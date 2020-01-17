@@ -109,7 +109,7 @@ CONTAINS
       ! so that this condition is fullfilled
       F_x=REAL_NOT_INITALIZED; dFx_ds=REAL_NOT_INITALIZED; d2Fx_ds2=REAL_NOT_INITALIZED
       dFx_dkF=REAL_NOT_INITALIZED;d2Fx_dsdkF=REAL_NOT_INITALIZED
-      
+
       correction = s_inp > s_thresh
       IF (correction) THEN
          s_si2 = s_chg/(s_inp*s_inp)
@@ -233,12 +233,12 @@ CONTAINS
                                   appInt, dAppInt_ds, d2AppInt_ds2, dAppInt_dkF, d2AppInt_dsdkF)
 
       USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre
-
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: omega_kF, Hs2, D_Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: appInt, dAppInt_ds, d2AppInt_ds2
-      REAL, INTENT(OUT) :: dAppInt_dkF, d2AppInt_dsdkF
+      REAL, INTENT(INOUT) :: appInt, dAppInt_ds, d2AppInt_ds2
+      REAL, INTENT(INOUT) :: dAppInt_dkF, d2AppInt_dsdkF
 
       REAL    :: w2, bw, r2bw, bw_Hs2, bw_D_Hs2
       ! variables for temporary storage of the integrals, the prefactors and the dot_product
@@ -255,6 +255,9 @@ CONTAINS
                                     -0.065032363850763, 0.008401793031216/), &
                          b = 1.455915450052607, cutoff = 14.0
 
+      appInt=REAL_NOT_INITALIZED; dAppInt_ds=REAL_NOT_INITALIZED;
+      d2AppInt_ds2=REAL_NOT_INITALIZED; dAppInt_dkF=REAL_NOT_INITALIZED;
+      d2AppInt_dsdkF=REAL_NOT_INITALIZED
       ! Calculate helper variables
       w2 = omega_kF**2
       bw = b*w2
@@ -604,7 +607,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s, H, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: F, dFs2_ds, d2Fs2_ds2
+      REAL, INTENT(INOUT) :: F, dFs2_ds, d2Fs2_ds2
 
       REAL, PARAMETER   :: slope = 6.4753871
       REAL, PARAMETER   :: shift = 0.4796583
@@ -627,10 +630,11 @@ CONTAINS
    !         dGs2_ds   - first derivative of G(s)s^2 with respect to s
    !         d2Gs2_ds2 - second derivative of G(s)s^2
    SUBROUTINE calculateG(s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2, G, dGs2_ds, d2Gs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: G, dGs2_ds, d2Gs2_ds2
+      REAL, INTENT(INOUT) :: G, dGs2_ds, d2Gs2_ds2
 
       ! helper variables
       REAL :: AHs2_1_2, AHs2_3_2, r1_Fs2, D_Hs2, D_Hs2Sqr, D_Hs2Cub, &
@@ -649,6 +653,7 @@ CONTAINS
                          D = 0.57786348, &
                          E = -0.051955731
 
+       G=REAL_NOT_INITALIZED; dGs2_ds=REAL_NOT_INITALIZED; d2Gs2_ds2=REAL_NOT_INITALIZED
       ! calculate the helper variables
       AHs2_1_2 = sqrtA*SQRT(Hs2)
       AHs2_3_2 = AHs2_1_2*A*Hs2
@@ -837,6 +842,7 @@ CONTAINS
    !         dHs2_ds   - first derivative d(s^2*H(s))/ds
    !         d2Hs2_ds2 - second derivative d^2(s^2H(s))/ds^2
    SUBROUTINE calculateH(s, H, dHs2_ds, d2Hs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s
@@ -856,6 +862,7 @@ CONTAINS
          a4 = 0.00120824, &
          a5 = 0.0347188
 
+      H=REAL_NOT_INITALIZED; dHs2_ds=REAL_NOT_INITALIZED; d2Hs2_ds2=REAL_NOT_INITALIZED
       ! calculate helper variables
       s2 = s*s
       s3 = s2*s
