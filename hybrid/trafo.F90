@@ -768,7 +768,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
-      COMPLEX, INTENT(OUT)     :: cfac
+      COMPLEX, INTENT(INOUT)   :: cfac
       REAL                    :: rdum, rmax
       INTEGER                 :: i
 
@@ -810,7 +810,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  maxlcutm
       INTEGER, INTENT(IN)      ::  nbasp
       LOGICAL, INTENT(IN)      ::  writevec
-      INTEGER, INTENT(OUT)     ::  igptm_out
+      INTEGER, INTENT(INOUT)   ::  igptm_out
 !     - arrays -
       INTEGER, INTENT(IN)      ::  rrot(:,:), invrrot(:,:)
       INTEGER, INTENT(IN)      :: lcutm(atoms%ntype),&
@@ -825,7 +825,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
                                        -maxlcutm:maxlcutm,&
                                                0:maxlcutm)
-      COMPLEX, INTENT(OUT)     ::  vecout(nbasm(ikpt0))
+      COMPLEX, INTENT(INOUT)     ::  vecout(nbasm(ikpt0))
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
@@ -840,6 +840,8 @@ CONTAINS
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(mpdata%n_g(ikpt0))
+
+      igptm_out=-1;vecout=CMPLX_NOT_INITALIZED
 
       IF (iop <= sym%nop) THEN
          isym = iop

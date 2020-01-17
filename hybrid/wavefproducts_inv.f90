@@ -35,7 +35,7 @@ CONTAINS
       INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
       INTEGER, INTENT(IN)      :: jsp, nk, iq
       INTEGER, INTENT(IN)      :: nbasm_mt
-      INTEGER, INTENT(OUT)     :: nkqpt
+      INTEGER, INTENT(INOUT)   :: nkqpt
 
       ! - arrays -
       REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
@@ -46,7 +46,7 @@ CONTAINS
 
 
       CALL timestart("wavefproducts_inv5")
-      cprod = 0.0
+      cprod = 0.0;nkqpt=-1
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt = kpts%to_first_bz(kqpthlp)
