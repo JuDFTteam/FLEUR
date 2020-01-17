@@ -20,7 +20,7 @@ MODULE m_types_fleurinput_base
 #else
   REAL,PARAMETER :: REAL_NOT_INITALIZED=0.0
 #endif
-COMPLEX, PARAMETER :: CMPLX_NOT_INITALIZED=(REAL_NOT_INITALIZED,REAL_NOT_INITALIZED)
+  COMPLEX, PARAMETER, PUBLIC :: CMPLX_NOT_INITALIZED=(REAL_NOT_INITALIZED,REAL_NOT_INITALIZED)
   !This module defines an abstract datatype all fleurinput-datatypes should
   !implement
 
