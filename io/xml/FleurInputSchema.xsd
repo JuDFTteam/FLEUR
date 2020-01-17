@@ -668,6 +668,7 @@
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
+      <xsd:attribute default="2" name="n_occpm" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="dftspinpol" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
@@ -711,6 +712,8 @@
    <xsd:complexType name="EContourDOSType">
       <xsd:attribute default="1300" name="n" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="0.0314" name="sigma" type="xsd:double"/>
+      <xsd:attribute default="-1.0" name="eb" type="xsd:double"/>
+      <xsd:attribute default="0.0" name="et" type="xsd:double"/>
       <xsd:attribute default="T" name="analytical_cont" type="FleurBool"/>
       <xsd:attribute default="T" name="l_fermi" type="FleurBool"/>
    </xsd:complexType>

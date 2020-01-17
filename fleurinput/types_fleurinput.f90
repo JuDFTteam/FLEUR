@@ -24,6 +24,8 @@ MODULE m_types_fleurinput
   USE m_types_forcetheo_data
   USE m_types_kpts
   USE m_types_enparaXML
+  USE m_types_gfinp
+  USE m_types_hub1inp
   IMPLICIT NONE
 
 CONTAINS
