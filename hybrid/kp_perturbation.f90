@@ -714,6 +714,7 @@ CONTAINS
 
       USE m_wrapper
       USE m_types
+      use m_constants, only: cmplx_0
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -733,7 +734,7 @@ CONTAINS
 !     - arrays -
 
       REAL, INTENT(IN)         ::  eig_irr(:, :)
-      COMPLEX, INTENT(OUT)     ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
+      COMPLEX, INTENT(INOUT)   ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
       INTEGER                 ::  ikpt, ikpt1, iband1, iband2
@@ -743,6 +744,7 @@ CONTAINS
       !                                       __
       ! Get momentum-matrix elements -i < uj | \/ | ui >
       !
+      dcprod = cmplx_0
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
          input, atoms, mpdata, hybinp, &
@@ -793,6 +795,7 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_io_hybinp
+      use m_constants, only: cmplx_0
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -810,7 +813,7 @@ CONTAINS
 
 !     - arrays -
       TYPE(t_mat):: z
-      COMPLEX, INTENT(OUT)     :: momentum(bandi2:bandf2, bandi1:bandf1, 3)
+      COMPLEX, INTENT(INOUT)   :: momentum(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
       INTEGER                 ::  itype, ieq, ic, i, j, l, lm, n1, n2, ikpt, iband1, iband2, ll, mm
@@ -838,7 +841,7 @@ CONTAINS
       COMPLEX                 ::  vec1_c(lapw%nv(jsp)), vec2_c(lapw%nv(jsp)), vec3_c(lapw%nv(jsp))
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
-
+      momentum = cmplx_0
       call read_cmt(cmt, nk)
 
       ! read in z coefficients from direct access file z at kpoint nk
