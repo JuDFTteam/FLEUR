@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,enpara,&
-       jspin,mpi,v,input,td,ud)
+       jspin,mpi,v,input,hub1inp,td,ud)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
@@ -21,6 +21,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_enpara),INTENT(IN)   :: enpara
+    TYPE(t_hub1inp),INTENT(IN)  :: hub1inp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin!physical spin&spin index for data
@@ -53,7 +54,7 @@ CONTAINS
     IF(jsp>=3) THEN
         ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
                  dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-        CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+        CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
     ENDIF
 
     td%tdulo(:,:,:,jsp) = CMPLX(0.0,0.0)
@@ -66,9 +67,9 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,uun21,udn21,dun21,ddn21)
+    !$OMP SHARED(atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,sym,enpara,jspin,jsp,mpi,v,input,td,ud)
+       CALL tlmplm(n,sphhar,atoms,sym,enpara,jspin,jsp,mpi,v,input,hub1inp,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
@@ -183,7 +184,7 @@ CONTAINS
        ENDIF
     ENDDO
     !$OMP END PARALLEL DO
-    IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,ud,noco,td)
+    IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,noco,td)
 
 
 
@@ -193,7 +194,7 @@ CONTAINS
 
 
 
-  SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,ud,noco,td)
+  SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,noco,td)
     USE m_radovlp
     USE m_types
     IMPLICIT NONE
@@ -204,6 +205,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT):: td
     TYPE(t_usdus),INTENT(INOUT) :: ud
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_hub1inp),INTENT(IN)  :: hub1inp
 
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
     COMPLEX :: c
@@ -212,7 +214,7 @@ CONTAINS
 
     ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
          dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-    CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+    CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
 
     DO  n = 1,atoms%ntype
        !If we do  a constraint calculation, we have to calculate the

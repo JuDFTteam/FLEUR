@@ -74,7 +74,7 @@ MODULE m_types_greensfCoeffs
          IF(gfinp%n.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
             ALLOCATE (thisGREENSFCOEFFS%projdos(gfinp%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,gfinp%n),spin_dim),source=cmplx_0)
-            IF(.NOT.input%l_gfsphavg) THEN
+            IF(.NOT.gfinp%l_sphavg) THEN
                ALLOCATE (thisGREENSFCOEFFS%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,gfinp%n),spin_dim),source=cmplx_0)
                ALLOCATE (thisGREENSFCOEFFS%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,gfinp%n),spin_dim),source=cmplx_0)
                ALLOCATE (thisGREENSFCOEFFS%du(gfinp%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,gfinp%n),spin_dim),source=cmplx_0)

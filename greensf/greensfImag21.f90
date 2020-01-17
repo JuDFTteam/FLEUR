@@ -51,8 +51,9 @@ MODULE m_greensfImag21
 
       IF(.NOT.gfinp%l_sphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
-      l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
-
+      !Temporary until input%tria/input%gauss are sorted out
+      !l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
+      l_tria=.false.
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb)
