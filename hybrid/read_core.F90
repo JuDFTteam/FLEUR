@@ -365,10 +365,10 @@
         DO 80 korb = 1,nst
           IF (occ(korb).EQ.0) GOTO 80
             fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
+            fj = iabs(kappa(korb)) - 0.5
             weight = 2*fj + 1.e0
             IF (bmu > 99.) weight = occ(korb)
-            fl = fj + (.5e0)*isign(1,kappa(korb))
+            fl = fj + (0.5)*isign(1,kappa(korb))
             e = -2* (z/ (fn+fl))**2
 
             nindxcr(NINT(fl),itype) = nindxcr(NINT(fl),itype) + 1
@@ -436,10 +436,10 @@
         DO 90 korb = 1,nst
           IF (occ(korb).EQ.0) GOTO 90
             fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
+            fj = iabs(kappa(korb)) - 0.5
             weight = 2*fj + 1.e0
             IF (bmu > 99.) weight = occ(korb)
-            fl = fj + (.5e0)*isign(1,kappa(korb))
+            fl = fj + (0.5)*isign(1,kappa(korb))
             e = -2* (z/ (fn+fl))**2
             CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
 
@@ -528,9 +528,9 @@
         DO  korb = 1,nst
           IF (occ(korb).EQ.0) CYCLE
             fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
+            fj = iabs(kappa(korb)) - 0.5
 
-            fl = fj + (.5e0)*isign(1,kappa(korb))
+            fl = fj + (0.5)*isign(1,kappa(korb))
             e = -2* (z/ (fn+fl))**2
 
             nindxcr(NINT(fl),itype) = nindxcr(NINT(fl),itype) + 1

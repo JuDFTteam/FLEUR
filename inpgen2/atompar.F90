@@ -20,7 +20,7 @@ MODULE m_atompar
 
   type(t_atompar),allocatable :: atompar_list(:)
   integer :: no_of_atompars
-  
+
 contains
   subroutine add_defaults(ap)
     class(t_atompar),intent(inout)::ap
@@ -28,7 +28,7 @@ contains
     TYPE(t_atompar):: ap_d
     INTEGER        :: n
 
-    
+
     if (ap%rmt>0) then
        ap_d=find_atompar(ap%nucnumber,ap%rmt)
     else
@@ -41,7 +41,7 @@ contains
     if (ap%lnonsph==0) ap%jri=ap_d%lnonsph
     if (ap%lo=="") ap%lo=ap_d%lo
     IF (ap%econfig=="") ap%econfig=ap_d%econfig
-    
+
     !now generate defaults for missing values
     if(ap%jri==0) ap%jri = NINT(NINT(330*ap%rmt)*0.5)*2+1
     if(ap%dx==0) ap%dx=LOG(3200*ap%nucnumber*ap%rmt)/(ap%jri-1)
@@ -75,7 +75,7 @@ contains
           IF (ap%nucnumber.EQ.61) ap%bmu = 4.1
           IF (ap%nucnumber.EQ.62) ap%bmu = 5.1
           IF (ap%nucnumber.EQ.63) ap%bmu = 7.1
-          IF (ap%nucnumber.EQ.64) ap%bmu = 7.1 
+          IF (ap%nucnumber.EQ.64) ap%bmu = 7.1
           IF (ap%nucnumber.EQ.65) ap%bmu = 6.1
           IF (ap%nucnumber.EQ.66) ap%bmu = 5.1
           IF (ap%nucnumber.EQ.67) ap%bmu = 4.1
@@ -91,18 +91,18 @@ contains
           ap%lo(LEN(ap%lo):LEN(ap%lo))=' '
        END IF
     ENDDO
-    
-    
-    
+
+
+
   end subroutine add_defaults
-    
-       
+
+
   subroutine add_atompar(ap)
     TYPE(t_atompar),INTENT(in),OPTIONAL::ap
     type(t_atompar),allocatable:: tmp_list(:)
 
-    
-    
+
+
     IF (.NOT.ALLOCATED(atompar_list)) THEN
        no_of_atompars=0
        ALLOCATE(atompar_list(100))
@@ -142,7 +142,6 @@ contains
              RETURN
           ENDIF
        end DO
-       call judft_error("You specified a specific id for an atom but never defined that")
     end if
 
     !Else we search if the MT has been given for this atom
@@ -151,7 +150,7 @@ contains
        if (ap%nucnumber==nucnumber) then
           IF (ap%rmt>0.AND.ap%rmt<rmt_max) THEN
              RETURN
-          ENDIF 
+          ENDIF
        endif
     enddo
 
@@ -165,7 +164,7 @@ contains
           endif
        endif
     enddo
-    
+
     call judft_error("No possible atomic parameter-set found")
   end function find_atompar
 
@@ -183,7 +182,7 @@ contains
 
     INQUIRE(file=filename,exist=l_exist)
     IF (.NOT.l_exist) RETURN
-    
+
     OPEN(99,file=filename)
     DO
        READ(99,*,err=100,END=100) str
@@ -211,11 +210,11 @@ contains
     REAL:: id,z,rmt,dx,bmu
     INTEGER:: jri,lmax,lnonsph,ncst,nc,io_stat,nz
     CHARACTER(len=100)::econfig,lo,element,name
-    
+
     NAMELIST /atom/ id,z,rmt,dx,jri,lmax,lnonsph,ncst,econfig,bmu,lo,element,name
 
     id=-9999.9;z=-1.0;rmt=0.0;dx=0.0;jri=0;lmax=0;lnonsph=0;ncst=-1;lo='';econfig='';name='';bmu=-9999.0
-    
+
     BACKSPACE(fh)
     READ(fh,atom,iostat=io_stat)
     IF(io_stat.NE.0) THEN
@@ -224,7 +223,7 @@ contains
        WRITE(*,*) name
        CALL judft_error("Found a &atom namelist in input that was incorrect")
     END IF
-    
+
     !determine nz and id
     nz=-1
     IF (element.NE."") THEN
@@ -250,22 +249,22 @@ contains
        econfig=ap%econfig
        IF (LEN_TRIM(lo)==0) lo=ap%lo
     END IF
-        
+
     ap=t_atompar(id=INT(id),nucnumber=nz,rmt=rmt,dx=dx,jri=jri,lmax=lmax,lnonsph=lnonsph,lo=lo,bmu=bmu,econfig=econfig,desc=name)
-    
-    
+
+
   CONTAINS
     INTEGER FUNCTION element_to_z(element)
       USE m_constants,ONLY: namat_const
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(in)::  element
-      
+
       CHARACTER(len=2)   :: ele,nam
       INTEGER,parameter  :: adiff=abs(ICHAR('A')-ICHAR('a'))
       INTEGER            :: n,diff
-      
+
       ele=ADJUSTL(element)
-      
+
       element_to_z = -1
       DO n = 0, SIZE(namat_const)-1
          nam=ADJUSTL(namat_const(n))
@@ -278,7 +277,7 @@ contains
             ENDIF
          END IF
       END DO
-      
+
     END FUNCTION element_to_z
   END SUBROUTINE read_atom_params_old
 
@@ -307,7 +306,6 @@ contains
        desc=ap%desc
        WRITE(6,atom)
     ENDDO
-    
+
   END SUBROUTINE dump_list
 END MODULE m_atompar
-

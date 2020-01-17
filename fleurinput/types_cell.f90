@@ -78,7 +78,6 @@ CONTAINS
        cell%area =ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
        IF (cell%area < 1.0e-7) THEN
           cell%area = 1.
-          CALL juDFT_warn("area = 0",calledby ="types_cell")
        END IF
      END IF
 

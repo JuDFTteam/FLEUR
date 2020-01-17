@@ -243,7 +243,7 @@ CONTAINS
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym), INTENT(IN)      :: sym
-      CLASS(t_xcpot),INTENT(OUT)   :: xcpot
+      CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars

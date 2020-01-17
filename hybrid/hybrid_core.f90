@@ -202,10 +202,10 @@ CONTAINS
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN
                fn = nprnc(korb)
-               fj = iabs(kappa(korb)) - .5e0
-               weight = 2*fj + 1.e0
+               fj = iabs(kappa(korb)) - 0.5
+               weight = 2*fj + 1.
                IF (bmu > 99.) weight = occ(korb)
-               fl = fj + (.5e0)*isign(1, kappa(korb))
+               fl = fj + (0.5)*isign(1, kappa(korb))
                e = -2*(z/(fn + fl))**2
 
                nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
@@ -269,10 +269,10 @@ CONTAINS
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN
                fn = nprnc(korb)
-               fj = iabs(kappa(korb)) - .5e0
-               weight = 2*fj + 1.e0
+               fj = iabs(kappa(korb)) - 0.5
+               weight = 2*fj + 1.
                IF (bmu > 99.) weight = occ(korb)
-               fl = fj + (.5e0)*isign(1, kappa(korb))
+               fl = fj + (0.5)*isign(1, kappa(korb))
                e = -2*(z/(fn + fl))**2
                CALL differ(fn, fl, fj, c, z, dxx, rnot, rn, d, ncmsh, vrd, e, a, b, ierr)
 
@@ -321,7 +321,7 @@ CONTAINS
       !  - local arrays -
       INTEGER              :: kappa(29), nprnc(29)
       INTEGER              :: nindxcr(0:29, atoms%ntype)
-      REAL                 :: occ(29), occ_h(29, 2)
+      REAL                 :: occ(29), occ_h(29, input%jspins)
       INTEGER              :: lmaxc(atoms%ntype)
 
       !   - intrinsic functions -
@@ -349,9 +349,9 @@ CONTAINS
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN
                fn = nprnc(korb)
-               fj = iabs(kappa(korb)) - .5e0
+               fj = iabs(kappa(korb)) - 0.5
 
-               fl = fj + (.5e0)*isign(1, kappa(korb))
+               fl = fj + (0.5)*isign(1, kappa(korb))
                e = -2*(z/(fn + fl))**2
 
                nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
