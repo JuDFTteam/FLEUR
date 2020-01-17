@@ -564,7 +564,7 @@ CONTAINS
       REAL, INTENT(INOUT)      ::  vecout_r(:,:,:)
       COMPLEX, INTENT(IN)      ::  vecin_c(:,:,:)
       COMPLEX, INTENT(INOUT)   ::  vecout_c(:,:,:)
-      COMPLEX, INTENT(OUT)     ::  phase(:,:)
+      COMPLEX, INTENT(INOUT)   ::  phase(:,:)
 
 !          - local -
 
@@ -583,6 +583,7 @@ CONTAINS
                                        -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
+      phase = cmplx_0
       call timestart("bra trafo")
 
       allocate(vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
