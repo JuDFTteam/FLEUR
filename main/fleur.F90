@@ -115,7 +115,6 @@ CONTAINS
     TYPE(t_gfinp)                   :: gfinp
     TYPE(t_hub1inp)                 :: hub1inp
     TYPE(t_hub1data)                :: hub1data
-    TYPE(t_hub1ham)                    :: hub1 !DELETE WHEN READY
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
@@ -333,7 +332,7 @@ CONTAINS
           vTemp%mmpMat = 0.0 !To avoid errors later on (When ldaUAdjEnpara is T the density
                              !is carried over after vgen)
           CALL timestart("Updating energy parameters")
-          CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT)
+          CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT,hub1inp)
           CALL timestop("Updating energy parameters")
           !IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
@@ -376,7 +375,7 @@ CONTAINS
 
 	  IF (input%gw.GT.0) THEN
 	    IF (mpi%irank.EQ.0) THEN
-	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,&
+	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,mpi,&
 		  	     results,eig_id,oneD,sphhar,stars,vacuum)
 	    END IF
 	    IF (input%gw.EQ.2) THEN
@@ -518,7 +517,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1%l_runthisiter)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
 !Plots of mixed density
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
 !               CDN including core charge
@@ -535,11 +534,11 @@ CONTAINS
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
          !Write out information if a hubbard 1 Iteration was performed
-         IF(hub1%l_runthisiter)  THEN
-            WRITE(*,*) "Hubbard 1 Iteration: ", hub1%iter," Distance: ", results%last_mmpMatdistance
+         IF(hub1data%l_runthisiter)  THEN
+            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter," Distance: ", results%last_mmpMatdistance
             WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
             WRITE(6,*) "nmmp element distance: ", results%last_mmpMatdistance
-            WRITE(6,FMT=8140) hub1%iter
+            WRITE(6,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
          CALL timestop("Iteration")
@@ -572,14 +571,14 @@ CONTAINS
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           !If we have converged run hia if the density matrix has not converged
           IF(atoms%n_hia>0) THEN
-             hub1%l_runthisiter = .NOT.l_cont.AND.(input%minoccDistance<=results%last_occdistance&
-                                  .OR.input%minmatDistance<=results%last_mmpMatdistance)
+             hub1data%l_runthisiter = .NOT.l_cont.AND.(hub1inp%minoccDistance<=results%last_occdistance&
+                                  .OR.hub1inp%minmatDistance<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter == 0&
-                                  .AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
-             hub1%l_runthisiter = hub1%l_runthisiter.AND.(iter < input%itmax)
+             hub1data%l_runthisiter = hub1data%l_runthisiter.OR.(iter==1.AND.(hub1data%iter == 0&
+                                  .AND.ALL(ABS(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)).LT.1e-12)))
+             hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(iter < input%itmax)
              !Prevent that the scf loop terminates
-             l_cont = l_cont.OR.hub1%l_runthisiter
+             l_cont = l_cont.OR.hub1data%l_runthisiter
           ENDIF
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF

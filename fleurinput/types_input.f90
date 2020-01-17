@@ -27,8 +27,6 @@ MODULE m_types_input
      INTEGER :: coretail_lmax =0
      INTEGER :: itmax =15
      REAL    :: minDistance=1.0e-5
-     REAL    :: minoccDistance=1.0e-2 !Distances for the density matrix in DFT+Hubbard 1 case
-     REAL    :: minmatDistance=1.0e-3
      INTEGER :: maxiter=99
      INTEGER :: imix=7
      INTEGER :: gw=0
@@ -71,27 +69,6 @@ MODULE m_types_input
      REAL    :: ldauMixParam=0.05
      REAL    :: ldauSpinf=1.0
      LOGICAL :: ldauAdjEnpara=.false.
-      LOGICAL :: l_dftspinpol=.false.
-      LOGICAL :: l_gfsphavg=.false.
-      LOGICAL :: l_gfmperp=.false.
-      LOGICAL :: l_resolvent=.false.
-      LOGICAL :: l_hist=.false.
-      INTEGER :: gf_ne
-      REAL    :: gf_ellow
-      REAL    :: gf_elup
-      INTEGER :: gf_mode=-1
-      INTEGER :: gf_n
-      REAL    :: gf_alpha
-      REAL    :: gf_et
-      REAL    :: gf_eb
-      INTEGER :: gf_n1
-      INTEGER :: gf_n2
-      INTEGER :: gf_n3
-      INTEGER :: gf_nmatsub
-      REAL    :: gf_sigma
-      LOGICAL :: gf_anacont=.false.
-      LOGICAL :: gf_dosfermi=.false.
-      LOGICAL :: gfTet=.false. !This switch will be true iff the tetrahedron were calculated from the equdistant grid
      LOGICAL :: l_rdmft=.FALSE.
      REAL    :: rdmftOccEps=0.0
      INTEGER :: rdmftStatesBelow=0

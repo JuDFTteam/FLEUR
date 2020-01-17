@@ -26,7 +26,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(INOUT) :: usdus
     TYPE(t_rsoc),INTENT(OUT)    :: rsoc
     LOGICAL,INTENT(IN)          :: l_angles
-    TYPE(t_hub1inp),OPTIONAL,INTENT(IN) :: hub1inp
+    TYPE(t_hub1inp),OPTIONAL, INTENT(IN)  :: hub1inp
     TYPE(t_hub1data),OPTIONAL,INTENT(INOUT) :: hub1data
     !     ..
     !     ..
@@ -53,7 +53,7 @@ CONTAINS
 
     !Calculate radial soc-matrix elements
     DO n = 1,atoms%ntype
-       CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus)
+       CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus,hub1inp)
     END DO
 
 
@@ -73,7 +73,7 @@ CONTAINS
           rsoc%rsoploplop(n,:,:,:,:) = rsoc%rsoploplop(n,:,:,:,:)*noco%socscale(n)
        ENDIF
     ENDDO
-    
+
     !Read in SOC-parameter for shell with hubbard 1
     IF(PRESENT(hub1inp).AND.mpi%irank.EQ.0) THEN
       DO i_hia = 1, atoms%n_hia

@@ -40,7 +40,9 @@ SUBROUTINE greensfImag(atoms,gfinp,sym,input,ispin,nbands,dosWeights,resWeights,
    COMPLEX weight
    COMPLEX, ALLOCATABLE :: im(:,:)
 
-   l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
+   !Temporary until input%tria/input%gauss are sorted out
+   !l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
+   l_tria=.false.
 
    IF(l_tria.AND.(ANY(ind.GT.gfinp%ne).OR.ANY(ind.LT.1))) THEN
       CALL juDFT_error("Invalid index",calledby="greensfImag")

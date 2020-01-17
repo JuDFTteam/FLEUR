@@ -233,7 +233,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
-      IF (gfinp%n.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
+      IF (gfinp%n.GT.0.AND..FALSE.) THEN!    (input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
          ALLOCATE(dosWeights(gfinp%ne,noccbd),source=0.0)
          ALLOCATE(resWeights(gfinp%ne,noccbd),source=0.0)
@@ -279,7 +279,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
-      IF (gfinp%n.GT.0.AND.(input%tria.OR.input%gfTet)) DEALLOCATE(dosWeights,resWeights,dosBound)
+      IF (gfinp%n.GT.0.AND..FALSE.) DEALLOCATE(dosWeights,resWeights,dosBound)
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN

@@ -17,7 +17,7 @@ MODULE m_usetup
   !     Extension to multiple U per atom type  G.M. 2017              |
   !-------------------------------------------------------------------+
 CONTAINS
-  SUBROUTINE u_setup(sym,atoms,sphhar, input,noco,el,inDen,pot,mpi,results)
+  SUBROUTINE u_setup(sym,atoms,sphhar,input,noco,hub1inp,el,inDen,pot,mpi,results)
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
@@ -34,6 +34,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_noco), INTENT(IN)        :: noco
+    TYPE(t_hub1inp), INTENT(IN)     :: hub1inp
     TYPE(t_potden),INTENT(IN)       :: inDen
     TYPE(t_potden),INTENT(INOUT)    :: pot
 
@@ -76,7 +77,7 @@ CONTAINS
        CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
 
        ! calculate potential matrix and total energy correction
-       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0(:,1),f2(:,1),pot%mmpMat,results%e_ldau)
+       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0(:,1),f2(:,1),pot%mmpMat,results%e_ldau)
 
        !spin off-diagonal elements (no rotation yet)
        IF(noco%l_mperp) THEN

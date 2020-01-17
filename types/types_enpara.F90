@@ -90,12 +90,13 @@ CONTAINS
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
-  SUBROUTINE update(enpara,mpi_comm,atoms,vacuum,input,v)
+  SUBROUTINE update(enpara,mpi_comm,atoms,vacuum,input,v,hub1inp)
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
     USE m_xmlOutput
     USE m_types_potden
+    USE m_types_hub1inp
     USE m_find_enpara
     CLASS(t_enpara),INTENT(inout):: enpara
     INTEGER,INTENT(IN)          :: mpi_comm
@@ -103,6 +104,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_potden),INTENT(IN)   :: v
+    TYPE(t_hub1inp),INTENT(IN)  :: hub1inp
 
 
     LOGICAL ::  l_enpara
@@ -158,6 +160,7 @@ CONTAINS
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
+
        IF (irank==0) THEN
          WRITE(6,*)
          WRITE(6,*) "Updated energy parameters for spin:",jsp
@@ -243,7 +246,7 @@ CONTAINS
        END IF
     END DO
 
-    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
+    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2.AND..NOT.hub1inp%l_dftspinpol) THEN
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to
        !be non spin-polarized
