@@ -141,7 +141,7 @@ CONTAINS
       INTEGER, INTENT(OUT):: lmaxc(:)
 
       !  - arrays -
-      INTEGER, INTENT(OUT):: nindxcr(0:ncstd, atoms%ntype)
+      INTEGER, INTENT(INOUT):: nindxcr(0:ncstd, atoms%ntype)
       REAL, INTENT(IN) :: vr(:, :, :)!(atoms%jmtd,atoms%ntypd,input%jspins)
       REAL, ALLOCATABLE :: core1(:, :, :, :), core2(:, :, :, :)
       REAL, ALLOCATABLE :: eig_c(:, :, :)

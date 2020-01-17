@@ -2,7 +2,7 @@
 
       ! read core radial wavefunctions from corebas
       ! corebas is written in cored.F
-      ! (core basis functions can be read in once during an iteration) 
+      ! (core basis functions can be read in once during an iteration)
 
       CONTAINS
 
@@ -164,7 +164,7 @@
       TYPE(t_atoms),INTENT(IN)   :: atoms
 
       ! - scalars -
-      INTEGER,INTENT(IN)        ::  jsp  
+      INTEGER,INTENT(IN)        ::  jsp
       INTEGER,INTENT(IN)        :: lmaxcd
       INTEGER,INTENT(INOUT)     ::  maxindxc
 
@@ -206,7 +206,7 @@
 
       ! average over core states that only differ in j
       ! core functions with l-qn equal 0 doesnot change during the average process
- 
+
       nindxc(0,:) = nindxcr(0,:)
       DO itype=1,atoms%ntype
         core1(:,:nindxc(0,itype),0,itype)&
@@ -296,19 +296,19 @@
 
       !  - scalars -
       INTEGER, INTENT (IN) :: ncstd
-      INTEGER, INTENT (IN) :: jspin   
+      INTEGER, INTENT (IN) :: jspin
       INTEGER, INTENT (OUT):: lmaxc(:)
 
-      !  - arrays - 
-      INTEGER, INTENT (OUT):: nindxcr(0:ncstd,atoms%ntype)
-      REAL   , INTENT (IN) :: vr(:,:,:)!(atoms%jmtd,atoms%ntypd,input%jspins)
-      REAL   , ALLOCATABLE :: core1(:,:,:,:),core2(:,:,:,:)
-      REAL   , ALLOCATABLE :: eig_c(:,:,:)
+      !  - arrays -
+      INTEGER, INTENT (INOUT) :: nindxcr(0:ncstd,atoms%ntype)
+      REAL   , INTENT (IN)    :: vr(:,:,:)!(atoms%jmtd,atoms%ntypd,input%jspins)
+      REAL   , ALLOCATABLE    :: core1(:,:,:,:),core2(:,:,:,:)
+      REAL   , ALLOCATABLE    :: eig_c(:,:,:)
 
       !  - local scalars -
       INTEGER              :: i,j,itype,korb,ncmsh,nst,ierr
       REAL                 :: e,fj,fl,fn,t2,c,bmu,weight
-      REAL                 :: d,dxx,rn,rnot,z,t1,rr 
+      REAL                 :: d,dxx,rn,rnot,z,t1,rr
       LOGICAL, SAVE        :: first = .true.
 
       !  - local arrays -
@@ -348,11 +348,11 @@
 !     &               nst,kappa,nprnc,occ_h)
         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
 
-        
+
         IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
         ELSE
-          occ(1:nst) = occ_h(1:nst,1) 
+          occ(1:nst) = occ_h(1:nst,1)
         END IF
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
@@ -395,7 +395,7 @@
         IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
         ELSE
-          occ(1:nst) = occ_h(1:nst,1) 
+          occ(1:nst) = occ_h(1:nst,1)
         END IF
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
@@ -486,15 +486,15 @@
       TYPE(t_atoms),INTENT(IN)       :: atoms
       INTEGER,INTENT(OUT)            :: maxindxc,lmaxcd
 
-      
+
       !  - local scalars -
       INTEGER              :: i,j,itype,korb,ncmsh,nst,ierr
       REAL                 :: e,fj,fl,fn,t,bmu,c
-      REAL                 :: d,dxx,rn,rnot,z,t1,rr 
+      REAL                 :: d,dxx,rn,rnot,z,t1,rr
 
       !  - local arrays -
       INTEGER              :: kappa(29),nprnc(29)
-      INTEGER              :: nindxcr(0:29,atoms%ntype) 
+      INTEGER              :: nindxcr(0:29,atoms%ntype)
       REAL                 :: occ(29),occ_h(29,2),a(atoms%msh),b(atoms%msh)
       INTEGER              :: lmaxc(atoms%ntype)
 
@@ -515,7 +515,7 @@
         !CALL setcor(itype,input%jspins,atoms,input,bmu, nst,kappa,nprnc,occ_h)
         call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
 
-        occ(1:nst) = occ_h(1:nst,1) 
+        occ(1:nst) = occ_h(1:nst,1)
 
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))

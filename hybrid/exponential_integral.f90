@@ -25,7 +25,7 @@ contains
       implicit none
 
       real, intent(in)  :: arg
-      real, intent(out) :: res
+      real, intent(inout) :: res
 
       ! For arguments smaller than 4 the series expansion is used
       if (arg < series_laguerre) then
