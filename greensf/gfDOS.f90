@@ -8,14 +8,13 @@ MODULE m_gfDOS
 
    CONTAINS
 
-
-   SUBROUTINE gfDOS(g,l,nType,jobID,atoms,input,ef)
+   SUBROUTINE gfDOS(g,l,nType,jobID,gfinp,input,ef)
 
       !Provides the spin up/down DOS as well as the high/low J DOS
       !calculated from the greens function in gfDOS.jobID
 
       TYPE(t_greensf),     INTENT(IN)  :: g
-      TYPE(t_atoms),       INTENT(IN)  :: atoms
+      TYPE(t_gfinp),       INTENT(IN)  :: gfinp
       TYPE(t_input),       INTENT(IN)  :: input
       INTEGER,             INTENT(IN)  :: l
       INTEGER,             INTENT(IN)  :: nType
@@ -38,7 +37,7 @@ MODULE m_gfDOS
       IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
       !Write out warnings
       IF(.NOT.PRESENT(ef)) WRITE(3456,"(A)") "This gfDOS is not corrected to have ef=0"
-      IF(g%mode.NE.3) WRITE(3456,"(A)") "You are using an energy contour where the gfDOS might not be very informative"
+      IF(gfinp%mode.NE.3) WRITE(3456,"(A)") "You are using an energy contour where the gfDOS might not be very informative"
       !Calculate the transformation between |L,S> and |J,mj> basis
       ns = 2*l+1
       CALL cmat%init(.TRUE.,2*ns,2*ns)
@@ -50,7 +49,7 @@ MODULE m_gfDOS
          re = 0.0
          DO ipm = 1, 2  !Sum over G^+ and G^-
             !Get the full gf matrix at the energy point
-            CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+            CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
             !Convert to eV^-1
             gmat%data_c = gmat%data_c/hartree_to_eV_const
             !Calculate up/down dos

@@ -19,6 +19,7 @@ MODULE m_hubbard1_io
    USE m_juDFT
    USE m_types
    USE m_constants
+   USE m_generic_txtio
 
    IMPLICIT NONE
    !------------------------------------------------------------------
@@ -44,15 +45,14 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first,l_new)
-
-      IMPLICIT NONE
+   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first,l_new)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: i_hia
       INTEGER,          INTENT(IN)  :: l
       REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      TYPE(t_hub1inp),  INTENT(IN)  :: hub1inp
+      TYPE(t_hub1data), INTENT(IN)  :: hub1data
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
@@ -61,25 +61,22 @@ MODULE m_hubbard1_io
 
       !Old or new input format
       IF(l_new) THEN
-         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first)
+         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
       ELSE
-         CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+         CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n)
       ENDIF
 
    END SUBROUTINE hubbard1_input
 
 
-   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first)
-
-      USE m_generic_txtio
-
-      IMPLICIT NONE
+   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: i_hia
       INTEGER,          INTENT(IN)  :: l
       REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      TYPE(t_hub1inp),  INTENT(IN)  :: hub1inp
+      TYPE(t_hub1data), INTENT(IN)  :: hub1data
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
@@ -107,8 +104,8 @@ MODULE m_hubbard1_io
          CALL writeValue(input_iounit,"Np_min",5)
          CALL writeValue(input_iounit,"Np_max",18)
       ELSE
-         CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1%n_exc))
-         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1%n_exc))
+         CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1inp%n_occpm))
+         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),hub1inp%n_occpm))
       ENDIF
       CALL comment(input_iounit,"Parameters for the case with bath states (only used when bath is present)",1)
       CALL writeValue(input_iounit,"Nbath_exc",2)
@@ -117,7 +114,7 @@ MODULE m_hubbard1_io
 
       CALL startSection(input_iounit,"GC_ensemble")
       CALL comment(input_iounit,"Inverse temperature",1)
-      CALL writeValue(input_iounit,"beta",hub1%beta)
+      CALL writeValue(input_iounit,"beta",hub1inp%beta)
       !CALL comment(input_iounit,"States with smaller weight are dropped",1)
       !CALL writeValue(input_iounit, "weight_limit",1.0e-4)
       CALL endSection(input_iounit)
@@ -151,14 +148,14 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Energy level of the atomic level",1)
       CALL writeValue(input_iounit,"ea",-mu)
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
-      CALL writeValue(input_iounit,"xiSOC",hub1%xi(i_hia))
+      CALL writeValue(input_iounit,"xiSOC",hub1data%xi(i_hia))
       !calculate the additional exchange splitting
       exc = 0.0
-      DO i_exc = 1, hub1%n_exc_given(i_hia)
-         exc = exc + hub1%exc(i_hia,i_exc)*hub1%mag_mom(i_hia,i_exc)
+      DO i_exc = 1, hub1inp%n_exc(i_hia)
+         exc = exc + hub1inp%exc(i_hia,i_exc)*hub1data%mag_mom(i_hia,i_exc)
       ENDDO
       !Only write the exchange splitting here if its not zero to not conflict with possible additional args
-      IF(exc.NE.0.0) THEN
+      IF(ABS(exc).GT.1e-12) THEN
          CALL comment(input_iounit,"Exchange splitting",1)
          !The sign flip is just a convention between the solver and the DFT calculation
          CALL writeValue(input_iounit,"Exc",-exc)
@@ -167,22 +164,22 @@ MODULE m_hubbard1_io
       ! Addtional arguments given by addArg are simply passed on
       !---------------------------------------------------------
       CALL comment(input_iounit,"Additional arguments",1)
-      DO i_arg = 1, hub1%n_addArgs(i_hia)
+      DO i_arg = 1, hub1inp%n_addArgs(i_hia)
          !----------------------------------------------
          ! Write out a warning about the sign convention
          !----------------------------------------------
-         IF(TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1%arg_vals(i_hia,i_arg).GT.0.0) THEN
+         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.ABS(hub1inp%arg_vals(i_hia,i_arg)).GT.1e-12) THEN
             WRITE(*,*) "-----------------------------------------------------------------------------------------"
             WRITE(*,*) "You provided a positive exchange splitting."
             WRITE(*,*) "Due to different conventions in the solver this will result in a negative magnetic moment"
             WRITE(*,*) "-----------------------------------------------------------------------------------------"
          ENDIF
-         CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))
+         CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))),hub1inp%arg_vals(i_hia,i_arg))
       ENDDO
       !------------------------------------
       ! Crystal field contribution
       !------------------------------------
-      IF(hub1%ccf(i_hia).NE.0.0.AND..NOT.l_first) THEN
+      IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12.AND..NOT.l_first) THEN
          CALL writeValue(input_iounit, "cf")
 
          CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
@@ -192,7 +189,7 @@ MODULE m_hubbard1_io
                DO k = 1, (2*l+1)
                   ind1 = (i-1)*(2*l+1) + j
                   ind2 = (i-1)*(2*l+1) + k
-                  cfmat%data_r(ind1,ind2) = hub1%ccfmat(i_hia,j-l-1,k-l-1)*hartree_to_ev_const*hub1%ccf(i_hia)
+                  cfmat%data_r(ind1,ind2) = hub1data%ccfmat(i_hia,j-l-1,k-l-1)*hartree_to_ev_const*hub1inp%ccf(i_hia)
                ENDDO
             ENDDO
          ENDDO
@@ -205,17 +202,14 @@ MODULE m_hubbard1_io
    END SUBROUTINE write_hubbard1_input_new
 
 
-   SUBROUTINE write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
-
-      USE m_generic_txtio
-
-      IMPLICIT NONE
+   SUBROUTINE write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: i_hia
       INTEGER,          INTENT(IN)  :: l
       REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      TYPE(t_hub1inp),  INTENT(IN)  :: hub1inp
+      TYPE(t_hub1data), INTENT(IN)  :: hub1data
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
 
@@ -236,33 +230,33 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
 
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
-      CALL writeValue(input_iounit,"gfact",hub1%xi(i_hia))
+      CALL writeValue(input_iounit,"gfact",hub1data%xi(i_hia))
 
       !calculate the additional exchange splitting
       exc = 0.0
-      DO i_exc = 1, hub1%n_exc_given(i_hia)
-         exc = exc + hub1%exc(i_hia,i_exc)*hub1%mag_mom(i_hia,i_exc)
+      DO i_exc = 1, hub1inp%n_exc(i_hia)
+         exc = exc + hub1inp%exc(i_hia,i_exc)*hub1data%mag_mom(i_hia,i_exc)
       ENDDO
 
       CALL comment(input_iounit,"External field",1)
-      CALL writeValue(input_iounit,"Bz",exc)
+      CALL writeValue(input_iounit,"Bz",-exc)
 
       CALL comment(input_iounit,"Inverse temperature",1)
-      CALL writeValue(input_iounit,"beta",hub1%beta)
+      CALL writeValue(input_iounit,"beta",hub1inp%beta)
 
       CALL comment(input_iounit,"Chemical potential",1)
       CALL writeValue(input_iounit,"mu",mu)
 
-      IF(hub1%ccf(i_hia).NE.0.0) THEN
+      IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
          CALL comment(input_iounit,"Crystal field factor",1)
-         CALL writeValue(input_iounit,"ccf",hub1%ccf(i_hia))
+         CALL writeValue(input_iounit,"ccf",hub1inp%ccf(i_hia))
       ENDIF
 
       CALL header(input_iounit,"Parameters for the Solver",1)
 
       CALL comment(input_iounit,"Minimum and maximum occupation of the orbital",1)
-      CALL writeValue(input_iounit,"Nap_min",MAX(0,n-hub1%n_exc))
-      CALL writeValue(input_iounit,"Nap_max",MIN(2*(2*l+1),n+hub1%n_exc))
+      CALL writeValue(input_iounit,"Nap_min",MAX(0,n-hub1inp%n_occpm))
+      CALL writeValue(input_iounit,"Nap_max",MIN(2*(2*l+1),n+hub1inp%n_occpm))
 
       CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
       CALL writeValue(input_iounit, "method_lancz")
@@ -294,14 +288,12 @@ MODULE m_hubbard1_io
    SUBROUTINE write_ccfmat(path,ccfmat,l)
 
       CHARACTER(len=*), INTENT(IN)  :: path
-      REAL,             INTENT(IN)  :: ccfmat(-l:l,-l:l)
+      REAL,             INTENT(IN)  :: ccfmat(-l:,-l:)
       INTEGER,          INTENT(IN)  :: l
 
       INTEGER :: info, io_error,io_unit
 
       io_unit = 17
-
-
 
       OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="replace", action="write", iostat=io_error)
 
@@ -318,7 +310,7 @@ MODULE m_hubbard1_io
    SUBROUTINE read_ccfmat(path,ccfmat,l)
 
       CHARACTER(len=*), INTENT(IN)  :: path
-      REAL,             INTENT(INOUT) :: ccfmat(-l:l,-l:l)
+      REAL,             INTENT(INOUT) :: ccfmat(-l:,-l:)
       INTEGER,          INTENT(IN)  :: l
 
       INTEGER :: info, io_error,io_unit

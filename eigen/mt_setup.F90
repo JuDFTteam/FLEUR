@@ -7,7 +7,7 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1,inden,vTot,mpi,results,td,ud)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,inden,vTot,mpi,results,td,ud)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
@@ -27,7 +27,8 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT) :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
-    TYPE(t_hub1ham),INTENT(INOUT) :: hub1
+    TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
+    TYPE(t_hub1data),INTENT(INOUT)::hub1data
 
     INTEGER:: jsp
 
@@ -50,7 +51,7 @@ CONTAINS
 
     !Setup of soc parameters for first-variation SOC
     IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.,hub1)
+       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
     END IF
 
   END SUBROUTINE mt_setup

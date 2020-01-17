@@ -20,7 +20,7 @@ CONTAINS
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
                     cell,enpara,banddos,noco,oneD,mpdata,hybinp,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1)
+                    iter,eig_id,results,inden,v,vx,hub1inp,hub1data)
 
 #include"cpp_double.h"
       USE m_types
@@ -64,7 +64,8 @@ CONTAINS
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_potden),INTENT(IN)    :: inden !
-      TYPE(t_hub1ham),INTENT(INOUT):: hub1
+      TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
+      TYPE(t_hub1data),INTENT(INOUT):: hub1data
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
 
@@ -129,7 +130,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1,inden,v,mpi,results,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,inden,v,mpi,results,td,ud)
 
       neigBuffer = 0
       results%neig = 0

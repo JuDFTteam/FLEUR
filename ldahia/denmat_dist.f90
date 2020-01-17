@@ -1,14 +1,15 @@
 MODULE m_denmat_dist
 
+   USE m_types
+   USE m_constants
+
+   IMPLICIT NONE
+
    CONTAINS
-   SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,input,results)
-
-      USE m_types
-      USE m_constants
-
-      IMPLICIT NONE
+   SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,input,gfinp,results)
 
       TYPE(t_input),       INTENT(IN)     :: input
+      TYPE(t_gfinp),       INTENT(IN)     :: gfinp
       COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_results),     INTENT(INOUT)  :: results
@@ -20,7 +21,7 @@ MODULE m_denmat_dist
       n_out = 0.0
       n_in = 0.0
       results%last_mmpMatdistance = 0.0
-      DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
+      DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO j = -3,3
             DO k = -3,3
                IF((ABS(n_mmp_out(k,j,ispin) - n_mmp_in(k,j,ispin))).GT.results%last_mmpMatdistance) THEN

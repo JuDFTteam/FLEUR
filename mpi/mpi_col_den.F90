@@ -11,7 +11,7 @@ MODULE m_mpi_col_den
   ! for some data also spread them back onto all pe's (Jan. 2019  U.Alekseeva)
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,jspin,regCharges,dos,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs)
 
 #include"cpp_double.h"
@@ -29,6 +29,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_gfinp),INTENT(IN)     :: gfinp
     TYPE(t_potden),INTENT(INOUT) :: den
     INCLUDE 'mpif.h'
     ! ..
@@ -432,9 +433,9 @@ CONTAINS
     !-lda+U
 
     !+green's functions
-    IF(atoms%n_gf.GT.0 ) THEN
+    IF(gfinp%n.GT.0 ) THEN
        IF(PRESENT(greensfCoeffs)) THEN
-         n = greensfCoeffs%ne*atoms%n_gf*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
+         n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
          ALLOCATE(c_b(n))
          CALL MPI_REDUCE(greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
@@ -449,8 +450,8 @@ CONTAINS
            IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%ud(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
          ENDIF
          DEALLOCATE(c_b)
-         IF(input%l_gfmperp.AND.jspin.EQ.1) THEN
-           n = greensfCoeffs%ne*atoms%n_gf*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
+         IF(gfinp%l_mperp.AND.jspin.EQ.1) THEN
+           n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
            ALLOCATE(c_b(n))
            CALL MPI_REDUCE(greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
            IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,3),1)
