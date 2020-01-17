@@ -23,10 +23,10 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
-      INTEGER, INTENT(IN)      ::  nk, iq, jsp
-      INTEGER, INTENT(IN)      ::  nbasm_mt
-      INTEGER, INTENT(OUT)     ::  nkqpt
+      INTEGER, INTENT(IN)        ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)        ::  nk, iq, jsp
+      INTEGER, INTENT(IN)        ::  nbasm_mt
+      INTEGER, INTENT(INOUT)     ::  nkqpt
 
 !     - arrays -
 
@@ -37,7 +37,7 @@ CONTAINS
 
 
       call timestart("wavefproducts_noinv5")
-      cprod = cmplx_0
+      cprod = cmplx_0; nkqpt = 0
 
       ! calculate nkpqt
       kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)

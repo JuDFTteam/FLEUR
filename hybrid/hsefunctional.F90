@@ -67,12 +67,12 @@ CONTAINS
    !         dFx_ds   - derivative of this factor with respect to s
    !         d2Fx_ds2 - second derivative with respect to s
    SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
-
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: kF, s_inp
-      REAL, INTENT(OUT) :: F_x, dFx_ds, d2Fx_ds2
-      REAL, INTENT(OUT) :: dFx_dkF, d2Fx_dsdkF
+      REAL, INTENT(INOUT) :: F_x, dFx_ds, d2Fx_ds2
+      REAL, INTENT(INOUT) :: dFx_dkF, d2Fx_dsdkF
 
       ! Helper variables
       REAL :: r1_kF, &                   ! 1 / kF
@@ -107,6 +107,9 @@ CONTAINS
 
       ! If a large value of s would violate the Lieb-Oxford bound, the value of s is reduced,
       ! so that this condition is fullfilled
+      F_x=REAL_NOT_INITALIZED; dFx_ds=REAL_NOT_INITALIZED; d2Fx_ds2=REAL_NOT_INITALIZED
+      dFx_dkF=REAL_NOT_INITALIZED;d2Fx_dsdkF=REAL_NOT_INITALIZED
+      
       correction = s_inp > s_thresh
       IF (correction) THEN
          s_si2 = s_chg/(s_inp*s_inp)

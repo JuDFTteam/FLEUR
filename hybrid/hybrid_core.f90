@@ -136,9 +136,9 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
       !  - scalars -
-      INTEGER, INTENT(IN) :: ncstd
-      INTEGER, INTENT(IN) :: jspin
-      INTEGER, INTENT(OUT):: lmaxc(:)
+      INTEGER, INTENT(IN)   :: ncstd
+      INTEGER, INTENT(IN)   :: jspin
+      INTEGER, INTENT(INOUT):: lmaxc(:)
 
       !  - arrays -
       INTEGER, INTENT(INOUT):: nindxcr(0:ncstd, atoms%ntype)
@@ -311,7 +311,7 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      INTEGER, INTENT(OUT)            :: maxindxc, lmaxcd
+      INTEGER, INTENT(INOUT)          :: maxindxc, lmaxcd
 
       !  - local scalars -
       INTEGER              :: itype, korb, ncmsh, nst
