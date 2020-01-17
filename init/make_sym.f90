@@ -9,7 +9,7 @@ MODULE m_make_sym
   PRIVATE
   PUBLIC make_sym
 CONTAINS
-  SUBROUTINE make_sym(sym,cell,atoms,noco,oneD,input)
+  SUBROUTINE make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
     !Generates missing symmetry info.
     !tau,mrot and nop have to be specified alread
     USE m_dwigner
@@ -22,12 +22,14 @@ CONTAINS
     USE m_types_noco
     USE m_types_oneD
     use m_types_input
+    USE m_types_gfinp
     TYPE(t_sym),INTENT(INOUT) :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_oneD),INTENT(INOUT):: oneD
     TYPE(t_input),INTENT(IN)  :: input
+    TYPE(t_gfinp),INTENT(IN)  :: gfinp
 
     integer :: nsymt
     integer,allocatable::nrot(:),locops(:,:)
@@ -44,7 +46,7 @@ CONTAINS
     !Generated wigner symbols for LDA+U (includes DFT+HubbardI)
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
-    IF (atoms%n_u+atoms%n_hia.GT.0) THEN
+    IF (atoms%n_u+gfinp%n.GT.0) THEN
        CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
     END IF
 
@@ -57,12 +59,12 @@ CONTAINS
 
 
     IF (.NOT.oneD%odd%d1) THEN
-     CALL mapatom(sym,atoms,cell,input,noco)
+     CALL mapatom(sym,atoms,cell,input,noco,gfinp)
      allocate(oneD%ngopr1(atoms%nat))
      oneD%ngopr1 = sym%ngopr
   ELSE
      CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-     CALL mapatom(sym,atoms,cell,input,noco)
+     CALL mapatom(sym,atoms,cell,input,noco,gfinp)
      !CALL od_mapatom(oneD,atoms,sym,cell)
   END IF
 

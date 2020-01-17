@@ -131,7 +131,7 @@ CONTAINS
                               sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
                               wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
       call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-      Banddos,Oned,Xcpot,Kpts)
+      Banddos,Oned,Xcpot,Kpts,gfinp)
     END IF
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&

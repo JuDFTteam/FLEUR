@@ -5,7 +5,7 @@
 !     atom into its equivalent atoms     c.l.fu
 !*******************************************************************
       CONTAINS
-      SUBROUTINE mapatom(sym,atoms,cell,input,noco)
+      SUBROUTINE mapatom(sym,atoms,cell,input,noco,gfinp)
 !
 !     if (l_f) setup multab,invtab,invarop,invarind for force_a12 & 21
 !***********************************************************************
@@ -34,6 +34,7 @@
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_input),INTENT(IN) :: input
       TYPE(t_noco),INTENT(IN)  :: noco
+      TYPE(t_gfinp),INTENT(IN) :: gfinp
 
 !     .. Local Scalars ..
       REAL s3,norm
@@ -120,7 +121,7 @@
 !
 ! search for operations which leave taual invariant
 !
-               IF (input%l_f.OR.(atoms%n_u+atoms%n_gf.GT.0)) THEN 
+               IF (input%l_f.OR.(atoms%n_u+gfinp%n.GT.0)) THEN
                   DO j3 = -2,2
                      sr(3) = gaminv(3) + real(j3)
                      DO j2 = -2,2
@@ -159,7 +160,7 @@
 !------------------------- FORCE PART -------------------------------
 !+gu this is the remainder of spgset necessary for force calculations
 !
-      IF (input%l_f.OR.(atoms%n_u.GT.0).OR.(atoms%n_gf.GT.0)) THEN
+      IF (input%l_f.OR.(atoms%n_u+gfinp%n.GT.0)) THEN
 
       WRITE (6,FMT=&
      &  '(//,"list of operations which leave taual invariant",/)')
