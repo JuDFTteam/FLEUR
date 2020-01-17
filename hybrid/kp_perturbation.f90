@@ -795,7 +795,6 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_io_hybinp
-      use m_constants, only: cmplx_0
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
