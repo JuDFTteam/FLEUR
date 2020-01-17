@@ -346,24 +346,23 @@
         bmu  = 0.0
 !        CALL setcor( itype,input%jspins,atoms,input,bmu,&
 !     &               nst,kappa,nprnc,occ_h)
-        call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
+         call atoms%econf(itype)%get_core(nst,nprnc,kappa, occ_h)
 
+         IF ((bmu > 99.)) THEN
+            occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
+         ELSE
+            occ(1:nst) = occ_h(1:nst, 1)
+         END IF
+         rnot = atoms%rmsh(1, itype)
+         d = exp(atoms%dx(itype))
+         ncmsh = nint(log((atoms%rmt(itype) + 10.0)/rnot)/dxx + 1)
+         ncmsh = min(ncmsh, atoms%msh)
+         rn = rnot*(d**(ncmsh - 1))
 
-        IF ((bmu > 99.)) THEN
-          occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
-        ELSE
-          occ(1:nst) = occ_h(1:nst,1)
-        END IF
-        rnot  = atoms%rmsh(1,itype)
-        d     = exp(atoms%dx(itype))
-        ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, atoms%msh )
-        rn = rnot* (d** (ncmsh-1))
+         nst = atoms%econf(itype)%num_core_states
 
-        nst = atoms%econf(itype)%num_core_states
-
-        DO 80 korb = 1,nst
-          IF (occ(korb).EQ.0) GOTO 80
+         DO 80 korb = 1, nst
+            IF (occ(korb) .EQ. 0) GOTO 80
             fn = nprnc(korb)
             fj = iabs(kappa(korb)) - 0.5
             weight = 2*fj + 1.e0
