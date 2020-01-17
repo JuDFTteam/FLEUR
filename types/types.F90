@@ -32,6 +32,5 @@ MODULE m_types
   USE m_types_mpdata
   USE m_types_greensf
   USE m_types_greensfCoeffs
-  USE m_types_hub1ham
   USE m_types_hub1data
 END MODULE m_types

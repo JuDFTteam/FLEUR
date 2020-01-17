@@ -115,7 +115,6 @@ CONTAINS
     TYPE(t_gfinp)                   :: gfinp
     TYPE(t_hub1inp)                 :: hub1inp
     TYPE(t_hub1data)                :: hub1data
-    TYPE(t_hub1ham)                    :: hub1 !DELETE WHEN READY
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
@@ -518,7 +517,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1%l_runthisiter)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
 !Plots of mixed density
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
 !               CDN including core charge
@@ -579,7 +578,7 @@ CONTAINS
                                   .AND.ALL(ABS(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)).LT.1e-12)))
              hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(iter < input%itmax)
              !Prevent that the scf loop terminates
-             l_cont = l_cont.OR.hub1%l_runthisiter
+             l_cont = l_cont.OR.hub1data%l_runthisiter
           ENDIF
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
