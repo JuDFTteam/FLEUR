@@ -73,7 +73,8 @@ CONTAINS
 
    SUBROUTINE olap_pwp(l_real, olap_r, olap_c, gpt, ngpt, atoms, cell)
 
-      USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
+      USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED,&
+                             fpi_const, tpi_const
       USE m_types
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell

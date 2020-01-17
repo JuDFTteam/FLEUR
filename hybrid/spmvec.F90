@@ -229,7 +229,7 @@ CONTAINS
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
       COMPLEX, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
-      COMPLEX, INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
+      COMPLEX, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
       ! - local scalars -
       INTEGER             ::  itype, ieq, iatom, ishift
@@ -244,6 +244,7 @@ CONTAINS
       COMPLEX             ::  vecinhlp(hybdat%nbasm(ikpt))
 
       call timestart("spmvec_noinvs")
+      vecout = CMPLX_NOT_INITALIZED
       vecinhlp = vecin
 
       CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vec_c=vecinhlp)

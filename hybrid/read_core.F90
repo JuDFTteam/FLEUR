@@ -297,7 +297,7 @@
       !  - scalars -
       INTEGER, INTENT (IN) :: ncstd
       INTEGER, INTENT (IN) :: jspin
-      INTEGER, INTENT (OUT):: lmaxc(:)
+      INTEGER, INTENT (INOUT):: lmaxc(:)
 
       !  - arrays -
       INTEGER, INTENT (INOUT) :: nindxcr(0:ncstd,atoms%ntype)
