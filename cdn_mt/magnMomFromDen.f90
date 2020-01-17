@@ -18,6 +18,7 @@ CONTAINS
 SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    USE m_constants
    USE m_types
+   USE m_types_fleurinput
    USE m_intgr
    USE m_juDFT
    USE m_polangle
