@@ -846,7 +846,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s
-      REAL, INTENT(OUT) :: H, dHs2_ds, d2Hs2_ds2
+      REAL, INTENT(INOUT) :: H, dHs2_ds, d2Hs2_ds2
 
       ! helper variables
       REAL :: s2, s3, s4, s5, s6
