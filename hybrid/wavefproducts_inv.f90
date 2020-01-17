@@ -38,7 +38,7 @@ CONTAINS
       INTEGER, INTENT(OUT)     :: nkqpt
 
       ! - arrays -
-      REAL, INTENT(OUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
       INTEGER                 ::    g_t(3)
@@ -46,6 +46,7 @@ CONTAINS
 
 
       CALL timestart("wavefproducts_inv5")
+      cprod = 0.0
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt = kpts%to_first_bz(kqpthlp)
@@ -92,7 +93,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(OUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm

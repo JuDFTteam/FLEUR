@@ -13,6 +13,7 @@ MODULE m_alignSpinAxisMagn
 
 USE m_magnMomFromDen
 USE m_types
+USE m_types_fleurinput
 USE m_flipcdn
 USE m_constants
 USE m_polangle
@@ -22,7 +23,7 @@ CONTAINS
 SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 ,sym,oneD,cell,noco,input,atoms,den)
    TYPE(t_input), INTENT(IN)     :: input
-   TYPE(t_atoms), INTENT(IN)     :: atoms
+   TYPE(t_atoms), INTENT(IN)  :: atoms
    TYPE(t_noco), INTENT(INOUT)   :: noco
    TYPE(t_stars),INTENT(IN)      :: stars
    TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -33,21 +34,21 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_potden), INTENT(INOUT) :: den
 
    REAL                          :: moments(3,atoms%ntype)
-   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype),pi
+   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    INTEGER                       :: i
-   pi=pimach()
+  
 !!TEMP
 !   REAL :: x,y,z
 
    phiTemp=noco%alph
    thetaTemp=noco%beta
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-  ! DO i=1, atoms%ntype
-     ! IF (abs(atoms%theta_mt_avg(i)).LE. 0.001) THEN
-     !    atoms%phi_mt_avg(i)=0.0
-     !    atoms%theta_mt_avg(i)=0.0
-     ! END IF
-  ! END DO
+   !DO i=1, atoms%ntype
+   !   IF (abs(atoms%theta_mt_avg(i)).LE. 0.0001) THEN
+   !      atoms%phi_mt_avg(i)=0.0
+   !      atoms%theta_mt_avg(i)=0.0
+   !   END IF
+   !END DO
    !write(*,*) "mx1"
    !write(*,*) moments(1,1)
    !write(*,*) "mz1"
@@ -63,24 +64,23 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    !CALL sphericaltocart(SQRT(moments(2,1)**2+moments(2,2)**2+moments(2,3)**2),thetaTemp(2),phiTemp(2),x,y,z)
    !write(*,*) x,y,z
    !write(*,*) "atoms%phi_mt_avg"
-   !!write(*,*) atoms%phi_mt_avg
+   !write(*,*) atoms%phi_mt_avg
    !write(*,*) "atoms%theta_mt_avg"
    !write(*,*) atoms%theta_mt_avg
    noco%alph=mod(noco%alph+phiTemp,2*pimach())
-   noco%beta=mod(noco%alph+thetaTemp,2*pimach())
-
-   DO i=1, atoms%ntype
-      IF(noco%alph(i)<0) noco%alph(i)=noco%alph(i)+2*pi
-      IF(noco%beta(i)<0) THEN
-         noco%beta(i)=-noco%beta(i)
-         noco%alph=noco%alph+pi
-END IF
-      IF(noco%beta(i)>pi) THEN
-         noco%beta(i)=pi-mod(noco%beta(i),pi)
-         noco%alph(i)=noco%alph(i)+pi
-      END IF
-      noco%alph=mod(noco%alph,2*pi)
-   End Do
+   noco%beta=mod(noco%beta+thetaTemp,pimach())
+   !DO i=1, atoms%ntype
+   !   IF(noco%alph(i)<0) noco%alph(i)=noco%alph(i)+2*pi
+   !   IF(noco%beta(i)<0) THEN
+   !      noco%beta(i)=-noco%beta(i)
+   !      noco%alph=noco%alph+pi
+!END IF
+ !     IF(noco%beta(i)>pi) THEN
+  !       noco%beta(i)=pi-mod(noco%beta(i),pi)
+   !      noco%alph(i)=noco%alph(i)+pi
+   !   END IF
+   !   noco%alph=mod(noco%alph,2*pi)
+   !End Do
    write(*,*) "Noco Phi"
    write(*,*) noco%alph
    write(*,*) "Noco Theta"

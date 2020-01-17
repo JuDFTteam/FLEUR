@@ -39,7 +39,7 @@ CONTAINS
       REAL, INTENT(IN)    :: vr0(:, :, :)
       LOGICAL, INTENT(IN)    :: l_real
 
-      REAL, ALLOCATABLE, INTENT(OUT)   :: eig_irr(:, :)
+      REAL, ALLOCATABLE, INTENT(INOUT)   :: eig_irr(:, :)
 
       ! local type variables
       TYPE(t_lapw)             :: lapw

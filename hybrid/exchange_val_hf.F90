@@ -453,7 +453,7 @@ CONTAINS
 
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_kpts), INTENT(IN)  :: kpts
-      REAL, INTENT(OUT) :: divergence
+      REAL, INTENT(INOUT) :: divergence
 
       INTEGER :: ix, iy, iz, sign, n
       logical :: found

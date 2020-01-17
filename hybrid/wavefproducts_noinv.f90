@@ -8,6 +8,7 @@ CONTAINS
                                    nkqpt, cprod)
       USE m_types
       use m_juDFT
+      use m_constants, only: cmplx_0
       IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)       :: input
@@ -29,13 +30,14 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       INTEGER        :: g_t(3)
       REAL           :: kqpt(3), kqpthlp(3)
 
 
       call timestart("wavefproducts_noinv5")
+      cprod = cmplx_0
 
       ! calculate nkpqt
       kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)
@@ -86,7 +88,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2

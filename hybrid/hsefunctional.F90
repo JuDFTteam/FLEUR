@@ -312,7 +312,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: bw_Hs2, bw_D_Hs2
-      REAL, INTENT(OUT) :: integral(0:12)
+      REAL, INTENT(INOUT) :: integral(0:12)
 
       ! Helper variables
       REAL :: bw_Hs2_Sqr, bw_Hs2_Cub, sqrt_bw_Hs2, &
@@ -325,6 +325,8 @@ CONTAINS
       REAL, PARAMETER :: &
          A = 1.0161144, A_2 = A/2.0, scale = 2.25/A, sqrtA = 1.008025, & !sqrt(A)
          b = 1.455915450052607
+
+      integral = 0.0
 
       ! Calculate many helper variables
       bw_Hs2_Sqr = bw_Hs2*bw_Hs2
@@ -999,10 +1001,10 @@ CONTAINS
       REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
-      COMPLEX, INTENT(OUT)   :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
+      REAL, INTENT(INOUT)    :: potential(noGPts)                           ! Fourier transformed potential
+      COMPLEX, INTENT(INOUT) :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
                                           (maxlcutm + 1)**2, ntype, MAXVAL(neq))
-      COMPLEX, INTENT(OUT)   :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
+      COMPLEX, INTENT(INOUT) :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
 
       ! private scalars
       INTEGER                :: cg, cg2, ci, cl, cn, cr                          ! counter variables
@@ -1334,11 +1336,11 @@ CONTAINS
       REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
+      REAL, INTENT(INOUT)      :: potential(noGPts)                           ! Fourier transformed potential
 #ifdef CPP_INVERSION
-      REAL, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      REAL, INTENT(INOUT)      :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #else
-      COMPLEX, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      COMPLEX, INTENT(INOUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #endif
 
       ! private scalars

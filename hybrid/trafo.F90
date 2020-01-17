@@ -35,8 +35,8 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
       COMPLEX, INTENT(IN)      ::  z_c(:,:)
-      COMPLEX, INTENT(OUT)     ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
-      COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
+      COMPLEX, INTENT(INOUT)   ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
+      COMPLEX, INTENT(INOUT)   ::  z_out(lapw%nv(jsp), ndb)
 
 !     - local -
 
@@ -544,6 +544,7 @@ CONTAINS
       USE m_constants
       USE m_util
       USE m_types
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED,CMPLX_NOT_INITALIZED
       IMPLICIT NONE
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -560,10 +561,10 @@ CONTAINS
       LOGICAL, INTENT(IN)      :: l_real
 
       REAL, INTENT(IN)         ::  vecin_r(:,:,:)
-      REAL, INTENT(OUT)        ::  vecout_r(:,:,:)
+      REAL, INTENT(INOUT)      ::  vecout_r(:,:,:)
       COMPLEX, INTENT(IN)      ::  vecin_c(:,:,:)
-      COMPLEX, INTENT(OUT)     ::  vecout_c(:,:,:)
-      COMPLEX, INTENT(OUT)     ::  phase(:,:)
+      COMPLEX, INTENT(INOUT)   ::  vecout_c(:,:,:)
+      COMPLEX, INTENT(INOUT)   ::  phase(:,:)
 
 !          - local -
 
@@ -582,6 +583,7 @@ CONTAINS
                                        -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
+      phase = cmplx_0
       call timestart("bra trafo")
 
       allocate(vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
@@ -751,8 +753,10 @@ CONTAINS
 
       if (l_real) THEN
          vecout_r = real(vecout1)
+         vecout_c = CMPLX_NOT_INITALIZED
       else
          vecout_c = vecout1
+         vecout_r = REAL_NOT_INITALIZED
       endif
       deallocate(vecout1)
       call timestop("bra trafo")
