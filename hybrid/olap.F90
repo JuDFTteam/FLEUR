@@ -170,7 +170,10 @@ CONTAINS
       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
       REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
                                   bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
-      REAL, INTENT(OUT)         :: olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(INOUT)      :: olapmt(maxval(mpdata%num_radfun_per_l), &
+                                          maxval(mpdata%num_radfun_per_l), &
+                                          0:atoms%lmaxd, &
+                                          atoms%ntype)
       TYPE(t_mat), INTENT(INOUT):: olappw
 
 !     - local -
