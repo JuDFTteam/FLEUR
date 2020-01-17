@@ -9,7 +9,7 @@ CONTAINS
   SUBROUTINE fleur_init(mpi,&
        input,field,atoms, sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybinp,&
-       oneD,coreSpecInput,hub1,wann)
+       oneD,coreSpecInput,gfinp,hub1inp,wann)
     USE m_types
     USE m_fleurinput_read_xml
     USE m_fleurinput_mpi_bc
@@ -76,7 +76,8 @@ CONTAINS
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
     TYPE(t_wann)     ,INTENT(OUT):: wann
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
-    TYPE(t_hub1ham)  ,INTENT(OUT):: hub1
+    TYPE(t_gfinp)    ,INTENT(OUT):: gfinp
+    TYPE(t_hub1inp)  ,INTENT(OUT):: hub1inp
     type(t_enparaXML)::enparaXML
     TYPE(t_forcetheo_data)::forcetheo_data
 
@@ -128,15 +129,14 @@ CONTAINS
     IF (mpi%irank.EQ.0) THEN
       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
                               sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
-                              wann,xcpot,forcetheo_data,kpts,enparaXML)
+                              wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
       call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
       Banddos,Oned,Xcpot,Kpts)
     END IF
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
          Sliceplot,Banddos,mpinp,hybinp,Oned,Corespecinput,Wann,&
-         Xcpot,Forcetheo_data,Kpts,Enparaxml,Mpi%Mpi_comm)
-
+         Xcpot,Forcetheo_data,Kpts,Enparaxml,gfinp,hub1inp,Mpi%Mpi_comm)
     !Remaining init is done using all PE
     CALL ylmnorm_init(max(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)

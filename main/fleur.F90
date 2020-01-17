@@ -81,7 +81,7 @@ CONTAINS
    !$ USE omp_lib
    IMPLICIT NONE
 
-   INTEGER, INTENT(IN)             :: mpi_comm
+   INTEGER, INTENT(IN)              :: mpi_comm
 
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
@@ -101,7 +101,7 @@ CONTAINS
     TYPE(t_mpinp)                   :: mpinp
     TYPE(t_hybinp)                  :: hybinp
     TYPE(t_hybdat)                  :: hybdat
-    TYPE(t_mpdata)                 :: mpdata
+    TYPE(t_mpdata)                  :: mpdata
     TYPE(t_oneD)                    :: oneD
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
@@ -112,8 +112,10 @@ CONTAINS
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
     TYPE(t_greensf)                 :: gOnsite
-    TYPE(t_greensf)                 :: gIntersite
-    TYPE(t_hub1ham)                 :: hub1
+    TYPE(t_gfinp)                   :: gfinp
+    TYPE(t_hub1inp)                 :: hub1inp
+    TYPE(t_hub1data)                :: hub1data
+    TYPE(t_hub1ham)                    :: hub1 !DELETE WHEN READY
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
@@ -133,7 +135,8 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,enpara,xcpot,results,kpts,mpinp,hybinp,oneD,coreSpecInput,hub1,wann)
+                    banddos,enpara,xcpot,results,kpts,mpinp,hybinp,oneD,coreSpecInput,gfinp,&
+                    hub1inp,wann)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
