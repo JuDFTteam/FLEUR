@@ -326,7 +326,11 @@ CONTAINS
          bmu = 0.0
 !        CALL setcor( itype,input%jspins,atoms,input,bmu,&
 !     &               nst,kappa,nprnc,occ_h)
+<<<<<<< HEAD
+         call atoms%econf(itype)%get_core(nst,nprnc,kappa, occ_h)
+=======
          call atoms%econf(itype)%get_core(nst, kappa, nprnc, occ_h)
+>>>>>>> b5433f1a2742d2d6de7a95caf5b67eb81a944ce4
 
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
