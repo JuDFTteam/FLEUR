@@ -103,7 +103,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error, perform_MetaGGA
-   REAL                  :: angle(sym%nop)
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,kpts,vacuum)
@@ -116,11 +115,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       !Only calculate the greens function when needed
       CALL greensfCoeffs%init(gfinp,input,atoms,noco)
       CALL gfinp%eContour(results%ef,mpi%irank,gOnsite%nz,gOnsite%e,gOnsite%de)
-      gOnsite%gmmpMat = 0.0
+      CALL gOnsite%reset(gfinp)
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
-
-   IF(gfinp%n+atoms%n_u.GT.0.AND.noco%l_mperp) CALL angles(sym,angle)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -139,12 +136,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(gfinp%n.GT.0) THEN
-        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,hub1inp,hub1data,results,angle)
+        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,&
+                           hub1inp,hub1data,results)
       ENDIF
    ENDIF
 

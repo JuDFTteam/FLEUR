@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
+                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -87,7 +87,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
-   REAL,                  OPTIONAL, INTENT(IN)    :: angle(:)
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -247,11 +246,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-         IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
-         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) CALL n_mat21(atoms,sym,angle,noccbd,we,denCoeffsOffdiag,&
-                                                                                eigVecCoeffs,den%mmpMat(:,:,:,3))
 
-         IF (gfinp%n.GT.0) CALL bzIntegrationGF(atoms,gfinp,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
+         IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
+         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) &
+                             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+
+         IF (gfinp%n.GT.0) CALL bzIntegrationGF(atoms,gfinp,sym,input,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
                                                 results%ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
 
          ! perform Brillouin zone integration and summation over the

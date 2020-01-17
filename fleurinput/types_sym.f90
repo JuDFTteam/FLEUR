@@ -33,7 +33,9 @@ MODULE m_types_sym
      !No of 2D-sym ops
      INTEGER ::nop2
      !Wigner matrix for lda+u
-     COMPLEX, ALLOCATABLE:: d_wgn(:, :, :, :)
+     COMPLEX, ALLOCATABLE :: d_wgn(:, :, :, :)
+     !Phase factors for offidagonal lda+u
+     REAL, ALLOCATABLE :: phase(:)
      !
      ! Atom sepecific stuff
      !
@@ -85,6 +87,7 @@ CONTAINS
       call mpi_bc(this%multab,rank,mpi_comm)
       call mpi_bc(this%nop2,rank,mpi_comm)
       call mpi_bc(this%d_wgn,rank,mpi_comm)
+      call mpi_bc(this%phase,rank,mpi_comm)
       call mpi_bc(this%invsatnr,rank,mpi_comm)
       call mpi_bc(this%invarop,rank,mpi_comm)
       call mpi_bc(this%invarind,rank,mpi_comm)

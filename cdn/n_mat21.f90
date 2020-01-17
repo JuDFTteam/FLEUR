@@ -1,24 +1,25 @@
 MODULE m_nmat21
-!     ************************************************************
-!     This subroutine calculates the density matrix n^{s}_{m,m'}
-!     for a given atom 'n' and l-quantum number 'l'. The l's for
-!     all atoms are stored in lda_u(), if lda_u()<0, no +U is used.
-!     For details see Eq.(12) of Shick et al. PRB 60, 10765 (1999)
-!     Part of the LDA+U package                   G.B., Oct. 2000
-!     ************************************************************
+   !------------------------------------------------------------
+   !This subroutine calculates the density matrix n^{s}_{m,m'}
+   !for a given atom 'n' and l-quantum number 'l'. The l's for
+   !all atoms are stored in lda_u(), if lda_u()<0, no +U is used.
+   !For details see Eq.(12) of Shick et al. PRB 60, 10765 (1999)
+   !Part of the LDA+U package                   G.B., Oct. 2000
+   !------------------------------------------------------------
+
+   USE m_types
+   USE m_constants
+
+   IMPLICIT NONE
+
    CONTAINS
-   SUBROUTINE n_mat21(atoms,sym,angle,ne,we,denCoeffsOffdiag,eigVecCoeffs,n_mmp)
 
-      USE m_types
-      USE m_constants
-
-      IMPLICIT NONE
+   SUBROUTINE n_mat21(atoms,sym,ne,we,denCoeffsOffdiag,eigVecCoeffs,n_mmp)
 
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffdiag
-      REAL,                      INTENT(IN)     :: angle(:)
       INTEGER,                   INTENT(IN)     :: ne
       REAL,                      INTENT(IN)     :: we(:)!(input%neig)
       COMPLEX,                   INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
@@ -113,7 +114,7 @@ MODULE m_nmat21
                   ENDDO
                   nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
                   n1_tmp =  matmul( nr_tmp, d_tmp )
-                  phase = exp(ImagUnit*angle(isi))
+                  phase = exp(ImagUnit*sym%phase(isi))
                   DO m = -l,l
                      DO mp = -l,l
                         n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac * phase

@@ -27,7 +27,7 @@ MODULE m_onsite
 
    CONTAINS
 
-   SUBROUTINE calc_onsite(atoms,gfinp,input,sym,noco,ef,angle,greensfCoeffs,g)
+   SUBROUTINE calc_onsite(atoms,gfinp,input,sym,noco,ef,greensfCoeffs,g)
 
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_gfinp),          INTENT(IN)     :: gfinp
@@ -37,9 +37,7 @@ MODULE m_onsite
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_input),          INTENT(IN)     :: input
       REAL,                   INTENT(IN)     :: ef
-      REAL,                   INTENT(IN)     :: angle(:)
 
-      !-Local Scalars
       INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom
       REAL    fac,del,eb,et
       INTEGER it,is,isi
@@ -123,7 +121,7 @@ MODULE m_onsite
                         calc_mat = matmul( transpose( conjg(d_mat) ) , &
                                     g21(ie,:,:))
                         calc_mat =  matmul( calc_mat, d_mat )
-                        phase = exp(ImagUnit*angle(isi))
+                        phase = exp(ImagUnit*sym%phase(isi))
                         DO m = -l,l
                            DO mp = -l,l
                               g%gmmpMat(ie,m,mp,3,ipm,i_gf) =&

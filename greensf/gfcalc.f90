@@ -11,14 +11,13 @@ MODULE m_gfcalc
    USE m_hybridization
    USE m_crystalfield
 
-
    IMPLICIT NONE
 
 
    CONTAINS
 
-   SUBROUTINE bzIntegrationGF(atoms,gfinp,sym,input,angle,ispin,nbands,dosWeights,resWeights,&
-                              indBound,wtkpt,ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,l21)
+   SUBROUTINE bzIntegrationGF(atoms,gfinp,sym,input,ispin,nbands,dosWeights,resWeights,indBound,&
+                              wtkpt,ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,l21)
 
       USE m_greensfImag
       USE m_greensfImag21
@@ -40,13 +39,12 @@ MODULE m_gfcalc
       REAL,                      INTENT(IN)    :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
       INTEGER,                   INTENT(IN)    :: indBound(:,:)   !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)    :: eig(:)          !Eigenvalues for the current k-point
-      REAL,                      INTENT(IN)    :: angle(:)        !Phases for spin-offdiagonal part
 
       CALL timestart("Greens Function: Imaginary Part")
       CALL greensfImag(atoms,gfinp,sym,input,ispin,nbands,dosWeights,resWeights,indBound,&
                        wtkpt,ef,eig,usdus,eigVecCoeffs,greensfCoeffs)
       IF(gfinp%l_mperp.AND.l21) THEN
-         CALL greensfImag21(atoms,gfinp,sym,angle,input,nbands,dosWeights,resWeights,indBound,&
+         CALL greensfImag21(atoms,gfinp,sym,input,nbands,dosWeights,resWeights,indBound,&
                             wtkpt,ef,eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
       ENDIF
       CALL timestop("Greens Function: Imaginary Part")
@@ -55,7 +53,7 @@ MODULE m_gfcalc
 
 
 
-   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,hub1inp,hub1data,results,angle)
+   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,hub1inp,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
@@ -69,7 +67,6 @@ MODULE m_gfcalc
       TYPE(t_hub1inp),           INTENT(IN)     :: hub1inp
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
-      REAL,                      INTENT(IN)     :: angle(:)
       TYPE(t_hub1data),          INTENT(INOUT)  :: hub1data
       TYPE(t_greensfCoeffs),     INTENT(INOUT)  :: greensfCoeffs
       TYPE(t_greensf),           INTENT(INOUT)  :: greensf
@@ -80,9 +77,9 @@ MODULE m_gfcalc
 
 
       CALL timestart("Green's Function: Postprocess")
-      CALL rot_projDOS(sym,atoms,gfinp,input,angle,greensfCoeffs)
+      CALL rot_projDOS(sym,atoms,gfinp,input,greensfCoeffs)
       !Perform the Kramer-Kronigs-Integration if we only have the imaginary part at this point
-      CALL calc_onsite(atoms,gfinp,input,sym,noco,results%ef,angle,greensfCoeffs,greensf)
+      CALL calc_onsite(atoms,gfinp,input,sym,noco,results%ef,greensfCoeffs,greensf)
       !-------------------------------------------------------------
       ! Calculate various properties from the greens function
       !-------------------------------------------------------------

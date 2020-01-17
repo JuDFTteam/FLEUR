@@ -12,14 +12,13 @@ MODULE m_rot_gf
 
    CONTAINS
 
-   SUBROUTINE rot_projDOS(sym,atoms,gfinp,input,angle,greensfCoeffs)
+   SUBROUTINE rot_projDOS(sym,atoms,gfinp,input,greensfCoeffs)
 
       TYPE(t_sym),            INTENT(IN)     :: sym
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_gfinp),          INTENT(IN)     :: gfinp
       TYPE(t_input),          INTENT(IN)     :: input
       TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
-      REAL,                   INTENT(IN)     :: angle(:)
 
       COMPLEX, ALLOCATABLE :: curr_dos(:,:,:),calc_mat(:,:,:)
       COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -69,7 +68,7 @@ MODULE m_rot_gf
                            d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                         ENDDO
                      ENDDO
-                     phase = MERGE(exp(ImagUnit*angle(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
+                     phase = MERGE(exp(ImagUnit*sym%phase(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
                      DO ie = 1, gfinp%ne
                         calc_mat(ie,:,:) = matmul( transpose( conjg(d_mat) ) , curr_dos(ie,:,:))
                         calc_mat(ie,:,:) = matmul( calc_mat(ie,:,:), d_mat )

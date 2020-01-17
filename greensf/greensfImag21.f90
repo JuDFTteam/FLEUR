@@ -24,12 +24,11 @@ MODULE m_greensfImag21
 
    CONTAINS
 
-   SUBROUTINE greensfImag21(atoms,gfinp,sym,angle,input,nbands,dosWeights,resWeights,ind,wtkpt,ef,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
+   SUBROUTINE greensfImag21(atoms,gfinp,sym,input,nbands,dosWeights,resWeights,ind,wtkpt,ef,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_sym),               INTENT(IN)     :: sym
-      REAL,                      INTENT(IN)     :: angle(:)
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
