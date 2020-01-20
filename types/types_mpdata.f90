@@ -537,22 +537,23 @@ contains
       integer                    :: ok
 
       if (.not. allocated(mpdata%num_radfun_per_l)) THEN
-         allocate (mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+         allocate (mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype), source=-1)
       endif
 
       call mpdata%set_max_indx_p_1(atoms, hybinp)
 
       if (.not. allocated(mpdata%l1)) then
-         allocate (mpdata%l1(mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
+         allocate (mpdata%l1(mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype)&
+                                 source=-1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')
 
-         allocate (mpdata%l2, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%l2, mold=mpdata%l1, source=-1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l2')
 
-         allocate (mpdata%n1, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%n1, mold=mpdata%l1, source=-1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%n1')
 
-         allocate (mpdata%n2, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%n2, mold=mpdata%l1, source=-1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%n2')
       endif
    end subroutine mpdata_init
