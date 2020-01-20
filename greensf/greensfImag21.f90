@@ -36,9 +36,9 @@ MODULE m_greensfImag21
       INTEGER,                   INTENT(IN)     :: nbands
       REAL,                      INTENT(IN)     :: wtkpt
       REAL,                      INTENT(IN)     :: ef
-      REAL,                      INTENT(IN)     :: dosWeights(:,:)
-      REAL,                      INTENT(IN)     :: resWeights(:,:)
-      INTEGER,                   INTENT(IN)     :: ind(:,:)
+      REAL,    ALLOCATABLE,      INTENT(IN)     :: resWeights(:,:)
+      REAL,    ALLOCATABLE,      INTENT(IN)     :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+      INTEGER, ALLOCATABLE,      INTENT(IN)     :: ind(:,:)        !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)     :: eig(:)
 
       INTEGER  i_gf,nType,l,natom,ib,j
@@ -99,7 +99,11 @@ MODULE m_greensfImag21
 
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
 
-                        weight = -2.0/input%jspins*ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/del,l_tria)
+                        IF(l_tria) THEN
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
+                        ELSE
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * wtkpt/del
+                        ENDIF
                         !
                         !Contribution from states
                         !

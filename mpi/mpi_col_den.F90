@@ -413,7 +413,7 @@ CONTAINS
 
     !+lda+U
     IF ( atoms%n_u.GT.0 ) THEN
-       n = 49*atoms%n_u 
+       n = 49*atoms%n_u
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -421,7 +421,7 @@ CONTAINS
        ENDIF
        DEALLOCATE (c_b)
        IF(noco%l_mperp.AND.jspin.EQ.1) THEN
-         n = 49*atoms%n_u 
+         n = 49*atoms%n_u
          ALLOCATE(c_b(n))
          CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
          IF (mpi%irank.EQ.0) THEN
@@ -433,28 +433,28 @@ CONTAINS
     !-lda+U
 
     !+green's functions
-    IF(gfinp%n.GT.0 ) THEN
+    IF(gfinp%n.GT.0) THEN
        IF(PRESENT(greensfCoeffs)) THEN
          n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
          ALLOCATE(c_b(n))
-         CALL MPI_REDUCE(greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
+         CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,:,:,:,:,jspin),1)
          IF(.NOT.gfinp%l_sphavg) THEN
-           CALL MPI_REDUCE(greensfCoeffs%uu(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%uu(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%du(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%du(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%dd(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%dd(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%ud(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%ud(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,jspin),1)
+           CALL MPI_REDUCE(greensfCoeffs%uu(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%uu(:,:,:,:,:,jspin),1)
+           CALL MPI_REDUCE(greensfCoeffs%du(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%du(:,:,:,:,:,jspin),1)
+           CALL MPI_REDUCE(greensfCoeffs%dd(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%dd(:,:,:,:,:,jspin),1)
+           CALL MPI_REDUCE(greensfCoeffs%ud(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%ud(:,:,:,:,:,jspin),1)
          ENDIF
          DEALLOCATE(c_b)
          IF(gfinp%l_mperp.AND.jspin.EQ.1) THEN
            n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
            ALLOCATE(c_b(n))
-           CALL MPI_REDUCE(greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,0:,:,3),1)
+           CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,:,:,:,:,3),1)
            DEALLOCATE(c_b)
          ENDIF
        ENDIF

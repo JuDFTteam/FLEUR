@@ -77,18 +77,18 @@ MODULE m_onsite
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                DO m= -l,l
                   DO mp= -lp,lp
-                     CALL kkintgr(REAL(greensfCoeffs%projdos(1:kkcut,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
+                     CALL kkintgr(REAL(greensfCoeffs%projdos(:,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
                                  g%gmmpMat(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                      IF(.NOT.gfinp%l_sphavg) THEN
                         ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                         ! We can do this because the radial functions are independent of E
-                        CALL kkintgr(REAL(greensfCoeffs%uu(1:kkcut,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
+                        CALL kkintgr(REAL(greensfCoeffs%uu(:,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
                                     g%uu(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
-                        CALL kkintgr(REAL(greensfCoeffs%dd(1:kkcut,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
+                        CALL kkintgr(REAL(greensfCoeffs%dd(:,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
                                     g%dd(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
-                        CALL kkintgr(REAL(greensfCoeffs%du(1:kkcut,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
+                        CALL kkintgr(REAL(greensfCoeffs%du(:,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
                                     g%du(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
-                        CALL kkintgr(REAL(greensfCoeffs%ud(1:kkcut,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
+                        CALL kkintgr(REAL(greensfCoeffs%ud(:,m,mp,0,i_gf,jspin)),eb,del,kkcut,&
                                     g%ud(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                      ENDIF
                   ENDDO
@@ -111,7 +111,7 @@ MODULE m_onsite
                   DO it = 1, sym%invarind(natom)
                      is = sym%invarop(natom,it)
                      isi = sym%invtab(is)
-                     d_mat(:,:) = cmplx(0.0,0.0)
+                     d_mat(:,:) = cmplx_0
                      DO m = -l,l
                         DO mp = -l,l
                            d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)

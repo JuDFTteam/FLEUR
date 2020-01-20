@@ -56,9 +56,9 @@ MODULE m_rot_gf
                   ELSE IF(imat.EQ.5) THEN
                      curr_dos(:,:,:) = greensfCoeffs%du(:,:,:,nn,i_gf,ispin)
                   ENDIF
-                  DO m = -l ,l
-                     IF(ANY(AIMAG(curr_dos(:,m,m)).GT.0.0).AND.ispin<3) CALL juDFT_error("curr_dos>0")
-                  ENDDO
+                  !DO m = -l ,l
+                  !   IF(ANY(AIMAG(curr_dos(:,m,m)).GT.0.0).AND.ispin<3) CALL juDFT_error("curr_dos>0")
+                  !ENDDO
                   DO it = 1, sym%invarind(natom)
                      is = sym%invarop(natom,it)
                      isi = sym%invtab(is)
@@ -68,7 +68,8 @@ MODULE m_rot_gf
                            d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                         ENDDO
                      ENDDO
-                     phase = MERGE(exp(ImagUnit*sym%phase(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
+                     IF(ispin<3)  phase = 1.0
+                     IF(ispin==3) phase = exp(ImagUnit*sym%phase(isi))
                      DO ie = 1, gfinp%ne
                         calc_mat(ie,:,:) = matmul( transpose( conjg(d_mat) ) , curr_dos(ie,:,:))
                         calc_mat(ie,:,:) = matmul( calc_mat(ie,:,:), d_mat )
