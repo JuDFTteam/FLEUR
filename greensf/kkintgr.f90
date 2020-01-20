@@ -45,7 +45,7 @@ MODULE m_kkintgr
       INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
 
       !Information about the complex energy contour
-      COMPLEX,       INTENT(OUT) :: g(:)       !Green's function on the complex plane
+      COMPLEX,       INTENT(INOUT) :: g(:)       !Green's function on the complex plane
       COMPLEX,       INTENT(IN)  :: ez(:)      !Complex energy contour
       LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
       INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
@@ -64,7 +64,6 @@ MODULE m_kkintgr
       ENDDO
 
       CALL timestart("kkintgr: integration")
-      g = 0.0
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
       !$OMP SHARED(g,ez,im,e) &
@@ -108,8 +107,6 @@ MODULE m_kkintgr
 
    COMPLEX FUNCTION g_circle(im,ne,z,del,eb)
 
-      IMPLICIT NONE
-
       REAL,    INTENT(IN) :: im(:)
       INTEGER, INTENT(IN) :: ne
       COMPLEX, INTENT(IN) :: z
@@ -129,8 +126,6 @@ MODULE m_kkintgr
    END FUNCTION g_circle
 
    REAL FUNCTION re_ire(im,ne,ire,method)
-
-      IMPLICIT NONE
 
       REAL,    INTENT(IN)  :: im(:) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
@@ -183,15 +178,11 @@ MODULE m_kkintgr
    !This is essentially smooth out of m_smooth but with a lorentzian distribution
    SUBROUTINE lorentzian_smooth(dx,f,sigma,n)
 
-      IMPLICIT NONE
-
-!    Arguments
       INTEGER, INTENT(IN)    :: n
       REAL,    INTENT(INOUT) :: f(:)
       REAL,    INTENT(IN)    :: sigma
       REAL,    INTENT(IN)    :: dx
 
-!    Locals
       REAL :: c , f0(n)
       INTEGER :: i , j , j1 , j2 , m1, m
 
@@ -228,15 +219,13 @@ MODULE m_kkintgr
             je = je+1
          ENDDO
       ENDDO
-      IF(ANY(ieee_IS_NAN(f(:)))) CALL juDFT_error("Smoothing failed", calledby="lorentzian_smooth")
+      !IF(ANY(ieee_IS_NAN(f(:)))) CALL juDFT_error("Smoothing failed", calledby="lorentzian_smooth")
 
 
    END SUBROUTINE lorentzian_smooth
 
    !General Purpose trapezian method integration (not used in kkintgr)
    REAL FUNCTION trapz(y,h,n)
-
-      IMPLICIT NONE
 
       REAL,          INTENT(IN)     :: y(:)
 
@@ -248,9 +237,7 @@ MODULE m_kkintgr
 
       trapz = y(1)
       DO i = 2, n-1
-
          trapz = trapz + 2*y(i)
-
       ENDDO
       trapz = trapz + y(n)
 

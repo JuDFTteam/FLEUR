@@ -36,9 +36,9 @@ MODULE m_greensfImag21
       INTEGER,                   INTENT(IN)     :: nbands
       REAL,                      INTENT(IN)     :: wtkpt
       REAL,                      INTENT(IN)     :: ef
-      REAL,                      INTENT(IN)     :: dosWeights(:,:)
-      REAL,                      INTENT(IN)     :: resWeights(:,:)
-      INTEGER,                   INTENT(IN)     :: ind(:,:)
+      REAL,    ALLOCATABLE,      INTENT(IN)     :: resWeights(:,:)
+      REAL,    ALLOCATABLE,      INTENT(IN)     :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+      INTEGER, ALLOCATABLE,      INTENT(IN)     :: ind(:,:)        !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)     :: eig(:)
 
       INTEGER  i_gf,nType,l,natom,ib,j
@@ -55,7 +55,7 @@ MODULE m_greensfImag21
       l_tria=.false.
 
       !Get the information on the real axis energy mesh
-      CALL gfinp%eMesh(ef,del,eb)
+      CALL gfinp%eMesh(ef,del_out=del,eb_out=eb)
 
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(wtkpt,nbands,l_tria,del,eb) &
@@ -68,7 +68,7 @@ MODULE m_greensfImag21
          nType = gfinp%elem(i_gf)%atomType
          l =     gfinp%elem(i_gf)%l
 
-         ALLOCATE(im(gfinp%ne,MERGE(1,5,gfinp%l_sphavg)))
+         ALLOCATE(im(gfinp%ne,MERGE(1,5,gfinp%l_sphavg)),source=cmplx_0)
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
@@ -77,7 +77,7 @@ MODULE m_greensfImag21
                lm = l*(l+1) + m
                DO mp = -l, l
                   lmp = l*(l+1) + mp
-                  im = 0.0
+                  im = cmplx_0
                   !Loop through bands
                   DO ib = 1, nbands
 
@@ -99,7 +99,11 @@ MODULE m_greensfImag21
 
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
 
-                        weight = -2.0/input%jspins*ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/del,l_tria)
+                        IF(l_tria) THEN
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
+                        ELSE
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * wtkpt/del
+                        ENDIF
                         !
                         !Contribution from states
                         !

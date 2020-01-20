@@ -35,9 +35,9 @@ MODULE m_gfcalc
       REAL,                      INTENT(IN)    :: wtkpt  !Weight of the current k-point
       REAL,                      INTENT(IN)    :: ef
       LOGICAL,                   INTENT(IN)    :: l21    !Calculate spin off-diagonal part ?
-      REAL,                      INTENT(IN)    :: resWeights(:,:)
-      REAL,                      INTENT(IN)    :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
-      INTEGER,                   INTENT(IN)    :: indBound(:,:)   !Gives the range where the tetrahedron weights are non-zero
+      REAL,    ALLOCATABLE,      INTENT(IN)    :: resWeights(:,:)
+      REAL,    ALLOCATABLE,      INTENT(IN)    :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+      INTEGER, ALLOCATABLE,      INTENT(IN)    :: indBound(:,:)   !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)    :: eig(:)          !Eigenvalues for the current k-point
 
       CALL timestart("Greens Function: Imaginary Part")

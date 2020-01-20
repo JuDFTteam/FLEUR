@@ -361,7 +361,7 @@ CONTAINS
             IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
          ENDIF
          !If we are here we found the element
-         l_found=.TRUE.
+         IF(PRESENT(l_found)) l_found=.TRUE.
          search = .FALSE.
       ENDDO
    END FUNCTION find_gfelem
@@ -411,7 +411,7 @@ CONTAINS
       CLASS(t_gfinp),       INTENT(IN)    :: this
       REAL,                 INTENT(IN)    :: ef
       INTEGER,              INTENT(IN)    :: irank
-      INTEGER,              INTENT(INOUT) :: nz
+      INTEGER,              INTENT(IN)    :: nz
       COMPLEX, ALLOCATABLE, INTENT(INOUT) :: e(:)
       COMPLEX, ALLOCATABLE, INTENT(INOUT) :: de(:)
 
@@ -421,21 +421,8 @@ CONTAINS
       REAL r, xr
       REAL, ALLOCATABLE :: x(:), w(:)
 
-      IF(ALLOCATED(e)) DEALLOCATE(e)
-      IF(ALLOCATED(de)) DEALLOCATE(de)
-
-      IF(this%mode.EQ.1) THEN
-         nz = this%n1+this%n2+this%n3+this%nmatsub
-      ELSE IF(this%mode.EQ.2) THEN
-         nz = this%ncirc
-      ELSE IF(this%mode.EQ.3) THEN
-         nz = this%nDOS
-      ELSE
-         CALL juDFT_error("No valid energy contour mode",calledby="eContour_gfinp")
-      ENDIF
-
-      ALLOCATE(e(nz),source=cmplx_0)
-      ALLOCATE(de(nz),source=cmplx_0)
+      !Make sure that the arrays are allocated
+      IF(.NOT.(ALLOCATED(e).AND.ALLOCATED(de))) CALL juDFT_error("e or de array not allocated",calledby="eContour_gfinp")
 
       !Help arrays
       ALLOCATE(x(nz),source=0.0)

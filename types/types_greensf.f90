@@ -92,6 +92,19 @@ MODULE m_types_greensf
                                hint="This is a bug in FLEUR, please report",&
                                calledby="greensf_init")
             ENDIF
+         ELSE
+            IF(gfinp%mode.EQ.1) THEN
+               thisGREENSF%nz = gfinp%n1+gfinp%n2+gfinp%n3+gfinp%nmatsub
+            ELSE IF(gfinp%mode.EQ.2) THEN
+               thisGREENSF%nz = gfinp%ncirc
+            ELSE IF(gfinp%mode.EQ.3) THEN
+               thisGREENSF%nz = gfinp%nDOS
+            ELSE
+               CALL juDFT_error("No valid energy contour mode",calledby="greensf_init")
+            ENDIF
+
+            ALLOCATE(thisGREENSF%e(thisGREENSF%nz),source=cmplx_0)
+            ALLOCATE(thisGREENSF%de(thisGREENSF%nz),source=cmplx_0)
          ENDIF
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
