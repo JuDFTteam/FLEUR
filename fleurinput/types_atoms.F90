@@ -125,7 +125,6 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  ELSE
     rank=0
  END IF
- PRINT *,"Attention, HUB1 parameters not in BC"
  CALL mpi_bc(this%ntype,rank,mpi_comm)
  CALL mpi_bc(this%nat,rank,mpi_comm)
  CALL mpi_bc(this%nlod,rank,mpi_comm)
