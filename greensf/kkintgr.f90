@@ -13,9 +13,10 @@ MODULE m_kkintgr
    !
    !------------------------------------------------------------------------------
    USE ieee_arithmetic
-
    USE m_constants
    USE m_juDFT
+
+   IMPLICIT NONE
 
    INTEGER, PARAMETER :: method_maclaurin = 1
    INTEGER, PARAMETER :: method_deriv     = 2
@@ -36,8 +37,6 @@ MODULE m_kkintgr
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
       USE m_smooth
-
-      IMPLICIT NONE
 
       !Information about the integrand
       REAL,          INTENT(IN)  :: im(:)      !Imaginary part of the green's function on the real axis

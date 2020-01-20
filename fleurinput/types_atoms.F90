@@ -13,23 +13,6 @@ MODULE m_types_atoms
   IMPLICIT NONE
   PRIVATE
 
-  TYPE t_gfelementtype
-     SEQUENCE
-     !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
-     INTEGER :: l=-1
-     INTEGER :: lp=-1
-     INTEGER :: atomType=0
-     INTEGER :: atomTypep=0
-  END TYPE t_gfelementtype
-
-  TYPE t_j0calctype
-     INTEGER :: atomType=0  !atom Type for which to calculate J0
-     INTEGER :: l_min=-1     !Minimum l considered
-     INTEGER :: l_max=-1     !Maximum l considered
-     LOGICAL :: l_avgexc=.FALSE.  !Determines wether we average over the exchange splittings for all l
-     LOGICAL :: l_eDependence=.FALSE.  !Switch to output J0 with variating fermi energy (only with contourDOS)
-  END TYPE t_j0calctype
-
   TYPE t_utype
      SEQUENCE
      REAL :: u=0.0, j=0.0         ! the actual U and J parameters
@@ -53,10 +36,6 @@ MODULE m_types_atoms
   INTEGER ::n_u=0
   ! no of lda+hubbard1s
   INTEGER :: n_hia=0
-  ! no of j0 calculations
-  INTEGER :: n_j0=0
-  ! no of greens function calculations (in total)
-  INTEGER :: n_gf=0
   ! dimensions
   INTEGER :: jmtd=-1
   INTEGER :: msh=0 !core state mesh was in dimension
@@ -115,11 +94,6 @@ MODULE m_types_atoms
   !lda+hubbard1 information is attached behind lda+u
   !so the dimension actually used is atoms%n_u+atoms%n_hia
   TYPE(t_utype), ALLOCATABLE::lda_u(:)
-  !greens function information(4*ntype)
-  TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
-  !j0 calc information(4*ntype)
-  TYPE(t_j0calctype), ALLOCATABLE::j0(:)
-
   INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
   !flipSpinTheta and flipSpinPhi are the angles which are given
   !in the input to rotate the charge den by these polar angles.
@@ -133,7 +107,6 @@ CONTAINS
   PROCEDURE :: init=>init_atoms
   PROCEDURE :: nsp => calc_nsp_atom
   PROCEDURE :: same_species
-  PROCEDURE :: add_gfjob
   PROCEDURE :: read_xml => read_xml_atoms
   PROCEDURE :: mpi_bc=>mpi_bc_atoms
 END TYPE t_atoms
@@ -280,8 +253,6 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%label(this%nat))
  ALLOCATE(this%pos(3,this%nat))
  ALLOCATE(this%rmt(this%ntype))
- ALLOCATE(this%j0(this%ntype))
- ALLOCATE(this%gfelem(4*This%ntype))
  ALLOCATE(this%econf(this%ntype))
  ALLOCATE(this%ncv(this%ntype)) ! For what is this?
  ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
@@ -579,47 +550,4 @@ SUBROUTINE init_atoms(this,cell)
  WHERE (ABS(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
  this%pos(:,:) = MATMUL(cell%amat,this%taual(:,:))
 END SUBROUTINE init_atoms
-
-SUBROUTINE add_gfjob(this,nType,lmin,lmax,l_off,l_inter,l_nn)
-
- USE m_juDFT
-
- CLASS(t_atoms),   INTENT(INOUT)  :: this
- INTEGER,          INTENT(IN)     :: nType
- INTEGER,          INTENT(IN)     :: lmin
- INTEGER,          INTENT(IN)     :: lmax
- LOGICAL,          INTENT(IN)     :: l_off !l!=lp
- LOGICAL,          INTENT(IN)     :: l_inter
- LOGICAL,          INTENT(IN)     :: l_nn
-
- INTEGER l,lp,i_gf
- LOGICAL l_found
-
- IF(l_inter) CALL juDFT_error("Intersite greens function not yet implemented",calledby="add_gfjob")
-
- !TODO: add the nearest neighbours jobs
-
- DO l = lmin, lmax
-    DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-       !Check if this job has already been added
-       l_found = .FALSE.
-       DO i_gf = 1, this%n_gf
-          IF(this%gfelem(i_gf)%l.NE.l) CYCLE
-          IF(this%gfelem(i_gf)%lp.NE.lp) CYCLE
-          IF(this%gfelem(i_gf)%atomType.NE.nType) CYCLE
-          IF(this%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
-          l_found = .TRUE.
-       ENDDO
-       IF(l_found) CYCLE !This job is already in the array
-
-       this%n_gf = this%n_gf + 1
-       this%gfelem(this%n_gf)%l = l
-       this%gfelem(this%n_gf)%atomType = nType
-       this%gfelem(this%n_gf)%lp = lp
-       this%gfelem(this%n_gf)%atomTypep = nType !For now
-
-    ENDDO
- ENDDO
-
-END SUBROUTINE add_gfjob
 END MODULE m_types_atoms

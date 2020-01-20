@@ -29,7 +29,7 @@ types/types_mpdata.f90
 types/types_hybdat.f90
 types/types_greensf.f90
 types/types_greensfCoeffs.f90
-types/types_hub1ham.f90
+types/types_hub1data.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}

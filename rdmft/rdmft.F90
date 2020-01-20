@@ -10,7 +10,7 @@ CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
                  sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpinp,mpdata,hybinp, hybdat,&
-                 results,coreSpecInput,archiveType,outDen)
+                 gfinp,hub1inp,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -67,6 +67,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_mpdata),        intent(inout) :: mpdata
    TYPE(t_hybinp),        INTENT(IN)    :: hybinp
    TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
+   TYPE(t_gfinp),         INTENT(IN)    :: gfinp
+   TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(INOUT) :: outDen
@@ -322,7 +324,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
             CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                        sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments)
+                        sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments,&
+                        gfinp,hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
@@ -436,7 +439,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
          CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                     sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
+                     sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments,&
+                     gfinp,hub1inp)
       END DO
 
       CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
@@ -763,7 +767,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,kpts,atoms,sphhar,stars,sym,&
+   CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy

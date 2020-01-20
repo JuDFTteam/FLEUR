@@ -2048,7 +2048,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       LOGICAL, INTENT(IN)    :: lwrite
-      INTEGER, INTENT(OUT)   :: nptsh, nshell
+      INTEGER, INTENT(INOUT)   :: nptsh, nshell
       INTEGER, ALLOCATABLE   :: ptsh(:, :)
       REAL, ALLOCATABLE   :: radsh(:)
       REAL, INTENT(IN)    :: rad, lat(:,:)
@@ -2142,7 +2142,7 @@ CONTAINS
 
       INTEGER, INTENT(IN)  :: ngpt(:), gpt(:,:), pgpt(:, :)!(dim,kpts%nkpt)
       REAL, ALLOCATABLE :: qnrm(:), help(:)
-      INTEGER, INTENT(OUT) :: nqnrm
+      INTEGER, INTENT(INOUT) :: nqnrm
       INTEGER, ALLOCATABLE :: pqnrm(:, :)
       INTEGER               :: i, j, ikpt, igpt, igptp
       REAL                  :: q(3), qnorm
@@ -2187,7 +2187,7 @@ CONTAINS
       INTEGER, INTENT(IN)  :: itype, nqnrm, iqnrm1, iqnrm2, l
       REAL, INTENT(IN)  :: qnrm(nqnrm), sphbes0(-1:hybinp%lexp + 2, atoms%ntype, nqnrm)
       LOGICAL, INTENT(IN), OPTIONAL  ::  l_warnin
-      LOGICAL, INTENT(OUT), OPTIONAL  ::  l_warnout
+      LOGICAL, INTENT(INOUT), OPTIONAL  ::  l_warnout
       REAL                  :: sphbessel_integral
       REAL                  :: q1, q2, dq, s, sb01, sb11, sb21, sb31, sb02, sb12
       REAL                  :: sb22, sb32, a1, a2, da, b1, b2, db, c1, c2, dc, r1, r2

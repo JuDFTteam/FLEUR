@@ -1,49 +1,42 @@
 MODULE m_hubbard1_setup
 
    USE m_juDFT
+   USE m_types
+   USE m_constants
 
    IMPLICIT NONE
 
    LOGICAL, PARAMETER :: l_setupdebug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
-
-
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,input,mpi,noco,pot,gdft,hub1,results,den)
+   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,mpi,noco,pot,gdft,hub1data,results,den)
 
-      USE m_types
-      USE m_constants
       USE m_uj2f
       USE m_mudc
       USE m_denmat_dist
       USE m_gfcalc
       USE m_hubbard1_io
       USE m_add_selfen
+      USE m_mpi_bc_tool
 #ifdef CPP_EDSOLVER
       USE EDsolver, only: EDsolver_from_cfg
-#endif
-#ifdef CPP_MPI
-      INCLUDE "mpif.h"
 #endif
 
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_gfinp),    INTENT(IN)     :: gfinp
+      TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
-      TYPE(t_hub1ham),  INTENT(INOUT)  :: hub1
+      TYPE(t_hub1data), INTENT(INOUT)  :: hub1data
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
-#ifdef CPP_MPI
-      EXTERNAL MPI_BCAST
-#endif
-
-      !-- Local Scalars
       INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
@@ -53,10 +46,8 @@ MODULE m_hubbard1_setup
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=8)   :: l_type*2,l_form*9
 
-      !-- Local Types
       TYPE(t_greensf)    :: gu
 
-      !-- Local Arrays
       REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL    :: n_l(atoms%n_hia,input%jspins)
@@ -82,11 +73,12 @@ MODULE m_hubbard1_setup
          !The onsite green's function was calculated but the solver
          !was not yet run
          !--> write out the configuration for the hubbard 1 solver
-         IF(.NOT.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
-         CALL gu%init(input,lmaxU_const,atoms,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de)
-         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2,atoms%n_hia))
-         selfen = 0.0
+         IF(ALL(ABS(gdft%gmmpMat(:,:,:,:,:,:)).LT.1e-12)) &
+            CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
 
+         CALL gu%init(gfinp,input,noco,nz_in=gdft%nz,e_in=gdft%e,de_in=gdft%de)
+
+         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2,atoms%n_hia),source=cmplx_0)
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
@@ -115,14 +107,14 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
-            IF(hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
-               n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
-               DO i_exc = 1, hub1%n_exc_given(i_hia)
-                  hub1%mag_mom(i_hia,i_exc) = hub1%init_mom(i_hia,i_exc)
+            IF(hub1data%iter.EQ.1.AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)) THEN
+               n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
+               DO i_exc = 1, hub1inp%n_exc(i_hia)
+                  hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
                ENDDO
             ELSE
                !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,l,nType,atoms,input,mmpMat(:,:,i_hia,:),occ_err)
+               CALL occmtx(gdft,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
@@ -162,7 +154,7 @@ MODULE m_hubbard1_setup
                   !-------------------------------------------------------
                   !Is a crystal field matrix present in the work directory
                   INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1data%ccfmat(i_hia,-l:l,-l:l),l)
                   !Is a bath parameter file present
                   INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
                   !Copy the bath file to the Hubbard 1 solver if its present
@@ -170,16 +162,16 @@ MODULE m_hubbard1_setup
                   !-------------------------------------------------------
                   ! Write the main config files
                   !-------------------------------------------------------
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,&
-                                     l_bathexist,hub1%iter==1.AND.ALL(pot%mmpmat(:,:,indStart:indEnd,:).EQ.0.0),.true.)
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1inp,hub1data,mu_dc,n_occ,&
+                                     l_bathexist,hub1data%iter==1.AND.ALL(ABS(pot%mmpmat(:,:,indStart:indEnd,:)).LT.1e-12),.true.)
                ELSE
                   !If no Solver is linked we assume that the old solver is used and we write out some additional files
                   !Crystal field matrix (old version)
-                  IF(hub1%ccf(i_hia).NE.0.0) THEN
-                     CALL write_ccfmat(xPath,hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                  IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
+                     CALL write_ccfmat(xPath,hub1data%ccfmat(i_hia,-l:l,-l:l),l)
                   ENDIF
                   !Energy contour (old version)
-                  IF(gdft%mode.NE.3) THEN
+                  IF(gfinp%mode.NE.3) THEN
                      OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
                      DO iz = 1, gdft%nz
                         WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
@@ -189,7 +181,7 @@ MODULE m_hubbard1_setup
                   !-------------------------------------------------------
                   ! Write the main config files (old version)
                   !-------------------------------------------------------
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.,.false.)
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1inp,hub1data,mu_dc,n_occ,.false.,.false.,.false.)
                ENDIF
             ENDIF
          ENDDO
@@ -266,14 +258,14 @@ MODULE m_hubbard1_setup
             ! so that the occupation of the correlated orbital does not change
             !----------------------------------------------------------------------
             CALL timestart("Hubbard 1: Add Selfenenergy")
-            CALL add_selfen(gdft,selfen,atoms,input,noco,hub1,results%ef,n_l,gu,mmpMat)
+            CALL add_selfen(gdft,selfen,atoms,gfinp,input,noco,hub1inp,results%ef,n_l,gu,mmpMat)
             CALL timestop("Hubbard 1: Add Selfenenergy")
             IF(l_setupdebug) THEN
                DO i_hia = 1, atoms%n_hia
                   nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                   l = atoms%lda_u(atoms%n_u+i_hia)%l
-                  CALL gfDOS(gdft,l,nType,800+i_hia+hub1%iter,atoms,input,results%ef)
-                  CALL gfDOS(gu,l,nType,900+i_hia+hub1%iter,atoms,input,results%ef)
+                  CALL gfDOS(gdft,l,nType,800+i_hia+hub1data%iter,gfinp,input,results%ef)
+                  CALL gfDOS(gu,l,nType,900+i_hia+hub1data%iter,gfinp,input,results%ef)
                   CALL writeSelfenElement(selfen(:,:,:,1,i_hia),gdft%e,results%ef,gdft%nz,2*l+1)
                ENDDO
             ENDIF
@@ -281,7 +273,7 @@ MODULE m_hubbard1_setup
             ! Calculate the distance and update the density matrix
             !----------------------------------------------------------------------
             DO i_hia = 1, atoms%n_hia
-               CALL n_mmp_dist(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,results)
+               CALL n_mmp_dist(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
                DO ispin = 1, MERGE(3,input%jspins,noco%l_mperp)
                   den%mmpMat(:,:,atoms%n_u+i_hia,ispin) = mmpMat(:,:,i_hia,ispin)
                ENDDO
@@ -302,11 +294,9 @@ MODULE m_hubbard1_setup
             !If we are here the solver was run and we go to MPI_BCAST
          ENDIF
       ENDIF
-#ifdef CPP_MPI
-      !Broadcast the density matrix here
-      CALL MPI_BCAST(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
-                     49*atoms%n_hia*MERGE(3,input%jspins,noco%l_mperp),MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-#endif
+
+      !Broadcast the density matrix
+      CALL mpi_bc(den%mmpMat,mpi%irank,mpi%mpi_comm)
 
       !FORMAT Statements:
 9010  FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
@@ -316,8 +306,6 @@ MODULE m_hubbard1_setup
    END SUBROUTINE hubbard1_setup
 
    SUBROUTINE swapSpin(mat,ns)
-
-      IMPLICIT NONE
 
       COMPLEX,       INTENT(INOUT) :: mat(:,:)
       INTEGER,       INTENT(IN)    :: ns
@@ -352,9 +340,6 @@ MODULE m_hubbard1_setup
 
    SUBROUTINE removeU(mat,l,jspins,l_vmperp,vmmp)
 
-      USE m_constants
-
-      IMPLICIT NONE
       COMPLEX,       INTENT(INOUT) :: mat(:,:)
       INTEGER,       INTENT(IN)    :: l
       INTEGER,       INTENT(IN)    :: jspins
@@ -394,10 +379,6 @@ MODULE m_hubbard1_setup
       ! Hubbard1/ if only one Hubbard1 prodcedure is run
       ! Hubbard1/atom_label_l if there are more
 
-      USE m_types
-
-      IMPLICIT NONE
-
       TYPE(t_atoms),       INTENT(IN)  :: atoms
       INTEGER,             INTENT(IN)  :: i_hia
       CHARACTER(len=300),  INTENT(OUT) :: xPath
@@ -423,10 +404,6 @@ MODULE m_hubbard1_setup
 
    SUBROUTINE writeSelfenElement(selfen,e,ef,nz,ns)
 
-      USE m_constants
-
-      IMPLICIT NONE
-
       INTEGER,       INTENT(IN)  :: nz,ns
       REAL,          INTENT(IN)  :: ef
       COMPLEX,       INTENT(IN)  :: selfen(:,:,:)
@@ -449,7 +426,6 @@ MODULE m_hubbard1_setup
       ENDDO
 
       CLOSE(unit=3456)
-
 
    END SUBROUTINE writeSelfenElement
 

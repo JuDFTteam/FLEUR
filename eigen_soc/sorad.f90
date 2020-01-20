@@ -9,7 +9,7 @@ MODULE m_sorad
   !     generates radial spin-orbit matrix elements
   !*********************************************************************
 CONTAINS
-  SUBROUTINE sorad(atoms,input,ntyp,vr,enpara,spav,rsoc,usdus)
+  SUBROUTINE sorad(atoms,input,ntyp,vr,enpara,spav,rsoc,usdus,hub1inp)
 
     USE m_constants, ONLY : c_light
     USE m_intgr,     ONLY : intgr0
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_usdus),INTENT(INOUT) :: usdus
     TYPE(t_rsoc),INTENT(INOUT)  :: rsoc
+    TYPE(t_hub1inp),OPTIONAL,INTENT(IN)  :: hub1inp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ntyp
@@ -60,10 +61,11 @@ CONTAINS
           ENDIF
        ENDDO
        DO jspin = 1,input%jspins
-          IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
-             vrTmp = (vr(:,1)+vr(:,2))/2.0
-          ELSE
-             vrTmp = vr(:,jspin)
+          vrTmp = vr(:,jspin)
+          IF(l_hia.AND.input%jspins.EQ.2) THEN
+             IF(PRESENT(hub1inp)) THEN
+                IF(.NOT.hub1inp%l_dftspinpol) vrTmp = (vr(:,1)+vr(:,2))/2.0
+             ENDIF
           ENDIF
           !
           !--->    calculate normalized function at e: p and q 

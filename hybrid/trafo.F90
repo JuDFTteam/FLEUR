@@ -35,8 +35,8 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
       COMPLEX, INTENT(IN)      ::  z_c(:,:)
-      COMPLEX, INTENT(OUT)     ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
-      COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
+      COMPLEX, INTENT(INOUT)   ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
+      COMPLEX, INTENT(INOUT)   ::  z_out(lapw%nv(jsp), ndb)
 
 !     - local -
 
@@ -544,6 +544,7 @@ CONTAINS
       USE m_constants
       USE m_util
       USE m_types
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED,CMPLX_NOT_INITALIZED
       IMPLICIT NONE
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -560,10 +561,10 @@ CONTAINS
       LOGICAL, INTENT(IN)      :: l_real
 
       REAL, INTENT(IN)         ::  vecin_r(:,:,:)
-      REAL, INTENT(OUT)        ::  vecout_r(:,:,:)
+      REAL, INTENT(INOUT)      ::  vecout_r(:,:,:)
       COMPLEX, INTENT(IN)      ::  vecin_c(:,:,:)
-      COMPLEX, INTENT(OUT)     ::  vecout_c(:,:,:)
-      COMPLEX, INTENT(OUT)     ::  phase(:,:)
+      COMPLEX, INTENT(INOUT)   ::  vecout_c(:,:,:)
+      COMPLEX, INTENT(INOUT)   ::  phase(:,:)
 
 !          - local -
 
@@ -582,6 +583,7 @@ CONTAINS
                                        -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
+      phase = cmplx_0
       call timestart("bra trafo")
 
       allocate(vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
@@ -751,8 +753,10 @@ CONTAINS
 
       if (l_real) THEN
          vecout_r = real(vecout1)
+         vecout_c = CMPLX_NOT_INITALIZED
       else
          vecout_c = vecout1
+         vecout_r = REAL_NOT_INITALIZED
       endif
       deallocate(vecout1)
       call timestop("bra trafo")
@@ -764,7 +768,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
-      COMPLEX, INTENT(OUT)     :: cfac
+      COMPLEX, INTENT(INOUT)   :: cfac
       REAL                    :: rdum, rmax
       INTEGER                 :: i
 
@@ -806,7 +810,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  maxlcutm
       INTEGER, INTENT(IN)      ::  nbasp
       LOGICAL, INTENT(IN)      ::  writevec
-      INTEGER, INTENT(OUT)     ::  igptm_out
+      INTEGER, INTENT(INOUT)   ::  igptm_out
 !     - arrays -
       INTEGER, INTENT(IN)      ::  rrot(:,:), invrrot(:,:)
       INTEGER, INTENT(IN)      :: lcutm(atoms%ntype),&
@@ -821,7 +825,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
                                        -maxlcutm:maxlcutm,&
                                                0:maxlcutm)
-      COMPLEX, INTENT(OUT)     ::  vecout(nbasm(ikpt0))
+      COMPLEX, INTENT(INOUT)     ::  vecout(nbasm(ikpt0))
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
@@ -836,6 +840,8 @@ CONTAINS
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(mpdata%n_g(ikpt0))
+
+      igptm_out=-1;vecout=CMPLX_NOT_INITALIZED
 
       IF (iop <= sym%nop) THEN
          isym = iop

@@ -32,4 +32,5 @@ init/prp_xcfft.f90
 init/stepf.F90
 init/strgn.f90
 init/lapw_dim.F90
+init/angles.f90
 )

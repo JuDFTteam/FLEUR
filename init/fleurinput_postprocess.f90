@@ -3,7 +3,7 @@ MODULE m_fleurinput_postprocess
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,Oned,Xcpot,Kpts)
+    Banddos,Oned,Xcpot,Kpts,gfinp)
     USE m_juDFT
     USE m_types_fleurinput
     use m_make_sym
@@ -22,14 +22,15 @@ CONTAINS
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
-    TYPE(t_kpts),INTENT(IN)::kpts
+    TYPE(t_kpts),INTENT(IN)     ::kpts
+    TYPE(t_gfinp),INTENT(IN)    ::gfinp
 
     call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
     call atoms%init(cell)
     CALL sym%init(cell,input%film)
     call vacuum%init(sym)
 
-    CALL make_sym(sym,cell,atoms,noco,oneD,input)
+    CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
     call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
 
@@ -37,7 +38,7 @@ CONTAINS
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.)
     !adjust positions by displacements
-    CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
+    CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms,gfinp)
 
 
   END SUBROUTINE fleurinput_postprocess

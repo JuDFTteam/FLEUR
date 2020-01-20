@@ -5,15 +5,14 @@ MODULE m_occmtx
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_ind_greensf
    USE m_lsTOjmj
 
    IMPLICIT NONE
 
 
-CONTAINS
+   CONTAINS
 
-   SUBROUTINE occmtx(g,l,nType,atoms,input,mmpMat,err,lp,nTypep,l_write,check)
+   SUBROUTINE occmtx(g,l,nType,gfinp,input,mmpMat,err,lp,nTypep,l_write,check)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -25,17 +24,17 @@ CONTAINS
       ! Additionally the transformation to the |J,mj> subspace is performed via the clebsch gordan coefficients
       ! And the occupations of the respective j states are given
 
-      TYPE(t_greensf),        INTENT(IN)  :: g
-      TYPE(t_atoms),          INTENT(IN)  :: atoms
-      TYPE(t_input),          INTENT(IN)  :: input
-      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
-      INTEGER,                INTENT(IN)  :: l
-      INTEGER,                INTENT(IN)  :: nType
-      LOGICAL,                INTENT(OUT) :: err
-      INTEGER, OPTIONAL,      INTENT(IN)  :: lp
-      INTEGER, OPTIONAL,      INTENT(IN)  :: nTypep
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: check
+      TYPE(t_greensf),        INTENT(IN)    :: g
+      TYPE(t_gfinp),          INTENT(IN)    :: gfinp
+      TYPE(t_input),          INTENT(IN)    :: input
+      INTEGER,                INTENT(IN)    :: l
+      INTEGER,                INTENT(IN)    :: nType
+      COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
+      LOGICAL,                INTENT(INOUT) :: err
+      INTEGER, OPTIONAL,      INTENT(IN)    :: lp
+      INTEGER, OPTIONAL,      INTENT(IN)    :: nTypep
+      LOGICAL, OPTIONAL,      INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
+      LOGICAL, OPTIONAL,      INTENT(IN)    :: check
 
 
 
@@ -45,9 +44,9 @@ CONTAINS
       CHARACTER(len=300) :: message
 
       !Check for Contours not reproducing occupations
-      IF(g%mode.EQ.2.AND.input%gf_et.NE.0.0) &
+      IF(gfinp%mode.EQ.2.AND.gfinp%et.NE.0.0) &
          WRITE(6,*) "Energy contour not ending at efermi: These are not the actual occupations"
-      IF(g%mode.EQ.3.AND..NOT.input%gf_dosfermi) &
+      IF(gfinp%mode.EQ.3.AND..NOT.gfinp%l_dosfermi) &
          WRITE(6,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
       mmpMat = 0.0
@@ -58,12 +57,12 @@ CONTAINS
          lp_loop = lp
       ENDIF
 
-      DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
+      DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, g%nz
                !get the corresponding gf-matrix
-               CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -77,9 +76,9 @@ CONTAINS
                CALL gmat%free()
             ENDDO
             !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
-            IF(g%mode.EQ.3.AND.input%gf_anacont) THEN
+            IF(gfinp%mode.EQ.3.AND.gfinp%l_anacont) THEN
                !left tail
-               CALL g%get(gmat,atoms,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,gfinp,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -92,7 +91,7 @@ CONTAINS
                ENDDO
                CALL gmat%free()
                !right tail
-               CALL g%get(gmat,atoms,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,gfinp,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -150,7 +149,7 @@ CONTAINS
                ENDDO
             ENDDO
             !spin-offdiagonal
-            IF(input%l_gfmperp) THEN
+            IF(gfinp%l_mperp) THEN
                gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
                gmat%data_r(ns+1:2*ns,1:ns) = REAL(transpose(mmpmat(-l:l,-l:l,3)))
             ENDIF
@@ -201,14 +200,10 @@ CONTAINS
          ENDIF
       ENDIF
 
-
-
    !FORMAT statements for error messages
 9100  FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
 9110  FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I2"): ",f14.8)
 
    END SUBROUTINE occmtx
-
-
 
 END MODULE m_occmtx

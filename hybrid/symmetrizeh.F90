@@ -545,15 +545,17 @@ CONTAINS
       ! Returns the spherical harmonics Y_lm(^rvec) for l = 0,...,ll in Y(1,...,(ll+1)**2).
       SUBROUTINE harmonicsr(Y, rvec, ll)
          use m_judft
+         use m_constants, only: CMPLX_NOT_INITALIZED
          IMPLICIT NONE
          INTEGER, INTENT(IN)    :: ll
          REAL, INTENT(IN)       :: rvec(:)
-         COMPLEX, INTENT(OUT)   :: Y((ll + 1)**2)
+         COMPLEX, INTENT(INOUT) :: Y((ll + 1)**2)
          REAL                  :: stheta, ctheta, sphi, cphi, r, rvec1(3)
          INTEGER               :: l, lm
          COMPLEX               :: c
          COMPLEX, PARAMETER     :: img = (0.0, 1.0)
 
+         Y = CMPLX_NOT_INITALIZED
          Y(1) = 0.282094791773878
          IF (ll == 0) RETURN
 

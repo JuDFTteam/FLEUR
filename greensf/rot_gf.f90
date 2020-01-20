@@ -1,25 +1,24 @@
 MODULE m_rot_gf
 
-!-----------------------------------------------
-! Rotates the contribution from eqivalent atoms
-!-----------------------------------------------
+   !-----------------------------------------------
+   ! Rotates the contribution from eqivalent atoms
+   !-----------------------------------------------
 
-CONTAINS
+   USE m_types
+   USE m_juDFT
+   USE m_constants
 
+   IMPLICIT NONE
 
-   SUBROUTINE rot_projDOS(sym,atoms,input,angle,greensfCoeffs)
+   CONTAINS
 
-      USE m_types
-      USE m_juDFT
-      USE m_constants
-
-      IMPLICIT NONE
+   SUBROUTINE rot_projDOS(sym,atoms,gfinp,input,greensfCoeffs)
 
       TYPE(t_sym),            INTENT(IN)     :: sym
       TYPE(t_atoms),          INTENT(IN)     :: atoms
+      TYPE(t_gfinp),          INTENT(IN)     :: gfinp
       TYPE(t_input),          INTENT(IN)     :: input
       TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
-      REAL,                   INTENT(IN)     :: angle(:)
 
       COMPLEX, ALLOCATABLE :: curr_dos(:,:,:),calc_mat(:,:,:)
       COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -30,13 +29,13 @@ CONTAINS
 
       CALL timestart("Green's function: Rotate")
 
-      ALLOCATE(curr_dos(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),&
-               calc_mat(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+      ALLOCATE(curr_dos(gfinp%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
+      ALLOCATE(calc_mat(gfinp%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
 
-      DO i_gf = 1, atoms%n_gf
+      DO i_gf = 1, gfinp%n
 
-         l     = atoms%gfelem(i_gf)%l
-         nType = atoms%gfelem(i_gf)%atomType
+         l     = gfinp%elem(i_gf)%l
+         nType = gfinp%elem(i_gf)%atomType
 
          !Loop through equivalent atoms
          DO nn = 1, atoms%neq(nType)
@@ -44,8 +43,8 @@ CONTAINS
             !Rotate the eqivalent atom into the irreducible brillouin zone
             fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
             IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
-            DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
-               DO imat = 1, MERGE(1,5,input%l_gfsphavg)
+            DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
+               DO imat = 1, MERGE(1,5,gfinp%l_sphavg)
                   IF(imat.EQ.1) THEN
                      curr_dos(:,:,:) = greensfCoeffs%projdos(:,:,:,nn,i_gf,ispin)
                   ELSE IF(imat.EQ.2) THEN
@@ -69,12 +68,12 @@ CONTAINS
                            d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                         ENDDO
                      ENDDO
-                     phase = MERGE(exp(ImagUnit*angle(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
-                     DO ie = 1, greensfCoeffs%ne
+                     phase = MERGE(exp(ImagUnit*sym%phase(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
+                     DO ie = 1, gfinp%ne
                         calc_mat(ie,:,:) = matmul( transpose( conjg(d_mat) ) , curr_dos(ie,:,:))
                         calc_mat(ie,:,:) = matmul( calc_mat(ie,:,:), d_mat )
                      ENDDO
-                     DO ie = 1, greensfCoeffs%ne
+                     DO ie = 1, gfinp%ne
                         IF(imat.EQ.1) THEN
                            greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) = greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) + phase *AIMAG(fac *  calc_mat(ie,:,:))
                         ELSE IF(imat.EQ.2) THEN
@@ -94,7 +93,6 @@ CONTAINS
       ENDDO
 
       CALL timestop("Green's function: Rotate")
-
 
    END SUBROUTINE rot_projDOS
 

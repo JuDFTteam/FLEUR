@@ -4,7 +4,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML)
+       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
     USE m_types_xml
 
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
@@ -25,6 +25,8 @@ CONTAINS
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
     TYPE(t_kpts),INTENT(OUT),OPTIONAL::kpts
+    TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
+    TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
 
     TYPE(t_xml)::xml
 
@@ -50,6 +52,8 @@ CONTAINS
     if (present(forcetheo_data)) call forcetheo_data%read_xml(xml)
     if (present(enparaXML)) call enparaXML%read_xml(xml)
     if (present(kpts)) CALL kpts%read_xml(xml)
+    if (present(gfinp)) CALL gfinp%read_xml(xml)
+    if (present(hub1inp)) CALL hub1inp%read_xml(xml)
 
     call xml%FreeResources()
   END SUBROUTINE fleurinput_read_xml

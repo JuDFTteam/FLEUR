@@ -136,12 +136,12 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
       !  - scalars -
-      INTEGER, INTENT(IN) :: ncstd
-      INTEGER, INTENT(IN) :: jspin
-      INTEGER, INTENT(OUT):: lmaxc(:)
+      INTEGER, INTENT(IN)   :: ncstd
+      INTEGER, INTENT(IN)   :: jspin
+      INTEGER, INTENT(INOUT):: lmaxc(:)
 
       !  - arrays -
-      INTEGER, INTENT(OUT):: nindxcr(0:ncstd, atoms%ntype)
+      INTEGER, INTENT(INOUT):: nindxcr(0:ncstd, atoms%ntype)
       REAL, INTENT(IN) :: vr(:, :, :)!(atoms%jmtd,atoms%ntypd,input%jspins)
       REAL, ALLOCATABLE :: core1(:, :, :, :), core2(:, :, :, :)
       REAL, ALLOCATABLE :: eig_c(:, :, :)
@@ -184,7 +184,7 @@ CONTAINS
          z = atoms%zatom(itype)
          dxx = atoms%dx(itype)
          bmu = 0.0
-         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
+         call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
 
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
@@ -225,7 +225,7 @@ CONTAINS
          z = atoms%zatom(itype)
          dxx = atoms%dx(itype)
          bmu = 0.0
-         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
+         call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
          ELSE
@@ -311,7 +311,7 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      INTEGER, INTENT(OUT)            :: maxindxc, lmaxcd
+      INTEGER, INTENT(INOUT)          :: maxindxc, lmaxcd
 
       !  - local scalars -
       INTEGER              :: itype, korb, ncmsh, nst
@@ -335,7 +335,7 @@ CONTAINS
          dxx = atoms%dx(itype)
          bmu = 0.0
 
-         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
+         call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
          occ(1:nst) = occ_h(1:nst, 1)
 
          rnot = atoms%rmsh(1, itype)

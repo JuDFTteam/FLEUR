@@ -67,12 +67,12 @@ CONTAINS
    !         dFx_ds   - derivative of this factor with respect to s
    !         d2Fx_ds2 - second derivative with respect to s
    SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
-
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: kF, s_inp
-      REAL, INTENT(OUT) :: F_x, dFx_ds, d2Fx_ds2
-      REAL, INTENT(OUT) :: dFx_dkF, d2Fx_dsdkF
+      REAL, INTENT(INOUT) :: F_x, dFx_ds, d2Fx_ds2
+      REAL, INTENT(INOUT) :: dFx_dkF, d2Fx_dsdkF
 
       ! Helper variables
       REAL :: r1_kF, &                   ! 1 / kF
@@ -107,6 +107,9 @@ CONTAINS
 
       ! If a large value of s would violate the Lieb-Oxford bound, the value of s is reduced,
       ! so that this condition is fullfilled
+      F_x=REAL_NOT_INITALIZED; dFx_ds=REAL_NOT_INITALIZED; d2Fx_ds2=REAL_NOT_INITALIZED
+      dFx_dkF=REAL_NOT_INITALIZED;d2Fx_dsdkF=REAL_NOT_INITALIZED
+
       correction = s_inp > s_thresh
       IF (correction) THEN
          s_si2 = s_chg/(s_inp*s_inp)
@@ -230,12 +233,12 @@ CONTAINS
                                   appInt, dAppInt_ds, d2AppInt_ds2, dAppInt_dkF, d2AppInt_dsdkF)
 
       USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre
-
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: omega_kF, Hs2, D_Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: appInt, dAppInt_ds, d2AppInt_ds2
-      REAL, INTENT(OUT) :: dAppInt_dkF, d2AppInt_dsdkF
+      REAL, INTENT(INOUT) :: appInt, dAppInt_ds, d2AppInt_ds2
+      REAL, INTENT(INOUT) :: dAppInt_dkF, d2AppInt_dsdkF
 
       REAL    :: w2, bw, r2bw, bw_Hs2, bw_D_Hs2
       ! variables for temporary storage of the integrals, the prefactors and the dot_product
@@ -252,6 +255,9 @@ CONTAINS
                                     -0.065032363850763, 0.008401793031216/), &
                          b = 1.455915450052607, cutoff = 14.0
 
+      appInt=REAL_NOT_INITALIZED; dAppInt_ds=REAL_NOT_INITALIZED;
+      d2AppInt_ds2=REAL_NOT_INITALIZED; dAppInt_dkF=REAL_NOT_INITALIZED;
+      d2AppInt_dsdkF=REAL_NOT_INITALIZED
       ! Calculate helper variables
       w2 = omega_kF**2
       bw = b*w2
@@ -312,7 +318,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: bw_Hs2, bw_D_Hs2
-      REAL, INTENT(OUT) :: integral(0:12)
+      REAL, INTENT(INOUT) :: integral(0:12)
 
       ! Helper variables
       REAL :: bw_Hs2_Sqr, bw_Hs2_Cub, sqrt_bw_Hs2, &
@@ -325,6 +331,8 @@ CONTAINS
       REAL, PARAMETER :: &
          A = 1.0161144, A_2 = A/2.0, scale = 2.25/A, sqrtA = 1.008025, & !sqrt(A)
          b = 1.455915450052607
+
+      integral = 0.0
 
       ! Calculate many helper variables
       bw_Hs2_Sqr = bw_Hs2*bw_Hs2
@@ -599,7 +607,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s, H, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: F, dFs2_ds, d2Fs2_ds2
+      REAL, INTENT(INOUT) :: F, dFs2_ds, d2Fs2_ds2
 
       REAL, PARAMETER   :: slope = 6.4753871
       REAL, PARAMETER   :: shift = 0.4796583
@@ -622,10 +630,11 @@ CONTAINS
    !         dGs2_ds   - first derivative of G(s)s^2 with respect to s
    !         d2Gs2_ds2 - second derivative of G(s)s^2
    SUBROUTINE calculateG(s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2, G, dGs2_ds, d2Gs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: G, dGs2_ds, d2Gs2_ds2
+      REAL, INTENT(INOUT) :: G, dGs2_ds, d2Gs2_ds2
 
       ! helper variables
       REAL :: AHs2_1_2, AHs2_3_2, r1_Fs2, D_Hs2, D_Hs2Sqr, D_Hs2Cub, &
@@ -644,6 +653,7 @@ CONTAINS
                          D = 0.57786348, &
                          E = -0.051955731
 
+       G=REAL_NOT_INITALIZED; dGs2_ds=REAL_NOT_INITALIZED; d2Gs2_ds2=REAL_NOT_INITALIZED
       ! calculate the helper variables
       AHs2_1_2 = sqrtA*SQRT(Hs2)
       AHs2_3_2 = AHs2_1_2*A*Hs2
@@ -832,10 +842,11 @@ CONTAINS
    !         dHs2_ds   - first derivative d(s^2*H(s))/ds
    !         d2Hs2_ds2 - second derivative d^2(s^2H(s))/ds^2
    SUBROUTINE calculateH(s, H, dHs2_ds, d2Hs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s
-      REAL, INTENT(OUT) :: H, dHs2_ds, d2Hs2_ds2
+      REAL, INTENT(INOUT) :: H, dHs2_ds, d2Hs2_ds2
 
       ! helper variables
       REAL :: s2, s3, s4, s5, s6
@@ -851,6 +862,7 @@ CONTAINS
          a4 = 0.00120824, &
          a5 = 0.0347188
 
+      H=REAL_NOT_INITALIZED; dHs2_ds=REAL_NOT_INITALIZED; d2Hs2_ds2=REAL_NOT_INITALIZED
       ! calculate helper variables
       s2 = s*s
       s3 = s2*s
@@ -999,10 +1011,10 @@ CONTAINS
       REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
-      COMPLEX, INTENT(OUT)   :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
+      REAL, INTENT(INOUT)    :: potential(noGPts)                           ! Fourier transformed potential
+      COMPLEX, INTENT(INOUT) :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
                                           (maxlcutm + 1)**2, ntype, MAXVAL(neq))
-      COMPLEX, INTENT(OUT)   :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
+      COMPLEX, INTENT(INOUT) :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
 
       ! private scalars
       INTEGER                :: cg, cg2, ci, cl, cn, cr                          ! counter variables
@@ -1334,11 +1346,11 @@ CONTAINS
       REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
+      REAL, INTENT(INOUT)      :: potential(noGPts)                           ! Fourier transformed potential
 #ifdef CPP_INVERSION
-      REAL, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      REAL, INTENT(INOUT)      :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #else
-      COMPLEX, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      COMPLEX, INTENT(INOUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #endif
 
       ! private scalars

@@ -1,12 +1,12 @@
 MODULE m_kp_perturbation
-  USE m_types_hybdat
+   USE m_types_hybdat
 
 CONTAINS
 
    SUBROUTINE ibs_correction( &
       nk, atoms, &
-       input, jsp, &
-      hybdat, mpdata,hybinp, &
+      input, jsp, &
+      hybdat, mpdata, hybinp, &
       lapw, kpts, nkpti, &
       cell, mnobd, &
       sym, &
@@ -39,7 +39,7 @@ CONTAINS
 
       ! - arrays -
 
-      COMPLEX, INTENT(INOUT)::  olap_ibsc(:,:,:,:)
+      COMPLEX, INTENT(INOUT)::  olap_ibsc(:, :, :, :)
       COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybdat%nbands(nk))
       ! - local scalars -
       INTEGER               ::  i, itype, ieq, iatom, iatom1, iband, iband1
@@ -104,7 +104,7 @@ CONTAINS
 
       ! read in z coefficient from direct access file z at k-point nk
 
-            call read_z(z, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z, kpts%nkptf*(jsp - 1) + nk)
 
       ! construct local orbital consisting of radial function times spherical harmonic
       ! where the radial function vanishes on the MT sphere boundary
@@ -145,7 +145,7 @@ CONTAINS
       END DO
 
       ! calculate lo wavefunction coefficients
-      allocate(cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
+      allocate (cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
       cmt_lo = 0
       iatom = 0
       ic = 0
@@ -222,7 +222,7 @@ CONTAINS
       END DO
       idum = maxval(lmp_start)
 
-      allocate(cmt_apw(input%neig, idum, atoms%nat))
+      allocate (cmt_apw(input%neig, idum, atoms%nat))
       cmt_apw = 0
       DO i = 1, lapw%nv(jsp)
          kvec = kpts%bk(:, nk) + lapw%gvec(:, i, jsp)
@@ -286,9 +286,9 @@ CONTAINS
       ! construct radial functions (complex) for the first order
       ! incomplete basis set correction
 
-      allocate(u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
+      allocate (u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
       IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u1')
-      allocate(u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
+      allocate (u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
       IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u2')
       u1 = 0; u2 = 0
 
@@ -706,18 +706,19 @@ CONTAINS
 !
    SUBROUTINE dwavefproducts( &
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
-      input,atoms, mpdata, hybinp, &
+      input, atoms, mpdata, hybinp, &
       cell, &
       hybdat, kpts, nkpti, lapw, &
-       jsp, &
+      jsp, &
       eig_irr)
 
       USE m_wrapper
       USE m_types
+      use m_constants, only: cmplx_0
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_input),INTENT(IN)     ::input
+      TYPE(t_input), INTENT(IN)     ::input
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -732,8 +733,8 @@ CONTAINS
 
 !     - arrays -
 
-      REAL, INTENT(IN)         ::  eig_irr(:,:)
-      COMPLEX, INTENT(OUT)     ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
+      REAL, INTENT(IN)         ::  eig_irr(:, :)
+      COMPLEX, INTENT(INOUT)   ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
       INTEGER                 ::  ikpt, ikpt1, iband1, iband2
@@ -743,12 +744,13 @@ CONTAINS
       !                                       __
       ! Get momentum-matrix elements -i < uj | \/ | ui >
       !
+      dcprod = cmplx_0
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         input,atoms, mpdata, hybinp, &
+         input, atoms, mpdata, hybinp, &
          cell, &
          hybdat, kpts, lapw, &
-          jsp)
+         jsp)
 
       !                                                __
       !  Calculate expansion coefficients -i < uj | \/ | ui > / ( ei - ej ) for periodic function ui
@@ -780,10 +782,10 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix( &
       momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      input,atoms, mpdata, hybinp, &
+      input, atoms, mpdata, hybinp, &
       cell, &
       hybdat, kpts, lapw, &
-       jsp)
+      jsp)
 
       USE m_olap
       USE m_wrapper
@@ -794,7 +796,7 @@ CONTAINS
       USE m_types
       USE m_io_hybinp
       IMPLICIT NONE
-      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -810,7 +812,7 @@ CONTAINS
 
 !     - arrays -
       TYPE(t_mat):: z
-      COMPLEX, INTENT(OUT)     :: momentum(bandi2:bandf2, bandi1:bandf1, 3)
+      COMPLEX, INTENT(INOUT)   :: momentum(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
       INTEGER                 ::  itype, ieq, ic, i, j, l, lm, n1, n2, ikpt, iband1, iband2, ll, mm
@@ -838,12 +840,12 @@ CONTAINS
       COMPLEX                 ::  vec1_c(lapw%nv(jsp)), vec2_c(lapw%nv(jsp)), vec3_c(lapw%nv(jsp))
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
-
+      momentum = cmplx_0
       call read_cmt(cmt, nk)
 
       ! read in z coefficients from direct access file z at kpoint nk
 
-            call read_z(z, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z, kpts%nkptf*(jsp - 1) + nk)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
       gpt(:, 1:lapw%nv(jsp)) = lapw%gvec(:, 1:lapw%nv(jsp), jsp)

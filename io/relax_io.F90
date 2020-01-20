@@ -127,7 +127,7 @@ CONTAINS
     END DO
   END SUBROUTINE read_displacements
 
-  SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
+  SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms,gfinp)
     USE m_types
     USE m_chkmt
     USE m_constants
@@ -138,6 +138,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)    :: oneD
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
+    TYPE(t_gfinp),INTENT(IN)   :: gfinp
 
     TYPE(t_atoms),INTENT(INOUT):: atoms
 
@@ -174,7 +175,7 @@ CONTAINS
        END IF
     END DO
 
-    CALL mapatom(sym,atoms,cell,input,noco)
+    CALL mapatom(sym,atoms,cell,input,noco,gfinp)
 
     WRITE(6,*) "Atomic positions including displacements:"
     DO n=1,atoms%nat

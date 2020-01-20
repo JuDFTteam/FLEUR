@@ -30,13 +30,14 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_kpts), INTENT(IN)    :: kpts
       INTEGER, INTENT(IN)    :: nk
-      INTEGER, INTENT(OUT)   :: nsymop
+      INTEGER, INTENT(INOUT) :: nsymop
       INTEGER, INTENT(INOUT) :: rrot(:,:,:) ! 3,3,sym%nsym
       INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
       REAL    :: rotkpt(3)
 
+      nsymop = 0
       ! calculate rotations in reciprocal space
       DO i = 1, sym%nsym
          IF (i <= sym%nop) THEN
@@ -96,16 +97,17 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
       INTEGER, INTENT(IN)              :: jsp
-      INTEGER, INTENT(OUT)             :: nkpt_EIBZ
+      INTEGER, INTENT(INOUT)           :: nkpt_EIBZ
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
       INTEGER, INTENT(IN)              :: rrot(:,:,:)
       INTEGER, INTENT(IN)              :: psym(:)
-      INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER, INTENT(OUT)             :: nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
-      INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
-      INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
+      INTEGER, INTENT(INOUT)           :: parent(kpts%nkptf)
+      INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk))
+      INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
+      INTEGER, ALLOCATABLE, INTENT(INOUT) :: pointer_EIBZ(:)
+      INTEGER, ALLOCATABLE, INTENT(INOUT) :: n_q(:)
 
       REAL, INTENT(IN)                 :: eig_irr(:,:)
 
@@ -144,6 +146,8 @@ CONTAINS
       TYPE(t_mat)                     :: olappw, z
       COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
+
+      parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ =0;
 
       WRITE (6, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
@@ -197,7 +201,7 @@ CONTAINS
       END DO
       nkpt_EIBZ = ic
 
-      allocate(pointer_EIBZ(nkpt_EIBZ))
+      allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
       ic = 0
       DO ikpt = 1, kpts%nkptf
          IF (parent(ikpt) == ikpt) THEN
@@ -210,8 +214,7 @@ CONTAINS
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
-
-      allocate(n_q(nkpt_EIBZ))
+      allocate(n_q(nkpt_EIBZ), source=0)
 
       ic = 0
       n_q = 0

@@ -12,7 +12,7 @@ MODULE m_spnorb
   !     using the functions anglso and sgml.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1)
+  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
     USE m_sorad 
     USE m_constants, only : hartree_to_ev_const
     USE m_types
@@ -26,7 +26,8 @@ CONTAINS
     TYPE(t_usdus),INTENT(INOUT) :: usdus
     TYPE(t_rsoc),INTENT(OUT)    :: rsoc
     LOGICAL,INTENT(IN)          :: l_angles
-    TYPE(t_hub1ham),OPTIONAL,INTENT(INOUT) :: hub1
+    TYPE(t_hub1inp),OPTIONAL, INTENT(IN)  :: hub1inp
+    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT) :: hub1data
     !     ..
     !     ..
     !     .. Array Arguments ..
@@ -52,7 +53,7 @@ CONTAINS
 
     !Calculate radial soc-matrix elements
     DO n = 1,atoms%ntype
-       CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus)
+       CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus,hub1inp)
     END DO
 
 
@@ -72,14 +73,14 @@ CONTAINS
           rsoc%rsoploplop(n,:,:,:,:) = rsoc%rsoploplop(n,:,:,:,:)*noco%socscale(n)
        ENDIF
     ENDDO
-    
+
     !Read in SOC-parameter for shell with hubbard 1
-    IF(PRESENT(hub1).AND.mpi%irank.EQ.0) THEN
+    IF(PRESENT(hub1inp).AND.mpi%irank.EQ.0) THEN
       DO i_hia = 1, atoms%n_hia
-         IF(hub1%l_soc_given(i_hia)) CYCLE
+         IF(hub1inp%l_soc_given(i_hia)) CYCLE
          n = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
-         hub1%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
+         IF(PRESENT(hub1data)) hub1data%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
       ENDDO
     ENDIF
 
