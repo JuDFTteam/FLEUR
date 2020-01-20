@@ -6,28 +6,30 @@ module m_types_mpdata
       integer, allocatable   :: n_g(:) ! (ik)
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       integer, allocatable   :: num_radbasfn(:, :) !(l,itype)
-      real, allocatable      :: radbasfn_mt(:,:,:,:) !(jri,n,l,itype)
-      INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:) !(l,itype)
+      real, allocatable      :: radbasfn_mt(:, :, :, :) !(jri,n,l,itype)
+      INTEGER, ALLOCATABLE   :: num_radfun_per_l(:, :) !(l,itype)
+      INTEGER                :: max_indx_p_1 = -1
 
-      integer, allocatable   :: l1(:,:,:) !(n, l, itype)
-      integer, allocatable   :: l2(:,:,:) !(n, l, itype)
-      integer, allocatable   :: n1(:,:,:) !(n, l, itype)
-      integer, allocatable   :: n2(:,:,:) !(n, l, itype)
+      integer, allocatable   :: l1(:, :, :) !(n, l, itype)
+      integer, allocatable   :: l2(:, :, :) !(n, l, itype)
+      integer, allocatable   :: n1(:, :, :) !(n, l, itype)
+      integer, allocatable   :: n2(:, :, :) !(n, l, itype)
    CONTAINS
-      procedure :: num_gpts               => mpdata_num_gpts
-      procedure :: gen_gvec               => mpdata_gen_gvec
-      procedure :: check_orthonormality   => mpdata_check_orthonormality
-      procedure :: check_radbasfn         => mpdata_check_radbasfn
-      procedure :: calc_olap_radbasfn     => mpdata_calc_olap_radbasfn
-      procedure :: filter_radbasfn        => mpdata_filter_radbasfn
+      procedure :: num_gpts => mpdata_num_gpts
+      procedure :: gen_gvec => mpdata_gen_gvec
+      procedure :: check_orthonormality => mpdata_check_orthonormality
+      procedure :: check_radbasfn => mpdata_check_radbasfn
+      procedure :: calc_olap_radbasfn => mpdata_calc_olap_radbasfn
+      procedure :: filter_radbasfn => mpdata_filter_radbasfn
       procedure :: trafo_to_orthonorm_bas => mpdata_trafo_to_orthonorm_bas
-      procedure :: add_l0_fun             => mpdata_add_l0_fun
-      procedure :: reduce_linear_dep      => mpdata_reduce_linear_dep
-      procedure :: normalize              => mpdata_normalize
-      procedure :: set_nl                 => mpdata_set_nl
-      procedure :: free                   => mpdata_free
-      procedure :: init                   => mpdata_init
-      procedure :: set_num_radfun_per_l   => set_num_radfun_per_l_mpdata
+      procedure :: add_l0_fun => mpdata_add_l0_fun
+      procedure :: reduce_linear_dep => mpdata_reduce_linear_dep
+      procedure :: normalize => mpdata_normalize
+      procedure :: set_nl => mpdata_set_nl
+      procedure :: free => mpdata_free
+      procedure :: init => mpdata_init
+      procedure :: set_num_radfun_per_l => set_num_radfun_per_l_mpdata
+      procedure :: set_max_indx_p_1 => set_max_indx_p_1
       !generic   :: write(unformatted) => write_mpdata
    end type t_mpdata
 contains
@@ -64,7 +66,7 @@ contains
       real, allocatable               ::  length_kg(:, :) ! length of the vectors k + G
       integer, allocatable            ::  ptr(:)
 
-      allocate(mpdata%n_g(kpts%nkptf))
+      allocate (mpdata%n_g(kpts%nkptf))
 
       mpdata%n_g = 0
       i = 0
@@ -102,12 +104,12 @@ contains
          if (.NOT. l_found_new_gpt) EXIT
       enddo
 
-      allocate(mpdata%g(3, i)) ! i = gptmd
-      allocate(mpdata%gptm_ptr(maxval(mpdata%n_g), kpts%nkptf))
+      allocate (mpdata%g(3, i)) ! i = gptmd
+      allocate (mpdata%gptm_ptr(maxval(mpdata%n_g), kpts%nkptf))
 
       ! allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(maxval(mpdata%n_g), kpts%nkptf))
-      allocate(length_kG(maxval(mpdata%n_g), kpts%nkptf))
+      allocate (unsrt_pgptm(maxval(mpdata%n_g), kpts%nkptf))
+      allocate (length_kG(maxval(mpdata%n_g), kpts%nkptf))
 
       mpdata%g = 0
       mpdata%gptm_ptr = 0
@@ -157,7 +159,7 @@ contains
 
       ! Sort pointers in array, so that shortest |k+G| comes first
       do ikpt = 1, kpts%nkptf
-         allocate(ptr(mpdata%n_g(ikpt)))
+         allocate (ptr(mpdata%n_g(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
          divconq = MAX(0, INT(1.443*LOG(0.001*mpdata%n_g(ikpt))))
          ! create pointers which correspond to a sorted array
@@ -166,7 +168,7 @@ contains
          do igpt = 1, mpdata%n_g(ikpt)
             mpdata%gptm_ptr(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          enddo
-         deallocate(ptr)
+         deallocate (ptr)
       enddo
 
       if (mpi%irank == 0) THEN
@@ -201,7 +203,7 @@ contains
 
       ! calculate overlap matrix
       call mpdata%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
-      
+
       !subtract identity-matrix
       do i = 1, size(olap, dim=1)
          olap(i, i) = olap(i, i) - 1.0
@@ -213,7 +215,7 @@ contains
             err_loc = maxloc(abs(olap))
             WRITE (*, *) 'mixedbasis: Bad orthonormality of ' &
                //lchar(l)//'-mpdatauct basis. Increase tolerance.'
-            write (*,*) "itype =", itype, "l =",l
+            write (*, *) "itype =", itype, "l =", l
             WRITE (*, *) 'Deviation of', &
                maxval(abs(olap)), ' occurred for (', &
                err_loc(1), ',', err_loc(2), ')-overlap.'
@@ -270,23 +272,23 @@ contains
       n_radbasfn = mpdata%num_radbasfn(l, itype)
       if (allocated(olap)) then
          if (any(shape(olap) /= n_radbasfn)) then
-            deallocate(olap)
+            deallocate (olap)
          endif
       endif
-      if (.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), &
-                                          source=REAL_NOT_INITALIZED)
+      if (.not. allocated(olap)) allocate (olap(n_radbasfn, n_radbasfn), &
+                                           source=REAL_NOT_INITALIZED)
 
       do n2 = 1, n_radbasfn
          do n1 = 1, n2
             olap(n1, n2) = intgrf(mpdata%radbasfn_mt(:, n1, l, itype)*mpdata%radbasfn_mt(:, n2, l, itype), &
                                   atoms, itype, gridf)
-            if(ieee_is_nan(olap(n1,n2))) then
-               write (*,*) "nan at", n1, n2
+            if (ieee_is_nan(olap(n1, n2))) then
+               write (*, *) "nan at", n1, n2
             endif
             olap(n2, n1) = olap(n1, n2)
          END do
       END do
-      if(any(ieee_is_nan(olap))) call juDFT_error("Mixed-product basis olap is nan")
+      if (any(ieee_is_nan(olap))) call juDFT_error("Mixed-product basis olap is nan")
       call timestop("calc mpdata overlap")
    end subroutine mpdata_calc_olap_radbasfn
 
@@ -304,7 +306,7 @@ contains
       integer, allocatable :: remaining_basfn(:)
 
       call timestart("filer mpdata")
-      allocate(remaining_basfn(n_radbasfn), source=1)
+      allocate (remaining_basfn(n_radbasfn), source=1)
       num_radbasfn = 0
 
       do i_bas = 1, mpdata%num_radbasfn(l, itype)
@@ -340,9 +342,9 @@ contains
       n = size(olap, dim=1)
 
       if (allocated(eig_val)) then
-         if (size(eig_val) /= n) deallocate(eig_val)
+         if (size(eig_val) /= n) deallocate (eig_val)
       endif
-      if (.not. allocated(eig_val)) allocate(eig_val(n))
+      if (.not. allocated(eig_val)) allocate (eig_val(n))
       eig_val = REAL_NOT_INITALIZED
 
       eig_vec = olap
@@ -351,8 +353,8 @@ contains
                   size_work, -1, size_iwork, -1, info)
       if (info /= 0) call juDFT_error("diagonalization for size failed")
 
-      allocate(work(int(size_work)))
-      allocate(iwork(size_iwork))
+      allocate (work(int(size_work)))
+      allocate (iwork(size_iwork))
 
       call dsyevd('V', 'U', n, eig_vec, n, eig_val, &
                   work, int(size_work), iwork, size_iwork, info)
@@ -402,12 +404,12 @@ contains
 
          ! Check if radbasfn_mt must be reallocated
          if (nn + 1 > SIZE(mpdata%radbasfn_mt, 2)) THEN
-            allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
+            allocate (basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
             basmhlp(:, 1:nn, :, :) = mpdata%radbasfn_mt
-            deallocate(mpdata%radbasfn_mt)
-            allocate(mpdata%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
+            deallocate (mpdata%radbasfn_mt)
+            allocate (mpdata%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
             mpdata%radbasfn_mt(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
-            deallocate(basmhlp)
+            deallocate (basmhlp)
          END if
 
          ! add l = 0 function
@@ -479,7 +481,7 @@ contains
             call mpdata%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-            if(l ==0) then
+            if (l == 0) then
                call mpdata%add_l0_fun(atoms, hybinp, n_grid_pt, l, itype, gridf)
             endif
 
@@ -488,7 +490,7 @@ contains
          enddo
       enddo
 
-      deallocate(olap, eigv, eig)
+      deallocate (olap, eigv, eig)
       call timestop("reduce lin. dep. mpdata")
    end subroutine
 
@@ -534,32 +536,66 @@ contains
 
       integer                    :: ok
 
-      if(.not. allocated(mpdata%num_radfun_per_l)) THEN
-         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+      if (.not. allocated(mpdata%num_radfun_per_l)) THEN
+         allocate (mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
       endif
-      if(.not. allocated(mpdata%l1)) then
-         allocate(mpdata%l1(hybdat%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
+
+      call mpdata%set_max_indx_p_1(atoms, hybinp)
+
+      if (.not. allocated(mpdata%l1)) then
+         allocate (mpdata%l1(mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')
 
-         allocate(mpdata%l2, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%l2, mold=mpdata%l1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l2')
 
-         allocate(mpdata%n1, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%n1, mold=mpdata%l1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%n1')
 
-         allocate(mpdata%n2, mold=mpdata%l1, stat=ok)
+         allocate (mpdata%n2, mold=mpdata%l1, stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%n2')
       endif
    end subroutine mpdata_init
+
+   subroutine set_max_indx_p_1(mpdata, atoms, hybinp)
+      use m_types_atoms
+      use m_types_hybinp
+      implicit none
+      class(t_mpdata)             :: mpdata
+      type(t_atoms), intent(in)   :: atoms
+      type(t_hybinp), intent(in)  :: hybinp
+
+      integer   :: itype, l, M, l1, l2, n1, n2
+
+      mpdata%max_indx_p_1 = 0
+
+      DO itype = 1, atoms%ntype
+         DO l = 0, hybinp%lcutm1(itype)
+            M = 0
+            DO l1 = 0, atoms%lmax(itype)
+               DO l2 = 0, atoms%lmax(itype)
+                  IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
+                     DO n1 = 1, mpdata%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
+                           M = M + 1
+                        END DO
+                     END DO
+                  END IF
+               END DO
+            END DO
+            mpdata%max_indx_p_1 = MAX(mpdata%max_indx_p_1, M)
+         END DO
+      END DO
+   end subroutine set_max_indx_p_1
 
    subroutine mpdata_free(mpdata)
       implicit NONE
       class(t_mpdata)          :: mpdata
 
-      if (allocated(mpdata%l1)) deallocate(mpdata%l1)
-      if (allocated(mpdata%l2)) deallocate(mpdata%l2)
-      if (allocated(mpdata%n1)) deallocate(mpdata%n1)
-      if (allocated(mpdata%n2)) deallocate(mpdata%n2)
+      if (allocated(mpdata%l1)) deallocate (mpdata%l1)
+      if (allocated(mpdata%l2)) deallocate (mpdata%l2)
+      if (allocated(mpdata%n1)) deallocate (mpdata%n1)
+      if (allocated(mpdata%n2)) deallocate (mpdata%n2)
    end subroutine mpdata_free
 
    subroutine mpdata_set_nl(mpdata, n, l, itype, n1, l1, n2, l2)
@@ -587,7 +623,7 @@ contains
       DO itype = 1, atoms%ntype
          DO ilo = 1, atoms%nlo(itype)
             mpdata%num_radfun_per_l(atoms%llo(ilo, itype), itype) &
-              = mpdata%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
+               = mpdata%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
          END DO
       END DO
    end subroutine set_num_radfun_per_l_mpdata

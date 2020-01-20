@@ -29,7 +29,6 @@ MODULE m_types_hybdat
       INTEGER                ::  maxlmindx = -1
       COMPLEX, ALLOCATABLE   :: stepfunc(:,:,:)
       INTEGER                ::  nbasp = -1
-      INTEGER                ::  max_indx_p_1 = -1
       INTEGER                ::  maxbasm1 = -1
       INTEGER, ALLOCATABLE   ::  nbasm(:)
    contains

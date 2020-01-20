@@ -72,7 +72,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
-      INTEGER                         ::  m, i_basfn, i, n_grid_pt,j
+      INTEGER                         ::  i_basfn, i, n_grid_pt,j
       REAL                            ::  rdum, rdum1, max_momentum, momentum
 
       ! - local arrays -
@@ -137,7 +137,6 @@ CONTAINS
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
-      hybdat%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
@@ -154,7 +153,6 @@ CONTAINS
 
          DO l = 0, hybinp%lcutm1(itype)
             n_radbasfn = 0
-            M = 0
 
             !
             ! valence * valence
@@ -172,7 +170,6 @@ CONTAINS
                   IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
                      DO n1 = 1, mpdata%num_radfun_per_l(l1, itype)
                         DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
-                           M = M + 1
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               n_radbasfn = n_radbasfn + 1
                               selecmat(n2, l2, n1, l1) = .FALSE. ! prevent double counting of products (a*b = b*a)
@@ -185,7 +182,6 @@ CONTAINS
             IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
-            hybdat%max_indx_p_1 = MAX(hybdat%max_indx_p_1, M)
             mpdata%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
       END DO
