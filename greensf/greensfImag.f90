@@ -75,6 +75,7 @@ MODULE m_greensfImag
                lm = l*(l+1)+m
                DO mp = -l,l
                   lmp = l*(l+1)+mp
+                  im = cmplx_0
                   !Loop through bands
                   DO ib = 1, nbands
                      !Check wether there is a non-zero weight for the energy window
@@ -89,7 +90,7 @@ MODULE m_greensfImag
                      ELSE
                         !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
                         j = FLOOR((eig(ib)-eb)/del)+1
-                        IF( (j.LE.gfinp%ne).AND.(j.GE.1) ) l_zero = .false.
+                        IF((j.LE.gfinp%ne).AND.(j.GE.1)) l_zero = .false.
                      END IF
 
                      IF(l_zero) CYCLE

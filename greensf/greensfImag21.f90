@@ -55,7 +55,7 @@ MODULE m_greensfImag21
       l_tria=.false.
 
       !Get the information on the real axis energy mesh
-      CALL gfinp%eMesh(ef,del,eb)
+      CALL gfinp%eMesh(ef,del_out=del,eb_out=eb)
 
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(wtkpt,nbands,l_tria,del,eb) &
@@ -68,7 +68,7 @@ MODULE m_greensfImag21
          nType = gfinp%elem(i_gf)%atomType
          l =     gfinp%elem(i_gf)%l
 
-         ALLOCATE(im(gfinp%ne,MERGE(1,5,gfinp%l_sphavg)))
+         ALLOCATE(im(gfinp%ne,MERGE(1,5,gfinp%l_sphavg)),source=cmplx_0)
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
@@ -77,7 +77,7 @@ MODULE m_greensfImag21
                lm = l*(l+1) + m
                DO mp = -l, l
                   lmp = l*(l+1) + mp
-                  im = 0.0
+                  im = cmplx_0
                   !Loop through bands
                   DO ib = 1, nbands
 
