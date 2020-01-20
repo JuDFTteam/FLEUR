@@ -22,7 +22,7 @@ add_subdirectory("inpgen2")
 
 
 #install(TARGETS fleur inpgen DESTINATION bin)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur 
+install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur
         CONFIGURATIONS Debug
         DESTINATION bin
         RENAME fleur_dbg)
