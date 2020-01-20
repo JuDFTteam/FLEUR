@@ -12,6 +12,7 @@ set(FLEUR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 add_executable(inpgen2
 dropDefaults.c
+default_econfig.h
 inpgen_help.f90
 inpgen.f90
 bravais_symm.f90
