@@ -51,20 +51,24 @@
 !     .. Intrinsic Functions ..
       INTRINSIC real,sqrt
 !     ..
-      
+
     !  CALL dotset(&
     ! &            cell,&
     ! &            aamat, )
       aamat=matmul(transpose(cell%amat),cell%amat)
-    
-      IF (ALLOCATED(sym%ngopr)) &
-           DEALLOCATE(sym%invsatnr,sym%invarop,sym%invarind,sym%ngopr,sym%invsat)
+
+      IF (ALLOCATED(sym%ngopr)) deallocate(sym%ngopr)
+      if (allocated(sym%invsatnr)) deallocate(sym%invsatnr)
+      if (allocated(sym%invarop)) deallocate(sym%invarop)
+      if (allocated(sym%invarind)) deallocate(sym%invarind)
+      if (allocated(sym%invsat)) deallocate(sym%invsat)
+      
       ALLOCATE(sym%invsatnr(atoms%nat))
       ALLOCATE(sym%invarop(atoms%nat,sym%nop))
       ALLOCATE(sym%invarind(atoms%nat))
       ALLOCATE(sym%ngopr(atoms%nat))
       ALLOCATE(sym%invsat(atoms%nat))
-   
+
 
       IF (noco%l_soc) THEN  ! check once more here...
         CALL soc_sym(&
@@ -73,7 +77,7 @@
       ELSE
         error(:) = .false.
       ENDIF
-                               
+
       WRITE (6,FMT=8000)
  8000 FORMAT (/,/,5x,'group operations on equivalent atoms:')
       nat1 = 1
@@ -264,6 +268,6 @@
      &       ' via 3d inversion')
       END IF
       END IF
- 
+
       END  SUBROUTINE mapatom
       END  MODULE m_mapatom
