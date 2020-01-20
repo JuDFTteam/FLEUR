@@ -103,7 +103,12 @@ CONTAINS
       IF (ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)
+
+      if(.not. allocated(mpdata%num_radfun_per_l)) &
+         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype), source=-1)
+
       call mpdata%set_num_radfun_per_l(atoms)
+      call mpdata%init(hybinp, hybdat, atoms)
 
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
