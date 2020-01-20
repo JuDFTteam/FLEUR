@@ -61,6 +61,7 @@ ${FLEUR_SRC}/kpoints/fulstar.f
 ${FLEUR_SRC}/kpoints/tetcon.f
 ${FLEUR_SRC}/kpoints/kvecon.f
 ${FLEUR_SRC}/kpoints/kprep.f
+${FLEUR_SRC}/kpoints/kptgen_hybrid.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/matmul.f
@@ -90,7 +91,6 @@ ${FLEUR_SRC}/types/types_dos.f90
 ${FLEUR_SRC}/types/types_denCoeffsOffdiag.f90
 ${FLEUR_SRC}/types/types_gpumat.F90
 
-${FLEUR_SRC}/kpoints/kptgen_hybrid.f90
 ${FLEUR_SRC}/io/nocoInputCheck.F90
 ${FLEUR_SRC}/eigen/orthoglo.F90
 ${FLEUR_SRC}/math/ylm4.F90
