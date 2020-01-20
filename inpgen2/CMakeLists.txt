@@ -132,3 +132,20 @@ target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(inpgen2 juDFT)
 target_link_libraries(inpgen2 fleurinput)
+
+find_program(XXD_PROG xxd)
+
+if (XXD_PROG)
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
+    COMMAND ${XXD_PROG} -i default.econfig default_econfig.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    COMMENT "Putting current default.econfig into default_econfig.h")
+else()
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
+    COMMAND cp  ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
+    COMMENT "No xxd found using backup")
+    message("No xxd command found! Using backup of default_econfig.h")
+endif()
