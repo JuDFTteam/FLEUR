@@ -362,6 +362,5 @@ CONTAINS
          if(abs(k(1)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(2) = nkpt3(2) + 1
          if(abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
       enddo
-      write (*,*) "nkpt3 =", nkpt3
    end function nkpt3_kpts
 END MODULE m_types_kpts
