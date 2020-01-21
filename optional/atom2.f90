@@ -307,8 +307,8 @@ CONTAINS
          ENDDO
          DO i=1,size(rhoss,1)
             bmu_l=rhoss(i,1)
-            rhoss(1,i)=rhoss(2,i)
-            rhoss(2,i)=bmu_l
+            rhoss(i,1)=rhoss(i,2)
+            rhoss(i,2)=bmu_l
          ENDDO
       ENDIF
 
