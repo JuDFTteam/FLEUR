@@ -12,12 +12,12 @@ MODULE m_mixing_history
   PUBLIC :: mixing_history,mixing_history_reset,mixing_history_store
   PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
 CONTAINS
-  
+
   SUBROUTINE mixing_history_open(mpi,maxiter)
     USE m_types,ONLY:t_mpi
     INTEGER,INTENT(IN)    :: maxiter
     TYPE(t_mpi),INTENT(in):: mpi
-    
+
     CHARACTER(len=20):: filename
     LOGICAL          :: l_fileexist
     INTEGER          :: n
@@ -38,17 +38,17 @@ CONTAINS
     READ(888) iter_stored
     IF (.NOT.ALLOCATED(sm_store)) ALLOCATE(sm_store(maxiter),fsm_store(maxiter))
     DO n=1,MIN(iter_stored,maxiter)
-       !READ(888) sm_store(n)
-       !READ(888) fsm_store(n)
+       call sm_store(n)%read_unformatted(888)
+       call fsm_store(n)%read_unformatted(888)
     ENDDO
     CLOSE(888)
-#endif    
+#endif
   END SUBROUTINE mixing_history_open
 
   SUBROUTINE mixing_history_close(mpi)
     USE m_types,ONLY:t_mpi
     TYPE(t_mpi),INTENT(in):: mpi
-    
+
     CHARACTER(len=20):: filename
     INTEGER          :: n
 
@@ -62,15 +62,15 @@ CONTAINS
     OPEN(888,file=filename,form='unformatted',status='replace')
     WRITE(888) iter_stored
     DO n=1,iter_stored
-       !WRITE(888) sm_store(n)
-       !WRITE(888) fsm_store(n)
+      call sm_store(n)%write_unformatted(888)
+      call fsm_store(n)%write_unformatted(888)
     ENDDO
     CLOSE(888)
     DEALLOCATE(sm_store,fsm_store)
     iter_stored=0
   END SUBROUTINE mixing_history_close
-    
-  
+
+
   SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it)
     USE m_types
     implicit none
@@ -84,7 +84,7 @@ CONTAINS
     if (.not.allocated(sm_store)) THEN
        allocate(sm_store(maxiter),fsm_store(maxiter))
     endif
-    IF (iter_stored+1==maxiter.AND.imix<8) iter_stored=0 !This is a broyden method which has to 
+    IF (iter_stored+1==maxiter.AND.imix<8) iter_stored=0 !This is a broyden method which has to
                                                             !be reset as soon as maxiter is reached
     it=iter_stored+1
     allocate(sm(it),fsm(it))
@@ -127,7 +127,7 @@ CONTAINS
        iter_stored=len
     end if
   end subroutine mixing_history_limit
-  
+
   SUBROUTINE mixing_history_store(fsm)
     IMPLICIT NONE
     TYPE(t_mixvector),INTENT(IN)::fsm
