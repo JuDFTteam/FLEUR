@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_hlomat
+  IMPLICIT NONE
 !***********************************************************************
 ! updates the hamiltonian  matrix with the contributions from the local
 ! orbitals.
@@ -54,7 +55,7 @@ CONTAINS
 
 
     !-->              synthesize the complex conjugates of a and b
-    ALLOCATE(ab(MAXVAL(lapw%nv),0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,MIN(jintsp,iintsp):MAX(jintsp,iintsp)))
+    ALLOCATE(ab(MAXVAL(lapw%nv),0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MIN(jintsp,iintsp):MAX(jintsp,iintsp)))
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
