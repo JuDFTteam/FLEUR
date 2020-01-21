@@ -207,6 +207,7 @@ LOGICAL FUNCTION same_species(atoms,n,nn)
  same=same.AND.TRIM(atoms%econf(n)%coreconfig)==TRIM(atoms%econf(nn)%coreconfig)
  same=same.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
  same=same.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+ if (same) same=same.AND.ALL(abs(atoms%econf(n)%occupation-atoms%econf(nn)%occupation)<1E-8)
  same_species=same
 END FUNCTION same_species
 PURE FUNCTION calc_nsp_atom(self) RESULT(nsp)
