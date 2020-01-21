@@ -53,8 +53,9 @@ CONTAINS
          DO j = 0, grid(2) - 1
             DO k = 0, grid(3) - 1
                ikpt = ikpt + 1
-               bk(:, ikpt) = (/1.0*i/grid(1), 1.0*j/grid(2), &
-               &                                      1.0*k/grid(3)/)
+               bk(:, ikpt) = [1.0*i/grid(1), &
+                              1.0*j/grid(2), &
+                              1.0*k/grid(3)]
             END DO
          END DO
       END DO
