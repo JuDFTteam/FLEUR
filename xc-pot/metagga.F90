@@ -238,8 +238,9 @@ CONTAINS
    end subroutine undo_vgen_finalize
 
    subroutine set_kinED(mpi,   sphhar, atoms, sym,  xcpot, &
-                        input, noco,   stars, cell,     den,     EnergyDen, vTot,kinED)
+                        input, noco,   stars, vacuum,oned,cell,     den,     EnergyDen, vTot,kinED)
       use m_types
+      use m_cdn_io
       implicit none
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
@@ -249,6 +250,8 @@ CONTAINS
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
       TYPE(t_kinED),INTENT(OUT)    :: kinED
@@ -266,15 +269,15 @@ CONTAINS
 
       call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
                           CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,rdum,ldum,core_den,'cdnc')
+                           0,rdum,ldum,core_den,'cdnc')
       call val_den%subPotDen(den,core_den)
 
       call vTot_corrected%copyPotDen(vTot)
       call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
-      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected)
+      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected,kinED)
       call set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
-                           xcpot, EnergyDen, input, vTot_corrected)
+                           xcpot, EnergyDen, input, vTot_corrected,kinED)
 #endif
    end subroutine set_kinED
 #ifdef CPP_LIBXC
@@ -361,19 +364,19 @@ CONTAINS
          do jr=1,atoms%jri(n)
             vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
          enddo
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., EnergyDen%mt(:, 0:, n, :), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym, sphhar,.TRUE., EnergyDen%mt(:, 0:, n, :), &
                          n,  noco,   tmp_grad,     ED_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., vTot_mt(:,0:,:), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., vTot_mt(:,0:,:), &
                          n,     noco,tmp_grad,     vTot_rs)
 
          tmp_sphhar%nlhd = sphhar%nlhd
          tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
 
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, tmp_sphhar,.TRUE., vTot_mt(:,0:0,:), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,tmp_sphhar,.TRUE., vTot_mt(:,0:0,:), &
                          n,    noco, tmp_grad,     vTot0_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., &
                          core_den%mt(:,0:,n,:), n,noco, tmp_grad, core_den_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., &
                          val_den%mt(:,0:,n,:), n,noco, tmp_grad, val_den_rs)
 
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &

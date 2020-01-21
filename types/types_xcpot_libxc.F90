@@ -270,7 +270,7 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    !***********************************************************************
-   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS)
       !***********************************************************************
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
@@ -280,6 +280,7 @@ CONTAINS
       REAL, INTENT(OUT)     :: vxc(:, :)  !
       ! optional arguments for GGA
       TYPE(t_gradients), OPTIONAL, INTENT(INOUT)::grad
+      REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:, :)
 #ifdef CPP_LIBXC
       REAL, ALLOCATABLE::vxc_tmp(:, :), vx_tmp(:, :), vsigma(:, :)
       !libxc uses the spin as a first index, hence we have to transpose....
@@ -417,7 +418,7 @@ CONTAINS
       ALLOCATE (grad%vsigma(MERGE(1, 3, jspins == 1), ngrid))
 
    END SUBROUTINE xcpot_alloc_gradients
-   
+
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool
       Class(t_xcpot_libxc), Intent(Inout)::This

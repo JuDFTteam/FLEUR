@@ -55,8 +55,8 @@ MODULE m_types_mixvector
       PROCEDURE :: read_unformatted
       PROCEDURE :: write_unformatted
       PROCEDURE :: allocated => mixvector_allocated
-      !GENERIC :: READ(UNFORMATTED) =>read_unformatted
-      !GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
+      GENERIC :: READ(UNFORMATTED) =>read_unformatted
+      GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
    END TYPE t_mixvector
 
    INTERFACE OPERATOR(*)
