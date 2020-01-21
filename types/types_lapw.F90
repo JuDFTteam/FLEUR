@@ -138,13 +138,13 @@ CONTAINS
           DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
        ENDIF
     ENDIF
+    ALLOCATE(lapw%k1(nv,input%jspins)) !shpuld be removed
+    ALLOCATE(lapw%k2(nv,input%jspins)) !
+    ALLOCATE(lapw%k3(nv,input%jspins)) !
     ALLOCATE(lapw%rk(nv,input%jspins) )
     ALLOCATE(lapw%gvec(3,nv,input%jspins))
     ALLOCATE(lapw%vk(3,nv,input%jspins))
     ALLOCATE(lapw%gk(3,nv,input%jspins))
-    ALLOCATE(lapw%k1(nv,input%jspins)) !shpuld be removed
-    ALLOCATE(lapw%k2(nv,input%jspins)) !
-    ALLOCATE(lapw%k3(nv,input%jspins)) !
     ALLOCATE(lapw%matind(nv,2))
 
     lapw%rk = 0 ; lapw%gvec = 0 ;lapw%nv=0

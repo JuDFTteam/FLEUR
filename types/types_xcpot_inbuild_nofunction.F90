@@ -226,7 +226,7 @@ MODULE m_types_xcpot_inbuild_nofunction
       IF (xcpot%is_name("vhse")) a_ex=amix_hse
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,kinEnergyDen_KS)
      !
       IMPLICIT NONE
 !c
@@ -246,7 +246,7 @@ MODULE m_types_xcpot_inbuild_nofunction
 
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
-
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
       CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called")
 
    END SUBROUTINE xcpot_get_vxc

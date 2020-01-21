@@ -65,7 +65,7 @@ CONTAINS
       ALLOCATE(v_x,mold=rho)
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then
-         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinED_KS=kinED%is)
+         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
       else
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       endif

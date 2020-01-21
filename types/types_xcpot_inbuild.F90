@@ -26,7 +26,7 @@ MODULE m_types_xcpot_inbuild
  CONTAINS
 
 
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,kinEnergyDen_KS)
 !
       USE m_xcxal, ONLY : vxcxal
       USE m_xcwgn, ONLY : vxcwgn
@@ -55,6 +55,7 @@ MODULE m_types_xcpot_inbuild
 
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 !c
 !c ---> local scalars
       INTEGER :: ngrid
