@@ -35,6 +35,10 @@ CONTAINS
        str=judft_string_for_argument("-k")
     END IF
 
+    IF (judft_was_argument("-specialk")) THEN
+       CALL set_special_points(kpts,judft_string_for_argument("-specialk"))
+    ENDIF
+
     !set name
     IF (INDEX(str,"#")>0) THEN
        name=str(:INDEX(str,"#")-1)
@@ -66,6 +70,10 @@ CONTAINS
        str=str(4:)
        READ(str,*) nk
        CALL init_by_number(kpts,nk,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+    ELSEIF(INDEX(str,'band=')==1) THEN
+       str=str(6:)
+       READ(str,*) kpts%nkpt
+       CALL init_special(kpts,cell,film)
     ELSEIF(INDEX(str,'grid=')==1) THEN
        str=str(6:)
        READ(str,*) grid
@@ -81,6 +89,36 @@ CONTAINS
     if (len_trim(name)>0) kpts%name=name
   END SUBROUTINE make_kpoints
 
+  SUBROUTINE set_special_points(kpts,str)
+    IMPLICIT NONE
+    TYPE(t_kpts),INTENT(INOUT)::kpts
+    CHARACTER(len=*),INTENT(IN)::str
+
+    CHARACTER(len=500) :: rest,l,ll
+    INTEGER :: i,err
+    real    :: kvec(3)
+    rest=str
+    DO WHILE(len_TRIM(rest)>1) 
+       !cut out everything before first ";"
+       IF (INDEX(rest,";")>0) THEN
+          l=rest(:INDEX(rest,";")-1)
+          rest=rest(INDEX(rest,";")+1:)
+       ELSE
+          l=rest
+          rest=""
+       ENDIF
+       IF (INDEX(l,"=")==0) CALL judft_error("Wrong definition of special k-point:"//l)
+       !full definition of special k-point
+       ll=l(INDEX(l,"=")+1:)
+       READ(ll,*,iostat=err) kvec
+       IF (err.NE.0) CALL judft_error("Wrong definition of special k-point:"//l)
+       CALL kpts%add_special_line(kvec,l(:INDEX(l,"l")-1))
+    END DO
+  END SUBROUTINE set_special_points
+             
+    
+  
+  
   SUBROUTINE init_by_kptsfile(kpts,film)
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film
@@ -122,11 +160,12 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)    :: cell
 
     REAL:: nextp(3),lastp(3),d(MAX(kpts%nkpt,kpts%numSpecialPoints))
-    INTEGER:: nk(MAX(kpts%nkpt,kpts%numSpecialPoints)),i,ii
+    INTEGER :: i,ii
+    INTEGER,ALLOCATABLE:: nk(:)
     IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
-
+    ALLOCATE(nk(kpts%numSpecialPoints-1))
     !Distances
     lastp=0
     DO i=1,kpts%numSpecialPoints
@@ -138,11 +177,14 @@ CONTAINS
     !Distribute points
     nk(1)=0
     DO i=2,kpts%numSpecialPoints
-       nk(i)=NINT((kpts%nkpt-kpts%numSpecialPoints)*(d(i)/SUM(d)))
+       nk(i-1)=NINT((kpts%nkpt-kpts%numSpecialPoints)*(d(i)/SUM(d)))
     ENDDO
 
     ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
-
+    ALLOCATE(kpts%wtkpt(kpts%numSpecialPoints+SUM(nk)))
+    kpts%wtkpt = 1.0
+    
+    
     !Generate lines
     kpts%nkpt=1
     DO i=1,kpts%numSpecialPoints-1
@@ -157,8 +199,6 @@ CONTAINS
     ENDDO
     kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,kpts%numSpecialPoints)
     kpts%specialPointIndices(kpts%numSpecialPoints)=kpts%nkpt
-    ALLOCATE(kpts%wtkpt(kpts%nkpt))
-    kpts%wtkpt = 1.0
   END SUBROUTINE init_special
 
 

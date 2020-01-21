@@ -55,8 +55,6 @@ MODULE m_types_mixvector
       PROCEDURE :: read_unformatted
       PROCEDURE :: write_unformatted
       PROCEDURE :: allocated => mixvector_allocated
-      !GENERIC :: READ(UNFORMATTED) =>read_unformatted
-      !GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
    END TYPE t_mixvector
 
    INTERFACE OPERATOR(*)
@@ -78,12 +76,10 @@ MODULE m_types_mixvector
 
 CONTAINS
 
-   SUBROUTINE READ_unformatted(this, unit, iostat, iomsg)
+   SUBROUTINE READ_unformatted(this, unit)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)::this
       INTEGER, INTENT(IN)::unit
-      INTEGER, INTENT(OUT)::iostat
-      CHARACTER(len=*), INTENT(INOUT)::iomsg
 
       CALL this%alloc()
       IF (pw_here) READ (unit) this%vec_pw
@@ -92,12 +88,10 @@ CONTAINS
       IF (misc_here) READ (unit) this%vec_misc
    END SUBROUTINE READ_unformatted
 
-   SUBROUTINE write_unformatted(this, unit, iostat, iomsg)
+   SUBROUTINE write_unformatted(this, unit)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)::this
       INTEGER, INTENT(IN)::unit
-      INTEGER, INTENT(OUT)::iostat
-      CHARACTER(len=*), INTENT(INOUT)::iomsg
       IF (pw_here) WRITE (unit) this%vec_pw
       IF (mt_here) WRITE (unit) this%vec_mt
       IF (vac_here) WRITE (unit) this%vec_vac

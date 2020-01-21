@@ -182,7 +182,7 @@ CONTAINS
 
 205   FORMAT('         <kPointList name="', a, '" count="', i0, '">')
       WRITE (fh, 205) adjustl(trim(kpts%name)), kpts%nkpt
-      IF (kpts%numSpecialPoints < 2) THEN
+      !IF (kpts%numSpecialPoints < 2) THEN
          DO n = 1, kpts%nkpt
 206         FORMAT('            <kPoint weight="', f12.6, '">', f12.6, ' ', f12.6, ' ', f12.6, '</kPoint>')
             WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
@@ -201,7 +201,7 @@ CONTAINS
 209            FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
             END DO
          END IF
-      END IF
+      !END IF
       WRITE (fh, '(a)') ('         </kPointList>')
       IF (PRESENT(filename)) CLOSE (fh)
    END SUBROUTINE print_xml

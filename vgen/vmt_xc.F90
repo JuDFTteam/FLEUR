@@ -118,7 +118,7 @@
 #ifdef CPP_LIBXC
             if(perform_MetaGGA .and. kinED%set) then
               CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                   , v_x,grad, kinED_KS=kinED%mt(:,:,loc_n))
+                   , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n))
             else
                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
                   , v_x,grad)
@@ -157,7 +157,7 @@
                IF(perform_MetaGGA .and. kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
-                     kinED_KS=kinED%mt(:,:,loc_n), mt_call=.True.)
+                     kinEnergyDen_KS=kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

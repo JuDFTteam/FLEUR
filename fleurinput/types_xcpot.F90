@@ -245,7 +245,7 @@ CONTAINS
       a_ex = -1
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS)
       USE m_judft
       IMPLICIT NONE
 
@@ -256,7 +256,7 @@ CONTAINS
       !---> xc potential
       REAL, INTENT(OUT)       :: vxc(:, :), vx(:, :)
       TYPE(t_gradients), OPTIONAL, INTENT(INOUT)::grad
-
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:, :)
       vxc = 0.0
       vx = 0.0
       CALL juDFT_error("Can't use XC-parrent class")

@@ -74,7 +74,7 @@ CONTAINS
       ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
 
       call set_kinED(mpi, sphhar, atoms, sym,  xcpot, &
-      input, noco, stars, cell, Den, EnergyDen, vTot,kinED)
+      input, noco, stars,vacuum,oned, cell, Den, EnergyDen, vTot,kinED)
 
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)

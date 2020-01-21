@@ -250,7 +250,7 @@ contains
        IF (LEN_TRIM(lo)==0) lo=ap%lo
     END IF
 
-    ap=t_atompar(id=INT(id),nucnumber=nz,rmt=rmt,dx=dx,jri=jri,lmax=lmax,lnonsph=lnonsph,lo=lo,bmu=bmu,econfig=econfig,desc=name)
+    ap=t_atompar(id=NINT(id),nucnumber=nz,rmt=rmt,dx=dx,jri=jri,lmax=lmax,lnonsph=lnonsph,lo=lo,bmu=bmu,econfig=econfig,desc=name)
 
 
   CONTAINS

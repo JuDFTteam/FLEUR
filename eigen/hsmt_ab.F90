@@ -102,7 +102,6 @@ CONTAINS
 
     
     ab_size=lmax*(lmax+2)+1
-    ab=0.0
     
     np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
@@ -240,6 +239,7 @@ CONTAINS
              ab(k,ll1+m+1+ab_size) = gj(k,l,iintsp)*term
           END DO
        END DO
+       IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0) 
        IF (PRESENT(abclo)) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -262,6 +262,7 @@ CONTAINS
        
     ENDDO !k-loop
     !$OMP END PARALLEL DO
+    IF (size(ab,1) > lapw%nv(iintsp)) ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
     IF (.NOT.l_apw) ab_size=ab_size*2
     
   END SUBROUTINE hsmt_ab_cpu
