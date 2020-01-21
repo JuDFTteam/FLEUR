@@ -59,7 +59,10 @@ CONTAINS
     CALL print_argument("-k")
     CALL print_argument("-inc")
     CALL print_argument("-overwrite")
-
+    CALL print_argument("-noco")
+    CALL print_argument("-warn_only")
+    CALL print_argument("-specialk")
+    CALL print_argument("-trace")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 
