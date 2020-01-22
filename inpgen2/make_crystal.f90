@@ -25,15 +25,15 @@ CONTAINS
     TYPE(t_cell),INTENT(in)   ::cell
     TYPE(t_sym),INTENT(inout) ::sym !symor is checked
     TYPE(t_atoms),INTENT(out) ::atoms
-  
- 
+
+
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
-    REAL,PARAMETER :: eps7 = 1.0e-7  
+    REAL,PARAMETER :: eps7 = 1.0e-7
     INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-    
 
-    
+
+
     !generate basic atom type
     !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     !---> atomic positions:
@@ -46,8 +46,9 @@ CONTAINS
     !---> read in atomic positions and shift to (-1/2,1/2] in lattice
     !---> coords. also read in identification (atomic) number (atomid)
     !---> to distinguish different atom types (need not be atomic number)
+    if (film) atompos(3,:)=atompos(3,:)/cell%amat(3,3)
     DO n=1,size(atompos,2)
-       atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
+      atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
     ENDDO
 
     !--->    calculate space group symmetry
@@ -81,7 +82,7 @@ CONTAINS
 
     !Generate basic atom type
     CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms)
-    
+
     !--->    determine a set of generators for this group
     !CALL generator(sym%nop,sym%mrot,sym%tau,6,0)
 

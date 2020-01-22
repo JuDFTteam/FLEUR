@@ -184,7 +184,7 @@ CONTAINS
       WRITE (fh, 205) adjustl(trim(kpts%name)), kpts%nkpt
       !IF (kpts%numSpecialPoints < 2) THEN
          DO n = 1, kpts%nkpt
-206         FORMAT('            <kPoint weight="', f12.6, '">', f12.6, ' ', f12.6, ' ', f12.6, '</kPoint>')
+206         FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
             WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
          END DO
          IF (kpts%ntet > 0) THEN
