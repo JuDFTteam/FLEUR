@@ -31,7 +31,7 @@ contains
 
     if (ap%rmt==0) then
       write(*,*) "Warning, you might want to specify rmt in your atom type definition."
-      ap%rmt=0.1
+      ap%rmt=2.0
     endif
     ap_d=find_atompar(ap%nucnumber,ap%rmt)
 
@@ -148,7 +148,7 @@ contains
     DO n=no_of_atompars,1,-1
        ap=atompar_list(n)
        if (ap%nucnumber==nucnumber) then
-          IF (ap%rmt>0.AND.ap%rmt<rmt_max) THEN
+          IF (ap%rmt>0.AND.ap%rmt<rmt_max.and.ap%id==-1) THEN
              RETURN
           ENDIF
        endif
@@ -157,7 +157,7 @@ contains
     !Else we check if there is an atom definition available
     DO n=no_of_atompars,1,-1
        ap=atompar_list(n)
-       if (ap%nucnumber==nucnumber) then
+       if (ap%nucnumber==nucnumber.and.ap%id==-1) then
           IF (ap%rmt_min>5.0.OR.ap%rmt_min<=rmt_max) THEN
              ap%rmt=rmt_max
              return
