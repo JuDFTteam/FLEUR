@@ -146,6 +146,7 @@ CONTAINS
     call mpi_bc(this%ldauLinMix,rank,mpi_comm)
     call mpi_bc(this%ldauMixParam,rank,mpi_comm)
     call mpi_bc(this%ldauSpinf,rank,mpi_comm)
+    call mpi_bc(this%ldauAdjEnpara,rank,mpi_comm)
     call mpi_bc(this%l_rdmft,rank,mpi_comm)
     call mpi_bc(this%rdmftOccEps,rank,mpi_comm)
     call mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
