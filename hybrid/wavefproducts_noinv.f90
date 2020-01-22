@@ -45,7 +45,9 @@ CONTAINS
       g_t  = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = kpts%get_nk(kqpt)
-      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
+      IF (.not. kpts%is_kpt(kqpt)) then
+         call juDFT_error('wavefproducts: k-point not found')
+      endif
 
       call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
