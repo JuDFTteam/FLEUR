@@ -1103,21 +1103,17 @@ CONTAINS
                END IF
                DO isym1 = 2, nsym1(ikpt)
                   isym = sym1(isym1, ikpt)
-                  CALL bramat_trafo( &
-                     carr2(:, 1), igpt1, &
-                     carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
+                  CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
                      sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
                      kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                      mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                     hybdat%nbasp, nbasm1)
+                     hybdat%nbasp, nbasm1,carr2(:, 1), igpt1)
                   IF (iarr(igpt1) == 0) THEN
-                     CALL bramat_trafo( &
-                        carr2(:, 1), igpt1, &
-                        carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
+                     CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
                         sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
                         kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                         mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                        dwgn(:, :, :, isym), hybdat%nbasp, nbasm1)
+                        dwgn(:, :, :, isym), hybdat%nbasp, nbasm1,carr2(:, 1), igpt1)
                      l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
                      coulomb(l + 1:l + hybdat%nbasp + igpt1, ikpt) = carr2(:hybdat%nbasp + igpt1, 1)
                      iarr(igpt1) = 1

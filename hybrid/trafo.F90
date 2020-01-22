@@ -791,9 +791,9 @@ CONTAINS
       END IF
    END SUBROUTINE commonphase
 
-   SUBROUTINE bramat_trafo( &
-      vecout, igptm_out, vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
-      rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
+   SUBROUTINE bramat_trafo(vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
+      rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm,&
+       dwgn, nbasp, nbasm , vecout, igptm_out)
 
       USE m_constants
       USE m_util
@@ -831,7 +831,7 @@ CONTAINS
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
       INTEGER                 ::  igptm, igptm2, igptp, isym
       INTEGER                 ::  ikpt1
-      LOGICAL                 ::  trs
+      LOGICAL                 ::  trs, touch
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
@@ -841,7 +841,7 @@ CONTAINS
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(maxval(mpdata%n_g))
 
-      igptm_out=-1;vecout=CMPLX_NOT_INITALIZED
+      igptm_out=-1;vecout=CMPLX_NOT_INITALIZED; touch=.false.
 
       IF (iop <= sym%nop) THEN
          isym = iop
@@ -872,6 +872,7 @@ CONTAINS
          igptm2 = pointer(g1(1), g1(2), g1(3))
          IF (igptm2 == igptm_in) THEN
             igptm_out = igptm
+            touch = .true.
             IF (writevec) THEN
                cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
                EXIT
@@ -881,6 +882,7 @@ CONTAINS
          END IF
       END DO
 
+      if(.not. touch) call judft_error("g-point could not be found.")
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecout(:nbasm(ikpt0)) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
