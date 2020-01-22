@@ -141,10 +141,10 @@ CONTAINS
        CALL kpts%add_special_line(kvec,l(:INDEX(l,"l")-1))
     END DO
   END SUBROUTINE set_special_points
-             
-    
-  
-  
+
+
+
+
   SUBROUTINE init_by_kptsfile(kpts,film)
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film
@@ -209,8 +209,8 @@ CONTAINS
     ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
     ALLOCATE(kpts%wtkpt(kpts%numSpecialPoints+SUM(nk)))
     kpts%wtkpt = 1.0
-    
-    
+
+
     !Generate lines
     kpts%nkpt=1
     DO i=1,kpts%numSpecialPoints-1
@@ -298,6 +298,7 @@ CONTAINS
     USE m_types_cell
     USE m_types_sym
     USE m_kptgen_hybrid
+    USE m_tetrahedron_regular
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -460,10 +461,6 @@ CONTAINS
                rltv,bltv,nbound,idimens,xvec,fnorm,fdist,ncorn,nface,&
                nedge,cpoint,nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
-          IF(bz_integration==3) THEN
-             !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
-             CALL judft_error("tetra: Nothing here yet")
-          ENDIF
        END IF
 
        DO j=1,kpts%nkpt
@@ -474,7 +471,18 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF (bz_integration==2.AND.random) THEN
+       IF(bz_integration==3.AND..NOT.film) THEN
+          !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
+          !We need to call gen_bz to get the full grid (necessary???)
+          CALL kpts%init(cell, sym, film)
+          CALL tetrahedron_regular(kpts,cell,grid,ntetra,voltet)
+       ENDIF
+
+       IF(bz_integration==3.AND.film) THEN
+          CALL juDFT_error("tetra and film: Nothing here yet",calledby="init_by_grid")
+       ENDIF
+
+       IF (bz_integration==2.AND.random.OR.bz_integration==3.AND..NOT.film) THEN
           ALLOCATE(kpts%ntetra(4,kpts%ntet))
           ALLOCATE(kpts%voltet(kpts%ntet))
           DO j = 1, kpts%ntet
