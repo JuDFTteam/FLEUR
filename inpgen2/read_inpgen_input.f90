@@ -174,11 +174,11 @@ CONTAINS
       integer,intent(inout)::bz_integration_out
       real,intent(inout):: tkb
 
-
+      logical :: tria
       integer :: div1,div2,div3,nkpt
       character(len=5) :: bz_integration
       real    :: den
-      NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,den
+      NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den
       div1=0;div2=0;div3=0;nkpt=0;den=0.0
       bz_integration='hist'
       read(line,kpt)
@@ -202,6 +202,13 @@ CONTAINS
       CASE DEFAULT
          CALL judft_error("No valid bz_integration mode",calledby="process_kpts")
       END SELECT
+      IF(tria.AND.bz_integration_out==0) THEN
+         bz_integration_out = 2
+      ELSE IF(tria.AND.bz_integration_out/=0) THEN
+         CALL juDFT_warn("You specified both tria and bz_integration in the input,\\&
+                          tria will be ignored",calledby="process_kpts")
+      ENDIF
+
     end SUBROUTINE process_kpts
 
     SUBROUTINE process_input(line,film,symor,hybinp)
