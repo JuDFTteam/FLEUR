@@ -94,7 +94,7 @@ CONTAINS
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
           CASE('kpt ')
-             CALL process_kpts(line,kpts_str,input%tria,input%tkb)
+             CALL process_kpts(line,kpts_str,input%bz_integration,input%tkb)
           CASE('film')
              CALL process_film(line,vacuum%dvac,cell%amat(3,3))
           CASE('gen ','sym ')
@@ -168,17 +168,19 @@ CONTAINS
   END SUBROUTINE read_inpgen_input
 
 
-  SUBROUTINE process_kpts(line,kpts_str,tria,tkb)
+  SUBROUTINE process_kpts(line,kpts_str,bz_integration_out,tkb)
       CHARACTER(len=*),INTENT(in)::line
       CHARACTER(len=40),INTENT(out)::kpts_str
-      logical,intent(inout)::tria
+      integer,intent(inout)::bz_integration_out
       real,intent(inout):: tkb
 
 
       integer :: div1,div2,div3,nkpt
+      character(len=5) :: bz_integration
       real    :: den
-      NAMELIST /kpt/nkpt,div1,div2,div3,tkb,tria,den
+      NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,den
       div1=0;div2=0;div3=0;nkpt=0;den=0.0
+      bz_integration='hist'
       read(line,kpt)
       kpts_str=''
       if (den>0.0) THEN
@@ -188,6 +190,18 @@ CONTAINS
       elseif(all([div1,div2,div3]>0)) then
          write(kpts_str,"(a,i0,a,i0,a,i0)") "grid=",div1,",",div2,",",div3
       end if
+      SELECT CASE(TRIM(ADJUSTL(bz_integration)))
+      CASE('hist')
+         bz_integration_out = 0
+      CASE('gauss')
+         bz_integration_out = 1
+      CASE('tria')
+         bz_integration_out = 2
+      CASE('tetra')
+         bz_integration_out = 3
+      CASE DEFAULT
+         CALL judft_error("No valid bz_integration mode",calledby="process_kpts")
+      END SELECT
     end SUBROUTINE process_kpts
 
     SUBROUTINE process_input(line,film,symor,hybinp)

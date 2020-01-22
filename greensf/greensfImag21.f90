@@ -43,6 +43,7 @@ MODULE m_greensfImag21
 
       INTEGER  i_gf,nType,l,natom,ib,j
       INTEGER  ie,m,lm,mp,lmp,ilo,ilop,nn
+      INTEGER  ie_start,ie_end
       REAL del,eb
       COMPLEX  weight
       LOGICAL  l_zero,l_tria
@@ -50,18 +51,14 @@ MODULE m_greensfImag21
 
       IF(.NOT.gfinp%l_sphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
-      !Temporary until input%tria/input%gauss are sorted out
-      !l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
-      l_tria=.false.
-
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del_out=del,eb_out=eb)
 
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(wtkpt,nbands,l_tria,del,eb) &
+      !$OMP SHARED(wtkpt,nbands,del,eb) &
       !$OMP SHARED(atoms,gfinp,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
       !$OMP SHARED(dosWeights,resWeights,ind) &
-      !$OMP PRIVATE(i_gf,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
+      !$OMP PRIVATE(i_gf,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop,ie_start,ie_end) &
       !$OMP PRIVATE(im)
       !$OMP DO
       DO i_gf = 1, gfinp%n
@@ -82,7 +79,11 @@ MODULE m_greensfImag21
                   DO ib = 1, nbands
 
                      l_zero = .true.
-                     IF(l_tria) THEN
+                     IF(input%bz_integration==0) THEN
+                        !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+                        j = FLOOR((eig(ib)-eb)/del)+1
+                        IF((j.LE.gfinp%ne).AND.(j.GE.1)) l_zero = .false.
+                     ELSE IF(input%bz_integration==3) THEN
                         !IF(.NOT.input%l_resolvent) THEN
                            !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                            IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
@@ -90,19 +91,25 @@ MODULE m_greensfImag21
                         !   l_zero = .false.
                         !ENDIF
                      ELSE
-                        !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                        j = FLOOR((eig(ib)-eb)/del)+1
-                        IF( (j.LE.gfinp%ne).AND.(j.GE.1) ) l_zero = .false.
-                     END IF
+                        CALL juDFT_error("Not a supported integration method for Green's functions",calledby="greensfImag")
+                     ENDIF
 
                      IF(l_zero) CYCLE
 
-                     DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
-
-                        IF(l_tria) THEN
-                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
-                        ELSE
+                     !Choose the relevant energy points depending on the bz-integration method
+                     IF(input%bz_integration==0) THEN
+                        ie_start = j
+                        ie_end = j
+                     ELSE IF(input%bz_integration==3) THEN
+                        ie_start = ind(ib,1)
+                        ie_end = ind(ib,2)
+                     ENDIF
+                     DO ie = ie_start, ie_end
+                        !weight for the bz-integration including spin-degeneracy
+                        IF(input%bz_integration==0) THEN
                            weight = -2.0/input%jspins * ImagUnit * pi_const * wtkpt/del
+                        ELSE IF(input%bz_integration==3) THEN
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
                         ENDIF
                         !
                         !Contribution from states

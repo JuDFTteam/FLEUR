@@ -232,7 +232,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
-      IF (gfinp%n.GT.0.AND..FALSE.) THEN!    (input%tria.OR.input%gfTet)) THEN
+      IF (gfinp%n.GT.0.AND.input%bz_integration==3) THEN
          CALL timestart("TetrahedronWeights")
          ALLOCATE(dosWeights(gfinp%ne,noccbd),source=0.0)
          ALLOCATE(resWeights(gfinp%ne,noccbd),source=0.0)

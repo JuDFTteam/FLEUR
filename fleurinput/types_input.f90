@@ -42,7 +42,7 @@ MODULE m_types_input
      REAL    :: preconditioning_param=0.0
      REAL    :: spinf=2.0
      REAL    :: tkb=0.001
-     LOGICAL :: gauss=.FALSE.
+     INTEGER :: bz_integration=0
      LOGICAL :: l_bmt=.FALSE.
      !INTEGER:: scale
      INTEGER:: kcrel =0
@@ -50,7 +50,6 @@ MODULE m_types_input
      LOGICAL:: lflip=.FALSE.
      LOGICAL:: score=.FALSE.
      LOGICAL:: swsp=.FALSE.
-     LOGICAL:: tria=.FALSE.
      LOGICAL:: integ=.FALSE.
      LOGICAL:: pallst=.FALSE.
      LOGICAL:: l_coreSpec=.FALSE.
@@ -124,14 +123,13 @@ CONTAINS
     call mpi_bc(this%preconditioning_param,rank,mpi_comm)
     call mpi_bc(this%spinf,rank,mpi_comm)
     call mpi_bc(this%tkb,rank,mpi_comm)
-    call mpi_bc(this%gauss,rank,mpi_comm)
+    call mpi_bc(this%bz_integration,rank,mpi_comm)
     call mpi_bc(this%l_bmt,rank,mpi_comm)
     call mpi_bc(this%kcrel,rank,mpi_comm)
     call mpi_bc(this%frcor,rank,mpi_comm)
     call mpi_bc(this%lflip,rank,mpi_comm)
     call mpi_bc(this%score,rank,mpi_comm)
     call mpi_bc(this%swsp,rank,mpi_comm)
-    call mpi_bc(this%tria,rank,mpi_comm)
     call mpi_bc(this%integ,rank,mpi_comm)
     call mpi_bc(this%pallst,rank,mpi_comm)
     call mpi_bc(this%l_coreSpec,rank,mpi_comm)
@@ -234,14 +232,13 @@ CONTAINS
     valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
     SELECT CASE (valueString)
     CASE ('hist')
-       this%gauss = .FALSE.
-       this%tria = .FALSE.
+       this%bz_integration = 0
     CASE ('gauss')
-       this%gauss = .TRUE.
-       this%tria = .FALSE.
+       this%bz_integration = 1
     CASE ('tria')
-       this%gauss = .FALSE.
-       this%tria = .TRUE.
+       this%bz_integration = 2
+    CASE ('tetra')
+       this%bz_integration = 3
     CASE DEFAULT
        CALL juDFT_error('Invalid bzIntegration mode selected!')
     END SELECT

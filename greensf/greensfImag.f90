@@ -31,7 +31,7 @@ MODULE m_greensfImag
       INTEGER, ALLOCATABLE,  INTENT(IN)    :: ind(:,:)        !Gives the range where the tetrahedron weights are non-zero
       REAL,                  INTENT(IN)    :: eig(:)          !Eigenvalues for the current k-point
 
-      LOGICAL :: l_zero,l_tria
+      LOGICAL :: l_zero
       INTEGER :: i_gf,ib,ie,j,nType,nn,natom
       INTEGER :: l,m,mp,lm,lmp,ilo,ilop
       INTEGER :: ie_start,ie_end
@@ -39,11 +39,7 @@ MODULE m_greensfImag
       COMPLEX :: weight
       COMPLEX, ALLOCATABLE :: im(:,:)
 
-      !Temporary until input%tria/input%gauss are sorted out
-      !l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
-      l_tria=.false.
-
-      IF(l_tria.AND.ALLOCATED(ind)) THEN
+      IF(ALLOCATED(ind)) THEN
          IF(ANY(ind.GT.gfinp%ne).OR.ANY(ind.LT.1)) THEN
             CALL juDFT_error("Invalid index",calledby="greensfImag")
          ENDIF
@@ -55,7 +51,7 @@ MODULE m_greensfImag
       !Loop through the gf elements to be calculated
 
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(ispin,wtkpt,nbands,l_tria,del,eb) &
+      !$OMP SHARED(ispin,wtkpt,nbands,del,eb) &
       !$OMP SHARED(atoms,gfinp,input,eigVecCoeffs,usdus,greensfCoeffs,eig,sym) &
       !$OMP SHARED(dosWeights,resWeights,ind) &
       !$OMP PRIVATE(i_gf,natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero,ie_start,ie_end) &
@@ -80,7 +76,11 @@ MODULE m_greensfImag
                   DO ib = 1, nbands
                      !Check wether there is a non-zero weight for the energy window
                      l_zero = .true.
-                     IF(l_tria) THEN
+                     IF(input%bz_integration==0) THEN
+                        !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+                        j = FLOOR((eig(ib)-eb)/del)+1
+                        IF((j.LE.gfinp%ne).AND.(j.GE.1)) l_zero = .false.
+                     ELSE IF(input%bz_integration==3) THEN
                         !IF(.NOT.input%l_resolvent) THEN
                            !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                            IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
@@ -88,27 +88,25 @@ MODULE m_greensfImag
                         !   l_zero = .false.
                         !ENDIF
                      ELSE
-                        !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                        j = FLOOR((eig(ib)-eb)/del)+1
-                        IF((j.LE.gfinp%ne).AND.(j.GE.1)) l_zero = .false.
-                     END IF
+                        CALL juDFT_error("Not a supported integration method for Green's functions",calledby="greensfImag")
+                     ENDIF
 
                      IF(l_zero) CYCLE
 
                      !Choose the relevant energy points depending on the bz-integration method
-                     IF(l_tria) THEN
-                        ie_start = ind(ib,1)
-                        ie_end = ind(ib,2)
-                     ELSE
+                     IF(input%bz_integration==0) THEN
                         ie_start = j
                         ie_end = j
+                     ELSE IF(input%bz_integration==3) THEN
+                        ie_start = ind(ib,1)
+                        ie_end = ind(ib,2)
                      ENDIF
                      DO ie = ie_start, ie_end
                         !weight for the bz-integration including spin-degeneracy
-                        IF(l_tria) THEN
-                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
-                        ELSE
+                        IF(input%bz_integration==0) THEN
                            weight = -2.0/input%jspins * ImagUnit * pi_const * wtkpt/del
+                        ELSE IF(input%bz_integration==3) THEN
+                           weight = -2.0/input%jspins * ImagUnit * pi_const * dosWeights(ie,ib)!+resWeights(ie,ib)
                         ENDIF
                         !-------------------------
                         !Contribution from states

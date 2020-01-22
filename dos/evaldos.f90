@@ -238,13 +238,13 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
-             IF (input%tria) THEN
+             IF (input%bz_integration==2) THEN
                ntetra = kpts%ntet
                DO i = 1, ntetra
                  itetra(1:4,i) = kpts%ntetra(1:4,i)
                  voltet(i) = kpts%voltet(i) / ntetra
                END DO
-               l_tria = input%tria
+               l_tria = input%bz_integration==2
                GOTO 67
              ELSE
                GOTO 66
