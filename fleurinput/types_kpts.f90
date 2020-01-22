@@ -51,13 +51,14 @@ CONTAINS
       real, intent(in)            :: kpoint(3)
       integer                     :: idx, ret_idx
 
+      ret_idx = 0
       DO idx = 1, kpts%nkptf
-         IF (all(abs(kpoint - kpts%bkf(:, idx)) < 1E-06)) THEN
+         IF (all(abs(  kpts%to_first_bz(kpoint) &
+                     - kpts%to_first_bz(kpts%bkf(:, idx))) < 1E-06)) THEN
             ret_idx = idx
-            return
+            exit
          END IF
       END DO
-      ret_idx = 0
    end function kpts_get_nk
 
    function kpts_to_first_bz(kpts, kpoint) result(out_point)
@@ -305,14 +306,9 @@ CONTAINS
          DO ikpt = 1, kpts%nkpt
             rotkpt = MATMUL(rrot(:, :, iop), kpts%bk(:, ikpt))
             !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
-            do while (any(rotkpt < -0.5 + eps))
-               where (rotkpt < -0.5 + eps) rotkpt = rotkpt + 1.0
-            enddo
-            do while (any(rotkpt > 0.5 + eps))
-               where (rotkpt > 0.5 + eps) rotkpt = rotkpt - 1.0
-            enddo
+            rotkpt = kpts%to_first_bz(rotkpt)
             DO ikpt1 = 1, ic
-               IF (MAXVAL(ABS(kpts%bkf(:, ikpt1) - rotkpt)) < 1e-07) EXIT
+               IF (all(abs(kpts%bkf(:, ikpt1) - rotkpt) < 1e-06)) EXIT
             END DO
 
             IF (ikpt1 > ic) THEN !new point
