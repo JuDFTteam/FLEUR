@@ -61,13 +61,18 @@ CONTAINS
       END DO
    end function kpts_get_nk
 
-   function kpts_to_first_bz(kpts, kpoint) result(out_point)
+   function kpts_to_first_bz(kpts, k_in) result(k)
       implicit NONE
       class(t_kpts), intent(in)  :: kpts
-      real, intent(in)           :: kpoint(3)
-      real                       :: out_point(3)
+      real, intent(in)           :: k_in(3)
+      real                       :: k(3)
 
-      out_point = kpoint - floor(kpoint)
+      k = k_in
+      ! everything close to 0 or 1 get's mapped to 0 and 1
+      where(abs(k - nint(k)) < 1e-8) k = nint(k)
+
+      ! map to 0 -> 1 interval
+      k = k - floor(k)
    end function kpts_to_first_bz
 
    function kpts_is_kpt(kpts, kpoint) result(is_kpt)
