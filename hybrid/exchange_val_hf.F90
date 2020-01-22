@@ -457,7 +457,7 @@ CONTAINS
 
       INTEGER :: ix, iy, iz, sign, n
       logical :: found
-      REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2
+      REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2, nkpt3(3)
       COMPLEX :: cdum
 
       expo = 5e-3
@@ -465,10 +465,10 @@ CONTAINS
       cdum = sqrt(expo)*rrad
       divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
       rrad = rrad**2
-      call judft_error("Missing functionality")
-      !kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
-      !kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
-      !kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
+      nkpt3 = kpts%nkpt3()
+      kv1 = cell%bmat(1, :)/nkpt3(1)
+      kv2 = cell%bmat(2, :)/nkpt3(2)
+      kv3 = cell%bmat(3, :)/nkpt3(3)
       n = 1
       found = .true.
 
@@ -496,4 +496,32 @@ CONTAINS
 
    END SUBROUTINE calc_divergence
 
+   function calc_divergence2(cell, kpts) result(divergence)
+      USE m_types
+      USE m_constants
+      USE m_util, ONLY: cerf
+      implicit none
+      TYPE(t_cell), INTENT(IN)  :: cell
+      TYPE(t_kpts), INTENT(IN)  :: kpts
+      REAL                      :: divergence
+
+      INTEGER :: ikpt
+      REAL, PARAMETER :: expo = 5e-3
+      REAL    :: rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2
+      COMPLEX :: cdum
+
+      rrad = sqrt(-log(5e-3)/expo)
+      cdum = sqrt(expo)*rrad
+      divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
+      rrad = rrad**2
+
+
+      do ikpt = 1, kpts%nkptf
+         k = kpts%bkf(:,ikpt)
+         knorm2 = norm2(k)
+         IF(knorm2 < rrad) THEN
+            divergence = divergence - exp(-expo*knorm2)/knorm2/kpts%nkptf
+         END IF
+      enddo
+   end function calc_divergence2
 END MODULE m_exchange_valence_hf

@@ -825,7 +825,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
                                        -maxlcutm:maxlcutm,&
                                                0:maxlcutm)
-      COMPLEX, INTENT(INOUT)     ::  vecout(nbasm(ikpt0))
+      COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm))
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
@@ -836,10 +836,10 @@ CONTAINS
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-                                  g1(3), iarr(mpdata%n_g(ikpt0))
+                                  g1(3), iarr(maxval(mpdata%n_g))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
-      COMPLEX                 ::  carr(mpdata%n_g(ikpt0))
+      COMPLEX                 ::  carr(maxval(mpdata%n_g))
 
       igptm_out=-1;vecout=CMPLX_NOT_INITALIZED
 
@@ -882,14 +882,14 @@ CONTAINS
       END DO
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
-      vecout = vecin(:nbasm(ikpt0))
+      vecout(:nbasm(ikpt0)) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
 
 !     Right-multiplication
       ! PW
-      IF (trs) THEN; vecin1 = cdum*conjg(vecout)
-      ELSE; vecin1 = cdum*vecout
+      IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0)))
+      ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0))
       END IF
 
 !     Define pointer to first mixed-basis functions (with m = -l)
@@ -934,6 +934,7 @@ CONTAINS
       END DO
 
       ! PW
+      write (*,*) ikpt1, ": ng =", mpdata%n_g(ikpt1)
       DO igptm = 1, mpdata%n_g(ikpt1)
          igptp = mpdata%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpdata%g(:, igptp) - g)

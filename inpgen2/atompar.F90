@@ -29,11 +29,11 @@ contains
     INTEGER        :: n
 
 
-    if (ap%rmt>0) then
-       ap_d=find_atompar(ap%nucnumber,ap%rmt)
-    else
-       call judft_error("Defaults ...")
+    if (ap%rmt==0) then
+      write(*,*) "Warning, you might want to specify rmt in your atom type definition."
+      ap%rmt=0.1
     endif
+    ap_d=find_atompar(ap%nucnumber,ap%rmt)
 
     if (ap%jri==0) ap%jri=ap_d%jri
     if (ap%dx==0) ap%jri=ap_d%dx

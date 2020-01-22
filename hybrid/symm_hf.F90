@@ -58,8 +58,7 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         call judft_error("Missing functionality")
-         !rotkpt = modulo1(rotkpt, kpts%nkpt3)
+         rotkpt = modulo1(rotkpt, kpts%nkpt3())
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -167,8 +166,7 @@ CONTAINS
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ
-            call judft_error("Missing functionality")
-            !rotkpt = modulo1(rotkpt, kpts%nkpt3)
+            rotkpt = modulo1(rotkpt, kpts%nkpt3())
 
             !determine number of rotkpt
             nrkpt = 0
@@ -226,8 +224,7 @@ CONTAINS
                rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, ikpt))
 
                !transfer rotkpt into BZ
-               call judft_error("Missing functionality")
-               !rotkpt = modulo1(rotkpt, kpts%nkpt3)
+               rotkpt = modulo1(rotkpt, kpts%nkpt3())
 
                !check if rotkpt is identical to bk(:,ikpt)
                IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
@@ -581,8 +578,7 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         call judft_error("Missing functionality")
-         !rotkpt = modulo1(rotkpt, kpts%nkpt3)
+         rotkpt = modulo1(rotkpt, kpts%nkpt3())
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -617,8 +613,7 @@ CONTAINS
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ
-            call judft_error("Missing functionality")
-            !rotkpt = modulo1(rotkpt, kpts%nkpt3)
+            rotkpt = modulo1(rotkpt, kpts%nkpt3())
 
             !determine number of rotkpt
             nrkpt = 0

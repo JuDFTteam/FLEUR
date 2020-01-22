@@ -38,6 +38,7 @@ MODULE m_types_kpts
       procedure :: to_first_bz => kpts_to_first_bz
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
+      procedure :: nkpt3 => nkpt3_kpts
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -272,8 +273,9 @@ CONTAINS
 
       !  - local arrays -
       INTEGER, ALLOCATABLE     ::  iarr(:)
-      REAL                    ::  rrot(3, 3, 2*sym%nop), rotkpt(3)
+      REAL                     ::  rrot(3, 3, 2*sym%nop), rotkpt(3)
       REAL, ALLOCATABLE        ::  rarr1(:, :)
+      REAL, PARAMETER          :: eps = 1e-8
 
       INTEGER:: nsym, ID_mat(3, 3)
 
@@ -303,14 +305,14 @@ CONTAINS
          DO ikpt = 1, kpts%nkpt
             rotkpt = MATMUL(rrot(:, :, iop), kpts%bk(:, ikpt))
             !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
-            do while (any(rotkpt < -0.5))
-               where (rotkpt < -0.5) rotkpt = rotkpt + 1.0
+            do while (any(rotkpt < -0.5 + eps))
+               where (rotkpt < -0.5 + eps) rotkpt = rotkpt + 1.0
             enddo
-            do while (any(rotkpt > 0.5 + 1E-8))
-               where (rotkpt > 0.5 + 1E-8) rotkpt = rotkpt - 1.0
+            do while (any(rotkpt > 0.5 + eps))
+               where (rotkpt > 0.5 + eps) rotkpt = rotkpt - 1.0
             enddo
             DO ikpt1 = 1, ic
-               IF (MAXVAL(ABS(kpts%bkf(:, ikpt1) - rotkpt)) .LE. 1e-07) EXIT
+               IF (MAXVAL(ABS(kpts%bkf(:, ikpt1) - rotkpt)) < 1e-07) EXIT
             END DO
 
             IF (ikpt1 > ic) THEN !new point
@@ -342,4 +344,23 @@ CONTAINS
       DEALLOCATE (rarr1)
 
    END SUBROUTINE gen_bz
+
+   function nkpt3_kpts(kpts) result(nkpt3)
+      implicit none
+      class(t_kpts), intent(in) :: kpts
+      integer                   :: nkpt3(3)
+
+      integer :: ikpt
+      real    :: k(3)
+
+      nkpt3 = 0
+
+      do ikpt = 1, kpts%nkptf
+         k = kpts%bkf(:,ikpt)
+         write (*,"(I3,A,F8.4,F8.4,F8.4)") ikpt, ": ", kpts%bkf(:,ikpt)
+         if(abs(k(2)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(1) = nkpt3(1) + 1
+         if(abs(k(1)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(2) = nkpt3(2) + 1
+         if(abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
+      enddo
+   end function nkpt3_kpts
 END MODULE m_types_kpts
