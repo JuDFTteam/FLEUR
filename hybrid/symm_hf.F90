@@ -58,7 +58,7 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3())
+         rotkpt = kpts%to_first_bz(rotkpt)
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -165,17 +165,8 @@ CONTAINS
 
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
-            !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3())
-
             !determine number of rotkpt
-            nrkpt = 0
-            DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
-                  nrkpt = ikpt1
-                  EXIT
-               END IF
-            END DO
+            nrkpt = kpts%get_nk(rotkpt)
             IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF (list(nrkpt) /= 0) THEN
@@ -224,7 +215,7 @@ CONTAINS
                rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, ikpt))
 
                !transfer rotkpt into BZ
-               rotkpt = modulo1(rotkpt, kpts%nkpt3())
+               rotkpt = kpts%to_first_bz(rotkpt)
 
                !check if rotkpt is identical to bk(:,ikpt)
                IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
@@ -578,7 +569,7 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3())
+         rotkpt = kpts%to_first_bz(rotkpt)
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -613,7 +604,7 @@ CONTAINS
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3())
+            rotkpt = kpts%to_first_bz(rotkpt)
 
             !determine number of rotkpt
             nrkpt = 0
