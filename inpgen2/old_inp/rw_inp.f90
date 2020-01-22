@@ -84,7 +84,7 @@
       INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest,rdum,rdum1
-      LOGICAL l_hyb,l_sym,ldum
+      LOGICAL l_hyb,l_sym,ldum,gauss,tria
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
@@ -525,9 +525,13 @@
       READ (UNIT=5,FMT='(f10.5)',END=99,ERR=99) input%rkmax
       WRITE (6,FMT='(f10.5,1x,A)') input%rkmax, '=kmax'
 
-      READ (UNIT=5,FMT=8010,END=99,ERR=99) input%gauss,input%delgau,input%tria
-      WRITE (6,9160) input%gauss,input%delgau,input%tria
+      READ (UNIT=5,FMT=8010,END=99,ERR=99) gauss,input%delgau,tria
+      WRITE (6,9160) gauss,input%delgau,tria
  8010 FORMAT (6x,l1,f10.5,5x,l1)
+
+      IF(.NOT.(tria.OR.gauss)) input%bz_integration = 0
+      IF(gauss) input%bz_integration = 1
+      IF(tria)  input%bz_integration = 2
 !
       input%tkb=input%delgau
 !
@@ -911,7 +915,7 @@
       WRITE (5,9150) input%ellow,input%elup,input%zelec
 9150  FORMAT (4f10.5)
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
-      WRITE (5,9160) input%gauss,input%delgau,input%tria
+      WRITE (5,9160) input%bz_integration==1,input%delgau,input%bz_integration==2
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
       WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
  9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)

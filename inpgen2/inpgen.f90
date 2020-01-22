@@ -128,7 +128,8 @@ PROGRAM inpgen
       !
       ! k-points can also be modified here
       !
-      call make_kpoints(kpts,cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,kpts_str)
+      call make_kpoints(kpts,cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
+                        input%bz_integration,kpts_str)
       !
       !Now the IO-section
       !

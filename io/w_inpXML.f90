@@ -213,16 +213,17 @@ CONTAINS
       END SELECT
       WRITE (fileNum, 190) input%l_f, input%forcealpha, TRIM(mixingScheme), input%epsdisp, input%epsforce
 
-      IF (input%gauss .AND. input%tria) THEN
-         call juDFT_error('Error: bz integration modes gauss AND tria selected!')
-      END IF
-
-      bzIntMode = 'hist'
-      IF (input%gauss) THEN
+      IF(input%bz_integration==0) THEN
+         bzIntMode = 'hist'
+      ELSE IF(input%bz_integration==1) THEN
          bzIntMode = 'gauss'
-      ELSE IF (input%tria) THEN
+      ELSE IF(input%bz_integration==2) THEN
          bzIntMode = 'tria'
-      END IF
+      ELSE IF(input%bz_integration==3) THEN
+         bzIntMode = 'tetra'
+      ELSE
+         CALL judft_error("Invalid brillouin zone integration mode",calledby="w_inpXML")
+      ENDIF
 
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
 195   FORMAT('      <ldaU l_linMix="', l1, '" mixParam="', f0.6, '" spinf="', f0.6, '"/>')

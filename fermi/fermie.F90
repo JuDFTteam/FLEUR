@@ -237,14 +237,14 @@ CONTAINS
        !-po
        results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
        results%bandgap = 0.0
-       IF (input%gauss) THEN
-          CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
-       ELSE IF (input%tria) THEN
-          CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
-               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
-       ELSE
+       IF(input%bz_integration==0) THEN
           CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp, n,&
                nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
+       ELSE IF (input%bz_integration==1) THEN
+          CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+       ELSE IF (input%bz_integration==2) THEN
+          CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
+               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
        END IF
        results%seigscv = results%seigsc + results%seigv
 

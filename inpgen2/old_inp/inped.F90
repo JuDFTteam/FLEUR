@@ -407,11 +407,7 @@
           WRITE (6,FMT=8290) input%rkmax
 8290      FORMAT (1x,/,' wavefunction cutoff =',f10.5)
           !
-          IF ((input%tria) .AND. (input%gauss)) THEN
-             WRITE (6,FMT='(a)') 'choose: either gaussian or triangular!'
-             CALL juDFT_error("integration method",calledby ="inped")
-          END IF
-          WRITE (6,FMT=8230) input%gauss,input%delgau
+          WRITE (6,FMT=8230) input%bz_integration==1,input%delgau
           WRITE (6,FMT=8240) input%zelec,input%tkb
 8230      FORMAT (/,10x,'gauss-integration is used  =',3x,l1,/,10x, 'gaussian half width        =',f10.5)
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)

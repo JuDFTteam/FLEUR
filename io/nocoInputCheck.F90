@@ -34,7 +34,7 @@ MODULE m_nocoInputCheck
       END IF
 
 !---> make sure histogram method is used
-      IF (input%gauss) THEN
+      IF (input%bz_integration==1) THEN
          WRITE (6,*) 'This non-collinear version of the flapw program'
          WRITE (6,*) 'cannot be used with the Gaussian smearing for '
          WRITE (6,*) 'the Brillouin zone integration!!'

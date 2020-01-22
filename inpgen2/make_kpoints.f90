@@ -10,7 +10,7 @@ MODULE m_make_kpoints
   private
   public :: make_kpoints
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,str)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
@@ -20,15 +20,16 @@ CONTAINS
     TYPE(t_sym),INTENT(in)     :: sym
     TYPE(t_hybinp), intent(in) :: hybinp
     LOGICAL,INTENT(in)::l_socorss,film
+    INTEGER,INTENT(inout)::bz_integration
     CHARACTER(len=*),INTENT(inout)::str
 
-    LOGICAL:: tria,l_gamma,l_soc_or_ss
+    LOGICAL:: l_gamma,l_soc_or_ss, l_bzset
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=20)::name=""
     !defaults
     l_soc_or_ss=l_socorss
-    tria=.false.;l_gamma=.false.
+    l_gamma=.false.
 
     IF (judft_was_argument("-k")) THEN
        IF (LEN_TRIM(str)>1) CALL judft_error("Do not specify k-points in file and on command line")
@@ -46,9 +47,34 @@ CONTAINS
     END IF
     str=ADJUSTL(str)
     DO WHILE(INDEX(str,'@')>0)
+       ! Read in the integration method if they are specified on the command line (hist is standard)
+       l_bzset = .FALSE. !To warn if there are multiple definitions on the command line
+        IF (INDEX(str,'gauss@')==1) THEN
+          IF(bz_integration.NE.0) &
+              CALL juDFT_warn("You specified the integration method in file and on command line")
+          bz_integration=1
+          IF(l_bzset) &
+              CALL juDFT_warn("You specified the integration method multiple times in the command line")
+          l_bzset = .TRUE.
+          str=str(7:)
+       ENDIF
        IF (INDEX(str,'tria@')==1) THEN
-          tria=.TRUE.
+          IF(bz_integration.NE.0) &
+              CALL juDFT_warn("You specified the integration method in file and on command line")
+          bz_integration=2
+          IF(l_bzset) &
+              CALL juDFT_warn("You specified the integration method multiple times in the command line")
+          l_bzset = .TRUE.
           str=str(6:)
+       ENDIF
+       IF (INDEX(str,'tetra@')==1) THEN
+          IF(bz_integration.NE.0) &
+              CALL juDFT_warn("You specified the integration method in file and on command line")
+          bz_integration=3
+          IF(l_bzset) &
+              CALL juDFT_warn("You specified the integration method multiple times in the command line")
+          l_bzset = .TRUE.
+          str=str(7:)
        ENDIF
        IF (INDEX(str,'gamma@')==1) THEN
           l_gamma=.TRUE.
@@ -65,11 +91,11 @@ CONTAINS
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)
        READ(str,*) den
-       CALL init_by_density(kpts,den,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+       CALL init_by_density(kpts,den,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'nk=')==1) THEN
        str=str(4:)
        READ(str,*) nk
-       CALL init_by_number(kpts,nk,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+       CALL init_by_number(kpts,nk,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'band=')==1) THEN
        str=str(6:)
        READ(str,*) kpts%nkpt
@@ -77,11 +103,11 @@ CONTAINS
     ELSEIF(INDEX(str,'grid=')==1) THEN
        str=str(6:)
        READ(str,*) grid
-       CALL init_by_grid(kpts,grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+       CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
     ELSEIF(LEN_TRIM(str)<1.OR.INDEX(ADJUSTL(str),'#')==1) THEN
-       CALL init_defaults(kpts,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+       CALL init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSE
        CALL judft_error(("Could not process -k argument:"//str))
     ENDIF
@@ -202,11 +228,12 @@ CONTAINS
   END SUBROUTINE init_special
 
 
-  SUBROUTINE init_defaults(kpts,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     USE m_types_cell
     USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
-    LOGICAL,INTENT(in)       :: film,tria,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(in)       :: film,l_soc_or_ss,l_gamma
+    INTEGER,INTENT(in)       :: bz_integration
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
 
@@ -216,17 +243,18 @@ CONTAINS
     ELSE
        nkpt = MAX(NINT((216000/cell%omtil)/sym%nop),1)
     ENDIF
-    CALL init_by_number(kpts,nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+    CALL init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
   END SUBROUTINE init_defaults
 
-  SUBROUTINE init_by_density(kpts,density,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_density(kpts,density,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     USE m_types_cell
     USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     REAL,INTENT(in)          :: density
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
-    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)       :: film,l_soc_or_ss,l_gamma
+    INTEGER,INTENT(IN)       :: bz_integration
     REAL    :: length
     INTEGER :: n,grid(3)
 
@@ -234,11 +262,11 @@ CONTAINS
        length=SQRT(DOT_PRODUCT(cell%bmat(n,:),cell%bmat(n,:)))  !TODO why not bmat(:,n)???
        grid(n)=CEILING(density*length)
     END DO
-    CALL init_by_grid(kpts,grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
 
   END SUBROUTINE init_by_density
 
-  SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     USE m_divi
     USE m_types_cell
     USE m_types_sym
@@ -246,15 +274,16 @@ CONTAINS
     INTEGER,INTENT(IN)       :: nkpt
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
-    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)       :: film,l_soc_or_ss,l_gamma
+    INTEGER,INTENT(IN)       :: bz_integration
 
     INTEGER :: grid(3)
 
     CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
-    CALL init_by_grid(kpts,grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
   END SUBROUTINE init_by_number
 
-  SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     !----------------------------------------------------------------------+
     ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
     ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
@@ -275,7 +304,8 @@ CONTAINS
     TYPE(t_sym),     INTENT(IN)    :: sym
     TYPE(t_cell),    INTENT(IN)    :: cell
     INTEGER,INTENT(INout)          :: grid(3)
-    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)             :: film,l_soc_or_ss,l_gamma
+    INTEGER,INTENT(IN)             :: bz_integration
 
 
     INTEGER, PARAMETER :: nop48  = 48
@@ -322,7 +352,7 @@ CONTAINS
     ! away from (0,0,0) (for even/odd nkpt3)
 
     INTEGER i,j,k,l,mkpt,addSym,nsym
-    LOGICAL random,trias
+    LOGICAL random
     REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
 
     IF (ANY(grid==0)) THEN
@@ -332,7 +362,7 @@ CONTAINS
 
 
     IF (l_gamma) THEN
-       IF (tria) CALL judft_error("tria and l_gamma incompatible")
+       IF (bz_integration==2) CALL judft_error("tria and l_gamma incompatible")
        CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
     ELSE
        !------------------------------------------------------------
@@ -362,8 +392,8 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       nbound  = MERGE(1,0,film.AND.tria)
-       random  = tria.AND..NOT.film
+       nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       random  = bz_integration==2.AND..NOT.film
        idimens = MERGE(2,3,film)
 
        ! Lattice information
@@ -415,7 +445,7 @@ CONTAINS
        ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
 
 
-       IF (tria.AND.random) THEN
+       IF (bz_integration==2.AND.random) THEN
           ! Calculate the points for tetrahedron method
           ndiv3 = 6*(mkpt+1)
           ALLOCATE (voltet(ndiv3),vktet(3,mkpt),ntetra(4,ndiv3))
@@ -430,6 +460,10 @@ CONTAINS
                rltv,bltv,nbound,idimens,xvec,fnorm,fdist,ncorn,nface,&
                nedge,cpoint,nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
+          IF(bz_integration==3) THEN
+             !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
+             CALL judft_error("tetra: Nothing here yet")
+          ENDIF
        END IF
 
        DO j=1,kpts%nkpt
@@ -440,7 +474,7 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF (tria.AND.random) THEN
+       IF (bz_integration==2.AND.random) THEN
           ALLOCATE(kpts%ntetra(4,kpts%ntet))
           ALLOCATE(kpts%voltet(kpts%ntet))
           DO j = 1, kpts%ntet
