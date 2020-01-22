@@ -288,7 +288,7 @@ CONTAINS
     p=bmu/2.0
     DO n=econf%num_states,1,-1
        el=econf%occupation(n,1)
-       el=MAX(el,ABS(econf%kappa(n)-el)) !Maximal charge to redistribtue
+       el=MIN(el,ABS(econf%kappa(n))-el) !Maximal charge to redistribtue
        IF (ABS(p)>el) THEN
           p=p-SIGN(el,p)
           econf%occupation(n,1)=econf%occupation(n,1)+SIGN(el,p)
