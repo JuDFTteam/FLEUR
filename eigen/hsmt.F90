@@ -19,10 +19,11 @@ CONTAINS
   !! - In the spin-spiral case, a loop over the global spin is performed and the four parts of the matrix are calculated one-by-one
   !! @todo
   !! The off-diagonal contribution in first-variation soc and constraint calculations is still missing
-  
+
   SUBROUTINE hsmt(atoms,sym,enpara,&
        ispin,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
     USE m_types
+    USE m_types_mpimat
     USE m_hsmt_nonsph
     USE m_hsmt_sph
     use m_hsmt_lo
@@ -40,14 +41,14 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_enpara),INTENT(IN)     :: enpara
-    TYPE(t_lapw),INTENT(IN)       :: lapw 
+    TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_usdus),INTENT(IN)      :: usdus
     CLASS(t_mat),INTENT(INOUT)    :: smat(:,:),hmat(:,:)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ispin  
-    
+    INTEGER, INTENT (IN) :: ispin
+
     !locals
 #ifdef CPP_GPU
     REAL, ALLOCATABLE,MANAGED    :: fj(:,:,:,:),gj(:,:,:,:)
@@ -58,14 +59,19 @@ CONTAINS
     INTEGER :: iintsp,jintsp,n
     COMPLEX :: chi(2,2),chi_one
 
-    TYPE(t_mat)::smat_tmp,hmat_tmp
+    CLASS(t_mat),ALLOCATABLE::smat_tmp,hmat_tmp
 
     !
     IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL smat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
-       CALL hmat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
+      if (mpi%n_size==1) Then
+        ALLOCATE(t_mat::hmat_tmp,smat_tmp)
+      ELSE
+        ALLOCATE(t_mpimat::hmat_tmp,smat_tmp)
+      endif
+      CALL smat_tmp%init(hmat(1,1))
+      CALL smat_tmp%init(hmat(1,1))
     ENDIF
-    
+
     ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins,MERGE(2,1,noco%l_noco)))
     ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins,MERGE(2,1,noco%l_noco)))
 
@@ -122,10 +128,10 @@ CONTAINS
                 ENDDO
              ENDDO
           ENDIF
-          
+
     END DO
 
-    
+
     RETURN
   END SUBROUTINE hsmt
 END MODULE m_hsmt
