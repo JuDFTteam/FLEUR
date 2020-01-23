@@ -80,16 +80,15 @@ CONTAINS
       !
       ! stars
       !
-      stars%gmax = merge(stars%gmax, 3.0*input%rkmax, stars%gmax > 0)
-      stars%gmax = round_to_deci(stars%gmax, 1)
+      stars%gmax = merge(stars%gmax, round_to_deci(3.0*input%rkmax, 1), stars%gmax > 0)
       input%gmax = stars%gmax
 
       !
       !xcpot
       !
-      xcpot%gmaxxc = merge(xcpot%gmaxxc, 3.0*input%rkmax, xcpot%gmaxxc > 0)
+      xcpot%gmaxxc = merge(xcpot%gmaxxc, round_to_deci(3.0*input%rkmax,1), xcpot%gmaxxc > 0)
       xcpot%gmaxxc = min(input%gmax,xcpot%gmaxxc)
-      xcpot%gmaxxc = round_to_deci(xcpot%gmaxxc, 1)
+
       xcpot%l_inbuild = .true.
       if (xcpot%icorr == 0) THEN
          if (hybinp%l_hybrid) then
