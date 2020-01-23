@@ -38,15 +38,19 @@ MODULE m_types_hybdat
    END TYPE t_hybdat
 
 contains
-   subroutine allocate_hybdat(hybdat, atoms, num_radfun_per_l)
+   subroutine allocate_hybdat(hybdat, atoms, hybinp, num_radfun_per_l)
       use m_types_atoms
+      use m_types_hybinp
       use m_judft
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_atoms), intent(in)      :: atoms
+      type(t_hybinp), intent(in)     :: hybinp
       integer, intent(in)            :: num_radfun_per_l(:,:)
-      integer                        :: ok(10)
+      integer                        :: ok(12)
+      character(len=2000) :: error_message
 
+      ok = -1
       allocate(hybdat%lmaxc(atoms%ntype),&
               stat=ok(1), source=0)
       allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
@@ -69,13 +73,17 @@ contains
                stat=ok(9), source=0.0)
 
 
-      allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac),&
-               stat=ok(10), source=0.0)
+      allocate(hybdat%fac(0:hybdat%maxfac), stat=ok(10), source=0.0)
+      allocate(hybdat%sfac(0:hybdat%maxfac), stat=ok(11), source=0.0)
+
+      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybinp%lcutm1),&
+                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1)),&
+                            stat=ok(12), source=0.0)
 
       if(any(ok /= 0)) then
          write (*,*) "allocation of hybdat failed. Error in array no.:"
          write (*,*) maxloc(abs(ok))
-         call juDFT_error("allocation of hybdat failed. Error in array no.:")
+         call juDFT_error("allocation of hybdat failed. Error in array no is the outfile")
       endif
    end subroutine allocate_hybdat
 
@@ -93,6 +101,7 @@ contains
       if(allocated(hybdat%core2)) deallocate(hybdat%core2)
       if(allocated(hybdat%eig_c)) deallocate(hybdat%eig_c)
       if(allocated(hybdat%fac)) deallocate(hybdat%fac)
+      if(allocated(hybdat%sfac)) deallocate(hybdat%sfac)
       if(allocated(hybdat%gauntarr)) deallocate(hybdat%gauntarr)
    end subroutine free_hybdat
 

@@ -18,29 +18,25 @@ CONTAINS
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-      INTEGER:: l, m, i, l1, l2, m1, m2, ok
+      INTEGER:: l, m, i, l1, l2, m1, m2
 
       !initialize hybdat%gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
       ! preparations for core states
       CALL core_init( input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
       hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
+
       !Alloc variables
-      call hybdat%allocate(atoms, mpdata%num_radfun_per_l)
+      call hybdat%free()
+      call hybdat%allocate(atoms, hybinp, mpdata%num_radfun_per_l)
 
       ! pre-calculate gaunt coefficients
-      IF (ok /= 0) call judft_error('eigen_hf: failure allocation fac,hybdat%sfac')
       hybdat%fac(0) = 1
       hybdat%sfac(0) = 1
       DO i = 1, hybdat%maxfac
          hybdat%fac(i) = hybdat%fac(i - 1)*i            ! hybdat%fac(i)    = i!
          hybdat%sfac(i) = hybdat%sfac(i - 1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
       END DO
-
-      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybinp%lcutm1),&
-                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1)),&
-                            stat=ok, source=0.0)
-      IF (ok /= 0) call judft_error('eigen: failure allocation hybdat%gauntarr')
 
       DO l2 = 0, atoms%lmaxd
          DO l1 = 0, atoms%lmaxd
