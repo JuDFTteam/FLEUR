@@ -40,16 +40,43 @@ MODULE m_types_hybdat
 contains
    subroutine allocate_hybdat(hybdat, atoms, num_radfun_per_l)
       use m_types_atoms
+      use m_judft
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_atoms), intent(in)      :: atoms
       integer, intent(in)            :: num_radfun_per_l(:,:)
+      integer                        :: ok(10)
 
-      allocate(hybdat%lmaxc(atoms%ntype), source=0)
-      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%lmaxc(atoms%ntype),&
+              stat=ok(1), source=0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(2), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(3), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(4), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(5), source=0.0)
+
+      ! core allocs
+      allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(6), source=0)
+      allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(7), source=0.0)
+      allocate(hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(8), source=0.0)
+      allocate(hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(9), source=0.0)
+
+
+      allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac),&
+               stat=ok(10), source=0.0)
+
+      if(any(ok /= 0)) then
+         write (*,*) "allocation of hybdat failed. Error in array no.:"
+         write (*,*) maxloc(abs(ok))
+         call juDFT_error("allocation of hybdat failed. Error in array no.:")
+      endif
    end subroutine allocate_hybdat
 
    subroutine free_hybdat(hybdat)
