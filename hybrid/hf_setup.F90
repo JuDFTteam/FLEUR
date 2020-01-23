@@ -67,12 +67,14 @@ CONTAINS
 
          allocate(zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
-         allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
+
+         if(.not. allocated(eig_irr)) allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
+         eig_irr = 0
+         
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
-         eig_irr = 0
          hybdat%kveclo_eig = 0
 
          INQUIRE(file ="z",exist= l_exist)
