@@ -1,6 +1,3 @@
-set(fleur_F77 ${fleur_F77}
-
-)
 set(fleur_F90 ${fleur_F90}
 greensf/greensfImag.f90
 greensf/greensfImag21.f90

@@ -12,4 +12,5 @@ set(fleur_F90 ${fleur_F90}
 fermi/fergwt.f90
 fermi/ferhis.f90
 fermi/fermie.F90
+fermi/fertetra.f90
 )

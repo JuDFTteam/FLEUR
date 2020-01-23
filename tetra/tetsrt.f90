@@ -1,10 +1,11 @@
 MODULE m_tetsrt
 
+
+   IMPLICIT NONE
+
    CONTAINS
 
    SUBROUTINE tetsrt(n,etetra,ind)
-
-      IMPLICIT NONE
 
       INTEGER,          INTENT(IN)     :: n
       REAL,             INTENT(IN)     :: etetra(:)
