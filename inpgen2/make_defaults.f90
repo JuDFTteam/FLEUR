@@ -88,7 +88,7 @@ CONTAINS
       !xcpot
       !
       xcpot%gmaxxc = merge(xcpot%gmaxxc, 3.0*input%rkmax, xcpot%gmaxxc > 0)
-      xcpot%gmaxxc = min(xcpot%gmax,xcpot%gmaxxc)
+      xcpot%gmaxxc = min(input%gmax,xcpot%gmaxxc)
       xcpot%gmaxxc = round_to_deci(xcpot%gmaxxc, 1)
       xcpot%l_inbuild = .true.
       if (xcpot%icorr == 0) THEN
