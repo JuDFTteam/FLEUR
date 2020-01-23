@@ -141,7 +141,7 @@ CONTAINS
     CALL ylmnorm_init(max(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-    CALL make_sphhar(atoms,sphhar,sym,cell,oneD)
+    CALL make_sphhar(mpi%irank==0,atoms,sphhar,sym,cell,oneD)
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
     call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     call lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)

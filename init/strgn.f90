@@ -14,7 +14,7 @@ MODULE m_strgn
   !     *********************************************************
 CONTAINS
   SUBROUTINE strgn1(&
-       &                  stars,sym,atoms,&
+       &                  l_write,stars,sym,atoms,&
        &                  vacuum,sphhar,input,cell,xcpot)
     !
     USE m_spgrot
@@ -24,6 +24,7 @@ CONTAINS
     USE m_sort
     USE m_cdn_io
     IMPLICIT NONE
+    LOGICAL,INTENT(IN)           :: l_write
     TYPE(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -122,7 +123,7 @@ CONTAINS
                !--->    new representative found
                stars%ng2 = stars%ng2 + 1
                IF (stars%ng2.GT.stars%ng2) THEN
-                  WRITE (6,8070) stars%ng2,stars%ng2
+                  if (l_write) write (6,8070) stars%ng2,stars%ng2
                   CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
                ENDIF
                DO j = 1,2
@@ -166,7 +167,7 @@ CONTAINS
     ENDDO
 
 
-    WRITE (6,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
+    if (l_write) WRITE (6,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
          &     /(3i4,f10.5,f10.5))')&
          &  stars%ng2,(k,stars%kv2(1,k),stars%kv2(2,k),stars%sk2(k),stars%phi2(k),k=1,stars%ng2)
     !
@@ -188,7 +189,7 @@ CONTAINS
     stars%pgfft=0.0
     stars%pgfft2=0.0
     !-gu
-    WRITE (6,'(/'' bmat(3,3),mx3='',f10.5,i5)') cell%bmat(3,3),stars%mx3
+    if (l_write) WRITE (6,'(/'' bmat(3,3),mx3='',f10.5,i5)') cell%bmat(3,3),stars%mx3
 
     IF (stars%mx3.GT.stars%mx3) THEN
        WRITE ( 6,FMT=8000) stars%mx3,stars%mx3
@@ -254,7 +255,7 @@ CONTAINS
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
-    WRITE (6,8060) stars%gmax, stars%sk3(stars%ng3)
+    if (l_write) write (6,8060) stars%gmax, stars%sk3(stars%ng3)
     stars%gmax = stars%sk3(stars%ng3)
 8060 FORMAT (/,1x,'old stars%gmax    =',f10.5, '(a.u.)**(-1) ==>  new stars%gmax  '&
          &       ,'  =',f10.5,'(a.u.)**(-1) ',/,t38,'==>  new E_cut   =',&
@@ -458,7 +459,7 @@ CONTAINS
     !stars%mx2=mxx2
 
     !--->    write /str0/ and /str1/ to file
-    CALL writeStars(stars,l_xcExtended,.TRUE.)
+    if (l_write) CALL writeStars(stars,l_xcExtended,.TRUE.)
 
 270 CONTINUE
     !
@@ -466,36 +467,36 @@ CONTAINS
     !
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i5,/,' nq2=  ',i5,/)
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,/)
-    WRITE (6,FMT=8030)
+    if (l_write) write (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
 
-    WRITE (6,FMT=8010) stars%gmax,stars%ng3,stars%ng2
-    WRITE (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    WRITE (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
+    if (l_write) write (6,FMT=8010) stars%gmax,stars%ng3,stars%ng2
+    if (l_write) write (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
+    if (l_write) write (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
          &  stars%kimax
 
-    WRITE (6,FMT=8040)
+    if (l_write) write (6,FMT=8040)
 8040 FORMAT(/4x,'no.',5x,'kv3',9x,'sk3',9x,'sk2',5x,&
          &  'ig2',1x,'nstr',2x,'nstr2'/)
 
     ned1=9
     nint=30
     DO k = 1,ned1
-       WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
+       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
             &                     stars%sk2(stars%ig2(k)),&
             &                     stars%ig2(k),stars%nstr(k),stars%nstr2(stars%ig2(k))
     ENDDO
 8050 FORMAT (1x,i5,3i4,2f12.6,i4,2i6)
 
     DO k = ned1+1,stars%ng3,nint
-       WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
+       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
             &                     stars%sk2(stars%ig2(k)),&
             &                     stars%ig2(k),stars%nstr(k),stars%nstr2(stars%ig2(k))
        kdone = k
     ENDDO
 
     IF (kdone.LT.stars%ng3) THEN
-       WRITE (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),stars%sk3(stars%ng3),&
+       if (l_write) write (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),stars%sk3(stars%ng3),&
             &                     stars%sk2(stars%ig2(stars%ng3)),&
             &                     stars%ig2(stars%ng3),stars%nstr(stars%ng3),stars%nstr2(stars%ig2(stars%ng3))
     ENDIF
@@ -505,7 +506,7 @@ CONTAINS
   END SUBROUTINE strgn1
   !----------------------------------------------------------------
   SUBROUTINE strgn2(&
-       &                  stars,sym,atoms,&
+       &                  l_write,stars,sym,atoms,&
        &                  vacuum,sphhar,input,cell,xcpot)
     USE m_boxdim
     USE m_sort
@@ -514,6 +515,7 @@ CONTAINS
     USE m_types
     USE m_cdn_io
     IMPLICIT NONE
+    LOGICAL,INTENT(IN)           :: l_write
     TYPE(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -644,7 +646,7 @@ CONTAINS
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
-    WRITE (6,8060) stars%gmax, stars%sk3(stars%ng3)
+    if (l_write) write (6,8060) stars%gmax, stars%sk3(stars%ng3)
     stars%gmax = stars%sk3(stars%ng3)
 8060 FORMAT (/,1x,'gmax    =',f10.5, '(a.u.)**(-1) ==>  new gmax  '&
          &       ,'  =',f10.5,'(a.u.)**(-1) ',/,t38,'==>  new E_cut   =',&
@@ -782,7 +784,7 @@ CONTAINS
 
     !--->    write /str0/ and /str1/ to file
     CALL timestart("writeStars")
-    CALL writeStars(stars,l_xcExtended,.FALSE.)
+    if (l_write) CALL writeStars(stars,l_xcExtended,.FALSE.)
     CALL timestop("writeStars")
 
 270 CONTINUE
@@ -791,32 +793,32 @@ CONTAINS
     !-->  listing
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i7,/)
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,' mx3= ',i5,/)
-    WRITE (6,FMT=8030)
+    if (l_write) write (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
 
 
-    WRITE (6,FMT=8010) stars%gmax,stars%ng3
-    WRITE (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    WRITE (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
+    if (l_write) write (6,FMT=8010) stars%gmax,stars%ng3
+    if (l_write) write (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
+    if (l_write) write (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
          &  stars%kimax
 
-    WRITE (6,FMT=8040)
+    if (l_write) write (6,FMT=8040)
 8040 FORMAT(/6x,'no.',5x,'kv3',9x,'sk3',7x,'nstr'/)
 
     ned1=9
     nint=30
     DO k = 1,ned1
-       WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
+       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
     ENDDO
 8050 FORMAT (1x,i7,3i4,f12.6,i6)
 
     DO k = ned1+1,stars%ng3,nint
-       WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
+       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
        kdone = k
     ENDDO
 
     IF (kdone.LT.stars%ng3) THEN
-       WRITE (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),&
+       if (l_write) write (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),&
             &                     stars%sk3(stars%ng3),stars%nstr(stars%ng3)
     ENDIF
 
