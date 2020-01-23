@@ -936,7 +936,6 @@ CONTAINS
       END DO
 
       ! PW
-      write (*,*) ikpt1, ": ng =", mpdata%n_g(ikpt1)
       DO igptm = 1, mpdata%n_g(ikpt1)
          igptp = mpdata%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
