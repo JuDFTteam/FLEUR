@@ -86,8 +86,13 @@ CONTAINS
           WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
           8025 FORMAT(2x,'--> Bfield before SF (atom ',i2,': ','Bx 1=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
        END DO
+       CALL timestart("Purging source terms in B-field")
+       CALL timestart("Building B")
        CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,vTot,2.0,bxc)
+       CALL timestop("Building B")
+       CALL timestart("SF subroutine")
        CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+       CALL timestop("SF subroutine")
        CALL div%resetPotDen()
        CALL checkdiv%resetPotDen()
        CALL phi%resetPotDen()
@@ -95,7 +100,10 @@ CONTAINS
           CALL bxc(i)%resetPotDen()
           CALL corrB(i)%resetPotDen()
        END DO
+       CALL timestart("Correcting vTot")
        CALL correctPot(vTot,cvec)
+       CALL timestop("Correcting vTot")
+       CALL timestop("Purging source terms in B-field")
        CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
        DO i=1,atoms%ntype
           WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
