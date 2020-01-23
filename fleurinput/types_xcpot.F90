@@ -35,7 +35,7 @@ MODULE m_types_xcpot
    END TYPE t_gradients
 
    TYPE, abstract, EXTENDS(t_fleurinput_base) :: t_xcpot
-      REAL :: gmaxxc
+      REAL :: gmaxxc=0.0 
       !Data for libxc
       LOGICAL                  :: l_libxc = .FALSE.
       INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
