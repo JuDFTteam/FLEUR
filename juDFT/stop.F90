@@ -93,18 +93,18 @@ CONTAINS
     ELSE
        callstop = .TRUE.
     ENDIF
-    
+
 #ifdef CPP_MPI
     if (l_mpi) CALL collect_messages(message,message_list,first_pe)
 #endif
-    
+
     IF (first_pe) THEN
        IF (.NOT.warn) THEN
           WRITE(0,'(a)') "**************juDFT-Error*****************"
        ELSE
           WRITE(0,'(a)') "************juDFT-Warning*****************"
        ENDIF
-       WRITE(0,"(3a)") "Error message:",message
+       WRITE(0,"(3a)") "Error message: ",message
        IF (PRESENT(calledby)) THEN
           WRITE(0,"(3a)") "Error occurred in subroutine:",calledby
        ENDIF
@@ -138,7 +138,7 @@ CONTAINS
        END IF
 #endif
        WRITE(0,'(2a)') "*****************************************"
-       
+
        IF (.NOT.warn) CALL juDFT_time_lastlocation()
        IF (callstop.and.warn) WRITE(0,'(a)')"Warnings not ignored. Touch 'JUDFT_WARN_ONLY' to make the warning nonfatal"
        IF (callstop) THEN
@@ -213,7 +213,7 @@ CONTAINS
        END IF
     END IF
     IF (TRIM(message)=="") STOP ! simple stop if no end message is given
-    
+
     if(present(irank)) then
        is_root = (irank == 0)
     else
@@ -317,9 +317,9 @@ CONTAINS
     INTEGER,ALLOCATABLE::ihandle(:)
     CHARACTER(len=100):: message
     REAL :: t1,t2
-    
+
     message=mymessage
-    
+
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
     ALLOCATE(message_list(0:isize-1))
@@ -355,5 +355,3 @@ CONTAINS
     ENDDO
   END SUBROUTINE priv_wait
 END MODULE m_juDFT_stop
-
-
