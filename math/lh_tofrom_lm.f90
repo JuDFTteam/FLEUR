@@ -12,49 +12,49 @@ CONTAINS
       REAL,           INTENT(IN)    :: flh(:,0:) ! (iR,iLH)
       COMPLEX,        INTENT(INOUT) :: flm(:,:) ! (iR,lm)
 
-      INTEGER :: iAtom, iLH, ns, l, iM, m, lm, iR, lh, imem, ilm
-      INTEGER, ALLOCATABLE :: llhs(:), nmem_work(:), mlh_work(:,:) 
-      COMPLEX, ALLOCATABLE :: cMat(:,:), gVec(:,:), clnu_work(:,:)
-      REAL, ALLOCATABLE :: fVec(:,:), flh_work(:,:)
+      INTEGER :: iAtom, iLH, ns, l, iM, m, lm, iR, lh, imem!, ilm
+      !INTEGER, ALLOCATABLE :: llhs(:), nmem_work(:), mlh_work(:,:) 
+      COMPLEX, ALLOCATABLE :: cMat(:,:), gVec(:,:)!, clnu_work(:,:)
+      REAL, ALLOCATABLE :: fVec(:,:)!, flh_work(:,:)
 
       iAtom = SUM(atoms%neq(:iType-1)) + 1
       ns = sym%ntypsy(iAtom)
 
       flm = CMPLX(0.0,0.0)
       
-      ALLOCATE (llhs(atoms%lmax(iType)*(atoms%lmax(iType)+2)))
-      ALLOCATE (flh_work(atoms%jri(iType),atoms%lmax(iType)*(atoms%lmax(iType)+2)))
-      ALLOCATE (nmem_work(atoms%lmax(iType)*(atoms%lmax(iType)+2)))
-      ALLOCATE (mlh_work(lathar%memd,atoms%lmax(iType)*(atoms%lmax(iType)+2)))
-      ALLOCATE (clnu_work(lathar%memd,atoms%lmax(iType)*(atoms%lmax(iType)+2)))
+      !ALLOCATE (llhs(atoms%lmax(iType)*(atoms%lmax(iType)+2)))
+      !ALLOCATE (flh_work(atoms%jri(iType),atoms%lmax(iType)*(atoms%lmax(iType)+2)))
+      !ALLOCATE (nmem_work(atoms%lmax(iType)*(atoms%lmax(iType)+2)))
+      !ALLOCATE (mlh_work(lathar%memd,atoms%lmax(iType)*(atoms%lmax(iType)+2)))
+      !ALLOCATE (clnu_work(lathar%memd,atoms%lmax(iType)*(atoms%lmax(iType)+2)))
 
-      llhs=0.0
-      flh_work=0.0
-      nmem_work=0
-      mlh_work=0
-      clnu_work=CMPLX(0.0,0.0)
+      !llhs=0.0
+      !flh_work=0.0
+      !nmem_work=0
+      !mlh_work=0
+      !clnu_work=CMPLX(0.0,0.0)
       
-      ilm=0
-      DO l=0, atoms%lmax(iType)
-         DO m=-l,l
-            llhs(ilm)=l
-            ilm=ilm+1
-         END DO
-      END DO 
+      !ilm=0
+      !DO l=0, atoms%lmax(iType)
+      !   DO m=-l,l
+      !      llhs(ilm)=l
+      !      ilm=ilm+1
+      !   END DO
+      !END DO 
 
-      ilm=0
-      DO lh = 0, atoms%lmax(iType)*(atoms%lmax(iType)+2)
-         l=llhs(lh)
-         IF (l==lathar%llh(ilm,ns)) THEN
-            flh_work(:,lh)=flh(:,ilm)
-            nmem_work(lh)=lathar%nmem(ilm,ns)
-            DO imem=1, nmem_work(lh)
-               mlh_work(imem,lh)=lathar%mlh(imem,ilm,ns)
-               clnu_work(imem,lh)=lathar%mlh(imem,ilm,ns)
-            END DO
-            ilm=ilm+1
-         END IF
-      END DO
+      !ilm=0
+      !DO lh = 0, atoms%lmax(iType)*(atoms%lmax(iType)+2)
+      !   l=llhs(lh)
+      !   IF (l==lathar%llh(ilm,ns)) THEN
+      !      flh_work(:,lh)=flh(:,ilm)
+      !      nmem_work(lh)=lathar%nmem(ilm,ns)
+      !      DO imem=1, nmem_work(lh)
+      !         mlh_work(imem,lh)=lathar%mlh(imem,ilm,ns)
+      !         clnu_work(imem,lh)=lathar%mlh(imem,ilm,ns)
+      !      END DO
+      !      ilm=ilm+1
+      !   END IF
+      !END DO
 
       DO l = 0, atoms%lmax(iType)
          ALLOCATE (cMat(-l:l,-l:l))
@@ -65,9 +65,9 @@ CONTAINS
 
          DO M = -l, l
             lh = l*(l+1)+M
-            fVec(M,:)=flh_work(:,lh)
-            DO imem = 1, nmem_work(lh)
-               cMat(M,mlh_work(imem,lh))=clnu_work(imem,lh)
+            fVec(M,:)=flh(:,lh)
+            DO imem = 1, lathar%nmem(lh,ns)
+               cMat(M,lathar%mlh(imem,lh,ns))=lathar%mlh(imem,lh,ns)
             END DO
          END DO
 
@@ -82,7 +82,7 @@ CONTAINS
          DEALLOCATE (cMat,fVec,gVec)
       END DO
 
-      DEALLOCATE (llhs,flh_work,nmem_work,mlh_work,clnu_work)
+      !DEALLOCATE (llhs,flh_work,nmem_work,mlh_work,clnu_work)
 
    END SUBROUTINE lh_to_lm
 

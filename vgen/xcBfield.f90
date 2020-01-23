@@ -8,6 +8,7 @@ MODULE m_xcBfield
    USE m_constants
    USE m_plot
    USE m_divergence
+   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -132,8 +133,10 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
       div%pw_w = CMPLX(0.0,0.0)
-
+      
+      CALL timestart("Building divergence")
       CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
+      CALL timestop("Building divergence")
 
       ! Local atoms variable with no charges;
       ! needed for the potential generation from the divergence.
@@ -143,7 +146,9 @@ CONTAINS
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
+      CALL timestart("Building potential")
       CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      CALL timestop("Building potential")
 
       DO i=1,3
          CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -151,7 +156,9 @@ CONTAINS
          cvec(i)%pw_w=CMPLX(0.0,0.0)
       ENDDO
 
-      CALL divpotgrad2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL timestart("Building correction field")
+      CALL divpotgrad2(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL timestop("Building correction field")
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
