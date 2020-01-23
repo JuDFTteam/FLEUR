@@ -32,10 +32,43 @@ MODULE m_types_hybdat
       INTEGER                ::  maxbasm1 = -1
       INTEGER, ALLOCATABLE   ::  nbasm(:)
    contains
-      procedure  :: set_stepfunction => set_stepfunction
+      procedure :: set_stepfunction => set_stepfunction
+      procedure :: free => free_hybdat
+      procedure :: allocate => allocate_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine allocate_hybdat(hybdat, atoms, num_radfun_per_l)
+      use m_types_atoms
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_atoms), intent(in)      :: atoms
+      integer, intent(in)            :: num_radfun_per_l(:,:)
+
+      allocate(hybdat%lmaxc(atoms%ntype), source=0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+   end subroutine allocate_hybdat
+
+   subroutine free_hybdat(hybdat)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+
+      if(allocated(hybdat%lmaxc)) deallocate(hybdat%lmaxc)
+      if(allocated(hybdat%bas1)) deallocate(hybdat%bas1)
+      if(allocated(hybdat%bas2)) deallocate(hybdat%bas2)
+      if(allocated(hybdat%bas1_MT)) deallocate(hybdat%bas1_MT)
+      if(allocated(hybdat%drbas1_MT)) deallocate(hybdat%drbas1_MT)
+      if(allocated(hybdat%nindxc)) deallocate(hybdat%nindxc)
+      if(allocated(hybdat%core1)) deallocate(hybdat%core1)
+      if(allocated(hybdat%core2)) deallocate(hybdat%core2)
+      if(allocated(hybdat%eig_c)) deallocate(hybdat%eig_c)
+      if(allocated(hybdat%fac)) deallocate(hybdat%fac)
+      if(allocated(hybdat%gauntarr)) deallocate(hybdat%gauntarr)
+   end subroutine free_hybdat
+
    subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
       use m_types_cell
       use m_types_atoms

@@ -1,4 +1,4 @@
-MODULE m_hybinp_core
+MODULE m_hybrid_core
 
    ! read core radial wavefunctions from corebas
    ! corebas is written in cored.F
@@ -366,4 +366,4 @@ CONTAINS
 
    END SUBROUTINE core_init
 
-END MODULE m_hybinp_core
+END MODULE m_hybrid_core

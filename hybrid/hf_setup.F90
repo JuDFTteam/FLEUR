@@ -15,7 +15,7 @@ CONTAINS
       USE m_util
       USE m_intgrf
       USE m_checkolap
-      USE m_hybinp_core
+      USE m_hybrid_core
       USE m_gen_wavf
       use m_types_hybdat
 

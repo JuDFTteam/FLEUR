@@ -6,7 +6,7 @@ MODULE m_hf_init
 CONTAINS
    SUBROUTINE hf_init(mpdata, hybinp, atoms, input,  hybdat)
       USE m_types
-      USE m_hybinp_core
+      USE m_hybrid_core
       USE m_util
       use m_intgrf
       USE m_io_hybinp
@@ -24,11 +24,7 @@ CONTAINS
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
 
       !Alloc variables
-      allocate(hybdat%lmaxc(atoms%ntype), source=0)
-      allocate(hybdat%bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas1_MT(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%drbas1_MT(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      call hybdat%allocate(atoms, mpdata%num_radfun_per_l)
 
       ! preparations for core states
       CALL core_init( input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
