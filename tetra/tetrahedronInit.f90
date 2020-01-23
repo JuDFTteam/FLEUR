@@ -68,7 +68,7 @@ MODULE m_tetrahedronInit
          DO icorn = 1, ncorn
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
-            fac = kpts%wtkpt(ikpt)
+            fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
             !$OMP SHARED(kpts,eig,weights,eMesh) &
@@ -113,7 +113,7 @@ MODULE m_tetrahedronInit
 
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,film)
-      fac = kpts%wtkpt(ikpt)
+      fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
 
       l_dos = PRESENT(dos)
       IF(PRESENT(dos))THEN

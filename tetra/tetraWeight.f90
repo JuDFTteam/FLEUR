@@ -2,21 +2,19 @@ MODULE m_tetraWeight
 
    IMPLICIT NONE
 
+   PRIVATE
    PUBLIC   :: tetraWeight
-   PRIVATE  :: tetraWeightBulk,tetraWeightFilm
 
    CONTAINS
 
    SUBROUTINE tetraWeight(efermi,etetra,ind,vol,film,weight)
 
-      IMPLICIT NONE
-
-      REAL,       INTENT(IN)  :: efermi
-      REAL,       INTENT(IN)  :: etetra(:)
-      INTEGER,    INTENT(IN)  :: ind
-      REAL,       INTENT(IN)  :: vol
-      LOGICAL,    INTENT(IN)  :: film
-      REAL,       INTENT(OUT) :: weight
+      REAL,       INTENT(IN)     :: efermi
+      REAL,       INTENT(IN)     :: etetra(:)
+      INTEGER,    INTENT(IN)     :: ind
+      REAL,       INTENT(IN)     :: vol
+      LOGICAL,    INTENT(IN)     :: film
+      REAL,       INTENT(INOUT)  :: weight
 
       IF(film) THEN
          CALL tetraWeightFilm(efermi,etetra,ind,weight)
@@ -40,12 +38,10 @@ MODULE m_tetraWeight
       ! ind is the corner index of the kpoint we are interested in
       !-------------------------------------------------------------
 
-      IMPLICIT NONE
-
-      REAL,       INTENT(IN)  :: efermi
-      REAL,       INTENT(IN)  :: etetra(:)
-      INTEGER,    INTENT(IN)  :: ind
-      REAL,       INTENT(OUT) :: weight
+      REAL,       INTENT(IN)     :: efermi
+      REAL,       INTENT(IN)     :: etetra(:)
+      INTEGER,    INTENT(IN)     :: ind
+      REAL,       INTENT(INOUT)  :: weight
 
       REAL C1, C2, C3
       INTEGER i,j
@@ -116,12 +112,10 @@ MODULE m_tetraWeight
       ! ind is the corner index of the kpoint we are interested in
       !-------------------------------------------------------------
 
-      IMPLICIT NONE
-
-      REAL,       INTENT(IN)  :: efermi
-      REAL,       INTENT(IN)  :: etetra(:)
-      INTEGER,    INTENT(IN)  :: ind
-      REAL,       INTENT(OUT) :: weight
+      REAL,       INTENT(IN)     :: efermi
+      REAL,       INTENT(IN)     :: etetra(:)
+      INTEGER,    INTENT(IN)     :: ind
+      REAL,       INTENT(INOUT)  :: weight
 
       REAL f(3)
 
