@@ -17,10 +17,13 @@ MODULE m_tetrahedronInit
    !of weights. These differ in the order of the loops and the arguments provided.
    !------------------------------------------------------------------------------------
 
+   USE m_types
+   USE m_juDFT
+
    IMPLICIT NONE
 
+   PRIVATE
    PUBLIC   :: tetrahedronInit
-   PRIVATE  :: getWeightKpoints, getWeightEnergyMesh, getWeightSingleBand
 
    INTERFACE tetrahedronInit
       PROCEDURE getWeightKpoints, getWeightEnergyMesh
@@ -32,21 +35,16 @@ MODULE m_tetrahedronInit
 
    SUBROUTINE getWeightKpoints(kpts,eig,neig,efermi,film,weights)
 
-      USE m_types
-      USE m_juDFT
+      TYPE(t_kpts),  INTENT(IN)    :: kpts
+      REAL,          INTENT(IN)    :: eig(:,:)
+      REAL,          INTENT(INOUT) :: weights(:,:)
 
-      IMPLICIT NONE
-
-      TYPE(t_kpts),  INTENT(IN)  :: kpts
-      REAL,          INTENT(IN)  :: eig(:,:)
-      REAL,          INTENT(OUT) :: weights(:,:)
-
-      INTEGER,       INTENT(IN)  :: neig
+      INTEGER,       INTENT(IN)  :: neig(:)
       REAL,          INTENT(IN)  :: efermi
       LOGICAL,       INTENT(IN)  :: film
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4),fac
-      REAL    :: eMesh(1),weight_tmp(1),etetra(4)
+      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
+      REAL    :: eMesh(1),weight_tmp(1),etetra(4),fac
 
       eMesh(1) = efermi  !Only a single energy point but getWeightSingleBand takes an array
 
@@ -70,13 +68,13 @@ MODULE m_tetrahedronInit
          DO icorn = 1, ncorn
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
-            fac = MERGE(1,count(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0)
+            fac = kpts%wtkpt(ikpt)
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
             !$OMP SHARED(kpts,eig,weights,eMesh) &
             !$OMP PRIVATE(iband,etetra,weight_tmp)
             !$OMP DO
-            DO iband = 1, neig
+            DO iband = 1, neig(ikpt)
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
                IF( ALL(MAXVAL(eMesh)<=etetra) ) CYCLE
@@ -96,34 +94,26 @@ MODULE m_tetrahedronInit
 
    SUBROUTINE getWeightEnergyMesh(kpts,ikpt,eig,neig,eMesh,ne,film,weights,bounds,dos)
 
-      USE m_types
-      USE m_juDFT
       USE m_differentiate
 
-      IMPLICIT NONE
-
-      TYPE(t_kpts),     INTENT(IN)  :: kpts
-      REAL,             INTENT(IN)  :: eig(:,:)
-      REAL,             INTENT(OUT) :: weights(:,:)
-      INTEGER,OPTIONAL, INTENT(OUT) :: bounds(:,:)
+      TYPE(t_kpts),     INTENT(IN)    :: kpts
+      REAL,             INTENT(IN)    :: eig(:,:)
+      REAL,             INTENT(INOUT) :: weights(:,:)
+      INTEGER,OPTIONAL, INTENT(INOUT) :: bounds(:,:)
 
       INTEGER,          INTENT(IN)  :: ikpt,neig,ne
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,          INTENT(IN)  :: film
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,k(4),fac
+      INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
       LOGICAL :: l_dos
-      REAL    :: etetra(4),del
+      REAL    :: etetra(4),del,fac
       REAL, ALLOCATABLE :: dos_weights(:), end_weights(:,:), occ_weights(:)
 
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,film)
-      IF(kpts%nkptf.NE.0) THEN
-         fac = count(kpts%bkp(:).EQ.ikpt)
-      ELSE
-         fac = 1
-      ENDIF
+      fac = kpts%wtkpt(ikpt)
 
       l_dos = PRESENT(dos)
       IF(PRESENT(dos))THEN
@@ -256,11 +246,8 @@ MODULE m_tetrahedronInit
       ! efficient in all cases
       !--------------------------------------------------------------
 
-      USE m_juDFT
       USE m_tetsrt
       USE m_tetraWeight
-
-      IMPLICIT NONE
 
       REAL,             INTENT(IN)     :: eMesh(:)
       REAL,             INTENT(IN)     :: etetra(:)
