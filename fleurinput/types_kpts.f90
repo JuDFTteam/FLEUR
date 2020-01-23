@@ -166,7 +166,7 @@ CONTAINS
             READ (str, *) this%ntetra(:, n)
          ENDDO
       END IF
-      this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
+      IF(this%ntet==0) this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
    END SUBROUTINE read_xml_kpts
 
    SUBROUTINE print_xml(kpts, fh, filename)

@@ -475,6 +475,9 @@ CONTAINS
           !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
           !We need to call gen_bz to get the full grid (necessary???)
           CALL kpts%init(cell, sym, film)
+          IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
+                                             "needs a gamma centerd kpoint grid",&
+                                             calledby="init_by_grid")
           CALL tetrahedron_regular(kpts,cell,grid,ntetra,voltet)
        ENDIF
 

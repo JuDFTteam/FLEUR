@@ -1025,6 +1025,7 @@
          <xsd:enumeration value="hist"/>
          <xsd:enumeration value="gauss"/>
          <xsd:enumeration value="tria"/>
+         <xsd:enumeration value="tetra"/>
       </xsd:restriction>
    </xsd:simpleType>
 

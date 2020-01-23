@@ -10,9 +10,11 @@ MODULE m_tetrahedron_regular
    !Decomposes an equidistant k-point grid into tetrahedra
    !This happens by looking at a cube of 8 neighbouring k-points
    !and dividing this cube into 6 tetrahedra along the shortest diagonal
+   ! Largely equivalent to spex routine
    !--------------------------------------------------------------------
 
-   USE m_types_fleurinput
+   USE m_types_kpts
+   USE m_types_cell
    USE m_juDFT
    USE m_constants
 
@@ -34,7 +36,6 @@ MODULE m_tetrahedron_regular
       INTEGER :: tetra(4,24),iarr(3),kcorn(8)
       INTEGER, ALLOCATABLE :: p(:,:,:)
 
-      CALL timestart("Calculation of Tetrahedra")
       volbz = ABS(det(cell%bmat))
       !Choose the tetrahedra decomposition along the shortest diagonal
       CALL get_tetra(kpts,cell,grid,ntetraCube,vol,tetra)
@@ -49,9 +50,11 @@ MODULE m_tetrahedron_regular
       p(:,grid(2),:) = p(:,0,:)
       p(:,:,grid(3)) = p(:,:,0)
 
+
       !Check for invalid indices
-      IF(ANY(p<=0).OR.ANY(p>kpts%nkptf))&
+      IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) THEN
             CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
+      ENDIF
 
       !Temporary Size
       ALLOCATE(ntetra(4,kpts%nkptf*6),source=0)
@@ -87,10 +90,10 @@ MODULE m_tetrahedron_regular
       ENDDO
 
       !Has the whole brillouin zone been covered?
-      IF(ABS(sumvol-volbz).GT.1E-12) &
+      IF(ABS(sumvol-volbz).GT.1E-12) THEN
             CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
+      ENDIF
       voltet = voltet/volbz
-      CALL timestop("Calculation of Tetrahedra")
 
    END SUBROUTINE tetrahedron_regular
 
