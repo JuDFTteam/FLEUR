@@ -2,7 +2,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE strgn1_dim(
-     >                  gmax,bmat,invs,zrfs,mrot,tau,nop,nop2,
+     >                  l_write,gmax,bmat,invs,zrfs,mrot,tau,nop,nop2,
      <                  k1d,k2d,k3d,n3d,n2d,odd)
 c
 c     *********************************************************
@@ -15,7 +15,7 @@ c     *********************************************************
       USE m_types_oneD
       USE m_ifft, ONLY : i2357
       IMPLICIT NONE
-
+      LOGICAL,INTENT(IN)    :: l_write
       INTEGER, INTENT (IN)  :: nop,nop2
       REAL,    INTENT (IN)  :: gmax
       INTEGER, INTENT (OUT) :: k1d,k2d,k3d,n3d,n2d
@@ -75,7 +75,7 @@ c
                   IF (mxx1.lt.kr(1,n)) mxx1 = kr(1,n)
                   IF (mxx2.lt.kr(2,n)) mxx2 = kr(2,n)
                ENDDO
-               DO k = 1,ng2 
+               DO k = 1,ng2
                   DO n = 1,nop2
                      IF (kr(1,n).EQ.kv2(1,k) .AND.
      +                   kr(2,n).EQ.kv2(2,k)) GOTO 30
@@ -163,7 +163,7 @@ c-odim    modifications due to one-dimensionality, YM
       END IF
 c+odim
 c     listing
-      WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
+      if (l_write) WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
  8000 FORMAT (' gmax=',f10.6/' n3d=  ',i10/' n2d=  ',i5/' k1d=  ',
      +       i5/' k2d=  ',i5/' k3d=  ',i5/)
 
@@ -171,7 +171,7 @@ c     listing
       END SUBROUTINE strgn1_dim
 !---------------------------------------------------------------------
       SUBROUTINE strgn2_dim(
-     >                  gmax,bmat,invs,zrfs,mrot,tau,nop,
+     >                  l_write,gmax,bmat,invs,zrfs,mrot,tau,nop,
      <                  k1d,k2d,k3d,n3d,n2d)
 c
 c     *********************************************************
@@ -183,6 +183,7 @@ c     *********************************************************
       USE m_ifft, ONLY : i2357
       IMPLICIT NONE
 
+      LOGICAL,INTENT(IN)    :: l_write
       INTEGER, INTENT (IN)  :: nop
       REAL,    INTENT (IN)  :: gmax
       INTEGER, INTENT (OUT) :: k1d,k2d,k3d,n3d,n2d
@@ -273,7 +274,7 @@ c
 #endif
 c
 c     listing
-      WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
+      if (l_write) WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
  8000 FORMAT (' gmax=',f10.6/' n3d=  ',i7/' n2d=  ',i7/' k1d=  ',
      +       i7/' k2d=  ',i7/' k3d=  ',i7/)
 

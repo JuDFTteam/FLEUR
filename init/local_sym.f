@@ -34,7 +34,7 @@
 !*********************************************************************
       CONTAINS
       SUBROUTINE local_sym(
-     >                     lmaxd,lmax,nops,mrot,tau,
+     >                     l_write,lmaxd,lmax,nops,mrot,tau,
      >                     natd,ntype,neq,amat,bmat,pos,
      X                     nlhd,memd,ntypsd,l_dim,
      <                     nlhtyp,nlh,llh,nmem,mlh,clnu)
@@ -45,6 +45,7 @@
       IMPLICIT NONE
 
 !---> Arguments
+      LOGICAL,INTENT(IN)   :: l_write
       INTEGER, INTENT (IN) :: lmaxd,nops,ntype,natd
       INTEGER, INTENT (IN) :: neq(ntype),lmax(ntype),mrot(3,3,nops)
       REAL,    INTENT (IN) :: tau(3,nops),pos(3,natd)
@@ -73,7 +74,7 @@
       nlhd_max = (lmaxd+1)**2
       ALLOCATE ( typsym(natd) )
 
-      WRITE (6,'(//," Local symmetries:",/,1x,17("-"))')
+      if (l_write) WRITE (6,'(//," Local symmetries:",/,1x,17("-"))')
 !
 !===> determine the point group symmetries for each atom given
 !===> the space group operations and atomic positions
@@ -83,18 +84,20 @@
      >           ntype,natd,neq,pos,nops,mrot,tau,lmax,
      <           nsymt,typsym,nrot,locops)
 
-      WRITE (6,'("   symmetry kinds =",i4)') nsymt
-      DO nsym = 1, nsymt
-         WRITE (6,'(/,"   symmetry",i3,":",i4," operations in",
-     &       " local point group",/,8x,"atoms:")') nsym,nrot(nsym)
-         na = 0
-         DO n=1,ntype
-           DO nn = 1, neq(n)
-             na = na + 1 
-             IF ( typsym(na) == nsym ) WRITE (6,'(i14)') na
-           ENDDO
-         ENDDO
-      ENDDO
+      if (l_write) THEN
+        WRITE (6,'("   symmetry kinds =",i4)') nsymt
+        DO nsym = 1, nsymt
+          WRITE (6,'(/,"   symmetry",i3,":",i4," operations in",
+     +      " local point group",/,8x,"atoms:")') nsym,nrot(nsym)
+          na = 0
+          DO n=1,ntype
+            DO nn = 1, neq(n)
+              na = na + 1
+              IF ( typsym(na) == nsym ) WRITE (6,'(i14)') na
+            ENDDO
+          ENDDO
+        ENDDO
+      endif
 !
 !===>  generate the lattice harmonics for each local symmetry
 !
@@ -178,8 +181,9 @@
          ENDDO
       ENDDO
 
- 
+
 !---> output results
+      if (.not.l_write) return
       DO n = 1, nsymt
         WRITE (6,'(/," --- Local symmetry",i3,":",i4,
      &       " lattice harmonics ",30("-"))') n,nlh(n)+1

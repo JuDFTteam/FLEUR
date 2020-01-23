@@ -227,7 +227,7 @@
       ENDIF
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
-        CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
+        CALL local_sym(.false.,atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
                        atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
                        atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
                        atoms%nlhtyp,sphhar%nlh,sphhar%llh,&
@@ -244,7 +244,7 @@
             ii = ii + 1
           END DO
         END DO
-        CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
+        CALL local_sym(.false.,atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
               atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
               sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
               sphhar%nlh,sphhar%llh,sphhar%nmem,&
@@ -289,12 +289,12 @@
 ! Dimensioning of the stars
 !
       IF (input%film.OR.(namgrp.ne.'any ')) THEN
-         CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+         CALL strgn1_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                     sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                     stars%ng3,stars%ng2,oneD%odd)
 
       ELSE
-         CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+         CALL strgn2_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                     sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
                     stars%ng3,stars%ng2)
          oneD%odd%n2d = stars%ng2

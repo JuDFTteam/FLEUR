@@ -30,7 +30,7 @@ MODULE m_make_stars
      use m_types_noco
      use m_mpi_bc_tool
      USE m_types_stars
-     
+
      class(t_stars),intent(INOUT) :: stars
      type(t_sym),intent(in)::sym
      type(t_atoms),intent(in)::atoms
@@ -47,12 +47,12 @@ MODULE m_make_stars
     ! Dimensioning of stars
 
   IF (input%film) THEN
-     CALL strgn1_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+     CALL strgn1_dim(mpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
           stars%ng3,stars%ng2,oneD%odd)
 
   ELSE
-     CALL strgn2_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+     CALL strgn2_dim(mpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
           stars%ng3,stars%ng2)
      oneD%odd%n2d = stars%ng2
@@ -105,12 +105,12 @@ MODULE m_make_stars
 
   CALL timestart("strgn")
   IF (input%film) THEN
-     CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+     CALL strgn1(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      IF (oneD%odd%d1) THEN
         CALL od_strgn1(xcpot,cell,sym,oneD)
      END IF
   ELSE
-     CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+     CALL strgn2(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
   END IF
 
   CALL lapw_fft_dim(cell,input,noco,stars)

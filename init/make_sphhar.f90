@@ -6,11 +6,11 @@
 
 MODULE m_make_sphhar
 CONTAINS
-  SUBROUTINE make_sphhar(atoms,sphhar,sym,cell,oneD)
+  SUBROUTINE make_sphhar(l_write,atoms,sphhar,sym,cell,oneD)
     USE m_types_setup
     USE m_localsym
     USE m_od_chisym
-
+    LOGICAL,INTENT(IN) :: l_write
     TYPE(t_atoms),INTENT(inout)::atoms
     TYPE(t_sphhar),INTENT(inout)::sphhar
     TYPE(t_cell),INTENT(in)::cell
@@ -27,7 +27,7 @@ CONTAINS
     ALLOCATE(sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1))
     sphhar%ntypsd = 0
     IF (.NOT.oneD%odd%d1) THEN
-       CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
+       CALL local_sym(l_write,atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
             atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
             atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.TRUE.,&
             atoms%nlhtyp,sphhar%nlh,sphhar%llh,&
@@ -44,7 +44,7 @@ CONTAINS
              ii = ii + 1
           END DO
        END DO
-       CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
+       CALL local_sym(l_write,atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
             atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
             sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.TRUE.,nlhtp1,&
             sphhar%nlh,sphhar%llh,sphhar%nmem,&
@@ -65,7 +65,7 @@ CONTAINS
     ! Generate lattice harmonics
 
     IF (.NOT.oneD%odd%d1) THEN
-       CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
+       CALL local_sym(l_write,atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
             atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
             sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
             atoms%nlhtyp,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
@@ -85,7 +85,7 @@ CONTAINS
              ii = ii + 1
           END DO
        END DO
-       CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
+       CALL local_sym(l_write,atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
             atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
             sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
             nlhtp1,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
