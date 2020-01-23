@@ -181,6 +181,7 @@ CONTAINS
       NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den
       div1=0;div2=0;div3=0;nkpt=0;den=0.0
       bz_integration='hist'
+      tria=.FALSE.
       read(line,kpt)
       kpts_str=''
       if (den>0.0) THEN
