@@ -69,12 +69,14 @@ CONTAINS
          input%ctail = .false.
       END IF
 
-      IF (input%rkmax == 0.0) input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
+      IF (input%rkmax == 0.0) then
+         input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
+         input%rkmax = round_to_deci(input%rkmax, 1)
+      endif
       IF (input%rkmax > 4.5) THEN
          PRINT *, "WARNING, large default rkmax has been reduced. Check input"
          input%rkmax = 4.5
       ENDIF
-      input%rkmax = round_to_deci(input%rkmax, 1)
       IF (noco%l_ss) input%ctail = .FALSE.
       input%zelec = dot_product(atoms%econf(:)%valence_electrons, atoms%neq(:))
       !

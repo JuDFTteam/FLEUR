@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_divergence
    USE m_types
+   USE m_juDFT
    PRIVATE
    PUBLIC :: mt_div, pw_div, divergence, divergence2, mt_grad, pw_grad, divpotgrad, divpotgrad2
 
@@ -172,6 +173,7 @@ CONTAINS
       INTEGER :: i,iType,indmax, lh
       COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:),divflm(:,:,:) ! (iR,lm,n[,x,i])
 
+      CALL timestart("MT divergence")
       indmax=(atoms%lmaxd+1)**2
 
       ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
@@ -200,9 +202,16 @@ CONTAINS
 
       DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
 
+      CALL timestop("MT divergence")
+
+      CALL timestart("PW divergence")
+      
       CALL pw_div(stars,sym,cell,noco,bxc,div)
 
+      CALL timestop("PW divergence")
+
       IF (input%film) THEN
+         CALL timestart("Vac divergence")
          div%vacxy=CMPLX(0.0,0.0)
          div%vacz=0.0
          CALL vac_grad(vacuum,stars,bxc(1),grad,9*stars%mx1*stars%mx2)
@@ -214,6 +223,7 @@ CONTAINS
          CALL vac_grad(vacuum,stars,bxc(3),grad,9*stars%mx1*stars%mx2)
          div%vacxy=div%vacxy+grad(3)%vacxy
          div%vacz=div%vacz+grad(3)%vacz
+         CALL timestop("Vac divergence")
       END IF
 
 
@@ -587,6 +597,7 @@ CONTAINS
       INTEGER :: i,iType,indmax,lh,lhmax
       COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm(:,:,:,:) ! (iR,lm,n[,x,i])
 
+      CALL timestart("MT potential gradient")
       indmax=(atoms%lmaxd+1)**2
 
       ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
@@ -613,10 +624,18 @@ CONTAINS
 
       DEALLOCATE(grsflm)
 
+      CALL timestop("MT potential gradient")
+
+      CALL timestart("PW potential gradient")
+
       CALL pw_grad(stars,cell,noco,sym,pot,grad)
 
+      CALL timestop("PW potential gradient")
+
       IF (input%film) THEN
+         CALL timestart("Vac potential gradient")
          CALL vac_grad(vacuum,stars,pot,grad,9*stars%mx1*stars%mx2)
+         CALL timestart("Vac potential gradient")
       END IF
 
    END SUBROUTINE divpotgrad2

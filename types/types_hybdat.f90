@@ -32,10 +32,70 @@ MODULE m_types_hybdat
       INTEGER                ::  maxbasm1 = -1
       INTEGER, ALLOCATABLE   ::  nbasm(:)
    contains
-      procedure  :: set_stepfunction => set_stepfunction
+      procedure :: set_stepfunction => set_stepfunction
+      procedure :: free => free_hybdat
+      procedure :: allocate => allocate_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine allocate_hybdat(hybdat, atoms, num_radfun_per_l)
+      use m_types_atoms
+      use m_judft
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_atoms), intent(in)      :: atoms
+      integer, intent(in)            :: num_radfun_per_l(:,:)
+      integer                        :: ok(10)
+
+      allocate(hybdat%lmaxc(atoms%ntype),&
+              stat=ok(1), source=0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(2), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(3), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(4), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+              stat=ok(5), source=0.0)
+
+      ! core allocs
+      allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(6), source=0)
+      allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(7), source=0.0)
+      allocate(hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(8), source=0.0)
+      allocate(hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+               stat=ok(9), source=0.0)
+
+
+      allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac),&
+               stat=ok(10), source=0.0)
+
+      if(any(ok /= 0)) then
+         write (*,*) "allocation of hybdat failed. Error in array no.:"
+         write (*,*) maxloc(abs(ok))
+         call juDFT_error("allocation of hybdat failed. Error in array no.:")
+      endif
+   end subroutine allocate_hybdat
+
+   subroutine free_hybdat(hybdat)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+
+      if(allocated(hybdat%lmaxc)) deallocate(hybdat%lmaxc)
+      if(allocated(hybdat%bas1)) deallocate(hybdat%bas1)
+      if(allocated(hybdat%bas2)) deallocate(hybdat%bas2)
+      if(allocated(hybdat%bas1_MT)) deallocate(hybdat%bas1_MT)
+      if(allocated(hybdat%drbas1_MT)) deallocate(hybdat%drbas1_MT)
+      if(allocated(hybdat%nindxc)) deallocate(hybdat%nindxc)
+      if(allocated(hybdat%core1)) deallocate(hybdat%core1)
+      if(allocated(hybdat%core2)) deallocate(hybdat%core2)
+      if(allocated(hybdat%eig_c)) deallocate(hybdat%eig_c)
+      if(allocated(hybdat%fac)) deallocate(hybdat%fac)
+      if(allocated(hybdat%gauntarr)) deallocate(hybdat%gauntarr)
+   end subroutine free_hybdat
+
    subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
       use m_types_cell
       use m_types_atoms
