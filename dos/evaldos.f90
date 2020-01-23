@@ -22,6 +22,7 @@
       USE m_triang
       USE m_maketetra
       USE m_tetrados
+      USE m_dostetra !confusing names (TODO:change/cleanup)
       USE m_dosbin
       USE m_ptdos
       USE m_smooth
@@ -238,13 +239,13 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
-             IF (input%bz_integration==2) THEN
+             IF (input%bz_integration==2.OR.input%bz_integration==3) THEN
                ntetra = kpts%ntet
                DO i = 1, ntetra
                  itetra(1:4,i) = kpts%ntetra(1:4,i)
-                 voltet(i) = kpts%voltet(i) / ntetra
+                 IF(input%bz_integration==2) voltet(i) = kpts%voltet(i) / ntetra
                END DO
-               l_tria = input%bz_integration==2
+               l_tria = .true.
                GOTO 67
              ELSE
                GOTO 66
@@ -285,19 +286,25 @@
 !
 !     DOS calculation: use triangular method!!
 !
-            IF ( input%film ) THEN
-!             CALL ptdos(
-!    >                  emin,emax,jspins,ned,qdim,neigd,
-!    >                  ntria,as,atr,2*nkpt,itria,nkpt,ev,qal,e,
-!    <                  g)
-              CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
-                        atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
-                        qal(:,1:ntb,1:kpts%nkpt),e, g)
+            IF(input%bz_integration.NE.3) THEN
+               !Either keyword tria in input or tetrahedrons created via make_tetra
+               IF ( input%film ) THEN
+   !             CALL ptdos(
+   !    >                  emin,emax,jspins,ned,qdim,neigd,
+   !    >                  ntria,as,atr,2*nkpt,itria,nkpt,ev,qal,e,
+   !    <                  g)
+                 CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
+                           atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
+                           qal(:,1:ntb,1:kpts%nkpt),e, g)
+               ELSE
+                 write(*,*) efermi
+                 CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
+                               itetra,efermi,voltet,e,results%neig(:,jspin), ev,qal, g)
+                 IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
+               ENDIF
             ELSE
-              write(*,*) efermi
-              CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
-                            itetra,efermi,voltet,e,results%neig(:,jspin), ev,qal, g)
-              IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
+               !Alternative tetrahedron method
+               CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jspin),ev,qal,g)
             ENDIF
          ELSE
 !
