@@ -121,7 +121,7 @@ MODULE m_make_stars
 
   ! Set up pointer for backtransformation from g-vector in positive
   ! domain of carge density fftibox into stars
-  CALL prp_qfft(stars,cell,noco,input)
+  CALL prp_qfft(mpi%irank==0,stars,cell,noco,input)
   CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
   CALL timestop("strgn")
