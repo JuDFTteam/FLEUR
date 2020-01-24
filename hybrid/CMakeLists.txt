@@ -9,7 +9,7 @@ hybrid/hybrid_core.f90
 hybrid/coulombmatrix.F90
 hybrid/gen_wavf.F90
 hybrid/spmvec.F90
-hybrid/hybrid.F90
+hybrid/calc_hybrid.F90
 hybrid/HF_init.F90
 hybrid/hsfock.F90
 hybrid/subvxc.F90
