@@ -13,7 +13,7 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, input,&
+   SUBROUTINE wavefproducts_inv5(bandf, bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 

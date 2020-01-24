@@ -82,9 +82,9 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_hybdat), INTENT(IN) :: hybdat
 
-      TYPE(t_input), INTENT(IN)   :: input
+      TYPE(t_input), INTENT(IN)  :: input
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_sym), INTENT(IN)    :: sym

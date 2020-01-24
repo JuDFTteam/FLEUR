@@ -226,7 +226,7 @@ CONTAINS
          DO ibando = 1, mnobd, psize
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv5(1, hybdat%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
+               CALL wavefproducts_inv5(hybdat%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybdat%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
