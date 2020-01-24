@@ -32,7 +32,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
       ! - scalars -
-      INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)      :: bandf, bandoi, bandof
       INTEGER, INTENT(IN)      :: jsp, nk, iq
       INTEGER, INTENT(IN)      :: nbasm_mt
       INTEGER, INTENT(INOUT)   :: nkqpt

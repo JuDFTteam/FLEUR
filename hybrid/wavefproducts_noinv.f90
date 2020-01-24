@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv5(bandi, bandf, bandoi, bandof, nk, iq, &
+   SUBROUTINE wavefproducts_noinv5(bandf, bandoi, bandof, nk, iq, &
                                     input, jsp, cell, atoms, mpdata, hybinp,&
                                    hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                    nkqpt, cprod)
@@ -23,7 +23,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
 !     - scalars -
-      INTEGER, INTENT(IN)        ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)        ::  bandf, bandoi, bandof
       INTEGER, INTENT(IN)        ::  nk, iq, jsp
       INTEGER, INTENT(IN)        ::  nbasm_mt
       INTEGER, INTENT(INOUT)     ::  nkqpt
