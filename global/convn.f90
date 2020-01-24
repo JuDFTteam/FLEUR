@@ -3,7 +3,7 @@
         implicit none
       CONTAINS
       SUBROUTINE convn(&
-     &                 atoms,stars)
+     &                 l_write,atoms,stars)
 !
 !     ***********************************************************
 !     determines the optimum values for the convergence parameter
@@ -15,7 +15,8 @@
 !     ***********************************************************
       USE m_types
       IMPLICIT NONE
-!     ..
+      !     ..
+      LOGICAL,INTENT(IN)           :: l_write
       TYPE(t_atoms),INTENT(INOUT)  :: atoms
       TYPE(t_stars),INTENT(IN)     :: stars
 !     .. Local Scalars ..
@@ -55,7 +56,8 @@
          atoms%ncv(n) = 18 + n1
    20 CONTINUE
 !--->    output and make sure ncv(n).le.ncvd
-   30 CONTINUE
+30    CONTINUE
+      IF (.not.l_write) return   
       WRITE (6,FMT=8010)
       DO 40 n = 1,atoms%ntype
          nc = atoms%ncv(n)
