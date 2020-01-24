@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE prp_qfft(&
-     &                    stars,&
+     &                    l_write,stars,&
      &                    cell,noco,&
      &                    input)
 !*********************************************************************
@@ -32,7 +32,8 @@
       IMPLICIT NONE
 !
 !---> Arguments
-!
+      !
+      LOGICAL,INTENT(IN)           :: l_write
       TYPE(t_stars),INTENT(INOUT)  :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_noco),INTENT(IN)      :: noco
@@ -137,9 +138,9 @@
      &             real( stars%kq3_fft )*arltv3)
       rknew = 0.5 * rknew / gmaxp
       IF (rknew.LT.input%rkmax) THEN
-         WRITE (6,'('' rkmax and true gmax recalculated '')')
-         WRITE (6,2100) input%rkmax, rknew, rknew*rknew
-         WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
+         IF (l_write) WRITE (6,'('' rkmax and true gmax recalculated '')')
+         IF (l_write) WRITE (6,2100) input%rkmax, rknew, rknew*rknew
+         IF (l_write) WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
          input%rkmax = rknew
       ENDIF
 !
@@ -215,7 +216,7 @@
          stars%kmxq_fft = stars%kmxq_fft + stars%nstr(istr)
       ENDDO
       IF ( stars%kmxq_fft .GT. stars%kq1_fft*stars%kq2_fft*stars%kq3_fft ) THEN
-         WRITE (6,'('' array dimensions in later subroutines too'',&
+         IF (l_write) WRITE (6,'('' array dimensions in later subroutines too'',&
      &             '' small'',2i10)') stars%kmxq_fft,stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
       ENDIF
 !---> 2d vectors
@@ -224,7 +225,7 @@
          kmxq2_fft = kmxq2_fft + stars%nstr2(istr)
       ENDDO
       IF ( kmxq2_fft .GT. stars%kq1_fft*stars%kq2_fft ) THEN
-         WRITE (6,'('' array dimensions in later subroutines too'',&
+         IF (l_write) WRITE (6,'('' array dimensions in later subroutines too'',&
      &             '' small'',2i10)') kmxq2_fft,stars%kq1_fft*stars%kq2_fft
       ENDIF
 
