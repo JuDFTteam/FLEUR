@@ -4,7 +4,7 @@ module m_wavefproducts_noinv
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandf, bandoi, bandof, nk, iq, &
                                     input, jsp, cell, atoms, mpdata, hybinp,&
-                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                   hybdat, kpts, lapw, sym, noco,&
                                    nkqpt, cprod)
       USE m_types
       use m_juDFT
@@ -25,7 +25,6 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)        ::  bandf, bandoi, bandof
       INTEGER, INTENT(IN)        ::  nk, iq, jsp
-      INTEGER, INTENT(IN)        ::  nbasm_mt
       INTEGER, INTENT(INOUT)     ::  nkqpt
 
 !     - arrays -
@@ -51,7 +50,7 @@ CONTAINS
 
       call wavefproducts_noinv5_IS(bandf, bandoi, bandof, nk, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
-                                        hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                        hybdat, kpts, lapw, sym, noco,&
                                         nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandf, bandoi, bandof, nk, iq, &
@@ -63,7 +62,7 @@ CONTAINS
 
    subroutine wavefproducts_noinv5_IS(bandf, bandoi, bandof, nk, iq, g_t, &
                                        input, jsp, cell, atoms, mpdata, hybinp,&
-                                      hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                      hybdat, kpts, lapw, sym, noco,&
                                       nkqpt, cprod)
       use m_types
       use m_constants
@@ -85,7 +84,6 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq, jsp, g_t(3)
-      INTEGER, INTENT(IN)      ::  nbasm_mt
       INTEGER, INTENT(IN)      ::  nkqpt
 
 !     - arrays -
@@ -167,7 +165,7 @@ CONTAINS
       call timestop("step function")
 
       call timestart("hybinp g")
-      ic = nbasm_mt
+      ic = hybdat%nbasp
       DO igptm = 1, mpdata%n_g(iq)
          carr = 0
          ic = ic + 1
