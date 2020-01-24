@@ -69,7 +69,7 @@ CONTAINS
         ALLOCATE(t_mpimat::hmat_tmp,smat_tmp)
       endif
       CALL smat_tmp%init(hmat(1,1))
-      CALL smat_tmp%init(hmat(1,1))
+      CALL hmat_tmp%init(hmat(1,1))
     ENDIF
 
     ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins,MERGE(2,1,noco%l_noco)))
