@@ -227,7 +227,7 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(hybdat%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
-                                       lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybdat%nbasp, sym, &
+                                       lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(hybdat%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &

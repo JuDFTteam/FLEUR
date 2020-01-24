@@ -15,7 +15,7 @@ module m_wavefproducts_inv
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandf, bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
+                                 cell, sym, noco, nkqpt, cprod)
 
 
 
@@ -34,7 +34,6 @@ CONTAINS
       ! - scalars -
       INTEGER, INTENT(IN)      :: bandf, bandoi, bandof
       INTEGER, INTENT(IN)      :: jsp, nk, iq
-      INTEGER, INTENT(IN)      :: nbasm_mt
       INTEGER, INTENT(INOUT)   :: nkqpt
 
       ! - arrays -
@@ -60,7 +59,7 @@ CONTAINS
 
       call wavefproducts_inv_IS(bandf, bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                cell, nbasm_mt, sym, noco, nkqpt, cprod)
+                                cell, sym, noco, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandf, bandoi, bandof,&
                                 input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
@@ -72,7 +71,7 @@ CONTAINS
 
    subroutine wavefproducts_inv_IS(bandf, bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
+                                 cell, sym, noco, nkqpt, cprod)
 
      implicit NONE
      TYPE(t_mpdata), intent(in)  :: mpdata
@@ -89,7 +88,6 @@ CONTAINS
      ! - scalars -
      INTEGER, INTENT(IN)      :: bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
-     INTEGER, INTENT(IN)      :: nbasm_mt
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
@@ -160,7 +158,7 @@ CONTAINS
      call timestop("step function")
 
      call timestart("hybinp g")
-     ic = nbasm_mt
+     ic = hybdat%nbasp
      DO igptm = 1, mpdata%n_g(iq)
         rarr2 = 0
         ic = ic + 1
