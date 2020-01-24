@@ -38,7 +38,7 @@ CONTAINS
       INTEGER, INTENT(INOUT)   :: nkqpt
 
       ! - arrays -
-      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
       ! - local scalars -
       INTEGER                 ::    g_t(3)
@@ -58,11 +58,11 @@ CONTAINS
 
 
 
-      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
+      call wavefproducts_inv_IS(bandf, bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
-      call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
+      call wavefproducts_inv5_MT(bandf, bandoi, bandof,&
                                 input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, cprod)
 
@@ -70,7 +70,7 @@ CONTAINS
 
    END SUBROUTINE wavefproducts_inv5
 
-   subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
+   subroutine wavefproducts_inv_IS(bandf, bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
@@ -87,13 +87,13 @@ CONTAINS
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
      ! - scalars -
-     INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
+     INTEGER, INTENT(IN)      :: bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nbasm_mt
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
@@ -106,7 +106,7 @@ CONTAINS
      INTEGER                 ::    g(3)
 
      REAL                    ::    rarr1(bandoi:bandof)
-     REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
+     REAL                    ::    rarr2(bandoi:bandof, bandf)
      REAL, ALLOCATABLE       ::    z0(:, :)
 
      TYPE(t_mat)             :: z_nk, z_kqpt
@@ -172,7 +172,7 @@ CONTAINS
 
            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
 
-           DO n1 = 1, bandf - bandi + 1
+           DO n1 = 1, bandf
               rdum1 = z_nk%data_r(ig1, n1)
               DO n2 = bandoi, bandof
                  rarr2(n2, n1) = rarr2(n2, n1) + rdum1*z0(n2, ig2)
@@ -190,7 +190,7 @@ CONTAINS
 
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
+   subroutine wavefproducts_inv5_MT(bandf, bandoi, bandof,&
                                    input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, cprod)
 
@@ -204,12 +204,12 @@ CONTAINS
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
      ! - scalars -
-     INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
+     INTEGER, INTENT(IN)      :: bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: nk, iq
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
      ! - local scalars -
      INTEGER                 ::    i, iband
@@ -231,8 +231,8 @@ CONTAINS
 
      REAL                    ::    cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
      REAL                    ::    cmt(input%neig, hybdat%maxlmindx, atoms%nat)
-     REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
-     REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
+     REAL                    ::    rarr2(bandoi:bandof, bandf)
+     REAL                    ::    rarr3(2, bandoi:bandof, bandf)
 
      COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :)
@@ -388,7 +388,7 @@ CONTAINS
                              ! precalculated Gaunt coefficient
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                    rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
                                    ! loop over occupied bands
@@ -410,7 +410,7 @@ CONTAINS
                              lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                              rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
                                    ! loop over occupied bands
@@ -439,7 +439,7 @@ CONTAINS
                        rdum = tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, iatom1))
                        rfac1 = sin(rdum)/sqrt(2.0)
                        rfac2 = cos(rdum)/sqrt(2.0)
-                       DO iband = bandi, bandf
+                       DO iband = 1, bandf
                           DO ibando = bandoi, bandof
                              rdum1 = rarr3(1, ibando, iband)
                              rdum2 = rarr3(2, ibando, iband)
@@ -521,7 +521,7 @@ CONTAINS
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
                           IF (abs(rdum) > 1e-12) THEN
-                             DO iband = bandi, bandf
+                             DO iband = 1, bandf
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                 DO ibando = bandoi, bandof
@@ -533,7 +533,7 @@ CONTAINS
                           IF (offdiag) THEN
                              rdum = hybdat%gauntarr(1, l2, l1, l, -m, m)
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
                                    DO ibando = bandoi, bandof
@@ -555,7 +555,7 @@ CONTAINS
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
-                             DO iband = bandi, bandf
+                             DO iband = 1, bandf
                                 rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                 IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
                                 DO ibando = bandoi, bandof
@@ -567,7 +567,7 @@ CONTAINS
                           IF (offdiag) THEN
                              rdum = hybdat%gauntarr(1, l2, l1, l, 0, m)
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
                                    DO ibando = bandoi, bandof
@@ -603,7 +603,7 @@ CONTAINS
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = rdum/sqrt(2.0)
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                    DO ibando = bandoi, bandof
@@ -623,7 +623,7 @@ CONTAINS
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = moneplm*rdum/sqrt(2.0)
-                                   DO iband = bandi, bandf
+                                   DO iband = 1, bandf
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                       DO ibando = bandoi, bandof
@@ -648,7 +648,7 @@ CONTAINS
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = moneplm*rdum/sqrt(2.0)
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                    DO ibando = bandoi, bandof
@@ -669,7 +669,7 @@ CONTAINS
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = rdum/sqrt(2.0)
-                                   DO iband = bandi, bandf
+                                   DO iband = 1, bandf
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m1) + sign(1, m2) == 0) rdum1 = fac*rdum1
                                       DO ibando = bandoi, bandof
@@ -687,7 +687,7 @@ CONTAINS
 
                        ! go to lm mixed basis startindx for l and m
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
-                       DO iband = bandi, bandf
+                       DO iband = 1, bandf
                           DO ibando = bandoi, bandof
                              rdum = rarr2(ibando, iband)
                              DO i = 1, mpdata%num_radbasfn(l, itype)
@@ -739,7 +739,7 @@ CONTAINS
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*fac1
                           END IF
                           IF (abs(rdum) > 1e-12) THEN
-                             DO iband = bandi, bandf
+                             DO iband = 1, bandf
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                 DO ibando = bandoi, bandof
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt(ibando, lmp2, iatom1)
@@ -755,7 +755,7 @@ CONTAINS
                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)*fac2
                              END IF
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                    DO ibando = bandoi, bandof
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt(ibando, lmp4, iatom1)
@@ -772,7 +772,7 @@ CONTAINS
 
                     ! go to lm mixed basis startindx for l and m
                     lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
-                    DO iband = bandi, bandf
+                    DO iband = 1, bandf
                        DO ibando = bandoi, bandof
                           rdum = rarr2(ibando, iband)
                           DO i = 1, mpdata%num_radbasfn(l, itype)
@@ -807,7 +807,7 @@ CONTAINS
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
                           IF (abs(rdum) > 1e-12) THEN
-                             DO iband = bandi, bandf
+                             DO iband = 1, bandf
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                 DO ibando = bandoi, bandof
@@ -819,7 +819,7 @@ CONTAINS
                           IF (offdiag) THEN
                              rdum = hybdat%gauntarr(1, l2, l1, l, -m, m)
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
                                    DO ibando = bandoi, bandof
@@ -841,7 +841,7 @@ CONTAINS
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
-                             DO iband = bandi, bandf
+                             DO iband = 1, bandf
                                 rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                 IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
                                 DO ibando = bandoi, bandof
@@ -853,7 +853,7 @@ CONTAINS
                           IF (offdiag) THEN
                              rdum = hybdat%gauntarr(1, l2, l1, l, 0, m)
                              IF (abs(rdum) > 1e-12) THEN
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
                                    DO ibando = bandoi, bandof
@@ -891,7 +891,7 @@ CONTAINS
                                 END IF
 
                                 rdum = -moneplm*monepl1m1*rdum/sqrt(2.0)
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!-moneplm*monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                    DO ibando = bandoi, bandof
@@ -912,7 +912,7 @@ CONTAINS
                                       fac = 1/2.*monepl1m1*(sign(1, m2) - sign(1, m1))
                                    END IF
                                    rdum = monepl1m1*moneplm*rdum/sqrt(2.0)
-                                   DO iband = bandi, bandf
+                                   DO iband = 1, bandf
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!monepl1m1*moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                       DO ibando = bandoi, bandof
@@ -938,7 +938,7 @@ CONTAINS
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m1) - sign(1, m2))
                                 END IF
                                 rdum = monepl1m1*rdum/sqrt(2.0)
-                                DO iband = bandi, bandf
+                                DO iband = 1, bandf
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = rdum1*fac
                                    DO ibando = bandoi, bandof
@@ -958,7 +958,7 @@ CONTAINS
                                       fac = -monepl1m1*(sign(1, m1) - sign(1, m2))/2
                                    END IF
                                    rdum = -monepl1m1*rdum/sqrt(2.0)
-                                   DO iband = bandi, bandf
+                                   DO iband = 1, bandf
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!-monepl1m1*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
                                       DO ibando = bandoi, bandof
@@ -981,7 +981,7 @@ CONTAINS
                        ! go to lm mixed basis startindx for l and m
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
 
-                       DO iband = bandi, bandf
+                       DO iband = 1, bandf
                           DO ibando = bandoi, bandof
                              rdum = rarr2(ibando, iband)
                              DO i = 1, mpdata%num_radbasfn(l, itype)

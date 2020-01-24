@@ -230,7 +230,7 @@ CONTAINS
                                        lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybdat%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv5(hybdat%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &!jsp,&
+               CALL wavefproducts_noinv5(hybdat%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, hybdat%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 

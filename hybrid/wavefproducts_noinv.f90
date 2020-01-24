@@ -30,7 +30,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
       INTEGER        :: g_t(3)
       REAL           :: kqpt(3), kqpthlp(3)
@@ -49,19 +49,19 @@ CONTAINS
          call juDFT_error('wavefproducts: k-point not found')
       endif
 
-      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
+      call wavefproducts_noinv5_IS(bandf, bandoi, bandof, nk, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                         nkqpt, cprod)
 
-      call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
+      call wavefproducts_noinv_MT(bandf, bandoi, bandof, nk, iq, &
                                    input,atoms, mpdata, hybinp, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
 
-   subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t, &
+   subroutine wavefproducts_noinv5_IS(bandf, bandoi, bandof, nk, iq, g_t, &
                                        input, jsp, cell, atoms, mpdata, hybinp,&
                                       hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                       nkqpt, cprod)
@@ -83,14 +83,14 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)      ::  bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq, jsp, g_t(3)
       INTEGER, INTENT(IN)      ::  nbasm_mt
       INTEGER, INTENT(IN)      ::  nkqpt
 
 !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2
@@ -109,7 +109,7 @@ CONTAINS
 
 
       COMPLEX                 ::  carr1(bandoi:bandof)
-      COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
+      COMPLEX                 ::  carr(bandoi:bandof, bandf)
       TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX, ALLOCATABLE    ::  z0(:,:)
 
@@ -179,7 +179,7 @@ CONTAINS
 
             IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-            DO n1 = 1, bandf - bandi + 1
+            DO n1 = 1, bandf
                if(z_nk%l_real) then
                   cdum1 = z_nk%data_r(ig1, n1)
                ELSE
@@ -201,7 +201,7 @@ CONTAINS
    end subroutine wavefproducts_noinv5_IS
 
 
-   subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
+   subroutine wavefproducts_noinv_MT(bandf, bandoi, bandof, nk, iq, &
                                       input,atoms, mpdata, hybinp, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
@@ -218,13 +218,13 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
       !     - scalars -
-      INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)      ::  bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq
       INTEGER, INTENT(IN)     ::  nkqpt
 
       !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf)
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
@@ -238,7 +238,7 @@ CONTAINS
       !      - local arrays -
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
-      COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
+      COMPLEX                 ::  carr(bandoi:bandof, bandf)
       COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
 
@@ -297,7 +297,7 @@ CONTAINS
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm2, ic), &
-                                                          conjg(cmt_nk(bandi:bandf, lm1, ic)))
+                                                          conjg(cmt_nk(1:bandf, lm1, ic)))
                               END IF
                            END IF
 
@@ -307,7 +307,7 @@ CONTAINS
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm1, ic),&
-                                                          conjg(cmt_nk(bandi:bandf, lm2, ic)))
+                                                          conjg(cmt_nk(1:bandf, lm2, ic)))
                               END IF
                            END IF
 
@@ -316,7 +316,7 @@ CONTAINS
                         END DO  !m1
 
                         lm = lm_0 + (m+l) * mpdata%num_radbasfn(l,itype)
-                        do k = 1,bandf-bandi+1
+                        do k = 1,bandf
                            do j = bandoi, bandof
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  cprod(i+lm,j,k) = cprod(i+lm,j,k) &
