@@ -1737,23 +1737,20 @@ MODULE m_cdnpot_io_hdf
                   CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
+            ENDIF
 
-               IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+            IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+               IF(l_mtNoco) THEN
                   dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                   CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
                   CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
                   CALL h5dclose_f(mmpMatSetID, hdfError)
-               END IF
-
-            ELSE
-
-               IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+               ELSE
                   dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,input%jspins/)
                   CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
                   CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
                   CALL h5dclose_f(mmpMatSetID, hdfError)
-               END IF
-
+               ENDIF
             ENDIF
 
             CALL h5gclose_f(groupID, hdfError)
@@ -1842,8 +1839,10 @@ MODULE m_cdnpot_io_hdf
                   CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
+            ENDIF
 
-               IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+            IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+               IF (l_mtNoco) THEN
                   dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                   dimsInt = dims
                   CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -1851,10 +1850,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5sclose_f(mmpMatSpaceID,hdfError)
                   CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
                   CALL h5dclose_f(mmpMatSetID, hdfError)
-               END IF
-            ELSE
-
-               IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+               ELSE
                   dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,input%jspins/)
                   dimsInt = dims
                   CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -1863,7 +1859,6 @@ MODULE m_cdnpot_io_hdf
                   CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
                   CALL h5dclose_f(mmpMatSetID, hdfError)
                END IF
-
             ENDIF
 
             CALL h5gclose_f(groupID, hdfError)
@@ -1972,8 +1967,10 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                CALL h5dclose_f(cdomvxySetID, hdfError)
             END IF
+         ENDIF
 
-            IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+         IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+            IF (l_mtNoco) THEN
                dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                dimsInt = dims
                CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -1981,9 +1978,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5sclose_f(mmpMatSpaceID,hdfError)
                CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
                CALL h5dclose_f(mmpMatSetID, hdfError)
-            END IF
-         ELSE
-            IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+            ELSE
                dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,input%jspins/)
                dimsInt = dims
                CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -2285,7 +2280,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
-      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals, l_amf_Temp, l_noco
+      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals, l_amf_Temp
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
       CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
@@ -2579,23 +2574,21 @@ MODULE m_cdnpot_io_hdf
       END IF
 
       IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
-         l_noco = (localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
-                  (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)
-         ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,MERGE(3,jspins,l_noco)))
-         dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,MERGE(3,jspins,l_noco)/)
+         ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,MERGE(3,jspins,l_mtnoco)))
+         dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,MERGE(3,jspins,l_mtnoco)/)
          CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
          CALL io_read_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),mmpMatTemp)
          CALL h5dclose_f(mmpMatSetID, hdfError)
 
          den%mmpMat = CMPLX(0.0,0.0)
          IF(l_mmpMatDimEquals) THEN
-            den%mmpMat(:,:,:,1:MERGE(3,jspins,l_noco)) = mmpMatTemp(:,:,:,1:MERGE(3,jspins,l_noco))
+            den%mmpMat(:,:,:,1:MERGE(3,jspins,l_mtnoco)) = mmpMatTemp(:,:,:,1:MERGE(3,jspins,l_mtnoco))
          ELSE
             DO i = 1, n_u
                DO j = 1, atoms%n_u+atoms%n_hia
                   IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
                   IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
-                  den%mmpMat(:,:,j,1:MERGE(3,jspins,l_noco)) = mmpMatTemp(:,:,i,1:MERGE(3,jspins,l_noco))
+                  den%mmpMat(:,:,j,1:MERGE(3,jspins,l_mtnoco)) = mmpMatTemp(:,:,i,1:MERGE(3,jspins,l_mtnoco))
                END DO
             END DO
          END IF
