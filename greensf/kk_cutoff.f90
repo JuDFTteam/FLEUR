@@ -11,6 +11,7 @@ MODULE m_kk_cutoff
    CONTAINS
 
    SUBROUTINE kk_cutoff(im,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
+
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the fDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
@@ -25,13 +26,10 @@ MODULE m_kk_cutoff
       REAL,                INTENT(IN)     :: e_top
       INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
 
-
-      INTEGER i,m,n_c,ispin,spins_cut
-      REAL integral
-      REAL a,b, n_states, scale
       CHARACTER(len=5) :: filename
-
-      REAL :: fDOS(ne,jspins)
+      INTEGER :: i,m,n_c,ispin,spins_cut
+      REAL    :: lowerBound,upperBound,integral,n_states,scale,e_cut
+      REAL    :: fDOS(ne,jspins)
 
       fDOS = 0.0
 
@@ -65,8 +63,12 @@ MODULE m_kk_cutoff
       cutoff(:,2) = ne
 
       DO ispin = 1, spins_cut
+
+         !----------------------------------------
+         !Check the integral up to the hard cutoff
+         !----------------------------------------
          IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
-         integral =  trapz(fDOS(1:ne,ispin),del,ne)
+         integral =  trapz(fDOS(:,ispin),del,ne)
          IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
          IF(integral.LT.n_states) THEN
             !If we are calculating the greens function for a d-band this is expected to happen
@@ -76,35 +78,34 @@ MODULE m_kk_cutoff
                IF(scale.GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
                im(:,-l:l,-l:l,ispin) = scale * im(:,-l:l,-l:l,ispin)
             ELSE IF(integral.LT.n_states-0.1) THEN
-            ! If the integral is to small we stop here to avoid problems
+               ! If the integral is to small we terminate here to avoid problems
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
          ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.00001)) THEN
             !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
 
-            a = e_bot
-            b = e_top
+            lowerBound = e_bot
+            upperBound = e_top
 
-            DO
+            DO WHILE(upperBound-lowerBound.GT.del)
 
-               cutoff(ispin,2) = INT(((a+b)/2.0-e_bot)/del)+1
-               integral =  trapz(fDOS(1:cutoff(ispin,2),ispin),del,cutoff(ispin,2))
+               e_cut = (lowerBound+upperBound)/2.0
+               cutoff(ispin,2) = INT((e_cut-e_bot)/del)+1
+               integral =  trapz(fDOS(:,ispin),del,cutoff(ispin,2))
 
-               IF((ABS(integral-n_states).LT.0.001).OR.(ABS(a-b)/2.0.LT.del)) THEN
-                  !The integral is inside the desired accuracy
-                  EXIT
-               ELSE IF((integral-n_states).LT.0) THEN
+               IF(integral.LT.n_states) THEN
                   !integral to small -> choose the right interval
-                  a = (a+b)/2.0
-               ELSE IF((integral-n_states).GT.0) THEN
+                  lowerBound = e_cut
+               ELSE IF(integral.GT.n_states) THEN
                   !integral to big   -> choose the left interval
-                  b = (a+b)/2.0
+                  upperBound = e_cut
                END IF
 
             ENDDO
 
             IF(l_debug) THEN
                WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(ispin,2)
+               WRITE(*,*) "CORRESPONDING ENERGY", e_cut
                WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
             ENDIF
             IF(spins_cut.EQ.1.AND.jspins.EQ.2) cutoff(2,2) = cutoff(1,2)
