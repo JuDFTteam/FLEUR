@@ -72,7 +72,7 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
-                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
+                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
@@ -100,7 +100,6 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)              :: rrot(:, :, :)
       INTEGER, INTENT(IN)              :: psym(:)
-      INTEGER, INTENT(INOUT)           :: parent(kpts%nkptf)
       INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk))
       INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(INOUT) :: pointer_EIBZ(:)
@@ -144,7 +143,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
-      parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
+      nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
       WRITE(6, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
@@ -169,7 +168,6 @@ CONTAINS
             IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
-               parent(nrkpt) = ikpt
             END IF
             IF(all(list == 0)) EXIT
 
@@ -177,20 +175,19 @@ CONTAINS
       END DO
 
       ! for the Gamma-point holds:
-      parent(1) = 1
       neqvkpt(1) = 1
 
       ! determine number of members in the EIBZ(k)
       ic = 0
       DO ikpt = 1, kpts%nkptf
-         IF(parent(ikpt) == ikpt) ic = ic + 1
+         IF(kpts%bkp(ikpt) == ikpt) ic = ic + 1
       END DO
       nkpt_EIBZ = ic
 
       allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
       ic = 0
       DO ikpt = 1, kpts%nkptf
-         IF(parent(ikpt) == ikpt) THEN
+         IF(kpts%bkp(ikpt) == ikpt) THEN
             ic = ic + 1
             pointer_EIBZ(ic) = ikpt
          END IF
@@ -205,7 +202,7 @@ CONTAINS
       ic = 0
       n_q = 0
       DO ikpt = 1, kpts%nkptf
-         IF(parent(ikpt) == ikpt) THEN
+         IF(kpts%bkp(ikpt) == ikpt) THEN
             ic = ic + 1
             DO iop = 1, nsymop
                isym = psym(iop)

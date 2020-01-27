@@ -20,7 +20,8 @@ MODULE m_types_kpts
       REAL, ALLOCATABLE              :: wtkpt(:)
       INTEGER                        :: nkptf = 0   !<k-vectors in full BZ
       REAL, ALLOCATABLE              :: bkf(:, :)
-      INTEGER, ALLOCATABLE           :: bkp(:)
+      INTEGER, ALLOCATABLE           :: bkp(:) ! bkp(ikpt) points to the symmetry equivalent point
+                                               ! under the little group of kpoint nk
       INTEGER, ALLOCATABLE           :: bksym(:)
       INTEGER                        :: numSpecialPoints = 0
       INTEGER, ALLOCATABLE           :: specialPointIndices(:)
