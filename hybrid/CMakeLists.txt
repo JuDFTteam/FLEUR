@@ -16,7 +16,7 @@ hybrid/subvxc.F90
 hybrid/add_Vnonlocal.F90
 hybrid/hf_setup.F90
 hybrid/kp_perturbation.f90
-hybrid/symm_hf.F90
+hybrid/symm_hf.f90
 hybrid/trafo.F90
 hybrid/exponential_integral.f90
 hybrid/hsefunctional.F90
