@@ -106,7 +106,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:,:)
 
       ! local scalars
-      INTEGER                 ::  iband, iband1, ibando, ikpt, iq
+      INTEGER                 ::  iband, iband1, ibando, jq, iq
       INTEGER                 ::  i
       INTEGER                 ::  j
       INTEGER                 ::  n, n1, n2, nn, nn2
@@ -201,9 +201,9 @@ CONTAINS
 
       exch_vv = 0
 
-      DO ikpt = 1, nkpt_EIBZ
+      DO jq = 1, nkpt_EIBZ
 
-         iq = pointer_EIBZ(ikpt)
+         iq = pointer_EIBZ(jq)
 
          n = hybdat%nbasp + mpdata%n_g(iq)
          IF (hybdat%nbasm(iq) /= n) call judft_error('error hybdat%nbasm')
@@ -249,7 +249,7 @@ CONTAINS
                                                 mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                                                 hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, ibando, psize, indx_sest, &
                                                 sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-                                                cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
+                                                cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
             END IF
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
@@ -276,7 +276,7 @@ CONTAINS
                DO iband = 1, psize
                   IF ((ibando + iband - 1) > hybdat%nobd(nkqpt,jsp)) CYCLE
 
-                  cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
+                  cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                   call timestart("sparse matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
@@ -308,7 +308,7 @@ CONTAINS
             END DO  !n1
             call timestop("exchange matrix")
          END DO !ibando
-      END DO  !ikpt
+      END DO  !jq
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
