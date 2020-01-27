@@ -538,9 +538,6 @@ CONTAINS
       mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
-      !  kpts%bkp(ikpt)  ::  parent of ikpt
-      !  kpts%bksym(ikpt) maps kpts%bkp(ikpt) on ikpt
-
       USE m_constants
       USE m_util
       USE m_types
