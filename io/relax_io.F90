@@ -131,6 +131,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)    :: oneD
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
+    character(len=350) :: error_output
 
     TYPE(t_atoms),INTENT(INOUT):: atoms
 
@@ -165,6 +166,9 @@ CONTAINS
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
           WRITE(6,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
+          WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%labels_type(indx(1)), atoms%labels_type(indx(2)),&
+          &overlap(indx(1),indx(2)), NEW_LINE('A')//"Treat as an error: writing rescaled displacements to relax.xml is not implemented"
+          CALL judft_error(error_output)
        END IF
     END DO
 

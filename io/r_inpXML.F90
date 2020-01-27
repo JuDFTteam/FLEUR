@@ -227,6 +227,7 @@ CONTAINS
       ALLOCATE(atoms%neq(atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat))
       ALLOCATE(atoms%label(atoms%nat))
+      ALLOCATE(atoms%labels_type(atoms%ntype))
       ALLOCATE(atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))
@@ -741,13 +742,13 @@ CONTAINS
       !   END IF
 
       ! Read in optional E-Field parameters
-     
+
       xPathA = '/fleurInput/calculationSetup/fields'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       field%b_field=0.0
       field%l_b_field=.FALSE.
       field%efield%sigma=0.0
-      
+
 
       IF (numberNodes.EQ.1) THEN
          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
@@ -1229,7 +1230,7 @@ CONTAINS
       ENDIF
 
 
-      ! LibXCID 
+      ! LibXCID
       IF (xmlGetNumberOfNodes(xPathA) == 1) THEN
 #ifdef CPP_LIBXC
          vxc_id_x=evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exchange'))
@@ -1240,7 +1241,7 @@ CONTAINS
          ELSE
             exc_id_x = vxc_id_x
          ENDIF
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
             exc_id_c = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exc_correlation'))
          ELSE
@@ -1249,7 +1250,7 @@ CONTAINS
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
 #endif
-      ! LibXCName 
+      ! LibXCName
       ELSEIF (xmlGetNumberOfNodes(TRIM(xPathB)) == 1) THEN
 #ifdef CPP_LIBXC
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exchange')))
@@ -1257,14 +1258,14 @@ CONTAINS
 
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@correlation')))
          vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
             exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
          ELSE
             exc_id_x = vxc_id_x
          ENDIF
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
             exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
@@ -1409,7 +1410,7 @@ CONTAINS
          IF (numberNodes==1) THEN
             vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
          ENDIF
-       
+
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
@@ -1844,6 +1845,7 @@ CONTAINS
             noco%b_con(1,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_x'))
             noco%b_con(2,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
          END IF
+      atoms%labels_type(iType) = atoms%label(na)
       END DO
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2231,7 +2233,7 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       !CALL xmlFreeResources()
-      
+
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
       DEALLOCATE(speciesNLO)
