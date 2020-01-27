@@ -234,10 +234,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
       IF (gfinp%n.GT.0.AND.input%bz_integration==3) THEN
          CALL timestart("TetrahedronWeights")
+         IF(mpi%n_size>1) CALL juDFT_error("Tetra for GF and ev parallelism currently broken")
          ALLOCATE(dosWeights(gfinp%ne,noccbd),source=0.0)
          ALLOCATE(resWeights(gfinp%ne,noccbd),source=0.0)
          ALLOCATE(dosBound(noccbd,2))
-         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),noccbd,eMesh,gfinp%ne,&
+         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),results%neig(:,jsp),eMesh,gfinp%ne,&
                               input%film,dosWeights,bounds=dosBound,dos=.TRUE.)
          CALL timestop("TetrahedronWeights")
       ENDIF

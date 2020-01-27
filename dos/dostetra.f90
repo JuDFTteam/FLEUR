@@ -27,7 +27,7 @@ MODULE m_dostetra
          !------------------------------------------------------
          ! Calculate the weights for the DOS on the energy Grid
          !------------------------------------------------------
-         CALL tetrahedronInit(kpts,ikpt,eig,neig(ikpt),eMesh,ne,&
+         CALL tetrahedronInit(kpts,ikpt,eig,neig,eMesh,ne,&
                               input%film,w,dos=.TRUE.)
          DO iBand = 1, neig(ikpt)
             DO idos = 1, ndos

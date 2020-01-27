@@ -90,7 +90,7 @@ MODULE m_tetrahedron_regular
       ENDDO
 
       !Has the whole brillouin zone been covered?
-      IF(ABS(sumvol-volbz).GT.1E-12) THEN
+      IF(ABS(sumvol-volbz).GT.1E-10) THEN
             CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
       ENDIF
       voltet = voltet/volbz

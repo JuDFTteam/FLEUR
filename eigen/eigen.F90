@@ -262,7 +262,7 @@ CONTAINS
       END IF
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),kpts%nkpt*input%jspins,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+      CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),size(nvbuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
       CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
       results%neig(:,:) = neigBuffer(:,:)
