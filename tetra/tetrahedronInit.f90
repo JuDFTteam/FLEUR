@@ -43,7 +43,7 @@ MODULE m_tetrahedronInit
       REAL,          INTENT(IN)  :: efermi
       LOGICAL,       INTENT(IN)  :: film
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
+      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4),neigMax
       REAL    :: eMesh(1),weight_tmp(1),etetra(4),fac
 
       eMesh(1) = efermi  !Only a single energy point but getWeightSingleBand takes an array
@@ -69,15 +69,16 @@ MODULE m_tetrahedronInit
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
+            neigMax =  MINVAL(neig(k(:ncorn)))
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
+            !$OMP SHARED(itet,neigMax,ikpt,film,ncorn,k,fac) &
             !$OMP SHARED(kpts,eig,weights,eMesh) &
             !$OMP PRIVATE(iband,etetra,weight_tmp)
             !$OMP DO
-            DO iband = 1, neig(ikpt)
+            DO iband = 1, neigMax
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
-               IF( ALL(MAXVAL(eMesh)<=etetra) ) CYCLE
+               IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
 
                weight_tmp = 0.0
                CALL getWeightSingleBand(eMesh,etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
@@ -101,12 +102,13 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(INOUT) :: weights(:,:)
       INTEGER,OPTIONAL, INTENT(INOUT) :: bounds(:,:)
 
-      INTEGER,          INTENT(IN)  :: ikpt,neig,ne
+      INTEGER,          INTENT(IN)  :: neig(:)
+      INTEGER,          INTENT(IN)  :: ikpt,ne
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,          INTENT(IN)  :: film
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
+      INTEGER :: itet,iband,ncorn,ie,icorn,k(4),neigMax
       LOGICAL :: l_dos
       REAL    :: etetra(4),del,fac
       REAL, ALLOCATABLE :: dos_weights(:), end_weights(:,:), occ_weights(:)
@@ -119,11 +121,12 @@ MODULE m_tetrahedronInit
       IF(PRESENT(dos))THEN
          l_dos = dos.AND.ne>1
          IF(l_dos) THEN
-            ALLOCATE(end_weights(2,neig))
-            end_weights = 0.0
+            ALLOCATE(end_weights(2,MAXVAL(neig)),source=0.0)
          ENDIF
       ENDIF
-      IF(ne>1) del = eMesh(2)-eMesh(1)
+      IF(ne>1) THEN
+         del = eMesh(2)-eMesh(1)
+      ENDIF
 
       weights = 0.0
       DO itet = 1, kpts%ntet
@@ -140,18 +143,20 @@ MODULE m_tetrahedronInit
          ELSE
             k(:ncorn) = kpts%ntetra(:ncorn,itet)
          ENDIF
+         neigMax = MINVAL(neig(k(:ncorn)))
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(itet,neig,ikpt,film,l_dos,ncorn,ne,k,fac) &
+         !$OMP SHARED(itet,neigMax,ikpt,film,l_dos,ncorn,ne,k,fac) &
          !$OMP SHARED(kpts,eig,weights,eMesh,end_weights,del) &
          !$OMP PRIVATE(iband,etetra)
          !$OMP DO
-         DO iband = 1, neig
+         DO iband = 1, neigMax
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
-            IF( ALL(MAXVAL(eMesh)<etetra) ) CYCLE
+            IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
 
             CALL getWeightSingleBand(eMesh,etetra,ne,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)*fac,film,.FALSE.,weights(:,iband))
+
             !---------------------------------------------------------------------------
             ! For the dos we want to avoid the formulas for the numerical
             ! derivatives at the endpoints so we calculate additional energy points here
@@ -159,10 +164,10 @@ MODULE m_tetrahedronInit
 
             IF(l_dos) THEN
                !Energy point one step to the left of the grid
-               CALL getWeightSingleBand((/MINVAL(eMesh)-del/),etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
+               CALL getWeightSingleBand([MINVAL(eMesh)-del],etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)*fac,film,.FALSE.,end_weights(1:1,iband))
                !Energy point one step to the right of the grid
-               CALL getWeightSingleBand((/MAXVAL(eMesh)+del/),etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
+               CALL getWeightSingleBand([MAXVAL(eMesh)+del],etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)*fac,film,.FALSE.,end_weights(2:2,iband))
             ENDIF
 
@@ -175,9 +180,9 @@ MODULE m_tetrahedronInit
       ! Weights for DOS -> differentiate with respect to E
       !---------------------------------------------------
       IF(l_dos) THEN
-         ALLOCATE(dos_weights(ne+2),occ_weights(ne+2))
-         DO iband = 1, neig
-            dos_weights = 0.0
+         ALLOCATE(dos_weights(ne),source=0.0)
+         ALLOCATE(occ_weights(ne+2),source=0.0)
+         DO iband = 1, neig(ikpt)
             occ_weights(2:ne+1) = weights(1:ne,iband)
             occ_weights(1) = end_weights(1,iband)
             occ_weights(ne+2) = end_weights(2,iband)
@@ -187,7 +192,7 @@ MODULE m_tetrahedronInit
       ENDIF
 
       IF(PRESENT(bounds)) THEN
-         DO iband = 1, neig
+         DO iband = 1, neig(ikpt)
             !--------------------------------------------------------------
             !Find the range where the weights are bigger than weightCutoff
             !--------------------------------------------------------------
