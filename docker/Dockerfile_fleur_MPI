@@ -1,5 +1,0 @@
-FROM ubuntu:18.10
-MAINTAINER d.wortmann@fz-juelich.de
-
-COPY ../fleur_MPI /home
-COPY ../inpgen /home
