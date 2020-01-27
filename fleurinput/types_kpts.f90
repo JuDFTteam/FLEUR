@@ -40,7 +40,6 @@ MODULE m_types_kpts
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
       procedure :: nkpt3 => nkpt3_kpts
-      procedure :: nkpt_EIBZ => nkpt_EIBZ_kpts
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -366,18 +365,4 @@ CONTAINS
          if(abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
       enddo
    end function nkpt3_kpts
-
-   function nkpt_EIBZ_kpts(kpts) result(nkpt_EIBZ)
-      ! determine number of members in the EIBZ(k)
-      implicit none
-      class(t_kpts), intent(in) :: kpts
-      integer                   :: nkpt_EIBZ
-
-      integer :: ikpt
-
-      nkpt_EIBZ = 0
-      DO ikpt = 1, kpts%nkptf
-         IF(kpts%bkp(ikpt) == ikpt) nkpt_EIBZ = nkpt_EIBZ + 1
-      END DO
-   end function nkpt_EIBZ_kpts
 END MODULE m_types_kpts
