@@ -43,6 +43,8 @@ MODULE m_hsfock
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
 !         mnobd   :=   maximum number of occupied bands                       c
+!         symop   :=   symop(ikpt) points to the symmetry operation, which    c
+!                      maps parent(ikpt) on ikpt                              c
 !                                                                             c
 !                                                                             c
 !                                               M.Betzinger (09/07)           c
@@ -93,6 +95,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3, sym%nsym)
       INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
+      INTEGER, ALLOCATABLE     ::  parent(:)
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
