@@ -106,7 +106,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:,:)
 
       ! local scalars
-      INTEGER                 ::  iband, iband1, ibando, ikpt, ikpt0
+      INTEGER                 ::  iband, iband1, ibando, ikpt, iq
       INTEGER                 ::  i
       INTEGER                 ::  j
       INTEGER                 ::  n, n1, n2, nn, nn2
@@ -203,21 +203,21 @@ CONTAINS
 
       DO ikpt = 1, nkpt_EIBZ
 
-         ikpt0 = pointer_EIBZ(ikpt)
+         iq = pointer_EIBZ(ikpt)
 
-         n = hybdat%nbasp + mpdata%n_g(ikpt0)
-         IF (hybdat%nbasm(ikpt0) /= n) call judft_error('error hybdat%nbasm')
+         n = hybdat%nbasp + mpdata%n_g(iq)
+         IF (hybdat%nbasm(iq) /= n) call judft_error('error hybdat%nbasm')
          nn = n*(n + 1)/2
 
          ! read in coulomb matrix from direct access file coulomb
          IF (mat_ex%l_real) THEN
-            CALL read_coulomb_spm_r(kpts%bkp(ikpt0), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
+            CALL read_coulomb_spm_r(kpts%bkp(iq), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
          ELSE
-            CALL read_coulomb_spm_c(kpts%bkp(ikpt0), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
+            CALL read_coulomb_spm_c(kpts%bkp(iq), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
          END IF
 
-         IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-            IF ((kpts%bksym(ikpt0) > sym%nop) .and. (.not. mat_ex%l_real)) THEN
+         IF (kpts%bkp(iq) /= iq) THEN
+            IF ((kpts%bksym(iq) > sym%nop) .and. (.not. mat_ex%l_real)) THEN
                coulomb_mt2_c = conjg(coulomb_mt2_c)
                coulomb_mtir_c = conjg(coulomb_mtir_c)
             END IF
@@ -227,10 +227,10 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(ibando, ibando + psize - 1, input, jsp, atoms, &
-                                       lapw, kpts, ik, ikpt0, hybdat, mpdata, hybinp, cell, sym, &
+                                       lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, ikpt0, input, jsp, &
+               CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, noco, nkqpt, cprod_vv_c)
             END IF
 
@@ -243,33 +243,33 @@ CONTAINS
                iband1 = hybdat%nobd(nkqpt,jsp)
 
                exch_vv = exch_vv + &
-                         dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
+                         dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, iq), iq, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
-                                                mpdata%n_g(ikpt0), mpdata%gptm_ptr(:, ikpt0), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                hybdat%nbasm(ikpt0), iband1, hybdat%nbands(ik), nsest, ibando, psize, indx_sest, &
-                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
-                                                cprod_vv_c(:hybdat%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
+                                                mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+                                                hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, ibando, psize, indx_sest, &
+                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+                                                cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
-            IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-               CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(ikpt0), :, :), cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
-                               carr3_vv_c(:hybdat%nbasm(ikpt0), :, :), cprod_vv_c(:hybdat%nbasm(ikpt0), :, :), &
-                               psize, hybdat%nbands(ik), ikpt0, sym, &
+            IF (kpts%bkp(iq) /= iq) THEN
+               CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(iq), :, :), cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+                               carr3_vv_c(:hybdat%nbasm(iq), :, :), cprod_vv_c(:hybdat%nbasm(iq), :, :), &
+                               psize, hybdat%nbands(ik), iq, sym, &
                                mpdata, hybinp, hybdat, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
-                  cprod_vv_r(:hybdat%nbasm(ikpt0), :, :) = carr3_vv_r(:hybdat%nbasm(ikpt0), :, :)
+                  cprod_vv_r(:hybdat%nbasm(iq), :, :) = carr3_vv_r(:hybdat%nbasm(iq), :, :)
                ELSE
-                  cprod_vv_c(:hybdat%nbasm(ikpt0), :, :) = carr3_vv_c(:hybdat%nbasm(ikpt0), :, :)
+                  cprod_vv_c(:hybdat%nbasm(iq), :, :) = carr3_vv_c(:hybdat%nbasm(iq), :, :)
                ENDIF
             ELSE
                phase_vv(:, :) = (1.0, 0.0)
             END IF
 
-            ! calculate exchange matrix at ikpt0
+            ! calculate exchange matrix at iq
 
             call timestart("exchange matrix")
             DO n1 = 1, hybdat%nbands(ik)
@@ -280,11 +280,11 @@ CONTAINS
                   call timestart("sparse matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
-                     CALL spmvec_invs(atoms, mpdata, hybinp, hybdat, ikpt0, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
+                     CALL spmvec_invs(atoms, mpdata, hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
                                       coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                   ELSE
                      carr1_v_c(:n) = 0
-                     CALL spmvec_noinvs(atoms, mpdata, hybinp, hybdat, ikpt0, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
+                     CALL spmvec_noinvs(atoms, mpdata, hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
                   call timestop("sparse matrix products")
