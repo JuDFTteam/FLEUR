@@ -10,25 +10,25 @@ MODULE m_types_kpts
    IMPLICIT NONE
    PRIVATE
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
-      character(len=20)     :: name = "default"
-      INTEGER               :: nkpt = 0
-      INTEGER               :: ntet = 0
-      LOGICAL               :: l_gamma = .FALSE.
+      character(len=20)              :: name = "default"
+      INTEGER                        :: nkpt = 0
+      INTEGER                        :: ntet = 0
+      LOGICAL                        :: l_gamma = .FALSE.
       !(3,nkpt) k-vectors internal units
-      REAL, ALLOCATABLE      :: bk(:, :)
+      REAL, ALLOCATABLE              :: bk(:, :)
       !(nkpts) weights
-      REAL, ALLOCATABLE      :: wtkpt(:)
-      INTEGER               :: nkptf = 0   !<k-vectors in full BZ
-      REAL, ALLOCATABLE   :: bkf(:, :)
-      INTEGER, ALLOCATABLE   :: bkp(:)
-      INTEGER, ALLOCATABLE   :: bksym(:)
-      INTEGER                       :: numSpecialPoints = 0
-      INTEGER, ALLOCATABLE          :: specialPointIndices(:)
+      REAL, ALLOCATABLE              :: wtkpt(:)
+      INTEGER                        :: nkptf = 0   !<k-vectors in full BZ
+      REAL, ALLOCATABLE              :: bkf(:, :)
+      INTEGER, ALLOCATABLE           :: bkp(:)
+      INTEGER, ALLOCATABLE           :: bksym(:)
+      INTEGER                        :: numSpecialPoints = 0
+      INTEGER, ALLOCATABLE           :: specialPointIndices(:)
       CHARACTER(LEN=50), ALLOCATABLE :: specialPointNames(:)
-      REAL, ALLOCATABLE           :: specialPoints(:, :)
+      REAL, ALLOCATABLE              :: specialPoints(:, :)
       INTEGER, ALLOCATABLE           :: ntetra(:, :)
-      REAL, ALLOCATABLE           :: voltet(:)
-      REAL, ALLOCATABLE           :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
+      REAL, ALLOCATABLE              :: voltet(:)
+      REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
    CONTAINS
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml

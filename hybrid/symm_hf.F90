@@ -133,7 +133,7 @@ CONTAINS
       INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
-      REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
+      REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
 
       COMPLEX                         :: cmt(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, atoms%nat)
@@ -142,7 +142,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
       COMPLEX, ALLOCATABLE             :: trace(:, :)
 
-      TYPE(t_mat)                     :: olappw, z
+      TYPE(t_mat)                      :: olappw, z
       COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
