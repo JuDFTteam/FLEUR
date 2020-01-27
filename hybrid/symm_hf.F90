@@ -13,8 +13,6 @@ MODULE m_symm_hf
   use m_judft
   USE m_types_hybdat
 
-#define irreps .false.
-
    USE m_constants
    USE m_types
    USE m_util
@@ -262,192 +260,83 @@ CONTAINS
          WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
       END DO
 
-      IF (irreps) THEN
-         ! calculate representation, i.e. the action of an element of
-         ! the little group of k on \phi_n,k:
-         ! P(R,T)\phi_n,k = \sum_{n'\in degenerat(n)} rep_v(n',n) *\phi_n',k
+      ! read in cmt and z at current k-point (nk)
 
-         ! read in cmt and z at current k-point (nk)
-         CALL read_cmt(cmt, nk)
-         call read_z(z, kpts%nkptf*(jsp - 1) + nk)
+      CALL read_cmt(cmt, nk)
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
-         allocate(rep_d(maxndb, nddb, nsymop), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation rep_v')
+      IF (allocated(olapmt)) deallocate(olapmt)
+      allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+      IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
+      olapmt = 0
 
-         call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
-
-         olapmt = 0
-         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpdata, &
-                          cell, hybdat%bas1, hybdat%bas2)
-
-         allocate(cmthlp(hybdat%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
-
-         DO isym = 1, nsymop
-            iop = psym(isym)
-
-            ic = 0
-            DO i = 1, hybdat%nbands(nk)
-               ndb = degenerat(i)
-               IF (ndb >= 1) THEN
-                  ic = ic + 1
-                  cmthlp = 0
-                  cpwhlp = 0
-
-                  CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, mpdata, hybinp, hybdat, kpts, sym, jsp, lapw)
-
-                  DO iband = 1, ndb
-                     carr1 = cmt(iband + i - 1, :, :)
-                     IF (z%l_real) THEN
-                        rep_d(iband, ic, isym) = wfolap_inv(carr1, z%data_r(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                            cpwhlp(:, iband), olappw%data_r, olapmt, atoms, mpdata)
-                     else
-                        rep_d(iband, ic, isym) = wfolap_noinv(carr1, z%data_c(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                              cpwhlp(:, iband), olappw%data_c, olapmt, atoms, mpdata)
-                     endif
-                  END DO
-
-               END IF
+      DO itype = 1, atoms%ntype
+         DO l = 0, atoms%lmax(itype)
+            nn = mpdata%num_radfun_per_l(l, itype)
+            DO n2 = 1, nn
+               DO n1 = 1, nn
+                  olapmt(n1, n2, l, itype) = intgrf( &
+                                hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
+                               + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
+                                atoms, itype, hybdat%gridf)
+               END DO
             END DO
-
          END DO
+      END DO
 
-         deallocate(cmthlp, cpwhlp)
+      allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
+      IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
+      wavefolap = 0
 
-         ! calculate trace of irrecudible representation
-         allocate(trace(sym%nsym, nddb), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation trace')
-
-         ic = 0
-         trace = 0
-         DO iband = 1, hybdat%nbands(nk)
-            ndb = degenerat(iband)
-            IF (ndb >= 1) THEN
-               ic = ic + 1
-               !calculate trace
-               DO iop = 1, nsymop
-                  isym = psym(iop)
-                  DO i = 1, ndb
-                     trace(isym, ic) = trace(isym, ic) + rep_d(i, ic, iop)
-                  END DO
-               END DO
-            END IF
-         END DO
-
-         ! determine symmetry equivalent bands/irreducible representations by comparing the trace
-
-         allocate(symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
-
-         ic1 = 0
-         symequivalent = .false.
-         DO iband1 = 1, hybdat%nbands(nk)
-            ndb1 = degenerat(iband1)
-            IF (ndb1 >= 1) THEN
-               ic1 = ic1 + 1
-               ic2 = 0
-               DO iband2 = 1, hybdat%nbands(nk)
-                  ndb2 = degenerat(iband2)
-                  IF (ndb2 >= 1) THEN
-                     ic2 = ic2 + 1
-                     IF (ndb2 == ndb1) THEN
-                        ! note that this criterium is only valid for pure spatial rotations
-                        ! if one combines spatial rotations with time reversal symmetry there
-                        ! is no unique criteria to identify symequivalent state
-                        ! however, also in the latter case the trace of the spatial rotations
-                        ! for two symmetry equivalent states must be equivalent
-                        IF (all(abs(trace(:sym%nop, ic1) - trace(:sym%nop, ic2)) <= 1E-8))&
-                        THEN
-                           symequivalent(ic2, ic1) = .true.
-                        END IF
-                     END IF
-                  END IF
-               END DO
-            END IF
-         END DO
-
-      ELSE
-         ! read in cmt and z at current k-point (nk)
-
-         CALL read_cmt(cmt, nk)
-         !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
-
-         IF (allocated(olapmt)) deallocate(olapmt)
-         allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
-         olapmt = 0
-
-         DO itype = 1, atoms%ntype
+      iatom = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            iatom = iatom + 1
+            lm = 0
             DO l = 0, atoms%lmax(itype)
-               nn = mpdata%num_radfun_per_l(l, itype)
-               DO n2 = 1, nn
-                  DO n1 = 1, nn
-                     olapmt(n1, n2, l, itype) = intgrf( &
-                                   hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
-                                  + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
-                                   atoms, itype, hybdat%gridf)
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
-         wavefolap = 0
-
-         iatom = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               iatom = iatom + 1
-               lm = 0
-               DO l = 0, atoms%lmax(itype)
-                  DO M = -l, l
-                     nn = mpdata%num_radfun_per_l(l, itype)
-                     DO iband1 = 1, hybdat%nbands(nk)
-                        carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
-                                            cmt(iband1, lm + 1:lm + nn, iatom))
-                        DO iband2 = 1, iband1
-                           wavefolap(iband2, iband1)&
-                         = wavefolap(iband2, iband1)&
-                         + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
-                        END DO
+               DO M = -l, l
+                  nn = mpdata%num_radfun_per_l(l, itype)
+                  DO iband1 = 1, hybdat%nbands(nk)
+                     carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
+                                         cmt(iband1, lm + 1:lm + nn, iatom))
+                     DO iband2 = 1, iband1
+                        wavefolap(iband2, iband1)&
+                      = wavefolap(iband2, iband1)&
+                      + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
                      END DO
-                     lm = lm + nn
                   END DO
+                  lm = lm + nn
                END DO
             END DO
          END DO
+      END DO
 
-         DO iband1 = 1, hybdat%nbands(nk)
-            DO iband2 = 1, iband1
-               wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
-            END DO
+      DO iband1 = 1, hybdat%nbands(nk)
+         DO iband2 = 1, iband1
+            wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
          END DO
+      END DO
 
-         allocate(symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
-         symequivalent = .false.
-         ic1 = 0
-         DO iband1 = 1, hybdat%nbands(nk)
-            ndb1 = degenerat(iband1)
-            IF (ndb1 == 0) CYCLE
-            ic1 = ic1 + 1
-            ic2 = 0
-            DO iband2 = 1, hybdat%nbands(nk)
-               ndb2 = degenerat(iband2)
-               IF (ndb2 == 0) CYCLE
-               ic2 = ic2 + 1
-               IF (any(abs(wavefolap(iband1:iband1 + ndb1 - 1,&
-                                      iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
+      allocate(symequivalent(nddb, nddb), stat=ok)
+      IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
+      symequivalent = .false.
+      ic1 = 0
+      DO iband1 = 1, hybdat%nbands(nk)
+         ndb1 = degenerat(iband1)
+         IF (ndb1 == 0) CYCLE
+         ic1 = ic1 + 1
+         ic2 = 0
+         DO iband2 = 1, hybdat%nbands(nk)
+            ndb2 = degenerat(iband2)
+            IF (ndb2 == 0) CYCLE
+            ic2 = ic2 + 1
+            IF (any(abs(wavefolap(iband1:iband1 + ndb1 - 1,&
+                                   iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
 !                .and. ndb1 .eq. ndb2 ) THEN
-                  symequivalent(ic2, ic1) = .true.
-               END IF
-            END DO
+               symequivalent(ic2, ic1) = .true.
+            END IF
          END DO
-      END IF
+      END DO
 
       !
       ! generate index field which contain the band combinations (n1,n2),
