@@ -1,0 +1,13 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp_force","$workdir/inp");
+	
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/out");
+$result=jt::test_fileexists("$workdir/inp_new");
+
+
+jt::stageresult($workdir,$result,"3");

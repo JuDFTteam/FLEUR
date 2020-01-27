@@ -1,0 +1,11 @@
+$test_name="PTO one iteration with SOC";
+$test_code="Fleur";
+%test_requirements=("SOC",1,"complex",1);
+$test_stages=2;
+$test_desc=<<EOF
+Simple test of Fleur with two steps:
+1.Generate a starting density
+2.Run a single iteration and test for ef, total energy
+Uses: SOC, LOs
+EOF
+;

@@ -1,0 +1,30 @@
+set(fleur_F77 ${fleur_F77}
+math/angle.f
+math/clebsch.f
+math/cylbes.f
+math/cylpts.f
+math/d_wigner.F
+math/dcylbs.f
+math/dsphbs.f
+math/gaussp.f
+math/inv3.f
+math/inwint.f
+math/matmul.f
+math/outint.f
+math/points.f
+math/qsf.f
+math/sphbes.f
+math/sphpts.f
+math/util.F
+math/difcub.f
+)
+set(fleur_F90 ${fleur_F90}
+math/qranf.f90
+math/differentiate.f90
+math/SphBessel.f90
+math/DoubleFactorial.f90
+math/ExpSave.f90
+math/intgr.F90
+math/ylm4.F90
+math/grule.f90
+)

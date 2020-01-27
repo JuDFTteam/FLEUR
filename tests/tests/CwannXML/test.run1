@@ -1,0 +1,10 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/out");
+
+jt::stageresult($workdir,$result,"1");

@@ -1,0 +1,42 @@
+
+                   FLAPW7 time.info-file
+
+preparation:stars,lattice harmonics,etc:                        0.04 sec =   0 h  0 min  0.04 sec
+
+ITERATION  1
+
+psqpw:                                                          0.39 sec =   0 h  0 min  0.39 sec
+p int                                                           0.00 sec =   0 h  0 min  0.00 sec
+p mts                                                           0.20 sec =   0 h  0 min  0.20 sec
+generation of ex.-cor.potential in interstitial:                0.27 sec =   0 h  0 min  0.27 sec
+generation of ex.-cor.potential in mt:                          5.76 sec =   0 h  0 min  5.76 sec
+generation of potential (total):                                6.70 sec =   0 h  0 min  6.70 sec
+EIGENVALUE PART (eigen):
+   tlmplm:                                                      0.12 sec =   0 h  0 min  0.12 sec
+   generation of planewaves (apws):                             0.00 sec =   0 h  0 min  0.00 sec
+   hsint:                                                       0.00 sec =   0 h  0 min  0.00 sec
+   hssph(n):
+      hssphn(init):                                             0.00 sec =   0 h  0 min  0.00 sec
+      spherical:                                                0.35 sec =   0 h  0 min  0.35 sec
+      extra:                                                    0.10 sec =   0 h  0 min  0.10 sec
+      non-spherical:                                            0.79 sec =   0 h  0 min  0.79 sec
+      hssphn (total):                                           1.24 sec =   0 h  0 min  1.24 sec
+   seclr4:                                                      0.33 sec =   0 h  0 min  0.33 sec
+   outeig:                                                      0.00 sec =   0 h  0 min  0.00 sec
+generation of hamiltonian and diagonalization (total):          3.16 sec =   0 h  0 min  3.16 sec
+determination of fermi energy:                                  0.00 sec =   0 h  0 min  0.00 sec
+CHARGE DENSITY PART (cdngen):
+   cdnval:
+      pwden:                                                    0.20 sec =   0 h  0 min  0.20 sec
+      readin:                                                   0.01 sec =   0 h  0 min  0.01 sec
+      abcof:                                                    0.16 sec =   0 h  0 min  0.16 sec
+      rhomt:                                                    0.00 sec =   0 h  0 min  0.00 sec
+      rhonmt:                                                   0.07 sec =   0 h  0 min  0.07 sec
+      sum of charge in spheres:                                 0.45 sec =   0 h  0 min  0.45 sec
+      communication :                                           0.00 sec =   0 h  0 min  0.00 sec
+      cdnval (total):                                           0.92 sec =   0 h  0 min  0.92 sec
+qpw_to_nmt:                                                     6.30 sec =   0 h  0 min  6.30 sec
+generation of new charge density (total)                        7.33 sec =   0 h  0 min  7.33 sec
+determination of total energy:                                  0.01 sec =   0 h  0 min  0.01 sec
+mixing:                                                         0.35 sec =   0 h  0 min  0.35 sec
+ITERATION (total):                                             17.55 sec =   0 h  0 min 17.55 sec

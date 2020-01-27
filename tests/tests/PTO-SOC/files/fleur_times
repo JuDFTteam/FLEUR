@@ -1,0 +1,22 @@
+ Minimal timing printed(s):  2.500000000000000E-002
+0     Total Run                                   5.00sec=   0h  0min  5.00sec -> 100.0%                                               
+0 measured in submodules:                                       2.00 sec =   0 h  0 min  2.00                                                        
+ 1    generation of potential                     2.00sec=   0h  0min  2.00sec ->    40.0%                                             
+ 1 measured in submodules:                                      0.00 sec =   0 h  0 min  0.00                                                        
+ 
+ -------------------------------------------------
+ 
+ Total timings:
+0     Total Run                                   5.00sec=   0h  0min  5.00sec -> 100.0%                                               
+0 measured in submodules:                                       2.00 sec =   0 h  0 min  2.00                                                        
+ 1    preparation:stars,lattice harm              0.00sec=   0h  0min  0.00sec ->     0.0%                                             
+ 1    generation of potential                     2.00sec=   0h  0min  2.00sec ->    40.0%                                             
+ 1 measured in submodules:                                      0.00 sec =   0 h  0 min  0.00                                                        
+  2   cdntot                                      0.00sec=   0h  0min  0.00sec ->       0.0%                                           
+  2 measured in submodules:                                     0.00 sec =   0 h  0 min  0.00                                                        
+   3  MT                                          0.00sec=   0h  0min  0.00sec ->         0.0%                                         
+   3  pwint_all                                   0.00sec=   0h  0min  0.00sec ->         0.0%                                         
+ 1    cdntot                                      0.00sec=   0h  0min  0.00sec ->     0.0%                                             
+ 1 measured in submodules:                                      0.00 sec =   0 h  0 min  0.00                                                        
+  2   MT                                          0.00sec=   0h  0min  0.00sec ->       0.0%                                           
+  2   pwint_all                                   0.00sec=   0h  0min  0.00sec ->       0.0%                                           

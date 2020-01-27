@@ -1,0 +1,26 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/sym.out",$workdir);
+
+jt::testrun("$executable ",$workdir);
+
+#now test output
+
+# Test of total energy from 1st HF iteration
+# old fleur result: -1272.7289406343, new fleur result: -1272.7289406361
+$result=jt::test_grepnumber("$workdir/out","HF total energy="," *= *([^ ]*)",-1272.72894063,0.000001);
+# Test of total energy from 2nd HF iteration
+# old fleur result: -1272.7334295568, new fleur result -1272.7324763241
+# Differences probably due to recomputation of mixed product basis in every HF iteration in new fleur
+# Note: Only with the new fleur we obtain convergence for this setup. The old fleur seems to have
+# problems here.
+ $result+=jt::test_grepexists("$workdir/out","HF total energy.*-1272.73247");
+
+# Test of magnetic moment from 1st HF iteration
+$result+=jt::test_grepexists("$workdir/out","mm.*3.4003");
+# Test of magnetic moment from 2nd HF iteration
+$result+=jt::test_grepexists("$workdir/out","mm.*3.4207");
+
+
+jt::stageresult($workdir,$result,"1");

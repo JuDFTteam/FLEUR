@@ -1,0 +1,14 @@
+docs/mkdocs/site
+init/compileinfo.h
+io/xml/inputSchema.h
+Testing/*
+*~
+\#*
+build
+build.*
+*.o
+*.x
+*.swp
+tags
+.DS_Store
+.vscode

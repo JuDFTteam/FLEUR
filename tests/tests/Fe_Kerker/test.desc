@@ -1,0 +1,9 @@
+$test_name="Fleur Fe Kerker XML";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Test of the Kerker preconditioner with one step:
+1.Generate a starting density and run 3 iterations and compare distance
+EOF
+;

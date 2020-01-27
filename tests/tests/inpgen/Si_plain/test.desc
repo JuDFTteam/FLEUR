@@ -1,0 +1,9 @@
+$test_name="Inpgen Si Bulk";
+$test_code="Inpgen";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Inpgen with one steps:
+1.Generate input files & check if interface right, that all files are produced that we expect. Also compare with expected files.
+EOF
+;

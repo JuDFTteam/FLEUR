@@ -1,0 +1,18 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/corespec_inp","$workdir");
+	
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/fort.37","435.09");
+$result+=jt::test_grepexists("$workdir/fort.37","1.917");
+$result+=jt::test_grepexists("$workdir/fort.37","438.09");
+$result+=jt::test_grepexists("$workdir/fort.37","1.050");
+$result+=jt::test_grepexists("$workdir/fort.37","2.236");
+$result+=jt::test_grepexists("$workdir/fort.37","3.299");
+$result+=jt::test_grepexists("$workdir/fort.37","    0    1 430.09");
+$result+=jt::test_grepexists("$workdir/fort.37","    1    1 446.09");
+
+jt::stageresult($workdir,$result,"2");

@@ -1,0 +1,9 @@
+$test_name="Fleur Si with LOs - XML";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur with XML input with one step:
+1.Generate a starting density and run a few iteration and compare fermi-energy & total energy
+EOF
+;

@@ -1,0 +1,375 @@
+1   f l a p w  version fleurH26b
+
+
+ -------- dump of inp-file ------------
+strho=F,film=F,dos=F,isec1= 99,ndir= 0,secvar=F
+FLEUR input generated with ASE                                                  
+squ any ,invs=F,zrfs=F,invs2=T,jspins=1,l_noco=F,l_J=F
+     7.47856168
+     7.98710608     7.98710608     1.00000000
+wc     non-relativi
+igrd=1,lwb=F,ndvgrd=6,idsprs=0,chng=-0.100D-11
+    
+  4
+**********************************
+Pb  82   19   12  853  2.100000  0.016000
+    
+ 1,force =T,nlo= 1,llo=  2
+  0.000000  0.000000  1.000000  2.000000
+**********************************
+Ti  22    5    8  517  1.950000  0.023000
+    
+ 1,force =T,nlo= 1,llo=  1
+  1.000000  1.000000  0.070000  2.000000
+**********************************
+O    8    1    6  293  1.350000  0.035000
+    
+ 2,force =T,nlo= 0,llo=
+  1.000000  0.000000  0.226000  2.000000
+  0.000000  1.000000  0.226000  2.000000
+**********************************
+O    8    1    6  293  1.350000  0.035000
+    
+ 1,force =T,nlo= 0,llo=
+  1.000000  1.000000 -0.792000  2.000000
+**********************************
+ 12.000000 10.000000
+vchk=F,cdinf=F,pot8=F,gw=0,numbands=  0
+lpr=0,form66=F,l_f=F,eonly=F,eig66=F,soc66=T
+  8  6  4  4  0  0  0  0
+  1  0
+Window # 1
+  -1.80000   1.00000  42.00000
+   4.50000 =kmax
+gauss=F   0.00331tria=F
+  0.000000  0.000000,l_soc=F,spav=F,off=F
+frcor=F,slice=F,ctail=T,disp=F,kcrel=0,u2f=F,f2u=F,bmt=F
+itmax=  1,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
+swsp=F  0.00  0.00  0.00  0.00
+lflip=F  1  1  1  1
+vacdos=F,layers= 0,integ=F,star=F,nstars= 0     0.00     0.00     0.00     0.00,nstm=0,tworkf=  0.000000
+
+iplot=F,score=F,plpot=F,band=F
+  0  0.000000  0.000000,nnne=  0,pallst=F
+xa=   2.00000,thetad= 330.00000,epsdisp=   0.00001,epsforce=   0.00001
+relax 111 111 111 111
+emin_dos=  -0.50000,emax_dos=   0.50000,sig_dos=   0.01500
+
+
+    FLEUR input generated with ASE                                                  
+
+
+ lattice=squ
+ name of space group=any 
+ inversion symmetry=   F
+ z-reflection symmetry=F
+ vacuum-inversion symm=T
+ jspins=1
+ unit cell scaled by      1.000000
+ the vacuum begins at z=  3.993553
+ dtilda/2=                3.993553
+igrd=1,lwb=F,ndvgrd=6,idsprs=0,chng=-0.100D-11
+
+
+Pb  82   19   12  853  2.100000  0.016000
+  0.000000  0.000000  0.500000  2.000000
+Ti  22    5    8  517  1.950000  0.023000
+  0.500000  0.500000  0.035000  2.000000
+O    8    1    6  293  1.350000  0.035000
+  0.500000  0.000000  0.113000  2.000000
+  0.000000  0.500000  0.113000  2.000000
+O    8    1    6  293  1.350000  0.035000
+  0.500000  0.500000 -0.396000  2.000000
+ nwd=           1 lepr=           0
+
+
+
+ input of parameters for eigenvalues:
+    eigenvectors are not printed
+    formatted eigenvector file = F
+    calculate Pulay-forces = F
+    eigenvalues only = F
+    number of energy windows = 1
+    energy parameter mode: absolute
+
+
+    max. l value in wavefunctions for atom type(s) 1 to  4:  8  6  4  4
+
+
+ energy window  1 of  1 from  -1.800 to   1.000 hartrees; nr. of electrons=  42.0
+
+ wavefunction cutoff (relative) =   4.50000
+                     (absolute) =   4.50000
+ itmax=           1  broy_sv=          99  imix=           7
+ alpha=  5.000000000000000E-002  spinf=   2.00000000000000     
+ gmax= 11.996656
+ nq3=   1935
+ izmin=    0
+ izmax=    0
+ nk1=     29
+ nk2=     29
+ nk3=     31
+
+ mx1=    14
+ mx2=    14 mx3=    15
+
+
+ number of k-points for this window =    1
+           coordinates           weights
+   0.25000   0.25000   0.25000   1.00000
+
+
+          convergence parameters for the pseudocharge density expansion
+          atom     parameter     max. l to include
+
+            1          18              17
+            2          16              15
+            3          10               9
+            4          10               9
+          max values allowed: ncvd= 18, l= 17
+
+
+             it=        1
+
+          total charge for spin  1=  128.000000
+          interst. charge =      11.649693
+          mt charge=             78.545243   19.563820    6.083360    6.074524
+
+
+          total charge  =  128.000000
+
+          total charge for spin  1=  128.000000
+          interst. charge =      11.649693
+          mt charge=             78.545243   19.563820    6.083360    6.074524
+
+
+          total charge  =  128.000000
+
+          integral of pseudo charge density inside the slab=        0.000000   0.000000
+
+          density-coulomb potential integrals
+
+
+          interstitial :                       3.1598674298
+
+          muffin tin spheres :            -38402.0641245757
+
+          total density-coulomb potenti   -38398.9042571459
+
+     interstitial potential average (vbar) = -0.009567
+
+          density-effective potential integrals for spin  1
+
+
+          interstitial :                      -1.4546728670
+
+          muffin tin spheres :            -38995.0003899639
+
+          total density-effective poten   -38996.4550628309
+
+          charge density-energy density integrals
+
+
+          interstitial :                      -3.6503008814
+
+          muffin tin spheres :              -452.1942103390
+
+          total charge density-energy d     -455.8445112204
+
+
+ k=(    0.250000    0.250000    0.250000):       698 3-d basis functions
+ the  33 eigenvalues are:
+        -0.914727551   -0.909163971   -0.909156194   -0.466945938   -0.452113228
+        -0.444718825   -0.206907221   -0.206696219   -0.206104103   -0.203697842
+        -0.203474266   -0.000933313    0.034527990    0.038553289    0.052073581
+         0.072521753    0.073184570    0.114906554    0.118313094    0.124081723
+         0.192309815    0.229951685    0.371126471    0.382799580    0.386708748
+         0.441495348    0.456356305    0.468963414    0.489055767    0.493517190
+         0.700000331    0.724446786    0.735454287
+          charge neutrality (T=0)     :   0.000000    (zero if the highest occ. eigenvalue is "entirely" occupied)
+
+     -->  new fermi energy            :   0.211131 htr
+          valence charge              :  42.000000 e 
+          actual charge blw ef-8kt    :  40.000000 e 
+          actual charge blw ef+8kt    :  42.000000 e 
+
+
+          valence density: spin= 1
+
+     l-like charge
+     atom     s        p        d        f        total
+ --> 1    0.88876  0.06321  9.20567  0.00528   10.16377
+ --> 2    0.09658  5.85342  0.66053  0.03264    6.65198
+ --> 3    1.40095  3.44827  0.00210  0.00037    4.85175
+ --> 4    1.40801  3.43461  0.00337  0.00049    4.84656
+
+     energy parameters for window 1
+     atom     s        p        d        f
+ -->  1   6.00000  6.00000  6.00000  6.00000 change: FFFF skiplo:   5
+ --> lo   5.00000
+ --> change   F
+ -->  2   4.00000  4.00000  3.00000  4.00000 change: FFFF skiplo:   3
+ --> lo   3.00000
+ --> change   F
+ -->  3   2.00000  2.00000  3.00000  4.00000 change: FFFF skiplo:   0
+ -->  4   2.00000  2.00000  3.00000  4.00000 change: FFFF skiplo:   0
+
+          total charge for spin  1=   42.000000
+          interst. charge =      10.634200
+          mt charge=             10.163770    6.651978    4.851746    4.846561
+
+
+          total charge  =   42.000000
+
+
+          z= 82.     r(1)=  0.252300E-05     dx=0.016000     m.t.index= 853
+               n    l     j    energy       weight
+               1.   0.   0.5-3232.4069        2.
+               2.   0.   0.5 -577.1527        2.
+               2.   1.   0.5 -554.2227        2.
+               2.   1.   1.5 -473.7380        4.
+               3.   0.   0.5 -138.0818        2.
+               3.   1.   0.5 -127.7392        2.
+               3.   1.   1.5 -109.7825        4.
+               3.   2.   1.5  -92.7874        4.
+               3.   2.   2.5  -88.9671        6.
+               4.   0.   0.5  -30.8101        2.
+               4.   1.   0.5  -26.3351        2.
+               4.   1.   1.5  -21.9382        4.
+               4.   2.   1.5  -14.6518        4.
+               4.   2.   2.5  -13.8315        6.
+               4.   3.   2.5   -4.3984        6.
+               4.   3.   3.5   -4.2135        8.
+               5.   0.   0.5   -4.7091        2.
+               5.   1.   0.5   -3.1817        2.
+               5.   1.   1.5   -2.3584        4.
+          atom type  1  (spin 1) 
+          kinetic energy=  0.242370263072E+05     sum of the eigenvalues= -0.129271944437E+05
+          0.03395689  electrons lost from core.
+
+
+          z= 22.     r(1)=  0.136719E-04     dx=0.023000     m.t.index= 517
+               n    l     j    energy       weight
+               1.   0.   0.5 -178.2864        2.
+               2.   0.   0.5  -19.1745        2.
+               2.   1.   0.5  -15.9241        2.
+               2.   1.   1.5  -15.7120        4.
+               3.   0.   0.5   -1.7711        2.
+          atom type  2  (spin 1) 
+          kinetic energy=  0.809268214102E+03     sum of the eigenvalues= -0.493160055938E+03
+          0.04734920  electrons lost from core.
+
+
+          z=  8.     r(1)=  0.491863E-04     dx=0.035000     m.t.index= 293
+               n    l     j    energy       weight
+               1.   0.   0.5  -18.4260        2.
+          atom type  3  (spin 1) 
+          kinetic energy=  0.581355664048E+02     sum of the eigenvalues= -0.368519895368E+02
+          0.00000231  electrons lost from core.
+
+
+          z=  8.     r(1)=  0.491863E-04     dx=0.035000     m.t.index= 293
+               n    l     j    energy       weight
+               1.   0.   0.5  -18.4243        2.
+          atom type  4  (spin 1) 
+          kinetic energy=  0.581361860367E+02     sum of the eigenvalues= -0.368486538180E+02
+          0.00000231  electrons lost from core.
+
+          total charge for spin  1=  128.000001
+          interst. charge =      10.714568
+          mt charge=             78.129802   18.604619    6.851975    6.847062
+
+
+          total charge  =  128.000001
+
+          total charge for spin  1=  128.000000
+          interst. charge =      10.714568
+          mt charge=             78.129802   18.604619    6.851975    6.847062
+
+
+          total charge  =  128.000000
+
+
+
+     t o t a l  e n e r g y
+
+          sum of eigenvalues =            -13539.5152105398
+
+          density-coulomb potential int   -38398.9042571459
+
+          density-effective potential i   -38996.4550628309
+
+          charge density-ex.-corr.energ     -455.8445112204
+
+          Fock-exchange energy (valence        0.0000000000
+          Fock-exchange energy (core)=         0.0000000000
+ 
+ FORCES: EQUATION A3 FOR ATOM TYPE   1
+ FX_A3=  0.000000  0.000000 FY_A3=  0.000000  0.000000 FZ_A3=  0.081369  0.000000
+ FORCES: EQUATION A3 FOR ATOM TYPE   2
+ FX_A3=  0.000000  0.000000 FY_A3=  0.000000  0.000000 FZ_A3=  0.063984  0.000000
+ FORCES: EQUATION A3 FOR ATOM TYPE   3
+ FX_A3=  0.000000  0.000000 FY_A3=  0.000000  0.000000 FZ_A3=  0.072227  0.000000
+ FORCES: EQUATION A3 FOR ATOM TYPE   4
+ FX_A3=  0.000000  0.000000 FY_A3=  0.000000  0.000000 FZ_A3= -0.501312  0.000000
+
+          el.-nucl. inter. diff. m.t.      26443.7533944214
+
+          Madelung term for atom type:       -71.0246311707
+
+          el.-nucl. inter. diff. m.t.       1007.2218055109
+
+          Madelung term for atom type:       -13.8687794427
+
+          el.-nucl. inter. diff. m.t.        170.0235444983
+
+          Madelung term for atom type:       -11.5909444113
+
+          el.-nucl. inter. diff. m.t.         84.9728118184
+
+          Madelung term for atom type:        -5.8405387719
+
+
+ ---->    total energy=                   -22006.6532375478 htr
+
+ ***** TOTAL FORCES ON ATOMS ***** 
+
+ TOTAL FORCE FOR ATOM TYPE=  1  X=  0.000   Y=  0.000   Z=  3.994
+                       FX_TOT= 0.000000 FY_TOT= 0.000000 FZ_TOT= 0.081369
+ TOTAL FORCE FOR ATOM TYPE=  2  X=  3.739   Y=  3.739   Z=  0.280
+                       FX_TOT= 0.000000 FY_TOT= 0.000000 FZ_TOT= 0.063984
+ TOTAL FORCE FOR ATOM TYPE=  3  X=  3.739   Y=  0.000   Z=  0.903
+                       FX_TOT= 0.000000 FY_TOT= 0.000000 FZ_TOT= 0.072227
+ TOTAL FORCE FOR ATOM TYPE=  4  X=  3.739   Y=  3.739   Z= -3.163
+                       FX_TOT= 0.000000 FY_TOT= 0.000000 FZ_TOT=-0.501312
+
+
+ ---->    (tkb*entropy) TS=                    0.0002994086 htr
+
+
+ ---->    free energy=                    -22006.6535369564 htr
+
+
+      extrapolation for T->0
+ ---->    total electron energy=          -22006.6533872521 htr
+ANDERSON GENERALIZED   0.05000
+
+---->    distance of charge densities for spin  1        it=    1:    26.925799 me/bohr**3
+
+          total charge for spin  1=  128.000000
+          interst. charge =      11.602936
+          mt charge=             78.524471   19.515860    6.121791    6.113150
+
+
+          total charge  =  128.000000
+
+          total charge for spin  1=  128.000000
+          interst. charge =      11.602936
+          mt charge=             78.524471   19.515860    6.121791    6.113150
+
+
+          total charge  =  128.000000
+
+     ******* it=  1  is completed********
+
+

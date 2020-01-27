@@ -1,0 +1,10 @@
+$test_name="Single Fe in a large box";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur:
+Generate a starting density
+Run 1 iteration and compare distance & total energy
+EOF
+;

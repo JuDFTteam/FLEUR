@@ -1,0 +1,15 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/sym.out",$workdir);
+
+jt::testrun("$executable ",$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/out","it=  12  is completed");
+$result+=jt::test_grepnumber("$workdir/out","total energy=","= *([^ ]*)",-75.1367097131,0.001);
+$result+=jt::test_grepnumber("$workdir/out","density-effective potential i","*([^ ]*)",-111.6343435080,0.001);
+$result+=jt::test_grepnumber("$workdir/out","charge density-ex.-corr.energ","*([^ ]*)",-11.0673799988,0.001);
+
+
+jt::stageresult($workdir,$result,"1");
