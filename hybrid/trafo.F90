@@ -149,7 +149,7 @@ CONTAINS
    END SUBROUTINE waveftrafo_symm
 
    SUBROUTINE waveftrafo_genwavf( &
-      cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
+      cmt_out, z_out, cmt, l_real, z_r, z_c, nk, iop, atoms, &
       mpdata, hybinp, kpts, sym, jsp, nbasfcn, input, nbands, &
        lapw_nk, lapw_rkpt, phase)
 
@@ -159,6 +159,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
+      type(t_mat), intent(inout)  :: z_out
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpdata), INTENT(IN)    :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -174,9 +175,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
       LOGICAL, INTENT(IN)      :: l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
-      REAL, INTENT(INOUT)      ::  z_rout(:,:)
       COMPLEX, INTENT(IN)      ::  z_c(:,:)
-      COMPLEX, INTENT(INOUT)   ::  z_cout(:,:)
 
       COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
 !        - local -
@@ -302,17 +301,17 @@ CONTAINS
                   WRITE (*, *) zhlp
                   call judft_error('waveftrafo1: Residual imaginary part.')
                END IF
-               z_rout(:, i) = real(zhlp(:, i)/cdum)
+               z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
                cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
             else
-               z_cout(:, i) = zhlp(:, i)
+               z_out%data_c(:, i) = zhlp(:, i)
             endif
          END DO
       ELSE
          if (l_real) THEN
-            z_rout = real(zhlp)
+            z_out%data_r = real(zhlp)
          else
-            z_cout = zhlp
+            z_out%data_c = zhlp
          endif
       END IF
 

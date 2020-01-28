@@ -260,7 +260,7 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
-               CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
+               CALL waveftrafo_genwavf(cmthlp, zhlp, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
                                        zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpdata, hybinp, kpts, sym, jsp, zmat(ikpt0)%matsize1,input, &
                                        hybdat%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
 
