@@ -155,18 +155,15 @@ contains
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF
-    IF(atoms%n_u>0.AND..NOT.input%ldaulinmix) THEN
-       inden%mmpMAT(:,:,:atoms%n_u,:)=outden%mmpMat(:,:,:atoms%n_u,:)
-    ENDIF
 
     IF(atoms%n_hia>0) THEN
-       !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
-       inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
+      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
+      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
     ENDIF
 
     IF (atoms%n_hia>0.AND.l_runhia) THEN
-       CALL mixing_history_reset(mpi)
-       CALL mixvector_reset()
+      CALL mixing_history_reset(mpi)
+      CALL mixvector_reset()
     ENDIF
 
     if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then 
