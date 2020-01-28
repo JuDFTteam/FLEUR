@@ -134,13 +134,13 @@ CONTAINS
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
 
-         CALL hf_init(mpdata, hybinp, atoms, input,  hybdat)
+         CALL hf_init(eig_id, mpdata, hybinp, atoms, input,  hybdat)
          CALL timestop("Preparation for hybinp functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
-                          mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
+                          mpi, noco, cell, oneD, results, jsp, enpara, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 

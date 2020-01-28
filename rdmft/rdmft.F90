@@ -394,7 +394,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,hybdat,xcpot)
 
-   CALL hf_init(mpdata,hybinp,atoms,input,hybdat)
+   CALL hf_init(eig_id,mpdata,hybinp,atoms,input,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -517,7 +517,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          results%neig(:,:) = neigTemp(:,:)
 
          CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,&
-                       cell,oneD,results,jspin,enpara,eig_id,&
+                       cell,oneD,results,jspin,enpara,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
@@ -571,7 +571,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
-      
+
             DO i = 1, hybdat%nbands(ikpt)
                DO j = 1, i-1
                   IF (exMat%l_real) THEN

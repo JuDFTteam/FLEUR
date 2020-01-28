@@ -190,7 +190,11 @@ contains
 
       rec = kpts%nkptf * (jsp - 1) + ik
 
-      CALL read_matrix(mat, rec, id_z)
+      ! if(ik <= kpts%nkpt) then
+      !    read_eig()
+      ! else
+         CALL read_matrix(mat, rec, id_z)
+      ! endif
    END subroutine read_z
 
    subroutine write_z(mat, rec)
