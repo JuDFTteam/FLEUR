@@ -95,7 +95,6 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3, sym%nsym)
       INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
-      INTEGER, ALLOCATABLE     ::  parent(:)
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
@@ -188,7 +187,7 @@ CONTAINS
 
          CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
          CALL trafo%TRANSPOSE(invtrafo)
-      
+
          DO i = 1, hybdat%nbands(nk)
             DO j = 1, i - 1
                IF (ex%l_real) THEN
