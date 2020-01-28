@@ -107,11 +107,11 @@ CONTAINS
              !Add off-diagonal contributions to Hamiltonian if needed
              IF (ispin==1.AND.noco%l_mtNocoPot) THEN
                 CALL hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,cell,lapw,usdus,td,fj,gj,hmat_tmp,hmat)
+             ELSEIF(noco%l_constr) THEN
+               CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat)
              ENDIF
              IF (ispin==1.and.noco%l_soc) &
                   CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)
-             IF (noco%l_constr) &
-                  CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat)
           ELSE
              !In the spin-spiral case the loop over the interstitial=global spin has to
              !be performed explicitely

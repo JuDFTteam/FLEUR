@@ -53,7 +53,11 @@ CONTAINS
 
     jsp=jspin
     vr0=v%mt(:,:,n,jsp)
-    IF (jsp<3) vr0(:,0)=0.0
+    IF (jsp<3) THEN
+      vr0(:,0)=0.0
+    ELSE
+      vr0(:,0)=vr0(:,0)-0.5*noco%b_con(jsp-2,n) !Add constraining field
+    ENDIF
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
        CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1inp%l_dftspinpol)
