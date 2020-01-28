@@ -179,9 +179,6 @@ CONTAINS
       parent(1) = 1
       neqvkpt(1) = 1
 
-      if(any(parent /= kpts%bkp))  call judft_error("parrent problem")
-
-
       allocate(pointer_EIBZ(kpts%nkpt_EIBZ()), source=0)
       ic = 0
       DO ikpt = 1, kpts%nkptf
