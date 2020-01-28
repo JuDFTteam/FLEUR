@@ -149,7 +149,7 @@ CONTAINS
    END SUBROUTINE waveftrafo_symm
 
    SUBROUTINE waveftrafo_genwavf( &
-      cmt_out, z_out, cmt, l_real, z_r, z_c, nk, iop, atoms, &
+      cmt_out, z_out, cmt, z_in, nk, iop, atoms, &
       mpdata, hybinp, kpts, sym, jsp, nbasfcn, input, nbands, &
        lapw_nk, lapw_rkpt, phase)
 
@@ -160,6 +160,7 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_mat), intent(inout)  :: z_out
+      type(t_mat), intent(in)     :: z_in
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpdata), INTENT(IN)    :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -173,9 +174,6 @@ CONTAINS
       LOGICAL                 ::  phase
 !     - arrays -
       COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
-      LOGICAL, INTENT(IN)      :: l_real
-      REAL, INTENT(IN)         ::  z_r(:,:)
-      COMPLEX, INTENT(IN)      ::  z_c(:,:)
 
       COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
 !        - local -
@@ -193,7 +191,7 @@ CONTAINS
       COMPLEX                 ::  zhlp(nbasfcn, input%neig)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
-      if (l_real) THEN
+      if (z_in%l_real) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
          invrrot = transpose(sym%mrot(:, :, iop))
          trans = sym%tau(:, iop)
@@ -242,7 +240,7 @@ CONTAINS
                   lm2 = lm0 + n + 2*l*nn
 
                   DO i = 1, nbands
-                     if (l_real) THEN
+                     if (z_in%l_real) THEN
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
                                            hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      else
@@ -277,13 +275,13 @@ CONTAINS
          END DO
          IF (igpt1 == 0) CYCLE
          cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
-         if (l_real) THEN
-            zhlp(igpt, :nbands) = cdum*z_r(igpt1, :nbands)
+         if (z_in%l_real) THEN
+            zhlp(igpt, :nbands) = cdum*z_in%data_r(igpt1, :nbands)
          else
             IF (trs) THEN
-               zhlp(igpt, :nbands) = cdum*conjg(z_c(igpt1, :nbands))
+               zhlp(igpt, :nbands) = cdum*conjg(z_in%data_c(igpt1, :nbands))
             ELSE
-               zhlp(igpt, :nbands) = cdum*z_c(igpt1, :nbands)
+               zhlp(igpt, :nbands) = cdum*z_in%data_c(igpt1, :nbands)
             END IF
          endif
       END DO
@@ -293,7 +291,7 @@ CONTAINS
 
       IF (phase) THEN
          DO i = 1, nbands
-            if (l_real) THEN
+            if (z_in%l_real) THEN
                CALL commonphase(cdum, zhlp(:, i), nbasfcn)
 
                IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
@@ -308,7 +306,7 @@ CONTAINS
             endif
          END DO
       ELSE
-         if (l_real) THEN
+         if (z_in%l_real) THEN
             z_out%data_r = real(zhlp)
          else
             z_out%data_c = zhlp
