@@ -30,8 +30,8 @@ MODULE m_types_mpimat
      INTEGER:: npcol,nprow                     !> the number of columns/rows in the processor grid
      INTEGER:: mycol,myrow
   END TYPE t_blacsdata
-  
-  
+
+
   TYPE,EXTENDS(t_mat):: t_mpimat
      INTEGER                   :: global_size1,global_size2        !> this is the size of the full-matrix
      TYPE(t_blacsdata),POINTER :: blacsdata
@@ -46,9 +46,10 @@ MODULE m_types_mpimat
      PROCEDURE   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
      PROCEDURE   :: print_matrix
      PROCEDURE   :: from_non_dist
+     PROCEDURE   :: transpose => mpimat_transpose
      FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
   END TYPE t_mpimat
-  
+
   PUBLIC t_mpimat
 
 CONTAINS
@@ -88,11 +89,50 @@ CONTAINS
     CLASS default
        CALL judft_error("BUG in mpimat%multiply")
     END SELECT
-#endif    
+#endif
   END SUBROUTINE mpimat_multiply
-          
 
-    
+  subroutine mpimat_transpose(mat1,res)
+    CLASS(t_mpimat),INTENT(INOUT) ::mat1
+    CLASS(t_mat),INTENT(OUT),OPTIONAL ::res
+    real,allocatable :: rd(:,:)
+    complex,allocatable :: cd(:,:)
+
+    if (present(res)) Then
+      select type(res)
+      type is (t_mpimat)
+        res%blacsdata=mat1%blacsdata
+        res%matsize1=mat1%matsize1
+        res%matsize2=mat1%matsize2
+        res%global_size1=mat1%global_size1
+        res%global_size2=mat1%global_size2
+        res%l_real=mat1%l_real
+      class default
+        call judft_error("BUG in t_mpimat%transpose, wrong matrix type")
+      end select
+    ENDIF
+
+    IF (mat1%l_real) THEN
+      allocate(rd(size(mat1%data_r,1),size(mat1%data_r,2)))
+      call pdtran(mat1%global_size1,mat1%global_size2,1.0,mat1%data_r,1,1,mat1%blacsdata%blacs_desc,0.0,rd,1,1,mat1%blacsdata%blacs_desc)
+      if (present(res))Then
+        call move_alloc(rd,res%data_r)
+      else
+        call move_alloc(rd,mat1%data_r)
+      endif
+    ELSE
+      allocate(cd(size(mat1%data_c,1),size(mat1%data_c,2)))
+      call pztranc(mat1%global_size1,mat1%global_size2,cmplx(1.0,0.0),mat1%data_c,1,1,mat1%blacsdata%blacs_desc,cmplx(0.0,0.0),cd,1,1,mat1%blacsdata%blacs_desc)
+      cd=conjg(cd) !do only a transpose, so undo the conjg in pztranc!
+      if (present(res))Then
+        call move_alloc(cd,res%data_c)
+      else
+        call move_alloc(cd,mat1%data_c)
+      endif
+    ENDIF
+  END subroutine
+
+
 
   SUBROUTINE print_matrix(mat,fileno)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
@@ -102,7 +142,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER,EXTERNAL:: indxl2g
     CHARACTER(len=10)::filename
-    INTEGER :: irank,isize,i,j,npr,npc,r,c,tmp,err,status(MPI_STATUS_SIZE) 
+    INTEGER :: irank,isize,i,j,npr,npc,r,c,tmp,err,status(MPI_STATUS_SIZE)
 
     CALL MPI_COMM_RANK(mat%blacsdata%mpi_com,irank,err)
     CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com,isize,err)
@@ -112,7 +152,7 @@ CONTAINS
     IF (irank>0) CALL MPI_RECV(tmp,1,MPI_INTEGER,irank-1,0,mat%blacsdata%mpi_com,status,err) !lock
     WRITE(filename,"(a,i0)") "out.",fileno
     OPEN(fileno,file=filename,access='append')
-    
+
     CALL blacs_gridinfo(mat%blacsdata%blacs_desc(2),npr,npc,r,c)
     DO i=1,mat%matsize1
        DO j=1,mat%matsize2
@@ -127,13 +167,13 @@ CONTAINS
     ENDDO
     CLOSE(fileno)
     IF (irank+1<isize) CALL MPI_SEND(tmp,1,MPI_INTEGER,irank+1,0,mat%blacsdata%mpi_com,err)
-    
-#endif    
+
+#endif
   END SUBROUTINE print_matrix
 
   SUBROUTINE generate_full_matrix(mat)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
-    
+
     INTEGER :: i,j,i_glob,j_glob,myid,err,np
     COMPLEX,ALLOCATABLE:: tmp_c(:,:)
     REAL,ALLOCATABLE   :: tmp_r(:,:)
@@ -144,7 +184,7 @@ CONTAINS
     CALL MPI_COMM_RANK(mat%blacsdata%mpi_com,myid,err)
     CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com,np,err)
     !Set lower part of matrix to zero
- 
+
     DO i=1,mat%matsize1
        DO j=1,mat%matsize2
           ! Get global column corresponding to i and number of local rows up to
@@ -178,7 +218,7 @@ CONTAINS
     END IF
     CALL MPI_BARRIER(mat%blacsdata%mpi_com,i)
  IF (mat%l_real) THEN
-#ifdef CPP_SCALAPACK          
+#ifdef CPP_SCALAPACK
 
        CALL pdgeadd('t',mat%global_size1,mat%global_size2,1.0,tmp_r,1,1,mat%blacsdata%blacs_desc,1.0,mat%data_r,1,1,mat%blacsdata%blacs_desc)
     ELSE
@@ -199,7 +239,7 @@ CONTAINS
 
     SELECT TYPE(mat1)
     TYPE IS (t_mpimat)
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     CALL MPI_COMM_RANK(mat%blacsdata%mpi_com,n_rank,i)
     CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com,n_size,i)
 #endif
@@ -216,7 +256,7 @@ CONTAINS
           ENDIF
        ENDDO
        IF (mat%l_real) THEN
-#ifdef CPP_SCALAPACK          
+#ifdef CPP_SCALAPACK
 
        CALL pdgeadd('t',mat1%global_size1,mat1%global_size2,1.0,mat1%data_r,1,1,mat1%blacsdata%blacs_desc,1.0,mat%data_r,1,1,mat%blacsdata%blacs_desc)
     ELSE
@@ -237,7 +277,7 @@ CONTAINS
     CLASS default
        CALL judft_error("Inconsistent types in t_mpimat_add_transpose")
     END SELECT
-    
+
   END SUBROUTINE mpimat_add_transpose
 
   SUBROUTINE mpimat_copy(mat,mat1,n1,n2)
@@ -256,7 +296,7 @@ CONTAINS
     CLASS DEFAULT
        CALL judft_error("Wrong datatype in copy")
     END SELECT
-#endif    
+#endif
   END SUBROUTINE mpimat_copy
 
   SUBROUTINE from_non_dist(mat,mat1)
@@ -277,9 +317,9 @@ CONTAINS
     ELSE
        CALL pzgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_c,1,1,blacs_desc,mat%data_c,1,1,mat%blacsdata%blacs_desc,mat%blacsdata%blacs_desc(2))
     END IF
-#endif    
+#endif
   END SUBROUTINE from_non_dist
-    
+
 
 
   SUBROUTINE mpimat_move(mat,mat1)
@@ -297,7 +337,7 @@ CONTAINS
 
   SUBROUTINE finalize_1d(mat)
     IMPLICIT NONE
-    
+
     TYPE(t_mpimat),INTENT(INOUT) :: mat(:)
     INTEGER                      :: i
     DO i = 1,size(mat)
@@ -307,7 +347,7 @@ CONTAINS
 
   SUBROUTINE finalize_2d(mat)
     IMPLICIT NONE
-    
+
     TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:)
     INTEGER                      :: i,j
 
@@ -317,10 +357,10 @@ CONTAINS
       ENDDO
     ENDDO
   END SUBROUTINE finalize_2d
-  
+
   SUBROUTINE finalize_3d(mat)
     IMPLICIT NONE
-    
+
     TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:,:)
     INTEGER                      :: i,j,k
 
@@ -344,7 +384,7 @@ CONTAINS
           mat%blacsdata%no_use=mat%blacsdata%no_use-1
           mat%blacsdata=>null()
        ELSE
-#ifdef CPP_SCALAPACK    
+#ifdef CPP_SCALAPACK
           CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2),ierr)
           DEALLOCATE(mat%blacsdata)
 #endif
@@ -364,7 +404,7 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
     LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
     INTEGER,INTENT(IN),OPTIONAL :: nb_y,nb_x
-#ifdef CPP_SCALAPACK    
+#ifdef CPP_SCALAPACK
     INTEGER::nbx,nby,irank,ierr
     include 'mpif.h'
     nbx=DEFAULT_BLOCKSIZE; nby=DEFAULT_BLOCKSIZE
@@ -385,7 +425,7 @@ CONTAINS
        CALL MPI_COMM_RANK(mpi_subcom,irank,ierr)
        IF (irank>0) mat%blacsdata%blacs_desc(2)=-1
     END IF
-#endif    
+#endif
   END SUBROUTINE mpimat_init
 
   SUBROUTINE mpimat_init_template(mat,templ,global_size1,global_size2)
@@ -396,7 +436,7 @@ CONTAINS
 
     INTEGER::numroc
     EXTERNAL::numroc
-    
+
     SELECT TYPE(templ)
     TYPE IS (t_mpimat)
        mat%l_real=templ%l_real
@@ -408,10 +448,10 @@ CONTAINS
           mat%blacsdata%blacs_desc(4)=global_size2
           mat%global_size1=global_size1
           mat%global_size2=global_size2
-#ifdef CPP_SCALAPACK    
+#ifdef CPP_SCALAPACK
           mat%matsize1=NUMROC( global_size1,mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow )
           mat%matsize1=NUMROC( global_size2,mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol )
-#endif    
+#endif
        ELSE
           mat%matsize1=templ%matsize1
           mat%matsize2=templ%matsize2
@@ -421,13 +461,13 @@ CONTAINS
           mat%blacsdata%no_use=mat%blacsdata%no_use+1
        ENDIF
        CALL mat%alloc()
-      
+
        CLASS default
           CALL judft_error("Mixed initialization in t_mpimat not possible(BUG)")
     END SELECT
   END SUBROUTINE mpimat_init_template
 
-    
+
   SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,blacsdata,local_size1,local_size2)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
@@ -436,7 +476,7 @@ CONTAINS
     LOGICAL,INTENT(IN) :: l_2d
     type(t_blacsdata),INTENT(OUT)::blacsdata
     INTEGER,INTENT(OUT):: local_size1,local_size2
-   
+
 #ifdef CPP_SCALAPACK
     INCLUDE 'mpif.h'
     INTEGER     :: myrowssca,mycolssca
@@ -449,7 +489,7 @@ CONTAINS
 
     EXTERNAL descinit, blacs_get
     EXTERNAL blacs_pinfo, blacs_gridinit
- 
+
     !Determine rank and no of processors
     CALL MPI_COMM_RANK(mpi_subcom,myid,ierr)
     CALL MPI_COMM_SIZE(mpi_subcom,np,ierr)
@@ -488,7 +528,7 @@ CONTAINS
     myrowssca=(m1-1)/(nbr*blacsdata%nprow)*nbr+ MIN(MAX(m1-(m1-1)/(nbr*blacsdata%nprow)*nbr*blacsdata%nprow-nbr*myrow,0),nbr)
     !     Number of rows the local process gets in ScaLAPACK distribution
     mycolssca=(m2-1)/(nbc*blacsdata%npcol)*nbc+ MIN(MAX(m2-(m2-1)/(nbc*blacsdata%npcol)*nbc*blacsdata%npcol-nbc*mycol,0),nbc)
-  
+
 
     !Get BLACS ranks for all MPI ranks
     CALL BLACS_PINFO(iamblacs,npblacs)  ! iamblacs = local process rank (e.g. myid)
@@ -497,22 +537,22 @@ CONTAINS
     ihelp=-2
     ihelp(myid+1)=iamblacs ! Get the Blacs id corresponding to the MPI id
     CALL MPI_ALLREDUCE(ihelp, iblacsnums, np,MPI_INTEGER,MPI_MAX,mpi_subcom,ierr)
-    IF (ierr.NE.0) STOP 'Error in allreduce for BLACS nums' 
+    IF (ierr.NE.0) STOP 'Error in allreduce for BLACS nums'
 
     !     iblacsnums(i) is the BLACS-process number of MPI-process i-1
     k = 1
-    DO i = 1, blacsdata%nprow 
-       DO j = 1, blacsdata%npcol  
+    DO i = 1, blacsdata%nprow
+       DO j = 1, blacsdata%npcol
           iusermap(i,j) = iblacsnums(k)
           k = k + 1
        ENDDO
     ENDDO
-!#ifdef CPP_BLACSDEFAULT    
+!#ifdef CPP_BLACSDEFAULT
     !Get the Blacs default context
     CALL BLACS_GET(0,0,ictextblacs)
 !#else
 !    ictextblacs=mpi_subcom
-!#endif    
+!#endif
     ! Create the Grid
     CALL BLACS_GRIDMAP(ictextblacs,iusermap,size(iusermap,1),blacsdata%nprow,blacsdata%npcol)
     !     Now control, whether the BLACS grid is the one we wanted

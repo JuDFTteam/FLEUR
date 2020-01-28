@@ -190,7 +190,7 @@ CONTAINS
 
    SUBROUTINE t_mat_transpose(mat1, res)
       CLASS(t_mat), INTENT(INOUT)       ::mat1
-      TYPE(t_mat), INTENT(OUT), OPTIONAL ::res
+      CLASS(t_mat), INTENT(OUT), OPTIONAL ::res
 
       IF (present(res)) THEN
          call res%alloc(mat1%l_real, mat1%matsize2, mat1%matsize1)
