@@ -179,23 +179,50 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(hybdat, kpts, ik, jsp, mat)
+   subroutine read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, ik, jsp, z_out)
       USE m_eig66_io
       use m_types_kpts
       implicit none
+      type(t_atoms), intent(in)    :: atoms
+      type(t_cell), intent(in)     :: cell
+      type(t_mpdata), intent(in)   :: mpdata
       type(t_hybdat), intent(in)   :: hybdat
+      type(t_hybinp), intent(in)   :: hybinp
       type(t_kpts), intent(in)     :: kpts
+      type(t_sym), intent(in)      :: sym
+      type(t_noco), intent(in)     :: noco
+      type(t_input), intent(in)    :: input
+      type(t_lapw), intent(in)     :: lapw(:)
       integer, intent(in)          :: ik, jsp
-      TYPE(t_mat), INTENT(INOUT)   :: mat
+      TYPE(t_mat), INTENT(INOUT)   :: z_out
 
-      INTEGER                      :: rec
+      INTEGER           :: ikp, iop
+      type(t_mat)       :: tmp_mat
+      complex           :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
+      complex           :: cmthlp(input%neig,hybdat%maxlmindx,atoms%nat)
+      type(t_lapw)      :: lapw_ik, lapw_ikp
 
-      rec = kpts%nkptf * (jsp - 1) + ik
+      cmt=0;cmthlp=0
+
+
+      !rec = kpts%nkptf * (jsp - 1) + ik
 
       if(ik <= kpts%nkpt) then
-         call read_eig(hybdat%eig_id,ik,jsp,zmat=mat)
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
       else
-         CALL read_matrix(mat, rec, id_z)
+         ikp = kpts%bkp(ik) ! parrent k-point
+         iop = kpts%bksym(ik) ! connecting symm
+         call tmp_mat%init(z_out)
+
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=tmp_mat)
+
+         CALL lapw_ik%init(input, noco, kpts, atoms, sym, ik, cell, sym%zrfs)
+         CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
+
+         CALL waveftrafo_genwavf(cmt, tmp_mat, ikp, iop, atoms,&
+                                 mpdata, hybinp, kpts, sym, jsp, input, &
+                                 hybdat%nbands(ikp), lapw(ikp), lapw(ik),cmthlp, z_out)
+         !CALL read_matrix(mat, rec, id_z)
       endif
    END subroutine read_z
 

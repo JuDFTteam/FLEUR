@@ -104,7 +104,7 @@ CONTAINS
 
       ! read in z coefficient from direct access file z at k-point nk
 
-      call read_z(hybdat, kpts,nk,jsp,z)
+      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, nk, jsp, z)
 
       ! construct local orbital consisting of radial function times spherical harmonic
       ! where the radial function vanishes on the MT sphere boundary
@@ -845,7 +845,7 @@ CONTAINS
 
       ! read in z coefficients from direct access file z at kpoint nk
 
-      call read_z(hybdat, kpts,nk,jsp,z)
+      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, nk, jsp, z)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
       gpt(:, 1:lapw%nv(jsp)) = lapw%gvec(:, 1:lapw%nv(jsp), jsp)
