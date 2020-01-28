@@ -188,6 +188,20 @@ contains
       CALL read_matrix(mat, rec, id_z)
    END subroutine read_z
 
+   subroutine read_z_new(kpts, ik, jsp, mat)
+      use m_types_kpts
+      implicit none
+      type(t_kpts), intent(in)     :: kpts
+      integer, intent(in)          :: ik, jsp
+      TYPE(t_mat), INTENT(INOUT)    :: mat
+
+      INTEGER                      :: rec
+
+      rec = kpts%nkptf * (jsp - 1) + ik
+
+      CALL read_matrix(mat, rec, id_z)
+   END subroutine read_z_new
+
    subroutine write_z(mat, rec)
       implicit none
       TYPE(t_mat), INTENT(IN)   :: mat
