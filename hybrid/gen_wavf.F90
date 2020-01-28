@@ -6,7 +6,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !     This module generates the cmt coefficients and eigenvectors z   !
-!     at all kpoints nkpt from the irreducible kpoints nkpti          !
+!     at all kpoints nkpt from the irreducible kpoints kpts%nkpt          !
 !     and writes them out in cmt and z, respectively.                 !
 !                                                 M.Betzinger(09/07)  !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -15,10 +15,9 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
+   SUBROUTINE gen_wavf(kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
                        hybdat, noco, oneD, mpi, input, jsp, zmat)
 
-      ! nkpti      ::     number of irreducible k-points
       ! nkpt       ::     number of all k-points
 
       USE m_radfun
@@ -45,7 +44,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mat), INTENT(IN)    :: zmat(:) !for all kpoints
 
-      INTEGER, INTENT(IN)    :: nkpti
+      INTEGER, INTENT(IN)    :: kpts%nkpt
       INTEGER, INTENT(IN)    :: jsp
 
       REAL, INTENT(IN)    :: vr0(:, :, :)!(jmtd,ntype,jspd)
@@ -79,7 +78,7 @@ CONTAINS
       REAL                    :: ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
 
 !     local arrays for abcof1
-!      COMPLEX                 ::  a(nvd,0:lmd,natd,nkpti),b(nvd,0:lmd,natd,nkpti)
+!      COMPLEX                 ::  a(nvd,0:lmd,natd,kpts%nkpt),b(nvd,0:lmd,natd,kpts%nkpt)
 
       TYPE(t_lapw)  :: lapw(kpts%nkptf)
       TYPE(t_usdus) :: usdus
@@ -105,10 +104,10 @@ CONTAINS
       ! set spherical component of the potential from the previous iteration vr
       vr = vr0
 
-!       allocate( z_out(nbasfcn,neigd,nkpti),stat=ok )
+!       allocate( z_out(nbasfcn,neigd,kpts%nkpt),stat=ok )
 !       IF ( ok .ne. 0) call judft_error('gen_wavf: failure allocation z')
 !       z_out = 0
-!       z_out(:,:,:nkpti) = z_in
+!       z_out(:,:,:kpts%nkpt) = z_in
 
       ! calculate radial basis functions belonging to the
       ! potential vr stored in bas1 and bas2
@@ -181,7 +180,7 @@ CONTAINS
       allocate(cmthlp(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
 
-      DO ikpt0 = 1, nkpti
+      DO ikpt0 = 1, kpts%nkpt
 
          acof = 0; bcof = 0; ccof = 0
 
