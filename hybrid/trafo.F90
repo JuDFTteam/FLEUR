@@ -149,9 +149,9 @@ CONTAINS
    END SUBROUTINE waveftrafo_symm
 
    SUBROUTINE waveftrafo_genwavf( &
-      cmt_out, z_out, cmt, z_in, nk, iop, atoms, &
-      mpdata, hybinp, kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, phase)
+       cmt, z_in, nk, iop, atoms, &
+       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
+       lapw_nk, lapw_rkpt, cmt_out, ,z_out)
 
       use m_juDFT
       USE m_constants
@@ -159,7 +159,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      type(t_mat), intent(inout)  :: z_out
+
       type(t_mat), intent(in)     :: z_in
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpdata), INTENT(IN)    :: mpdata
@@ -168,10 +168,10 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
+      type(t_mat), intent(inout)  :: z_out
 !     - scalars -
       INTEGER, INTENT(IN)      :: nk, jsp, nbands
       INTEGER, INTENT(IN)      ::  iop
-      LOGICAL                 ::  phase
 !     - arrays -
       COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
 
@@ -289,30 +289,21 @@ CONTAINS
       ! If phase and inversion-sym. is true,
       ! define the phase such that z_out is real.
 
-      IF (phase) THEN
-         DO i = 1, nbands
-            if (z_in%l_real) THEN
-               CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
-
-               IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
-                  WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
-                  WRITE (*, *) zhlp
-                  call judft_error('waveftrafo1: Residual imaginary part.')
-               END IF
-               z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
-               cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
-            else
-               z_out%data_c(:, i) = zhlp(:, i)
-            endif
-         END DO
-      ELSE
+      DO i = 1, nbands
          if (z_in%l_real) THEN
-            z_out%data_r = real(zhlp)
-         else
-            z_out%data_c = zhlp
-         endif
-      END IF
+            CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
 
+            IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
+               WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
+               WRITE (*, *) zhlp
+               call judft_error('waveftrafo1: Residual imaginary part.')
+            END IF
+            z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
+            cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
+         else
+            z_out%data_c(:, i) = zhlp(:, i)
+         endif
+      END DO
    END SUBROUTINE waveftrafo_genwavf
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
