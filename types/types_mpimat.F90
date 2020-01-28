@@ -123,7 +123,6 @@ CONTAINS
     ELSE
       allocate(cd(size(mat1%data_c,1),size(mat1%data_c,2)))
       call pztranc(mat1%global_size1,mat1%global_size2,cmplx(1.0,0.0),mat1%data_c,1,1,mat1%blacsdata%blacs_desc,cmplx(0.0,0.0),cd,1,1,mat1%blacsdata%blacs_desc)
-      cd=conjg(cd) !do only a transpose, so undo the conjg in pztranc!
       if (present(res))Then
         call move_alloc(cd,res%data_c)
       else

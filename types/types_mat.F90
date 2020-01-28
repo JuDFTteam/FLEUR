@@ -197,14 +197,14 @@ CONTAINS
          IF (mat1%l_real) THEN
             res%data_r = transpose(mat1%data_r(:mat1%matsize1, :mat1%matsize2))
          ELSE
-            res%data_c = transpose(mat1%data_c(:mat1%matsize1, :mat1%matsize2))
+            res%data_c = conjg(transpose(mat1%data_c(:mat1%matsize1, :mat1%matsize2)))
          ENDIF
       else
          if (mat1%matsize1 .ne. mat1%matsize2) CALL judft_error("Cannot transpose matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
          IF (mat1%l_real) THEN
             mat1%data_r(:mat1%matsize1, :mat1%matsize2) = transpose(mat1%data_r(:mat1%matsize1, :mat1%matsize2))
          ELSE
-            mat1%data_c(:mat1%matsize1, :mat1%matsize2) = transpose(mat1%data_c(:mat1%matsize1, :mat1%matsize2))
+            mat1%data_c(:mat1%matsize1, :mat1%matsize2) = conjg(transpose(mat1%data_c(:mat1%matsize1, :mat1%matsize2)))
          ENDIF
       end IF
    end SUBROUTINE t_mat_transpose

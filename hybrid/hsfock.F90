@@ -188,8 +188,7 @@ CONTAINS
 
          CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
          CALL trafo%TRANSPOSE(invtrafo)
-         IF (.NOT. invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
-
+      
          DO i = 1, hybdat%nbands(nk)
             DO j = 1, i - 1
                IF (ex%l_real) THEN

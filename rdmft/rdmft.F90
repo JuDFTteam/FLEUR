@@ -568,8 +568,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
-            IF(.NOT.invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
-
+      
             DO i = 1, hybdat%nbands(ikpt)
                DO j = 1, i-1
                   IF (exMat%l_real) THEN
