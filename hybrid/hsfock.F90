@@ -186,7 +186,7 @@ CONTAINS
          IF (input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
          call z%init(olap%l_real, nbasfcn, input%neig)
-         call read_z_new(kpts,nk,jsp,z)
+         call read_z(kpts,nk,jsp,z)
          z%matsize2 = hybdat%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)

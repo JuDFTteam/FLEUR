@@ -179,16 +179,7 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
-      !print *,"read z:",rec
-
-      CALL read_matrix(mat, rec, id_z)
-   END subroutine read_z
-
-   subroutine read_z_new(kpts, ik, jsp, mat)
+   subroutine read_z(kpts, ik, jsp, mat)
       use m_types_kpts
       implicit none
       type(t_kpts), intent(in)     :: kpts
@@ -200,7 +191,7 @@ contains
       rec = kpts%nkptf * (jsp - 1) + ik
 
       CALL read_matrix(mat, rec, id_z)
-   END subroutine read_z_new
+   END subroutine read_z
 
    subroutine write_z(mat, rec)
       implicit none
