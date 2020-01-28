@@ -179,22 +179,24 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(kpts, ik, jsp, mat)
+   subroutine read_z(hybdat, kpts, ik, jsp, mat)
+      USE m_eig66_io
       use m_types_kpts
       implicit none
+      type(t_hybdat), intent(in)   :: hybdat
       type(t_kpts), intent(in)     :: kpts
       integer, intent(in)          :: ik, jsp
-      TYPE(t_mat), INTENT(INOUT)    :: mat
+      TYPE(t_mat), INTENT(INOUT)   :: mat
 
       INTEGER                      :: rec
 
       rec = kpts%nkptf * (jsp - 1) + ik
 
-      ! if(ik <= kpts%nkpt) then
-      !    read_eig()
-      ! else
+      if(ik <= kpts%nkpt) then
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=mat)
+      else
          CALL read_matrix(mat, rec, id_z)
-      ! endif
+      endif
    END subroutine read_z
 
    subroutine write_z(mat, rec)
