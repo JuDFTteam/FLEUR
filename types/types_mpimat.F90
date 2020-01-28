@@ -97,7 +97,7 @@ CONTAINS
     CLASS(t_mat),INTENT(OUT),OPTIONAL ::res
     real,allocatable :: rd(:,:)
     complex,allocatable :: cd(:,:)
-
+#ifdef CPP_SCALAPACK
     if (present(res)) Then
       select type(res)
       type is (t_mpimat)
@@ -129,6 +129,9 @@ CONTAINS
         call move_alloc(cd,mat1%data_c)
       endif
     ENDIF
+#else
+    call judft_error("Not compiled with MPI")
+#endif
   END subroutine
 
 
