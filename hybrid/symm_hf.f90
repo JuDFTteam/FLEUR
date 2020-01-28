@@ -72,7 +72,7 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
-                      lapw, jsp, rrot, nsymop, psym, n_q, parent, &
+                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
@@ -94,6 +94,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
       INTEGER, INTENT(IN)              :: jsp
+      INTEGER, INTENT(INOUT)           :: nkpt_EIBZ
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
@@ -143,7 +144,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
-      parent = 0; nsest = 0; indx_sest = 0;
+      parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
       WRITE(6, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
@@ -179,25 +180,32 @@ CONTAINS
       parent(1) = 1
       neqvkpt(1) = 1
 
-      allocate(pointer_EIBZ(kpts%nkpt_EIBZ()), source=0)
+      ! determine number of members in the EIBZ(k)
       ic = 0
       DO ikpt = 1, kpts%nkptf
-         IF(kpts%bkp(ikpt) == ikpt) THEN
+         IF(parent(ikpt) == ikpt) ic = ic + 1
+      END DO
+      nkpt_EIBZ = ic
+
+      allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
+      ic = 0
+      DO ikpt = 1, kpts%nkptf
+         IF(parent(ikpt) == ikpt) THEN
             ic = ic + 1
             pointer_EIBZ(ic) = ikpt
          END IF
       END DO
 
-      WRITE(6, '(A,i5)') ' Number of k-points in the EIBZ', kpts%nkpt_EIBZ()
+      WRITE(6, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
-      allocate(n_q(kpts%nkpt_EIBZ()), source=0)
+      allocate(n_q(nkpt_EIBZ), source=0)
 
       ic = 0
       n_q = 0
       DO ikpt = 1, kpts%nkptf
-         IF(kpts%bkp(ikpt) == ikpt) THEN
+         IF(parent(ikpt) == ikpt) THEN
             ic = ic + 1
             DO iop = 1, nsymop
                isym = psym(iop)
@@ -213,7 +221,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      IF(ic /= kpts%nkpt_EIBZ()) call judft_error('symm: failure EIBZ')
+      IF(ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
 
       ! calculate degeneracy:
       ! degenerat(i) = 1 state i  is not degenerat,
