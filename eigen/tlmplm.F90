@@ -29,7 +29,7 @@ CONTAINS
 
     INTEGER, INTENT (IN) :: n,jspin !atom index,physical spin&spin index for data
 
-    REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:)
+    REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:,:)
     INTEGER,ALLOCATABLE :: indt(:)
     REAL,ALLOCATABLE    :: vr0(:,:)
 
@@ -46,7 +46,7 @@ CONTAINS
     ALLOCATE( uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( f(atoms%jmtd,2,0:atoms%lmaxd,2),g(atoms%jmtd,2,0:atoms%lmaxd,2),x(atoms%jmtd))
 
-    ALLOCATE( flo(atoms%jmtd,2,atoms%nlod))
+    ALLOCATE( flo(atoms%jmtd,2,atoms%nlod,2))
     ALLOCATE( indt(0:SIZE(td%tuu,1)-1))
     ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
@@ -56,7 +56,7 @@ CONTAINS
     IF (jsp<3) vr0(:,0)=0.0
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
-       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo,hub1inp%l_dftspinpol)
+       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1inp%l_dftspinpol)
     ENDDO
     IF (jspin>2) THEN
        jspin1=1
@@ -195,10 +195,9 @@ CONTAINS
     !
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
-    IF (atoms%nlo(n).GE.1.AND.jspin<3) THEN
-       CALL tlo(atoms,sym,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
-            na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
-
+    IF (atoms%nlo(n).GE.1) THEN
+           CALL tlo(atoms,sym,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
+            na,flo,f,g,ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
     ENDIF
   END SUBROUTINE tlmplm
 END MODULE m_tlmplm
