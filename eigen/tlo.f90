@@ -18,12 +18,12 @@ MODULE m_tlo
           !
           !*************** ABBREVIATIONS *****************************************
           ! tuulo      : t-matrix element of the lo and the apw radial fuction
-          ! tdulo      : t-matrix element of the lo and the energy derivativ of 
+          ! tdulo      : t-matrix element of the lo and the energy derivativ of
           !              the apw radial fuction
           ! tuloulo    : t-matrix element of two los
           !c***********************************************************************
           !
-          USE m_intgr, ONLY : intgr3  
+          USE m_intgr, ONLY : intgr3
           USE m_gaunt, ONLY: gaunt1
           USE m_types
           use m_constants
@@ -41,20 +41,25 @@ MODULE m_tlo
           !     ..
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd)
-          REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
-          REAL,    INTENT (IN) :: flo(atoms%jmtd,2,atoms%nlod)
+          REAL,    INTENT (IN) :: f(:,:,0:,:),g(:,:,0:,:) !(atoms%jmtd,2,0:atoms%lmaxd,spins)
+          REAL,    INTENT (IN) :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,spins)
           REAL,    INTENT (IN) :: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
           REAL,    INTENT (IN) :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX cil
-          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
+          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo,jspin1,jspin2
           !     ..
           !     .. Local Arrays ..
           REAL x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
           REAL uvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd),dvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd)
           !     ..
-
+          IF (jspin>2) THEN
+            jspin1=1
+            jspin2=2
+          ELSE
+            jspin1=jspin;jspin2=jspin
+          END IF
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)
              DO lp = 0,atoms%lmax(ntyp)
@@ -69,11 +74,11 @@ MODULE m_tlo
                       dvulo(lo,lp,lh) = 0.0
                    ELSE
                       DO i = 1,atoms%jri(ntyp)
-                         x(i) = (f(i,1,lp)*flo(i,1,lo)+ f(i,2,lp)*flo(i,2,lo))*vr(i,lh)
+                         x(i) = (f(i,1,lp,jspin1)*flo(i,1,lo,jspin2)+ f(i,2,lp,jspin1)*flo(i,2,lo,jspin2))*vr(i,lh)
                       END DO
                       CALL intgr3(x,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),uvulo(lo,lp,lh))
                       DO i = 1,atoms%jri(ntyp)
-                         x(i) = (g(i,1,lp)*flo(i,1,lo)+ g(i,2,lp)*flo(i,2,lo))*vr(i,lh)
+                         x(i) = (g(i,1,lp,jspin1)*flo(i,1,lo,jspin2)+ g(i,2,lp,jspin1)*flo(i,2,lo,jspin2))*vr(i,lh)
                       END DO
                       CALL intgr3(x,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),dvulo(lo,lp,lh))
                    END IF
@@ -95,7 +100,7 @@ MODULE m_tlo
                       ulovulo(loplo,lh) = 0.0
                    ELSE
                       DO i = 1,atoms%jri(ntyp)
-                         x(i) = (flo(i,1,lop)*flo(i,1,lo)+flo(i,2,lop)*flo(i,2,lo))*vr(i,lh)
+                         x(i) = (flo(i,1,lop,jspin1)*flo(i,1,lo,jspin2)+flo(i,2,lop,jspin1)*flo(i,2,lo,jspin2))*vr(i,lh)
                       END DO
                       CALL intgr3(x,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),ulovulo(loplo,lh))
                    END IF
@@ -104,7 +109,7 @@ MODULE m_tlo
           END DO
           !---> generate the different t matrices
           !---> but first initialize them ( done in eigen )
-          !     
+          !
           !---> generate the t-matrices. for optimal performance consider only
           !---> those combinations of l,l',l'',m,m',m'' that satisfy the three
           !---> conditions for non-zero gaunt-coeff. i.e.
@@ -174,7 +179,7 @@ MODULE m_tlo
           !---> terms have to be made hermitian. if second variation is switched
           !---> on, the t-matrices contain only the contributions from the
           !---> non-spherical hamiltonian.
-          IF (.NOT.input%secvar) THEN
+          IF (.NOT.input%secvar.and.jspin<3) THEN
              DO lo = 1,atoms%nlo(ntyp)
                 l = atoms%llo(lo,ntyp)
                 DO m = -l,l
@@ -188,7 +193,7 @@ MODULE m_tlo
                       tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
                    ENDIF
                    !+apw_lo
-                   IF (atoms%l_dulo(lo,ntyp)) THEN         
+                   IF (atoms%l_dulo(lo,ntyp)) THEN
                       tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5
                       tlmplm%tdulo(lm,m,lo+mlo,jsp) = 0.0
                    ENDIF
