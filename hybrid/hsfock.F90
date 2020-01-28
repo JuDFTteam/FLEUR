@@ -43,6 +43,8 @@ MODULE m_hsfock
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
 !         mnobd   :=   maximum number of occupied bands                       c
+!         parent  :=   parent(ikpt) points to the symmetry equivalent point   c
+!                      under the little group of kpoint nk                    c
 !         symop   :=   symop(ikpt) points to the symmetry operation, which    c
 !                      maps parent(ikpt) on ikpt                              c
 !                                                                             c
@@ -140,12 +142,15 @@ CONTAINS
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
          ! calculate all symmetrie operations, which yield k invariant
 
+         allocate(parent(kpts%nkptf), stat=ok)
+         IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
+         parent = 0
 
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
          CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw, jsp, &
-                      rrot, nsymop, psym, nkpt_EIBZ, n_q, pointer_EIBZ, nsest, indx_sest)
+                      rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
          ! remove weights(wtkpt) in w_iks

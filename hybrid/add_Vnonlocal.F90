@@ -32,6 +32,10 @@ MODULE m_add_vnonlocal
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
 !         mnobd   :=   maximum number of occupied bands                       c
+!         parent  :=   parent(ikpt) points to the symmetry equivalent point   c
+!                      under the little group of kpoint nk                    c
+!         symop   :=   symop(ikpt) points to the symmetry operation, which    c
+!                      maps parent(ikpt) on ikpt                              c
 !                                                                             c
 !                                                                             c
 !                                               M.Betzinger (09/07)           c

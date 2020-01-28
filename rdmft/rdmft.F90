@@ -135,6 +135,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    REAL, ALLOCATABLE                    :: occupationVec(:)
 
+   INTEGER, ALLOCATABLE                 :: parent(:)
    INTEGER, ALLOCATABLE                 :: pointer_EIBZ(:)
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
@@ -400,6 +401,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    maxHistoryLength = 7*numStates
    maxHistoryLength = 5*numStates
 
+   ALLOCATE(parent(kpts%nkptf))
    ALLOCATE(exDiag(input%neig,ikpt,input%jspins))
    ALLOCATE(lastGradient(numStates+1))
    ALLOCATE(lastParameters(numStates+1))
@@ -526,9 +528,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,l_zref)
 
+            parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
             CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,jspin,&
-                         rrot,nsymop,psym,nkpt_EIBZ,n_q,pointer_EIBZ,nsest,indx_sest)
+                         rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
             CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
