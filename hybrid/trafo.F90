@@ -151,7 +151,7 @@ CONTAINS
    SUBROUTINE waveftrafo_genwavf( &
        cmt, z_in, nk, iop, atoms, &
        mpdata, hybinp, kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, cmt_out, ,z_out)
+       lapw_nk, lapw_rkpt, cmt_out, z_out)
 
       use m_juDFT
       USE m_constants

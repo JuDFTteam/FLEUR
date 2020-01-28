@@ -44,7 +44,6 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mat), INTENT(IN)    :: zmat(:) !for all kpoints
 
-      INTEGER, INTENT(IN)    :: kpts%nkpt
       INTEGER, INTENT(IN)    :: jsp
 
       REAL, INTENT(IN)    :: vr0(:, :, :)!(jmtd,ntype,jspd)
