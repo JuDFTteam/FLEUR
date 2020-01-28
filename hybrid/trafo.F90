@@ -150,7 +150,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_out, cmt, z_in, nk, iop, atoms, &
-      mpdata, hybinp, kpts, sym, jsp, nbasfcn, input, nbands, &
+      mpdata, hybinp, kpts, sym, jsp, input, nbands, &
        lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -169,7 +169,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
 !     - scalars -
-      INTEGER, INTENT(IN)      :: nk, jsp, nbasfcn, nbands
+      INTEGER, INTENT(IN)      :: nk, jsp, nbands
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
@@ -188,7 +188,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(nbasfcn, input%neig)
+      COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       if (z_in%l_real) THEN
@@ -292,7 +292,7 @@ CONTAINS
       IF (phase) THEN
          DO i = 1, nbands
             if (z_in%l_real) THEN
-               CALL commonphase(cdum, zhlp(:, i), nbasfcn)
+               CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
 
                IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                   WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))

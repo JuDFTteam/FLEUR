@@ -262,8 +262,7 @@ CONTAINS
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp, cmt(:,:,:), zmat(ikpt0), ikpt0,&
                                        iop, atoms, mpdata, hybinp, kpts, sym, jsp, &
-                                       zmat(ikpt0)%matsize1, input, &
-                                       hybdat%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
+                                       input, hybdat%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)
                CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt)
