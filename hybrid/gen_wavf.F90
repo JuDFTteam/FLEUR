@@ -154,10 +154,9 @@ CONTAINS
       END DO
       deallocate(u, du)
 
-#if CPP_DEBUG
       ! consistency check
       IF (.not. all(iarr == mpdata%num_radfun_per_l)) call judft_error('gen_wavf: counting error')
-#endif
+
 
 8000  FORMAT(1x, /, /, ' wavefunction parameters for atom type', i3, ':', /, t32, 'radial function', t79, &
              'energy derivative', /, t3, 'l', t8, 'energy', t26, 'value', t39, 'derivative', t53, &
