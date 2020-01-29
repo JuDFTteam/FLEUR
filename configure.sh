@@ -1,5 +1,55 @@
 #!/usr/bin/env bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+{
+function clone_from_git(){
+    rm -rf $DIR/* $DIR/.??*
+    git clone https://iffgit.fz-juelich.de/fleur/fleur.git $DIR
+    git checkout release
+    echo "Current FLEUR source code obtained from iffgit.fz-juelich.de"
+    echo "Restart the configure.sh script"
+    exit
+    }
+    
+function check_git(){
+    git_found=`which git`
+    ping -q -c1 -W1 iffgit.fz-juelich.de
+    iffgit_reachable=$?
+    if [ $git_found ] && [ $iffgit_reachable == 0 ] ; then
+       return 0;
+    fi
+    return 1;
+}
+
+function update_git(){
+    if [ -r $DIR/.git ]
+    then
+	cd $DIR ; git pull ; cd -
+    else
+	echo "WARNING........."
+	echo "You asked to pull the current version from IFFGIT"
+	echo "So far your version is not controlled by git."
+	echo "If you modified any source code in your directory it will be deleted"
+	echo "Interrupt the script now to abort or press ENTER to continue"
+	echo ""
+	read y
+	clone_from_git
+    fi
+    }
+
+if [ ! -r $DIR/cmake ]
+then
+    if check_git
+    then
+	clone_from_git
+    else
+	echo "ERROR: No source present"
+	echo "You have no 'git' executable and/or the iffgit server is not reachable"
+	echo "Please download the complete source manually to your machine"
+	exit
+    fi
+fi
+
 #These contain functions to be used later on...
 . $DIR/cmake/machines.sh
 . $DIR/external/install_external.sh
@@ -21,6 +71,11 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 . $DIR/cmake/process_arguments.sh
 
 
+if [ $gitupdate -gt 0 ] 
+then
+    update_git
+fi
+
 
 #Check if we are using the git version and update if pull was used as an argument
 if test -d $DIR/.git
@@ -33,12 +88,6 @@ then
         mkdir -p $DIR/.git/hooks
         ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
         echo "Git version found, hook installed"
-    fi
-    if [ $gitupdate -gt 0 ] 
-    then
-       cd $DIR 
-       git pull
-       cd -
     fi
 fi
 
@@ -134,3 +183,5 @@ else
 	echo "run 'make' or 'make -j'"
     fi
 fi
+}
+exit
