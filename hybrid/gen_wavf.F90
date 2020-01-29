@@ -262,7 +262,6 @@ CONTAINS
                                        hybdat%nbands(ikpt0), lapw(ikpt0), lapw(ikpt),cmthlp, zhlp)
 
                CALL write_cmt(cmthlp, ikpt)
-               CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt)
             END IF
          END DO  !ikpt
       END DO !ikpt0
