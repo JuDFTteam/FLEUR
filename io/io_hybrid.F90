@@ -217,10 +217,11 @@ contains
          CALL lapw_ik%init(input, noco, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
-         CALL waveftrafo_genwavf(cmt, tmp_mat, ikp, iop, atoms,&
-                                 mpdata, hybinp, kpts, sym, jsp, input, &
-                                 hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
-         !CALL read_matrix(mat, rec, id_z)
+         call waveftrafo_gen_zmat(tmp_mat, ikp, iop, kpts, sym, jsp, input, &
+                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out)
+         ! CALL waveftrafo_genwavf(cmt, tmp_mat, ikp, iop, atoms,&
+         !                         mpdata, hybinp, kpts, sym, jsp, input, &
+         !                         hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
       endif
       call timestop("read_z")
    END subroutine read_z

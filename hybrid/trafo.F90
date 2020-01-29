@@ -308,6 +308,112 @@ CONTAINS
       call timestop("genwavf")
    END SUBROUTINE waveftrafo_genwavf
 
+   SUBROUTINE waveftrafo_gen_zmat(z_in, nk, iop, &
+       kpts, sym, jsp, input, nbands, &
+       lapw_nk, lapw_rkpt, z_out)
+
+      use m_juDFT
+      USE m_constants
+      USE m_wrapper
+      USE m_types
+      IMPLICIT NONE
+
+
+      type(t_mat), intent(in)     :: z_in
+      TYPE(t_input), INTENT(IN)   :: input
+      TYPE(t_sym), INTENT(IN)     :: sym
+      TYPE(t_kpts), INTENT(IN)    :: kpts
+      TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
+      type(t_mat), intent(inout)  :: z_out
+!     - scalars -
+      INTEGER, INTENT(IN)      :: nk, jsp, nbands
+      INTEGER, INTENT(IN)      :: iop
+
+!     - scalars -
+      INTEGER                 ::  igpt, igpt1, iiop, i
+      COMPLEX                 ::  cdum
+      LOGICAL                 ::  trs
+
+!     - arrays -
+      INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
+      INTEGER                 ::  g(3), g1(3)
+      REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
+      COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
+
+      call timestart("gen_zmat")
+      if (z_in%l_real) THEN
+         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
+         invrrot = transpose(sym%mrot(:, :, iop))
+         trans = sym%tau(:, iop)
+      else
+         IF (iop <= sym%nop) THEN
+            trs = .false.
+            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
+            invrrot = transpose(sym%mrot(:, :, iop))
+            trans = sym%tau(:, iop)
+         ELSE
+! in the case of SOC (l_soc=.true.)
+! time reversal symmetry is not valid anymore;
+! nsym should thus equal nop
+            trs = .true.
+            iiop = iop - sym%nop
+            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
+            invrrot = -transpose(sym%mrot(:, :, iiop))
+            trans = sym%tau(:, iiop)
+         END IF
+      endif
+
+      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      rkpthlp = rkpt
+      rkpt = kpts%to_first_bz(rkpt)
+      g1 = nint(rkpt - rkpthlp)
+
+      ! PW coefficients
+
+      zhlp = 0
+      DO igpt = 1, lapw_rkpt%nv(jsp)
+         g = matmul(invrrot, lapw_rkpt%gvec(:,igpt,jsp) + g1)
+         !determine number of g
+         igpt1 = 0
+         DO i = 1, lapw_nk%nv(jsp)
+            IF (all(abs(g - lapw_nk%gvec(:,i, jsp) ) <= 1E-06)) THEN
+               igpt1 = i
+               EXIT
+            END IF
+         END DO
+         IF (igpt1 == 0) CYCLE
+         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
+         if (z_in%l_real) THEN
+            zhlp(igpt, :nbands) = cdum*z_in%data_r(igpt1, :nbands)
+         else
+            IF (trs) THEN
+               zhlp(igpt, :nbands) = cdum*conjg(z_in%data_c(igpt1, :nbands))
+            ELSE
+               zhlp(igpt, :nbands) = cdum*z_in%data_c(igpt1, :nbands)
+            END IF
+         endif
+      END DO
+
+      ! If phase and inversion-sym. is true,
+      ! define the phase such that z_out is real.
+
+      DO i = 1, nbands
+         if (z_in%l_real) THEN
+            CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
+
+            IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
+               WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
+               WRITE (*, *) zhlp
+               call judft_error('waveftrafo1: Residual imaginary part.')
+            END IF
+            z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
+         else
+            z_out%data_c(:, i) = zhlp(:, i)
+         endif
+      END DO
+      call timestop("gen_zmat")
+   END SUBROUTINE waveftrafo_gen_zmat
+
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    ! Symmetrizes MT part of input matrix according to inversion symmetry.
    ! This is achieved by a transformation to
