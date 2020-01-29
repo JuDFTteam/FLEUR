@@ -4,7 +4,7 @@ MODULE m_kp_perturbation
 CONTAINS
 
    SUBROUTINE ibs_correction(nk, atoms, input, jsp, hybdat, mpdata, hybinp, &
-                             lapw, kpts, nkpti, cell, mnobd, sym, &
+                             lapw, kpts, nkpti, cell, mnobd, sym, noco, &
                              proj_ibsc, olap_ibsc)
 
       USE m_sphbes
@@ -22,6 +22,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)   :: sym
+      TYPE(t_noco), INTENT(IN)  :: noco
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -99,7 +100,7 @@ CONTAINS
 
       ! read in z coefficient from direct access file z at k-point nk
 
-      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, nk, jsp, z)
+      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, nk, jsp, z)
 
       ! construct local orbital consisting of radial function times spherical harmonic
       ! where the radial function vanishes on the MT sphere boundary
@@ -836,7 +837,7 @@ CONTAINS
 
       ! read in z coefficients from direct access file z at kpoint nk
 
-      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, nk, jsp, z)
+      call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, nk, jsp, z)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
       gpt(:, 1:lapw%nv(jsp)) = lapw%gvec(:, 1:lapw%nv(jsp), jsp)

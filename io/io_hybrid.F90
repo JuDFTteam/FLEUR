@@ -179,7 +179,7 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, ik, jsp, z_out)
+   subroutine read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, ik, jsp, z_out)
       USE m_eig66_io
       use m_types_kpts
       implicit none
@@ -192,7 +192,6 @@ contains
       type(t_sym), intent(in)      :: sym
       type(t_noco), intent(in)     :: noco
       type(t_input), intent(in)    :: input
-      type(t_lapw), intent(in)     :: lapw(:)
       integer, intent(in)          :: ik, jsp
       TYPE(t_mat), INTENT(INOUT)   :: z_out
 

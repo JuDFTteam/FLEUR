@@ -228,7 +228,7 @@
             allocate(carr2(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr3(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
             DO ikpt = 1, nkpti
-               call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, lapw, ikpt, jsp, z(ikpt))
+               call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, ikpt, jsp, z(ikpt))
             END DO
 
             iatom = 0
