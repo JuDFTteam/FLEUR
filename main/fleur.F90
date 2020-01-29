@@ -378,7 +378,7 @@ CONTAINS
 
 	  IF (input%gw.GT.0) THEN
 	    IF (mpi%irank.EQ.0) THEN
-	       CALL writeBasis(input_soc,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,mpi,&
+	       CALL writeBasis(input_soc,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,mpi,&
 		  	     results,eig_id,oneD,sphhar,stars,vacuum)
 	    END IF
 	    IF (input%gw.EQ.2) THEN
