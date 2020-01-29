@@ -23,7 +23,7 @@ CONTAINS
       USE m_radfun
       USE m_radflo
       USE m_abcof
-      USE m_trafo, ONLY: waveftrafo_genwavf
+      USE m_trafo!, ONLY: waveftrafo_genwavf
       USE m_olap
       USE m_types
       USE m_hyb_abcrot
@@ -67,7 +67,7 @@ CONTAINS
       INTEGER                 :: iarr(0:atoms%lmaxd, atoms%ntype)
       COMPLEX, ALLOCATABLE     :: acof(:, :, :), bcof(:, :, :), ccof(:, :, :, :)
 
-      COMPLEX, ALLOCATABLE     :: cmt(:, :, :), cmthlp(:, :, :)
+      COMPLEX, ALLOCATABLE     :: cmt(:, :, :), cmthlp(:, :, :), c_phase(:)
 
       REAL                    :: vr(atoms%jmtd, atoms%ntype, input%jspins)
       REAL, ALLOCATABLE        :: u(:, :, :), du(:, :, :)
@@ -257,10 +257,15 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
-               CALL waveftrafo_genwavf(cmt, zmat(ikpt0), ikpt0, iop, atoms,&
-                                       mpdata, hybinp, kpts, sym, jsp, input, &
-                                       hybdat%nbands(ikpt0), lapw(ikpt0), lapw(ikpt),cmthlp, zhlp)
 
+               if(allocated(c_phase)) deallocate(c_phase)
+               allocate(c_phase(hybdat%nbands(ikpt0)))
+
+               call waveftrafo_gen_zmat(zmat(ikpt0), ikpt0, iop, &
+                                        kpts, sym, jsp, input, hybdat%nbands(ikpt0), &
+                                        lapw(ikpt0), lapw(ikpt), zhlp, c_phase)
+               call waveftrafo_gen_cmt(cmt, c_phase, zmat(ikpt0)%l_real, ikpt0, iop, atoms, &
+                                        mpdata, hybinp, kpts, sym, hybdat%nbands(ikpt0), cmthlp)
                CALL write_cmt(cmthlp, ikpt)
             END IF
          END DO  !ikpt

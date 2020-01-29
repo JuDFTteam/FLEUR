@@ -217,9 +217,6 @@ contains
 
          call waveftrafo_gen_zmat(tmp_mat, ikp, iop, kpts, sym, jsp, input, &
                                   hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out)
-         ! CALL waveftrafo_genwavf(cmt, tmp_mat, ikp, iop, atoms,&
-         !                         mpdata, hybinp, kpts, sym, jsp, input, &
-         !                         hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
       endif
       call timestop("read_z")
    END subroutine read_z

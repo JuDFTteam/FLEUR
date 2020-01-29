@@ -148,10 +148,8 @@ CONTAINS
 
    END SUBROUTINE waveftrafo_symm
 
-   SUBROUTINE waveftrafo_gen_cmt( &
-       cmt, l_real, nk, iop, atoms, &
-       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, cmt_out)
+   SUBROUTINE waveftrafo_gen_cmt(cmt, c_phase, l_real, nk, iop, atoms, &
+                                 mpdata, hybinp, kpts, sym, nbands, cmt_out)
 
       use m_juDFT
       USE m_constants
@@ -159,16 +157,13 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_input), INTENT(IN)   :: input
-      TYPE(t_mpdata), INTENT(IN)    :: mpdata
-      TYPE(t_hybinp), INTENT(IN)   :: hybinp
-      TYPE(t_sym), INTENT(IN)   :: sym
+      TYPE(t_mpdata), INTENT(IN) :: mpdata
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-      TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
-      type(t_mat), intent(inout)  :: z_out
+      TYPE(t_atoms), INTENT(IN)  :: atoms
 !     - scalars -
-      INTEGER, INTENT(IN)      :: nk, jsp, nbands
+      INTEGER, INTENT(IN)      :: nk, nbands
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL, INTENT(in)      :: l_real
 !     - arrays -
@@ -178,14 +173,14 @@ CONTAINS
 !        - local -
 
 !     - scalars -
-      INTEGER                 ::  itype, iatom, iatom1, iiatom, igpt, igpt1, ieq, iiop
+      INTEGER                 ::  itype, iatom, iatom1, iiatom, ieq, iiop
       INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2
       COMPLEX                 ::  cdum
       LOGICAL                 ::  trs
 
 !     - arrays -
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
-      INTEGER                 ::  g(3), g1(3)
+      INTEGER                 ::  g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
@@ -239,7 +234,7 @@ CONTAINS
                   lm2 = lm0 + n + 2*l*nn
 
                   DO i = 1, nbands
-                     if (z_in%l_real) THEN
+                     if (l_real) THEN
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
                                            hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      else
@@ -525,7 +520,7 @@ CONTAINS
          if (z_in%l_real) THEN
             cdum = commonphase(zhlp(:, i), z_in%matsize1)
             if(present(c_phase)) c_phase(i) = cdum
-            
+
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                WRITE (*, *) zhlp
