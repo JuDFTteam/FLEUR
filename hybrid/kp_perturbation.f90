@@ -3,14 +3,9 @@ MODULE m_kp_perturbation
 
 CONTAINS
 
-   SUBROUTINE ibs_correction( &
-      nk, atoms, &
-      input, jsp, &
-      hybdat, mpdata, hybinp, &
-      lapw, kpts, nkpti, &
-      cell, mnobd, &
-      sym, &
-      proj_ibsc, olap_ibsc)
+   SUBROUTINE ibs_correction(nk, atoms, input, jsp, hybdat, mpdata, hybinp, &
+                             lapw, kpts, nkpti, cell, mnobd, sym, &
+                              proj_ibsc, olap_ibsc)
 
       USE m_sphbes
       USE m_dsphbs
