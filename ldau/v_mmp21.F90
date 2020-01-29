@@ -17,12 +17,11 @@ MODULE m_vmmp21
 
       CONTAINS
 
-      SUBROUTINE v_mmp_21(u_in,n_u,n_mmp21,u,f0,f2,v_mmp21,e_off)
+      SUBROUTINE v_mmp_21(u_in,n_u,n_mmp21,u,v_mmp21,e_off)
 
       INTEGER,          INTENT(IN)     :: n_u
       TYPE(t_utype),    INTENT(IN)     :: u_in(:)
       REAL,             INTENT(IN)     :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,             INTENT(IN)     :: f0(:),f2(:)
       COMPLEX,          INTENT(IN)     :: n_mmp21(-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(INOUT)  :: e_off
       COMPLEX,          INTENT(INOUT)  :: v_mmp21(-lmaxU_const:,-lmaxU_const:,:)
