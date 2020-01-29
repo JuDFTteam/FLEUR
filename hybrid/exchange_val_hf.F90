@@ -60,8 +60,8 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
 
-   SUBROUTINE exchange_valence_hf(ik, kpts, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv,nsest, indx_sest, &
+   SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_wrapper
@@ -93,7 +93,7 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: ik
+      INTEGER, INTENT(IN)    :: ik, nkpt_EIBZ
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
@@ -202,7 +202,7 @@ CONTAINS
 
       exch_vv = 0
 
-      DO jq = 1, kpts%nkpt_EIBZ()
+      DO jq = 1, nkpt_EIBZ
 
          iq = pointer_EIBZ(jq)
 

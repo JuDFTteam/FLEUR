@@ -532,10 +532,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
             CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,jspin,&
-                         rrot,nsymop,psym,n_q,parent,pointer_EIBZ,nsest,indx_sest)
+                         rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nococonv,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
