@@ -148,6 +148,127 @@ CONTAINS
 
    END SUBROUTINE waveftrafo_symm
 
+   SUBROUTINE waveftrafo_gen_cmt( &
+       cmt, l_real, nk, iop, atoms, &
+       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
+       lapw_nk, lapw_rkpt, cmt_out)
+
+      use m_juDFT
+      USE m_constants
+      USE m_wrapper
+      USE m_types
+      IMPLICIT NONE
+
+      TYPE(t_input), INTENT(IN)   :: input
+      TYPE(t_mpdata), INTENT(IN)    :: mpdata
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_sym), INTENT(IN)   :: sym
+      TYPE(t_kpts), INTENT(IN)   :: kpts
+      TYPE(t_atoms), INTENT(IN)   :: atoms
+      TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
+      type(t_mat), intent(inout)  :: z_out
+!     - scalars -
+      INTEGER, INTENT(IN)      :: nk, jsp, nbands
+      INTEGER, INTENT(IN)      ::  iop
+      LOGICAL, INTENT(in)      :: l_real
+!     - arrays -
+      COMPLEX, INTENT(IN)      ::  cmt(:,:,:), c_phase(nbands)
+
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
+!        - local -
+
+!     - scalars -
+      INTEGER                 ::  itype, iatom, iatom1, iiatom, igpt, igpt1, ieq, iiop
+      INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2
+      COMPLEX                 ::  cdum
+      LOGICAL                 ::  trs
+
+!     - arrays -
+      INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
+      INTEGER                 ::  g(3), g1(3)
+      REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
+      COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
+
+      call timestart("gen_cmt")
+      if (l_real) THEN
+         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
+         invrrot = transpose(sym%mrot(:, :, iop))
+         trans = sym%tau(:, iop)
+      else
+         IF (iop <= sym%nop) THEN
+            trs = .false.
+            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
+            invrrot = transpose(sym%mrot(:, :, iop))
+            trans = sym%tau(:, iop)
+         ELSE
+! in the case of SOC (l_soc=.true.)
+! time reversal symmetry is not valid anymore;
+! nsym should thus equal nop
+            trs = .true.
+            iiop = iop - sym%nop
+            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
+            invrrot = -transpose(sym%mrot(:, :, iiop))
+            trans = sym%tau(:, iiop)
+         END IF
+      endif
+
+      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      rkpthlp = rkpt
+      rkpt = kpts%to_first_bz(rkpt)
+      g1 = nint(rkpt - rkpthlp)
+
+      ! MT coefficients
+      cmt_out = 0
+      iatom = 0
+      iiatom = 0
+
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            iatom = iatom + 1
+
+            iatom1 = hybinp%map(iatom, iop)
+            tau1 = hybinp%tvec(:, iatom, iop)
+
+            cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt, tau1))
+
+            lm0 = 0
+            DO l = 0, atoms%lmax(itype)
+               nn = mpdata%num_radfun_per_l(l, itype)
+               DO n = 1, nn
+                  lm1 = lm0 + n
+                  lm2 = lm0 + n + 2*l*nn
+
+                  DO i = 1, nbands
+                     if (z_in%l_real) THEN
+                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
+                                           hybinp%d_wgn2(-l:l, -l:l, l, iop))
+                     else
+                        IF (trs) THEN
+                           cmthlp(:2*l + 1) = conjg(cmt(i, lm1:lm2:nn, iatom))
+                        ELSE
+                           cmthlp(:2*l + 1) = cmt(i, lm1:lm2:nn, iatom)
+                        END IF
+                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmthlp(:2*l + 1), hybinp%d_wgn2(-l:l, -l:l, l, iop))
+                     endif
+
+                  END DO
+               END DO
+               lm0 = lm2
+            END DO
+         END DO
+         iiatom = iiatom + atoms%neq(itype)
+      END DO
+
+      ! If phase and inversion-sym. is true,
+      ! define the phase such that z_out is real.
+      if(l_real) then
+         DO i = 1, nbands
+            cmt_out(i, :, :) = cmt_out(i, :, :)/c_phase(i)
+         END DO
+      endif
+      call timestop("gen_cmt")
+   END SUBROUTINE waveftrafo_gen_cmt
+
    SUBROUTINE waveftrafo_genwavf( &
        cmt, z_in, nk, iop, atoms, &
        mpdata, hybinp, kpts, sym, jsp, input, nbands, &
@@ -292,7 +413,7 @@ CONTAINS
 
       DO i = 1, nbands
          if (z_in%l_real) THEN
-            CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
+            cdum = commonphase(zhlp(:, i), z_in%matsize1)
 
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
@@ -310,7 +431,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_gen_zmat(z_in, nk, iop, &
        kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, z_out)
+       lapw_nk, lapw_rkpt, z_out, c_phase)
 
       use m_juDFT
       USE m_constants
@@ -325,6 +446,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
       type(t_mat), intent(inout)  :: z_out
+      complex, intent(inout), optional :: c_phase(nbands)
 !     - scalars -
       INTEGER, INTENT(IN)      :: nk, jsp, nbands
       INTEGER, INTENT(IN)      :: iop
@@ -341,6 +463,8 @@ CONTAINS
       COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
 
       call timestart("gen_zmat")
+      if(present(c_phase)) c_phase = 0
+
       if (z_in%l_real) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
          invrrot = transpose(sym%mrot(:, :, iop))
@@ -399,8 +523,9 @@ CONTAINS
 
       DO i = 1, nbands
          if (z_in%l_real) THEN
-            CALL commonphase(cdum, zhlp(:, i), z_in%matsize1)
-
+            cdum = commonphase(zhlp(:, i), z_in%matsize1)
+            if(present(c_phase)) c_phase(i) = cdum
+            
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                WRITE (*, *) zhlp
@@ -532,7 +657,7 @@ CONTAINS
 !     call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
 
 ! Determine common phase factor and divide by it to make the output matrix real.
-         CALL commonphase(cfac, mat, dim1*dim2)
+         cfac = commonphase(mat, dim1*dim2)
          mat = mat/cfac
          IF (any(abs(aimag(mat)) > 1e-8)) &
       STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
@@ -834,7 +959,7 @@ CONTAINS
                CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
                                atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
 
-               CALL commonphase(phase(j, i), vecout1(:, j, i), hybdat%nbasm(ikpt))
+               phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
                IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
                   WRITE (*, *) vecout1(:, j, i)
@@ -859,33 +984,32 @@ CONTAINS
    END SUBROUTINE bra_trafo
 
    ! Determines common phase factor (with unit norm)
-   SUBROUTINE commonphase(cfac, carr, n)
+   function commonphase(carr, n) result(cfac)
       USE m_juDFT
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
-      COMPLEX, INTENT(INOUT)   :: cfac
-      REAL                    :: rdum, rmax
-      INTEGER                 :: i
-
-!       IF( all( abs(carr) .lt. 1E-12 ) ) THEN
-!         cfac = 1
-!         RETURN
-!       END IF
+      COMPLEX                  :: cfac
+      REAL                     :: rdum, rmax
+      INTEGER                  :: i
 
       cfac = 0
       rmax = 0
       DO i = 1, n
          rdum = abs(carr(i))
-         IF (rdum > 1e-6) THEN; cfac = carr(i)/rdum; EXIT
-         ELSE IF (rdum > rmax) THEN; cfac = carr(i)/rdum; rmax = rdum
+         IF (rdum > 1e-6) THEN
+            cfac = carr(i)/rdum
+            EXIT
+         ELSE IF (rdum > rmax) THEN
+            cfac = carr(i)/rdum
+            rmax = rdum
          END IF
       END DO
       IF (abs(cfac) < 1e-10 .and. all(abs(carr) > 1e-10)) THEN
          WRITE (999, *) carr
          call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
       END IF
-   END SUBROUTINE commonphase
+   END function commonphase
 
    SUBROUTINE bramat_trafo(vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
       rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm,&
