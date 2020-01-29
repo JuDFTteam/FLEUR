@@ -191,6 +191,7 @@ CONTAINS
       COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
+      call timestart("genwavf")
       if (z_in%l_real) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
          invrrot = transpose(sym%mrot(:, :, iop))
@@ -304,6 +305,7 @@ CONTAINS
             z_out%data_c(:, i) = zhlp(:, i)
          endif
       END DO
+      call timestop("genwavf")
    END SUBROUTINE waveftrafo_genwavf
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

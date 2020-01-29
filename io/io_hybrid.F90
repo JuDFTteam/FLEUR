@@ -204,9 +204,7 @@ contains
 
       cmt=0;cmthlp=0
 
-
-      !rec = kpts%nkptf * (jsp - 1) + ik
-
+      call timestart("read_z")
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
       else
@@ -224,6 +222,7 @@ contains
                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
          !CALL read_matrix(mat, rec, id_z)
       endif
+      call timestart("read_z")
    END subroutine read_z
 
    subroutine write_z(mat, rec)
