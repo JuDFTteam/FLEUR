@@ -179,16 +179,14 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, ik, jsp, z_out)
+   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco, input, ik, jsp, z_out)
       USE m_eig66_io
       use m_types
       use m_trafo
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell
-      type(t_mpdata), intent(in)   :: mpdata
       type(t_hybdat), intent(in)   :: hybdat
-      type(t_hybinp), intent(in)   :: hybinp
       type(t_kpts), intent(in)     :: kpts
       type(t_sym), intent(in)      :: sym
       type(t_noco), intent(in)     :: noco

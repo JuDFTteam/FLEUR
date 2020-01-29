@@ -122,8 +122,8 @@ CONTAINS
      call z_kqpt%alloc(.true., nbasfcn, input%neig)
 
      ! read in z at k-point nk and nkqpt
-     CALL read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, nk, jsp, z_nk)
-     call read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, nkqpt, jsp, z_kqpt)
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z_nk)
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nkqpt, jsp, z_kqpt)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&

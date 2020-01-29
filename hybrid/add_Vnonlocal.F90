@@ -113,7 +113,7 @@ CONTAINS
 
       CALL z%init(olap%l_real, nbasfcn, input%neig)
 
-      CALL read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, nk, jsp, z)
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90

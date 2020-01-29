@@ -564,7 +564,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybdat%nbands(ikpt))],neig=nbands,zmat=zMat)
 
-!            CALL read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, ikpt, jsp, zMat)
+!            call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, zMat)
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)
