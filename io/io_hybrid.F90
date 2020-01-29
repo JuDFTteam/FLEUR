@@ -181,7 +181,8 @@ contains
 
    subroutine read_z(atoms, cell, mpdata, hybdat, hybinp, kpts, sym, noco, input, ik, jsp, z_out)
       USE m_eig66_io
-      use m_types_kpts
+      use m_types
+      use m_trafo
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell
@@ -220,7 +221,7 @@ contains
 
          CALL waveftrafo_genwavf(cmt, tmp_mat, ikp, iop, atoms,&
                                  mpdata, hybinp, kpts, sym, jsp, input, &
-                                 hybdat%nbands(ikp), lapw(ikp), lapw(ik),cmthlp, z_out)
+                                 hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
          !CALL read_matrix(mat, rec, id_z)
       endif
    END subroutine read_z

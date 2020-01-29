@@ -330,7 +330,7 @@ CONTAINS
 
          IF (zero_order) THEN
             CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., input,atoms, mpdata,hybinp, &
-                                cell, hybdat, kpts, kpts%nkpt, lapw, jsp, eig_irr)
+                                cell, hybdat, kpts, sym,noco, lapw, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybdat%nbands(ik)
@@ -341,8 +341,8 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp, lapw, kpts, kpts%nkpt, cell, mnobd, &
-                                   sym, proj_ibsc, olap_ibsc)
+               CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp, lapw, kpts, cell, mnobd, &
+                                   sym, noco, proj_ibsc, olap_ibsc)
             END IF
          END IF
 

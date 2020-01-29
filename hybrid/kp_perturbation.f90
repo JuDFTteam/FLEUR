@@ -4,7 +4,7 @@ MODULE m_kp_perturbation
 CONTAINS
 
    SUBROUTINE ibs_correction(nk, atoms, input, jsp, hybdat, mpdata, hybinp, &
-                             lapw, kpts, nkpti, cell, mnobd, sym, noco, &
+                             lapw, kpts, cell, mnobd, sym, noco, &
                              proj_ibsc, olap_ibsc)
 
       USE m_sphbes
@@ -31,7 +31,7 @@ CONTAINS
       ! - scalars -
       INTEGER, INTENT(IN)   :: jsp
       INTEGER, INTENT(IN)   ::  mnobd
-      INTEGER, INTENT(IN)   ::  nk, nkpti
+      INTEGER, INTENT(IN)   ::  nk
 
       ! - arrays -
 
@@ -704,7 +704,7 @@ CONTAINS
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
       input, atoms, mpdata, hybinp, &
       cell, &
-      hybdat, kpts, nkpti, lapw, &
+      hybdat, kpts, sym, noco, lapw, &
       jsp, &
       eig_irr)
 
@@ -719,12 +719,13 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
+      type(t_sym), intent(in)    :: sym
+      type(t_noco), intent(in)   :: noco
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  nk, bandi1, bandf1, bandi2, bandf2
-      INTEGER, INTENT(IN)      :: nkpti
       INTEGER, INTENT(IN)      :: jsp
 
 !     - arrays -
@@ -741,11 +742,8 @@ CONTAINS
       ! Get momentum-matrix elements -i < uj | \/ | ui >
       !
       dcprod = cmplx_0
-      CALL momentum_matrix( &
-         dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         input, atoms, mpdata, hybinp, &
-         cell, &
-         hybdat, kpts, lapw, &
+      CALL momentum_matrix(dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
+         input, atoms, mpdata, hybinp, cell, hybdat, kpts, sym, noco, lapw, &
          jsp)
 
       !                                                __
@@ -778,7 +776,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
                               input, atoms, mpdata, hybinp, &
-                              cell, hybdat, kpts, lapw, jsp)
+                              cell, hybdat, kpts, sym, noco, lapw, jsp)
       USE m_olap
       USE m_wrapper
       USE m_util, only: derivative
@@ -794,6 +792,8 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
+      type(t_sym), intent(in)    :: sym
+      type(t_noco), intent(in)   :: noco
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
 
