@@ -157,7 +157,7 @@ CONTAINS
      END DO
      call timestop("step function")
 
-     call timestart("hybinp g")
+     call timestart("hybrid g")
      ic = hybdat%nbasp
      DO igptm = 1, mpdata%n_g(iq)
         rarr2 = 0

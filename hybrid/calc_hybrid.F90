@@ -56,7 +56,7 @@ CONTAINS
       ! write (7465,*) iter, iterHF
       ! close(7465)
 
-      CALL timestart("hybinp code")
+      CALL timestart("hybrid code")
       INQUIRE (file="v_x.mat", exist=hybdat%l_addhf)
       CALL open_hybinp_io1( sym%invs)
 
@@ -120,7 +120,7 @@ CONTAINS
 
          l_zref = (sym%zrfs .AND. (SUM(ABS(kpts%bk(3, :kpts%nkpt))) < 1e-9) .AND. .NOT. noco%l_noco)
 
-         CALL timestart("Preparation for hybinp functionals")
+         CALL timestart("Preparation for hybrid functionals")
          !    CALL juDFT_WARN ("hybinp functionals not working in this version")
 
          !construct the mixed-basis
