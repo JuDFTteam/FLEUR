@@ -180,7 +180,7 @@ CONTAINS
         END DO
         cprod(ic, :, :) = rarr2(:, :)
      END DO
-     call timestop("hybinp g")
+     call timestop("hybrid g")
      call timestop("calc convolution")
 
      deallocate(z0, pointer, gpt0)

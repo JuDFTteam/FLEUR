@@ -71,7 +71,7 @@ CONTAINS
       hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
-         CALL timestop("hybinp code")
+         CALL timestop("hybrid code")
          RETURN
       ENDIF
 
@@ -135,7 +135,7 @@ CONTAINS
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
 
          CALL hf_init(eig_id, mpdata, hybinp, atoms, input,  hybdat)
-         CALL timestop("Preparation for hybinp functionals")
+         CALL timestop("Preparation for hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
@@ -155,6 +155,6 @@ CONTAINS
          CALL close_eig(eig_id)
 
       ENDIF
-      CALL timestop("hybinp code")
+      CALL timestop("hybrid code")
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

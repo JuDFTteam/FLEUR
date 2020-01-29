@@ -191,7 +191,7 @@ CONTAINS
          END DO
          cprod(ic, :,:) = carr(:,:)
       END DO
-      call timestop("hybinp g")
+      call timestop("hybrid g")
       deallocate(z0, pointer, gpt0)
       call timestop("calc convolution")
 
