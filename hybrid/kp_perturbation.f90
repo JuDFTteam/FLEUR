@@ -5,7 +5,7 @@ CONTAINS
 
    SUBROUTINE ibs_correction(nk, atoms, input, jsp, hybdat, mpdata, hybinp, &
                              lapw, kpts, nkpti, cell, mnobd, sym, &
-                              proj_ibsc, olap_ibsc)
+                             proj_ibsc, olap_ibsc)
 
       USE m_sphbes
       USE m_dsphbs
@@ -140,7 +140,7 @@ CONTAINS
       END DO
 
       ! calculate lo wavefunction coefficients
-      allocate (cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
+      allocate(cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
       cmt_lo = 0
       iatom = 0
       ic = 0
@@ -151,9 +151,9 @@ CONTAINS
          const = fpi_const*(atoms%rmt(itype)**2)/2/sqrt(cell%omtil)
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            IF ((sym%invsat(iatom) == 0) .or. (sym%invsat(iatom) == 1)) THEN
-               IF (sym%invsat(iatom) == 0) invsfct = 1
-               IF (sym%invsat(iatom) == 1) THEN
+            IF((sym%invsat(iatom) == 0) .or. (sym%invsat(iatom) == 1)) THEN
+               IF(sym%invsat(iatom) == 0) invsfct = 1
+               IF(sym%invsat(iatom) == 1) THEN
                   invsfct = 2
                   iatom1 = sym%invsatnr(iatom)
                END IF
@@ -175,11 +175,11 @@ CONTAINS
                      DO M = -l, l
                         lm = lm + 1
                         cdum2 = cdum1*conjg(ylm(lm))
-                        if (z%l_real) THEN
+                        if(z%l_real) THEN
                            work_r = z%data_r(ibas, :)
                            DO iband = 1, hybdat%nbands(nk)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_r(iband)
-                              IF (invsfct == 2) THEN
+                              IF(invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
                                  ! the cmt_lo in the local coordinate system of the atom
                                  cmt_lo(iband, -M, ilo, iatom1) = cmt_lo(iband, -M, ilo, iatom1) + (-1)**(l + M)*conjg(cdum2)*work_r(iband)
@@ -189,7 +189,7 @@ CONTAINS
                            work_c = z%data_c(ibas, :)
                            DO iband = 1, hybdat%nbands(nk)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_c(iband)
-                              IF (invsfct == 2) THEN
+                              IF(invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
                                  ! the cmt_lo in the local coordinate system of the atom
                                  cmt_lo(iband, -M, ilo, iatom1) = cmt_lo(iband, -M, ilo, iatom1) + (-1)**(l + M)*conjg(cdum2)*work_c(iband)
@@ -217,7 +217,7 @@ CONTAINS
       END DO
       idum = maxval(lmp_start)
 
-      allocate (cmt_apw(input%neig, idum, atoms%nat))
+      allocate(cmt_apw(input%neig, idum, atoms%nat))
       cmt_apw = 0
       DO i = 1, lapw%nv(jsp)
          kvec = kpts%bk(:, nk) + lapw%gvec(:, i, jsp)
@@ -259,7 +259,7 @@ CONTAINS
                                      wronskian(bas1_MT_tmp(p1, l, itype), drbas1_MT_tmp(p1, l, itype), AIMAG(cj), AIMAG(cdj)))
 
                         cdum = (-1)**(p + 1)*enum/denom
-                        if (z%l_real) THEN
+                        if(z%l_real) THEN
                            work_r = z%data_r(i, :)
                            DO iband = 1, hybdat%nbands(nk)
                               cmt_apw(iband, lmp, iatom) = cmt_apw(iband, lmp, iatom) + cdum*work_r(iband)
@@ -281,10 +281,10 @@ CONTAINS
       ! construct radial functions (complex) for the first order
       ! incomplete basis set correction
 
-      allocate (u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
-      IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u1')
-      allocate (u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
-      IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u2')
+      allocate(u1(atoms%jmtd, 3, mnobd,(atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
+      IF(ok /= 0) call judft_error('kp_perturbation: failure allocation u1')
+      allocate(u2(atoms%jmtd, 3, mnobd,(atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybdat%nbands
+      IF(ok /= 0) call judft_error('kp_perturbation: failure allocation u2')
       u1 = 0; u2 = 0
 
       iatom = 0
@@ -321,7 +321,7 @@ CONTAINS
                      END DO
 
                      l2 = l1 - 1
-                     IF (l2 >= 0) THEN
+                     IF(l2 >= 0) THEN
                         carr2 = 0
                         lmp2 = 2*l2**2 + p1
                         DO m2 = -l2, l2
@@ -368,7 +368,7 @@ CONTAINS
                      END DO
 
                      l2 = l1 - 1
-                     IF (l2 >= 0) THEN
+                     IF(l2 >= 0) THEN
                         carr2 = 0
                         lmp2 = 2*l2**2
                         DO m2 = -l2, l2
@@ -401,7 +401,7 @@ CONTAINS
       END DO  !iatom
 
       ! construct lo contribtution
-      IF (any(atoms%llo == atoms%lmaxd)) call judft_error('ibs_correction: atoms%llo=atoms%lmaxd is not implemented')
+      IF(any(atoms%llo == atoms%lmaxd)) call judft_error('ibs_correction: atoms%llo=atoms%lmaxd is not implemented')
 
       iatom = 0
       DO itype = 1, atoms%ntype
@@ -439,7 +439,7 @@ CONTAINS
                END DO
 
                l2 = l1 - 1
-               IF (l2 >= 0) THEN
+               IF(l2 >= 0) THEN
                   lm2 = l2**2
                   DO m2 = -l2, l2
                      lm2 = lm2 + 1
@@ -657,7 +657,7 @@ CONTAINS
       INTEGER               ::  p
       REAL                  ::  denom, enum
 
-      IF (p1 > 2 .or. p2 > 2) call judft_error('w: the formalism is only valid for p<=2')
+      IF(p1 > 2 .or. p2 > 2) call judft_error('w: the formalism is only valid for p<=2')
 
       denom = wronskian(bas1_MT(2, l1, itype), drbas1_MT(2, l1, itype), bas1_MT(1, l1, itype), drbas1_MT(1, l1, itype))
 
@@ -753,7 +753,7 @@ CONTAINS
       DO iband1 = bandi1, bandf1
          DO iband2 = bandi2, bandf2
             rdum = eig_irr(iband2, nk) - eig_irr(iband1, nk)
-            IF (abs(rdum) > 1e-6) THEN !10.0**-6
+            IF(abs(rdum) > 1e-6) THEN !10.0**-6
                dcprod(iband2, iband1, :) = dcprod(iband2, iband1, :)/rdum
             ELSE
                dcprod(iband2, iband1, :) = 0.0
@@ -775,13 +775,9 @@ CONTAINS
 !                                                              n' = unocc.  ( bandi2 <= n' <= bandf2 )
 !
 !
-   SUBROUTINE momentum_matrix( &
-      momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      input, atoms, mpdata, hybinp, &
-      cell, &
-      hybdat, kpts, lapw, &
-      jsp)
-
+   SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
+                              input, atoms, mpdata, hybinp, &
+                              cell, hybdat, kpts, lapw, jsp)
       USE m_olap
       USE m_wrapper
       USE m_util, only: derivative
@@ -873,7 +869,7 @@ CONTAINS
                CALL derivative(dbas2, hybdat%bas2(:, n2, l, itype), atoms, itype)
                dbas2 = dbas2 - hybdat%bas2(:, n2, l, itype)/atoms%rmsh(:, itype)
 
-               IF (l /= 0) THEN
+               IF(l /= 0) THEN
                   DO n1 = 1, mpdata%num_radfun_per_l(l - 1, itype)
                      ic = ic + 1
                      qmat1(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l - 1, itype) + &
@@ -883,7 +879,7 @@ CONTAINS
 
                   END DO
                END IF
-               IF (l /= atoms%lmax(itype)) THEN
+               IF(l /= atoms%lmax(itype)) THEN
                   DO n1 = 1, mpdata%num_radfun_per_l(l + 1, itype)
 
                      qmat2(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l + 1, itype) + dbas2(:)*hybdat%bas2(:, n1, l + 1, itype), &
@@ -953,9 +949,9 @@ CONTAINS
                      lm1 = lm_1 + (M + 1 + l - 1)*n1
                      lm2 = lm_1 + (M + l - 1)*n1
                      lm3 = lm_1 + (M - 1 + l - 1)*n1
-                     IF (abs(M + 1) <= l - 1) cvec1(lm0 + 1:lm0 + n0) = cvec1(lm0 + 1:lm0 + n0) + gcoeff(lm, -1)*matmul(cmt1(lm1 + 1:lm1 + n1, iband1), qmat1(:n1, :n0, l, itype))
-                     IF (abs(M) <= l - 1) cvec2(lm0 + 1:lm0 + n0) = cvec2(lm0 + 1:lm0 + n0) + gcoeff(lm, 0)*matmul(cmt1(lm2 + 1:lm2 + n1, iband1), qmat1(:n1, :n0, l, itype))
-                     IF (abs(M - 1) <= l - 1) cvec3(lm0 + 1:lm0 + n0) = cvec3(lm0 + 1:lm0 + n0) + gcoeff(lm, 1)*matmul(cmt1(lm3 + 1:lm3 + n1, iband1), qmat1(:n1, :n0, l, itype))
+                     IF(abs(M + 1) <= l - 1) cvec1(lm0 + 1:lm0 + n0) = cvec1(lm0 + 1:lm0 + n0) + gcoeff(lm, -1)*matmul(cmt1(lm1 + 1:lm1 + n1, iband1), qmat1(:n1, :n0, l, itype))
+                     IF(abs(M) <= l - 1) cvec2(lm0 + 1:lm0 + n0) = cvec2(lm0 + 1:lm0 + n0) + gcoeff(lm, 0)*matmul(cmt1(lm2 + 1:lm2 + n1, iband1), qmat1(:n1, :n0, l, itype))
+                     IF(abs(M - 1) <= l - 1) cvec3(lm0 + 1:lm0 + n0) = cvec3(lm0 + 1:lm0 + n0) + gcoeff(lm, 1)*matmul(cmt1(lm3 + 1:lm3 + n1, iband1), qmat1(:n1, :n0, l, itype))
                   END DO
                   lm_0 = lm_0 + (2*l + 1)*n0
                   lm_1 = lm_1 + (2*l - 1)*n1
@@ -992,7 +988,7 @@ CONTAINS
          qg(nn, :) = matmul(kpts%bk(:, nk) + gpt(:, nn), cell%bmat)
       END DO
 
-      if (z%l_real) THEN
+      if(z%l_real) THEN
       DO iband2 = bandi2, bandf2
          vec1_r = matvec(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 1))
          vec2_r = matvec(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 2))
