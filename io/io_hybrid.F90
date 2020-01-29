@@ -222,7 +222,7 @@ contains
                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik,cmthlp, z_out)
          !CALL read_matrix(mat, rec, id_z)
       endif
-      call timestart("read_z")
+      call timestop("read_z")
    END subroutine read_z
 
    subroutine write_z(mat, rec)
