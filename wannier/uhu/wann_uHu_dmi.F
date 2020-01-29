@@ -20,7 +20,7 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu_dmi(
      >      stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
-     >      banddos,oneD,noco,cell,vTot,wann,enpara,
+     >      banddos,oneD,noco,nococonv,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -71,7 +71,7 @@ c*******************************************c
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-      
+
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -83,6 +83,7 @@ c*******************************************c
       TYPE(t_banddos),INTENT(IN)   :: banddos
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_wann),INTENT(INOUT)   :: wann
@@ -139,11 +140,11 @@ c     ..allocatable arrays..
       integer, allocatable :: k1_b(:,:) , k2_b(:,:) , k3_b(:,:)
       integer, allocatable :: k1_b2(:,:), k2_b2(:,:), k3_b2(:,:)
       integer, allocatable :: irreduc(:),mapkoper(:)
-      integer, allocatable :: irreduc_q(:),mapqoper(:)        
+      integer, allocatable :: irreduc_q(:),mapqoper(:)
       integer, allocatable :: shiftkpt(:,:),pair_to_do(:,:)
-      integer, allocatable :: shiftqpt(:,:),pair_to_do_q(:,:)  
+      integer, allocatable :: shiftqpt(:,:),pair_to_do_q(:,:)
       integer, allocatable :: maptopair(:,:,:)
-      integer, allocatable :: maptopair_q(:,:,:)              
+      integer, allocatable :: maptopair_q(:,:,:)
       integer, allocatable :: counts(:),displs(:)
       integer, allocatable :: gb(:,:,:),bpt(:,:)
       integer, allocatable :: gb_q(:,:,:),bpt_q(:,:)
@@ -292,8 +293,8 @@ c     ..initializations..
 
       ! do we have to construct GWF ?
       l_gwf = .false.
-      l_gwf = l_sgwf.or.l_socgwf 
-      
+      l_gwf = l_sgwf.or.l_socgwf
+
 
 c-----read the input file to determine what to do
 !      call wann_read_inp(input,l_p0,wann) CAll wann_read_inp in fleur_init
@@ -394,7 +395,7 @@ c**********************************************************
          read (202,'(2i6,3x,3i4)')
      &     ikpt_help,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
          if (ikpt/=ikpt_help)  CALL juDFT_error("ikpt.ne.ikpt_help"
-     +        ,calledby ="wannier")       
+     +        ,calledby ="wannier")
          if (bpt(nn,ikpt)>fullnkpts) CALL juDFT_error("bpt.gt.fullnkpts"
      +        ,calledby ="wannier")
         enddo
@@ -403,7 +404,7 @@ c**********************************************************
         allocate(kdiff(3,nntot))
 
 c**********************************************************
-ccccccccccccccc   read in the bqpts file  ccccccccccccccccc         
+ccccccccccccccc   read in the bqpts file  ccccccccccccccccc
 c**********************************************************
       if (l_gwf.or.l_ms) then ! for Omega functional minimization
        l_bqpts = .false.
@@ -433,15 +434,15 @@ c**********************************************************
         allocate(qdiff(3,nntot_q))
         allocate(zero_qdiff(3,nntot_q))
         zero_qdiff=0.0
-      endif                                                        
+      endif
 
 
 ! when treating gen. WF for spin spirals, the Brillouin zone
 ! of q-points is twice as large compared to k-BZ. Thus,
 ! the G-vectors connecting neighbors across the boundary
 ! need to be doubled
-      if(l_sgwf) gb_q = 2*gb_q    
-      if(l_socgwf) gb_q = 2*gb_q 
+      if(l_sgwf) gb_q = 2*gb_q
+      if(l_socgwf) gb_q = 2*gb_q
 
       if(wann%l_finishgwf) goto 9110
 c********************************************************
@@ -456,7 +457,7 @@ c********************************************************
      <     pair_to_do,maptopair,kdiff,.false.,param_file)
 
       ! do the same for q-points to construct GWFs
-      if(l_gwf)then 
+      if(l_gwf)then
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
          call wann_mmnk_symm(input,kpts,
@@ -532,26 +533,26 @@ c--->       load the warping part of the potential
                DO ipot = 1,3
                   READ (npotmatfile)((vzxy(imz,igvm2,ivac,ipot),
      +                           imz=1,nmzxy),igvm2=1,nq2-1)
-               ENDDO   
+               ENDDO
             else
                DO ipot = 1,3
                   READ (npotmatfile)((vzxy(imz,igvm2,ivac,ipot),
      +                           imz=1,nmzxy),igvm2=1,odi%n2d-1)
-               ENDDO   
-            endif   
+               ENDDO
+            endif
             vzxy(:,:,:,4) = conjg(vzxy(:,:,:,3))
-          enddo   
+          enddo
          endif
          CLOSE (npotmatfile)
-      endif   
-   
+      endif
+
 
       if(film .and. l_p0) write(*,*)'nvac',nvac
 
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
-     
+
       allocate ( flo(ntypd,jmtd,2,nlod,2) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
@@ -594,8 +595,8 @@ cccccccccccccccc   end of the potential part  ccccccccccc
        read(888,*)l_skip_soc
        read(888,*)l_skip_loc
        read(888,*)l_skip_vac
-       read(888,*)doublespin_max 
-       read(888,*)doublespin_start 
+       read(888,*)doublespin_max
+       read(888,*)doublespin_start
        close(888)
        if(l_p0) then
         write(*,*)'skip INT :',l_skip_int
@@ -651,7 +652,7 @@ c*****************************************************************c
 
        ALLOCATE(innerEig_idList(nntot_q))
 
-        qptibz=iqpt                          
+        qptibz=iqpt
         if(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
         if(wann%l_bzsym .AND. l_gwf) oper_q=mapqoper(iqpt)
 
@@ -663,7 +664,7 @@ c*****************************************************************c
        if(l_sgwf.or.l_ms) then
           qpt_i(:) = param_vec(:,qptibz)
           alph_i(:) = param_alpha(:,qptibz)
-       elseif(l_socgwf) then 
+       elseif(l_socgwf) then
           if(l_dim(2)) phi_i = tpi*param_vec(2,qptibz)
           if(l_dim(3)) theta_i = tpi*param_vec(3,qptibz)
        endif
@@ -719,7 +720,7 @@ c*****************************************************************c
        nrec_b=0
 
 c****************************************************
-c cycle by spins starts! 
+c cycle by spins starts!
 c****************************************************
       do 110 doublespin=doublespin_start,doublespin_max   ! cycle by spins
          if(l_p0) write(*,*)'spin loop:',doublespin
@@ -743,7 +744,7 @@ c         if(doublespin.eq.4) jspin_b=1
 c...read number of bands and wannier functions from file proj
 
 c..reading the proj.1 / proj.2 / proj file
-       l_proj=.false.  
+       l_proj=.false.
        do j=jspin,0,-1
          inquire(file=trim('proj'//spin012(j)),exist=l_proj)
          if(l_proj)then
@@ -761,7 +762,7 @@ c..reading the proj.1 / proj.2 / proj file
        elseif(wann%l_projmethod.or.wann%l_bestproj
      &                         .or.wann%l_matrixamn)then
           CALL juDFT_error("no proj/proj.1/proj.2",calledby ="wannier")
-       endif  
+       endif
 
 
        jspin2=jspin
@@ -788,7 +789,7 @@ c..   now we want to define the maximum number of the bands by all kpts
       nbnd = 0
       i_rec = 0 ; n_rank = 0
 
-      if(l_p0)then         
+      if(l_p0)then
          call wann_maxbnd(
      >            eig_id,l_real,
      >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
@@ -799,8 +800,8 @@ c..   now we want to define the maximum number of the bands by all kpts
      >            irreduc,odi,wann%band_min(jspin),
      >            wann%band_max(jspin),
      >            numbands,e1s,e2s,efermi,nkpts,
-     <            nbnd,l_gwf,iqpt)      
-         write(*,*)'iqpt=',iqpt,'nbnd=',nbnd 
+     <            nbnd,l_gwf,iqpt)
+         write(*,*)'iqpt=',iqpt,'nbnd=',nbnd
       endif!l_p0
 
 ! nbnd is calculated for process zero and is sent here to the others
@@ -813,7 +814,7 @@ c..   now we want to define the maximum number of the bands by all kpts
        call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,MPI_COMM_WORLD,stt,ierr)
       endif
 #endif
-     
+
 c##################################################################
          if(.not.allocated(uHu)) then
             allocate(uHu(nbnd,nbnd,nntot_q,nntot,counts(irank)))
@@ -914,13 +915,13 @@ c       na = na + neq(n)
      >     tuloulo_soc(:,:,:,:,:,:,tspin))
          call cpu_time(t1)
          t_myTlmplm = t_myTlmplm + t1-t0
-         enddo!tspin 
+         enddo!tspin
       endif!l_soc
 
       !endif!iqpt.eq.1
 
       i_rec = 0 ; n_rank = 0
-      
+
 c****************************************************************
 c.. loop by kpoints starts!      each may be a separate task
 c****************************************************************
@@ -936,7 +937,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
       allocate (eigg(neigd))
 
-        CALL lapw%init(input,noco,kpts,atoms,sym,kptibz,cell,
+        CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,
      &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
 
@@ -944,7 +945,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
           n_start=1
           n_end=neigd
- 
+
       call cpu_time(t0)
       ! get current bkpt vector
 
@@ -953,7 +954,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       zzMat%matsize1 = lapw%dim_nbasfcn()
 !      zzMat%nbands = neigd
       zzMat%matsize2 = input%neig
-      
+
       IF(l_real) THEN
 !         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
              IF(.NOT.ALLOCATED(zzMat%data_r))
@@ -976,12 +977,12 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
       zMat_b%l_real = zzMat%l_real
       zMat_b2%l_real = zzMat%l_real
-      
+
 !      zMat_b%nbasfcn = zzMat%nbasfcn
 !      zMat_b2%nbasfcn = zzMat%nbasfcn
        zMat_b%matsize1 = zzMat%matsize1
        zMat_b2%matsize1 = zzMat%matsize1
-      
+
 !      zMat_b%nbands = zzMat%nbands
 !      zMat_b2%nbands = zzMat%nbands
       zMat_b%matsize2 = zzMat%matsize2
@@ -1028,7 +1029,8 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 !     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
 
 
-        call lapw_b%init(input,noco,kpts,atoms,sym,kptibz_b,cell,
+        call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,
+     &   cell,
      &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
         CALL cdn_read(
@@ -1132,7 +1134,7 @@ c***********************************************************
 
 
         CALL abcof(input,atoms,sym,cell,lapw_b,
-     &      noccbd_b,usdus,noco,jspin,oneD,
+     &      noccbd_b,usdus,noco,nococonv,jspin,oneD,
      &      acof_b,bcof_b,ccof_b,zMat_b)
 
 
@@ -1193,7 +1195,7 @@ c***********************************************************
 !#endif
 
 
-          call lapw_b2%init(input,noco,kpts,atoms,sym,qptibz_b,
+          call lapw_b2%init(input,noco,nococonv,kpts,atoms,sym,qptibz_b,
      &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
 
@@ -1293,7 +1295,7 @@ c**************************************c
 c    calculate uHu matrix due to:      c
 c             (i)    interstitial      c
 c             (ii)   muffin tins       c
-c             (iii)  vacuum            c 
+c             (iii)  vacuum            c
 c**************************************c
 
       ! transformation from (thetab_i,phib_i)-frame
@@ -1538,7 +1540,7 @@ c************************************************c
       deallocate(tdulo_soc,tuulo_soc)
       deallocate(tulou_soc,tulod_soc)
       deallocate(tuloulo_soc)
-      deallocate(counts,displs)   
+      deallocate(counts,displs)
 
 9110  continue
 
@@ -1562,11 +1564,11 @@ c************************************************c
       if(l_p0) then
        write(*,900)'t_init  =',t_init
        write(*,900)'t_myTlmplm=',t_myTlmplm
-       write(*,900)'t_eig   =',t_eig   
-       write(*,900)'t_abcof =',t_abcof 
-       write(*,900)'t_int   =',t_int   
-       write(*,900)'t_sph   =',t_sph   
-       write(*,900)'t_vac   =',t_vac   
+       write(*,900)'t_eig   =',t_eig
+       write(*,900)'t_abcof =',t_abcof
+       write(*,900)'t_int   =',t_int
+       write(*,900)'t_sph   =',t_sph
+       write(*,900)'t_vac   =',t_vac
        write(*,900)'t_total =',t_total
       endif
 
@@ -1574,7 +1576,5 @@ c************************************************c
 
       END SUBROUTINE wann_uHu_dmi
 
- 
+
       END MODULE m_wann_uHu_dmi
-
-

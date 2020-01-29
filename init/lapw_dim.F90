@@ -6,7 +6,7 @@
 
 MODULE m_lapwdim
 CONTAINS
-  SUBROUTINE lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)
+  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -19,6 +19,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_oneD),INTENT(IN)      :: oneD
     CLASS(t_forcetheo),INTENT(IN):: forcetheo
@@ -72,10 +73,10 @@ CONTAINS
        q_vectors=forcetheo%qvec
     CLASS IS (t_forcetheo) ! DEFAULT
        ALLOCATE(q_vectors(3,1))
-       q_vectors(:,1)=noco%qss
+       q_vectors(:,1)=nococonv%qss
     END SELECT
 
-    if (any(abs(noco%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
+    if (any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
 
 
     nvd = 0 ; nv2d = 0

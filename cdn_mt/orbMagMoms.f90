@@ -8,7 +8,7 @@ MODULE m_orbMagMoms
 
 CONTAINS
 
-SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
+SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
 
    USE m_types
    USE m_xmlOutput
@@ -18,6 +18,8 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
    TYPE(t_input), INTENT(IN) :: input
    TYPE(t_atoms), INTENT(IN)     :: atoms
    TYPE(t_noco), INTENT(IN)      :: noco
+   TYPE(t_nococonv), INTENT(IN)      :: nococonv
+
 
    REAL, INTENT(INOUT)           :: clmom(3,atoms%ntype,input%jspins)
 
@@ -25,9 +27,9 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
    REAL                          :: thetai, phii, slmom, slxmom, slymom
    CHARACTER(LEN=20)             :: attributes(4)
 
-   
-   thetai = noco%theta
-   phii   = noco%phi
+
+   thetai = nococonv%theta
+   phii   = nococonv%phi
    WRITE (6,FMT=9020)
    CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    DO iType = 1, atoms%ntype
@@ -37,8 +39,8 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
       slmom =  clmom(3,iType,1)+clmom(3,iType,2)
 
       IF (noco%l_noco) THEN
-         thetai = noco%beta(iType)
-         phii   = noco%alph(iType)
+         thetai = nococonv%beta(iType)
+         phii   = nococonv%alph(iType)
 
          !Fix of sign of moment in first variation calculations. Perhaps it would be better to understand this :-(
          !slxmom=-1*slxmom

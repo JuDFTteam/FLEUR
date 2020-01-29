@@ -8,13 +8,13 @@ MODULE m_hsmt_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,noco,lapw,td,usdus,fj,gj,hmat)
+  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,nococonv,lapw,td,usdus,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)       :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -33,7 +33,7 @@ CONTAINS
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
-    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
+    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     REAL fl2p1bt(0:atoms%lmaxd)
     REAL qssbti(3),qssbtj(3)
     COMPLEX:: chi(2,2,2,2)
@@ -42,14 +42,14 @@ CONTAINS
 
     CALL timestart("offdiagonal setup")
 
-    CALL hsmt_spinor_soc(n,1,noco,lapw,chi)
+    CALL hsmt_spinor_soc(n,1,nococonv,lapw,chi)
 
     IF (isp==1) THEN
        iintsp=2;jintsp=1
     ELSE
        iintsp=1;jintsp=2
     ENDIF
-    
+
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
@@ -64,8 +64,8 @@ CONTAINS
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     plegend=0.0
     plegend(:,0)=1.0
-    qssbti=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
-    qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+    qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
+    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  mpi%n_rank+1, lapw%nv(iintsp), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
@@ -97,10 +97,10 @@ CONTAINS
                   fj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l,l+s,n,isp) + &
                   gj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l+s,l,n,isp) + &
                   gj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l+s,l+s,n,isp)* usdus%ddn(l,n,isp))
-             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct 
-             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct 
-             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct 
-             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,iintsp,jintsp)*fct 
+             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct
+             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct
+             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct
+             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,iintsp,jintsp)*fct
           ENDDO
           !--->          end loop over l
        ENDDO

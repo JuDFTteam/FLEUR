@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpinp,mpdata,hybinp, hybdat,&
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,nococonv,xcpot,mpinp,mpdata,hybinp, hybdat,&
                  gfinp,hub1inp,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
@@ -61,8 +61,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_potden),        INTENT(INOUT) :: vTot
    TYPE(t_potden),        INTENT(INOUT) :: vCoul
    TYPE(t_oneD),          INTENT(IN)    :: oneD
-   TYPE(t_noco),          INTENT(INOUT) :: noco
-   TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
+   TYPE(t_noco),          INTENT(IN)    :: noco
+   TYPE(t_nococonv),      INTENT(INOUT) :: nococonv
+   TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
    TYPE(t_mpinp),         INTENT(IN)    :: mpinp
    TYPE(t_mpdata),        intent(inout) :: mpdata
    TYPE(t_hybinp),        INTENT(IN)    :: hybinp
@@ -323,7 +324,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-            CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
+            CALL cdnval(eig_id,mpi,kpts,jsp,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                         sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments,&
                         gfinp,hub1inp)
 
@@ -438,12 +439,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
-         CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
+         CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments,&
                      gfinp,hub1inp)
       END DO
 
-      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
          CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
@@ -516,7 +517,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,&
+         CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,nococonv,&
                        cell,oneD,results,jspin,enpara,eig_id,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
@@ -526,7 +527,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          DO ikpt = 1,kpts%nkpt
 
-            CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,ikpt,cell,l_zref)
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
@@ -535,7 +536,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             exMat%l_real=sym%invs
             CALL exchange_valence_hf(ikpt,kpts,sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
-                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
+                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nococonv,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 
@@ -767,7 +768,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
    CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
-               enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
+               enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0

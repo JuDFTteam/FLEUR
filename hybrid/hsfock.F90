@@ -54,7 +54,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco,nococonv, &
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -63,6 +63,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
@@ -164,7 +165,7 @@ CONTAINS
          ! HF exchange
          ex%l_real = sym%invs
          CALL exchange_valence_hf(nk, kpts, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv,nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")

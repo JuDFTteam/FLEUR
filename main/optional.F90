@@ -70,7 +70,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_input),INTENT(INOUT) :: input
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -113,14 +113,14 @@ CONTAINS
 #endif
     ENDIF
     IF (strho) THEN
-       strho=input%total
-       input%total = .FALSE.
+       !strho=input%total
+       !input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
        CALL stden(mpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco,oneD)
        !
-       input%total=strho
+       !input%total=strho
        CALL timestop("generation of start-density")
     END IF
     IF (mpi%irank == 0) THEN

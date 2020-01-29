@@ -9,22 +9,23 @@ MODULE m_od_hsvac
 CONTAINS
   SUBROUTINE od_hsvac(&
        vacuum,stars, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,nv2,l_real,hamOvlp)
+       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,nococonv,nv2,l_real,hamOvlp)
 
     !     subroutine for calculating the hamiltonian and overlap matrices in
     !     the vacuum in the case of 1-dimensional calculations
-    !     Y. Mokrousov June 2002             
+    !     Y. Mokrousov June 2002
 
     USE m_cylbes
     USE m_dcylbs
     USE m_od_vacfun
     USE m_types
     IMPLICIT NONE
-    
+
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -34,8 +35,8 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: vM
-    INTEGER, INTENT (IN) :: MM 
-    INTEGER, INTENT (IN) :: jsp ,n_size,n_rank,n2d_1 
+    INTEGER, INTENT (IN) :: MM
+    INTEGER, INTENT (IN) :: jsp ,n_size,n_rank,n2d_1
     INTEGER, INTENT (IN) :: m_cyl
     !     ..
     !     .. Array Arguments ..
@@ -73,7 +74,7 @@ CONTAINS
     ic  = CMPLX(0.,1.)
     d2 = SQRT(cell%omtil/cell%area)
 
- 
+
     ALLOCATE (&
          ai(-vM:vM,lapw%dim_nv2d(),lapw%dim_nvd()),bi(-vM:vM,lapw%dim_nv2d(),lapw%dim_nvd()),&
          nvp(lapw%dim_nv2d(),input%jspins),ind(stars%ng2,lapw%dim_nv2d(),input%jspins),&
@@ -122,7 +123,7 @@ CONTAINS
 
     ENDDO
 
-    npot = 1      
+    npot = 1
     ivac = 1
 
     IF (noco%l_noco) THEN
@@ -142,7 +143,7 @@ CONTAINS
 
        CALL od_vacfun(&
             m_cyl,cell,vacuum,stars,&
-            jsp,input,noco,ipot,oneD,n2d_1, ivac,evac(1,1),bkpt,MM,vM,&
+            jsp,input,noco,nococonv,ipot,oneD,n2d_1, ivac,evac(1,1),bkpt,MM,vM,&
             vxy(1,1,ivac),vz,kvac3,nv2, tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv)
 
        IF (noco%l_noco) THEN
@@ -171,7 +172,7 @@ CONTAINS
 
           ENDDO  ! jspin
 
-       ELSE 
+       ELSE
 
           DO k = 1,lapw%nv(jsp)
              irec3 = stars%ig(lapw%k1(k,jsp),lapw%k2(k,jsp),lapw%k3(k,jsp))
@@ -181,10 +182,10 @@ CONTAINS
                 gphi = stars%phi2(irec2)
                 i2 = map1(k,jsp)
                 qq = gr*cell%z1
-                CALL cylbes(vM,qq,bess) 
+                CALL cylbes(vM,qq,bess)
                 CALL dcylbs(vM,qq,bess,dbss)
                 DO m = -vM,vM
-                   wronk = uz(m,i2,jsp)*dudz(m,i2,jsp) - udz(m,i2,jsp)*duz(m,i2,jsp) 
+                   wronk = uz(m,i2,jsp)*dudz(m,i2,jsp) - udz(m,i2,jsp)*duz(m,i2,jsp)
                    a(m,k,1)=EXP(-CMPLX(0.0,m*gphi))*(ic**m)*&
                         CMPLX(dudz(m,i2,jsp)*bess(m)- udz(m,i2,jsp)*gr*dbss(m),0.0) /(d2*wronk)
 
@@ -225,14 +226,14 @@ CONTAINS
              IF (noco%l_noco) jspin1 = jspin
              DO j = 1,i - 1
                 ii = ii0 + j
-                !     overlap: only  (g-g') parallel=0        
+                !     overlap: only  (g-g') parallel=0
                 IF (map1(j,jspin).EQ.ik) THEN
                    sij = (0.0,0.0)
                    DO m = -vM,vM
                       sij = sij + CONJG(a(m,i,jspin))*a(m,j,jspin) &
                            +CONJG(b(m,i,jspin))*b(m,j,jspin) *ddnv(m,ik,jspin1)
                    END DO
-                   IF (l_real) THEN 
+                   IF (l_real) THEN
                       hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
                    ELSE
                       hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
@@ -248,13 +249,13 @@ CONTAINS
 
              IF (l_real) THEN
                 hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
-             ELSE 
+             ELSE
                 hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
              ENDIF
           ENDDO
        ENDIF ! ipot.eq.1.or.2
-       !   hamiltonian update 
-       !   for the noncylindr. contributions we use the cutoff of m_cyl        
+       !   hamiltonian update
+       !   for the noncylindr. contributions we use the cutoff of m_cyl
        IF (ipot.EQ.1) THEN
           jspin1 = 1
           jspin2 = 1
@@ -277,7 +278,7 @@ CONTAINS
 
        DO ik = 1,nv2(jspin1)
           DO jk = 1,nv2(jspin2)
-             i3 = kvac3(ik,jspin1) - kvac3(jk,jspin2) 
+             i3 = kvac3(ik,jspin1) - kvac3(jk,jspin2)
              DO l = -vM,vM
                 DO m = -vM,vM
                    IF (l.EQ.m .OR. (iabs(m).LE.m_cyl .AND. iabs(l).LE.m_cyl)) THEN
@@ -320,7 +321,7 @@ CONTAINS
              END DO
              IF (l_real) THEN
                 hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + REAL(hij)
-             ELSE 
+             ELSE
                 hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + hij
              ENDIF
           END DO

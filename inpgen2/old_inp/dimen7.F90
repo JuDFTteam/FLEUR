@@ -117,9 +117,8 @@
      & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
-     & atoms%l_geo(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
+     & atoms%l_geo(atoms%ntype),noco%alph_inp(atoms%ntype),noco%beta_inp(atoms%ntype),&
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),&
-     & noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
      & hybinp%select1(4,atoms%ntype),hybinp%lcutm1(atoms%ntype),&
      & hybinp%lcutwf(atoms%ntype), STAT=ok)
@@ -133,7 +132,7 @@
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
-      noco%qss = 0.0
+      noco%qss_inp = 0.0
       noco%l_ss = .false.
       IF (noco%l_noco) THEN
          CALL inpnoco(atoms,input,vacuum,noco)
@@ -263,7 +262,7 @@
       IF (noco%l_soc .and. (.not.noco%l_noco)) THEN
         ! test symmetry for spin-orbit coupling
         ALLOCATE ( error(sym%nop) )
-        CALL soc_sym(sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,error)
+        CALL soc_sym(sym%nop,sym%mrot,noco%theta_inp,noco%phi_inp,cell%amat,error)
         IF ( ANY(error(:)) ) THEN
           WRITE(*,fmt='(1x)')
           WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'
@@ -281,7 +280,7 @@
       ENDIF
       IF (noco%l_ss) THEN  ! test symmetry for spin-spiral
         ALLOCATE ( error(sym%nop) )
-        CALL ss_sym(sym%nop,sym%mrot,noco%qss,error)
+        CALL ss_sym(sym%nop,sym%mrot,noco%qss_inp,error)
         IF ( ANY(error(:)) )  CALL juDFT_error("symmetry & SSDW", calledby="dimen7")
         DEALLOCATE ( error )
       ENDIF
@@ -372,7 +371,6 @@
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%bmu,noel,&
      & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
-     & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
      & sphhar%llh,sphhar%nmem,sphhar%mlh,hybinp%select1,hybinp%lcutm1,&
      & hybinp%lcutwf)
 

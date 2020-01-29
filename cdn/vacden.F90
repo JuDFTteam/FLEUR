@@ -5,7 +5,7 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
+  SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
                     gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,dos)
 
     !***********************************************************************
@@ -54,6 +54,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -262,12 +263,12 @@ CONTAINS
           !--->    Thus, the vaccum wavefunctions and the A- and B-coeff. (ac bc)
           !--->    have to be calculated for both spins on that call.
           !--->       setup the spin-spiral q-vector
-          qssbti(1,1) = - noco%qss(1)/2
-          qssbti(2,1) = - noco%qss(2)/2
-          qssbti(1,2) = + noco%qss(1)/2
-          qssbti(2,2) = + noco%qss(2)/2
-          qssbti(3,1) = - noco%qss(3)/2
-          qssbti(3,2) = + noco%qss(3)/2
+          qssbti(1,1) = - nococonv%qss(1)/2
+          qssbti(2,1) = - nococonv%qss(2)/2
+          qssbti(1,2) = + nococonv%qss(1)/2
+          qssbti(2,2) = + nococonv%qss(2)/2
+          qssbti(3,1) = - nococonv%qss(3)/2
+          qssbti(3,2) = + nococonv%qss(3)/2
           DO ispin = 1,input%jspins
              !     -----> set up vacuum wave functions
              IF (oneD%odi%d1) THEN

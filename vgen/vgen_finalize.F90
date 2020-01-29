@@ -7,7 +7,7 @@ MODULE m_vgen_finalize
   USE m_juDFT
    USE m_xcBfield
 CONTAINS
-  SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,xcpot,sphhar,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -28,6 +28,7 @@ CONTAINS
     TYPE(t_cell),      INTENT(IN)     :: cell
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_atoms),INTENT(IN)        :: atoms
@@ -62,7 +63,7 @@ CONTAINS
     ! Source-free testwise
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
-    
+
     sfscale=1.0
     IF (xcpot%needs_grad()) THEN
        sfscale=1.14
@@ -88,7 +89,7 @@ CONTAINS
        END DO
        CALL timestart("Purging source terms in B-field")
        CALL timestart("Building B")
-       CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,vTot,2.0,bxc)
+       CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,vTot,2.0,bxc)
        CALL timestop("Building B")
        CALL timestart("SF subroutine")
        CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)

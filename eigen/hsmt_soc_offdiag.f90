@@ -8,13 +8,13 @@ MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,mpi,nococonv,lapw,usdus,td,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)       :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -37,9 +37,9 @@ CONTAINS
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
-   
+
     CALL timestart("offdiagonal soc-setup")
-    
+
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
@@ -47,7 +47,7 @@ CONTAINS
     END DO
 
     !$OMP PARALLEL DEFAULT(NONE)&
-    !$OMP SHARED(n,lapw,atoms,td,fj,gj,noco,fl2p1,fleg1,fleg2,hmat,mpi)&
+    !$OMP SHARED(n,lapw,atoms,td,fj,gj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
     !$OMP PRIVATE(cph,nn,tnn,fct)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
@@ -70,7 +70,7 @@ CONTAINS
        END DO
        !--->             set up phase factors
        cph = 0.0
-       ski = lapw%gvec(:,ki,1) 
+       ski = lapw%gvec(:,ki,1)
        DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
           tnn = tpi_const*atoms%taual(:,nn)
           DO kj = 1,ki
@@ -80,7 +80,7 @@ CONTAINS
           END DO
        END DO
        !Set up spinors...
-       CALL hsmt_spinor_soc(n,ki,noco,lapw,chi,angso)
+       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        DO  l = 1,atoms%lmax(n)
@@ -94,9 +94,9 @@ CONTAINS
                         gj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
                         gj(ki,l,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                         * angso(kj,j1,j2)
-                   hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct 
-                   hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct 
-                   hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,j1,j2)*fct 
+                   hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct
+                   hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct
+                   hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,j1,j2)*fct
                    hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,j1,j2)*fct
                 ENDDO
              ENDDO

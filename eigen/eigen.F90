@@ -16,10 +16,9 @@ CONTAINS
    !> 3. within the (collinear)spin and k-point loop: CALL to eigen_hssetup() to generate the matrices, CALL to eigen_diag() to perform diagonalization
    !> 4. writing (saving) of eigenvectors
    !>
-   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,mpdata,hybinp,hybdat,&
+                    cell,enpara,banddos,noco,nococonv,oneD,mpdata,hybinp,hybdat,&
                     iter,eig_id,results,inden,v,vx,hub1inp,hub1data)
 
 #include"cpp_double.h"
@@ -56,11 +55,12 @@ CONTAINS
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_banddos),INTENT(IN)   :: banddos
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
-      TYPE(t_kpts),INTENT(INOUT)   :: kpts
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_potden),INTENT(IN)    :: inden !
@@ -130,7 +130,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,inden,v,mpi,results,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,v,mpi,results,td,ud)
 
       neigBuffer = 0
       results%neig = 0
@@ -144,9 +144,9 @@ CONTAINS
          k_loop:DO nk_i = 1,size(mpi%k_list)
             nk=mpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
+            CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,mpi,hybinp,enpara,input,vacuum,noco,sym,&
+            CALL eigen_hssetup(jsp,mpi,hybinp,enpara,input,vacuum,noco,nococonv,sym,&
                                stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 

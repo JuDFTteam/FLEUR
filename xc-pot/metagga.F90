@@ -70,7 +70,7 @@ CONTAINS
    END SUBROUTINE calc_kinEnergyDen_mt
 
 
-   SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
+   SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco,nococonv, input, banddos, cell, atoms, enpara, stars, &
          vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
@@ -87,13 +87,14 @@ CONTAINS
       USE m_types_dos
       USE m_types_cdnval
       USE m_cdnval
-
+      use m_types_nococonv
       IMPLICIT NONE
 
       INTEGER,           INTENT(in)           :: eig_id
       TYPE(t_mpi),       INTENT(in)           :: mpi
       TYPE(t_kpts),      INTENT(in)           :: kpts
       TYPE(t_noco),      INTENT(in)           :: noco
+      TYPE(t_nococonv),  INTENT(in)           :: nococonv
       TYPE(t_input),     INTENT(in)           :: input
       TYPE(t_banddos),   INTENT(in)           :: banddos
       TYPE(t_cell),      INTENT(in)           :: cell
@@ -135,7 +136,7 @@ CONTAINS
          ! replace brillouin weights with auxillary weights
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
-         CALL cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
+         CALL cdnval(eig_id, mpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
             enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
             EnergyDen, regCharges, dos, tmp_results, moments, gfinp, hub1inp)
       ENDDO

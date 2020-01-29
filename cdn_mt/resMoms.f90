@@ -16,7 +16,7 @@ CONTAINS
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,den,rhoLRes)
+SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,nococonv,den,rhoLRes)
 
    USE m_constants
    USE m_types
@@ -29,6 +29,7 @@ SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,den,rhoLRes)
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_noco),          INTENT(IN)    :: noco
+   TYPE(t_nococonv),      INTENT(IN)    :: nococonv
    TYPE(t_potden),        INTENT(IN)    :: den
    REAL,                  INTENT(IN)    :: rhoLRes(:,0:,0:,:,:)
 
@@ -61,7 +62,7 @@ SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,den,rhoLRes)
 !      WRITE(5000,'(f15.8)') den%mt(:,:,:,4)
    END IF
 
-   CALL magDiMom(sym,input,atoms,sphhar,noco,noco%l_mperp,rhoTemp,t_op,elecDip)
+   CALL magDiMom(sym,input,atoms,sphhar,noco,nococonv,noco%l_mperp,rhoTemp,t_op,elecDip)
 
    DO l = 0, input%lResMax
       DO lp = 0, l
@@ -71,7 +72,7 @@ SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,den,rhoLRes)
          rhoTemp(:,:,:,2) = rhoLRes(:,:,llp,:,2)
          rhoTemp(:,:,:,3) = rhoLRes(:,:,llp,:,3)
          rhoTemp(:,:,:,4) = rhoLRes(:,:,llp,:,4)
-         CALL magDiMom(sym,input,atoms,sphhar,noco,noco%l_mperp,rhoTemp,res_T_op(:,:,llp),resElecDip(:,:,llp))
+         CALL magDiMom(sym,input,atoms,sphhar,noco,nococonv,noco%l_mperp,rhoTemp,res_T_op(:,:,llp),resElecDip(:,:,llp))
       END DO
    END DO
 

@@ -20,11 +20,11 @@ CONTAINS
     INTEGER :: i
     DO i =1,3
 	p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
-	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y 
-	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z 
+	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
+	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
 !	p_cell%amat(i,1)=cell%amat(i,1)/banddos%s_cell_x
-!	p_cell%amat(i,2)=cell%amat(i,2)/banddos%s_cell_y 
-!	p_cell%amat(i,3)=cell%amat(i,3)/banddos%s_cell_z 
+!	p_cell%amat(i,2)=cell%amat(i,2)/banddos%s_cell_y
+!	p_cell%amat(i,3)=cell%amat(i,3)/banddos%s_cell_z
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
@@ -42,7 +42,7 @@ CONTAINS
     TYPE(t_cell),INTENT(INOUT)  :: p_cell
     TYPE(t_kpts),INTENT(INOUT)  :: p_kpts
     TYPE(t_kpts),INTENT(INOUT)  :: kpts
-   
+
     CALL build_primitive_cell(banddos,p_cell,cell)
 
     p_kpts=kpts
@@ -67,7 +67,7 @@ CONTAINS
     !write(1088,'(a,i7,a,i7)') 'kpts%nkpt',kpts%nkpt,'   p_kpts%nkpt',p_kpts%nkpt
     !write(1088,*) kpts%specialPoints
   END SUBROUTINE unfold_band_kpts
-  
+
   SUBROUTINE find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
     USE m_types
     USE m_juDFT
@@ -79,7 +79,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: p_cell
     TYPE(t_kpts),INTENT(IN)     :: p_kpts
     TYPE(t_kpts),INTENT(INOUT)  :: kpts
-    
+
     INTEGER :: i,m1,m2,m3
     REAL    :: rez_inv_to_internal(3,3)
     REAL    :: rez_inv_det
@@ -110,7 +110,7 @@ CONTAINS
 		list(1,i)=pc_kpoint_c(1)
 		list(2,i)=pc_kpoint_c(2)
 		list(3,i)=pc_kpoint_c(3)
-	!!!!------- finding kpts in primitive rez. unit cell ----- 
+	!!!!------- finding kpts in primitive rez. unit cell -----
 	!	representation_found=.false.
 	!m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
 	!		DO m2= -banddos%s_cell_y,banddos%s_cell_y
@@ -149,7 +149,7 @@ CONTAINS
 	    m3=0
 	    sc_kpoint_i(1) = sc_kpoint_i(1) - m1
 	    sc_kpoint_i(2) = sc_kpoint_i(2) - m2
-	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3 
+	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3
 	    !sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
 	    list(4,i)=sc_kpoint_i(1)
 	    list(5,i)=sc_kpoint_i(2)
@@ -163,7 +163,7 @@ CONTAINS
 	    list(11:13,i)=kpts%bk(:,i)
   	    !------finished---------
 	    kpts%bk(:,i)=list(4:6,i)
-	
+
 	IF (i>1) THEN
 	kpt_dist=kpt_dist+sqrt(dot_product(list(1:3,i)-list(1:3,i-1),list(1:3,i)-list(1:3,i-1)))
 	END IF
@@ -190,7 +190,7 @@ CONTAINS
 	TYPE(t_banddos),INTENT(IN)  :: banddos
 	TYPE(t_results),INTENT(INOUT)  :: results
 	TYPE(t_cell),INTENT(IN)     :: cell
-	TYPE(t_kpts),INTENT(INOUT)     :: kpts
+	TYPE(t_kpts),INTENT(IN)     :: kpts
 	CLASS(t_mat),INTENT(INOUT)  :: smat_unfold
 	CLASS(t_mat),INTENT(IN)     :: zMat
 	TYPE(t_lapw),INTENT(IN)     :: lapw
@@ -237,7 +237,7 @@ CONTAINS
 !		write(223,'(234f15.8)') smat_unfold%data_r
 
 
-	IF (zmat%l_real) THEN	
+	IF (zmat%l_real) THEN
 		ALLOCATE(w_n(zMat%matsize2))
 	        w_n = 0
 !	    IF (method_rubel) THEN
@@ -246,10 +246,10 @@ CONTAINS
 !	    END IF
 	ELSE
 		ALLOCATE(w_n_c(zMat%matsize2))
-		w_n_c=0	
+		w_n_c=0
 !	    IF (method_rubel) THEN
 		ALLOCATE(w_n_c_sum(zMat%matsize2))
-		w_n_c_sum=0	
+		w_n_c_sum=0
 !	    END IF
 	END IF
 !---------create zmat_s--- smat*zmat---------------------
@@ -272,11 +272,11 @@ CONTAINS
 	write (*,*)results%ef
         write (*,*) i_kpt
 	IF (.not. method_rubel) THEN
-!          IF (mpi%n_size==1) THEN       
+!          IF (mpi%n_size==1) THEN
 !             call smat_unfold%multiply(zMat,zMat_s)
 !          ELSE
 !             call smat_unfold%mpimat_multiply(zMat,zMat_s)
-!          ENDIF  
+!          ENDIF
            call smat_unfold%multiply(zMat,zMat_s)
         END IF
        !$omp parallel private(j,n_i,nn,na,lo,nk,nki,gi)
@@ -429,7 +429,7 @@ CONTAINS
 !				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
 !				IF ((abs(w_n_c(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c larger 1 or smaller 0', w_n_c(i), 'eigenvalue',eig(i)
 !	        	END IF
-!		END IF			
+!		END IF
 	END DO
        !$omp end do
        !$omp end parallel
@@ -446,7 +446,7 @@ CONTAINS
 	END IF
  END SUBROUTINE
 
-	
+
 SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
      USE m_types
      USE m_juDFT
@@ -471,7 +471,7 @@ SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
 	IF (SIZE(results%unfolding_weights,3)==2) CLOSE (680)
 	write(*,*) 'Unfolded Bandstructure written succesfully - use band_sc.gnu to plot, calledby=write_band_sc',eFermiPrev
 END SUBROUTINE
-      	
+
       SUBROUTINE write_gnu_sc(nosyp,d,ssy,input)
       	USE m_types
 	USE m_juDFT
@@ -481,12 +481,12 @@ END SUBROUTINE
       INTEGER, INTENT (IN) :: nosyp
       REAL,    INTENT (IN) :: d(nosyp)
       CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
-      
+
       INTEGER n,aoff,adel
       CHARACTER(LEN=200) tempTitle
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
-      !write(*,*) aoff,adel 
+      !write(*,*) aoff,adel
 
       OPEN (27,file='band_sc.gnu',status='unknown')
       WRITE (27,*) 'reset'
@@ -512,7 +512,7 @@ END SUBROUTINE
         WRITE (27,907) " ",d(1),achar(92)
       ENDIF
       DO n = 2, nosyp-1
-        IF (iachar(ssy(n)) < aoff ) THEN 
+        IF (iachar(ssy(n)) < aoff ) THEN
           WRITE (27,908) ssy(n),d(n),achar(92)
         ELSE
           WRITE (27,908) " ",d(n),achar(92)

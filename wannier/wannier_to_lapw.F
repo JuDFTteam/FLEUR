@@ -17,7 +17,8 @@ c******************************************************************
       contains
       subroutine wannier_to_lapw(
      >      mpi_comm,eig_id,l_real,
-     >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
+     >      input,lapw,oneD,noco,nococonv,sym,cell,atoms,stars,vacuum,
+     >      sphhar,
      >      vTot,
      >      l_soc,unigrid,sortrule,band_min,band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -51,6 +52,7 @@ c******************************************************************
       TYPE(t_lapw),INTENT(IN)   :: lapw
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_noco),INTENT(IN)   :: noco
+      TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -72,7 +74,7 @@ c******************************************************************
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
-      integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac 
+      integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
@@ -84,7 +86,7 @@ c******************************************************************
       integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d)
-      real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd) 
+      real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd)
       real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
       real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
       real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)
@@ -195,7 +197,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       CHARACTER(len=30):: filename
       CHARACTER(len=20):: name1,name2,name3
       CHARACTER(len=10):: vandername
-      NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename 
+      NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename
       integer cell1,cell2,cell3,pw1,pw2,pw3
       complex,allocatable::wannint(:,:,:,:)
       complex,allocatable::wannz(:,:),wannz2(:,:)
@@ -241,7 +243,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
           enddo
         enddo
       enddo
- 
+
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
@@ -261,7 +263,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       allocate ( usdus%dulon(nlod,ntypd,jspins) )
       allocate ( usdus%uloulopn(nlod,nlod,ntypd,jspins) )
 c****************************************************
-c cycle by spins starts! 
+c cycle by spins starts!
 c****************************************************
       do 110 jspin=1,wannierspin   ! cycle by spins
 
@@ -312,14 +314,14 @@ c**************************************************************
             IF(kpt/=i) CALL juDFT_error("kpt.ne.i",calledby
      +           ="wannier_to_lapw")
             print*,i,irreduc(i),mapkoper(i)
-         enddo   
+         enddo
          close(713)
          IF(MAXVAL(irreduc(:))/=nkpts) CALL juDFT_error
      +        ("max(irreduc(:))/=nkpts",calledby ="wannier_to_lapw")
-      else   
+      else
          fullnkpts=nkpts
 
-      endif   
+      endif
 
       IF(kpun/=fullnkpts) CALL juDFT_error
      +     ("mismatch in kpun and fullnkpts",calledby ="wannier_to_lapw"
@@ -357,11 +359,11 @@ c**************************************************************
                do i=1,num_bands
                   read(419,*)u_matrix(i,j,ikpt)
                enddo
-            enddo   
-         enddo   
+            enddo
+         enddo
          close(419)
-      endif   
-      
+      endif
+
 ***********************************************************
 ***********************************************************
 
@@ -397,7 +399,7 @@ c       do ilo = 1, nlo(n)
          call radflo(
      >             ntypd,nlod,jspd,jmtd,lmaxd,n,jspin,
      >             ello(1,1,jspin),vr(1,n,jspin),
-     >             jri(n),rmsh(1,n),dx(n),ff(n,1:,1:,0:), 
+     >             jri(n),rmsh(1,n),dx(n),ff(n,1:,1:,0:),
      >             gg(n,1:,1:,0:),llo,nlo,l_dulo(1,n),irank,ulo_der,
      <             ulos(1,1),dulos(1,1),uulon(1,1),dulon(1,1),
      <             uloulopn(1,1,1),uuilon,duilon,ulouilopn,flo(n,:,:,:))
@@ -436,7 +438,7 @@ c******************************************************************
         i_rec = i_rec + 1
         if (mod(i_rec-1,isize).eq.irank) then
         print*,"k-point=",ikpt
-        kptibz=ikpt 
+        kptibz=ikpt
         if(l_bzsym) kptibz=irreduc(ikpt)
         if(l_bzsym) oper=mapkoper(ikpt)
 
@@ -501,8 +503,8 @@ c...we work only within the energy window
              zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
-       endif 
-      enddo 
+       endif
+      enddo
 
 c***********************************************************
 c              rotate the wavefunction
@@ -518,15 +520,15 @@ c***********************************************************
                j1=mrot(1,1,oper)*k1(j,jspin)+
      +             mrot(2,1,oper)*k2(j,jspin)+mrot(3,1,oper)*k3(j,jspin)
                j2=mrot(1,2,oper)*k1(j,jspin)+
-     +             mrot(2,2,oper)*k2(j,jspin)+mrot(3,2,oper)*k3(j,jspin)  
+     +             mrot(2,2,oper)*k2(j,jspin)+mrot(3,2,oper)*k3(j,jspin)
                j3=mrot(1,3,oper)*k1(j,jspin)+
      +             mrot(2,3,oper)*k2(j,jspin)+mrot(3,3,oper)*k3(j,jspin)
                k1(j,jspin)=j1
                k2(j,jspin)=j2
                k3(j,jspin)=j3
-         enddo jloop   
+         enddo jloop
 
-      endif   
+      endif
       print*,"bkpt=",bkpt(:)
 c******************************************************************
 c          calculate a-, b-, and c-coefficients
@@ -541,11 +543,11 @@ c******************************************************************
       acof(:,:,:) = cmplx(0.,0.) ; bcof(:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:) = cmplx(0.,0.)
 
-c...generation of the A,B,C coefficients in the spheres 
-c...for the lapws and local orbitals, summed by the basis functions 
+c...generation of the A,B,C coefficients in the spheres
+c...for the lapws and local orbitals, summed by the basis functions
 
       CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +           noco,jspin,oneD,acof,bcof,ccof,zMat)
+     +           noco,nococonv,jspin,oneD,acof,bcof,ccof,zMat)
 
       call abcrot(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -560,16 +562,16 @@ c***************************************************************
        do i2=-cell2,cell2
         do i3=-cell3,cell3
          factor=exp(ImagUnit*tpi_const*
-     *          (i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
+     *          (i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))
          do i=1,num_wann
           do n=1,noccbd
             wann_acof(i,0:lmd,1:natd,i1,i2,i3)=
      =          wann_acof(i,0:lmd,1:natd,i1,i2,i3)+
-     +          u_matrix(n,i,ikpt)*acof(n,0:lmd,1:natd)*factor 
-            
+     +          u_matrix(n,i,ikpt)*acof(n,0:lmd,1:natd)*factor
+
             wann_bcof(i,0:lmd,1:natd,i1,i2,i3)=
      =          wann_bcof(i,0:lmd,1:natd,i1,i2,i3)+
-     +          u_matrix(n,i,ikpt)*bcof(n,0:lmd,1:natd)*factor     
+     +          u_matrix(n,i,ikpt)*bcof(n,0:lmd,1:natd)*factor
 
             wann_ccof(i,-llod:llod,1:nlod,1:natd,i1,i2,i3)=
      =          wann_ccof(i,-llod:llod,1:nlod,1:natd,i1,i2,i3)+
@@ -577,11 +579,11 @@ c***************************************************************
           enddo
          enddo
         enddo
-       enddo   
+       enddo
       enddo
 c***************************************************************
 c       calculate wannierfunctions' planewave-expansion
-c***************************************************************   
+c***************************************************************
       allocate(wannz(nv(jspin),num_wann))
       allocate(wannz2(nv(jspin),num_wann))
       wannz(:,:)=cmplx(0.0,0.0)
@@ -591,49 +593,49 @@ c***************************************************************
           do j=1, nv(jspin)
             wannz(j,m)=wannz(j,m)+zMat%data_r(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
-          enddo  
+          enddo
         ELSE
           do j=1, nv(jspin)
             wannz(j,m)=wannz(j,m)+zMat%data_c(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
-          enddo  
+          enddo
         END IF
 
-       enddo   
+       enddo
       enddo
       print*,"unigrid=",unigrid(:)
-      do j=1,nv(jspin)  
+      do j=1,nv(jspin)
        do pw1=-unigrid(4),unigrid(4)
         do pw2=-unigrid(4),unigrid(4)
          do pw3=-unigrid(4),unigrid(4)
-          denom=-pw1+unigrid(1)*(k1(j,jspin)+bkpt(1))  
+          denom=-pw1+unigrid(1)*(k1(j,jspin)+bkpt(1))
           wannz2(j,:)=wannz(j,:)
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ImagUnit*denom*2)
-          endif   
-          denom=-pw2+unigrid(2)*(k2(j,jspin)+bkpt(2))  
+          endif
+          denom=-pw2+unigrid(2)*(k2(j,jspin)+bkpt(2))
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ImagUnit*denom*2)
-          endif   
-          denom=-pw3+unigrid(3)*(k3(j,jspin)+bkpt(3))  
+          endif
+          denom=-pw3+unigrid(3)*(k3(j,jspin)+bkpt(3))
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ImagUnit*denom*2)
-          endif   
+          endif
              wannint(pw1,pw2,pw3,:)=wannint(pw1,pw2,pw3,:)+
      +                wannz2(j,:)
-         enddo    
+         enddo
         enddo
        enddo
-      enddo 
+      enddo
       deallocate(wannz,wannz2)
 
       deallocate ( acof,bcof,ccof,we,eigg )
@@ -666,7 +668,7 @@ c****************************************************************
       write(344)flo(1:ntype,1:jmtd,1:2,1:nlod)
 c****************************************************************
 c      write a-,b-, and c-coefficients to file
-c**************************************************************** 
+c****************************************************************
 
       write(344)wann_acof(1:num_wann,0:lmd,1:natd,-cell1:cell1,
      &                    -cell2:cell2,-cell3:cell3)
@@ -696,7 +698,7 @@ c****************************************************************
 
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,mpiierr)
-#endif      
+#endif
 
       nrec=nrec+nkpts
 110   continue ! end of cycle by spins
@@ -704,10 +706,10 @@ c****************************************************************
 
       deallocate ( vr,nv,k1,k2,k3 )
       deallocate ( ff,gg)
- 
+
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,mpiierr)
-#endif      
+#endif
 
       end subroutine wannier_to_lapw
       end module m_wannier_to_lapw

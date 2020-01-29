@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpinp, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpinp, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, nococonv,cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types_hybdat
@@ -33,6 +33,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -140,15 +141,15 @@ CONTAINS
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
-                          mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
+                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, eig_id, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
             DO nk = 1, kpts%nkpt
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-               CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
+               CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, l_zref)
                CALL hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
+                           noco,nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")

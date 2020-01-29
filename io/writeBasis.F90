@@ -36,7 +36,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,v
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_kpts),INTENT(IN)       :: kpts
-      TYPE(t_atoms),INTENT(INOUT)   :: atoms
+      TYPE(t_atoms),INTENT(IN)      :: atoms
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_hub1inp),INTENT(IN)    :: hub1inp

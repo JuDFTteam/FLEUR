@@ -8,7 +8,7 @@ MODULE m_hsmt_lo
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,Mpi,Noco,Lapw,Ud,Tlmplm,Fj,Gj,N,Chi,Isp,Iintsp,Jintsp,Hmat,Smat)
+  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,Mpi,Noco,nococonv,Lapw,Ud,Tlmplm,Fj,Gj,N,Chi,Isp,Iintsp,Jintsp,Hmat,Smat)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -17,6 +17,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -61,11 +62,11 @@ CONTAINS
              IF (isp<3) THEN
                 IF (.NOT.PRESENT(smat)) CALL judft_error("Bug in hsmt_lo, called without smat")
                 CALL slomat(&
-                     input,atoms,sym,mpi,lapw,cell,noco,n,na,&
+                     input,atoms,sym,mpi,lapw,cell,nococonv,n,na,&
                      isp,ud, alo1,blo1,clo1,fj,gj,&
                      iintsp,jintsp,chi,smat)
              ENDIF
-             CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,isp,&
+             CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,&
                   n,na,fj,gj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat)
           ENDIF
        END IF

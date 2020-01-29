@@ -1,22 +1,22 @@
-MODULE m_qal21 
+MODULE m_qal21
   !***********************************************************************
-  ! Calculates qal21  needed to determine the off-diagonal parts of the 
+  ! Calculates qal21  needed to determine the off-diagonal parts of the
   ! DOS
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
-
+  SUBROUTINE qal_21(atoms,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+    use m_types_nococonv
     USE m_types_setup
     USE m_types_dos
-    USE m_types_cdnval, ONLY: t_eigVecCoeffs 
+    USE m_types_cdnval, ONLY: t_eigVecCoeffs
     USE m_types_denCoeffsOffdiag
     USE m_rotdenmat
     use m_constants
     IMPLICIT NONE
-    
+
     TYPE(t_input),             INTENT(IN)    :: input
-    TYPE(t_noco),              INTENT(IN)    :: noco
+    TYPE(t_nococonv),          INTENT(IN)    :: nococonv
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
     TYPE(t_denCoeffsOffdiag),  INTENT(IN)    :: denCoeffsOffdiag
@@ -52,7 +52,7 @@ CONTAINS
           ls : DO l = 0,3
              IF (i==1) THEN
              ENDIF
-             sumaa = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.) 
+             sumaa = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.)
              sumbb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
              ll1 = l* (l+1)
              ms : DO m = -l,l
@@ -65,7 +65,7 @@ CONTAINS
                 ENDDO atoms_loop
              ENDDO ms
              qal21(l,n,i) = sumaa * denCoeffsOffdiag%uu21n(l,n) + sumbb * denCoeffsOffdiag%dd21n(l,n) +&
-                            sumba * denCoeffsOffdiag%du21n(l,n) + sumab * denCoeffsOffdiag%ud21n(l,n) 
+                            sumba * denCoeffsOffdiag%du21n(l,n) + sumab * denCoeffsOffdiag%ud21n(l,n)
           ENDDO ls
           nt1 = nt1 + atoms%neq(n)
        ENDDO types_loop
@@ -92,13 +92,13 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1, noccbd
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +      &
-                        eigVecCoeffs%bcof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins)) 
+                        eigVecCoeffs%bcof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +      &
-                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%bcof(i,lm,natom,input%jspins)) 
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%bcof(i,lm,natom,input%jspins))
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +       &
-                        eigVecCoeffs%acof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins)) 
+                        eigVecCoeffs%acof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +       &
-                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%acof(i,lm,natom,input%jspins)) 
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%acof(i,lm,natom,input%jspins))
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)
@@ -146,14 +146,14 @@ CONTAINS
     !
     ! rotate into global frame
     !
-    TYPE_loop : DO n = 1,atoms%ntype 
-       chi(1,1) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
-       chi(1,2) = -EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-       chi(2,1) =  EXP( ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-       chi(2,2) =  EXP( ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
+    TYPE_loop : DO n = 1,atoms%ntype
+       chi(1,1) =  EXP(-ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+       chi(1,2) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+       chi(2,1) =  EXP( ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+       chi(2,2) =  EXP( ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
        state : DO i = 1, noccbd
           lls : DO l = 0,3
-             CALL rot_den_mat(noco%alph(n),noco%beta(n),&
+             CALL rot_den_mat(nococonv%alph(n),nococonv%beta(n),&
                   dos%qal(l,n,ev_list(i),ikpt,1),dos%qal(l,n,ev_list(i),ikpt,2),qal21(l,n,i))
              IF (.FALSE.) THEN
                 IF (n==1) WRITE(*,'(3i3,4f10.5)') l,n,i,qal21(l,n,i),dos%qal(l,n,ev_list(i),ikpt,:)

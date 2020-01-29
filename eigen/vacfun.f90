@@ -2,7 +2,7 @@ MODULE m_vacfun
   use m_juDFT
 CONTAINS
   SUBROUTINE vacfun(&
-       vacuum,stars,input,noco,jspin1,jspin2,&
+       vacuum,stars,input,nococonv,jspin1,jspin2,&
        sym, cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
     !*********************************************************************
@@ -21,7 +21,7 @@ CONTAINS
 
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
-    TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_stars),INTENT(IN)       :: stars
     TYPE(t_cell),INTENT(IN)        :: cell
@@ -38,7 +38,7 @@ CONTAINS
     COMPLEX, INTENT (OUT):: tudv(:,:),tuuv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
     REAL,    INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
     REAL,    INTENT (IN) :: evac(:,:)!(2,input%jspins)
-    REAL,    INTENT (IN) :: bkpt(3) 
+    REAL,    INTENT (IN) :: bkpt(3)
     REAL,    INTENT (OUT):: udz(:,:),uz(:,:)!(lapw%dim_nv2d(),input%jspins)
     REAL,    INTENT (OUT):: dudz(:,:),duz(:,:)!(lapw%dim_nv2d(),input%jspins)
     REAL,    INTENT (OUT):: ddnv(:,:)!(lapw%dim_nv2d(),input%jspins)
@@ -63,8 +63,8 @@ CONTAINS
     !--->    wronksian for the schrodinger equation given by an identity
     wronk = 2.0
     !---> setup the spin-spiral q-vector
-    qssbti(1:2,1) = - noco%qss(1:2)/2
-    qssbti(1:2,2) = + noco%qss(1:2)/2
+    qssbti(1:2,1) = - nococonv%qss(1:2)/2
+    qssbti(1:2,2) = + nococonv%qss(1:2)/2
     !--->    generate basis functions for each 2-d k+g
     DO jspin = MIN(jspin1,jspin2),MAX(jspin1,jspin2)
        DO  ik = 1,nv2(jspin)
@@ -221,4 +221,3 @@ CONTAINS
 
   END SUBROUTINE vacfun
 END MODULE m_vacfun
-

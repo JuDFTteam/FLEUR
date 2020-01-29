@@ -66,12 +66,12 @@ CONTAINS
                  nsymt, sym%ntypsy, nrot, locops)
 
       IF (.NOT. oneD%odd%d1) THEN
-         CALL mapatom(sym, atoms, cell, input, noco, gfinp)
+         CALL mapatom(sym, atoms, cell, input, noco,gfinp)
          allocate (oneD%ngopr1(atoms%nat))
          oneD%ngopr1 = sym%ngopr
       ELSE
          CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-         CALL mapatom(sym, atoms, cell, input, noco, gfinp)
+         CALL mapatom(sym, atoms, cell, input, noco,gfinp)
          !CALL od_mapatom(oneD,atoms,sym,cell)
       END IF
 
