@@ -229,7 +229,7 @@ CONTAINS
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
-                                       noco, nkqpt, cprod_vv_r)
+                                       noco, oneD, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, noco, nkqpt, cprod_vv_c)

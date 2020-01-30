@@ -15,15 +15,13 @@ module m_wavefproducts_inv
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nkqpt, cprod)
-
-
-
+                                 cell, sym, noco, oneD, nkqpt, cprod)
       IMPLICIT NONE
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_noco), INTENT(IN)      :: noco
+      type(t_oneD), intent(in)      :: oneD
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -67,7 +65,7 @@ CONTAINS
                                 cell, sym, noco, nkqpt, z_k, c_phase_k, z_q, c_phase_q, cprod)
 
       call wavefproducts_inv5_MT(bandoi, bandof,&
-                                input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
+                                input,atoms, cell, noco, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, z_k, c_phase_k, z_q, c_phase_q, cprod)
 
       CALL timestop("wavefproducts_inv5")
@@ -193,9 +191,9 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandoi, bandof,&
-                                   input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
+                                   input,atoms, cell, noco, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, z_k, c_phase_k, z_q, c_phase_q,  cprod)
-
+     use m_calc_cmt
      implicit NONE
      TYPE(t_input),INTENT(IN)      :: input
      TYPE(t_mpdata), INTENT(IN)   :: mpdata
@@ -203,12 +201,15 @@ CONTAINS
      TYPE(t_sym), INTENT(IN)       :: sym
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
+     type(t_cell), intent(in)      :: cell
+     type(t_noco), intent(in)      :: noco
+     type(t_oneD), intent(in)      :: oneD
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
      type(t_mat), intent(in)       :: z_k, z_q
 
      ! - scalars -
      INTEGER, INTENT(IN)      :: bandoi, bandof
-     INTEGER, INTENT(IN)      :: nk, iq
+     INTEGER, INTENT(IN)      :: nk, iq, jsp
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
@@ -233,7 +234,7 @@ CONTAINS
      ! - local arrays -
      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
 
-     REAL                    ::    cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+     REAL                    ::    cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
      REAL                    ::    cmt(input%neig, hybdat%maxlmindx, atoms%nat)
      REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(nk))
      REAL                    ::    rarr3(2, bandoi:bandof, hybdat%nbands(nk))
@@ -250,12 +251,14 @@ CONTAINS
      END DO
 
      ! read in cmt coefficient at k-point nk
-     allocate(ccmt_nk(input%neig, hybdat%maxlmindx, atoms%nat), &
+     allocate(ccmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat), &
                ccmt(input%neig, hybdat%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 
-     call read_cmt(ccmt_nk, nk)
+     ! call read_cmt(ccmt_nk, nk)
+     call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+                         sym, oneD, z_k, jsp, nk, c_phase_k, ccmt_nk)
      !read in cmt coefficients at k+q point
      call read_cmt(ccmt, nkqpt)
 
