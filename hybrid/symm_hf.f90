@@ -138,7 +138,7 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
