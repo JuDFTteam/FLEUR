@@ -188,9 +188,8 @@ CONTAINS
          !calculate trafo from wavefunctions to APW basis
          IF (input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
-         call z%init(olap%l_real, nbasfcn, input%neig)
+         call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
          call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
-         z%matsize2 = hybdat%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)
 
