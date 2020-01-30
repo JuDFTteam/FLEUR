@@ -8,7 +8,7 @@ CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
-                  enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                  enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,gOnsite,hub1data)
 
    !*****************************************************
@@ -30,6 +30,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_genNewNocoInp
    USE m_xmlOutput
    USE m_magMoms
+   USE m_magMultipoles
    USE m_orbMagMoms
    USE m_resMoms
    USE m_cdncore
@@ -61,7 +62,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-   TYPE(t_noco),INTENT(INOUT)       :: noco
+   TYPE(t_noco),INTENT(IN)          :: noco
+   TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
@@ -74,7 +76,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_hub1inp),INTENT(IN)       :: hub1inp
    TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
-   CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
+   CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
 
    !Scalar Arguments
@@ -134,14 +136,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
-      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
+      CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(gfinp%n.GT.0) THEN
-        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,&
+        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,nococonv,vTot,&
                            hub1inp,hub1data,results)
       ENDIF
    ENDIF
@@ -149,7 +151,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
-      CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
+      CALL calc_EnergyDen(eig_id, mpi, kpts, noco, nococonv,input, banddos, cell, atoms, enpara, stars,&
                              vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
    endif
 
@@ -186,17 +188,17 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (mpi%irank == 0) THEN
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
-         IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, outDen, 1, sliceplot)
+         IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
-      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
    else
-      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
    call core_den%subPotDen(outDen, val_den)
@@ -204,7 +206,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(mpi%irank.EQ.0) THEN
-      IF(.FALSE.) CALL resMoms(sym,input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+      IF(.FALSE.) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
@@ -218,17 +220,17 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          noco_new = noco
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL magMoms(input,atoms,noco_new,vTot,moments)
-
-         noco = noco_new
+         CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
+         if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+!         noco = noco_new
 
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
          IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
-            CALL genNewNocoInp(input,atoms,noco,noco_new)
+          !  CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
-         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
+         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
 
       END IF
    END IF ! mpi%irank == 0
@@ -241,17 +243,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
 
 #ifdef CPP_MPI
-   CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%l_constr,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%mix_b,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-
-   CALL MPI_BCAST(noco%alphInit,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif

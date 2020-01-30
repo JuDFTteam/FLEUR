@@ -14,8 +14,8 @@ CONTAINS
   !! 3. The MT-part is calculated (in hsmt() )
   !! 4. The vacuum part is added (in hsvac())
   !! 5. The matrices are copied to the final matrix, in the noco-case the full matrix is constructed from the 4-parts.
-  
-  SUBROUTINE eigen_hssetup(isp,mpi,hybinp,enpara,input,vacuum,noco,sym,&
+
+  SUBROUTINE eigen_hssetup(isp,mpi,hybinp,enpara,input,vacuum,noco,nococonv,sym,&
        stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat_final,hmat_final)
     USE m_types
     USE m_types_mpimat
@@ -28,13 +28,14 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,INTENT(IN)           :: isp
     TYPE(t_mpi),INTENT(IN)       :: mpi
-    
+
     TYPE(t_hybinp),INTENT(IN)    :: hybinp
     TYPE(t_enpara),INTENT(IN)    :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym  
+    TYPE(t_nococonv),INTENT(IN)      :: nococonv
+    TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
@@ -45,16 +46,16 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)    :: v
     CLASS(t_mat),ALLOCATABLE,INTENT(INOUT)   :: smat_final,hmat_final
     LOGICAL,INTENT(IN)           :: l_real
-    
 
-    
+
+
     CLASS(t_mat),ALLOCATABLE :: smat(:,:),hmat(:,:)
     INTEGER :: i,j,ispin,nspins
-    
+
     !Matrices for Hamiltonian and Overlapp
     !In noco case we need 4-matrices for each spin channel
     nspins=MERGE(2,1,noco%l_noco)
-    IF (mpi%n_size==1) THEN       
+    IF (mpi%n_size==1) THEN
        IF (judft_was_argument("-gpu")) THEN
           ALLOCATE(t_gpumat::smat(nspins,nspins),hmat(nspins,nspins))
        ELSE
@@ -70,7 +71,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    
+
     CALL timestart("Interstitial part")
     !Generate interstitial part of Hamiltonian
     CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,v%pw_w,smat,hmat)
@@ -78,15 +79,15 @@ CONTAINS
     CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
     DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-       CALL hsmt(atoms,sym,enpara,ispin,input,mpi,noco,cell,lapw,ud,td,smat,hmat)
+       CALL hsmt(atoms,sym,enpara,ispin,input,mpi,noco,nococonv,cell,lapw,ud,td,smat,hmat)
     ENDDO
     CALL timestop("MT part")
-   
+
     !Vacuum contributions
     IF (input%film) THEN
        CALL timestart("Vacuum part")
        CALL hsvac(vacuum,stars,mpi,isp,input,v,enpara%evac,cell,&
-            lapw,sym, noco,hmat,smat)
+            lapw,sym, noco,nococonv,hmat,smat)
        CALL timestop("Vacuum part")
     ENDIF
     !Now copy the data into final matrix
@@ -102,4 +103,3 @@ CONTAINS
 
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup
-       

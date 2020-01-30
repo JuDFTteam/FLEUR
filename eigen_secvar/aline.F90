@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD,eig,ne,zMat,hmat,smat)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv,oneD,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -34,10 +34,11 @@ CONTAINS
     USE m_eig66_io
     USE m_types
     IMPLICIT NONE
-    
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -60,17 +61,17 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER lhelp
-    INTEGER i,info,j 
+    INTEGER i,info,j
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
 
-    REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:) 
+    REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:)
     REAL     CPP_BLAS_sdot
     EXTERNAL CPP_BLAS_sdot,CPP_BLAS_sspmv
 
     COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
-    COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:) 
+    COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:)
     COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc,CPP_BLAS_chpmv
     REAL,    ALLOCATABLE :: rwork(:)
@@ -86,8 +87,8 @@ CONTAINS
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
-       !     in outeig z is complex conjugated to make it usable for abcof. Here we 
-       !                       first have to undo this  complex conjugation for the 
+       !     in outeig z is complex conjugated to make it usable for abcof. Here we
+       !                       first have to undo this  complex conjugation for the
        ! multiplication with a and b matrices.
 
        zmat%data_c=conjg(zmat%data_c)
@@ -127,14 +128,14 @@ CONTAINS
     END DO
 
     ALLOCATE ( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat) )
-    ALLOCATE ( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat) ) 
+    ALLOCATE ( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat) )
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
     IF (.NOT.l_real) zMat%data_c = CONJG(zMat%data_c)
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,sym,cell,lapw,ne,&
-         usdus,noco,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+         usdus,noco,nococonv,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !

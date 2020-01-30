@@ -21,7 +21,7 @@ MODULE m_eigenso
   !
 CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
-                     sym,cell,noco,input,kpts,oneD,vTot,enpara,results,hub1inp,hub1data)
+                     sym,cell,noco,nococonv,input,kpts,oneD,vTot,enpara,results,hub1inp,hub1data)
 
     USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
@@ -39,6 +39,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -115,7 +116,7 @@ CONTAINS
     !  ..
 
     !Get spin-orbit coupling matrix elements
-    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
+    CALL spnorb( atoms,noco,nococonv,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
     !
 
 
@@ -133,7 +134,7 @@ CONTAINS
     DO nk_i=1,SIZE(mpi%k_list)
         nk=mpi%k_list(nk_i)
      !DO nk = mpi%n_start,n_end,n_stride
-       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
+       CALL lapw%init(input,noco, nococonv,kpts,atoms,sym,nk,cell,.FALSE., mpi)
        ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")

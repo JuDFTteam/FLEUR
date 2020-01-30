@@ -60,8 +60,8 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
 
-   SUBROUTINE exchange_valence_hf(ik, kpts, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+   SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_wrapper
@@ -82,6 +82,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
@@ -92,7 +93,7 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: ik
+      INTEGER, INTENT(IN)    :: ik, nkpt_EIBZ
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
@@ -201,7 +202,7 @@ CONTAINS
 
       exch_vv = 0
 
-      DO jq = 1, kpts%nkpt_EIBZ()
+      DO jq = 1, nkpt_EIBZ
 
          iq = pointer_EIBZ(jq)
 
@@ -228,10 +229,10 @@ CONTAINS
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
-                                       noco, nkqpt, cprod_vv_r)
+                                       noco,nococonv, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
-                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, noco, nkqpt, cprod_vv_c)
+                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, noco, nococonv,nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE

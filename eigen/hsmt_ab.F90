@@ -41,12 +41,12 @@ CONTAINS
        CALL ylm4_dev(lmax,gkrot_dev(:,i),ylm(:))
        DO l = 0,lmax
           ll1 = l* (l+1)
-          DO m = -l,l               
-             ab(i,ll1+m+1)         = CONJG(fj(i,l+1)*c_ph(i)*ylm(ll1+m+1)) 
-             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1)*c_ph(i)*ylm(ll1+m+1)) 
+          DO m = -l,l
+             ab(i,ll1+m+1)         = CONJG(fj(i,l+1)*c_ph(i)*ylm(ll1+m+1))
+             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1)*c_ph(i)*ylm(ll1+m+1))
           END DO
        END DO
-    ENDDO 
+    ENDDO
 
     DEALLOCATE(ylm)
   END SUBROUTINE synth_ab
@@ -77,7 +77,7 @@ CONTAINS
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
-    
+
     INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
     REAL   :: th,v(3),bmrot(3,3),vmult(3)
     COMPLEX,ALLOCATABLE :: ylm(:,:)
@@ -89,8 +89,8 @@ CONTAINS
     REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
     INTEGER :: grid, block, loop_size
     INTEGER :: istat
- 
-    call nvtxStartRange("hsmt_ab",3)    
+
+    call nvtxStartRange("hsmt_ab",3)
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
@@ -100,14 +100,14 @@ CONTAINS
     ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)))
     ALLOCATE(gkrot(3,lapw%nv(1)))
 
-    
+
     ab_size=lmax*(lmax+2)+1
-    
+
     np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
-    c_ph_dev=c_ph   
- 
+    c_ph_dev=c_ph
+
     IF (np==1) THEN
        gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)
     ELSE
@@ -121,7 +121,7 @@ CONTAINS
        END DO
     END IF
 
-    gkrot_dev = gkrot 
+    gkrot_dev = gkrot
 
 
     !-->  synthesize the complex conjugates of a and b
@@ -154,18 +154,18 @@ CONTAINS
        !   ENDDO
        !ENDDO
     ENDIF
-       
+
     ab_size=ab_size*2
-    
+
     DEALLOCATE(c_ph_dev)
     DEALLOCATE(gkrot_dev)
 
-    istat = cudaDeviceSynchronize() 
+    istat = cudaDeviceSynchronize()
     call nvtxEndRange
   END SUBROUTINE hsmt_ab_gpu
 #endif
 
-  SUBROUTINE hsmt_ab_cpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab_cpu(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -176,6 +176,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n,na,iintsp
@@ -188,7 +189,7 @@ CONTAINS
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
-    
+
     INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
     COMPLEX:: term
     REAL   :: th,v(3),bmrot(3,3),vmult(3)
@@ -196,20 +197,20 @@ CONTAINS
     COMPLEX,ALLOCATABLE:: c_ph(:,:)
     REAL,ALLOCATABLE   :: gkrot(:,:)
     LOGICAL :: l_apw
-   
+
     ALLOCATE(c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot)))
     ALLOCATE(gkrot(3,maxval(lapw%nv)))
 
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
-    
+
     ab_size=lmax*(lmax+2)+1
     l_apw=ALL(gj==0.0)
     ab=0.0
-    
+
     np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
-    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
-    
+    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
+
     IF (np==1) THEN
        gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)
     ELSE
@@ -233,13 +234,13 @@ CONTAINS
        !-->  synthesize the complex conjugates of a and b
        DO l = 0,lmax
           ll1 = l* (l+1)
-          DO m = -l,l               
+          DO m = -l,l
              term = c_ph(k,iintsp)*ylm(ll1+m+1)
              ab(k,ll1+m+1)         = fj(k,l,iintsp)*term
              ab(k,ll1+m+1+ab_size) = gj(k,l,iintsp)*term
           END DO
        END DO
-       IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0) 
+       IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)
        IF (PRESENT(abclo)) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -259,11 +260,11 @@ CONTAINS
              ENDDO
           ENDDO
        ENDIF
-       
+
     ENDDO !k-loop
     !$OMP END PARALLEL DO
     IF (size(ab,1) > lapw%nv(iintsp)) ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
     IF (.NOT.l_apw) ab_size=ab_size*2
-    
+
   END SUBROUTINE hsmt_ab_cpu
 END MODULE m_hsmt_ab

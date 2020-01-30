@@ -8,20 +8,21 @@ MODULE m_magMoms
 IMPLICIT NONE
 CONTAINS
 
-SUBROUTINE magMoms(input,atoms,noco,vTot,moments)
+SUBROUTINE magMoms(input,atoms,noco,nococonv,vTot,moments)
 
    USE m_types
    USE m_xmlOutput
    USE m_m_perp
 
- 
 
-   
-   TYPE(t_input), INTENT(IN)     :: input
-   TYPE(t_atoms), INTENT(IN)     :: atoms
-   TYPE(t_noco), INTENT(INOUT)   :: noco
-   TYPE(t_potden),INTENT(IN)     :: vTot
-   TYPE(t_moments),INTENT(IN)    :: moments
+
+
+   TYPE(t_input), INTENT(IN)       :: input
+   TYPE(t_atoms), INTENT(IN)       :: atoms
+   TYPE(t_noco), INTENT(IN)        :: noco
+   TYPE(t_nococonv), INTENT(INOUT) :: nococonv
+   TYPE(t_potden),INTENT(IN)       :: vTot
+   TYPE(t_moments),INTENT(IN)      :: moments
 
    INTEGER                       :: iType, j, iRepAtom
    REAL                          :: sval,stot,scor,smom
@@ -41,7 +42,7 @@ SUBROUTINE magMoms(input,atoms,noco,vTot,moments)
    8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
    WRITE (6,FMT=8020)
-  
+
    CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    iRepAtom = 1
    DO iType = 1, atoms%ntype
@@ -60,7 +61,7 @@ SUBROUTINE magMoms(input,atoms,noco,vTot,moments)
          !calculate the perpendicular part of the local moment
          !and relax the angle of the local moment or calculate
          !the constraint B-field.
-         CALL m_perp(atoms,iType,iRepAtom,noco,vTot%mt(:,0,:,:),moments%chmom,moments%qa21)
+         CALL m_perp(atoms,iType,iRepAtom,noco,nococonv,vTot%mt(:,0,:,:),moments%chmom,moments%qa21)
       END IF
       iRepAtom= iRepAtom + atoms%neq(iType)
    END DO

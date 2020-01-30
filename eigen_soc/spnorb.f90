@@ -12,8 +12,8 @@ MODULE m_spnorb
   !     using the functions anglso and sgml.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
-    USE m_sorad 
+  SUBROUTINE spnorb(atoms,noco,nococonv,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
+    USE m_sorad
     USE m_constants, only : hartree_to_ev_const
     USE m_types
     IMPLICIT NONE
@@ -22,6 +22,7 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_usdus),INTENT(INOUT) :: usdus
     TYPE(t_rsoc),INTENT(OUT)    :: rsoc
@@ -37,7 +38,7 @@ CONTAINS
     INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n,i_hia
     LOGICAL, SAVE :: first_k = .TRUE.
     !     ..
-  
+
     !Allocate space for SOC matrix elements; set to zero at the same time
     ALLOCATE(rsoc%rsopp  (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopp =0.0
     ALLOCATE(rsoc%rsoppd (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsoppd=0.0
@@ -58,7 +59,7 @@ CONTAINS
 
 
     !
-    !Scale SOC 
+    !Scale SOC
     DO n= 1,atoms%ntype
        IF (ABS(noco%socscale(n)-1)>1E-5) THEN
           IF (mpi%irank==0) WRITE(6,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
@@ -105,20 +106,20 @@ CONTAINS
 
     !Calculate angular matrix elements if requested
     IF (l_angles) &
-         CALL spnorb_angles(atoms,mpi,noco%theta,noco%phi,rsoc%soangl)
+         CALL spnorb_angles(atoms,mpi,nococonv%theta,nococonv%phi,rsoc%soangl)
   END SUBROUTINE spnorb
 
   SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl,compo)
     USE m_anglso
     USE m_sgml
-    USE m_sorad 
+    USE m_sorad
     USE m_types
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_mpi),INTENT(IN)      :: mpi
     REAL,INTENT(IN)             :: theta,phi
     COMPLEX,INTENT(INOUT)       :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)
-    INTEGER, INTENT(IN),OPTIONAL :: compo    
+    INTEGER, INTENT(IN),OPTIONAL :: compo
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -130,7 +131,7 @@ CONTAINS
     !     ..
     DATA ispjsp/1,-1/
 
-  
+
     IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)&
                        .AND..NOT.PRESENT(compo)) THEN
        !
@@ -152,11 +153,11 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-       
+
     ELSE
        !
        !       TEST for complex function anglso(teta,phi,l1,m1,is1,l2,m2,is2)
-       ! 
+       !
        DO l1 = 1,atoms%lmaxd
           DO l2 = 1,atoms%lmaxd
              DO jspin1 = 1,2
@@ -177,9 +178,9 @@ CONTAINS
        ENDDO
        !
     ENDIF
-    
+
     IF (mpi%irank.EQ.0) THEN
-       WRITE (6,FMT=8002) 
+       WRITE (6,FMT=8002)
        DO jspin1 = 1,2
           DO jspin2 = 1,2
              WRITE (6,FMT=*) 'd-states:is1=',jspin1,',is2=',jspin2

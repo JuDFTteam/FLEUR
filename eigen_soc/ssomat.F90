@@ -3,8 +3,8 @@ MODULE m_ssomat
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE ssomat(seigvso,theta,phi,eig_id,atoms,kpts,sym,&
-       cell,noco, input,mpi, oneD,enpara,v,results )
-
+       cell,noco,nococonv, input,mpi, oneD,enpara,v,results )
+    USE m_types_nococonv
     USE m_types_mat
     USE m_types_setup
     USE m_types_mpi
@@ -26,6 +26,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
@@ -81,7 +82,7 @@ CONTAINS
 
     !Calculate radial and angular matrix elements of SOC
     !many directions of SOC at once...
-    CALL spnorb(atoms,noco,input,mpi, enpara, v%mt, usdus, rsoc,.FALSE.)
+    CALL spnorb(atoms,noco,nococonv,input,mpi, enpara, v%mt, usdus, rsoc,.FALSE.)
 
     ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(theta)))
@@ -91,7 +92,7 @@ CONTAINS
     ENDDO
 
     DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
-       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false.)
+       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,.false.)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=input%neig
        zmat%l_real=.FALSE.
@@ -100,7 +101,7 @@ CONTAINS
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,nk,1),zmat=zmat)
        DO jsloc= 1,2
           eig_shift(:,nk,1)=0.0 !not needed
-          CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,jsloc,oneD, &
+          CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc,oneD, &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
 
@@ -109,8 +110,8 @@ CONTAINS
        DO n= 1,atoms%ntype
           DO na= 1,atoms%neq(n)
              nat= nat+1
-             r1= noco%alph(n)
-             r2= noco%beta(n)
+             r1= nococonv%alph(n)
+             r2= nococonv%beta(n)
              DO lm= 0,atoms%lmaxd*(atoms%lmaxd+2)
                 DO band= 1,input%neig
                    c1= acof(band,lm,nat,1,1)

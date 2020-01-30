@@ -33,4 +33,5 @@ MODULE m_types
   USE m_types_greensf
   USE m_types_greensfCoeffs
   USE m_types_hub1data
+  USE m_types_nococonv
 END MODULE m_types

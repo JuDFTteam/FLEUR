@@ -31,9 +31,9 @@ CONTAINS
 
     INTEGER, ALLOCATABLE :: ntyrep(:)    ! here, these variables are allocated with
     INTEGER, ALLOCATABLE :: natype(:),natrep(:)  ! or  'nat'
-    
 
-  
+
+
     INTEGER,PARAMETER::nop48=48
     !   point group operations from bravais lattice
     INTEGER mops,nops,mmrot(3,3,nop48),m_inv(nop48)
@@ -70,8 +70,8 @@ CONTAINS
     !reduce symmetry in special setups
     ALLOCATE ( error(mops) ); error=.FALSE.
     ! reduce symmetry if SSDW calculation
-    IF (noco%l_ss) CALL ss_sym(mops,mmrot,noco%qss,error)
-    IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta,noco%phi,cell%amat, error)
+    IF (noco%l_ss) CALL ss_sym(mops,mmrot,noco%qss_inp,error)
+    IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta_inp,noco%phi_inp,cell%amat, error)
     IF (film) CALL film_sym(mops,mmrot,error)
     n=0 !Keep only operations without error
     DO i=1,mops
@@ -83,7 +83,7 @@ CONTAINS
     mops=n
 
 
-    
+
     ALLOCATE ( mtable(mops,mops) )
     ! check closure and get  multiplication table
     CALL close_pt(mops,mmrot, mtable)
@@ -462,7 +462,7 @@ CONTAINS
     !      endif
 
 
-    
+
     ALLOCATE ( sym%mrot(3,3,nops),sym%tau(3,nops) )
     sym%nop=nops
     DO n=1,nops
@@ -489,7 +489,7 @@ CONTAINS
 
     ENDIF ! sym%symor
     WHERE ( ABS( sym%tau ) < eps7 ) sym%tau = 0.00
-    
+
 
     ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -6,7 +6,7 @@
                            mpdata,hybinp,&
                            nkpti, kpts,&
                             mpi, &
-                           input, sym, noco,&
+                           input, sym, noco,nococonv,&
                            cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
             use m_intgrf, only:  intgrf, intgrf_init
@@ -20,10 +20,11 @@
             TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
             TYPE(t_mpi), INTENT(IN)         :: mpi
-            TYPE(t_mpdata), intent(in) :: mpdata
+            TYPE(t_mpdata), intent(in)      :: mpdata
             TYPE(t_hybinp), INTENT(IN)      :: hybinp
             TYPE(t_input), INTENT(IN)       :: input
             TYPE(t_noco), INTENT(IN)        :: noco
+            TYPE(t_nococonv), INTENT(IN)    :: nococonv
             TYPE(t_sym), INTENT(IN)         :: sym
             TYPE(t_cell), INTENT(IN)        :: cell
             TYPE(t_kpts), INTENT(IN)        :: kpts
@@ -73,7 +74,7 @@
 
             allocate(z(nkpti))
             DO ikpt = 1, nkpti
-               CALL lapw%init(input, noco, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+               CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, ikpt, cell, sym%zrfs)
                nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
                call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
             ENDDO
@@ -244,7 +245,7 @@
                      carr1 = 0; carr2 = 0; carr3 = 0
 
                      ! calculate k1,k2,k3
-                     CALL lapw%init(input, noco, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+                     CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, ikpt, cell, sym%zrfs)
 
                      ! PW part
                      DO igpt = 1, lapw%nv(jsp)

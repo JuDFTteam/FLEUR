@@ -8,7 +8,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,sym,&
+SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
 
    USE m_constants
@@ -29,11 +29,12 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,sym,&
 
 
    TYPE(t_mpi),        INTENT(IN)              :: mpi
-   
+
    TYPE(t_oneD),       INTENT(IN)              :: oneD
    TYPE(t_input),      INTENT(IN)              :: input
    TYPE(t_vacuum),     INTENT(IN)              :: vacuum
    TYPE(t_noco),       INTENT(IN)              :: noco
+   TYPE(t_nococonv),   INTENT(IN)              :: nococonv
    TYPE(t_sym),        INTENT(IN)              :: sym
    TYPE(t_stars),      INTENT(IN)              :: stars
    TYPE(t_cell),       INTENT(IN)              :: cell
@@ -121,13 +122,13 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,sym,&
                rhoint = (qint(iType,1) + qint(iType,2)) /(cell%volint * input%jspins * 2.0)
                momint = (qint(iType,1) - qint(iType,2)) /(cell%volint * input%jspins * 2.0)
                !rho_11
-               outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(iType))
+               outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(nococonv%beta(iType))
                !rho_22
-               outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(iType))
+               outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(nococonv%beta(iType))
                !real part rho_21
-               outDen%pw(1,3) = outDen%pw(1,3) + cmplx( 0.5*momint *cos(noco%alph(iType))*sin(noco%beta(iType)),&
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx( 0.5*momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
                !imaginary part rho_21
-                                                       -0.5*momint *sin(noco%alph(iType))*sin(noco%beta(iType)))
+                                                       -0.5*momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
             END DO
             !pk non-collinear (end)
          END IF

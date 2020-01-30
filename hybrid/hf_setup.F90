@@ -8,7 +8,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, cell, oneD, results, jsp, enpara, eig_id_hf, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -27,6 +27,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_input), INTENT(IN)    :: input
@@ -71,7 +72,7 @@ CONTAINS
          if(.not. allocated(eig_irr)) allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          eig_irr = 0
-         
+
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
@@ -86,7 +87,7 @@ CONTAINS
          ! Reading the eig file
          DO nk = 1, kpts%nkpt
             nrec1 = kpts%nkpt*(jsp - 1) + nk
-            CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
+            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
             CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
@@ -180,7 +181,7 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpdata, hybinp, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
+                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
@@ -188,7 +189,7 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(atoms, hybdat, mpdata, hybinp, kpts%nkpt, kpts,  mpi, &
-                        input, sym, noco, cell, lapw, jsp)
+                        input, sym, noco, nococonv,cell, lapw, jsp)
 
          ! set up pointer pntgpt
 
@@ -197,7 +198,7 @@ CONTAINS
          ALLOCATE (hybdat%pntgptd(3))
          hybdat%pntgptd = 0
          DO nk = 1, kpts%nkptf
-            CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
+            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             do n_dim = 1,3
                hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i,jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
             end do
@@ -209,7 +210,7 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
          DO nk = 1, kpts%nkptf
-            CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
+            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             DO i = 1, lapw%nv(jsp)
                hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO

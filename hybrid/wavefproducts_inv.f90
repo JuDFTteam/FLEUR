@@ -15,15 +15,16 @@ module m_wavefproducts_inv
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nkqpt, cprod)
+                                 cell, sym, noco, nococonv, nkqpt, cprod)
 
 
 
       IMPLICIT NONE
-      TYPE(t_mpdata), intent(in)  :: mpdata
+      TYPE(t_mpdata), intent(in)    :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_noco), INTENT(IN)      :: noco
+      TYPE(t_nococonv), INTENT(IN)  :: nococonv
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -59,7 +60,7 @@ CONTAINS
 
       call wavefproducts_inv_IS(bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                cell, sym, noco, nkqpt, cprod)
+                                cell, sym, noco, nococonv, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandoi, bandof,&
                                 input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
@@ -71,13 +72,14 @@ CONTAINS
 
    subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nkqpt, cprod)
+                                 cell, sym, noco, nococonv,nkqpt, cprod)
 
      implicit NONE
      TYPE(t_mpdata), intent(in)  :: mpdata
      TYPE(t_hybinp), INTENT(IN)    :: hybinp
      TYPE(t_input), INTENT(IN)     :: input
      TYPE(t_noco), INTENT(IN)      :: noco
+     TYPE(t_nococonv), INTENT(IN)  :: nococonv
      TYPE(t_sym), INTENT(IN)       :: sym
      TYPE(t_cell), INTENT(IN)      :: cell
      TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -115,7 +117,7 @@ CONTAINS
      !
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
-     CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
+     CALL lapw_nkqpt%init(input, noco, nococonv, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
      call z_nk%alloc(.true., nbasfcn, input%neig)
      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)

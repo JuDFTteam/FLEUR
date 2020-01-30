@@ -12,7 +12,7 @@ MODULE m_hlomat
 ! p.kurz sept. 1996
 !***********************************************************************
 CONTAINS
-  SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,isp,&
+  SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,&
        ntyp,na,fj,gj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
     !
     USE m_hsmt_ab
@@ -27,11 +27,12 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_noco),INTENT(IN)   :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
 
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: na,ntyp  
+    INTEGER, INTENT (IN) :: na,ntyp
     INTEGER, INTENT (IN) :: isp !spin for usdus and tlmplm
     INTEGER, INTENT (IN) :: jintsp,iintsp
     COMPLEX, INTENT (IN) :: chi
@@ -44,7 +45,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo
-    INTEGER im,in,invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i  
+    INTEGER im,in,invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i
     INTEGER mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo
     INTEGER locol,lorow,ii,ij,n,k,ab_size
     !     ..
@@ -59,7 +60,7 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL hsmt_ab(sym,atoms,noco,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
     ENDDO
 
 
@@ -117,7 +118,7 @@ CONTAINS
                       !--->                   not their complex conjugates as in hssphn
                       !--->                   and that a,b,alo... are the complex
                       !--->                   conjugates of the a,b...-coefficients
-                      !$OMP PARALLEL DO DEFAULT(none) & 
+                      !$OMP PARALLEL DO DEFAULT(none) &
                       !$OMP& SHARED(ax,bx,cx) &
                       !$OMP& SHARED(lapw,ab,ab_size,iintsp) &
                       !$OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)

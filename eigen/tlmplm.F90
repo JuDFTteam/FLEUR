@@ -6,7 +6,7 @@ MODULE m_tlmplm
   !     l',m',l,m,u- basis which is independent from k!
   !*********************************************************************
 CONTAINS
-  SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,&
+  SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
        jspin,jsp,mpi,v,input,hub1inp,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
@@ -21,6 +21,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_enpara),INTENT(IN)    :: enpara
+    type(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
@@ -53,7 +54,11 @@ CONTAINS
 
     jsp=jspin
     vr0=v%mt(:,:,n,jsp)
-    IF (jsp<3) vr0(:,0)=0.0
+    IF (jsp<3) THEN
+      vr0(:,0)=0.0
+    ELSE
+      vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(jsp-2,n) !Add constraining field
+    ENDIF
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
        CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1inp%l_dftspinpol)

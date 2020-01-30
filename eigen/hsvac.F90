@@ -12,16 +12,17 @@ CONTAINS
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
        vacuum,stars, mpi,jsp,input,v,evac,cell,&
-       lapw,sym, noco,hmat,smat)
- 
+       lapw,sym, noco,nococonv,hmat,smat)
+
 
     USE m_vacfun
     USE m_types
     IMPLICIT NONE
-    
+
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)       :: nococonv
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -84,10 +85,10 @@ CONTAINS
           s1=MIN(SIZE(hmat,1),jspin1) !in colinear case s1=1
           DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
              s2=MIN(SIZE(hmat,1),jspin2) !in colinear case s2=1
-          !--->       get the wavefunctions and set up the tuuv, etc matrices          
+          !--->       get the wavefunctions and set up the tuuv, etc matrices
              CALL vacfun(&
                   vacuum,stars,&
-                  input,noco,jspin1,jspin2,&
+                  input,nococonv,jspin1,jspin2,&
                   sym, cell,ivac,evac,lapw%bkpt,v%vacxy,v%vacz,kvac,nv2,&
                   tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
           !
@@ -121,15 +122,15 @@ CONTAINS
                               * CONJG(a(i,jspin1)* duz(ik,jspin1) + b(i,jspin1)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                          IF (hmat(1,1)%l_real) THEN
-                            hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo) 
-                         ELSE 
+                            hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo)
+                         ELSE
                             hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + 0.25 * apw_lo
                          ENDIF
                       ENDIF
                       !Overlapp Matrix
                       IF (hmat(1,1)%l_real) THEN
                          smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
-                      ELSE 
+                      ELSE
                          smat(s1,s2)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
                       ENDIF
                    END IF

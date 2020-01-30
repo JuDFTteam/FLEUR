@@ -53,7 +53,7 @@ MODULE m_gfcalc
 
 
 
-   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,gfinp,input,sym,noco,vTot,hub1inp,hub1data,results)
+   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,gfinp,input,sym,noco,nococonv,vTot,hub1inp,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
@@ -64,6 +64,7 @@ MODULE m_gfcalc
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_hub1inp),           INTENT(IN)     :: hub1inp
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
@@ -85,7 +86,7 @@ MODULE m_gfcalc
       !-------------------------------------------------------------
       !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
       IF(atoms%n_hia.GT.0.AND.ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-        CALL crystal_field(atoms,gfinp,hub1inp,input,noco,greensfCoeffs,vTot,results%ef,hub1data)
+        CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfCoeffs,vTot,results%ef,hub1data)
       ENDIF
       IF(input%jspins.EQ.2) THEN
          CALL eff_excinteraction(greensf,gfinp,input,results%ef,greensfCoeffs)

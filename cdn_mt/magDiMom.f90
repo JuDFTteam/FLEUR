@@ -15,7 +15,7 @@ CONTAINS
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,l_fmpl2,rho,magDipoles,elecDipoles)
+SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,elecDipoles)
 
    USE m_constants
    USE m_types
@@ -31,6 +31,7 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,l_fmpl2,rho,magDipoles,elecDipol
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_noco),          INTENT(IN)    :: noco
+   TYPE(t_nococonv),      INTENT(IN)    :: nococonv
    REAL,                  INTENT(IN)    :: rho(:,0:,:,:) ! if l_fmpl last dimension is 4, otherwise 2.
 
    LOGICAL,               INTENT(IN)    :: l_fmpl2
@@ -56,8 +57,8 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,l_fmpl2,rho,magDipoles,elecDipol
    ALLOCATE(inRho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4))
    DO iType = 1,atoms%ntype
       IF (.NOT.l_fmpl2) THEN
-         theta = noco%beta(iType)
-         phi   = noco%alph(iType)
+         theta = nococonv%beta(iType)
+         phi   = nococonv%alph(iType)
          inRho(:,:,iType,1) = rho(:,:,iType,1) + rho(:,:,iType,2)
          inRho(:,:,iType,2) = rho(:,:,iType,1) - rho(:,:,iType,2)
          inRho(:,:,iType,3) = inRho(:,:,iType,2) * SIN(phi)*SIN(theta)
@@ -70,7 +71,7 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,l_fmpl2,rho,magDipoles,elecDipol
                cdn11 = rho(i,ilh,iType,1)
                cdn22 = rho(i,ilh,iType,2)
                cdn21 = CMPLX(rho(i,ilh,iType,3),rho(i,ilh,iType,4))
-               CALL rot_den_mat(noco%alph(iType),noco%beta(iType),cdn11,cdn22,cdn21)
+               CALL rot_den_mat(nococonv%alph(iType),nococonv%beta(iType),cdn11,cdn22,cdn21)
                inRho(i,ilh,iType,1) = cdn11 + cdn22
                inRho(i,ilh,iType,2) = 2.0 * REAL(cdn21)
                ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal

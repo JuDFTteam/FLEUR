@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_m_perp
-CONTAINS 
-  SUBROUTINE m_perp(atoms,itype,iRepAtom,noco,vr0, chmom,qa21)
+CONTAINS
+  SUBROUTINE m_perp(atoms,itype,iRepAtom,noco,nococonv,vr0, chmom,qa21)
     !***********************************************************************
     ! calculates the perpendicular part of the local moment.
     ! if l_relax is true the angle of the output local moment is calculated
@@ -22,8 +22,9 @@ CONTAINS
     USE m_rotdenmat
     USE m_types
     IMPLICIT NONE
-    TYPE(t_noco),INTENT(INOUT)   :: noco
-    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_noco),INTENT(IN)          :: noco
+    TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
+    TYPE(t_atoms),INTENT(IN)         :: atoms
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: itype, iRepAtom
@@ -45,9 +46,9 @@ CONTAINS
 
     ! angles in nocoinp file are (alph-alphdiff)
     IF (noco%l_ss) THEN
-       alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iRepAtom) + &
-                                noco%qss(2)*atoms%taual(2,iRepAtom) + &
-                                noco%qss(3)*atoms%taual(3,iRepAtom) )
+       alphdiff = 2.0*pi_const*(nococonv%qss(1)*atoms%taual(1,iRepAtom) + &
+                                nococonv%qss(2)*atoms%taual(2,iRepAtom) + &
+                                nococonv%qss(3)*atoms%taual(3,iRepAtom) )
     ELSE
        alphdiff = 0.0
     END IF
@@ -71,23 +72,23 @@ CONTAINS
        rho11 = chmom(itype,1)
        rho22 = chmom(itype,2)
        rho21 = qa21(itype)
-       CALL rot_den_mat(noco%alph(itype),noco%beta(itype), rho11,rho22,rho21)
+       CALL rot_den_mat(nococonv%alph(itype),nococonv%beta(itype), rho11,rho22,rho21)
        !--->    determine the polar angles of the mom. vec. in the global frame
        mx = 2*REAL(rho21)
        my = 2*AIMAG(rho21)
        mz = rho11 - rho22
        CALL pol_angle(mx,my,mz,betah,alphh)
-       WRITE  (6,8027) noco%beta(itype),noco%alph(itype)-alphdiff
+       WRITE  (6,8027) nococonv%beta(itype),nococonv%alph(itype)-alphdiff
        WRITE  (6,8028) betah,alphh-alphdiff
-8027   FORMAT(2x,'-->',10x,' input noco%beta=',f9.5, '  input noco%alpha=',f9.5)
-8028   FORMAT(2x,'-->',10x,'output noco%beta=',f9.5, ' output noco%alpha=',f9.5)
+8027   FORMAT(2x,'-->',10x,' input nococonv%beta=',f9.5, '  input nococonv%alpha=',f9.5)
+8028   FORMAT(2x,'-->',10x,'output nococonv%beta=',f9.5, ' output nococonv%alpha=',f9.5)
 
        !  ff    do the same for mixed density: rho21 = mix_b * rho21
        rho11 = chmom(itype,1)
        rho22 = chmom(itype,2)
        rho21 = qa21(itype)
        rho21 = noco%mix_b * rho21
-       CALL rot_den_mat(noco%alph(itype),noco%beta(itype), rho11,rho22,rho21)
+       CALL rot_den_mat(nococonv%alph(itype),nococonv%beta(itype), rho11,rho22,rho21)
        !--->    determine the polar angles of the mom. vec. in the global frame
        mx_mix = 2*REAL(rho21)
        my_mix = 2*AIMAG(rho21)
@@ -95,8 +96,8 @@ CONTAINS
        WRITE  (6,8031) mx_mix,my_mix
 8031   FORMAT(2x,'--> global frame: ','mixed mx=',f9.5,' mixed my=',f9.5)
        ! if magnetic moment (in local frame!) is negative, direction of quantization
-       ! has to be antiparallel! 
-       mz_tmp = chmom(itype,1) - chmom(itype,2) 
+       ! has to be antiparallel!
+       mz_tmp = chmom(itype,1) - chmom(itype,2)
        IF ( mz_tmp .LT. 0.0 ) THEN
           mx_mix = (-1.0) * mx_mix
           my_mix = (-1.0) * my_mix
@@ -105,9 +106,9 @@ CONTAINS
        ! calculate angles alpha and beta in global frame
        CALL pol_angle(mx_mix,my_mix,mz_mix,betah,alphh)
        WRITE  (6,8029) betah,alphh-alphdiff
-8029   FORMAT(2x,'-->',10x,' new noco%beta  =',f9.5, '  new noco%alpha  =',f9.5)
-       noco%alph(itype) = alphh
-       noco%beta(itype) = betah
+8029   FORMAT(2x,'-->',10x,' new nococonv%beta  =',f9.5, '  new nococonv%alpha  =',f9.5)
+       nococonv%alph(itype) = alphh
+       nococonv%beta(itype) = betah
     ENDIF
 
     IF (noco%l_constr) THEN
@@ -123,10 +124,10 @@ CONTAINS
        b_con_outx = scale*mx
        b_con_outy = scale*my
        !--->    mix input and output constraint fields
-       WRITE  (6,8100) noco%b_con(1,itype),noco%b_con(2,itype)
+       WRITE  (6,8100) nococonv%b_con(1,itype),nococonv%b_con(2,itype)
        WRITE  (6,8200) b_con_outx,b_con_outy
-       noco%b_con(1,itype) = noco%b_con(1,itype) + noco%mix_b*b_con_outx
-       noco%b_con(2,itype) = noco%b_con(2,itype) + noco%mix_b*b_con_outy
+       nococonv%b_con(1,itype) = nococonv%b_con(1,itype) + noco%mix_b*b_con_outx
+       nococonv%b_con(2,itype) = nococonv%b_con(2,itype) + noco%mix_b*b_con_outy
     ENDIF
 
 8100 FORMAT (2x,'-->',10x,' input B_con_x=',f12.6,&

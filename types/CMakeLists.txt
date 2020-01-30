@@ -30,6 +30,7 @@ types/types_hybdat.f90
 types/types_greensf.f90
 types/types_greensfCoeffs.f90
 types/types_hub1data.f90
+types/types_nococonv.F90
 )
 
 set(inpgen_F90 ${inpgen_F90}

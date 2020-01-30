@@ -108,7 +108,7 @@
           END IF
           !---> pk non-collinear
           !---> read the angle information from nocoinf
-          noco%qss(:) = 0.0
+          noco%qss_inp(:) = 0.0
           IF (noco%l_noco) THEN
              CALL inpnoco(atoms,input,vacuum,noco)
           ELSE
@@ -117,9 +117,8 @@
              noco%l_constr = .FALSE.
              noco%mix_b = 0.0
              noco%l_relax(:) = .FALSE.
-             noco%alph(:) = 0.0
-             noco%beta(:) = 0.0
-             noco%b_con(:,:) = 0.0
+             noco%alph_inp(:) = 0.0
+             noco%beta_inp(:) = 0.0
           ENDIF
           !---> pk non-collinear
 

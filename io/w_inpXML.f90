@@ -174,7 +174,7 @@ CONTAINS
 
       !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
 150   FORMAT('      <soc theta="', f0.8, '" phi="', f0.8, '" l_soc="', l1, '" spav="', l1, '"/>')
-      WRITE (fileNum, 150) noco%theta, noco%phi, noco%l_soc, noco%l_spav
+      WRITE (fileNum, 150) noco%theta_inp, noco%phi_inp, noco%l_soc, noco%l_spav
 
       IF (l_explicit .OR. hybinp%l_hybrid) THEN
 155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '"/>')
@@ -186,7 +186,7 @@ CONTAINS
                 '" mix_b="', f0.8, '">')
          WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%mix_b
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
-         WRITE (fileNum, 162) noco%qss(1), noco%qss(2), noco%qss(3)
+         WRITE (fileNum, 162) noco%qss_inp
          WRITE (fileNum, '(a)') '      </nocoParams>'
       END IF
 
@@ -483,9 +483,9 @@ CONTAINS
 
          IF (l_nocoOpt .OR. l_explicit) THEN
 362         FORMAT('         <nocoParams l_relax="', l1, '" alpha="', f0.8, '" beta="', &
-                   f0.8, '" b_cons_x="', f0.8, '" b_cons_y="', f0.8, '"/>')
-            WRITE (fileNum, 362) noco%l_relax(iAtomType), noco%alphInit(iAtomType), &
-               noco%beta(iAtomType), noco%b_con(1, iAtomType), noco%b_con(2, iAtomType)
+                   f0.8,  '"/>')
+            WRITE (fileNum, 362) noco%l_relax(iAtomType), noco%alph_inp(iAtomType), &
+               noco%beta_inp(iAtomType)
          END IF
 
          WRITE (fileNum, '(a)') '      </atomGroup>'

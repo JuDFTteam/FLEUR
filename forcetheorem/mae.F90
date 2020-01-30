@@ -17,7 +17,7 @@ MODULE m_types_mae
      REAL,ALLOCATABLE:: evsum(:)
    CONTAINS
      PROCEDURE :: start   =>mae_start
-     PROCEDURE :: next_job=>mae_next_job 
+     PROCEDURE :: next_job=>mae_next_job
      PROCEDURE :: eval    =>mae_eval
      PROCEDURE :: postprocess => mae_postprocess
      PROCEDURE :: init   => mae_init !not overloaded
@@ -25,7 +25,7 @@ MODULE m_types_mae
   END TYPE t_forcetheo_mae
   PUBLIC t_forcetheo_mae
 CONTAINS
- 
+
 
   SUBROUTINE mae_init(this,theta,phi,cell,sym)
     USE m_calculator
@@ -39,7 +39,7 @@ CONTAINS
 
     INTEGER::n
     LOGICAL::error(sym%nop)
-    
+
     this%phi=phi
     this%theta=theta
 
@@ -52,7 +52,7 @@ CONTAINS
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
   END SUBROUTINE mae_init
-    
+
 
   SUBROUTINE mae_start(this,potden,l_io)
     USE m_types_potden
@@ -65,7 +65,7 @@ CONTAINS
   END SUBROUTINE  mae_start
 
 
-  LOGICAL FUNCTION mae_next_job(this,lastiter,atoms,noco)
+  LOGICAL FUNCTION mae_next_job(this,lastiter,atoms,noco,nococonv)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
@@ -73,10 +73,11 @@ CONTAINS
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
+    TYPE(t_noco),INTENT(IN)             :: noco
     !Stuff that might be modified...
-    TYPE(t_noco),INTENT(INOUT) :: noco
+    TYPE(t_nococonv),INTENT(INOUT) :: nococonv
        IF (.NOT.lastiter) THEN
-          mae_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
+          mae_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
@@ -84,25 +85,27 @@ CONTAINS
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
        IF (.NOT.mae_next_job) RETURN
 
-       noco%theta=this%theta(this%directions_done)
-       noco%phi=this%phi(this%directions_done)
-       noco%l_soc=.true.
+       nococonv%theta=this%theta(this%directions_done)
+       nococonv%phi=this%phi(this%directions_done)
+       if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
+       !noco%l_soc=.true.
        IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop_MAE')
        IF (this%l_io) CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
@@ -115,7 +118,7 @@ CONTAINS
        skip=.FALSE.
        RETURN
     ENDIF
-    this%evsum(this%directions_done)=results%seigv/2.0 
+    this%evsum(this%directions_done)=results%seigv/2.0
     skip=.TRUE.
   END FUNCTION  mae_eval
 
@@ -130,7 +133,7 @@ CONTAINS
     IF (this%directions_done==0) THEN
        RETURN
     ENDIF
-    
+
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop_MAE')
@@ -138,7 +141,7 @@ CONTAINS
        DO n=1,SIZE(this%evsum)
           WRITE(attributes(1),'(f12.7)') this%theta(n)
           WRITE(attributes(2),'(f12.7)') this%phi(n)
-          WRITE(attributes(3),'(f12.7)') this%evsum(n)     
+          WRITE(attributes(3),'(f12.7)') this%evsum(n)
           CALL writeXMLElementForm('Angle',(/'theta ','phi   ','ev-sum'/),attributes,&
                RESHAPE((/5,3,6,12,12,12/),(/3,2/)))
        END DO
@@ -154,13 +157,13 @@ CONTAINS
     TYPE(t_mpi),INTENT(in):: mpi
 
     INTEGER:: i,ierr
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     INCLUDE 'mpif.h'
     IF (mpi%irank==0) i=SIZE(this%theta)
     call MPI_BCAST(i,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     IF (mpi%irank.NE.0) ALLOCATE(this%phi(i),this%theta(i),this%evsum(i));this%evsum=0.0
     CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif    
+#endif
   END SUBROUTINE mae_dist
 END MODULE m_types_mae

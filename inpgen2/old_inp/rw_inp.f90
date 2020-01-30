@@ -541,17 +541,17 @@
       READ(5,fmt='(A)',END=99,ERR=99) line
       BACKSPACE(5)
       IF (line(9:10)=='pi') THEN
-        READ(5,fmt='(f8.4)') noco%theta
-        noco%theta= noco%theta*4.*ATAN(1.)
+        READ(5,fmt='(f8.4)') noco%theta_inp
+        noco%theta_inp= noco%theta_inp*4.*ATAN(1.)
       ELSE
-        READ(5,fmt='(f10.6)',END=99,ERR=99) noco%theta
+        READ(5,fmt='(f10.6)',END=99,ERR=99) noco%theta_inp
       ENDIF
       BACKSPACE(5)
       IF (line(19:20)=='pi') THEN
-        READ(5,fmt='(10x,f8.4)',END=99,ERR=99) noco%phi
-        noco%phi= noco%phi*4.*ATAN(1.)
+        READ(5,fmt='(10x,f8.4)',END=99,ERR=99) noco%phi_inp
+        noco%phi_inp= noco%phi_inp*4.*ATAN(1.)
       ELSE
-        READ(5,fmt='(10x,f10.6)',END=99,ERR=99) noco%phi
+        READ(5,fmt='(10x,f10.6)',END=99,ERR=99) noco%phi_inp
       ENDIF
       IF ( line(30:34)=='spav=' ) THEN
         BACKSPACE(5)

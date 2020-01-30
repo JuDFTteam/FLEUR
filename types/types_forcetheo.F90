@@ -46,21 +46,23 @@ CONTAINS
     this%l_io=l_io
   END SUBROUTINE forcetheo_start
 
-  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,atoms,noco)
+  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,atoms,noco,nococonv)
     USE m_types_atoms
     USE m_types_noco
+    USE m_types_nococonv
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
+    TYPE(t_noco),INTENT(IN)             :: noco
     !Stuff that might be modified...
-    TYPE(t_noco),INTENT(INOUT) :: noco
+    TYPE(t_nococonv),INTENT(INOUT) :: nococonv
     forcetheo_next_job=this%firstloop
     this%firstloop=.FALSE.
   END FUNCTION forcetheo_next_job
 
   FUNCTION forcetheo_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types_atoms
     USE m_types_oneD
     USE m_types_input
@@ -72,6 +74,7 @@ CONTAINS
     USE m_types_misc
     USE m_types_kpts
     USE m_types_enpara
+    USE m_types_nococonv
 
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
@@ -82,6 +85,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts

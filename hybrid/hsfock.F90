@@ -54,7 +54,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco,nococonv, &
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -63,6 +63,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
@@ -87,6 +88,7 @@ CONTAINS
       INTEGER                 ::  ikpt, ikpt0
       INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
+      INTEGER                 ::  nkpt_EIBZ
       INTEGER                 ::  ncstd
       INTEGER                 ::  ok
       REAL                    ::  a_ex
@@ -149,7 +151,7 @@ CONTAINS
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
          CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw, jsp, &
-                      rrot, nsymop, psym, n_q, parent, pointer_EIBZ, nsest, indx_sest)
+                      rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
          ! remove weights(wtkpt) in w_iks
@@ -163,8 +165,8 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = sym%invs
-         CALL exchange_valence_hf(nk, kpts, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv,nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")

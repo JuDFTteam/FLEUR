@@ -8,7 +8,7 @@ MODULE m_od_vacfun
 CONTAINS
   SUBROUTINE od_vacfun(&
        m_cyl,cell,vacuum,stars,&
-       jsp,input,noco,ipot,oneD, n2d_1, ivac,evac,bkpt,MM,vM,&
+       jsp,input,noco,nococonv,ipot,oneD, n2d_1, ivac,evac,bkpt,MM,vM,&
        vxy,vz,kvac3,nv2, tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv)
     !*********************************************************************
     !     determines the necessary values and derivatives on the cylindrical
@@ -27,6 +27,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_cell),INTENT(IN)     :: cell
     !     ..
@@ -74,8 +75,8 @@ CONTAINS
 
     wronk = 2.0
 
-    qssbti(1) = - noco%qss(3)/2.
-    qssbti(2) = + noco%qss(3)/2.
+    qssbti(1) = - nococonv%qss(3)/2.
+    qssbti(2) = + nococonv%qss(3)/2.
 
     tuuv(:,:,:,:) = CMPLX(0.,0.)
     tudv(:,:,:,:) = CMPLX(0.,0.)

@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE wann_updown(
      >      wann,mpi,input,kpts,sym,atoms,stars,vacuum,
-     >      sphhar,oneD,noco,cell,vTot,
+     >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -87,6 +87,7 @@ c****************************************************************************
       TYPE(t_sphhar),INTENT(IN) :: sphhar
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_noco),INTENT(IN)   :: noco
+      TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_potden),INTENT(IN) :: vTot
       TYPE(t_enpara),INTENT(IN) :: enpara
@@ -845,7 +846,7 @@ c****************************************************************
      &         calledby='wann_updown')
       END IF
 
-        CALL lapw%init(input,noco,kpts,atoms,sym,
+        CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &  kptibz,cell,
      &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
@@ -995,7 +996,8 @@ c...for the lapws and local orbitals, summed by the basis functions
       do jspin=1,wannierspin
 
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +      noco,min(jspin,input%jspins),oneD,acof(1:,0:,1:,jspin),
+     +      noco,nococonv,min(jspin,input%jspins),oneD,
+     +      acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
@@ -1012,7 +1014,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmat)then
          call wann_socmat(
-     >       mpi,enpara,input,noco,atoms,
+     >       mpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       theta,phi,jspins,irank,
@@ -1032,7 +1034,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
-     >       mpi,enpara,input,noco,atoms,
+     >       mpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,neigd,
      >       llod,jspd,
      >       jspins,irank,

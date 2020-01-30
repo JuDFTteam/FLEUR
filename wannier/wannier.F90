@@ -9,7 +9,7 @@ MODULE m_wannier
 CONTAINS
   SUBROUTINE wannier(&
        mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
-       wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
+       wann,noco,nococonv,cell,enpara,banddos,sliceplot,vTot,results,&
        eig_idList,l_real,nkpt)
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
     !     Makes necessary for the construction of the wannier functions
@@ -125,6 +125,7 @@ CONTAINS
     TYPE(t_sphhar),    INTENT(IN) :: sphhar
     TYPE(t_oneD),      INTENT(IN) :: oneD
     TYPE(t_noco),      INTENT(IN) :: noco
+    TYPE(t_nococonv),  INTENT(IN) :: nococonv
     TYPE(t_cell),      INTENT(IN) :: cell
     TYPE(t_enpara),    INTENT(IN) :: enpara
     TYPE(t_banddos),   INTENT(IN) :: banddos
@@ -362,7 +363,7 @@ CONTAINS
     IF(wann%l_updown)THEN
        CALL wann_updown(&
             wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
-            oneD,noco,cell,vTot,&
+            oneD,noco,nococonv,cell,vTot,&
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
             atoms%lmaxd,atoms%ntype,input%neig,atoms%nat,sym%nop,&
@@ -370,8 +371,8 @@ CONTAINS
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
-            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,&                    ! TODO: adapt if needed&
+            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,&                    ! TODO: adapt if needed&
             stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,&
             stars%ng3,&
             vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,sphhar%nlhd,stars%ng3,&
@@ -386,7 +387,7 @@ CONTAINS
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
-            noco%theta,noco%phi)
+            nococonv%theta,nococonv%phi)
 
        DO pc = 1, wann%nparampts
           CALL close_eig(eig_idList(pc))
@@ -403,15 +404,15 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu(&
             stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
+            banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
             input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
-            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
+            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
             mpi%irank,&
             mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
@@ -426,7 +427,7 @@ CONTAINS
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
-            noco%theta,noco%phi,&
+            nococonv%theta,nococonv%phi,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,&
             wann%param_file,wann%param_vec,wann%nparampts,&
             wann%param_alpha,wann%l_dim)
@@ -446,15 +447,15 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu_dmi(&
             stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
+            banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
             input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
-            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
+            atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
             mpi%irank,&
             mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
@@ -469,7 +470,7 @@ CONTAINS
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
-            noco%theta,noco%phi,&
+            nococonv%theta,nococonv%phi,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,&
             wann%param_file,wann%param_vec,wann%nparampts,&
             wann%param_alpha,wann%l_dim,l_nochi)
@@ -746,11 +747,11 @@ CONTAINS
        IF(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
        IF(wann%l_bzsym .AND. l_gwf) oper_q=mapqoper(iqpt)
 
-       qpt_i = noco%qss
-       alph_i = noco%alph
-       beta_i = noco%beta
-       theta_i = noco%theta
-       phi_i = noco%phi
+       qpt_i = nococonv%qss
+       alph_i = nococonv%alph
+       beta_i = nococonv%beta
+       theta_i = nococonv%theta
+       phi_i = nococonv%phi
        IF(wann%l_sgwf.OR.wann%l_ms) THEN
           qpt_i(:) = wann%param_vec(:,qptibz)
           alph_i(:) = wann%param_alpha(:,qptibz)
@@ -1185,7 +1186,7 @@ CONTAINS
                 ! stored in the eig file on unit 66. the lattice respectively
                 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
-                CALL lapw%init(input,noco,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
 
                 CALL cdn_read(&
                      eig_id,&
@@ -1259,7 +1260,7 @@ CONTAINS
 
 
                 CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,&
-                     noco,jspin2,oneD,acof,bcof,ccof,zMat)
+                     noco,nococonv,jspin2,oneD,acof,bcof,ccof,zMat)
 
 
                 CALL wann_abinv(atoms,sym, acof,bcof,ccof)
@@ -1525,7 +1526,7 @@ CONTAINS
 
                       n_start=1
                       n_end=input%neig
-                      call lapw_b%init(input,noco,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
                       CALL cdn_read(&
                            eig_id,&
                            lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
@@ -1597,7 +1598,7 @@ CONTAINS
 !!! get the band-dependent k-dependent ab coeff.
 
                       CALL abcof(input,atoms,sym,cell,lapw_b,&
-                           noccbd_b,usdus,noco,jspin2,oneD,&
+                           noccbd_b,usdus,noco,nococonv,jspin2,oneD,&
                            acof_b,bcof_b,ccof_b,zMat_b)
 
 
@@ -1718,11 +1719,11 @@ CONTAINS
                       IF(qptibz_b.EQ.qptibz) CYCLE     ! no need to compute overlaps
                       ! with periodic images for now
 
-                      qptb_i = noco%qss
-                      alphb_i = noco%alph
-                      betab_i = noco%beta
-                      thetab_i = noco%theta
-                      phib_i = noco%phi
+                      qptb_i = nococonv%qss
+                      alphb_i = nococonv%alph
+                      betab_i = nococonv%beta
+                      thetab_i = nococonv%theta
+                      phib_i = nococonv%phi
                       IF(wann%l_sgwf) THEN
                          qptb_i(:) = wann%param_vec(:,qptibz_b)
                          alphb_i(:) = wann%param_alpha(:,qptibz_b)
@@ -1744,7 +1745,7 @@ CONTAINS
                       ! moreover, the plane-wave vectors G(k,q+b) are stored
                       ! in (k1_qb,k2_qb,k3_qb) for later use.
 
-                      CALL lapw_qb%init(input,noco,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      CALL lapw_qb%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
                       CALL cdn_read(&
                            innerEig_idList(iqpt_b),&
                            lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&
@@ -1825,7 +1826,7 @@ CONTAINS
                       ! at the point (k,q+b) using previously read information
 
                       CALL abcof(input,atoms,sym,cell,lapw_qb,&
-                           noccbd_qb,usdus,noco,jspin_b,oneD,&
+                           noccbd_qb,usdus,noco,nococonv,jspin_b,oneD,&
                            acof_qb,bcof_qb,ccof_qb,zMat_qb)
 
                       CALL wann_abinv(atoms,sym,&
@@ -2502,7 +2503,7 @@ CONTAINS
        CALL timeStop("Wannier total")
        CALL wann_postproc(&
             stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            lapw,oneD,noco,cell,vTot,enpara,sliceplot,eig_id,l_real,&                !eig_id is used here after closing the files?!&
+            lapw,oneD,noco,nococonv,cell,vTot,enpara,sliceplot,eig_id,l_real,&                !eig_id is used here after closing the files?!&
             wann,fullnkpts,l_proj,results%ef,wann%l_sgwf,fullnqpts)
 
 #ifdef CPP_MPI
