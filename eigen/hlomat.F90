@@ -38,7 +38,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: chi
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT (IN) :: alo1(:),blo1(:),clo1(:)
+    REAL, INTENT (IN) :: alo1(:,:),blo1(:,:),clo1(:,:)
     REAL,INTENT(IN)      :: fj(:,0:,:),gj(:,0:,:)
 
     CLASS(t_mat),INTENT (INOUT) :: hmat
@@ -60,7 +60,7 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1(:,i),blo1(:,i),clo1(:,i))
     ENDDO
 
 

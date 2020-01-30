@@ -50,7 +50,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
     REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
-    REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
+    REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     COMPLEX ccchi(2,2)
     LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
@@ -283,7 +283,7 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,natom)
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                          n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
+                                          n,natom,k,nkvec,lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
                          ENDIF
                       ENDDO
                    END DO
