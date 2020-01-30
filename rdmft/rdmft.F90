@@ -141,6 +141,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
 
+   complex :: c_phase(input%neig)
+
 #endif
 
 #ifndef CPP_OLDINTEL
@@ -529,8 +531,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,l_zref)
 
             parent = 0
+            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
+            call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, zMat, c_phase)
+
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,&
+                         noco, oneD, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
@@ -562,11 +568,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                olap%data_c = conjg(olap%data_c)
             END IF
 
-            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
 
-            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybdat%nbands(ikpt))],neig=nbands,zmat=zMat)
 
-!            call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, zMat)
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)

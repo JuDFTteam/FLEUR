@@ -102,6 +102,8 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
+      complex                  :: c_phase(hybdat%nbands(nk))
+
       REAL                    ::  wl_iks(input%neig, kpts%nkptf)
 
       TYPE(t_mat)             :: olap, trafo, invtrafo, ex, tmp, v_x, z
@@ -147,10 +149,15 @@ CONTAINS
          IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
          parent = 0
 
+
+         call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
+         call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase)
+
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw, jsp, &
+         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw,&
+                       noco, oneD, z, c_phase, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -187,9 +194,6 @@ CONTAINS
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
          IF (input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
-
-         call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
-         call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
 
          call olap%multiply(z, trafo)
 
