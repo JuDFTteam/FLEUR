@@ -43,6 +43,9 @@ CONTAINS
       INTEGER                 ::    g_t(3)
       REAL                    ::    kqpt(3), kqpthlp(3)
 
+      type(t_mat) :: z_k, z_q
+      complex     :: c_phase_k(hybdat%nbands(nk)), c_phase_q(hybdat%nbands(nkqpt))
+
 
       CALL timestart("wavefproducts_inv5")
       cprod = 0.0;nkqpt=-1
@@ -59,11 +62,11 @@ CONTAINS
 
       call wavefproducts_inv_IS(bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                cell, sym, noco, nkqpt, cprod)
+                                cell, sym, noco, nkqpt, z_k, c_phase_k, z_q, c_phase_q, cprod)
 
       call wavefproducts_inv5_MT(bandoi, bandof,&
                                 input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                sym, nkqpt, cprod)
+                                sym, nkqpt, z_k, c_phase_k, z_q, c_phase_q, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
@@ -71,7 +74,7 @@ CONTAINS
 
    subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nkqpt, cprod)
+                                 cell, sym, noco, nkqpt, z_nk, c_phase_k, z_kqpt, c_phase_q, cprod)
 
      implicit NONE
      TYPE(t_mpdata), intent(in)  :: mpdata
@@ -84,14 +87,15 @@ CONTAINS
      TYPE(t_atoms), INTENT(IN)     :: atoms
      TYPE(t_lapw), INTENT(IN)      :: lapw
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-
+     TYPE(t_mat), intent(inout)    :: z_nk, z_kqpt
      ! - scalars -
      INTEGER, INTENT(IN)      :: bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
+     REAL, INTENT(INOUT)      :: cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
+     complex, intent(inout)   :: c_phase_k(hybdat%nbands(nk)), c_phase_q(hybdat%nbands(nkqpt))
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
@@ -107,7 +111,7 @@ CONTAINS
      REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(nk))
      REAL, ALLOCATABLE       ::    z0(:, :)
 
-     TYPE(t_mat)             :: z_nk, z_kqpt
+
 
      CALL timestart("wavefproducts_inv5 IR")
      cprod = 0.0
@@ -188,7 +192,7 @@ CONTAINS
 
    subroutine wavefproducts_inv5_MT(bandoi, bandof,&
                                    input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                   sym, nkqpt, cprod)
+                                   sym, nkqpt, z_k, c_phase_k, z_q, c_phase_q,  cprod)
 
      implicit NONE
      TYPE(t_input),INTENT(IN)      :: input
@@ -198,6 +202,7 @@ CONTAINS
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+     type(t_mat), intent(in)       :: z_k, z_q
 
      ! - scalars -
      INTEGER, INTENT(IN)      :: bandoi, bandof
@@ -205,6 +210,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
+     complex, intent(in)        :: c_phase_k(hybdat%nbands(nk)), c_phase_q(hybdat%nbands(nkqpt))
      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
 
      ! - local scalars -
