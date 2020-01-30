@@ -227,7 +227,6 @@ CONTAINS
       ALLOCATE(atoms%neq(atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat))
       ALLOCATE(atoms%label(atoms%nat))
-      ALLOCATE(atoms%labels_type(atoms%ntype))
       ALLOCATE(atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))
@@ -1845,7 +1844,6 @@ CONTAINS
             noco%b_con(1,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_x'))
             noco%b_con(2,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
          END IF
-      atoms%labels_type(iType) = atoms%label(na)
       END DO
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

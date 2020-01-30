@@ -152,7 +152,6 @@ MODULE m_types_setup
       !labels
       CHARACTER(LEN=20), ALLOCATABLE :: label(:)
       CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
-      CHARACTER(len=20), ALLOCATABLE :: labels_type(:)
       !name and other data of explicitely provided xc functional
       CHARACTER(len=4), ALLOCATABLE :: namex(:)
       INTEGER, ALLOCATABLE :: icorr(:)
