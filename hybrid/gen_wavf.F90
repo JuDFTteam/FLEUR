@@ -80,9 +80,8 @@ CONTAINS
 !      COMPLEX                 ::  a(nvd,0:lmd,natd,kpts%nkpt),b(nvd,0:lmd,natd,kpts%nkpt)
 
       TYPE(t_lapw)  :: lapw(kpts%nkptf)
-      TYPE(t_usdus) :: usdus
 
-      CALL usdus%init(atoms, input%jspins)
+      CALL hybdat%usdus%init(atoms, input%jspins)
       CALL zhlp%alloc(zmat(1)%l_real, zmat(1)%matsize1, zmat(1)%matsize2)
 
       ! setup rotations in reciprocal space
@@ -123,32 +122,32 @@ CONTAINS
          ng = atoms%jri(itype)
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), &
-                      atoms, u(:, :, l), du(:, :, l), usdus, nodem, noded, wronk)
+                      atoms, u(:, :, l), du(:, :, l), hybdat%usdus, nodem, noded, wronk)
             IF (mpi%irank == 0) WRITE (6, FMT=8010) l, el_eig(l, itype), &
-                               usdus%us(l, itype, jsp), usdus%dus(l, itype, jsp),&
-                               nodem, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp),&
-                               noded, usdus%ddn(l, itype, jsp), wronk
+                               hybdat%usdus%us(l, itype, jsp), hybdat%usdus%dus(l, itype, jsp),&
+                               nodem, hybdat%usdus%uds(l, itype, jsp), hybdat%usdus%duds(l, itype, jsp),&
+                               noded, hybdat%usdus%ddn(l, itype, jsp), wronk
 
             hybdat%bas1(1:ng, 1, l, itype) = u(1:ng, 1, l)
             hybdat%bas2(1:ng, 1, l, itype) = u(1:ng, 2, l)
             hybdat%bas1(1:ng, 2, l, itype) = du(1:ng, 1, l)
             hybdat%bas2(1:ng, 2, l, itype) = du(1:ng, 2, l)
 
-            hybdat%bas1_MT(1, l, itype) = usdus%us(l, itype, jsp)
-            hybdat%drbas1_MT(1, l, itype) = usdus%dus(l, itype, jsp)
-            hybdat%bas1_MT(2, l, itype) = usdus%uds(l, itype, jsp)
-            hybdat%drbas1_MT(2, l, itype) = usdus%duds(l, itype, jsp)
+            hybdat%bas1_MT(1, l, itype) = hybdat%usdus%us(l, itype, jsp)
+            hybdat%drbas1_MT(1, l, itype) = hybdat%usdus%dus(l, itype, jsp)
+            hybdat%bas1_MT(2, l, itype) = hybdat%usdus%uds(l, itype, jsp)
+            hybdat%drbas1_MT(2, l, itype) = hybdat%usdus%duds(l, itype, jsp)
          END DO
 
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), u, du, mpi, hybdat%usdus, uuilon, duilon, ulouilopn, flo)
 
             DO ilo = 1, atoms%nlo(itype)
                iarr(atoms%llo(ilo, itype), itype) = iarr(atoms%llo(ilo, itype), itype) + 1
                hybdat%bas1(1:ng, iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = flo(1:ng, 1, ilo)
                hybdat%bas2(1:ng, iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = flo(1:ng, 2, ilo)
-               hybdat%bas1_MT(iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = usdus%ulos(ilo, itype, jsp)
-               hybdat%drbas1_MT(iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = usdus%dulos(ilo, itype, jsp)
+               hybdat%bas1_MT(iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = hybdat%usdus%ulos(ilo, itype, jsp)
+               hybdat%drbas1_MT(iarr(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype) = hybdat%usdus%dulos(ilo, itype, jsp)
             END DO
          END IF
       END DO
@@ -185,7 +184,7 @@ CONTAINS
          ! abcof calculates the wavefunction coefficients
          ! stored in acof,bcof,ccof
          lapw(ikpt0)%nmat = lapw(ikpt0)%nv(jsp) + atoms%nlotot
-         CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybdat%nbands(ikpt0), usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
+         CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybdat%nbands(ikpt0), hybdat%usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
                     oneD, acof(:hybdat%nbands(ikpt0), :, :), bcof(:hybdat%nbands(ikpt0), :, :), &
                     ccof(:, :hybdat%nbands(ikpt0), :, :), zmat(ikpt0))
 
