@@ -44,7 +44,7 @@ CONTAINS
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       type(t_mat) :: z_k, z_q
-      complex     :: c_phase_k(hybdat%nbands(nk)), c_phase_q(hybdat%nbands(nkqpt))
+      complex, allocatable :: c_phase_k(:), c_phase_q(:)
 
 
       CALL timestart("wavefproducts_inv5")
@@ -56,6 +56,8 @@ CONTAINS
 
       ! determine number of kqpt
       nkqpt = kpts%get_nk(kqpt)
+      allocate(c_phase_k(hybdat%nbands(nk)), &
+               c_phase_q(hybdat%nbands(kpts%bkp(nkqpt))))
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
 
