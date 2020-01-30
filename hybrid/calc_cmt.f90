@@ -21,6 +21,7 @@ contains
       type(t_sym), intent(in)      :: sym
       type(t_oneD), intent(in)     :: oneD
       type(t_mat), intent(in)      :: zmat_ikp ! zmat of parent k-point
+                                               ! not sure wether zmat works aswell
       integer, intent(in)          :: jsp
       integer, intent(in)          :: ik       ! k-point
       complex, intent(in)          :: c_phase(:)
