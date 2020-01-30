@@ -425,8 +425,8 @@ CONTAINS
    END SUBROUTINE waveftrafo_genwavf
 
    SUBROUTINE waveftrafo_gen_zmat(z_in, nk, iop, &
-       kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, z_out, c_phase)
+                                  kpts, sym, jsp, input, nbands, &
+                                  lapw_nk, lapw_rkpt, z_out, c_phase)
 
       use m_juDFT
       USE m_constants
@@ -441,7 +441,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
       type(t_mat), intent(inout)  :: z_out
-      complex, intent(inout), optional :: c_phase(nbands)
+      complex, intent(inout), optional :: c_phase(:)
 !     - scalars -
       INTEGER, INTENT(IN)      :: nk, jsp, nbands
       INTEGER, INTENT(IN)      :: iop

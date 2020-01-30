@@ -2,14 +2,11 @@
 
       CONTAINS
 
-         SUBROUTINE checkolap(atoms, hybdat,&
-                           mpdata,hybinp,&
-                           nkpti, kpts,&
-                            mpi, &
-                           input, sym, noco,&
-                           cell, lapw, jsp)
+         SUBROUTINE checkolap(atoms, hybdat, mpdata,hybinp, nkpti, kpts,&
+                              mpi, input, sym, noco, cell, jsp, oneD, lapw)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
             use m_intgrf, only:  intgrf, intgrf_init
+            use m_calc_cmt
             USE m_constants
             USE m_types
             USE m_io_hybinp
@@ -28,6 +25,7 @@
             TYPE(t_cell), INTENT(IN)        :: cell
             TYPE(t_kpts), INTENT(IN)        :: kpts
             TYPE(t_atoms), INTENT(IN)       :: atoms
+            type(t_oneD), intent(in)        :: oneD
             TYPE(t_lapw), INTENT(INOUT)     :: lapw
 
             ! - scalars -
@@ -62,7 +60,7 @@
 
             COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat, nkpti)
             COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
-            COMPLEX, ALLOCATABLE   ::  olapcv(:, :)
+            COMPLEX, ALLOCATABLE   ::  olapcv(:, :), c_phase(:)
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
 
             CHARACTER, PARAMETER    ::  lchar(0:38) =&
@@ -87,8 +85,13 @@
 
             ! read in cmt
             DO ikpt = 1, nkpti
-               call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, z(ikpt))
-               call read_cmt(cmt(:, :, :, ikpt), ikpt)
+               if(allocated(c_phase)) deallocate(c_phase)
+               allocate(c_phase(hybdat%nbands(ikpt)))
+
+               call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, &
+                           jsp, z(ikpt), c_phase)
+               call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+                             sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, cmt(:,:,:,ikpt))
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|core>'

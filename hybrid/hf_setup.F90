@@ -188,7 +188,7 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(atoms, hybdat, mpdata, hybinp, kpts%nkpt, kpts,  mpi, &
-                        input, sym, noco, cell, lapw, jsp)
+                        input, sym, noco, cell, jsp, oneD, lapw)
 
          ! set up pointer pntgpt
 
