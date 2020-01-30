@@ -262,7 +262,6 @@ CONTAINS
       ! read in cmt and z at current k-point (nk)
 
       CALL read_cmt(cmt, nk)
-      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       IF(allocated(olapmt)) deallocate(olapmt)
       allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
