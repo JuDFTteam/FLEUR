@@ -704,7 +704,7 @@ CONTAINS
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
       input, atoms, mpdata, hybinp, &
       cell, &
-      hybdat, kpts, sym, noco, lapw, &
+      hybdat, kpts, sym, noco, lapw, oneD, &
       jsp, &
       eig_irr)
 
@@ -723,6 +723,7 @@ CONTAINS
       type(t_noco), intent(in)   :: noco
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
+      type(t_oneD), intent(in)   :: oneD
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  nk, bandi1, bandf1, bandi2, bandf2
@@ -744,7 +745,7 @@ CONTAINS
       dcprod = cmplx_0
       CALL momentum_matrix(dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
          input, atoms, mpdata, hybinp, cell, hybdat, kpts, sym, noco, lapw, &
-         jsp)
+         oneD,jsp)
 
       !                                                __
       !  Calculate expansion coefficients -i < uj | \/ | ui > / ( ei - ej ) for periodic function ui
@@ -776,7 +777,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
                               input, atoms, mpdata, hybinp, &
-                              cell, hybdat, kpts, sym, noco, lapw, jsp)
+                              cell, hybdat, kpts, sym, noco, lapw, oneD, jsp)
       USE m_olap
       USE m_wrapper
       USE m_util, only: derivative
@@ -785,6 +786,7 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_io_hybinp
+      use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -796,6 +798,7 @@ CONTAINS
       type(t_noco), intent(in)   :: noco
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
+      type(t_oneD), intent(in)   :: oneD
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi1, bandf1, bandi2, bandf2
@@ -830,14 +833,17 @@ CONTAINS
       COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))
       COMPLEX                 ::  vec1_c(lapw%nv(jsp)), vec2_c(lapw%nv(jsp)), vec3_c(lapw%nv(jsp))
+      COMPLEX                 :: c_phase(hybdat%nbands(nk))
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
       momentum = cmplx_0
-      call read_cmt(cmt, nk)
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase)
+      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+                          sym, oneD, z, jsp, nk, c_phase, cmt)
+      !call read_cmt(cmt, nk)
 
       ! read in z coefficients from direct access file z at kpoint nk
 
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
       gpt(:, 1:lapw%nv(jsp)) = lapw%gvec(:, 1:lapw%nv(jsp), jsp)

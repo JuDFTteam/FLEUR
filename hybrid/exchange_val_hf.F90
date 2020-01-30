@@ -61,7 +61,7 @@ MODULE m_exchange_valence_hf
 CONTAINS
 
    SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+                                  oneD,eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_wrapper
@@ -87,6 +87,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      type(t_oneD), intent(in)    :: oneD
       TYPE(t_mat), INTENT(INOUT) :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
@@ -330,7 +331,7 @@ CONTAINS
 
          IF (zero_order) THEN
             CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., input,atoms, mpdata,hybinp, &
-                                cell, hybdat, kpts, sym,noco, lapw, jsp, eig_irr)
+                                cell, hybdat, kpts, sym,noco, lapw, oneD, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybdat%nbands(ik)

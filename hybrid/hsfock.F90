@@ -54,7 +54,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw, oneD, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -68,6 +68,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      type(t_oneD), intent(in)   :: oneD
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -165,7 +166,7 @@ CONTAINS
          ! HF exchange
          ex%l_real = sym%invs
          CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+                                  oneD,eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")
@@ -193,7 +194,7 @@ CONTAINS
 
          CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
          CALL trafo%TRANSPOSE(invtrafo)
-      
+
          DO i = 1, hybdat%nbands(nk)
             DO j = 1, i - 1
                IF (ex%l_real) THEN
