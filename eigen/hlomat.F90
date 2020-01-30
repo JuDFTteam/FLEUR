@@ -60,7 +60,7 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1(:,i),blo1(:,i),clo1(:,i))
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     ENDDO
 
 
