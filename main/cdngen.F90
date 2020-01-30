@@ -30,6 +30,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_genNewNocoInp
    USE m_xmlOutput
    USE m_magMoms
+   USE m_magMultipoles
    USE m_orbMagMoms
    USE m_resMoms
    USE m_cdncore
@@ -220,7 +221,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
          CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
-
+         if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
 !         noco = noco_new
 
          !Generate and save the new nocoinp file if the directions of the local
