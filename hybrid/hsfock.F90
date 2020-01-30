@@ -175,7 +175,9 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, input,atoms, mpdata, hybinp, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_vccv1(nk, input,atoms,cell, kpts, sym, noco, oneD, &
+                                mpdata, hybinp, hybdat,  jsp, &
+                                lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 

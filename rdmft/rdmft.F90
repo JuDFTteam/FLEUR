@@ -537,7 +537,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
                                      oneD,eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,input,atoms,cell, kpts, sym, noco, oneD,&
+                                mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
+                                1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 

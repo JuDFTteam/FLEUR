@@ -91,7 +91,8 @@
                call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, &
                            jsp, z(ikpt), c_phase)
                call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
-                             sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, cmt(:,:,:,ikpt))
+                             sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
+                             cmt(:hybdat%nbands(ikpt),:,:,ikpt))
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|core>'
