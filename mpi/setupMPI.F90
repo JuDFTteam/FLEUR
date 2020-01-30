@@ -11,22 +11,27 @@ MODULE m_setupMPI
 CONTAINS
   SUBROUTINE setupMPI(nkpt,neigd,mpi)
 !$  use omp_lib
-    USE m_types  
+    USE m_types
     USE m_available_solvers,ONLY:parallel_solver_available
     INTEGER,INTENT(in)           :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
-    INTEGER :: omp=-1,i
-
+    INTEGER :: omp=-1,i,isize
+#ifdef CPP_MPI
+    include 'mpif.h'
+    CALL MPI_COMM_SPLIT_TYPE(mpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,mpi%mpi_comm_same_node,i)
+#endif
     !$ omp=omp_get_max_threads()
     if (mpi%irank==0) THEN
        !print INFO on parallelization
        WRITE(*,*) "--------------------------------------------------------"
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       CALL add_usage_data("MPI-PE",mpi%isize)     
+       CALL MPI_COMM_SIZE(mpi%mpi_comm_same_node,isize,i)
+       write(*,*) "Number of PE/node  :  ",isize
+       CALL add_usage_data("MPI-PE",mpi%isize)
 #else
-       CALL add_usage_data("MPI-PE",1)     
+       CALL add_usage_data("MPI-PE",1)
 #endif
        IF (omp==-1) THEN
           write(*,*) "No OpenMP version of FLEUR."
@@ -57,7 +62,7 @@ CONTAINS
 
     !Now check if parallelization is possible
     IF (mpi%n_size>1.AND..NOT.parallel_solver_available()) &
-         CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")       
+         CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")
 #endif
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,neigd,mpi)
@@ -79,10 +84,10 @@ CONTAINS
     !-------------------------------------------------------------------------------------------
     !
     ! Distribute the k-point / eigenvector  parallelisation so, that
-    ! all pe's have aproximately equal load. Maximize for k-point 
+    ! all pe's have aproximately equal load. Maximize for k-point
     ! parallelisation. The naming conventions are as follows:
     !
-    ! groups             1               2               3             4      (n_groups = 4) 
+    ! groups             1               2               3             4      (n_groups = 4)
     !                 /     \         /     \          /   \         /   \
     ! k-points:      1       2       3       4       5       6      7     8     (nkpts = 8)
     !               /|\     /|\     /|\     /|\     /|\     /|\    /|\   /|\
@@ -109,13 +114,13 @@ CONTAINS
        txt=judft_string_for_argument("-n_min_size")
        READ(txt,*) n_size_min
        WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
-       n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size_min) ) 
+       n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size_min) )
     ENDIF
-    DO  
+    DO
        IF ((MOD(mpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
        n_members = n_members - 1
     ENDDO
- 
+
     !mpi%n_groups = nkpt/n_members
     mpi%n_size   = mpi%isize/n_members
     !mpi%n_stride = n_members
@@ -138,15 +143,15 @@ CONTAINS
 
     compact = .true.
     n_members = mpi%isize/mpi%n_size
-    
+
     ! now, we make the groups
-    
-    
+
+
     IF (compact) THEN
 
         ! This will distribute sub ranks in a compact manner.
         ! For example, if nkpt = 8 and mpi%isize = 6:
-        
+
         !  -----------------------------------
         ! |  0  |  1  |  2  |  3  |  4  |  5  |    mpi%irank
         !  -----------------------------------
@@ -157,7 +162,7 @@ CONTAINS
         ! |        5        |        6        |
         ! |        7        |        8        |
         !  -----------------------------------
-    
+
         n_start = INT(mpi%irank/mpi%n_size) + 1
         i_mygroup(1) = (n_start-1) * mpi%n_size
         do i = 2, mpi%n_size
@@ -168,7 +173,7 @@ CONTAINS
 
         ! This will distribute sub ranks in a spread manner.
         ! For example, if nkpt = 8 and mpi%isize = 6:
-    
+
         !  -----------------------------------
         ! |  0  |  1  |  2  |  3  |  4  |  5  |    mpi%irank
         !  -----------------------------------
@@ -176,7 +181,7 @@ CONTAINS
         !  -----------------------------------
         ! |  1  |  2  |  1  |  2  |  1  |  2  |    k - points
         ! |  3  |  4  |  3  |  4  |  3  |  4  |
-        ! |  5  |  6  |  5  |  6  |  5  |  6  |  
+        ! |  5  |  6  |  5  |  6  |  5  |  6  |
         ! |  7  |  8  |  7  |  8  |  7  |  8  |
         !  -----------------------------------
 
@@ -199,7 +204,7 @@ CONTAINS
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
     ALLOCATE(mpi%ev_list(neigd/mpi%n_size+1))
     mpi%ev_list=[(i,i=mpi%n_rank+1,neigd,mpi%n_size)]
-    
+
 #endif
   END SUBROUTINE priv_create_comm
 
@@ -209,7 +214,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt
 
     INTEGER:: n,k_only,pe_k_only(nkpt)
-    
+
 #ifdef CPP_MPI
     !Create a list of PE that will lead to k-point parallelization only
     k_only=0
@@ -229,5 +234,3 @@ CONTAINS
 
 
 END MODULE m_setupMPI
-
-

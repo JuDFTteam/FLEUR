@@ -15,5 +15,7 @@ MODULE m_types_mpi
      INTEGER :: n_rank   !< rank in sub_comm
      INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
      INTEGER,ALLOCATABLE :: ev_list(:)
+     !Communicator for PE on same node
+     INTEGER :: mpi_comm_same_node
   END TYPE t_mpi
 END MODULE m_types_mpi
