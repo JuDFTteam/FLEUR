@@ -110,7 +110,7 @@
           !---> read the angle information from nocoinf
           noco%qss_inp(:) = 0.0
           IF (noco%l_noco) THEN
-             CALL inpnoco(atoms,input,vacuum,noco)
+             CALL inpnoco(atoms,input,sym,vacuum,noco)
           ELSE
              noco%l_ss = .FALSE.
              noco%l_mperp = .FALSE.

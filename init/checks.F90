@@ -44,7 +44,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym)
       USE m_nocoInputCheck
       USE m_types_fleurinput
       type(t_banddos),INTENT(IN)::banddos
@@ -52,6 +52,7 @@ MODULE m_checks
       type(t_noco),INTENT(IN)   ::noco
       type(t_atoms),INTENT(IN)  ::atoms
       type(t_input),INTENT(IN)  ::input
+      type(t_sym),INTENT(IN)    :: sym
 
       integer :: i
 
@@ -89,7 +90,7 @@ MODULE m_checks
            END IF
         END DO
      END IF
-     IF (noco%l_noco) CALL nocoInputCheck(atoms,input,vacuum,noco)
+     IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
    END SUBROUTINE check_input_switches
 
   END MODULE m_checks

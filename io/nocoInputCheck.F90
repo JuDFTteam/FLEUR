@@ -8,11 +8,12 @@ MODULE m_nocoInputCheck
 
    CONTAINS
 
-   SUBROUTINE nocoInputCheck(atoms,input,vacuum,noco)
+   SUBROUTINE nocoInputCheck(atoms,input,sym,vacuum,noco)
 
       USE m_juDFT
       USE m_types_atoms
       USE m_types_input
+      USE m_types_sym
       USE m_types_vacuum
       USE m_types_noco
 
@@ -20,6 +21,7 @@ MODULE m_nocoInputCheck
 
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_input),  INTENT(IN)    :: input
+      TYPE(t_sym),    INTENT(IN)    :: sym
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_noco),   INTENT(IN)    :: noco
 
@@ -98,6 +100,9 @@ MODULE m_nocoInputCheck
          CALL juDFT_error("Stop: constraint not implemented for spin spirals!!",calledby ="nocoInputCheck")
       ENDIF
 
+      IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.sym%nop.NE.1) THEN
+         CALL juDFT_error("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
+      ENDIF
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

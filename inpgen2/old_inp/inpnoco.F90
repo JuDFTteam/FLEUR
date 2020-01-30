@@ -16,18 +16,20 @@
 !                each atom(-type).
 !**********************************************************************
       CONTAINS
-      SUBROUTINE inpnoco(atoms,input,vacuum,noco)
+      SUBROUTINE inpnoco(atoms,input,sym,vacuum,noco)
 
       USE m_constants, ONLY : tpi_const
       USE m_rwnoco
       USE m_types_atoms
       USE m_types_input
+      USE m_types_sym
       USE m_types_vacuum
       USE m_types_noco
       Use m_nocoInputCheck
       IMPLICIT NONE
       TYPE(t_atoms),INTENT(INOUT) ::atoms
       TYPE(t_input),INTENT(INOUT) ::input
+      TYPE(t_sym),INTENT(IN)      ::sym
       TYPE(t_vacuum),INTENT(IN)   ::vacuum
       TYPE(t_noco),INTENT(INOUT)  ::noco
 
@@ -46,7 +48,7 @@
 
       CALL rw_noco_read(atoms,noco,input)
 
-      CALL nocoInputCheck(atoms,input,vacuum,noco)
+      CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
 
       IF (noco%l_ss) THEN
 !
