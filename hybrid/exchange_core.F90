@@ -87,7 +87,6 @@ CONTAINS
       call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, zmat, jsp, nk, c_phase, cmt)
       call zmat%free()
-      !CALL read_cmt(cmt, nk)
 
       allocate(fprod(atoms%jmtd, 5), larr(5), parr(5))
 

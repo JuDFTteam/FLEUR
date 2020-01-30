@@ -840,7 +840,6 @@ CONTAINS
       call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase)
       call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, z, jsp, nk, c_phase, cmt)
-      !call read_cmt(cmt, nk)
 
       ! read in z coefficients from direct access file z at kpoint nk
 
