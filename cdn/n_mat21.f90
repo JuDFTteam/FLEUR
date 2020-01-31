@@ -100,25 +100,32 @@ MODULE m_nmat21
                !
                !  n_mmp should be rotated by D_mm' ; compare force_a21
                !
+               !Note: This can be done only if the correct magnetic symmetries are
+               !present. This is not the case at the moment (Jan 2020).
+               !Symmetries are ignored if the user forces this calculation
+               !DO it = 1, sym%invarind(natomTemp)
 
-               DO it = 1, sym%invarind(natomTemp)
-
-                  fac = 1.0  /  ( sym%invarind(natomTemp) * atoms%neq(n) )
-                  is = sym%invarop(natomTemp,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx_0
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
-                  ENDDO
-                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                  n1_tmp =  matmul( nr_tmp, d_tmp )
-                  phase = exp(ImagUnit*sym%phase(isi))
-                  DO m = -l,l
-                     DO mp = -l,l
-                        n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac * phase
-                     ENDDO
+               !   fac = 1.0  /  ( sym%invarind(natomTemp) * atoms%neq(n) )
+               !   is = sym%invarop(natomTemp,it)
+               !   isi = sym%invtab(is)
+               !   d_tmp(:,:) = cmplx_0
+               !   DO m = -l,l
+               !      DO mp = -l,l
+               !         d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+               !      ENDDO
+               !   ENDDO
+               !   nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
+               !   n1_tmp =  matmul( nr_tmp, d_tmp )
+               !   phase = exp(ImagUnit*sym%phase(isi))
+               !   DO m = -l,l
+               !      DO mp = -l,l
+               !         n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac * phase
+               !      ENDDO
+               !   ENDDO
+               !ENDDO
+               DO m = -l,l
+                  DO mp = -l,l
+                     n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n_tmp(m,mp))
                   ENDDO
                ENDDO
 
