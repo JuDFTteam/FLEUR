@@ -176,6 +176,7 @@ CONTAINS
          ! spread hybdat%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf
             i = kpts%bkp(nk)
+            hybdat%nbands(nk) = hybdat%nbands(i)
             hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
          END DO
 

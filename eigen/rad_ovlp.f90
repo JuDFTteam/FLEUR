@@ -28,8 +28,8 @@ MODULE m_radovlp
     !     .. Array Arguments ..
     REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,input%jspins)
     REAL,    INTENT  (IN):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT):: uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype)
-    REAL,    INTENT (OUT):: dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype)
+    REAL,    INTENT (OUT):: uun21(0:,:),udn21(0:,:)!(0:atoms%lmaxd,atoms%ntype)
+    REAL,    INTENT (OUT):: dun21(0:,:),ddn21(0:,:)!(0:atoms%lmaxd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,l,ispin,noded,nodeu,i
@@ -54,13 +54,13 @@ MODULE m_radovlp
              !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
              !the correlated orbitals with a non-spin-polarized basis
              IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.hub1inp%l_dftspinpol) THEN
-                vrTmp = (vr(:,0,iType,1) + vr(:,0,iType,2))/2.0 
+                vrTmp = (vr(:,0,iType,1) + vr(:,0,iType,2))/2.0
              ELSE
                 vrTmp = vr(:,0,iType,ispin)
              ENDIF
 
              CALL radfun(l,iType,ispin,epar(l,iType,ispin),vrTmp,atoms,&
-                 f(1,1,l,ispin),g(1,1,l,ispin),usdus,nodeu,noded,wronk) 
+                 f(1,1,l,ispin),g(1,1,l,ispin),usdus,nodeu,noded,wronk)
 
           ENDDO
           CALL int_21(f,g,atoms,itype,l,uun21,udn21,dun21,ddn21)

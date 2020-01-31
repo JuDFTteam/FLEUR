@@ -2582,13 +2582,13 @@ MODULE m_cdnpot_io_hdf
 
          den%mmpMat = CMPLX(0.0,0.0)
          IF(l_mmpMatDimEquals) THEN
-            den%mmpMat(:,:,:,1:MERGE(3,jspins,l_mtnoco)) = mmpMatTemp(:,:,:,1:MERGE(3,jspins,l_mtnoco))
+            den%mmpMat = mmpMatTemp
          ELSE
             DO i = 1, n_u
                DO j = 1, atoms%n_u+atoms%n_hia
                   IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
                   IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
-                  den%mmpMat(:,:,j,1:MERGE(3,jspins,l_mtnoco)) = mmpMatTemp(:,:,i,1:MERGE(3,jspins,l_mtnoco))
+                  den%mmpMat(:,:,j,:) = mmpMatTemp(:,:,i,:)
                END DO
             END DO
          END IF

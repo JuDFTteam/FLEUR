@@ -95,7 +95,7 @@ CONTAINS
             endif
          endif
 
-         allocate(hybdat%nbands(kpts%nkpt), source=0)
+         allocate(hybdat%nbands(kpts%nkptf), source=0)
 
          if(allocated(hybdat%nobd)) deallocate(hybdat%nobd)
          allocate(hybdat%nobd(kpts%nkptf, input%jspins), source=0)

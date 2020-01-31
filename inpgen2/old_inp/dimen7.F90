@@ -135,7 +135,7 @@
       noco%qss_inp = 0.0
       noco%l_ss = .false.
       IF (noco%l_noco) THEN
-         CALL inpnoco(atoms,input,vacuum,noco)
+         CALL inpnoco(atoms,input,sym,vacuum,noco)
       ENDIF
 
       vacuum%nvacd = 2
