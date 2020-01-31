@@ -126,8 +126,8 @@ CONTAINS
      call z_kqpt%alloc(.true., nbasfcn, input%neig)
 
      ! read in z at k-point nk and nkqpt
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z_nk)
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nkqpt, jsp, z_kqpt)
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z_nk, c_phase_k)
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nkqpt, jsp, z_kqpt, c_phase_q)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
@@ -240,7 +240,7 @@ CONTAINS
      REAL                    ::    rarr3(2, bandoi:bandof, hybdat%nbands(nk))
 
      COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
-     COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :)
+     COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :), ccmt_nk2(:, :, :)
      COMPLEX, ALLOCATABLE    ::    ccmt(:, :, :)
 
      ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
@@ -252,13 +252,22 @@ CONTAINS
 
      ! read in cmt coefficient at k-point nk
      allocate(ccmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat), &
+              ccmt_nk2(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat), &
                ccmt(input%neig, hybdat%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 
-     ! call read_cmt(ccmt_nk, nk)
+     call read_cmt(ccmt_nk2, nk)
      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                          sym, oneD, z_k, jsp, nk, c_phase_k, ccmt_nk)
+
+     write (*,*) "##################"
+     write (*,*) "jsp = ", jsp
+     write (*,*) "nk = ", nk
+     write (*,*) "diff = ", maxval(abs(ccmt_nk - ccmt_nk2))
+     write (*,*) "loc = ", maxloc(abs(ccmt_nk - ccmt_nk2))
+     if(maxval(abs(ccmt_nk - ccmt_nk2)) > 1e-10) call juDFT_error("too much diff in cmt")
+
      !read in cmt coefficients at k+q point
      call read_cmt(ccmt, nkqpt)
 
