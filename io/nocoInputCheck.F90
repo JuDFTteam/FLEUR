@@ -101,7 +101,7 @@ MODULE m_nocoInputCheck
       ENDIF
 
       IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.sym%nop.NE.1) THEN
-         CALL juDFT_error("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
+         CALL juDFT_warn("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
       ENDIF
    END SUBROUTINE nocoInputCheck
 
