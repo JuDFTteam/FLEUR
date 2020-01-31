@@ -44,8 +44,8 @@ C     ..
      +       0.5*(1.0-cos(beta))*rho22
       r22n = 0.5*(1.0-cos(beta))*rho11 + sin(beta)*real(rho21) +
      +       0.5*(1.0+cos(beta))*rho22
-      r21n = CMPLX(cos(alph),-sin(alph))*(sin(beta)*(rho11-rho22) +
-     +       2.0*(cos(beta)*real(rho21)-cmplx(0.0,aimag(rho21))))*0.5
+      r21n = CMPLX(cos(alph),sin(alph))*(sin(beta)*(rho11-rho22) +
+     +       2.0*(cos(beta)*real(rho21)+cmplx(0.0,aimag(rho21))))*0.5
 
       rho11 = r11n
       rho22 = r22n

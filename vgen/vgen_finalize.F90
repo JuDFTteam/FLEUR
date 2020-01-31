@@ -24,7 +24,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_mpi),       INTENT(IN)     :: mpi
     TYPE(t_oneD),      INTENT(IN)     :: oneD
-    TYPE(t_field),                INTENT(INOUT)  :: field
+    TYPE(t_field),        INTENT(IN)  :: field
     TYPE(t_cell),      INTENT(IN)     :: cell
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco

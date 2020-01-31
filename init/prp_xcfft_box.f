@@ -63,11 +63,11 @@ c     (restrict kxcid to: kxcid=  (2**P) * (3**Q) * (5**R)
 c
       iofile = 6
       ksfft = 1
-      WRITE (6,*) 'minimum: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
+      !WRITE (6,*) 'minimum: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
       kxc1d = ifft235(iofile,ksfft,kxc1d,2.0)
       kxc2d = ifft235(iofile,ksfft,kxc2d,2.0)
       kxc3d = ifft235(iofile,ksfft,kxc3d,2.0)
-      WRITE (6,*) 'ifft235: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
+      !WRITE (6,*) 'ifft235: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
 
       RETURN
       END

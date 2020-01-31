@@ -110,7 +110,7 @@ CONTAINS
       !       A field of the same form will also be calculated.
 
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
-      TYPE(t_field),                INTENT(INOUT)  :: field
+      TYPE(t_field),                INTENT(IN)     :: field
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar

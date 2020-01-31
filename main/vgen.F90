@@ -42,7 +42,7 @@ CONTAINS
       TYPE(t_oneD),      INTENT(IN)     :: oneD
       TYPE(t_sliceplot), INTENT(IN)     :: sliceplot
       TYPE(t_input),     INTENT(IN)     :: input
-      TYPE(t_field),     INTENT(INOUT)  :: field  !efield can be modified
+      TYPE(t_field),     INTENT(IN)     :: field  
       TYPE(t_vacuum),    INTENT(IN)     :: vacuum
       TYPE(t_noco),      INTENT(IN)     :: noco
       TYPE(t_nococonv),  INTENT(INOUT)  :: nococonv

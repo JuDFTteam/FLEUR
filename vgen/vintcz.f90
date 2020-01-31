@@ -8,7 +8,7 @@ MODULE m_vintcz
 CONTAINS
   COMPLEX FUNCTION vintcz(&
        &                        stars,vacuum,cell,sym,input,field,&
-       &                        z,nrec2,psq,vxy,vz,rhobar,sig1dh,vz1dh,alphm)
+       &                        z,nrec2,psq,vxy,vz,rhobar,sig1dh,vz1dh,alphm,vslope)
 
     USE m_constants
     USE m_types
@@ -22,13 +22,13 @@ CONTAINS
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_field),INTENT(IN)  :: field
     INTEGER, INTENT (IN) :: nrec2
-    COMPLEX, INTENT (IN) :: rhobar
+    COMPLEX, INTENT (IN) :: rhobar,vslope
     REAL,    INTENT (IN) :: sig1dh,vz1dh  ,z
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
     COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
-    REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)  
+    REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
     COMPLEX argr,sumrr,vcons1,test,c_ph
     REAL bj0,dh,fit,g,g3,q,qdh,signz,vcons2,zf
@@ -97,8 +97,8 @@ CONTAINS
        !           -----> v2(z)
        vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &            (sig1dh-rhobar/2.* (dh-z))
-       IF (field%efield%dirichlet .AND. field%efield%vslope /= 0.0) THEN
-          vintcz = vintcz + field%efield%vslope * (dh-z)
+       IF (field%efield%dirichlet .AND. vslope /= 0.0) THEN
+          vintcz = vintcz + vslope * (dh-z)
        END IF
        !     ---->    (g.ne.0)  coefficients
     ELSE
