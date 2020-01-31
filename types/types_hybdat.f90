@@ -50,7 +50,6 @@ contains
       type(t_hybinp), intent(in)     :: hybinp
       integer, intent(in)            :: num_radfun_per_l(:, :)
       integer                        :: ok(12)
-      character(len=2000) :: error_message
 
       ok = -1
       allocate(hybdat%lmaxc(atoms%ntype), &
