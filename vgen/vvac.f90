@@ -5,7 +5,7 @@ module m_vvac
   ! ****************************************************************
   contains
 
-  subroutine vvac( vacuum, stars, cell, sym, input, field, psq, rht, vz, rhobar, sig1dh, vz1dh )
+  subroutine vvac( vacuum, stars, cell, sym, input, field, psq, rht, vz, rhobar, sig1dh, vz1dh ,vslope)
 
     use m_constants
     use m_qsf
@@ -20,9 +20,10 @@ module m_vvac
     complex,        intent(out)   :: rhobar
     real,           intent(out)   :: sig1dh, vz1dh
     type(t_input),  intent(in)    :: input
-    type(t_field),  intent(inout) :: field ! efield is modified here
+    type(t_field),  intent(in)    :: field
+    COMPLEX,INTENT(OUT)           :: vslope
 
-    real,           intent(in)    :: rht(vacuum%nmzd,2) 
+    real,           intent(in)    :: rht(vacuum%nmzd,2)
     complex,        intent(in)    :: psq(stars%ng3)
     real,           intent(out)   :: vz(vacuum%nmzd,2)
 
@@ -92,14 +93,14 @@ module m_vvac
       end do
 
       ! force matching on the other side
-      field%efield%vslope = ( field%efield%sig_b(2) - vz(ncsh,1) ) / ( 2 * vacuum%delz * ( ncsh + 1 ) + vacuum%dvac )
+      vslope = ( field%efield%sig_b(2) - vz(ncsh,1) ) / ( 2 * vacuum%delz * ( ncsh + 1 ) + vacuum%dvac )
       ivac = 1
       do imz = 1, ncsh
-        vz(imz,ivac) = vz(imz,ivac) + field%efield%vslope * vacuum%delz * ( ncsh - imz + 1 )
+        vz(imz,ivac) = vz(imz,ivac) + vslope * vacuum%delz * ( ncsh - imz + 1 )
       end do
       ivac = 2
       do imz = 1, ncsh
-        vz(imz,ivac) = vz(imz,ivac) + field%efield%vslope * ( vacuum%dvac + vacuum%delz * imz + vacuum%delz * ncsh )
+        vz(imz,ivac) = vz(imz,ivac) + vslope * ( vacuum%dvac + vacuum%delz * imz + vacuum%delz * ncsh )
       end do
       vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
 
@@ -110,7 +111,7 @@ module m_vvac
       sig1dh = sig(vacuum%nmz) - sigmaa(1)  ! need to include contribution from electric field
       sig(1:vacuum%nmz) = sig(vacuum%nmz) - sig(1:vacuum%nmz)
       call qsf( vacuum%delz, sig, vtemp, vacuum%nmz, 1 )
-      ! external electric field contribution 
+      ! external electric field contribution
       do imz = 1, ncsh
         vz(imz,ivac) = - fpi_const * ( vtemp(vacuum%nmz) - vtemp(imz) ) + vz(imz,ivac) - fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(1)
       enddo

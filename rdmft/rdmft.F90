@@ -57,7 +57,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_sym),           INTENT(IN)    :: sym
-   TYPE(t_field),         INTENT(INOUT) :: field
+   TYPE(t_field),         INTENT(IN)    :: field
    TYPE(t_potden),        INTENT(INOUT) :: vTot
    TYPE(t_potden),        INTENT(INOUT) :: vCoul
    TYPE(t_oneD),          INTENT(IN)    :: oneD
