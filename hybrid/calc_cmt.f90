@@ -114,6 +114,10 @@ contains
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
       endif
       call read_cmt(cmt_out2, ik)
-      if(maxval(abs(cmt_out - cmt_out2))> 1e-10) call juDFT_error("too big off a diff")
+      if(maxval(abs(cmt_out - cmt_out2))> 1e-10) then
+         write (*,*) "ik = ", ik
+         write (*,*) "max diff = ", maxval(abs(cmt_out - cmt_out2))
+         call juDFT_error("too big off a diff")
+      endif
    end subroutine calc_cmt
 end module m_calc_cmt
