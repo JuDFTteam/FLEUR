@@ -9,6 +9,7 @@ contains
       USE m_abcof
       use m_constants, only: ImagUnit
       use m_trafo, only: waveftrafo_gen_cmt
+      use m_io_hybinp
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell
@@ -29,15 +30,16 @@ contains
       complex, intent(inout)       :: cmt_out(:,:,:)
 
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
-      complex, allocatable :: cmt(:,:,:)
+      complex, allocatable :: cmt(:,:,:), cmt_out2(:,:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
 
       complex :: cdum
-
       type(t_lapw)  :: lapw_ik, lapw_ikp
+
+      allocate(cmt_out2, source=cmt_out)
 
       ikp = kpts%bkp(ik)
       nbands = hybdat%nbands(ikp)
@@ -111,5 +113,7 @@ contains
          call waveftrafo_gen_cmt(cmt, c_phase, zmat_ikp%l_real, ikp, iop, atoms, &
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
       endif
+      call read_cmt(cmt_out2, ik)
+      if(maxval(abs(cmt_out - cmt_out2))> 1e-10) call juDFT_error("too big off a diff")
    end subroutine calc_cmt
 end module m_calc_cmt
