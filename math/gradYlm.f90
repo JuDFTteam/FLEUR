@@ -247,5 +247,5 @@ CONTAINS
       rotMt(:,:,:,2)=gradMtx(:,:,:,3)-gradMtz(:,:,:,1)
       rotMt(:,:,:,3)=gradMty(:,:,:,1)-gradMtx(:,:,:,2)
 
-   END SUBROUTINE divYlm
+   END SUBROUTINE rotYlm
 END MODULE m_gradYlm
