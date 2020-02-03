@@ -180,7 +180,7 @@ MODULE m_tetrahedronInit
       ! Weights for DOS -> differentiate with respect to E
       !---------------------------------------------------
       IF(l_dos) THEN
-         ALLOCATE(dos_weights(ne),source=0.0)
+         ALLOCATE(dos_weights(ne+2),source=0.0)
          ALLOCATE(occ_weights(ne+2),source=0.0)
          DO iband = 1, neig(ikpt)
             occ_weights(2:ne+1) = weights(1:ne,iband)
