@@ -105,7 +105,7 @@ MODULE m_hubbard1_io
          CALL writeValue(input_iounit,"Np_max",18)
       ELSE
          CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1inp%n_occpm))
-         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),hub1inp%n_occpm))
+         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1inp%n_occpm))
       ENDIF
       CALL comment(input_iounit,"Parameters for the case with bath states (only used when bath is present)",1)
       CALL writeValue(input_iounit,"Nbath_exc",2)
