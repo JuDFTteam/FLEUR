@@ -32,9 +32,15 @@ C     ..
       vxy  = sqrt(vx**2 + vy**2)
       vxyz = sqrt(vx**2 + vy**2 + vz**2)
 
-      IF ( (vxyz.LT.eps) .OR. (vxy.LT.eps) ) THEN
+      IF ( (vxyz.LT.eps) .AND. (vxy.LT.eps) ) THEN
          theta = 0.0
          phi   = 0.0
+      ELSE IF ( (vxy.LT.eps) .AND. vz.LT.0) THEN
+         theta = pi
+         phi   = 0.0       
+      ELSE IF ( (vxy.LT.eps) .AND. vz.GT.0) THEN
+         theta = 0.0
+         phi   = 0.0       
       ELSE
 c--->    due to rounding errors vxy/vxyz can become >1, if vz is very
 c--->    small. therefore, make sure that vz is not to small.
