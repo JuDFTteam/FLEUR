@@ -190,7 +190,7 @@ CONTAINS
     ! Initialize Green's function (start)
     IF(gfinp%n>0) CALL gOnsite%init(gfinp,input,noco)
     ! Initialize Green's function (end)
-    IF(atoms%n_hia) CALL hub1data%init(atoms,hub1inp)
+    IF(atoms%n_hia>0) CALL hub1data%init(atoms,hub1inp)
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
