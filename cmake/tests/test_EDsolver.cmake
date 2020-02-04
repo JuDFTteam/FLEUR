@@ -2,20 +2,24 @@
 try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
             LINK_LIBRARIES ${FLEUR_LIBRARIES})
 
-#Try to find the library by adding linker options
-foreach(ADD_STRING "-larpack_ifort"
-                   "-larpack_gfortran")
-   if (NOT FLEUR_USE_ARPACK)
-      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${ADD_STRING}")
-      try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
-          LINK_LIBRARIES ${TEST_LIBRARIES})
-     if (FLEUR_USE_ARPACK)
-          set(FLEUR_ARPACK_LIBRARIES ${TEST_LIBRARIES})
-     else()
-          set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
+if(FLEUR_USE_ARPACK)
+  set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
+else()
+  #Try to find the library by adding linker options
+  foreach(ADD_STRING "-larpack_ifort"
+                     "-larpack_gfortran")
+     if (NOT FLEUR_USE_ARPACK)
+        set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${ADD_STRING}")
+        try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
+            LINK_LIBRARIES ${TEST_LIBRARIES})
+       if (FLEUR_USE_ARPACK)
+            set(FLEUR_ARPACK_LIBRARIES ${TEST_LIBRARIES})
+       else()
+            set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
+       endif()
      endif()
-   endif()
-endforeach()
+  endforeach()
+endif()
 message("ARPACK Library found:${FLEUR_USE_ARPACK}")
 
 
@@ -56,7 +60,10 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
                if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/edsolver-library/src")
                   #If someone has no access to the repository but tries to to git submodule init/update
                   #It will complete with no error but nothing will happen
-                  message(FATAL_ERROR "It seems that you asked for the EDsolver library to be pulled from git. This is a private repository. If you already have access please configure your git to log you in automatically. If not contact he.janssen@fz-juelich.de")
+                  message(FATAL_ERROR "It seems that you asked for the EDsolver library to be pulled from git.
+                                       This is a private repository.
+                                       If you already have access please configure your git to log you in automatically.
+                                       If not contact he.janssen@fz-juelich.de")
                endif()
             endif()
          endif()
@@ -70,7 +77,7 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
       endif()
    else()
       if (FLEUR_USE_EDSOLVER)
-         message("EDsolver library found, but you explicetly asked not to use it")
+         message("EDsolver library found, but you explicitly asked not to use it")
          set(FLEUR_USE_EDSOLVER FALSE)
       endif()
    endif()
