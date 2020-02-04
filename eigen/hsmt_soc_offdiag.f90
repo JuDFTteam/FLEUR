@@ -216,10 +216,10 @@ CONTAINS
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                     alo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
                     alo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                    blo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j2,j1) + &
                     blo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                    clo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
+                    clo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopplo(n,lo,j2,j1) + &
+                    clo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdplo(n,lo,j2,j1)) &
                     * angso(kj,j1,j2)
                     hmat(1,1)%data_c(kj,locol)=hmat(1,1)%data_c(kj,locol) + chi(1,1,j1,j2)*fct
                     hmat(1,2)%data_c(kj,locol)=hmat(1,2)%data_c(kj,locol) + chi(1,2,j1,j2)*fct
@@ -236,11 +236,11 @@ CONTAINS
                         alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
                         alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
                         alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsopplo(n,ilo,j1,j2) + &
-                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j2,j1) + &
                         blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
                         blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsopdplo(n,ilo,j1,j2)+ &
-                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
+                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j2,j1) + &
+                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j2,j1)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
                         * angso(kj,j1,j2)
                         hmat(1,1)%data_c(lorow,locol)=hmat(1,1)%data_c(lorow,locol) + chi(1,1,j1,j2)*fct
