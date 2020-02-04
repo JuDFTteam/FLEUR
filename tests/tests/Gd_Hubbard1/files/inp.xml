@@ -4,42 +4,358 @@
       hcp Gadolinium                                                                  
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.00000000" Gmax="10.00000000" GmaxXC="8.90000000" numbands="125"/>
+      <cutoffs Kmax="3.00000000" Gmax="9.00000000" GmaxXC="9.00000000" numbands="125"/>
       <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
-      <greensFunction l_sphavg="T" l_mperp="F" l_resolv="F">
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <greensFunction l_sphavg="T" l_mperp="F">
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" et="0.0" alpha="1.0"/>
       </greensFunction>
-      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
-      <bzIntegration valenceElectrons="36.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointMesh nx="5" ny="5" nz="3" gamma="T"/>
-         <altKPointSet purpose="bands">
-            <kPointCount count="   240" gamma="F"/>
-         </altKPointSet>
+      <bzIntegration valenceElectrons="32.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
+         <kPointList name="default" count="10">
+            <kPoint weight="    12.0000000000000">-0.4000000000000 -0.4000000000000  0.3333333333333</kPoint>
+            <kPoint weight="    12.0000000000000">-0.2000000000000 -0.4000000000000  0.3333333333333</kPoint>
+            <kPoint weight="    12.0000000000000">-0.4000000000000 -0.6000000000000  0.3333333333333</kPoint>
+            <kPoint weight="    12.0000000000000">-0.2000000000000 -0.2000000000000  0.3333333333333</kPoint>
+            <kPoint weight="     2.0000000000000"> 0.0000000000000  0.0000000000000  0.3333333333333</kPoint>
+            <kPoint weight="     6.0000000000000">-0.4000000000000 -0.4000000000000  0.0000000000000</kPoint>
+            <kPoint weight="     6.0000000000000">-0.2000000000000 -0.4000000000000  0.0000000000000</kPoint>
+            <kPoint weight="     6.0000000000000">-0.4000000000000 -0.6000000000000  0.0000000000000</kPoint>
+            <kPoint weight="     6.0000000000000">-0.2000000000000 -0.2000000000000  0.0000000000000</kPoint>
+            <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
+            <tetraeder ntet="174">
+               <tet vol="     0.0022222222222">10 44 24 42</tet>
+               <tet vol="     0.0022222222222">5 20 24 42</tet>
+               <tet vol="     0.0022222222222">10 5 24 42</tet>
+               <tet vol="     0.0022222222222">38 10 36 5</tet>
+               <tet vol="     0.0022222222222">34 32 36 5</tet>
+               <tet vol="     0.0022222222222">38 34 36 5</tet>
+               <tet vol="     0.0022222222222">10 24 36 5</tet>
+               <tet vol="     0.0022222222222">24 20 36 5</tet>
+               <tet vol="     0.0022222222222">32 20 36 5</tet>
+               <tet vol="     0.0022222222222">37 8 28 33</tet>
+               <tet vol="     0.0022222222222">8 3 28 33</tet>
+               <tet vol="     0.0022222222222">25 3 28 33</tet>
+               <tet vol="     0.0022222222222">37 36 8 32</tet>
+               <tet vol="     0.0022222222222">33 3 8 32</tet>
+               <tet vol="     0.0022222222222">37 33 8 32</tet>
+               <tet vol="     0.0022222222222">36 15 8 32</tet>
+               <tet vol="     0.0022222222222">15 12 8 32</tet>
+               <tet vol="     0.0022222222222">3 12 8 32</tet>
+               <tet vol="     0.0022222222222">28 8 29 3</tet>
+               <tet vol="     0.0022222222222">25 26 29 3</tet>
+               <tet vol="     0.0022222222222">28 25 29 3</tet>
+               <tet vol="     0.0022222222222">8 6 29 3</tet>
+               <tet vol="     0.0022222222222">6 1 29 3</tet>
+               <tet vol="     0.0022222222222">26 1 29 3</tet>
+               <tet vol="     0.0022222222222">8 15 6 12</tet>
+               <tet vol="     0.0022222222222">3 1 6 12</tet>
+               <tet vol="     0.0022222222222">8 3 6 12</tet>
+               <tet vol="     0.0022222222222">15 7 6 12</tet>
+               <tet vol="     0.0022222222222">7 2 6 12</tet>
+               <tet vol="     0.0022222222222">1 2 6 12</tet>
+               <tet vol="     0.0022222222222">15 21 7 17</tet>
+               <tet vol="     0.0022222222222">12 2 7 17</tet>
+               <tet vol="     0.0022222222222">15 12 7 17</tet>
+               <tet vol="     0.0022222222222">21 14 7 17</tet>
+               <tet vol="     0.0022222222222">14 11 7 17</tet>
+               <tet vol="     0.0022222222222">2 11 7 17</tet>
+               <tet vol="     0.0022222222222">29 6 48 1</tet>
+               <tet vol="     0.0022222222222">26 46 48 1</tet>
+               <tet vol="     0.0022222222222">29 26 48 1</tet>
+               <tet vol="     0.0022222222222">6 47 48 1</tet>
+               <tet vol="     0.0022222222222">47 45 48 1</tet>
+               <tet vol="     0.0022222222222">46 45 48 1</tet>
+               <tet vol="     0.0022222222222">6 7 47 2</tet>
+               <tet vol="     0.0022222222222">1 45 47 2</tet>
+               <tet vol="     0.0022222222222">6 1 47 2</tet>
+               <tet vol="     0.0022222222222">7 9 47 2</tet>
+               <tet vol="     0.0022222222222">9 4 47 2</tet>
+               <tet vol="     0.0022222222222">45 4 47 2</tet>
+               <tet vol="     0.0022222222222">7 14 9 11</tet>
+               <tet vol="     0.0022222222222">2 4 9 11</tet>
+               <tet vol="     0.0022222222222">7 2 9 11</tet>
+               <tet vol="     0.0022222222222">14 16 9 11</tet>
+               <tet vol="     0.0022222222222">16 13 9 11</tet>
+               <tet vol="     0.0022222222222">4 13 9 11</tet>
+               <tet vol="     0.0022222222222">16 50 10 49</tet>
+               <tet vol="     0.0022222222222">13 5 10 49</tet>
+               <tet vol="     0.0022222222222">16 13 10 49</tet>
+               <tet vol="     0.0022222222222">50 44 10 49</tet>
+               <tet vol="     0.0022222222222">44 42 10 49</tet>
+               <tet vol="     0.0022222222222">5 42 10 49</tet>
+               <tet vol="     0.0022222222222">47 9 35 4</tet>
+               <tet vol="     0.0022222222222">45 31 35 4</tet>
+               <tet vol="     0.0022222222222">47 45 35 4</tet>
+               <tet vol="     0.0022222222222">9 38 35 4</tet>
+               <tet vol="     0.0022222222222">38 34 35 4</tet>
+               <tet vol="     0.0022222222222">31 34 35 4</tet>
+               <tet vol="     0.0022222222222">9 16 38 13</tet>
+               <tet vol="     0.0022222222222">4 34 38 13</tet>
+               <tet vol="     0.0022222222222">9 4 38 13</tet>
+               <tet vol="     0.0022222222222">16 10 38 13</tet>
+               <tet vol="     0.0022222222222">10 5 38 13</tet>
+               <tet vol="     0.0022222222222">34 5 38 13</tet>
+               <tet vol="     0.0022222222222">5 42 20 72</tet>
+               <tet vol="     0.0022222222222">5 55 20 72</tet>
+               <tet vol="     0.0022222222222">34 5 32 55</tet>
+               <tet vol="     0.0022222222222">5 20 32 55</tet>
+               <tet vol="     0.0022222222222">33 3 25 68</tet>
+               <tet vol="     0.0022222222222">3 53 25 68</tet>
+               <tet vol="     0.0022222222222">33 32 3 67</tet>
+               <tet vol="     0.0022222222222">68 53 3 67</tet>
+               <tet vol="     0.0022222222222">33 68 3 67</tet>
+               <tet vol="     0.0022222222222">32 12 3 67</tet>
+               <tet vol="     0.0022222222222">12 57 3 67</tet>
+               <tet vol="     0.0022222222222">53 57 3 67</tet>
+               <tet vol="     0.0022222222222">25 3 26 53</tet>
+               <tet vol="     0.0022222222222">3 1 26 53</tet>
+               <tet vol="     0.0022222222222">1 51 26 53</tet>
+               <tet vol="     0.0022222222222">3 12 1 57</tet>
+               <tet vol="     0.0022222222222">53 51 1 57</tet>
+               <tet vol="     0.0022222222222">3 53 1 57</tet>
+               <tet vol="     0.0022222222222">12 2 1 57</tet>
+               <tet vol="     0.0022222222222">2 52 1 57</tet>
+               <tet vol="     0.0022222222222">51 52 1 57</tet>
+               <tet vol="     0.0022222222222">12 17 2 59</tet>
+               <tet vol="     0.0022222222222">57 52 2 59</tet>
+               <tet vol="     0.0022222222222">12 57 2 59</tet>
+               <tet vol="     0.0022222222222">17 11 2 59</tet>
+               <tet vol="     0.0022222222222">11 56 2 59</tet>
+               <tet vol="     0.0022222222222">52 56 2 59</tet>
+               <tet vol="     0.0022222222222">26 1 46 51</tet>
+               <tet vol="     0.0022222222222">1 45 46 51</tet>
+               <tet vol="     0.0022222222222">1 2 45 52</tet>
+               <tet vol="     0.0022222222222">1 51 45 52</tet>
+               <tet vol="     0.0022222222222">2 4 45 52</tet>
+               <tet vol="     0.0022222222222">4 54 45 52</tet>
+               <tet vol="     0.0022222222222">2 11 4 56</tet>
+               <tet vol="     0.0022222222222">52 54 4 56</tet>
+               <tet vol="     0.0022222222222">2 52 4 56</tet>
+               <tet vol="     0.0022222222222">11 13 4 56</tet>
+               <tet vol="     0.0022222222222">13 58 4 56</tet>
+               <tet vol="     0.0022222222222">54 58 4 56</tet>
+               <tet vol="     0.0022222222222">13 49 5 75</tet>
+               <tet vol="     0.0022222222222">58 55 5 75</tet>
+               <tet vol="     0.0022222222222">13 58 5 75</tet>
+               <tet vol="     0.0022222222222">49 42 5 75</tet>
+               <tet vol="     0.0022222222222">42 72 5 75</tet>
+               <tet vol="     0.0022222222222">55 72 5 75</tet>
+               <tet vol="     0.0022222222222">45 4 31 54</tet>
+               <tet vol="     0.0022222222222">4 34 31 54</tet>
+               <tet vol="     0.0022222222222">4 13 34 58</tet>
+               <tet vol="     0.0022222222222">4 54 34 58</tet>
+               <tet vol="     0.0022222222222">13 5 34 58</tet>
+               <tet vol="     0.0022222222222">5 55 34 58</tet>
+               <tet vol="     0.0022222222222">10 24 62 44</tet>
+               <tet vol="     0.0022222222222">55 10 62 44</tet>
+               <tet vol="     0.0022222222222">69 55 67 10</tet>
+               <tet vol="     0.0022222222222">38 36 67 10</tet>
+               <tet vol="     0.0022222222222">69 38 67 10</tet>
+               <tet vol="     0.0022222222222">55 62 67 10</tet>
+               <tet vol="     0.0022222222222">62 24 67 10</tet>
+               <tet vol="     0.0022222222222">36 24 67 10</tet>
+               <tet vol="     0.0022222222222">53 8 63 37</tet>
+               <tet vol="     0.0022222222222">28 8 63 37</tet>
+               <tet vol="     0.0022222222222">37 8 53 36</tet>
+               <tet vol="     0.0022222222222">8 15 53 36</tet>
+               <tet vol="     0.0022222222222">63 53 64 8</tet>
+               <tet vol="     0.0022222222222">28 29 64 8</tet>
+               <tet vol="     0.0022222222222">63 28 64 8</tet>
+               <tet vol="     0.0022222222222">53 51 64 8</tet>
+               <tet vol="     0.0022222222222">51 6 64 8</tet>
+               <tet vol="     0.0022222222222">29 6 64 8</tet>
+               <tet vol="     0.0022222222222">8 6 51 15</tet>
+               <tet vol="     0.0022222222222">53 8 51 15</tet>
+               <tet vol="     0.0022222222222">52 7 51 15</tet>
+               <tet vol="     0.0022222222222">6 7 51 15</tet>
+               <tet vol="     0.0022222222222">15 7 52 21</tet>
+               <tet vol="     0.0022222222222">7 14 52 21</tet>
+               <tet vol="     0.0022222222222">64 51 74 6</tet>
+               <tet vol="     0.0022222222222">29 48 74 6</tet>
+               <tet vol="     0.0022222222222">64 29 74 6</tet>
+               <tet vol="     0.0022222222222">51 73 74 6</tet>
+               <tet vol="     0.0022222222222">73 47 74 6</tet>
+               <tet vol="     0.0022222222222">48 47 74 6</tet>
+               <tet vol="     0.0022222222222">51 52 73 7</tet>
+               <tet vol="     0.0022222222222">6 47 73 7</tet>
+               <tet vol="     0.0022222222222">51 6 73 7</tet>
+               <tet vol="     0.0022222222222">52 54 73 7</tet>
+               <tet vol="     0.0022222222222">54 9 73 7</tet>
+               <tet vol="     0.0022222222222">47 9 73 7</tet>
+               <tet vol="     0.0022222222222">7 9 54 14</tet>
+               <tet vol="     0.0022222222222">52 7 54 14</tet>
+               <tet vol="     0.0022222222222">9 16 54 14</tet>
+               <tet vol="     0.0022222222222">16 10 55 50</tet>
+               <tet vol="     0.0022222222222">10 44 55 50</tet>
+               <tet vol="     0.0022222222222">73 54 66 9</tet>
+               <tet vol="     0.0022222222222">47 35 66 9</tet>
+               <tet vol="     0.0022222222222">73 47 66 9</tet>
+               <tet vol="     0.0022222222222">54 69 66 9</tet>
+               <tet vol="     0.0022222222222">69 38 66 9</tet>
+               <tet vol="     0.0022222222222">35 38 66 9</tet>
+               <tet vol="     0.0022222222222">9 38 69 16</tet>
+               <tet vol="     0.0022222222222">54 9 69 16</tet>
+               <tet vol="     0.0022222222222">55 10 69 16</tet>
+               <tet vol="     0.0022222222222">38 10 69 16</tet>
+            </tetraeder>
+         </kPointList>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>1 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>-1 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 1 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>-1 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 -1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 -1 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>1 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>1 1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>-1 -1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 1 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>-1 -1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 -1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 -1 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .5000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>1 1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
    </calculationSetup>
    <cell>
-      <symmetryFile filename="sym.out"/>
-      <bulkLattice scale="1.0000000000" latnam="hex">
-         <a1 scale="1.0000000000">6.8597086470</a1>
-         <c scale="1.0000000000">10.9549358120</c>
+      <bulkLattice scale="1.0000000000">
+         <bravaisMatrix>
+            <row-1>   -5.9406819509     3.4298543235     0.0000000000</row-1>
+            <row-2>   -5.9406819509    -3.4298543235     0.0000000000</row-2>
+            <row-3>    0.0000000000     0.0000000000    10.9549358120</row-3>
+         </bravaisMatrix>
       </bulkLattice>
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Gd-1" element="Gd" atomicNumber="64" coreStates="14" magMom="7.10000000">
+      <species name="Gd-1" element="Gd" atomicNumber="64" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01400000"/>
-         <atomicCutoffs lmax="12" lnonsphr="10"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig>
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2)</coreConfig>
+            <valenceConfig>(5p1/2) (5p3/2) (6s1/2) (4f5/2) (4f7/2) (5d3/2) (5d5/2)</valenceConfig>
+            <stateOccupation state="(4f5/2)" spinUp="2.55000000" spinDown=".45000000"/>
+            <stateOccupation state="(4f7/2)" spinUp="4.00000000" spinDown=".00000000"/>
+            <stateOccupation state="(5d3/2)" spinUp=".40000000" spinDown=".00000000"/>
+            <stateOccupation state="(5d5/2)" spinUp=".60000000" spinDown=".00000000"/>
+         </electronConfig>
          <energyParameters s="6" p="6" d="5" f="4"/>
          <ldaHIA l="3" U="6.7" J="0.7" l_amf="F" init_occ="7.0">
-	 	<exc l="2" J="0.0952" init_mom="0.5"/>
-	 </ldaHIA>
+            <exc l="2" J="0.0952" init_mom="0.5"/>
+         </ldaHIA>
          <lo type="SCLO" l="0" n="5" eDeriv="0"/>
          <lo type="SCLO" l="1" n="5" eDeriv="0"/>
       </species>
@@ -51,9 +367,9 @@
          <force calculate="T" relaxXYZ="TTT"/>
       </atomGroup>
    </atomGroups>
-   <output dos="T" band="F" vacdos="F" slice="F" mcd="F">
+   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
       <checks vchk="F" cdinf="F"/>
-      <densityOfStates ndir="-2" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
+      <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
       <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
       <plotting iplot="0"/>
@@ -61,6 +377,6 @@
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
    </output>
- <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
 </fleurInput>
