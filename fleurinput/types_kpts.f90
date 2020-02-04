@@ -197,7 +197,7 @@ CONTAINS
             WRITE (fh, 207) kpts%ntet
 207         FORMAT('            <tetraeder ntet="', i0, '">')
             DO n = 1, kpts%ntet
-208            FORMAT('          <tet vol="', f12.6, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+208            FORMAT('                <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
                WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
             WRITE (fh, '(a)') '            </tetraeder>'
