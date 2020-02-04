@@ -54,7 +54,7 @@ CONTAINS
       REAL                  ::  ws
       COMPLEX               ::  phase
       COMPLEX               ::  cj, cdj
-      COMPLEX               ::  denom, enum
+      COMPLEX               ::  denom, var_enum
       COMPLEX               ::  cdum, cdum1, cdum2
       COMPLEX, PARAMETER    ::  img = (0.0, 1.0)
       ! - local arrays -
@@ -256,10 +256,10 @@ CONTAINS
                         lmp = lmp + 1
                         p1 = p + (-1)**(p - 1)
 
-                        enum = CMPLX(wronskian(bas1_MT_tmp(p1, l, itype), drbas1_MT_tmp(p1, l, itype), REAL(cj), REAL(cdj)), &
+                        var_enum = CMPLX(wronskian(bas1_MT_tmp(p1, l, itype), drbas1_MT_tmp(p1, l, itype), REAL(cj), REAL(cdj)), &
                                      wronskian(bas1_MT_tmp(p1, l, itype), drbas1_MT_tmp(p1, l, itype), AIMAG(cj), AIMAG(cdj)))
 
-                        cdum = (-1)**(p + 1)*enum/denom
+                        cdum = (-1)**(p + 1)*var_enum/denom
                         if(z%l_real) THEN
                            work_r = z%data_r(i, :)
                            DO iband = 1, hybdat%nbands(nk)
@@ -656,7 +656,7 @@ CONTAINS
       REAL                  ::  w
 
       INTEGER               ::  p
-      REAL                  ::  denom, enum
+      REAL                  ::  denom, var_enum
 
       IF(p1 > 2 .or. p2 > 2) call judft_error('w: the formalism is only valid for p<=2')
 
@@ -664,10 +664,10 @@ CONTAINS
 
       p = p1 + (-1)**(p1 - 1)
 
-      enum = bas1_MT(p, l1, itype)*bas1_MT(p2, l2, itype) + rmt(itype)*wronskian(bas1_MT(p, l1, itype), &
+      var_enum = bas1_MT(p, l1, itype)*bas1_MT(p2, l2, itype) + rmt(itype)*wronskian(bas1_MT(p, l1, itype), &
                                                                                  drbas1_MT(p, l1, itype), bas1_MT(p2, l2, itype), drbas1_MT(p2, l2, itype))
 
-      w = (-1)**(p1 + 1)*enum/denom
+      w = (-1)**(p1 + 1)*var_enum/denom
 
    END FUNCTION
 
