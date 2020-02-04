@@ -51,7 +51,7 @@ CONTAINS
    n = stars%ng3 * SIZE(potden%pw,2)
    CALL MPI_BCAST(potden%pw,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
-   n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
+   n = size(potden%mt)
    CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
    IF (l_pw_wAlloc) THEN
