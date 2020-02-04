@@ -7,7 +7,8 @@ if(FLEUR_USE_ARPACK)
 else()
   #Try to find the library by adding linker options
   foreach(ADD_STRING "-larpack_ifort"
-                     "-larpack_gfortran")
+                     "-larpack_gfortran"
+                     "-larpack")
      if (NOT FLEUR_USE_ARPACK)
         set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${ADD_STRING}")
         try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
