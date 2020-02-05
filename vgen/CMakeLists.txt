@@ -9,7 +9,6 @@ vgen/od_mkgz.f
 vgen/vacp5_0.f
 vgen/vacp5_z.f
 vgen/visp5_0.f
-vgen/pol_angle.f
 vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
