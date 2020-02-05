@@ -51,7 +51,8 @@ CONTAINS
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
-    CALL hmat_tmp%TRANSPOSE()
+    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !CALL hmat_tmp%TRANSPOSE()
     CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
@@ -66,8 +67,8 @@ CONTAINS
 
     CALL hsmt_spinor(3,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
-
-    CALL hmat_tmp%TRANSPOSE()
+    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !CALL hmat_tmp%TRANSPOSE()
     CALL hsmt_spinor(4,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
   END SUBROUTINE hsmt_mtNocoPot_offdiag
