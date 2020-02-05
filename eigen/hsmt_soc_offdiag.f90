@@ -8,14 +8,15 @@ MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,mpi,nococonv,lapw,sym,usdus,td,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_nococonv),INTENT(IN)       :: nococonv
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym  ),INTENT(IN)      :: sym
     TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -113,12 +114,12 @@ CONTAINS
     !$OMP END PARALLEL
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,mpi,nococonv,lapw,sym,td,usdus,fj,gj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,usdus,fj,gj,hmat)
 
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,mpi,nococonv,lapw,sym,td,ud,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,ud,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -127,6 +128,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_tlmplm),INTENT(IN)     :: td
@@ -168,6 +170,10 @@ CONTAINS
     DO j1=1,2
       call setabc1lo(atoms,n,ud,j1, alo1,blo1,clo1)
     ENDDO
+    !Normalization taken from hsmt_ab
+    alo1=alo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
+    blo1=blo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
+    clo1=clo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
 
     DO na=sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
@@ -216,10 +222,10 @@ CONTAINS
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                     alo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
                     alo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j2,j1) + &
+                    blo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
                     blo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopplo(n,lo,j2,j1) + &
-                    clo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdplo(n,lo,j2,j1)) &
+                    clo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
+                    clo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
                     hmat(1,1)%data_c(kj,locol)=hmat(1,1)%data_c(kj,locol) + chi(1,1,j1,j2)*fct
                     hmat(1,2)%data_c(kj,locol)=hmat(1,2)%data_c(kj,locol) + chi(1,2,j1,j2)*fct
@@ -234,13 +240,13 @@ CONTAINS
                         lorow= lapw%nv(1)+lapw%index_lo(ilo,na)+nkvecp !local row
                         fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                         alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsopplo(n,ilo,j1,j2) + &
-                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j2,j1) + &
+                        alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplop(n,ilo,j1,j2) + &
+                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
                         blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                        blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsopdplo(n,ilo,j1,j2)+ &
-                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j2,j1) + &
-                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j2,j1)+ &
+                        blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplopd(n,ilo,j1,j2)+ &
+                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j1) + &
+                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j1)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
                         * angso(kj,j1,j2)
                         hmat(1,1)%data_c(lorow,locol)=hmat(1,1)%data_c(lorow,locol) + chi(1,1,j1,j2)*fct

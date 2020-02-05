@@ -112,7 +112,7 @@ CONTAINS
                CALL hsmt_offdiag(n,atoms,mpi,ispin,nococonv,lapw,td,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat)
              ENDIF
              IF (ispin==1.and.noco%l_soc) &
-             CALL hsmt_soc_offdiag(n,atoms,mpi,nococonv,lapw,sym,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)
+             CALL hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)
           ELSE
              !In the spin-spiral case the loop over the interstitial=global spin has to
              !be performed explicitely
