@@ -36,51 +36,15 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
-   INTEGER                       :: i
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-   !DO i=1, atoms%ntype
-   !   IF (abs(atoms%theta_mt_avg(i)).LE. 0.0001) THEN
-   !      atoms%phi_mt_avg(i)=0.0
-   !      atoms%theta_mt_avg(i)=0.0
-   !   END IF
-   !END DO
-   !write(*,*) "mx1"
-   !write(*,*) moments(1,1)
-   !write(*,*) "mz1"
-   !write(*,*) moments(1,3)
-   !write(*,*) "mx2"
-   !write(*,*) moments(2,1)
-   !write(*,*) "mz2"
-   !write(*,*) moments(2,3)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phiTemp,-thetaTemp,den)
-  !write (*,*)"mx                my                     mz"
-  !CALL sphericaltocart(SQRT(moments(1,1)**2+moments(1,2)**2+moments(1,3)**2),thetaTemp(1),phiTemp(1),x,y,z)
-   !write(*,*) x,y,z
-   !CALL sphericaltocart(SQRT(moments(2,1)**2+moments(2,2)**2+moments(2,3)**2),thetaTemp(2),phiTemp(2),x,y,z)
-   !write(*,*) x,y,z
-   !write(*,*) "atoms%phi_mt_avg"
-   !write(*,*) atoms%phi_mt_avg
-   !write(*,*) "atoms%theta_mt_avg"
-   !write(*,*) atoms%theta_mt_avg
    nococonv%alph=mod(nococonv%alph+phiTemp,2*pimach())
    nococonv%beta=mod(nococonv%beta+thetaTemp,pimach())
-   !DO i=1, atoms%ntype
-   !   IF(nococonv%alph(i)<0) nococonv%alph(i)=nococonv%alph(i)+2*pi
-   !   IF(nococonv%beta(i)<0) THEN
-   !      nococonv%beta(i)=-nococonv%beta(i)
-   !      nococonv%alph=nococonv%alph+pi
-!END IF
- !     IF(nococonv%beta(i)>pi) THEN
-  !       nococonv%beta(i)=pi-mod(nococonv%beta(i),pi)
-   !      nococonv%alph(i)=nococonv%alph(i)+pi
-   !   END IF
-   !   nococonv%alph=mod(nococonv%alph,2*pi)
-   !End Do
-   write(*,*) "Noco Phi"
-   write(*,*) nococonv%alph
-   write(*,*) "Noco Theta"
-   write(*,*) nococonv%beta
+!   write(*,*) "Noco Phi"
+!   write(*,*) nococonv%alph
+!   write(*,*) "Noco Theta"
+!   write(*,*) nococonv%beta
 END SUBROUTINE rotateMagnetToSpinAxis
 
 
