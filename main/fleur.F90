@@ -84,7 +84,7 @@ CONTAINS
 
    TYPE(t_mpi),INTENT(IN)      :: mpi
    TYPE(t_input),INTENT(IN)    :: input
-   TYPE(t_field),INTENT(IN)    :: field 
+   TYPE(t_field),INTENT(IN)    :: field
    TYPE(t_atoms),INTENT(IN)    :: atoms
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
    TYPE(t_cell),INTENT(IN)     :: cell
@@ -278,10 +278,10 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
-!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
-    !   IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
-    !          ,sym,oneD,cell,noco,input,atoms,inDen)
-!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+
+       IF(noco%l_alignMT) CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
+             ,sym,oneD,cell,noco,nococonv,input,atoms,inDen)
+
 
        IF (noco%l_sourceFree) THEN
           sfscale=1.0
@@ -487,9 +487,9 @@ CONTAINS
           ENDIF
 #endif
           CALL timestop("generation of new charge density (total)")
-!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
-!IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
-!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+
+IF (noco%l_alignMT) CALL rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
+
 !!$             !----> output potential and potential difference
 !!$             IF (disp) THEN
 !!$                reap = .FALSE.
