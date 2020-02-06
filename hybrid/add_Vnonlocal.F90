@@ -42,8 +42,9 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
 
-   SUBROUTINE add_vnonlocal(nk, lapw, atoms, cell, sym, mpdata, hybinp, hybdat, input, kpts, jsp, results,&
-                            xcpot, noco, hmat)
+   SUBROUTINE add_vnonlocal(nk, lapw, atoms, cell, sym, mpdata, hybinp, hybdat, &
+                            input, kpts, jsp, results,&
+                            xcpot, noco,nococonv, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
       USE m_intgrf, ONLY: intgrf, intgrf_init
@@ -69,6 +70,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)       :: kpts
       TYPE(t_lapw), INTENT(IN)       :: lapw
       TYPE(t_noco), INTENT(IN)       :: noco
+      type(t_nococonv),intent(in)    :: nococonv
       TYPE(t_mat), INTENT(INOUT)     :: hmat
 
       INTEGER, INTENT(IN)    :: jsp
@@ -113,7 +115,7 @@ CONTAINS
 
       CALL z%init(olap%l_real, nbasfcn, input%neig)
 
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z)
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90

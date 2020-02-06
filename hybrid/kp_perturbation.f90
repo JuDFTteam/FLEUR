@@ -4,7 +4,7 @@ MODULE m_kp_perturbation
 CONTAINS
 
    SUBROUTINE ibs_correction(nk, atoms, input, jsp, hybdat, mpdata, hybinp, &
-                             lapw, kpts, cell, mnobd, sym, noco, &
+                             lapw, kpts, cell, mnobd, sym, noco,nococonv, &
                              proj_ibsc, olap_ibsc)
 
       USE m_sphbes
@@ -23,6 +23,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_noco), INTENT(IN)  :: noco
+      type(t_nococonv), intent(in) :: nococonv
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -100,7 +101,7 @@ CONTAINS
 
       ! read in z coefficient from direct access file z at k-point nk
 
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z)
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z)
 
       ! construct local orbital consisting of radial function times spherical harmonic
       ! where the radial function vanishes on the MT sphere boundary
@@ -704,7 +705,7 @@ CONTAINS
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
       input, atoms, mpdata, hybinp, &
       cell, &
-      hybdat, kpts, sym, noco, lapw, oneD, &
+      hybdat, kpts, sym, noco, nococonv, lapw, oneD, &
       jsp, &
       eig_irr)
 
@@ -721,6 +722,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       type(t_sym), intent(in)    :: sym
       type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in) :: nococonv
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
       type(t_oneD), intent(in)   :: oneD
@@ -744,7 +746,7 @@ CONTAINS
       !
       dcprod = cmplx_0
       CALL momentum_matrix(dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         input, atoms, mpdata, hybinp, cell, hybdat, kpts, sym, noco, lapw, &
+         input, atoms, mpdata, hybinp, cell, hybdat, kpts, sym, noco,nococonv, lapw, &
          oneD,jsp)
 
       !                                                __
@@ -777,7 +779,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
                               input, atoms, mpdata, hybinp, &
-                              cell, hybdat, kpts, sym, noco, lapw, oneD, jsp)
+                              cell, hybdat, kpts, sym, noco,nococonv, lapw, oneD, jsp)
       USE m_olap
       USE m_wrapper
       USE m_util, only: derivative
@@ -796,6 +798,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       type(t_sym), intent(in)    :: sym
       type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in)::nococonv
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
       type(t_oneD), intent(in)   :: oneD
@@ -839,8 +842,8 @@ CONTAINS
       momentum = cmplx_0
 
       if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase=c_phase)
-      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z, c_phase=c_phase)
+      call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, z, jsp, nk, c_phase, cmt)
 
       ! read in z coefficients from direct access file z at kpoint nk

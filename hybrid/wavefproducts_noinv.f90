@@ -4,7 +4,7 @@ module m_wavefproducts_noinv
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandoi, bandof, ik, iq, &
                                     input, jsp, cell, atoms, mpdata, hybinp,&
-                                   hybdat, kpts, lapw, sym, noco,nococonv,&
+                                   hybdat, kpts, lapw, sym, noco,nococonv, oneD,&
                                    nkqpt, cprod)
       USE m_types
       use m_juDFT
@@ -13,13 +13,14 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
+      type(t_nococonv), intent(in)    :: nococonv
       type(t_oneD), intent(in)        :: oneD
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
-      TYPE(t_mpdata), intent(in)     :: mpdata
+      TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
@@ -54,11 +55,11 @@ CONTAINS
 
       call wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
-                                        hybdat, kpts, lapw, sym, noco,&
+                                        hybdat, kpts, lapw, sym, noco, nococonv,&
                                         nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &
-                                   input,atoms, cell, noco, oneD, sym,&
+                                   input,atoms, cell, noco,nococonv, oneD, sym,&
                                     mpdata, hybinp, hybdat, kpts, &
                                    jsp, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
@@ -68,7 +69,7 @@ CONTAINS
 
    subroutine wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t, &
                                        input, jsp, cell, atoms, mpdata, hybinp,&
-                                      hybdat, kpts, lapw, sym, noco,&
+                                      hybdat, kpts, lapw, sym, noco,nococonv,&
                                       nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
@@ -136,9 +137,9 @@ CONTAINS
       call z_kqpt_p%init(z_kqpt)
 
       ! read in z at k-point ik and nkqpt
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ik, jsp, z_nk, &
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ik, jsp, z_nk, &
                   c_phase=c_phase_k, parent_z=z_k_p)
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nkqpt, jsp, z_kqpt, &
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
       g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
@@ -211,7 +212,7 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &
-                                      input,atoms, cell, noco, oneD, sym,&
+                                      input,atoms, cell, noco,nococonv, oneD, sym,&
                                       mpdata, hybinp, hybdat, kpts, &
                                       jsp, ikqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
@@ -226,6 +227,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)       :: atoms
       type(t_cell), intent(in)        :: cell
       type(t_noco), intent(in)        :: noco
+      type(t_nococonv), intent(in)    :: nococonv
       type(t_oneD), intent(in)        :: oneD
       type(t_sym), intent(in)         :: sym
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
@@ -270,9 +272,9 @@ CONTAINS
       call timestop("set lmstart")
 
       ! read in cmt coefficients from direct access file cmt
-      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, z_k_p, jsp, ik, c_phase_k, cmt_nk)
-      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")

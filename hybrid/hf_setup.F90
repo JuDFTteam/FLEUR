@@ -8,7 +8,8 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, &
+                       cell, oneD, results, jsp, enpara, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -190,7 +191,7 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(atoms, hybdat, mpdata, hybinp, kpts%nkpt, kpts,  mpi, &
-                        input, sym, noco, nococonv,cell, lapw, jsp)
+                        input, sym, noco, nococonv,oneD,cell, lapw, jsp)
 
          ! set up pointer pntgpt
 

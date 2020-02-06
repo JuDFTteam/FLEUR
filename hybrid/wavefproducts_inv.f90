@@ -15,7 +15,7 @@ module m_wavefproducts_inv
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nococonv, nkqpt, cprod)
+                                 cell, sym, noco, nococonv, oneD, nkqpt, cprod)
 
 
 
@@ -25,6 +25,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)     :: input
       type(t_oneD), intent(in)      :: oneD
       TYPE(t_noco), INTENT(IN)      :: noco
+      type(t_nococonv), intent(in)  :: nococonv
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -65,10 +66,10 @@ CONTAINS
 
       call wavefproducts_inv_IS(bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                cell, sym, noco, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv5_MT(bandoi, bandof,&
-                                input,atoms, cell, noco, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
+                                input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
@@ -77,7 +78,7 @@ CONTAINS
 
    subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                 cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
      implicit NONE
      TYPE(t_mpdata), intent(in)  :: mpdata
@@ -134,9 +135,9 @@ CONTAINS
      call z_kqpt_p%init(z_kqpt)
 
      ! read in z at k-point nk and nkqpt
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z_k, &
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z_k, &
                  c_phase=c_phase_k, parent_z=z_k_p)
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nkqpt, jsp, z_kqpt, &
+     call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
@@ -201,7 +202,7 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandoi, bandof,&
-                                   input,atoms, cell, noco, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
+                                   input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt,  cprod)
      use m_calc_cmt
      implicit NONE
@@ -212,6 +213,7 @@ CONTAINS
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
      type(t_cell), intent(in)      :: cell
+     type(t_nococonv), intent(in)  :: nococonv
      type(t_noco), intent(in)      :: noco
      type(t_oneD), intent(in)      :: oneD
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -268,11 +270,11 @@ CONTAINS
               source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
 
-     call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+     call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                          sym, oneD, z_k_p, jsp, nk, c_phase_k, ccmt_nk)
 
      !read in cmt coefficients at k+q point
-     call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+     call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                          sym, oneD, z_kqpt_p, jsp, nkqpt, c_phase_kqpt, ccmt_nkqpt)
 
      iatom = 0

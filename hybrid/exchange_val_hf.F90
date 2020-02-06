@@ -61,7 +61,7 @@ MODULE m_exchange_valence_hf
 CONTAINS
 
    SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, oneD, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_wrapper
@@ -230,11 +230,11 @@ CONTAINS
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
-                                       noco, oneD, nkqpt, cprod_vv_r)
+                                       noco,nococonv, oneD, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
-                                         sym, noco, oneD, nkqpt, cprod_vv_c)
+                                         sym, noco,nococonv, oneD, nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -333,7 +333,7 @@ CONTAINS
 
          IF (zero_order) THEN
             CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., input,atoms, mpdata,hybinp, &
-                                cell, hybdat, kpts, sym,noco, lapw, oneD, jsp, eig_irr)
+                                cell, hybdat, kpts, sym,noco,nococonv, lapw, oneD, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybdat%nbands(ik)
@@ -344,8 +344,9 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp, lapw, kpts, cell, mnobd, &
-                                   sym, noco, proj_ibsc, olap_ibsc)
+               CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp,&
+                                   lapw, kpts, cell, mnobd, &
+                                   sym, noco,nococonv, proj_ibsc, olap_ibsc)
             END IF
          END IF
 

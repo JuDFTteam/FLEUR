@@ -1,7 +1,7 @@
 module m_calc_cmt
 
 contains
-   subroutine calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+   subroutine calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
                        sym, oneD, zmat_ikp, jsp, ik, c_phase, cmt_out)
       use m_types
       use m_judft
@@ -15,6 +15,7 @@ contains
       type(t_cell), intent(in)     :: cell
       type(t_input), intent(in)    :: input
       type(t_noco), intent(in)     :: noco
+      type(t_nococonv), intent(in) :: nococonv
       type(t_hybinp), intent(in)   :: hybinp
       type(t_hybdat), intent(in)   :: hybdat
       type(t_mpdata), intent(in)   :: mpdata
@@ -56,13 +57,13 @@ contains
       endif
       acof = 0; bcof = 0; ccof = 0
 
-      CALL lapw_ik%init(input, noco, kpts, atoms, sym, ik, cell, sym%zrfs)
-      CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
+      CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
+      CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
       lapw_ikp%nmat = lapw_ikp%nv(jsp) + atoms%nlotot
 
-      CALL abcof(input, atoms, sym, cell, lapw_ikp, nbands, hybdat%usdus, noco, jsp, &
-                 oneD, acof, bcof, ccof, zmat_ikp)
+      CALL abcof(input, atoms, sym, cell, lapw_ikp, nbands, hybdat%usdus, noco, nococonv,&
+                 jsp, oneD, acof, bcof, ccof, zmat_ikp)
       CALL hyb_abcrot(hybinp, atoms, nbands, sym, acof, bcof, ccof)
 
       cmt = 0

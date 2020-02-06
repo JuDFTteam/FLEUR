@@ -163,7 +163,8 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco, input, ik, jsp, z_out, parent_z, c_phase)
+   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
+                     jsp, z_out, parent_z, c_phase)
       USE m_eig66_io
       use m_types
       use m_trafo
@@ -174,6 +175,7 @@ contains
       type(t_kpts), intent(in)     :: kpts
       type(t_sym), intent(in)      :: sym
       type(t_noco), intent(in)     :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
       type(t_input), intent(in)    :: input
       integer, intent(in)          :: ik, jsp
       TYPE(t_mat), INTENT(INOUT)   :: z_out
@@ -207,8 +209,8 @@ contains
 
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
 
-         CALL lapw_ik%init(input, noco, kpts, atoms, sym, ik, cell, sym%zrfs)
-         CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
+         CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
+         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
          call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
                                   hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &

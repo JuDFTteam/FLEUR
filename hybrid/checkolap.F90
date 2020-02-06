@@ -6,7 +6,7 @@
                            mpdata,hybinp,&
                            nkpti, kpts,&
                             mpi, &
-                           input, sym, noco,nococonv,&
+                           input, sym, noco,nococonv,oneD,&
                            cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
             use m_intgrf, only:  intgrf, intgrf_init
@@ -94,9 +94,9 @@
                allocate(c_phase(hybdat%nbands(ikpt)))
 
                if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
-               call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, &
+               call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ikpt, &
                            jsp, z(ikpt), c_phase=c_phase)
-               call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+               call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                              sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
                              cmt(:hybdat%nbands(ikpt),:,:,ikpt))
             END DO

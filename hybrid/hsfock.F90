@@ -54,7 +54,8 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco,nococonv, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, &
+                     eig_irr, sym, cell, noco,nococonv, oneD,&
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -154,13 +155,13 @@ CONTAINS
          call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
 
          if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
-         call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase=c_phase)
+         call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z, c_phase=c_phase)
 
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
          CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw,&
-                       noco, oneD, z, c_phase, jsp, &
+                       noco, nococonv, oneD, z, c_phase, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -176,7 +177,7 @@ CONTAINS
          ! HF exchange
          ex%l_real = sym%invs
          CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv,nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv, oneD,nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")
@@ -185,7 +186,7 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, input,atoms,cell, kpts, sym, noco, oneD, &
+            CALL exchange_vccv1(nk, input,atoms,cell, kpts, sym, noco,nococonv, oneD, &
                                 mpdata, hybinp, hybdat,  jsp, &
                                 lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)

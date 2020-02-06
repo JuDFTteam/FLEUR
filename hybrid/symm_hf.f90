@@ -72,7 +72,7 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
-                      lapw, noco, oneD, zmat, c_phase, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
+                      lapw, noco, nococonv,oneD, zmat, c_phase, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
@@ -92,6 +92,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
       type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in):: nococonv
       type(t_oneD), intent(in)   :: oneD
       type(t_mat), intent(in)    :: zmat
 
@@ -265,7 +266,7 @@ CONTAINS
       END DO
 
       ! read in cmt and z at current k-point (nk)
-      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, zmat, jsp, nk, c_phase, cmt)
 
       IF(allocated(olapmt)) deallocate(olapmt)

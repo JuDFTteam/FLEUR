@@ -19,7 +19,7 @@ MODULE m_exchange_core
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, input,atoms, cell, kpts, sym, noco, oneD,&
+   SUBROUTINE exchange_vccv1(nk, input,atoms, cell, kpts, sym, noco, nococonv, oneD,&
                              mpdata, hybinp, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
       use m_wavefproducts_aux
@@ -42,6 +42,7 @@ CONTAINS
       type(t_kpts), intent(in)   :: kpts
       type(t_sym), intent(in)    :: sym
       type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in):: nococonv
       type(t_oneD), intent(in)   :: oneD
       TYPE(t_lapw), INTENT(IN)   :: lapw
 
@@ -84,8 +85,8 @@ CONTAINS
       nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
       CALL zmat%init(sym%invs, nbasfcn, hybdat%nbands(kpts%bkp(nk)))
       if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
-      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, zmat, jsp, nk, c_phase, cmt)
       call zmat%free()
 

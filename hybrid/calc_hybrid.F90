@@ -141,7 +141,7 @@ CONTAINS
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
-                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, eig_id, &
+                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
@@ -149,7 +149,7 @@ CONTAINS
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, l_zref)
                CALL hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco,nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
+                           noco,nococonv, oneD, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")
