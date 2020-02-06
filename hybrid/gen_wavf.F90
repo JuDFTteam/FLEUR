@@ -101,11 +101,6 @@ CONTAINS
       ! set spherical component of the potential from the previous iteration vr
       vr = vr0
 
-!       allocate( z_out(nbasfcn,neigd,kpts%nkpt),stat=ok )
-!       IF ( ok .ne. 0) call judft_error('gen_wavf: failure allocation z')
-!       z_out = 0
-!       z_out(:,:,:kpts%nkpt) = z_in
-
       ! calculate radial basis functions belonging to the
       ! potential vr stored in bas1 and bas2
       ! bas1 denotes the large component
@@ -160,119 +155,6 @@ CONTAINS
              'energy derivative', /, t3, 'l', t8, 'energy', t26, 'value', t39, 'derivative', t53, &
              'nodes', t68, 'value', t81, 'derivative', t95, 'nodes', t107, 'norm', t119, 'wronskian')
 8010  FORMAT(i3, f10.5, 2(5x, 1p, 2e16.7, i5), 1p, 2e16.7)
-
-      ! calculate wavefunction expansion in the the MT region
-      ! (acof,bcof,ccof) and APW-basis coefficients
-      ! (a,b,bascofold_lo) at irred. kpoints
-
-      allocate(acof(input%neig, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('gen_wavf: failure allocation acof')
-      allocate(bcof(input%neig, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('gen_wavf: failure allocation bcof')
-      allocate(ccof(-atoms%llod:atoms%llod, input%neig, atoms%nlod, atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('gen_wavf: failure allocation ccof')
-      allocate(cmt(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('gen_wavf: Failure allocation cmt')
-      allocate(cmthlp(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
-
-      DO ikpt0 = 1, kpts%nkpt
-
-         acof = 0; bcof = 0; ccof = 0
-
-         ! abcof calculates the wavefunction coefficients
-         ! stored in acof,bcof,ccof
-         lapw(ikpt0)%nmat = lapw(ikpt0)%nv(jsp) + atoms%nlotot
-
-         CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybdat%nbands(ikpt0), hybdat%usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
-                    oneD, acof(:hybdat%nbands(ikpt0), :, :), bcof(:hybdat%nbands(ikpt0), :, :), &
-                    ccof(:, :hybdat%nbands(ikpt0), :, :), zmat(ikpt0))
-
-         ! MT wavefunction coefficients are calculated in a local coordinate system rotate them in the global one
-         CALL hyb_abcrot(hybinp, atoms, hybdat%nbands(ikpt0), sym, acof(:hybdat%nbands(ikpt0), :, :), &
-                         bcof(:hybdat%nbands(ikpt0), :, :), ccof(:, :hybdat%nbands(ikpt0), :, :))
-
-         ! decorate acof, bcof, ccof with coefficient i**l and store them
-         ! in the field cmt(neigd,nkpt,maxlmindx,nat), i.e.
-         ! where maxlmindx subsumes l,m and nindx
-
-         cmt = 0
-         iatom = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               iatom = iatom + 1
-               indx = 0
-               DO l = 0, atoms%lmax(itype)
-                  ll = l*(l + 1)
-                  cdum = img**l
-
-                  ! determine number of local orbitals with quantum number l
-                  ! map returns the number of the local orbital of quantum
-                  ! number l in the list of all local orbitals of the atom type
-                  idum = 0
-                  map_lo = 0
-                  IF (mpdata%num_radfun_per_l(l, itype) > 2) THEN
-                     DO j = 1, atoms%nlo(itype)
-                        IF (atoms%llo(j, itype) == l) THEN
-                           idum = idum + 1
-                           map_lo(idum) = j
-                        END IF
-                     END DO
-                  END IF
-
-                  DO M = -l, l
-                     lm = ll + M
-                     DO i = 1, mpdata%num_radfun_per_l(l, itype)
-                        indx = indx + 1
-                        IF (i == 1) THEN
-                           cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)
-                        ELSE IF (i == 2) THEN
-                           cmt(:, indx, iatom) = cdum*bcof(:, lm, iatom)
-                        ELSE
-                           idum = i - 2
-                           cmt(:, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
-                        END IF
-                     END DO
-                  END DO
-               END DO
-            END DO
-         END DO
-
-
-         ! write cmt at irreducible k-points in direct-access file cmt
-         CALL write_cmt(cmt, ikpt0)
-         CALL zhlp%alloc(zmat(ikpt0)%l_real, zmat(ikpt0)%matsize1, zmat(ikpt0)%matsize2)
-
-         IF (zhlp%l_real) THEN
-            zhlp%data_r = zmat(ikpt0)%data_r
-         ELSE
-            zhlp%data_c = zmat(ikpt0)%data_c
-         END IF
-         CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt0)
-
-         ! generate wavefunctions coefficients at all k-points from
-         ! irreducible k-points
-
-         DO ikpt = 1, kpts%nkptf
-            IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
-               iop = kpts%bksym(ikpt)
-
-               if(allocated(c_phase)) deallocate(c_phase)
-               allocate(c_phase(hybdat%nbands(ikpt0)))
-
-               call waveftrafo_gen_zmat(zmat(ikpt0), ikpt0, iop, &
-                                        kpts, sym, jsp, input, hybdat%nbands(ikpt0), &
-                                        lapw(ikpt0), lapw(ikpt), zhlp, c_phase)
-
-               call waveftrafo_gen_cmt(cmt, c_phase, zmat(ikpt0)%l_real, ikpt0, iop, atoms, &
-                                        mpdata, hybinp, kpts, sym, hybdat%nbands(ikpt0), cmthlp)
-               CALL write_cmt(cmthlp, ikpt)
-            END IF
-         END DO  !ikpt
-      END DO !ikpt0
-
-      deallocate(acof, bcof, ccof)
-      deallocate(cmt, cmthlp)
 
    END SUBROUTINE gen_wavf
 END MODULE m_gen_wavf
