@@ -232,7 +232,8 @@ CONTAINS
                                        noco, oneD, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
-                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, noco, nkqpt, cprod_vv_c)
+                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
+                                         sym, noco, oneD, nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
