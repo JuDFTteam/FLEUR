@@ -40,7 +40,7 @@ contains
       type(t_lapw)  :: lapw_ik, lapw_ikp
 
       real :: diff
-      
+
       call timestart("calc_cmt")
 
       ikp = kpts%bkp(ik)
@@ -115,17 +115,6 @@ contains
 
          call waveftrafo_gen_cmt(cmt, c_phase, zmat_ikp%l_real, ikp, iop, atoms, &
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
-      endif
-
-      call read_cmt(cmt_comp, ik)
-      write (*,*) "%%%%%%%%%%%%%%%%%%%%%%%"
-      write (*,*) "ik =", ik
-      write (*,*) "ikp =", ikp
-      write (*,*) "jsp =", jsp
-      diff =  norm2(abs(cmt_out - cmt_comp(:hybdat%nbands(ik),:,:)))
-      write (*,*) "diff = ", diff
-      if(diff > 1e-10) then
-         call juDFT_error("diff too big!")
       endif
       call timestop("calc_cmt")
    end subroutine calc_cmt
