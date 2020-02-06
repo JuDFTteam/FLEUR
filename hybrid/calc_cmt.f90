@@ -39,6 +39,7 @@ contains
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
 
+      call timestart("calc_cmt")
 
       ikp = kpts%bkp(ik)
       nbands = hybdat%nbands(ikp)
@@ -115,5 +116,6 @@ contains
          call waveftrafo_gen_cmt(cmt, c_phase, zmat_ikp%l_real, ikp, iop, atoms, &
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
       endif
+      call timestop("calc_cmt")
    end subroutine calc_cmt
 end module m_calc_cmt
