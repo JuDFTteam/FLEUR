@@ -115,15 +115,13 @@ CONTAINS
       !
       !noco
       !
-      ALLOCATE (noco%l_relax(atoms%ntype), noco%b_con(2, atoms%ntype))
-      ALLOCATE (noco%alphInit(atoms%ntype), noco%alph(atoms%ntype), noco%beta(atoms%ntype))
-      noco%qss = MERGE(noco%qss, [0.0, 0.0, 0.0], noco%l_ss)
+      ALLOCATE (noco%l_relax(atoms%ntype))
+      ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
+      noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
       noco%l_relax(:) = .FALSE.
-      noco%alphInit(:) = 0.0
-      noco%alph(:) = 0.0
-      noco%beta(:) = 0.0
-      noco%b_con(:, :) = 0.0
-
+      noco%alph_inp(:) = 0.0
+      noco%beta_inp(:) = 0.0
+      
       !
       !hybinp
       !

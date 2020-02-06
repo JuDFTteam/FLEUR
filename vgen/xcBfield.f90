@@ -22,7 +22,7 @@ MODULE m_xcBfield
    PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
-   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec)
+   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,aVec)
 
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
@@ -44,6 +44,7 @@ CONTAINS
       TYPE(t_vacuum),               INTENT(IN)  :: vacuum
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_noco),                 INTENT(IN)  :: noco
+      TYPE(t_nococonv),             INTENT(IN)  :: nococonv
       TYPE(t_potden),               INTENT(IN)  :: denmat
       REAL,                         INTENT(IN)  :: factor
       TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
@@ -63,7 +64,7 @@ CONTAINS
          ALLOCATE(dummyDen(i)%pw_w,mold=dummyDen(i)%pw)
       ENDDO
 
-      CALL matrixsplit(sym,stars,atoms,sphhar,vacuum,input,noco,factor,denmat, &
+      CALL matrixsplit(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,factor,denmat, &
                        dummyDen(1),dummyDen(2),dummyDen(3),dummyDen(4))
 
       r2=1.0
@@ -109,7 +110,7 @@ CONTAINS
       !       A field of the same form will also be calculated.
 
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
-      TYPE(t_field),                INTENT(INOUT)  :: field
+      TYPE(t_field),                INTENT(IN)     :: field
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
@@ -133,7 +134,7 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
       div%pw_w = CMPLX(0.0,0.0)
-      
+
       CALL timestart("Building divergence")
       CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
       CALL timestop("Building divergence")

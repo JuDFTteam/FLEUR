@@ -95,6 +95,7 @@
       <xsd:attribute default="0.0" name="thetaJ" type="xsd:string" use="optional"/>
       <xsd:attribute default="0" name="nsh" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="l_mtNocoPot" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_alignMT" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
@@ -440,8 +441,8 @@
       <xsd:attribute default="0.0" name="M" type="xsd:string" use="optional"/>
       <xsd:attribute name="alpha" type="xsd:string" use="required"/>
       <xsd:attribute name="beta" type="xsd:string" use="required"/>
-      <xsd:attribute name="b_cons_x" type="xsd:string" use="required"/>
-      <xsd:attribute name="b_cons_y" type="xsd:string" use="required"/>
+      <xsd:attribute name="b_cons_x" type="xsd:string" use="optional"/>
+      <xsd:attribute name="b_cons_y" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="MTSphereType">

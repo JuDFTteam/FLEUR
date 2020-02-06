@@ -82,7 +82,7 @@ CONTAINS
        !spin off-diagonal elements (no rotation yet)
        IF(noco%l_mperp) THEN
           IF(ANY(atoms%lda_u(:)%phi.NE.0.0).OR.ANY(atoms%lda_u(:)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
-          CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,f0(:,1),f2(:,1),pot%mmpMat(:,:,:,3),e_off)
+          CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,pot%mmpMat(:,:,:,3),e_off)
           results%e_ldau = results%e_ldau + e_off
        ENDIF
 

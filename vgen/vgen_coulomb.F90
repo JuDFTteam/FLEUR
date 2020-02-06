@@ -43,7 +43,7 @@ contains
 
     type(t_oneD),       intent(in)               :: oneD
     type(t_input),      intent(in)               :: input
-    type(t_field),      intent(inout)            :: field
+    type(t_field),      intent(in)               :: field
     type(t_vacuum),     intent(in)               :: vacuum
     type(t_sym),        intent(in)               :: sym
     type(t_stars),      intent(in)               :: stars
@@ -55,7 +55,7 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
-    complex                                      :: vintcza, xint, rhobar
+    complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1
     integer                                      :: imz, imzxy, ichsmrg, ivfft
@@ -100,7 +100,7 @@ contains
       elseif ( input%film .and. .not. oneD%odi%d1 ) then
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
-        call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh )
+        call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
         call vvacis( stars, vacuum, sym, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
         call timestop( "Vacuum" )
@@ -125,7 +125,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell, sym, input, field, z, irec2, psq, &
                               vCoul%vacxy(:,:,:,ispin), vCoul%vacz(:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm )
+                              rhobar, sig1dh, vz1dh, alphm,vslope )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
@@ -197,7 +197,6 @@ contains
       end if CHECK_CONTINUITY
 
       CALCULATE_DENSITY_POTENTIAL_INTEGRAL: if ( present( results ) ) then
-        if ( input%total ) then
           call timestart( "den-pot integrals" )
           !     CALCULATE THE INTEGRAL OF n*Vcoulomb
           write( 6, fmt=8020 )
@@ -213,7 +212,6 @@ contains
 8030      format (/,10x,'total density-coulomb potential integral :', t40,f20.10)
 
           call timestop( "den-pot integrals" )
-        end if
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
 

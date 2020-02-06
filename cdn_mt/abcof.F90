@@ -1,7 +1,7 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
+                   noco,nococonv,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -22,6 +22,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_noco),INTENT(IN)   :: noco
+    TYPE(t_nococonv),INTENT(IN):: nococonv
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -49,7 +50,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
     REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
-    REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
+    REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     COMPLEX ccchi(2,2)
     LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
@@ -105,9 +106,9 @@ CONTAINS
        nvmax=lapw%nv(jspin)
        IF (noco%l_ss) nvmax=lapw%nv(iintsp)
        IF (iintsp .EQ. 1) THEN
-          qss= - noco%qss/2
+          qss= - nococonv%qss/2
        ELSE
-          qss= + noco%qss/2
+          qss= + nococonv%qss/2
        ENDIF
 
        !---> loop over atom types
@@ -115,11 +116,11 @@ CONTAINS
        !$OMP& DEFAULT(none)&
        !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
        !$OMP& alo1,blo1,clo1,inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
-       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,eig,l_force,&
+       !$OMP& SHARED(noco,nococonv,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,eig,l_force,&
        !$OMP& jspin,qss,apw,const,nbasf0,enough,acof,bcof,ccof,force)
        DO n = 1,atoms%ntype
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
-          
+
           !  ----> loop over equivalent atoms
           DO nn = 1,atoms%neq(n)
              natom = 0
@@ -145,10 +146,10 @@ CONTAINS
 
                    IF (noco%l_noco) THEN
                       !--->            generate the spinors (chi)
-                      ccchi(1,1) =  EXP(ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
-                      ccchi(1,2) = -EXP(ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-                      ccchi(2,1) =  EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-                      ccchi(2,2) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
+                      ccchi(1,1) =  EXP(ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+                      ccchi(1,2) = -EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+                      ccchi(2,1) =  EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+                      ccchi(2,2) =  EXP(-ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
                       IF (noco%l_ss) THEN
                          !--->              the coefficients of the spin-down basis functions are
                          !--->              stored in the second half of the eigenvector
@@ -282,14 +283,14 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,natom)
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                          n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
+                                          n,natom,k,nkvec,lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
                          ENDIF
                       ENDDO
                    END DO
                 ENDDO ! loop over LAPWs
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)
-                ELSE               
+                ELSE
                    DEALLOCATE(work_c)
                 ENDIF
              ENDIF  ! invsatom == ( 0 v 1 )

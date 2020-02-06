@@ -7,7 +7,7 @@ MODULE m_hsmt_mtNocoPot_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,cell,lapw,ud,td,fj,gj,hmat_tmp,hmat)
+  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,nococonv,cell,lapw,ud,td,fj,gj,hmat_tmp,hmat)
     !Calculate the contribution from the local-spin-offdiagonal potential
     !The following idea is used:
     !Calculate the matrix by using non-spherical algorithm. This is done only once, since
@@ -25,6 +25,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)       :: nococonv
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -44,28 +45,31 @@ CONTAINS
     chi_one=1.0
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(real part of potential)
-    CALL hsmt_nonsph(n,mpi,sym,atoms,3,1,1,chi_one,noco,cell,lapw,td,fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
-    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,3,1,1,hmat_tmp)
-    CALL hsmt_spinor(3,n,noco,chi) !spinor for off-diagonal part
+    CALL hsmt_nonsph(n,mpi,sym,atoms,3,1,1,chi_one,noco,nococonv,cell,lapw,td,fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
+    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,3,1,1,hmat_tmp)
+    call hmat_tmp%generate_full_matrix()
+    CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
-    CALL hmat_tmp%TRANSPOSE()
-    CALL hsmt_spinor(4,n,noco,chi) !spinor for off-diagonal part
+    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !CALL hmat_tmp%TRANSPOSE()
+    CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
 
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(imag part of potential)
     chi_one=CMPLX(0.,1.)
-    CALL hsmt_nonsph(n,mpi,sym,atoms,4,1,1,chi_one,noco,cell,lapw,td,&
+    CALL hsmt_nonsph(n,mpi,sym,atoms,4,1,1,chi_one,noco,nococonv,cell,lapw,td,&
          fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
-    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,4,1,1,hmat_tmp)
+    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,4,1,1,hmat_tmp)
+    call hmat_tmp%generate_full_matrix()
 
-    CALL hsmt_spinor(3,n,noco,chi)
+    CALL hsmt_spinor(3,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
-
-    CALL hmat_tmp%TRANSPOSE()
-    CALL hsmt_spinor(4,n,noco,chi)
+    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !CALL hmat_tmp%TRANSPOSE()
+    CALL hsmt_spinor(4,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
   END SUBROUTINE hsmt_mtNocoPot_offdiag
 END MODULE m_hsmt_mtNocoPot_offdiag

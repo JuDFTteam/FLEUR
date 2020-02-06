@@ -24,7 +24,7 @@ MODULE m_crystalfield
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,noco,greensfCoeffs,v,ef,hub1data)
+   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfCoeffs,v,ef,hub1data)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
@@ -32,7 +32,7 @@ MODULE m_crystalfield
       TYPE(t_atoms),         INTENT(IN)    :: atoms
       TYPE(t_gfinp),         INTENT(IN)    :: gfinp
       TYPE(t_input),         INTENT(IN)    :: input
-      TYPE(t_noco),          INTENT(IN)    :: noco
+      TYPE(t_nococonv),      INTENT(IN)    :: nococonv
       TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
       TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
       REAL,                  INTENT(IN)    :: ef
@@ -99,10 +99,10 @@ MODULE m_crystalfield
             DO m = -l, l
                DO mp = -l, l
                   isp = 3.0-2.0*jspin !1,-1
-                  IF((ABS(noco%theta).LT.1e-5).AND.(ABS(noco%phi).LT.1e-5)) THEN
+                  IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
                      vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
                   ELSE
-                     vso = anglso(noco%theta,noco%phi,l,m,isp,l,mp,isp)
+                     vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
                   ENDIF
                   h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
                ENDDO

@@ -5,10 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_wann_postproc
-CONTAINS 
+CONTAINS
   SUBROUTINE wann_postproc(&
        stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-       lapw,oneD,noco,cell,vTot,enpara,sliceplot,eig_id,l_real,&
+       lapw,oneD,noco,nococonv,cell,vTot,enpara,sliceplot,eig_id,l_real,&
        wann, fullnkpts, l_proj,ef,l_sgwf,fullnqpts)
     !     <          fermi_weights)
 
@@ -53,7 +53,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
 
-    
+
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -65,6 +65,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)      :: lapw
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_potden),INTENT(IN)    :: vTot
     TYPE(t_enpara),INTENT(IN)    :: enpara
@@ -101,7 +102,7 @@ CONTAINS
 
     !***************************************************
     !     Read in the kpoints from w90kpts or kpts.
-    !***************************************************      
+    !***************************************************
     CALL wann_get_kpts(input,kpts,&
          wann%l_bzsym,input%film,oneD%odi%d1,.FALSE.,&
          nkpts,kpoints)
@@ -164,8 +165,8 @@ CONTAINS
        !     >   atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,
        !     >      input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),jspd,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,
        !     >      nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,
-       !     >      sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
-       !     >      noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
+       !     >      sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,
+       !     >      nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
        !     >      size(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,
        !     >      sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,
        !     >      stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,
@@ -392,13 +393,13 @@ CONTAINS
     IF(wann%l_plot_umdat)THEN
        CALL wann_plot_um_dat(&
             stars,vacuum,atoms,sphhar,input,sym,mpi,&
-            lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,&
+            lapw,oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,&
             mpi%mpi_comm,i,wann%band_min,wann%band_max,noco%l_soc,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
-            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
@@ -412,14 +413,14 @@ CONTAINS
     IF(wann%l_lapw.AND.mpi%irank==0)THEN
        CALL wannier_to_lapw(&
             mpi%mpi_comm,eig_id,l_real,&
-            input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,&
+            input,lapw,oneD,noco,nococonv,sym,cell,atoms,stars,vacuum,sphhar,&
             vTot,&
             noco%l_soc,wann%unigrid,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
-            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
@@ -435,8 +436,8 @@ CONTAINS
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
-            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
@@ -454,8 +455,8 @@ CONTAINS
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
-            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
-            noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
+            nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
@@ -491,14 +492,14 @@ CONTAINS
 
     IF(wann%l_finishnocoplot.AND.mpi%irank==0) THEN
        !         write(*,*)'doing the UNK mixing'
-       !         write(*,*)'noco%alph',noco%alph
-       !         write(*,*)'noco%beta',noco%beta
+       !         write(*,*)'nococonv%alph',nococonv%alph
+       !         write(*,*)'nococonv%beta',nococonv%beta
        !         nkqpts=fullnkpts
-       !         if(l_sgwf) nkqpts=fullnkpts*fullnqpts 
+       !         if(l_sgwf) nkqpts=fullnkpts*fullnqpts
        CALL wann_nocoplot(atoms,sliceplot%slice,sliceplot%nnne,&!nslibd&
             cell%amat,cell%bmat,fullnkpts,oneD%odi,input%film,&
             atoms%nat,atoms%ntype,SIZE(atoms%rmsh,1),atoms%ntype,atoms%neq,atoms%pos,&
-            atoms%jri,atoms%rmsh,noco%alph,noco%beta,fullnqpts,noco%qss,&
+            atoms%jri,atoms%rmsh,nococonv%alph,nococonv%beta,fullnqpts,nococonv%qss,&
             cell%z1,atoms%zatom)
     ENDIF
 

@@ -12,7 +12,7 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       input,atoms,sym,mpi,lapw,cell,noco,ntyp,na,&
+       input,atoms,sym,mpi,lapw,cell,nococonv,ntyp,na,&
        isp,ud, alo1,blo1,clo1,fj,gj,&
        iintsp,jintsp,chi,smat)
     !***********************************************************************
@@ -31,10 +31,10 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_mpi),INTENT(IN)    :: mpi
     TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_noco),INTENT(IN)   :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN)      :: na,ntyp 
+    INTEGER, INTENT (IN)      :: na,ntyp
     INTEGER, INTENT (IN)      :: jintsp,iintsp
     COMPLEX, INTENT (IN)      :: chi
     INTEGER, INTENT(IN)       :: isp
@@ -56,7 +56,7 @@ CONTAINS
     COMPLEX,   ALLOCATABLE  :: cph(:,:)
     ALLOCATE(cph(MAXVAL(lapw%nv),2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
+       CALL lapw%phase_factors(i,atoms%taual(:,na),nococonv%qss,cph(:,i))
     ENDDO
 
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
@@ -126,7 +126,7 @@ CONTAINS
                                  cph(k,jintsp)*conjg(cph(kp,iintsp))
                          ELSE
                             smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)*&
-                                 cph(k,jintsp)*CONJG(cph(kp,iintsp)) 
+                                 cph(k,jintsp)*CONJG(cph(kp,iintsp))
                          ENDIF
                       END DO
                    ENDIF
@@ -146,7 +146,7 @@ CONTAINS
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
-             ENDIF ! mod(locol-1,n_size) = nrank 
+             ENDIF ! mod(locol-1,n_size) = nrank
           END DO
        END DO
     END IF

@@ -8,7 +8,7 @@ MODULE m_tlmplm_cholesky
   !     and does a cholesky decomposition
   !*********************************************************************
 CONTAINS
-  SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,enpara,&
+  SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
        jspin,mpi,v,input,hub1inp,td,ud)
     USE m_tlmplm
     USE m_types
@@ -16,6 +16,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -67,9 +68,9 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21)
+    !$OMP SHARED(nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,sym,enpara,jspin,jsp,mpi,v,input,hub1inp,td,ud)
+       CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,jspin,jsp,mpi,v,input,hub1inp,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
@@ -115,23 +116,23 @@ CONTAINS
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
                    !------------------------------------------------------------------------
-                   ! Currently for jsp >= 3 the convention is:
+                   ! For jsp >= 3 the convention is:
                    !      -jsp=3 => real part of the off-diagonal hamiltonian
                    !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
                    !------------------------------------------------------------------------
                    IF (jsp < 3) THEN
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + v%mmpMat(m,mp,i_u,jsp)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
+                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) + v%mmpMat(m,mp,i_u,jsp)
+                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
                    ELSE IF(jsp.EQ.3) THEN
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp  ,n,jsp) = td%h_loc(lm+s,lmp  ,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm  ,lmp+s,n,jsp) = td%h_loc(lm  ,lmp+s,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ELSE
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp  ,n,jsp) = td%h_loc(lm+s,lmp  ,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm  ,lmp+s,n,jsp) = td%h_loc(lm  ,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ENDIF
                 ENDDO
              ENDDO
@@ -184,7 +185,7 @@ CONTAINS
        ENDIF
     ENDDO
     !$OMP END PARALLEL DO
-    IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,noco,td)
+    IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,nococonv,td)
 
 
 
@@ -194,7 +195,7 @@ CONTAINS
 
 
 
-  SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,noco,td)
+  SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,nococonv,td)
     USE m_radovlp
     USE m_types
     IMPLICIT NONE
@@ -204,7 +205,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)   :: v
     TYPE(t_tlmplm),INTENT(INOUT):: td
     TYPE(t_usdus),INTENT(INOUT) :: ud
-    TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_hub1inp),INTENT(IN)  :: hub1inp
 
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
@@ -222,7 +223,7 @@ CONTAINS
        s=atoms%lnonsph(n)+1
        !first ispin=2,jspin=1 case
        DO l=0,atoms%lnonsph(n)
-          c=(-0.5)*CMPLX(noco%b_con(1,n),noco%b_con(2,n))
+          c=(-0.5)*CMPLX(nococonv%b_con(1,n),nococonv%b_con(2,n))
           td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + uun21(l,n)*c
           td%h_off(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + udn21(l,n)*c
           td%h_off(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
@@ -232,7 +233,7 @@ CONTAINS
 
        !then ispin=2,jspin=1 case
        DO l=0,atoms%lnonsph(n)
-          c=(-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))
+          c=(-0.5)*CMPLX(nococonv%b_con(1,n),-nococonv%b_con(2,n))
           td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + uun21(l,n)*c
           td%h_off(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + udn21(l,n)*c
           td%h_off(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + dun21(l,n)*c

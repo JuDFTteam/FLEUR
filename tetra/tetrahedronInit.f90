@@ -69,7 +69,7 @@ MODULE m_tetrahedronInit
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
-            neigMax =  MINVAL(neig(k(:ncorn)))
+            neigMax = MIN(MINVAL(neig(k(:ncorn))),SIZE(eig,1))
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neigMax,ikpt,film,ncorn,k,fac) &
             !$OMP SHARED(kpts,eig,weights,eMesh) &
@@ -143,7 +143,7 @@ MODULE m_tetrahedronInit
          ELSE
             k(:ncorn) = kpts%ntetra(:ncorn,itet)
          ENDIF
-         neigMax = MINVAL(neig(k(:ncorn)))
+         neigMax = MIN(MINVAL(neig(k(:ncorn))),SIZE(eig,1))
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(itet,neigMax,ikpt,film,l_dos,ncorn,ne,k,fac) &
          !$OMP SHARED(kpts,eig,weights,eMesh,end_weights,del) &
@@ -180,7 +180,7 @@ MODULE m_tetrahedronInit
       ! Weights for DOS -> differentiate with respect to E
       !---------------------------------------------------
       IF(l_dos) THEN
-         ALLOCATE(dos_weights(ne),source=0.0)
+         ALLOCATE(dos_weights(ne+2),source=0.0)
          ALLOCATE(occ_weights(ne+2),source=0.0)
          DO iband = 1, neig(ikpt)
             occ_weights(2:ne+1) = weights(1:ne,iband)

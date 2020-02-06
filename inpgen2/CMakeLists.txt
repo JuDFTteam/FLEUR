@@ -69,6 +69,7 @@ ${FLEUR_SRC}/init/strgn_dim.F
 ${FLEUR_SRC}/init/spgrot.f
 #${FLEUR_SRC}/init/convn_dim.f
 
+${FLEUR_SRC}/types/types_nococonv.F90
 ${FLEUR_SRC}/types/types_mat.F90
 ${FLEUR_SRC}/types/types_xcpot_inbuild_nofunction.F90
 ${FLEUR_SRC}/types/types_xcpot_data.F90

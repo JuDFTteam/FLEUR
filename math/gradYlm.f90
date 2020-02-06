@@ -238,4 +238,14 @@ CONTAINS
       divMt(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
 
    END SUBROUTINE divYlm
+   
+   SUBROUTINE rotYlm(gradMtx, gradMty, gradMtz, rotMt)
+      COMPLEX, INTENT(IN) :: gradMtx(:,:,:,:), gradMty(:,:,:,:), gradMtz(:,:,:,:) !r,lm,n,x
+      COMPLEX, INTENT(OUT) :: rotMt(:,:,:,:)
+
+      rotMt(:,:,:,1)=gradMtz(:,:,:,2)-gradMty(:,:,:,3)
+      rotMt(:,:,:,2)=gradMtx(:,:,:,3)-gradMtz(:,:,:,1)
+      rotMt(:,:,:,3)=gradMty(:,:,:,1)-gradMtx(:,:,:,2)
+
+   END SUBROUTINE rotYlm
 END MODULE m_gradYlm

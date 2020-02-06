@@ -159,8 +159,39 @@ CONTAINS
 
     SUBROUTINE fleur_job_execute(jobs)
         USE m_fleur
+        USE m_types
+        USE m_fleur_init
+
         TYPE(t_job),INTENT(IN) ::jobs(:)
 
+        !local variables for FLEUR
+        TYPE(t_mpi)      :: mpi
+        TYPE(t_input)    :: input
+        TYPE(t_field)    :: field
+        TYPE(t_atoms)    :: atoms
+        TYPE(t_sphhar)   :: sphhar
+        TYPE(t_cell)     :: cell
+        TYPE(t_stars)    :: stars
+        TYPE(t_sym)      :: sym
+        TYPE(t_noco)     :: noco
+        TYPE(t_vacuum)   :: vacuum
+        TYPE(t_sliceplot):: sliceplot
+        TYPE(t_banddos)  :: banddos
+        TYPE(t_enpara)   :: enpara
+        TYPE(t_results)  :: results
+        TYPE(t_kpts)     :: kpts
+        TYPE(t_mpinp)    :: mpinp
+        TYPE(t_hybinp)   :: hybinp
+        TYPE(t_oneD)     :: oneD
+        TYPE(t_coreSpecInput):: coreSpecInput
+        TYPE(t_wann)     :: wann
+        TYPE(t_gfinp)    :: gfinp
+        TYPE(t_hub1inp)  :: hub1inp
+        TYPE(t_nococonv) :: nococonv
+        CLASS(t_xcpot),ALLOCATABLE:: xcpot
+        CLASS(t_forcetheo),ALLOCATABLE::forcetheo
+
+        !local variables for jobcontrol
         INTEGER:: njob=1
         INTEGER:: irank=0
 
@@ -183,8 +214,16 @@ CONTAINS
         !change directory
         CALL chdir(jobs(njob)%directory)
         !Call FLEUR
+        mpi%mpi_comm = jobs(njob)%mpi_comm
+        CALL timestart("Initialization")
+        call fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,nococonv,vacuum,forcetheo,sliceplot,&
+        banddos,enpara,xcpot,results,kpts,mpinp,hybinp,oneD,coreSpecInput,gfinp,&
+        hub1inp,wann)
+        CALL timestop("Initialization")
 
-        CALL fleur_execute(jobs(njob)%mpi_comm)
+        CALL fleur_execute(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,nococonv,vacuum,forcetheo,sliceplot,&
+        banddos,enpara,xcpot,results,kpts,mpinp,hybinp,oneD,coreSpecInput,gfinp,&
+        hub1inp,wann)
 
     END SUBROUTINE
 

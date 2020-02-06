@@ -28,6 +28,26 @@ MODULE m_types_fleurinput
   USE m_types_hub1inp
   IMPLICIT NONE
 
+  TYPE t_fleurinput
+    TYPE(t_cell)::cell
+    TYPE(t_sym)::sym
+    TYPE(t_atoms)::atoms
+    TYPE(t_input)::input
+    TYPE(t_noco)::noco
+    TYPE(t_vacuum)::vacuum
+    TYPE(t_field)::field
+    TYPE(t_sliceplot)::sliceplot
+    TYPE(t_banddos)::banddos
+    TYPE(t_hybinp)::hybinp
+    TYPE(t_oneD)::oneD
+    TYPE(t_coreSpecInput)::coreSpecInput
+    TYPE(t_wann)::wann
+    CLASS(t_xcpot),ALLOCATABLE::xcpot
+    TYPE(t_forcetheo_data)::forcetheo_data
+    TYPE(t_enparaXML)::enparaXML
+    TYPE(t_kpts)::kpts
+  end type
+
 CONTAINS
   !Subroutine does nothing, only here for copy-paste code...
   SUBROUTINE dummy_subroutine_that_should_never_be_used(cell,sym,atoms,input,noco,vacuum,field,&

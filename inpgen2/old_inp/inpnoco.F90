@@ -7,27 +7,29 @@
       MODULE m_inpnoco
 
 !**********************************************************************
-!     This subroutine reads the  Euler angles of the  magnetic field 
+!     This subroutine reads the  Euler angles of the  magnetic field
 !     directions and other noncollinear parameters from the file nocoinp
 !
 !                                                 Philipp Kurz 98/01/28
 !******** ABBREVIATIONS ***********************************************
 !     alpha,beta:Euler angles of the local magnetic field direction of
-!                each atom(-type). 
+!                each atom(-type).
 !**********************************************************************
       CONTAINS
-      SUBROUTINE inpnoco(atoms,input,vacuum,noco)
+      SUBROUTINE inpnoco(atoms,input,sym,vacuum,noco)
 
       USE m_constants, ONLY : tpi_const
       USE m_rwnoco
       USE m_types_atoms
       USE m_types_input
+      USE m_types_sym
       USE m_types_vacuum
       USE m_types_noco
       Use m_nocoInputCheck
       IMPLICIT NONE
       TYPE(t_atoms),INTENT(INOUT) ::atoms
       TYPE(t_input),INTENT(INOUT) ::input
+      TYPE(t_sym),INTENT(IN)      ::sym
       TYPE(t_vacuum),INTENT(IN)   ::vacuum
       TYPE(t_noco),INTENT(INOUT)  ::noco
 
@@ -46,8 +48,8 @@
 
       CALL rw_noco_read(atoms,noco,input)
 
-      CALL nocoInputCheck(atoms,input,vacuum,noco)
-         
+      CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
+
       IF (noco%l_ss) THEN
 !
 !--->    the angle beta is relative to the spiral in a spin-spiral
@@ -57,8 +59,8 @@
 !--->    a plane perpendicular to qss can be equivalent!
          iatom = 1
          DO itype = 1,atoms%ntype
-            noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,iatom))
-            noco%alph(itype) = noco%alph(itype) + noco%phi
+            noco%phi_inp = tpi_const*dot_product(noco%qss_inp,atoms%taual(:,iatom))
+            noco%alph_inp(itype) = noco%alph_inp(itype) + noco%phi_inp
             iatom = iatom + atoms%neq(itype)
          ENDDO
       ENDIF

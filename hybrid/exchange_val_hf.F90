@@ -61,7 +61,7 @@ MODULE m_exchange_valence_hf
 CONTAINS
 
    SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
-                                  oneD,eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_wrapper
@@ -82,6 +82,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts

@@ -8,7 +8,7 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,&
+SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,&
                       mpi,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
@@ -35,8 +35,9 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,v
 
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_noco),INTENT(IN)       :: noco
+      TYPE(t_nococonv),INTENT(IN)   :: nococonv
       TYPE(t_kpts),INTENT(IN)       :: kpts
-      TYPE(t_atoms),INTENT(INOUT)   :: atoms
+      TYPE(t_atoms),INTENT(IN)      :: atoms
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_hub1inp),INTENT(IN)    :: hub1inp
@@ -324,7 +325,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,v
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
          DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
@@ -462,7 +463,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,v
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
        DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
@@ -484,7 +485,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,v
 !	    	ngopr_temp(i)=sym%ngopr(i)
 !               sym%ngopr(i)=1
 !            END DO
-		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,jsp,oneD,&
+		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,nococonv,jsp,oneD,&
 		    eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),&
 		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force)
 !            DO i=1,atoms%nat

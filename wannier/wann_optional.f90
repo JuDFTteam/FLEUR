@@ -9,7 +9,7 @@ MODULE m_wann_optional
 CONTAINS
   SUBROUTINE wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     !**************************************************
-    !     Make preparations for the calculation of 
+    !     Make preparations for the calculation of
     !     Wannier functions.
     !     Frank Freimuth
     !**************************************************
@@ -34,42 +34,42 @@ CONTAINS
     TYPE(t_cell),      INTENT(IN)    :: cell
     TYPE(t_oneD),      INTENT(IN)    :: oneD
     TYPE(t_noco),      INTENT(IN)    :: noco
-    TYPE(t_wann),      INTENT(INOUT) :: wann
+    TYPE(t_wann),      INTENT(IN)    :: wann
 
     INTEGER       :: num_wann(2)
-    LOGICAL       :: l_nocosoc
+    LOGICAL       :: l_nocosoc,l_stopopt
 
     l_nocosoc=noco%l_noco.OR.noco%l_soc
-
+    l_stopopt=l_stopopt
     !-----read the input file to determine what to do
 !    CALL wann_read_inp(input,.TRUE.,wann) !call wann_read_inp now in fleur_init
 
     !-----generate projection-definition-file
     IF(wann%l_projgen) THEN
        CALL wann_projgen(atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
     !-----generate k-point-files
     IF(wann%l_kpointgen) THEN
        CALL wann_kpointgen()
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
     IF(wann%l_w90kpointgen) THEN
        CALL wann_w90kpointgen()
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc)THEN
        CALL wann_kptsreduc(sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, oneD%odi%d1,l_nocosoc)
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc2)THEN
        CALL wann_kptsreduc2(wann%mhp, sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, oneD%odi%d1,l_nocosoc)
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
     !-----generate WF1.win and bkpts
@@ -87,7 +87,7 @@ CONTAINS
        num_wann(2)=wann%band_max(2)-wann%band_min(2)+1
        CALL wann_dipole3(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,cell%bmat,atoms%taual,&
             num_wann, atoms%ntype,atoms%neq,atoms%zatom,l_nocosoc)
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
     !-----calculate polarization, if not wannierize
@@ -95,7 +95,7 @@ CONTAINS
     IF(wann%l_dipole.AND..NOT.wann%l_wannierize)THEN
        CALL wann_dipole(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,atoms%ntype,&
             atoms%neq,atoms%zatom)
-       wann%l_stopopt=.TRUE.
+       l_stopopt=.TRUE.
     ENDIF
 
 
@@ -123,11 +123,11 @@ CONTAINS
 
          call wann_convert_fleur_w90(input%jspins,l_nocosoc,wann)
 
-         wann%l_stopopt=.true.
+         l_stopopt=.true.
     ENDIF
 
 
-    IF(wann%l_stopopt)  CALL juDFT_end("wann_optional done",1) ! The 1 is temporarily. Should be mpi%irank.
+    IF(l_stopopt)  CALL juDFT_end("wann_optional done",1) ! The 1 is temporarily. Should be mpi%irank.
 
   END SUBROUTINE wann_optional
 END MODULE m_wann_optional

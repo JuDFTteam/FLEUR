@@ -17,13 +17,13 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: mpi
-   TYPE(t_noco),INTENT(IN)       :: noco
+   TYPE(t_nococonv),INTENT(IN)       :: nococonv
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_lapw),INTENT(IN)       :: lapw
    TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -53,7 +53,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
    REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
    REAL, ALLOCATABLE :: cph_re(:), cph_im(:)
    REAL, ALLOCATABLE :: dot(:), fct(:), fct2(:)
-   INTEGER, PARAMETER :: NVEC = 128 
+   INTEGER, PARAMETER :: NVEC = 128
    INTEGER :: NVEC_rem  !remainder
 
    CALL timestart("spherical setup")
@@ -64,7 +64,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
       fl2p1(l) = REAL(l+l+1)/fpi_const
    END DO ! l
 !$OMP     PARALLEL DEFAULT(NONE)&
-!$OMP     SHARED(lapw,atoms,noco,mpi,input,usdus,smat,hmat)&
+!$OMP     SHARED(lapw,atoms,nococonv,mpi,input,usdus,smat,hmat)&
 !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fj,gj,isp,fl2p1,el,e_shift,chi)&
 !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
 !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
@@ -75,8 +75,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
    ALLOCATE(plegend(NVEC,0:2))
    ALLOCATE(xlegend(NVEC))
    ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
-   qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
-   qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
+   qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
+   qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
 !$OMP      DO SCHEDULE(DYNAMIC,1)
    DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
       kii=(ki-1)/mpi%n_size+1
@@ -98,15 +98,15 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
          !--->          update overlap and l-diagonal hamiltonian matrix
          VecHelpS = 0.0
          VecHelpH = 0.0
-         
+
          !--->       x for legendre polynomials
          DO jv = 0, NVEC_rem-1
             kj = jv + kj_off
             xlegend(jv+1) = DOT_PRODUCT(lapw%gk(1:3,kj,iintsp), lapw%gk(1:3,ki,jintsp))
          END DO ! kj
-         
+
          DO  l = 0,atoms%lmax(n)
-         
+
             fjkiln = fj(ki,l,jintsp)
             gjkiln = gj(ki,l,jintsp)
 
@@ -156,7 +156,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
             cph_im(:NVEC_REM) = cph_im(:NVEC_REM) - SIN(dot(:NVEC_REM))
             ! IF (iintsp.NE.jintsp) cph_im=-cph_im
          END DO ! nn
-         
+
          IF (smat%l_real) THEN
             smat%data_r(kj_off:kj_vec,kii) = &
             smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
@@ -384,14 +384,14 @@ ENDDO
 DEALLOCATE(plegend)
 END SUBROUTINE HsmtSphGpuKernel_cmplx
 
-SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE nvtx
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: mpi
-   TYPE(t_noco),INTENT(IN)       :: noco
+   TYPE(t_nococonv),INTENT(IN)       :: nococonv
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_lapw),INTENT(IN)       :: lapw
    TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -427,8 +427,8 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
       fl2p1(l) = REAL(l+l+1)/fpi_const
       fl2p1bt(l) = fl2p1(l)*0.5
    END DO
-   qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
-   qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
+   qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
+   qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
 
    ! pretty ugly solution
    nv_dev = lapw%nv

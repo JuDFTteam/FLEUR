@@ -67,7 +67,7 @@ CONTAINS
             lh = l*(l+1)+M
             fVec(M,:)=flh(:,lh)
             DO imem = 1, lathar%nmem(lh,ns)
-               cMat(M,lathar%mlh(imem,lh,ns))=lathar%mlh(imem,lh,ns)
+               cMat(M,lathar%mlh(imem,lh,ns))=lathar%clnu(imem,lh,ns)
             END DO
          END DO
 

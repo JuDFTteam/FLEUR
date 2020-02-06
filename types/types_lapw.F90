@@ -6,6 +6,7 @@
 
 MODULE m_types_lapw
   USE m_judft
+  use m_types_nococonv
   IMPLICIT NONE
   PRIVATE
   !These dimensions should be set once per call of FLEUR
@@ -66,7 +67,7 @@ CONTAINS
     dim_nbasfcn=lapw_dim_nbasfcn
   end function
 
-  SUBROUTINE lapw_alloc(lapw,cell,input,noco)
+  SUBROUTINE lapw_alloc(lapw,cell,input,noco,nococonv)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -74,11 +75,12 @@ CONTAINS
     !*********************************************************************
     USE m_boxdim
     USE m_types_fleurinput
-
+    USE m_types_nococonv
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
     CLASS(t_lapw),INTENT(INOUT)  :: lapw
 
 
@@ -113,14 +115,14 @@ CONTAINS
     !---> by |G + k +/- qss/2| < rkmax.
     nvh(2)=0
     DO ispin = 1,MERGE(2,1,noco%l_ss)
-       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
-       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
-       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*nococonv%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*nococonv%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*nococonv%qss(3))/arltv3))
        nv = 0
        DO  j1 = -mk1-addX,mk1+addX
           DO  j2 = -mk2-addY,mk2+addY
              DO  j3 = -mk3-addZ,mk3+addZ
-                s = lapw%bkpt + (/j1,j2,j3/) + (2*ispin - 3)/2.0*noco%qss
+                s = lapw%bkpt + (/j1,j2,j3/) + (2*ispin - 3)/2.0*nococonv%qss
                 r2 = dot_PRODUCT(MATMUL(s,cell%bbmat),s)
                 IF (r2.LE.rk2)  nv = nv + 1
              END DO
@@ -151,17 +153,19 @@ CONTAINS
   END SUBROUTINE lapw_alloc
 
 
-  SUBROUTINE lapw_init(lapw,input,noco,kpts,atoms,sym,&
+  SUBROUTINE lapw_init(lapw,input,noco,nococonv,kpts,atoms,sym,&
        nk,cell,l_zref,mpi)
     USE m_types_mpi
     USE m_sort
     USE m_boxdim
     USE m_types_fleurinput
     USE m_types_kpts
+    USE m_types_nococonv
     IMPLICIT NONE
 
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -197,7 +201,7 @@ CONTAINS
     ENDIF
 
 
-    CALL lapw%alloc(cell,input,noco)
+    CALL lapw%alloc(cell,input,noco,nococonv)
 
     ALLOCATE(gvec(3,SIZE(lapw%gvec,2)))
     ALLOCATE(rk(SIZE(lapw%gvec,2)),rkq(SIZE(lapw%gvec,2)),rkqq(SIZE(lapw%gvec,2)))
@@ -218,15 +222,15 @@ CONTAINS
     rk2 = input%rkmax*input%rkmax
     !---> if too many basis functions, reduce rkmax
     spinloop:DO ispin = 1,input%jspins
-       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
-       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
-       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*nococonv%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*nococonv%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*nococonv%qss(3))/arltv3))
        !--->    obtain vectors
        n = 0
        DO  j1 = -mk1-addX,mk1+addX
           DO  j2 = -mk2-addY,mk2+addY
              DO  j3 = -mk3-addZ,mk3+addZ
-                s=lapw%bkpt+(/j1,j2,j3/)+(2*ispin - 3)/2.0*noco%qss
+                s=lapw%bkpt+(/j1,j2,j3/)+(2*ispin - 3)/2.0*nococonv%qss
                 sq = lapw%bkpt+ (/j1,j2,j3/)
                 r2 = dot_PRODUCT(s,MATMUL(s,cell%bbmat))
                 r2q = dot_PRODUCT(sq,MATMUL(sq,cell%bbmat))
@@ -311,7 +315,7 @@ CONTAINS
           ENDIF
        ENDIF
        DO k=1,lapw%nv(ispin)
-          lapw%vk(:,k,ispin)=lapw%bkpt+lapw%gvec(:,k,ispin)+(ispin-1.5)*noco%qss
+          lapw%vk(:,k,ispin)=lapw%bkpt+lapw%gvec(:,k,ispin)+(ispin-1.5)*nococonv%qss
           lapw%gk(:,k,ispin)=MATMUL(TRANSPOSE(cell%bmat),lapw%vk(:,k,ispin))/MAX (lapw%rk(k,ispin),1.0e-30)
        ENDDO
 
@@ -344,7 +348,7 @@ CONTAINS
        END IF
     END DO
 
-    IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
+    IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,nococonv,cell)
 
     lapw%nv_tot=lapw%nv(1)
     lapw%nmat=lapw%nv(1)+atoms%nlotot
@@ -353,7 +357,7 @@ CONTAINS
 
   CONTAINS
 
-    SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
+    SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,nococonv,cell)
       USE m_types_fleurinput
 
       IMPLICIT NONE
@@ -362,6 +366,8 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_noco),INTENT(IN)   :: noco
+      TYPE(t_nococonv),INTENT(IN)   :: nococonv
+
 
 
       INTEGER:: n,na,nn,np,lo,nkvec_sv,nkvec(atoms%nlod,2),iindex
@@ -379,7 +385,7 @@ CONTAINS
             if (sym%invsat(na)>1) cycle
             !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
             np=sym%invtab(sym%ngopr(na))
-            CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
+            CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,nococonv,lapw,cell)
             DO lo = 1,atoms%nlo(n)
                lapw%index_lo(lo,na)=iindex
                iindex=iindex+lapw%nkvec(lo,na)
@@ -410,13 +416,14 @@ CONTAINS
 
 
   SUBROUTINE priv_vec_for_lo(atoms,sym,na,&
-       n,np,noco, lapw,cell)
+       n,np,noco,nococonv, lapw,cell)
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
     USE m_ylm
     USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
+    TYPE(t_nococonv),INTENT(IN):: nococonv
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -453,9 +460,9 @@ CONTAINS
     nintsp=MERGE(2,1,noco%l_ss)
     DO iintsp = 1,nintsp
        IF (iintsp.EQ.1) THEN
-          qssbti = - noco%qss/2
+          qssbti = - nococonv%qss/2
        ELSE
-          qssbti = + noco%qss/2
+          qssbti = + nococonv%qss/2
        ENDIF
 
        !--->    set up phase factors

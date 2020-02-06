@@ -79,8 +79,8 @@ CONTAINS
          END SELECT
       ENDIF
       !Put the potentials in rez. space.
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,input%total,v_xc,vTot%pw,vTot%pw_w)
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,input%total,v_x,vx%pw,vx%pw_w)
+      CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_xc,vTot%pw,vTot%pw_w)
+      CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_x,vx%pw,vx%pw_w)
 
       !calculate the ex.-cor energy density
       IF (ALLOCATED(exc%pw_w)) THEN

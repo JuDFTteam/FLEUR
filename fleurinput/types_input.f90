@@ -14,7 +14,6 @@ MODULE m_types_input
      LOGICAL :: film=.FALSE.
      INTEGER :: jspins=1
      INTEGER :: neig=0
-     LOGICAL :: total
      REAL    :: rkmax=0.0
      REAL    :: gmax
      REAL    :: zelec
@@ -95,7 +94,6 @@ CONTAINS
     call mpi_bc(this%film,rank,mpi_comm)
     call mpi_bc(this%jspins,rank,mpi_comm)
     call mpi_bc(this%neig,rank,mpi_comm)
-    call mpi_bc(this%total,rank,mpi_comm)
     call mpi_bc(this%rkmax,rank,mpi_comm)
     call mpi_bc(this%gmax,rank,mpi_comm)
     call mpi_bc(this%zelec,rank,mpi_comm)

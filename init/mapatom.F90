@@ -62,7 +62,7 @@
       if (allocated(sym%invarop)) deallocate(sym%invarop)
       if (allocated(sym%invarind)) deallocate(sym%invarind)
       if (allocated(sym%invsat)) deallocate(sym%invsat)
-      
+
       ALLOCATE(sym%invsatnr(atoms%nat))
       ALLOCATE(sym%invarop(atoms%nat,sym%nop))
       ALLOCATE(sym%invarind(atoms%nat))
@@ -72,7 +72,7 @@
 
       IF (noco%l_soc) THEN  ! check once more here...
         CALL soc_sym(&
-     &               sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,&
+     &               sym%nop,sym%mrot,noco%theta_inp,noco%phi_inp,cell%amat,&
      &               error)
       ELSE
         error(:) = .false.

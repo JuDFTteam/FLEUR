@@ -238,7 +238,7 @@ CONTAINS
 
      buf=ADJUSTL(line(5:len_TRIM(line)-1))
 
-     READ(buf,*,iostat=ios) noco%qss
+     READ(buf,*,iostat=ios) noco%qss_inp
      noco%l_ss=.TRUE.
      noco%l_noco=.TRUE.
      IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
@@ -253,7 +253,7 @@ CONTAINS
 
      buf=ADJUSTL(line(5:len_TRIM(line)-1))
 
-     READ(buf,*,iostat=ios) noco%theta,noco%phi
+     READ(buf,*,iostat=ios) noco%theta_inp,noco%phi_inp
      noco%l_soc=.TRUE.
      IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
    END SUBROUTINE process_soc

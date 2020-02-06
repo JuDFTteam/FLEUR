@@ -1,6 +1,5 @@
 MODULE m_fleurinput_postprocess
   USE m_types_fleurinput
-  IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
     Banddos,Oned,Xcpot,Kpts,gfinp)
@@ -12,12 +11,13 @@ CONTAINS
     use m_lapwdim
     use m_checks
     USE m_relaxio
+    USE m_types_nococonv
 
     TYPE(t_cell),INTENT(INOUT)  ::cell
     TYPE(t_sym),INTENT(INOUT)   ::sym
     TYPE(t_atoms),INTENT(INOUT) ::atoms
     TYPE(t_input),INTENT(INOUT) ::input
-    TYPE(t_noco),INTENT(INOUT)  ::noco
+    TYPE(t_noco),INTENT(IN)     ::noco
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
@@ -34,7 +34,7 @@ CONTAINS
     call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
 
-    call check_input_switches(banddos,vacuum,noco,atoms,input)
+    call check_input_switches(banddos,vacuum,noco,atoms,input,sym)
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.)
     !adjust positions by displacements

@@ -27,7 +27,7 @@
           TYPE(t_vacuum),INTENT(IN)    :: vacuum
           TYPE(t_atoms),INTENT(IN)     :: atoms
           TYPE(t_sphhar),INTENT(IN)    :: sphhar
-          TYPE(t_input),INTENT(INOUT)  :: input
+          TYPE(t_input),INTENT(IN)     :: input
           TYPE(t_sym),INTENT(IN)       :: sym
           TYPE(t_noco),INTENT(IN)      :: noco
           TYPE(t_oneD),INTENT(IN)      :: oneD
@@ -36,7 +36,7 @@
 
           ! local type instances
           TYPE(t_potden)               :: den
-
+          TYPE(t_input)                ::input_jsp
           !     .. Local Scalars ..
           REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp
           INTEGER i,ivac,j,k,lh,n,na,jsp_new
@@ -55,12 +55,11 @@
           IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
 
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-
-          input%jspins=1
+          input_jsp=input
+          input_jsp%jspins=1
           CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
-          CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+          CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
-          input%jspins=2
 
           qval = 0.
           na = 1

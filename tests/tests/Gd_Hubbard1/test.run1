@@ -14,7 +14,7 @@ $result+=jt::test_fileexists("$workdir/Hubbard1/hloc.cfg");
 #test for one eigval file
 $result+=jt::test_fileexists("$workdir/Hubbard1/eigval7part.dat");
 #test density matrix
-$result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",7.00071244002505,0.00001);
-$result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",1.00011127013323,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",7.00015383049998,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",1.00023177097908,0.00001);
 
 jt::stageresult($workdir,$result,"1");

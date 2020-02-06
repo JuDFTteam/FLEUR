@@ -15,8 +15,8 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
-                       hybdat, noco, oneD, mpi, input, jsp, zmat)
+   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
+                       hybdat, noco,nococonv, oneD, mpi, input, jsp, zmat)
 
       ! nkpt       ::     number of all k-points
       USE m_radfun
@@ -37,6 +37,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
@@ -95,7 +96,7 @@ CONTAINS
       ! generate G-vectors, which fulfill |k+G|<rkmax
       ! for all k-points
       DO ikpt = 1, kpts%nkptf
-         CALL lapw(ikpt)%init(input, noco, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+         CALL lapw(ikpt)%init(input, noco,nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
       END DO
 
       ! set spherical component of the potential from the previous iteration vr
