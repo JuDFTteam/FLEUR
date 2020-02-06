@@ -16,6 +16,7 @@ MODULE m_types_noco
     LOGICAL:: l_mperp = .FALSE.
     LOGICAL:: l_constr = .FALSE.
     LOGICAL:: l_mtNocoPot = .FALSE.
+    LOGICAL:: l_alignMT = .FALSE.
     LOGICAL:: l_sourceFree = .FALSE.
     REAL   :: mix_b=0.0
     LOGICAL:: l_spav= .FALSE.
