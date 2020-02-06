@@ -4,7 +4,7 @@ module m_wavefproducts_noinv
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandoi, bandof, ik, iq, &
                                     input, jsp, cell, atoms, mpdata, hybinp,&
-                                   hybdat, kpts, lapw, sym, noco,nococonv,&
+                                   hybdat, kpts, lapw, sym, noco,nococonv, oneD,&
                                    nkqpt, cprod)
       USE m_types
       use m_juDFT
@@ -13,13 +13,14 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
-      TYPE(t_nococonv), INTENT(IN)        :: nococonv
+      type(t_nococonv), intent(in)    :: nococonv
+      type(t_oneD), intent(in)        :: oneD
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
-      TYPE(t_mpdata), intent(in)     :: mpdata
+      TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
@@ -32,9 +33,11 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(ik))
 
-      INTEGER        :: g_t(3)
-      REAL           :: kqpt(3), kqpthlp(3)
-
+      INTEGER              :: g_t(3)
+      REAL                 :: kqpt(3), kqpthlp(3)
+      complex              :: c_phase_k(hybdat%nbands(ik))
+      complex, allocatable :: c_phase_kqpt(:)
+      type(t_mat)          :: z_k_p, z_kqpt_p
 
       call timestart("wavefproducts_noinv5")
       cprod = cmplx_0; nkqpt = 0
@@ -45,6 +48,7 @@ CONTAINS
       g_t  = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = kpts%get_nk(kqpt)
+      allocate(c_phase_kqpt(hybdat%nbands(nkqpt)))
       IF (.not. kpts%is_kpt(kqpt)) then
          call juDFT_error('wavefproducts: k-point not found')
       endif
@@ -52,11 +56,13 @@ CONTAINS
       call wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
                                         hybdat, kpts, lapw, sym, noco, nococonv,&
-                                        nkqpt, cprod)
+                                        nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &
-                                   input,atoms, mpdata, hybinp, hybdat, kpts, &
-                                  nkqpt, cprod)
+                                   input,atoms, cell, noco,nococonv, oneD, sym,&
+                                    mpdata, hybinp, hybdat, kpts, &
+                                   jsp, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
@@ -64,7 +70,7 @@ CONTAINS
    subroutine wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t, &
                                        input, jsp, cell, atoms, mpdata, hybinp,&
                                       hybdat, kpts, lapw, sym, noco,nococonv,&
-                                      nkqpt, cprod)
+                                      nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
@@ -82,6 +88,7 @@ CONTAINS
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+      type(t_mat), intent(inout)      :: z_k_p, z_kqpt_p
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandoi, bandof
@@ -89,8 +96,8 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  nkqpt
 
 !     - arrays -
-
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(ik))
+      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
+      COMPLEX, INTENT(INOUT)    :: cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(ik))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2
@@ -123,14 +130,17 @@ CONTAINS
       CALL lapw_nkqpt%init(input, noco, nococonv,kpts, atoms, sym, nkqpt, cell, sym%zrfs)
       nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
       call z_nk%alloc(.false., nbasfcn, input%neig)
+      call z_k_p%init(z_nk)
+
       nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
       call z_kqpt%alloc(.false., nbasfcn, input%neig)
+      call z_kqpt_p%init(z_kqpt)
 
       ! read in z at k-point ik and nkqpt
-      call timestart("read_z")
-      call read_z(z_nk, kpts%nkptf*(jsp - 1) + ik)
-      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
-      call timestop("read_z")
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ik, jsp, z_nk, &
+                  c_phase=c_phase_k, parent_z=z_k_p)
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
+                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
       g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
         + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
@@ -166,7 +176,7 @@ CONTAINS
       END DO
       call timestop("step function")
 
-      call timestart("hybinp g")
+      call timestart("hybrid g")
       ic = hybdat%nbasp
       DO igptm = 1, mpdata%n_g(iq)
          carr = 0
@@ -193,7 +203,7 @@ CONTAINS
          END DO
          cprod(ic, :,:) = carr(:,:)
       END DO
-      call timestop("hybinp g")
+      call timestop("hybrid g")
       deallocate(z0, pointer, gpt0)
       call timestop("calc convolution")
 
@@ -202,29 +212,38 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &
-                                      input,atoms, mpdata, hybinp, hybdat, kpts, &
-                                     nkqpt, cprod)
+                                      input,atoms, cell, noco,nococonv, oneD, sym,&
+                                      mpdata, hybinp, hybdat, kpts, &
+                                      jsp, ikqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       USE m_constants
       use m_io_hybinp
       use m_judft
       use m_wavefproducts_aux
+      use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)         :: input
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
+      type(t_cell), intent(in)        :: cell
+      type(t_noco), intent(in)        :: noco
+      type(t_nococonv), intent(in)    :: nococonv
+      type(t_oneD), intent(in)        :: oneD
+      type(t_sym), intent(in)         :: sym
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
       TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+      type(t_mat), intent(in)         :: z_k_p, z_kqpt_p
 
       !     - scalars -
       INTEGER, INTENT(IN)      ::  bandoi, bandof
-      INTEGER, INTENT(IN)      ::  ik, iq
-      INTEGER, INTENT(IN)     ::  nkqpt
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp
+      INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
-
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(ik))
+      complex, intent(in)     :: c_phase_k(hybdat%nbands(ik))
+      complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      COMPLEX, INTENT(INOUT)  ::  cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(ik))
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
@@ -239,8 +258,8 @@ CONTAINS
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX                 ::  carr(bandoi:bandof, hybdat%nbands(ik))
-      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_ikqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
@@ -253,11 +272,10 @@ CONTAINS
       call timestop("set lmstart")
 
       ! read in cmt coefficients from direct access file cmt
-      call timestart("read_cmt")
-      call read_cmt(cmt_nk(:,:,:), ik)
-      call read_cmt(cmt(:,:,:), nkqpt)
-      call timestop("read_cmt")
-
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
+                          sym, oneD, z_k_p, jsp, ik, c_phase_k, cmt_nk)
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
+                          sym, oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
       !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
@@ -296,7 +314,7 @@ CONTAINS
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                             * outer_prod(cmt(bandoi:bandof, lm2, ic), &
+                                             * outer_prod(cmt_ikqpt(bandoi:bandof, lm2, ic), &
                                                           conjg(cmt_nk(1:hybdat%nbands(ik), lm1, ic)))
                               END IF
                            END IF
@@ -306,7 +324,7 @@ CONTAINS
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                             * outer_prod(cmt(bandoi:bandof, lm1, ic),&
+                                             * outer_prod(cmt_ikqpt(bandoi:bandof, lm1, ic),&
                                                           conjg(cmt_nk(1:hybdat%nbands(ik), lm2, ic)))
                               END IF
                            END IF

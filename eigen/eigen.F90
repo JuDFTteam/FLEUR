@@ -160,8 +160,8 @@ CONTAINS
             END IF ! hybinp%l_hybrid.OR.input%l_rdmft
 
             IF(hybinp%l_hybrid) THEN
-               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,hybdat,&
-                                                      input,kpts,jsp,results,xcpot,noco,hmat)
+               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,cell,sym,mpdata,hybinp,hybdat,&
+                                                      input,kpts,jsp,results,xcpot,noco,nococonv,hmat)
 
                IF(hybdat%l_subvxc) THEN
                   CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,&

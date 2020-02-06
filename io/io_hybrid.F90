@@ -77,22 +77,6 @@ contains
 #endif
    END SUBROUTINE open_hybinp_io2
 
-   subroutine write_cmt(cmt, nk)
-      implicit none
-      complex, INTENT(IN):: cmt(:, :, :)
-      integer, INTENT(IN):: nk
-
-      write(777, rec=nk) cmt
-   end subroutine write_cmt
-
-   subroutine read_cmt(cmt, nk)
-      implicit none
-      complex, INTENT(OUT):: cmt(:, :, :)
-      integer, INTENT(IN):: nk
-
-      read(777, rec=nk) cmt
-   end subroutine read_cmt
-
    subroutine write_coulomb(nk, l_real, coulomb)
       implicit none
       complex, intent(in) :: coulomb(:)
@@ -179,22 +163,61 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(mat, rec)
+   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
+                     jsp, z_out, parent_z, c_phase)
+      USE m_eig66_io
+      use m_types
+      use m_trafo
       implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
-      !print *,"read z:",rec
+      type(t_atoms), intent(in)    :: atoms
+      type(t_cell), intent(in)     :: cell
+      type(t_hybdat), intent(in)   :: hybdat
+      type(t_kpts), intent(in)     :: kpts
+      type(t_sym), intent(in)      :: sym
+      type(t_noco), intent(in)     :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
+      type(t_input), intent(in)    :: input
+      integer, intent(in)          :: ik, jsp
+      TYPE(t_mat), INTENT(INOUT)   :: z_out
 
-      CALL read_matrix(mat, rec, id_z)
+      type(t_mat), intent(inout), target, optional :: parent_z
+      complex, intent(inout), optional             :: c_phase(:)
+
+      INTEGER              :: ikp, iop
+      type(t_mat), pointer :: ptr_mat
+      type(t_mat), target  :: tmp_mat
+      complex              :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
+      complex              :: cmthlp(input%neig,hybdat%maxlmindx,atoms%nat)
+      type(t_lapw)         :: lapw_ik, lapw_ikp
+
+      cmt=0;cmthlp=0
+
+      call timestart("read_z")
+      if(ik <= kpts%nkpt) then
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+         if(present(parent_z)) call parent_z%copy(z_out,1,1)
+      else
+         if(present(parent_z)) then
+            ptr_mat => parent_z
+         else
+            call tmp_mat%init(z_out)
+            ptr_mat => tmp_mat
+         endif
+
+         ikp = kpts%bkp(ik) ! parrent k-point
+         iop = kpts%bksym(ik) ! connecting symm
+
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
+
+         CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
+         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
+
+         call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
+                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
+                                  c_phase)
+      endif
+      call timestop("read_z")
    END subroutine read_z
-
-   subroutine write_z(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)           :: rec
-      !print *,"write z:",rec
-      CALL write_matrix(mat, rec, id_z)
-   END subroutine write_z
 
    subroutine read_v_x(mat, rec)
       implicit none

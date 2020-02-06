@@ -72,11 +72,12 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
-                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
+                      lapw, noco, nococonv,oneD, zmat, c_phase, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
       USE m_trafo
+      use m_calc_cmt
 
       IMPLICIT NONE
 
@@ -90,6 +91,10 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
+      type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in):: nococonv
+      type(t_oneD), intent(in)   :: oneD
+      type(t_mat), intent(in)    :: zmat
 
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
@@ -98,6 +103,7 @@ CONTAINS
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
+      complex, intent(in)              :: c_phase(hybdat%nbands(nk))
       INTEGER, INTENT(IN)              :: rrot(:, :, :)
       INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(INOUT)           :: parent(kpts%nkptf)
@@ -133,7 +139,7 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
@@ -260,9 +266,8 @@ CONTAINS
       END DO
 
       ! read in cmt and z at current k-point (nk)
-
-      CALL read_cmt(cmt, nk)
-      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
+                          sym, oneD, zmat, jsp, nk, c_phase, cmt)
 
       IF(allocated(olapmt)) deallocate(olapmt)
       allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)

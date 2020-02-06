@@ -19,15 +19,17 @@ MODULE m_exchange_core
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, input,atoms, mpdata, hybinp, hybdat, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, input,atoms, cell, kpts, sym, noco, nococonv, oneD,&
+                             mpdata, hybinp, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
-
+      use m_wavefproducts_aux
       USE m_constants
       USE m_util
       use m_intgrf
       USE m_wrapper
       USE m_types
       USE m_io_hybinp
+      use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -36,6 +38,12 @@ CONTAINS
       TYPE(t_mpdata), intent(in)   :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_atoms), INTENT(IN)   :: atoms
+      type(t_cell), intent(in)   :: cell
+      type(t_kpts), intent(in)   :: kpts
+      type(t_sym), intent(in)    :: sym
+      type(t_noco), intent(in)   :: noco
+      type(t_nococonv), intent(in):: nococonv
+      type(t_oneD), intent(in)   :: oneD
       TYPE(t_lapw), INTENT(IN)   :: lapw
 
       !     -scalars -
@@ -60,19 +68,27 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
 
+      integer                 :: nbasfcn
       REAL                    ::  integrand(atoms%jmtd)
       REAL                    ::  primf1(atoms%jmtd), primf2(atoms%jmtd)
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
-      COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
+      complex                 :: c_phase(hybdat%nbands(nk))
+      COMPLEX, ALLOCATABLE    :: carr(:, :), carr2(:, :), carr3(:, :)
+      type(t_mat)             :: zmat
 
 
       ! read in mt wavefunction coefficients from file cmt
-
-      CALL read_cmt(cmt, nk)
+      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
+      CALL zmat%init(sym%invs, nbasfcn, hybdat%nbands(kpts%bkp(nk)))
+      if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
+      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
+                          sym, oneD, zmat, jsp, nk, c_phase, cmt)
+      call zmat%free()
 
       allocate(fprod(atoms%jmtd, 5), larr(5), parr(5))
 

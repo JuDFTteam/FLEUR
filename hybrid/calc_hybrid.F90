@@ -57,7 +57,7 @@ CONTAINS
       ! write (7465,*) iter, iterHF
       ! close(7465)
 
-      CALL timestart("hybinp code")
+      CALL timestart("hybrid code")
       INQUIRE (file="v_x.mat", exist=hybdat%l_addhf)
       CALL open_hybinp_io1( sym%invs)
 
@@ -72,7 +72,7 @@ CONTAINS
       hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
-         CALL timestop("hybinp code")
+         CALL timestop("hybrid code")
          RETURN
       ENDIF
 
@@ -121,7 +121,7 @@ CONTAINS
 
          l_zref = (sym%zrfs .AND. (SUM(ABS(kpts%bk(3, :kpts%nkpt))) < 1e-9) .AND. .NOT. noco%l_noco)
 
-         CALL timestart("Preparation for hybinp functionals")
+         CALL timestart("Preparation for hybrid functionals")
          !    CALL juDFT_WARN ("hybinp functionals not working in this version")
 
          !construct the mixed-basis
@@ -135,13 +135,13 @@ CONTAINS
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
 
-         CALL hf_init(mpdata, hybinp, atoms, input,  hybdat)
-         CALL timestop("Preparation for hybinp functionals")
+         CALL hf_init(eig_id, mpdata, hybinp, atoms, input,  hybdat)
+         CALL timestop("Preparation for hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
-                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, eig_id, &
+                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
@@ -149,13 +149,13 @@ CONTAINS
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, l_zref)
                CALL hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco,nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
+                           noco,nococonv, oneD, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")
          CALL close_eig(eig_id)
 
       ENDIF
-      CALL timestop("hybinp code")
+      CALL timestop("hybrid code")
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

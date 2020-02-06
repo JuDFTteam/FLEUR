@@ -4,7 +4,7 @@ MODULE m_hf_init
    !     preparations for HF and hybinp functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(mpdata, hybinp, atoms, input, hybdat)
+   SUBROUTINE hf_init(eig_id, mpdata, hybinp, atoms, input, hybdat)
       USE m_types
       USE m_hybrid_core
       USE m_util
@@ -12,6 +12,7 @@ CONTAINS
       USE m_io_hybinp
       USE m_types_hybdat
       IMPLICIT NONE
+      integer, intent(in)               :: eig_id
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybinp), INTENT(IN)        :: hybinp
       TYPE(t_atoms), INTENT(IN)         :: atoms
@@ -19,6 +20,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
       INTEGER:: l, m, i, l1, l2, m1, m2
+
 
       !initialize hybdat%gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
@@ -30,6 +32,7 @@ CONTAINS
       call hybdat%free()
       call hybdat%allocate(atoms, hybinp, mpdata%num_radfun_per_l)
 
+      hybdat%eig_id = eig_id
       ! pre-calculate gaunt coefficients
       hybdat%fac(0) = 1
       hybdat%sfac(0) = 1

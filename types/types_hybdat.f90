@@ -1,6 +1,6 @@
 MODULE m_types_hybdat
-  IMPLICIT NONE
-
+   use m_types_usdus
+   IMPLICIT NONE
 
    TYPE t_hybdat
       LOGICAL                ::  l_subvxc = .false.
@@ -8,29 +8,31 @@ MODULE m_types_hybdat
       LOGICAL                ::  l_addhf = .false.
       INTEGER                :: lmaxcd, maxindxc
       INTEGER                :: maxfac
-      REAL, ALLOCATABLE      :: gridf(:,:)
-      INTEGER, ALLOCATABLE   :: nindxc(:,:)
+      REAL, ALLOCATABLE      :: gridf(:, :)
+      INTEGER, ALLOCATABLE   :: nindxc(:, :)
       INTEGER, ALLOCATABLE   :: lmaxc(:)
-      REAL, ALLOCATABLE      :: core1(:,:,:,:), core2(:,:,:,:)
-      REAL, ALLOCATABLE      :: eig_c(:,:,:)
-      INTEGER, ALLOCATABLE   :: kveclo_eig(:,:)
+      REAL, ALLOCATABLE      :: core1(:, :, :, :), core2(:, :, :, :)
+      REAL, ALLOCATABLE      :: eig_c(:, :, :)
+      INTEGER, ALLOCATABLE   :: kveclo_eig(:, :)
       REAL, ALLOCATABLE      :: sfac(:), fac(:)
-      REAL, ALLOCATABLE      :: gauntarr(:,:,:,:,:,:)
-      REAL, ALLOCATABLE      :: bas1(:,:,:,:), bas2(:,:,:,:)
-      REAL, ALLOCATABLE      :: bas1_MT(:,:,:), drbas1_MT(:,:,:)
-      REAL, ALLOCATABLE      :: prodm(:,:,:,:)
+      REAL, ALLOCATABLE      :: gauntarr(:, :, :, :, :, :)
+      REAL, ALLOCATABLE      :: bas1(:, :, :, :), bas2(:, :, :, :)
+      REAL, ALLOCATABLE      :: bas1_MT(:, :, :), drbas1_MT(:, :, :)
+      REAL, ALLOCATABLE      :: prodm(:, :, :, :)
       REAL, ALLOCATABLE      :: div_vv(:, :, :)
       INTEGER, ALLOCATABLE   :: pntgptd(:)
-      INTEGER, ALLOCATABLE   :: pntgpt(:,:,:,:)
-      INTEGER, ALLOCATABLE   :: nindxp1(:,:)
+      INTEGER, ALLOCATABLE   :: pntgpt(:, :, :, :)
+      INTEGER, ALLOCATABLE   :: nindxp1(:, :)
       INTEGER, ALLOCATABLE   ::  ne_eig(:)
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:, :)
       INTEGER                ::  maxlmindx = -1
-      COMPLEX, ALLOCATABLE   :: stepfunc(:,:,:)
+      COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
       INTEGER                ::  nbasp = -1
       INTEGER                ::  maxbasm1 = -1
+      INTEGER                :: eig_id = -1
       INTEGER, ALLOCATABLE   ::  nbasm(:)
+      type(t_usdus)          :: usdus
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free => free_hybdat
@@ -46,43 +48,41 @@ contains
       class(t_hybdat), intent(inout) :: hybdat
       type(t_atoms), intent(in)      :: atoms
       type(t_hybinp), intent(in)     :: hybinp
-      integer, intent(in)            :: num_radfun_per_l(:,:)
+      integer, intent(in)            :: num_radfun_per_l(:, :)
       integer                        :: ok(12)
-      character(len=2000) :: error_message
 
       ok = -1
-      allocate(hybdat%lmaxc(atoms%ntype),&
-              stat=ok(1), source=0)
-      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-              stat=ok(2), source=0.0)
-      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-              stat=ok(3), source=0.0)
-      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-              stat=ok(4), source=0.0)
-      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-              stat=ok(5), source=0.0)
+      allocate(hybdat%lmaxc(atoms%ntype), &
+               stat=ok(1), source=0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
+               stat=ok(2), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
+               stat=ok(3), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
+               stat=ok(4), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
+               stat=ok(5), source=0.0)
 
       ! core allocs
-      allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype),&
+      allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype), &
                stat=ok(6), source=0)
-      allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+      allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), &
                stat=ok(7), source=0.0)
-      allocate(hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+      allocate(hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), &
                stat=ok(8), source=0.0)
-      allocate(hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+      allocate(hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), &
                stat=ok(9), source=0.0)
-
 
       allocate(hybdat%fac(0:hybdat%maxfac), stat=ok(10), source=0.0)
       allocate(hybdat%sfac(0:hybdat%maxfac), stat=ok(11), source=0.0)
 
-      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybinp%lcutm1),&
-                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1)),&
-                            stat=ok(12), source=0.0)
+      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybinp%lcutm1), &
+                               -atoms%lmaxd:atoms%lmaxd, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1)), &
+               stat=ok(12), source=0.0)
 
       if(any(ok /= 0)) then
-         write (*,*) "allocation of hybdat failed. Error in array no.:"
-         write (*,*) maxloc(abs(ok))
+         write(*, *) "allocation of hybdat failed. Error in array no.:"
+         write(*, *) maxloc(abs(ok))
          call juDFT_error("allocation of hybdat failed. Error in array no is the outfile")
       endif
    end subroutine allocate_hybdat
@@ -110,24 +110,24 @@ contains
       use m_types_atoms
       use m_judft
       implicit none
-      class(t_hybdat),INTENT(INOUT) :: hybdat
-      type(t_cell),  INTENT(in)    :: cell
+      class(t_hybdat), INTENT(INOUT) :: hybdat
+      type(t_cell), INTENT(in)    :: cell
       type(t_atoms), INTENT(in)    :: atoms
-      integer,       INTENT(in)    :: g(3)
-      real,          INTENT(in)    :: svol
+      integer, INTENT(in)    :: g(3)
+      real, INTENT(in)    :: svol
       integer :: i, j, k, ok
 
-      if (.not. allocated(hybdat%stepfunc)) then
+      if(.not. allocated(hybdat%stepfunc)) then
          call timestart("setup stepfunction")
-         ALLOCATE (hybdat%stepfunc(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
-         IF (ok /= 0) then
+         ALLOCATE(hybdat%stepfunc(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
+         IF(ok /= 0) then
             call juDFT_error('wavefproducts_inv5: error allocation stepfunc')
          endif
 
          DO i = -g(1), g(1)
             DO j = -g(2), g(2)
                DO k = -g(3), g(3)
-                  hybdat%stepfunc(i,j,k) = stepfunction(cell, atoms, [i, j, k])/svol
+                  hybdat%stepfunc(i, j, k) = stepfunction(cell, atoms,[i, j, k])/svol
                END DO
             END DO
          END DO
@@ -153,7 +153,7 @@ contains
 
       gnorm = gptnorm(g, cell%bmat)
       gnorm3 = gnorm**3
-      IF (abs(gnorm) < 1e-12) THEN
+      IF(abs(gnorm) < 1e-12) THEN
          stepfunction = 1
          DO itype = 1, atoms%ntype
             stepfunction = stepfunction - atoms%neq(itype)*atoms%volmts(itype)/cell%omtil
@@ -166,7 +166,7 @@ contains
             fgr = fpi_const*(sin(r) - r*cos(r))/gnorm3/cell%omtil
             DO ieq = 1, atoms%neq(itype)
                icent = icent + 1
-               stepfunction = stepfunction - fgr*exp(-cmplx(0., tpi_const*dot_product(atoms%taual(:,icent), g)))
+               stepfunction = stepfunction - fgr*exp(-cmplx(0., tpi_const*dot_product(atoms%taual(:, icent), g)))
             ENDDO
          ENDDO
       ENDIF
@@ -179,8 +179,8 @@ contains
       INTEGER, INTENT(IN)  :: gpt(3)
       REAL, INTENT(IN)     :: bmat(3, 3)
 
-      gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
+      gptnorm = norm2(matmul(gpt(:), bmat(:, :)))
 
    END FUNCTION gptnorm
 
- END MODULE m_types_hybdat
+END MODULE m_types_hybdat

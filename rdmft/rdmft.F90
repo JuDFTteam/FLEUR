@@ -142,6 +142,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
 
+   complex :: c_phase(input%neig)
+
 #endif
 
 #ifndef CPP_OLDINTEL
@@ -395,7 +397,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,hybdat,xcpot)
 
-   CALL hf_init(mpdata,hybinp,atoms,input,hybdat)
+   CALL hf_init(eig_id,mpdata,hybinp,atoms,input,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -518,7 +520,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          results%neig(:,:) = neigTemp(:,:)
 
          CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,nococonv,&
-                       cell,oneD,results,jspin,enpara,eig_id,&
+                       cell,oneD,results,jspin,enpara,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
@@ -530,15 +532,23 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,ikpt,cell,l_zref)
 
             parent = 0
+            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
+
+            if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
+            call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ikpt, jsp, zMat, c_phase=c_phase)
+
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,&
+                         noco,nococonv, oneD, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
             CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
-                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nococonv,nsest,indx_sest,&
+                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nococonv,oneD,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,input,atoms,cell, kpts, sym, noco,nococonv, oneD,&
+                                mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
+                                1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 
@@ -561,11 +571,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                olap%data_c = conjg(olap%data_c)
             END IF
 
-            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
 
-            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybdat%nbands(ikpt))],neig=nbands,zmat=zMat)
 
-!            CALL read_z(zMat,kpts%nkpt*(jspin-1)+ikpt)
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)
