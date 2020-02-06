@@ -218,7 +218,8 @@ contains
          CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
          call waveftrafo_gen_zmat(tmp_mat, ikp, iop, kpts, sym, jsp, input, &
-                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out)
+                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
+                                  c_phase)
       endif
       call timestop("read_z")
    END subroutine read_z
