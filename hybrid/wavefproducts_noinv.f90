@@ -250,8 +250,8 @@ CONTAINS
 
       ! read in cmt coefficients from direct access file cmt
       call timestart("read_cmt")
-      call read_cmt(cmt_nk(:,:,:), ik)
-      call read_cmt(cmt_ikqpt(:,:,:), ikqpt)
+      call read_cmt(cmt_nk, ik)
+      call read_cmt(cmt_ikqpt, ikqpt)
       call timestop("read_cmt")
 
 
