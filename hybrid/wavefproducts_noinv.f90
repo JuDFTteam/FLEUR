@@ -199,7 +199,7 @@ CONTAINS
 
    subroutine wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &
                                       input,atoms, mpdata, hybinp, hybdat, kpts, &
-                                     nkqpt, cprod)
+                                     ikqpt, cprod)
       use m_types
       USE m_constants
       use m_io_hybinp
@@ -216,7 +216,7 @@ CONTAINS
       !     - scalars -
       INTEGER, INTENT(IN)      ::  bandoi, bandof
       INTEGER, INTENT(IN)      ::  ik, iq
-      INTEGER, INTENT(IN)     ::  nkqpt
+      INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
 
@@ -235,7 +235,7 @@ CONTAINS
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX                 ::  carr(bandoi:bandof, hybdat%nbands(ik))
-      COMPLEX                 ::  cmt_nkqpt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_ikqpt(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
@@ -251,7 +251,7 @@ CONTAINS
       ! read in cmt coefficients from direct access file cmt
       call timestart("read_cmt")
       call read_cmt(cmt_nk(:,:,:), ik)
-      call read_cmt(cmt_nkqpt(:,:,:), nkqpt)
+      call read_cmt(cmt_ikqpt(:,:,:), ikqpt)
       call timestop("read_cmt")
 
 
@@ -292,7 +292,7 @@ CONTAINS
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                             * outer_prod(cmt_nkqpt(bandoi:bandof, lm2, ic), &
+                                             * outer_prod(cmt_ikqpt(bandoi:bandof, lm2, ic), &
                                                           conjg(cmt_nk(1:hybdat%nbands(ik), lm1, ic)))
                               END IF
                            END IF
@@ -302,7 +302,7 @@ CONTAINS
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                             * outer_prod(cmt_nkqpt(bandoi:bandof, lm1, ic),&
+                                             * outer_prod(cmt_ikqpt(bandoi:bandof, lm1, ic),&
                                                           conjg(cmt_nk(1:hybdat%nbands(ik), lm2, ic)))
                               END IF
                            END IF
