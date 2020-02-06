@@ -532,7 +532,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL zMat%init(olap%l_real,nbasfcn,input%neig)
-            call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, zMat, c_phase)
+
+            if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
+            call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, jsp, zMat, c_phase=c_phase)
 
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
             CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,&

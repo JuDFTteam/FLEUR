@@ -30,7 +30,7 @@ contains
       complex, intent(inout)       :: cmt_out(:,:,:)
 
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
-      complex, allocatable :: cmt(:,:,:), cmt_out2(:,:,:)
+      complex, allocatable :: cmt(:,:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
@@ -39,7 +39,6 @@ contains
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
 
-      allocate(cmt_out2, source=cmt_out)
 
       ikp = kpts%bkp(ik)
       nbands = hybdat%nbands(ikp)
@@ -105,19 +104,16 @@ contains
          END DO
       END DO
 
+
+
       ! write cmt at irreducible k-points in direct-access file cmt
       if(ik <= kpts%nkpt) then
          cmt_out = cmt
       else
          iop = kpts%bksym(ik)
+
          call waveftrafo_gen_cmt(cmt, c_phase, zmat_ikp%l_real, ikp, iop, atoms, &
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
-      endif
-      call read_cmt(cmt_out2, ik)
-      if(maxval(abs(cmt_out - cmt_out2))> 1e-10) then
-         write (*,*) "ik = ", ik
-         write (*,*) "max diff = ", maxval(abs(cmt_out - cmt_out2))
-         call juDFT_error("too big off a diff")
       endif
    end subroutine calc_cmt
 end module m_calc_cmt

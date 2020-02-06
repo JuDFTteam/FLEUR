@@ -151,7 +151,9 @@ CONTAINS
 
 
          call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
-         call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase)
+
+         if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+         call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase=c_phase)
 
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)

@@ -88,8 +88,9 @@
                if(allocated(c_phase)) deallocate(c_phase)
                allocate(c_phase(hybdat%nbands(ikpt)))
 
+               if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
                call read_z(atoms, cell, hybdat, kpts, sym, noco, input, ikpt, &
-                           jsp, z(ikpt), c_phase)
+                           jsp, z(ikpt), c_phase=c_phase)
                call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                              sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
                              cmt(:hybdat%nbands(ikpt),:,:,ikpt))

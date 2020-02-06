@@ -19,7 +19,6 @@ CONTAINS
                        hybdat, noco, oneD, mpi, input, jsp, zmat)
 
       ! nkpt       ::     number of all k-points
-
       USE m_radfun
       USE m_radflo
       USE m_abcof
@@ -184,12 +183,12 @@ CONTAINS
          ! abcof calculates the wavefunction coefficients
          ! stored in acof,bcof,ccof
          lapw(ikpt0)%nmat = lapw(ikpt0)%nv(jsp) + atoms%nlotot
+
          CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybdat%nbands(ikpt0), hybdat%usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
                     oneD, acof(:hybdat%nbands(ikpt0), :, :), bcof(:hybdat%nbands(ikpt0), :, :), &
                     ccof(:, :hybdat%nbands(ikpt0), :, :), zmat(ikpt0))
 
          ! MT wavefunction coefficients are calculated in a local coordinate system rotate them in the global one
-
          CALL hyb_abcrot(hybinp, atoms, hybdat%nbands(ikpt0), sym, acof(:hybdat%nbands(ikpt0), :, :), &
                          bcof(:hybdat%nbands(ikpt0), :, :), ccof(:, :hybdat%nbands(ikpt0), :, :))
 
@@ -239,6 +238,7 @@ CONTAINS
             END DO
          END DO
 
+
          ! write cmt at irreducible k-points in direct-access file cmt
          CALL write_cmt(cmt, ikpt0)
          CALL zhlp%alloc(zmat(ikpt0)%l_real, zmat(ikpt0)%matsize1, zmat(ikpt0)%matsize2)
@@ -263,6 +263,7 @@ CONTAINS
                call waveftrafo_gen_zmat(zmat(ikpt0), ikpt0, iop, &
                                         kpts, sym, jsp, input, hybdat%nbands(ikpt0), &
                                         lapw(ikpt0), lapw(ikpt), zhlp, c_phase)
+
                call waveftrafo_gen_cmt(cmt, c_phase, zmat(ikpt0)%l_real, ikpt0, iop, atoms, &
                                         mpdata, hybinp, kpts, sym, hybdat%nbands(ikpt0), cmthlp)
                CALL write_cmt(cmthlp, ikpt)

@@ -837,7 +837,9 @@ CONTAINS
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
       momentum = cmplx_0
-      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase)
+
+      if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+      call read_z(atoms, cell, hybdat, kpts, sym, noco, input, nk, jsp, z, c_phase=c_phase)
       call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, z, jsp, nk, c_phase, cmt)
 

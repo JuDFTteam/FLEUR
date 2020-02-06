@@ -179,7 +179,7 @@ contains
       CALL write_matrix(mat, rec, id_olap)
    END subroutine write_olap
 
-   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco, input, ik, jsp, z_out, c_phase)
+   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco, input, ik, jsp, z_out, parent_z, c_phase)
       USE m_eig66_io
       use m_types
       use m_trafo
@@ -194,30 +194,39 @@ contains
       integer, intent(in)          :: ik, jsp
       TYPE(t_mat), INTENT(INOUT)   :: z_out
 
-      complex, intent(inout), optional :: c_phase(:)
+      type(t_mat), intent(inout), target, optional :: parent_z
+      complex, intent(inout), optional             :: c_phase(:)
 
-      INTEGER           :: ikp, iop
-      type(t_mat)       :: tmp_mat
-      complex           :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
-      complex           :: cmthlp(input%neig,hybdat%maxlmindx,atoms%nat)
-      type(t_lapw)      :: lapw_ik, lapw_ikp
+      INTEGER              :: ikp, iop
+      type(t_mat), pointer :: ptr_mat
+      type(t_mat), target  :: tmp_mat
+      complex              :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
+      complex              :: cmthlp(input%neig,hybdat%maxlmindx,atoms%nat)
+      type(t_lapw)         :: lapw_ik, lapw_ikp
 
       cmt=0;cmthlp=0
 
       call timestart("read_z")
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+         if(present(parent_z)) call parent_z%copy(z_out,1,1)
       else
+         if(present(parent_z)) then
+            ptr_mat => parent_z
+         else
+            call tmp_mat%init(z_out)
+            ptr_mat => tmp_mat
+         endif
+
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
-         call tmp_mat%init(z_out)
 
-         call read_eig(hybdat%eig_id,ikp, jsp,zmat=tmp_mat)
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
 
          CALL lapw_ik%init(input, noco, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
-         call waveftrafo_gen_zmat(tmp_mat, ikp, iop, kpts, sym, jsp, input, &
+         call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
                                   hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
       endif
