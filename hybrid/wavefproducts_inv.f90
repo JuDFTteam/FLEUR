@@ -270,7 +270,6 @@ CONTAINS
      !read in cmt coefficients at k+q point
      call calc_cmt(atoms, cell, input, noco, hybinp, hybdat, mpdata, kpts, &
                          sym, oneD, z_kqpt_p, jsp, nkqpt, c_phase_kqpt, ccmt_nkqpt)
-     !call read_cmt(ccmt_nkqpt, nkqpt)
 
      iatom = 0
      DO itype = 1, atoms%ntype
