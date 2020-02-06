@@ -247,7 +247,8 @@ CONTAINS
           CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
                results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
        ELSE IF (input%bz_integration==3) THEN
-          CALL fertetra(input,kpts,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+          CALL fertetra(input,noco,kpts,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),&
+                        results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ENDIF
        results%seigscv = results%seigsc + results%seigv
 

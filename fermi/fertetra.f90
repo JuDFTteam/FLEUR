@@ -8,9 +8,10 @@ MODULE m_fertetra
 
    CONTAINS
 
-   SUBROUTINE fertetra(input,kpts,mpi,ne,eig,ef,w,seigv)
+   SUBROUTINE fertetra(input,noco,kpts,mpi,ne,eig,ef,w,seigv)
 
       TYPE(t_kpts),        INTENT(IN)     :: kpts
+      TYPE(t_noco),        INTENT(IN)     :: noco
       TYPE(t_input),       INTENT(IN)     :: input
       TYPE(t_mpi),         INTENT(IN)     :: mpi
       INTEGER,             INTENT(IN)     :: ne(:,:)
@@ -19,10 +20,12 @@ MODULE m_fertetra
       REAL,                INTENT(INOUT)  :: ef
       REAL,                INTENT(INOUT)  :: w(:,:,:)
 
-      INTEGER :: jspin,ikpt,it,iBand
+      INTEGER :: jspin,jspins,ikpt,it,iBand
       REAL    :: dlow,dup,dfermi,s1,s,chmom
       REAL    :: lowBound,upperBound
 
+
+      jspins = MERGE(1,input%jspins,noco%l_noco)
       !---------------------------------------------
       !Find the interval, where ef should be located
       !---------------------------------------------
@@ -32,7 +35,7 @@ MODULE m_fertetra
 
       !First check the lower bound
       dlow = 0.0
-      DO jspin = 1, input%jspins
+      DO jspin = 1, jspins
          CALL tetrahedronInit(kpts,eig(:,:,jspin),ne(:,jspin),&
                               lowBound,input%film,w(:,:,jspin))
          DO ikpt = 1, kpts%nkpt
@@ -53,7 +56,7 @@ MODULE m_fertetra
       DO
          !Now check the upper bound
          dup = 0.0
-         DO jspin = 1, input%jspins
+         DO jspin = 1, jspins
             CALL tetrahedronInit(kpts,eig(:,:,jspin),ne(:,jspin),&
                                  upperBound,input%film,w(:,:,jspin))
             DO ikpt = 1, kpts%nkpt
@@ -87,7 +90,7 @@ MODULE m_fertetra
 
          ef = (lowBound+upperBound)/2.0
          dfermi = 0.0
-         DO jspin = 1, input%jspins
+         DO jspin = 1, jspins
             !-------------------------------------------------------
             ! Compute the weights for charge density integration
             !-------------------------------------------------------
@@ -116,7 +119,7 @@ MODULE m_fertetra
       !----------------------------------------------
       s1 = 0.
       seigv = 0.
-      DO jspin = 1,input%jspins
+      DO jspin = 1,jspins
          s = 0.
          DO iBand = 1,MAXVAL(ne(:,jspin))
             DO ikpt = 1,kpts%nkpt
@@ -127,7 +130,7 @@ MODULE m_fertetra
          s1 = s1 + s
       ENDDO
       seigv = 2.0/input%jspins*seigv
-      chmom = s1 - input%jspins*s
+      chmom = s1 - jspins*s
       IF ( mpi%irank == 0 ) THEN
         WRITE (6,FMT=9300) seigv,s1,chmom
       END IF
