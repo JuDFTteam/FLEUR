@@ -77,22 +77,6 @@ contains
 #endif
    END SUBROUTINE open_hybinp_io2
 
-   subroutine write_cmt(cmt, nk)
-      implicit none
-      complex, INTENT(IN):: cmt(:, :, :)
-      integer, INTENT(IN):: nk
-
-      write(777, rec=nk) cmt
-   end subroutine write_cmt
-
-   subroutine read_cmt(cmt, nk)
-      implicit none
-      complex, INTENT(OUT):: cmt(:, :, :)
-      integer, INTENT(IN):: nk
-
-      read(777, rec=nk) cmt
-   end subroutine read_cmt
-
    subroutine write_coulomb(nk, l_real, coulomb)
       implicit none
       complex, intent(in) :: coulomb(:)
@@ -232,14 +216,6 @@ contains
       endif
       call timestop("read_z")
    END subroutine read_z
-
-   subroutine write_z(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)           :: rec
-      !print *,"write z:",rec
-      CALL write_matrix(mat, rec, id_z)
-   END subroutine write_z
 
    subroutine read_v_x(mat, rec)
       implicit none
