@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kpts, enpara, &
+      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kpts, enpara, gfinp, &
       l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -30,6 +30,7 @@ CONTAINS
       use m_types_oneD
       use m_types_mpinp
       use m_types_hybinp
+      use m_types_gfinp
       use m_types_cell
       use m_types_banddos
       use m_types_sliceplot
@@ -62,6 +63,7 @@ CONTAINS
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
+      TYPE(t_gfinp), INTENT(IN)    :: gfinp
       CLASS(t_enparaxml), INTENT(IN)   :: enpara
       CLASS(t_forcetheo), INTENT(IN):: forcetheo !nothing is done here so far....
       LOGICAL, INTENT(IN)        :: l_explicitIn, l_includeIn(4)
@@ -114,7 +116,7 @@ CONTAINS
       CHARACTER(len=20) :: mixingScheme
       CHARACTER(len=10) :: loType
       CHARACTER(len=10) :: bzIntMode
-      LOGICAL ::   l_explicit, l_nocoOpt, l_include(4)
+      LOGICAL ::   l_explicit, l_nocoOpt, l_gfOpt, l_include(4)
       INTEGER :: iAtomType, startCoreStates, endCoreStates
       CHARACTER(len=100) :: posString(3)
       CHARACTER(len=7) :: str
@@ -124,6 +126,7 @@ CONTAINS
       l_include = l_includeIn .or. .not. present(filename)
       l_explicit = l_explicitIn .OR. .not. present(filename)
       l_nocoOpt = noco%l_noco .OR. juDFT_was_argument("-noco")
+      l_gfOpt = gfinp%n>0 .OR. juDFT_was_argument("-greensf")
 
       band = .false.
       nw = 1
@@ -228,6 +231,30 @@ CONTAINS
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
 195   FORMAT('      <ldaU l_linMix="', l1, '" mixParam="', f0.6, '" spinf="', f0.6, '"/>')
       WRITE (fileNum, 195) input%ldauLinMix, input%ldauMixParam, input%ldauSpinf
+
+      IF(l_gfOpt) THEN
+205      FORMAT('      <greensFunction l_sphavg="', l1, '" l_mperp="', l1'">')
+         WRITE(fileNum, 205) gfinp%l_sphavg, gfinp%l_mperp
+206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" ellup="', f0.8, '"/>')
+         WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
+         SELECT CASE(gfinp%mode)
+         CASE(1)
+207         FORMAT('         <contourRectangle n1="', i0, '" n2="', i0, '" n3="', i0, '" nmatsub="', i0,&
+                   '" sigma="', f0.8, '" eb="', f0.8, '"/>')
+            WRITE(fileNum, 207) gfinp%n1, gfinp%n2, gfinp%n3, gfinp%nmatsub, gfinp%sigma, gfinp%eb
+         CASE(2)
+208         FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '"/>')
+            WRITE(fileNum, 208) gfinp%ncirc, gfinp%eb, gfinp%et, gfinp%alpha
+         CASE(3)
+209         FORMAT('         <contourDOS n="', i0, '" sigma="', f0.8, '" eb="', f0.8, '" et="', f0.8, &
+                   '" analytical_cont="', l1, '" l_fermi="', l1, '"/>')
+            WRITE(fileNum, 209) gfinp%nDOS, gfinp%sigmaDOS, gfinp%eb, gfinp%et, gfinp%l_anacont, gfinp%l_dosfermi
+         CASE DEFAULT
+            CALL judft_error("Unknown green's function contour mode", calledby="w_inpXML")
+         END SELECT
+         WRITE(fileNum, '(a)') '      </greensFunction>'
+      ENDIF
+
 
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
 200   FORMAT('      <bzIntegration valenceElectrons="', f0.8, '" mode="', a, '" fermiSmearingEnergy="', f0.8, '">')

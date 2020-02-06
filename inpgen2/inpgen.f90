@@ -34,6 +34,7 @@ PROGRAM inpgen
   USE m_types_xcpot_inbuild_nofunction
   USE m_types_forcetheo
   USE m_types_kpts
+  USE m_types_gfinp
   USE m_types_enpara
   USE m_types_oneD
   USE m_types_sliceplot
@@ -64,6 +65,7 @@ PROGRAM inpgen
       TYPE(t_oned)     :: oned
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
+      TYPE(t_gfinp)    :: gfinp
 
       CHARACTER(len=40):: kpts_str
       LOGICAL          :: l_exist
@@ -139,7 +141,7 @@ PROGRAM inpgen
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
               l_explicit,l_include,"inp.xml")
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF

@@ -167,7 +167,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,&
+            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
     !
