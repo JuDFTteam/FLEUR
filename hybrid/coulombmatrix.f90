@@ -1669,12 +1669,6 @@ CONTAINS
    !     (The real-space function G can be calculated with gfunction.f)
    !
 
-   ! Convergence parameter
-#define CONVPARAM 1e-18
-   ! Do some additional shells ( real-space and Fourier-space sum )
-#define ADDSHELL1 40
-#define ADDSHELL2 0
-
    SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
 
       USE m_constants, ONLY: pi_const
@@ -1721,6 +1715,10 @@ CONTAINS
 
       COMPLEX                   ::  y((2*hybinp%lexp + 1)**2)
       COMPLEX                   ::  shlp((2*hybinp%lexp + 1)**2, kpts%nkpt)
+      REAL, PARAMETER           :: CONVPARAM = 1e-18
+      ! Do some additional shells ( real-space and Fourier-space sum )
+      INTEGER, PARAMETER        :: ADDSHELL1 = 40
+      INTEGER, PARAMETER        :: ADDSHELL2 = 0
 
       call timestart("calc struc_const.")
 

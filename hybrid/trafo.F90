@@ -849,7 +849,6 @@ CONTAINS
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
 
-#ifdef CPP_DEBUG
       !test
       nrkpt = 0
       DO i = 1, kpts%nkptf
@@ -866,7 +865,6 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       ENDIF
-#endif
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i = 0

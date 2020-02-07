@@ -7,7 +7,7 @@ set(fleur_F90 ${fleur_F90}
    hybrid/checkolap.F90
    hybrid/exchange_val_hf.F90
    hybrid/hybrid_core.f90
-   hybrid/coulombmatrix.F90
+   hybrid/coulombmatrix.f90
    hybrid/gen_wavf.F90
    hybrid/spmvec.F90
    hybrid/calc_hybrid.F90
