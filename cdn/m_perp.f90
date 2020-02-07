@@ -66,7 +66,7 @@ CONTAINS
 8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
-    IF (noco%l_relax(itype)) THEN
+    IF (noco%l_alignMT) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
        !--->    it in the global spin coordinate frame
        rho11 = chmom(itype,1)
