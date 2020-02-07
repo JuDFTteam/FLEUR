@@ -66,7 +66,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
 
    INTEGER                            :: i
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
-
+   REAL                          :: moments(3,atoms%ntype)
 
 
 
