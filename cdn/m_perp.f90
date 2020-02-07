@@ -37,7 +37,8 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER iri
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
-         &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
+         &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag,&
+         &     mxglo,myglo,mzglo
     REAL    rho11,rho22, alphdiff
     COMPLEX rho21
     !     ..
@@ -65,6 +66,12 @@ CONTAINS
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
+    !Output of magnetic moments in global Frame
+    IF(noco%l_mtNocoPot.AND. noco%l_alignMT) then
+    CALL sphericaltocart(absmag,betah,alphh,mxglo,myglo,mzglo)
+    WRITE  (6,8032) mxglo,myglo,mzglo,absmag
+    8032 FORMAT(2x,'--> global frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
+    END IF
 
     IF (noco%l_relax(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
