@@ -36,7 +36,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
-
+   integer                       ::  i
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    DO i=1, atoms%ntype
      IF(thetaTemp(i).LE.10**(-3)) thetaTemp(i)=0
