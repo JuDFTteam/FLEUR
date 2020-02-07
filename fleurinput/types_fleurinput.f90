@@ -39,6 +39,7 @@ MODULE m_types_fleurinput
     TYPE(t_sliceplot)::sliceplot
     TYPE(t_banddos)::banddos
     TYPE(t_hybinp)::hybinp
+    type(t_mpinp) :: mpinp
     TYPE(t_oneD)::oneD
     TYPE(t_coreSpecInput)::coreSpecInput
     TYPE(t_wann)::wann
@@ -46,6 +47,8 @@ MODULE m_types_fleurinput
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML
     TYPE(t_kpts)::kpts
+    type(t_gfinp)::gfinp
+    type(t_hub1inp)::hub1inp
   end type
 
 CONTAINS
