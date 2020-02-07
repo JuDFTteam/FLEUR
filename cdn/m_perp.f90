@@ -66,8 +66,10 @@ CONTAINS
 8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
-    IF(noco%l_alignMT)   8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
-
+    IF(noco%l_alignMT) THEN
+      WRITE  (6,8400) nococonv%beta,nococonv%alph
+      8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
+    END IF
     IF (noco%l_relax(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
        !--->    it in the global spin coordinate frame
