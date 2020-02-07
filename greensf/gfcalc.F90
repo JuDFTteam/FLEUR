@@ -103,7 +103,7 @@ MODULE m_gfcalc
          IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
          IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
          !Density of states from Greens function
-         CALL gfDOS(greensf,l,nType,i_gf,gfinp,input,results%ef)
+         !CALL gfDOS(greensf,l,nType,i_gf,gfinp,input,results%ef)
          !Occupation matrix
          CALL occmtx(greensf,l,nType,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
