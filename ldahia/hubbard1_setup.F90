@@ -3,28 +3,25 @@ MODULE m_hubbard1_setup
    USE m_juDFT
    USE m_types
    USE m_constants
+   USE m_uj2f
+   USE m_mudc
+   USE m_denmat_dist
+   USE m_gfcalc
+   USE m_hubbard1_io
+   USE m_add_selfen
+   USE m_mpi_bc_tool
+   USE m_greensf_io
+#ifdef CPP_EDSOLVER
+   USE EDsolver, only: EDsolver_from_cfg
+#endif
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_setupdebug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
    CONTAINS
 
    SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,mpi,noco,pot,gdft,hub1data,results,den)
-
-      USE m_uj2f
-      USE m_mudc
-      USE m_denmat_dist
-      USE m_gfcalc
-      USE m_hubbard1_io
-      USE m_add_selfen
-      USE m_mpi_bc_tool
-      USE m_greensf_io
-#ifdef CPP_EDSOLVER
-      USE EDsolver, only: EDsolver_from_cfg
-#endif
-
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
@@ -45,14 +42,13 @@ MODULE m_hubbard1_setup
       LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
-      CHARACTER(len=8)   :: l_type*2,l_form*9
-
+      CHARACTER(len=2)   :: l_type
+      CHARACTER(len=9)   :: l_form
       TYPE(t_greensf)    :: gu
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
 #endif
-
 
       REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
@@ -112,6 +108,9 @@ MODULE m_hubbard1_setup
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
+            !calculate the occupation of the correlated shell
+            CALL occmtx(gdft,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
+
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             IF(hub1data%iter.EQ.1.AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)) THEN
                n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
@@ -119,8 +118,6 @@ MODULE m_hubbard1_setup
                   hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
                ENDDO
             ELSE
-               !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
@@ -191,6 +188,20 @@ MODULE m_hubbard1_setup
                ENDIF
             ENDIF
          ENDDO
+
+#ifdef CPP_HDF
+         !------------------------------
+         !Write out DFT Green's Function
+         !------------------------------
+         CALL timestart("Hubbard 1: IO/Write")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gdft, &
+                              inFilename="greensf_DFT.hdf", l_corr=.TRUE.)
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, gu, &
+                               mmpmat, l_corr=.TRUE.)
+         CALL closeGreensFFile(greensf_fileID)
+         CALL timestop("Hubbard 1: IO/Write")
+
+#endif
 
          !------------------------------------------------------------
          ! This loop runs the solver if it is available
@@ -268,9 +279,10 @@ MODULE m_hubbard1_setup
             CALL timestop("Hubbard 1: Add Selfenenergy")
 
 #ifdef CPP_HDF
+            !-------------------------------------
+            !Write out correlated Green's Function
+            !-------------------------------------
             CALL timestart("Hubbard 1: IO/Write")
-            !Not correlated ??
-            !Write out correlated Green's function
             CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, &
                                  inFilename="greensf_corr.hdf", l_corr=.TRUE.)
             CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, gu, mmpmat, &
@@ -410,32 +422,5 @@ MODULE m_hubbard1_setup
       xPath = TRIM(ADJUSTL(xPath)) // "/" // folder
 
    END SUBROUTINE hubbard1_path
-
-   SUBROUTINE writeSelfenElement(selfen,e,ef,nz,ns)
-
-      INTEGER,       INTENT(IN)  :: nz,ns
-      REAL,          INTENT(IN)  :: ef
-      COMPLEX,       INTENT(IN)  :: selfen(:,:,:)
-      COMPLEX,       INTENT(IN)  :: e(:)
-
-      INTEGER iz,i,io_error
-      CHARACTER(len=300) file
-      COMPLEX up, down
-
-      OPEN(unit=3456,file="selfen",status="replace",iostat = io_error)
-
-      DO iz = 1, nz
-         up = 0.0
-         down = 0.0
-         DO i = 1, ns
-            up = up + selfen(i,i,iz)
-            down = down + selfen(i+ns,i+ns,iz)
-         ENDDO
-         WRITE(3456,"(5f14.8)") REAL(e(iz))*hartree_to_ev_const, -AIMAG(up), -AIMAG(down), REAL(up), REAL(down)
-      ENDDO
-
-      CLOSE(unit=3456)
-
-   END SUBROUTINE writeSelfenElement
 
 END MODULE m_hubbard1_setup
