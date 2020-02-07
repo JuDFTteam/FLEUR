@@ -41,10 +41,10 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phiTemp,-thetaTemp,den)
    nococonv%alph=mod(nococonv%alph+phiTemp,2*pimach())
    nococonv%beta=mod(nococonv%beta+thetaTemp,pimach())
-!   write(*,*) "Noco Phi"
-!   write(*,*) nococonv%alph
-!   write(*,*) "Noco Theta"
-!   write(*,*) nococonv%beta
+   write(*,*) "Noco Phi"
+   write(*,*) nococonv%alph
+   write(*,*) "Noco Theta"
+   write(*,*) nococonv%beta
 END SUBROUTINE rotateMagnetToSpinAxis
 
 
