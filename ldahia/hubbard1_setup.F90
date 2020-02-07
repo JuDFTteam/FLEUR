@@ -20,6 +20,7 @@ MODULE m_hubbard1_setup
       USE m_hubbard1_io
       USE m_add_selfen
       USE m_mpi_bc_tool
+      USE m_greensf_io
 #ifdef CPP_EDSOLVER
       USE EDsolver, only: EDsolver_from_cfg
 #endif
@@ -47,6 +48,11 @@ MODULE m_hubbard1_setup
       CHARACTER(len=8)   :: l_type*2,l_form*9
 
       TYPE(t_greensf)    :: gu
+
+#ifdef CPP_HDF
+      INTEGER(HID_T)     :: greensf_fileID
+#endif
+
 
       REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
@@ -260,12 +266,19 @@ MODULE m_hubbard1_setup
             CALL timestart("Hubbard 1: Add Selfenenergy")
             CALL add_selfen(gdft,selfen,atoms,gfinp,input,noco,hub1inp,results%ef,n_l,gu,mmpMat)
             CALL timestop("Hubbard 1: Add Selfenenergy")
+
+#ifdef CPP_HDF
+            CALL timestart("Hubbard 1: IO/Write")
+            !Not correlated ??
+            !Write out correlated Green's function
+            CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, inFilename="greensf_corr.hdf")
+            CALL writeGreensFData(greensf_fileID, input, gfinp, gu, mmpmat)
+            CALL closeGreensFFile(greensf_fileID)
+            CALL timestop("Hubbard 1: IO/Write")
+
+#endif
             IF(l_setupdebug) THEN
                DO i_hia = 1, atoms%n_hia
-                  nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-                  l = atoms%lda_u(atoms%n_u+i_hia)%l
-                  CALL gfDOS(gdft,l,nType,800+i_hia+hub1data%iter,gfinp,input,results%ef)
-                  CALL gfDOS(gu,l,nType,900+i_hia+hub1data%iter,gfinp,input,results%ef)
                   CALL writeSelfenElement(selfen(:,:,:,1,i_hia),gdft%e,results%ef,gdft%nz,2*l+1)
                ENDDO
             ENDIF

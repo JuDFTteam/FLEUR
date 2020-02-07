@@ -40,8 +40,8 @@ MODULE m_add_selfen
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
 
       INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm
-      INTEGER spin_match,matsize,start,end,i_match,ind
-      CHARACTER(len=6) app,filename
+      INTEGER spin_match,matsize,start,end,i_match
+      CHARACTER(len=6) filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
       REAL mu,n,n_target
@@ -102,11 +102,6 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_selfenDebug.AND..FALSE.) THEN
-                  !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu)
-                  ind = AINT((mu+0.2)/0.01)
-                  CALL gfDOS(gp,l,nType,500+ind,gfinp,input,ef)
-               ENDIF
                CALL occmtx(gp,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
                IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
                !Calculate the trace

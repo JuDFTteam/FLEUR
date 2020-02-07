@@ -11,7 +11,7 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, filename_in)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, inFilename)
 
       USE m_types
       USE m_cdn_io
@@ -20,7 +20,7 @@ MODULE m_greensf_io
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
       TYPE(t_greensf),              INTENT(IN)  :: greensf
-      CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: filename_in
+      CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
       LOGICAL           :: l_exist
@@ -40,7 +40,7 @@ MODULE m_greensf_io
 
       version = 1
       IF(PRESENT(filename_in)) THEN
-         filename = TRIM(ADJUSTL(filename_in))
+         filename = TRIM(ADJUSTL(inFilename))
       ELSE
          filename = "greensf.hdf"
       ENDIF
@@ -104,7 +104,7 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, greensf, mmpmat)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, greensf, mmpmat,)
 
       USE m_types
       USE m_constants
