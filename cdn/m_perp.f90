@@ -66,6 +66,10 @@ CONTAINS
 8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
+    IF(noco%l_alignMT) THEN
+      WRITE  (6,8400) nococonv%beta,nococonv%alph
+      8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
+    END IF
     IF (noco%l_relax(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
        !--->    it in the global spin coordinate frame
@@ -77,6 +81,11 @@ CONTAINS
        mx = 2*REAL(rho21)
        my = 2*AIMAG(rho21)
        mz = rho11 - rho22
+       IF ( mz .LT. 0.0 ) THEN
+          mx = (-1.0) * mx_mix
+          my = (-1.0) * my_mix
+          mz = (-1.0) * mz_mix
+       ENDIF
        CALL pol_angle(mx,my,mz,betah,alphh)
        WRITE  (6,8027) nococonv%beta(itype),nococonv%alph(itype)-alphdiff
        WRITE  (6,8028) betah,alphh-alphdiff

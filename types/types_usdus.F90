@@ -63,7 +63,7 @@ CONTAINS
       if(.not. allocated(ud%ulouilopn)) &
          allocate(ud%ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype, jsp), stat=err(13))
 
-      write (*,*) "err array", err
+      !write (*,*) "err array", err
       IF(ANY(err > 0)) CALL judft_error("Not enough memory allocating usdus datatype")
 
       ud%uloulopn  = 0; ud%ddn       = 0; ud%us        = 0
