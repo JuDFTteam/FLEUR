@@ -110,7 +110,6 @@ MODULE m_gfcalc
          !CALL hybridization(greensf,l,nType,gfinp,input,results%ef)
       ENDDO
       CALL timestop("Green's Function: Occupation/DOS")
-      CALL timestop("Green's Function: Postprocess")
 
 #ifdef CPP_HDF
       CALL timestart("Green's Function: IO/Write")
@@ -119,6 +118,7 @@ MODULE m_gfcalc
       CALL closeGreensFFile(greensf_fileID)
       CALL timestop("Green's Function: IO/Write")
 #endif
+      CALL timestop("Green's Function: Postprocess")
 
    END SUBROUTINE postProcessGF
 

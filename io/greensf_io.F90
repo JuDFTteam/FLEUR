@@ -11,17 +11,17 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, filename_in)
 
       USE m_types
       USE m_cdn_io
 
-      TYPE(t_input),       INTENT(IN)  :: input
-      TYPE(t_gfinp),       INTENT(IN)  :: gfinp
-      TYPE(t_atoms),       INTENT(IN)  :: atoms
-      TYPE(t_greensf),     INTENT(IN)  :: greensf
-
-      INTEGER(HID_T),       INTENT(OUT) :: fileID
+      TYPE(t_input),                INTENT(IN)  :: input
+      TYPE(t_gfinp),                INTENT(IN)  :: gfinp
+      TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_greensf),              INTENT(IN)  :: greensf
+      CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: filename_in
+      INTEGER(HID_T),               INTENT(OUT) :: fileID
 
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
@@ -39,7 +39,11 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: dims(7)
 
       version = 1
-      filename = "greensf.hdf"
+      IF(PRESENT(filename_in)) THEN
+         filename = TRIM(ADJUSTL(filename_in))
+      ELSE
+         filename = "greensf.hdf"
+      ENDIF
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
       IF(l_exist) THEN
