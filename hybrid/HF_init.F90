@@ -1,4 +1,3 @@
-
 MODULE m_hf_init
    !
    !     preparations for HF and hybinp functional calculation
