@@ -54,7 +54,8 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco,nococonv, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, &
+                     eig_irr, sym, cell, noco,nococonv, oneD,&
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -69,6 +70,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      type(t_oneD), intent(in)   :: oneD
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -101,6 +103,8 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  parent(:)
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
+
+      complex                  :: c_phase(hybdat%nbands(nk))
 
       REAL                    ::  wl_iks(input%neig, kpts%nkptf)
 
@@ -147,10 +151,17 @@ CONTAINS
          IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
          parent = 0
 
+
+         call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
+
+         if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+         call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z, c_phase=c_phase)
+
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw, jsp, &
+         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw,&
+                       noco, nococonv, oneD, z, c_phase, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -166,7 +177,7 @@ CONTAINS
          ! HF exchange
          ex%l_real = sym%invs
          CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv,nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv, oneD,nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")
@@ -175,7 +186,9 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, input,atoms, mpdata, hybinp, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_vccv1(nk, input,atoms,cell, kpts, sym, noco,nococonv, oneD, &
+                                mpdata, hybinp, hybdat,  jsp, &
+                                lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 
@@ -185,10 +198,6 @@ CONTAINS
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
          IF (input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
-
-         call z%init(olap%l_real, nbasfcn, input%neig)
-         call read_z(z, kpts%nkptf*(jsp - 1) + nk)
-         z%matsize2 = hybdat%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)
 

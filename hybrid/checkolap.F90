@@ -6,10 +6,11 @@
                            mpdata,hybinp,&
                            nkpti, kpts,&
                             mpi, &
-                           input, sym, noco,nococonv,&
+                           input, sym, noco,nococonv,oneD,&
                            cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
             use m_intgrf, only:  intgrf, intgrf_init
+            use m_calc_cmt
             USE m_constants
             USE m_types
             USE m_io_hybinp
@@ -29,6 +30,7 @@
             TYPE(t_cell), INTENT(IN)        :: cell
             TYPE(t_kpts), INTENT(IN)        :: kpts
             TYPE(t_atoms), INTENT(IN)       :: atoms
+            type(t_oneD), intent(in)        :: oneD
             TYPE(t_lapw), INTENT(INOUT)     :: lapw
 
             ! - scalars -
@@ -63,7 +65,7 @@
 
             COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat, nkpti)
             COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
-            COMPLEX, ALLOCATABLE   ::  olapcv(:, :)
+            COMPLEX, ALLOCATABLE   ::  olapcv(:, :), c_phase(:)
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
 
             CHARACTER, PARAMETER    ::  lchar(0:38) =&
@@ -88,7 +90,15 @@
 
             ! read in cmt
             DO ikpt = 1, nkpti
-               call read_cmt(cmt(:, :, :, ikpt), ikpt)
+               if(allocated(c_phase)) deallocate(c_phase)
+               allocate(c_phase(hybdat%nbands(ikpt)))
+
+               if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
+               call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ikpt, &
+                           jsp, z(ikpt), c_phase=c_phase)
+               call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
+                             sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
+                             cmt(:hybdat%nbands(ikpt),:,:,ikpt))
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|core>'
@@ -228,9 +238,6 @@
             allocate(carr1(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr2(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr3(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
-            DO ikpt = 1, nkpti
-               call read_z(z(ikpt), kpts%nkptf*(jsp - 1) + ikpt)
-            END DO
 
             iatom = 0
             DO itype = 1, atoms%ntype

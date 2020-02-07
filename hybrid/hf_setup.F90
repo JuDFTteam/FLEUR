@@ -8,7 +8,8 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, &
+                       cell, oneD, results, jsp, enpara, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -36,7 +37,7 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
-      INTEGER, INTENT(IN)    :: jsp, eig_id_hf
+      INTEGER, INTENT(IN)    :: jsp
       REAL, INTENT(IN)    :: vr0(:, :, :)
       LOGICAL, INTENT(IN)    :: l_real
 
@@ -90,7 +91,7 @@ CONTAINS
             CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
             CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
-            CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
+            CALL read_eig(hybdat%eig_id, nk, jsp, zmat=zMat(nk))
 
             IF(l_exist.AND.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_r(:,:)
@@ -190,7 +191,7 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(atoms, hybdat, mpdata, hybinp, kpts%nkpt, kpts,  mpi, &
-                        input, sym, noco, nococonv,cell, lapw, jsp)
+                        input, sym, noco, nococonv,oneD,cell, lapw, jsp)
 
          ! set up pointer pntgpt
 
