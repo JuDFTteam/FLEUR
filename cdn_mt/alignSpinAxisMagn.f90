@@ -42,7 +42,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    nococonv%alph=mod(nococonv%alph+phiTemp,2*pimach())
    nococonv%beta=mod(nococonv%beta+thetaTemp,2*pimach())
-   
+
    write(*,*) "Noco Phi"
    write(*,*) nococonv%alph
    write(*,*) "Noco Theta"
@@ -64,13 +64,17 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    TYPE(t_cell),INTENT(IN)	 :: cell
    TYPE(t_potden), INTENT(INOUT) :: den, inDen
 
+   INTEGER                            :: i
 
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
+
+
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,inDen)
-
-   nococonv%alph=0
-   nococonv%beta=0
-
+   CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phiTemp,thetaTemp,den)
+   DO i=0, atoms%ntype
+     nococonv%alph(i)=0
+     nococonv%beta(i)=0
+   END DO
 END SUBROUTINE rotateMagnetFromSpinAxis
 
 
