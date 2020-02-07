@@ -39,7 +39,7 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: dims(7)
 
       version = 1
-      IF(PRESENT(filename_in)) THEN
+      IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
          filename = "greensf.hdf"
@@ -104,7 +104,7 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, greensf, mmpmat,)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, greensf, mmpmat)
 
       USE m_types
       USE m_constants
