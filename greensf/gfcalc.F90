@@ -114,7 +114,7 @@ MODULE m_gfcalc
 #ifdef CPP_HDF
       CALL timestart("Green's Function: IO/Write")
       CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, greensf)
-      CALL writeGreensFData(greensf_fileID, input, gfinp, greensf, mmpmat)
+      CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, greensf, mmpmat)
       CALL closeGreensFFile(greensf_fileID)
       CALL timestop("Green's Function: IO/Write")
 #endif

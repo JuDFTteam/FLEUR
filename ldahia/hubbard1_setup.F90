@@ -271,17 +271,13 @@ MODULE m_hubbard1_setup
             CALL timestart("Hubbard 1: IO/Write")
             !Not correlated ??
             !Write out correlated Green's function
-            CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, inFilename="greensf_corr.hdf")
-            CALL writeGreensFData(greensf_fileID, input, gfinp, gu, mmpmat)
+            CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, &
+                                 inFilename="greensf_corr.hdf", l_corr=.TRUE.)
+            CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, gu, mmpmat, &
+                                  selfen=selfen, l_corr=.TRUE.)
             CALL closeGreensFFile(greensf_fileID)
             CALL timestop("Hubbard 1: IO/Write")
-
 #endif
-            IF(l_setupdebug) THEN
-               DO i_hia = 1, atoms%n_hia
-                  CALL writeSelfenElement(selfen(:,:,:,1,i_hia),gdft%e,results%ef,gdft%nz,2*l+1)
-               ENDDO
-            ENDIF
             !----------------------------------------------------------------------
             ! Calculate the distance and update the density matrix
             !----------------------------------------------------------------------
