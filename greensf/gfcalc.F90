@@ -58,6 +58,7 @@ MODULE m_gfcalc
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
       USE m_rot_gf
+      USE m_greensf_io
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
@@ -75,6 +76,10 @@ MODULE m_gfcalc
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  err
+
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: greensf_fileID
+#endif
 
 
       CALL timestart("Green's Function: Postprocess")
@@ -106,6 +111,14 @@ MODULE m_gfcalc
       ENDDO
       CALL timestop("Green's Function: Occupation/DOS")
       CALL timestop("Green's Function: Postprocess")
+
+#ifdef CPP_HDF
+      CALL timestart("Green's Function: IO/Write")
+      CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, greensf)
+      CALL writeGreensFData(greensf_fileID, input, gfinp, greensf)
+      CALL closeGreensFFile(greensf_fileID)
+      CALL timestop("Green's Function: IO/Write")
+#endif
 
    END SUBROUTINE postProcessGF
 
