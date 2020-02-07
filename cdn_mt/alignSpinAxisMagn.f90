@@ -65,6 +65,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    TYPE(t_potden), INTENT(INOUT) :: den, inDen
 
    INTEGER                            :: i
+   REAL                               ::thetaTemp,phiTemp
 
 
 
