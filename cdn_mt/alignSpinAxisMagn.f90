@@ -40,7 +40,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    DO i=1, atoms%ntype
      IF(thetaTemp(i).LE.10**(-3)) thetaTemp(i)=0
-     IF(thetaPhi(i).LE.10**(-3)) thetaPhi(i)=0
+     IF(phiTemp(i).LE.10**(-3)) phiTemp(i)=0
    END DO
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phiTemp,-thetaTemp,den)
 
