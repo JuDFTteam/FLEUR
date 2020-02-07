@@ -23,17 +23,14 @@ MODULE m_gfDOS
 
       INTEGER iz,ipm,i,ns
       INTEGER io_error
-      COMPLEX dos(4,2*l+2),re(2) !up,down,low,high (only at the current energy point)
+      COMPLEX dos(4),re(2) !up,down,low,high (only at the current energy point)
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=10) :: filename
 
 9000  FORMAT("gfDOS.",I3.3)
-9001  FORMAT("mgfDOS.",I3.3)
       WRITE(filename,9000) jobID
 
       OPEN(unit=3456,file=filename,status="replace",action="write",iostat=io_error)
-      WRITE(filename,9001) jobID
-      OPEN(unit=3457,file=filename,status="replace",action="write",iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
       !Write out warnings
       IF(.NOT.PRESENT(ef)) WRITE(3456,"(A)") "This gfDOS is not corrected to have ef=0"
@@ -54,20 +51,20 @@ MODULE m_gfDOS
             gmat%data_c = gmat%data_c/hartree_to_eV_const
             !Calculate up/down dos
             DO i = 1, ns
-               dos(1,i) = dos(1,i) - 1.0/tpi_const * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(1) = dos(1) - 1.0/tpi_const * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             DO i = ns+1, 2*ns
-               dos(2,i-ns) = dos(2,i-ns) - 1.0/tpi_const * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(2) = dos(2) - 1.0/tpi_const * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             !Transform to |J,mj> basis
             jmat%data_c = matmul(gmat%data_c,cmat%data_r)
             jmat%data_c = matmul(transpose(cmat%data_r),jmat%data_c)
             !Calculate low/high dos
             DO i = 1, ns-1
-               dos(3,i) = dos(3,i) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(3) = dos(3) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             DO i = ns, 2*ns
-               dos(4,i-ns+1) = dos(4,i-ns+1) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(4) = dos(4) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             !Real part
             DO i = 1, ns
@@ -79,14 +76,10 @@ MODULE m_gfDOS
             CALL gmat%free()
          ENDDO
          WRITE(3456,"(7f14.8)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, &
-                                SUM(AIMAG(dos(1,1:ns))),SUM(AIMAG(dos(2,1:ns))),&
-                                SUM(AIMAG(dos(3,1:ns-1))),SUM(AIMAG(dos(4,1:ns+1))), REAL(re(1)), REAL(re(2))
-         WRITE(3457,"(15f10.5)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns)
-
+                                AIMAG(dos(1)),AIMAG(dos(2)),AIMAG(dos(3)),AIMAG(dos(4)), REAL(re(1)), REAL(re(2))
 
       ENDDO
       CLOSE(3456,iostat=io_error)
-      CLOSE(3457)
       IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
 
       CALL cmat%free()
