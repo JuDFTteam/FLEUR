@@ -42,7 +42,6 @@ MODULE m_types_fleurinput
     type(t_mpinp) :: mpinp
     TYPE(t_oneD)::oneD
     TYPE(t_coreSpecInput)::coreSpecInput
-    CLASS(t_xcpot),ALLOCATABLE::xcpot
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML
     TYPE(t_kpts)::kpts

@@ -174,6 +174,7 @@ CONTAINS
         TYPE(t_nococonv) :: nococonv
         type(t_wann)     :: wann
         CLASS(t_forcetheo),ALLOCATABLE::forcetheo
+        class(t_xcpot), allocatable :: xcpot
 
         !local variables for jobcontrol
         INTEGER:: njob=1
@@ -201,11 +202,12 @@ CONTAINS
         mpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
         call fleur_init(mpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
-           fi%banddos,enpara,fi%xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
+           fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
            fi%hub1inp,wann)
         CALL timestop("Initialization")
 
-        CALL fleur_execute(mpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results, wann)
+        CALL fleur_execute(mpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
+                           xcpot, wann)
 
     END SUBROUTINE
 
