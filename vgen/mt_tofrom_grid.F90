@@ -232,7 +232,7 @@ CONTAINS
          ENDIF
          kt = kt + nsp
       END DO
-
+      IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
       IF (rotch.AND.noco%l_mtNocoPot) THEN
           DO jr = 1,nsp*atoms%jri(n)
@@ -253,7 +253,8 @@ CONTAINS
       ELSE
          ch(:nsp*atoms%jri(n),1:jspins)=ch_calc(:nsp*atoms%jri(n),1:jspins)
 
-      EnD IF
+      END IF
+      END IF
    END SUBROUTINE mt_to_grid
 
    SUBROUTINE mt_from_grid(atoms, sym, sphhar, n, jspins, v_in, vr)

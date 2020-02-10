@@ -62,13 +62,13 @@ CONTAINS
     REAL    vup,vdown,veff,beff,vziw,theta,phi
     !     ..
     !     .. Local Arrays ..
-    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:)
+    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:),vis2(:,:)
 
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
     
-    ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
+    ALLOCATE ( vis(ifft3,4),fftwork(ifft3),vis2(ifft3,4))
     
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
@@ -98,7 +98,7 @@ CONTAINS
        vis(imeshpt,4) = beff*SIN(theta)*SIN(phi)
 
        DO ipot = 1,4
-          vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
+          vis2(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
        ENDDO
 
     ENDDO
@@ -106,10 +106,13 @@ CONTAINS
     !---> Fouriertransform the matrix potential back to reciprocal space
     DO ipot = 1,2
        fftwork=0.0
-       CALL fft3d(vis(:,ipot),fftwork, vTot%pw_w(1,ipot), stars,-1)
+       CALL fft3d(vis(:,ipot),fftwork, vTot%pw(1,ipot), stars,-1)
+       fftwork=0.0
+       CALL fft3d(vis2(:,ipot),fftwork, vTot%pw_w(1,ipot), stars,-1)
     ENDDO
     
-    CALL fft3d(vis(:,3),vis(:,4), vTot%pw_w(1,3), stars,-1)
+    CALL fft3d(vis(:,3),vis(:,4), vTot%pw(1,3), stars,-1)
+    CALL fft3d(vis2(:,3),vis2(:,4), vTot%pw_w(1,3), stars,-1)
 
     IF (.NOT. input%film) RETURN
 
