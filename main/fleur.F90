@@ -156,8 +156,7 @@ CONTAINS
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
 
-    IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-          ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
+
 
 
     IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
@@ -199,7 +198,8 @@ CONTAINS
     ! Open/allocate eigenvector storage (end)
 
     scfloop:DO WHILE (l_cont)
-
+      IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+            ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
        iter = iter + 1
        IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
           hub1data%iter = hub1data%iter + 1
