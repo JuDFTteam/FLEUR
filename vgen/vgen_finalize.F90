@@ -106,8 +106,10 @@ CONTAINS
        END DO
 
        CALL init_pw_grid(.FALSE.,stars,sym,cell)
-       CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
-       CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+       DO i=1,3
+         CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+       END DO
        CALL finish_pw_grid()
 
        CALL timestart("Correcting vTot")
