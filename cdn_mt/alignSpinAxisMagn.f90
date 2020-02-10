@@ -72,7 +72,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
 
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,inDen)
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phiTemp,thetaTemp,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phiTemp+nococonv%alph,thetaTemp+nococonv%beta,den)
    DO i=0, atoms%ntype
      nococonv%alph(i)=0
      nococonv%beta(i)=0
