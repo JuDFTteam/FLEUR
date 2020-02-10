@@ -46,14 +46,14 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    END IF
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-   thetaTemp(:)=-1*thetaTemp(:)
-   phiTemp(:)=-1*phiTemp(:)
+   thetaTemp=-1*thetaTemp
+   phiTemp=-1*phiTemp
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phiTemp,thetaTemp,den)
-   thetaTemp(:)=-1*thetaTemp(:)
-   phiTemp(:)=-1*phiTemp(:)
+   thetaTemp=-1*thetaTemp
+   phiTemp=-1*phiTemp
 
-   nococonv%alph(:)=phiTemp(:)+nococonv%alph(:)
-   nococonv%beta(:)=thetaTemp(:)+nococonv%beta(:)
+   nococonv%alph=phiTemp+nococonv%alph
+   nococonv%beta=thetaTemp+nococonv%beta
 
    write(*,*) "Noco Phi"
    write(*,*) nococonv%alph
@@ -79,15 +79,23 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    INTEGER                            :: i
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    REAL                          :: moments(3,atoms%ntype)
-
-
+   write(*,*) "From Spin"
+   write(*,*) "Noco Phi"
+   write(*,*) nococonv%alph
+   write(*,*) "Noco Theta"
+   write(*,*) nococonv%beta
 
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,inDen)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
-   DO i=0, atoms%ntype
-     nococonv%alph(i)=0
-     nococonv%beta(i)=0
-   END DO
+
+     nococonv%alph=0
+     nococonv%beta=0
+
+     write(*,*) "From Spin2"
+     write(*,*) "Noco Phi"
+     write(*,*) nococonv%alph
+     write(*,*) "Noco Theta"
+     write(*,*) nococonv%beta
 END SUBROUTINE rotateMagnetFromSpinAxis
 
 
