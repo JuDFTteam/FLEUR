@@ -39,36 +39,13 @@ MODULE m_types_fleurinput
     TYPE(t_sliceplot)::sliceplot
     TYPE(t_banddos)::banddos
     TYPE(t_hybinp)::hybinp
+    type(t_mpinp) :: mpinp
     TYPE(t_oneD)::oneD
     TYPE(t_coreSpecInput)::coreSpecInput
-    TYPE(t_wann)::wann
-    CLASS(t_xcpot),ALLOCATABLE::xcpot
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML
     TYPE(t_kpts)::kpts
+    type(t_gfinp)::gfinp
+    type(t_hub1inp)::hub1inp
   end type
-
-CONTAINS
-  !Subroutine does nothing, only here for copy-paste code...
-  SUBROUTINE dummy_subroutine_that_should_never_be_used(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML)
-    TYPE(t_cell),INTENT(IN)::cell
-    TYPE(t_sym),INTENT(IN)::sym
-    TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_input),INTENT(IN)::input
-    TYPE(t_noco),INTENT(IN)::noco
-    TYPE(t_vacuum),INTENT(IN)::vacuum
-    TYPE(t_field),INTENT(IN)::field
-    TYPE(t_sliceplot),INTENT(IN)::sliceplot
-    TYPE(t_banddos),INTENT(IN)::banddos
-    TYPE(t_hybinp),INTENT(IN)::hybinp
-    TYPE(t_oneD),INTENT(IN)::oneD
-    TYPE(t_coreSpecInput),INTENT(IN)::coreSpecInput
-    TYPE(t_wann),INTENT(IN)::wann
-    CLASS(t_xcpot),INTENT(IN)::xcpot
-    TYPE(t_forcetheo_data),INTENT(IN)::forcetheo_data
-    TYPE(t_enparaXML),INTENT(IN)::enparaXML
-    TYPE(t_kpts),INTENT(IN)::kpts
-  END SUBROUTINE
 END MODULE m_types_fleurinput

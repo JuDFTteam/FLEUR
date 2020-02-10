@@ -1,316 +1,315 @@
-      MODULE m_checkolap
+MODULE m_checkolap
 
-      CONTAINS
+CONTAINS
 
-         SUBROUTINE checkolap(atoms, hybdat,&
-                           mpdata,hybinp,&
-                           nkpti, kpts,&
-                            mpi, &
-                           input, sym, noco,nococonv,oneD,&
-                           cell, lapw, jsp)
-            USE m_util, ONLY: chr, sphbessel, harmonicsr
-            use m_intgrf, only:  intgrf, intgrf_init
-            use m_calc_cmt
-            USE m_constants
-            USE m_types
-            USE m_io_hybinp
-            USE m_types_hybdat
+   SUBROUTINE checkolap(atoms, hybdat, &
+                        mpdata, hybinp, &
+                        nkpti, kpts, &
+                        mpi, &
+                        input, sym, noco, nococonv, oneD, &
+                        cell, lapw, jsp)
+      USE m_util, ONLY: chr, sphbessel, harmonicsr
+      use m_intgrf, only: intgrf, intgrf_init
+      use m_calc_cmt
+      USE m_constants
+      USE m_types
+      USE m_io_hybinp
+      USE m_types_hybdat
 
-            IMPLICIT NONE
+      IMPLICIT NONE
 
-            TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
-            TYPE(t_mpi), INTENT(IN)         :: mpi
-            TYPE(t_mpdata), intent(in)      :: mpdata
-            TYPE(t_hybinp), INTENT(IN)      :: hybinp
-            TYPE(t_input), INTENT(IN)       :: input
-            TYPE(t_noco), INTENT(IN)        :: noco
-            TYPE(t_nococonv), INTENT(IN)    :: nococonv
-            TYPE(t_sym), INTENT(IN)         :: sym
-            TYPE(t_cell), INTENT(IN)        :: cell
-            TYPE(t_kpts), INTENT(IN)        :: kpts
-            TYPE(t_atoms), INTENT(IN)       :: atoms
-            type(t_oneD), intent(in)        :: oneD
-            TYPE(t_lapw), INTENT(INOUT)     :: lapw
+      TYPE(t_mpi), INTENT(IN)         :: mpi
+      TYPE(t_mpdata), intent(in)      :: mpdata
+      TYPE(t_hybinp), INTENT(IN)      :: hybinp
+      TYPE(t_input), INTENT(IN)       :: input
+      TYPE(t_noco), INTENT(IN)        :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_sym), INTENT(IN)         :: sym
+      TYPE(t_cell), INTENT(IN)        :: cell
+      TYPE(t_kpts), INTENT(IN)        :: kpts
+      TYPE(t_atoms), INTENT(IN)       :: atoms
+      type(t_oneD), intent(in)        :: oneD
+      TYPE(t_lapw), INTENT(INOUT)     :: lapw
 
-            ! - scalars -
-            INTEGER, INTENT(IN)     :: jsp
-            INTEGER, INTENT(IN)     ::  nkpti
+      ! - scalars -
+      INTEGER, INTENT(IN)     :: jsp
+      INTEGER, INTENT(IN)     ::  nkpti
 
+      ! - local scalars -
+      INTEGER                 ::  i, itype, iatom, ikpt, ineq, igpt, iband
+      INTEGER                 ::  j, m
+      INTEGER                 ::  l
+      INTEGER                 :: lm, lm1
+      INTEGER                 ::  n, nbasfcn
 
-            ! - local scalars -
-            INTEGER                 ::  i, itype, iatom, ikpt, ineq, igpt, iband
-            INTEGER                 ::  j, m
-            INTEGER                 ::  l
-            INTEGER                 :: lm, lm1
-            INTEGER                 ::  n, nbasfcn
+      REAL                    ::  rdum, rdum1
+      REAL                    ::  qnorm
 
-            REAL                    ::  rdum, rdum1
-            REAL                    ::  qnorm
+      COMPLEX                 ::  cexp, cdum
+      COMPLEX, PARAMETER     ::  img = (0.0, 1.0)
 
-            COMPLEX                 ::  cexp, cdum
-            COMPLEX, PARAMETER     ::  img = (0.0, 1.0)
+      ! -local arrays -
+      INTEGER                 ::  iarr(2), gpt(3)
+      INTEGER, ALLOCATABLE   ::  olapcv_loc(:, :, :, :, :)
 
-            ! -local arrays -
-            INTEGER                 ::  iarr(2), gpt(3)
-            INTEGER, ALLOCATABLE   ::  olapcv_loc(:, :, :, :, :)
+      REAL                    ::  sphbes(0:atoms%lmaxd)
+      REAL                    ::  q(3)
+      REAL                    ::  integrand(atoms%jmtd)
+      REAL                    ::  rarr(maxval(hybdat%nbands))
+      REAL, ALLOCATABLE   ::  olapcb(:)
+      REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
+      TYPE(t_mat), ALLOCATABLE :: z(:)
 
-            REAL                    ::  sphbes(0:atoms%lmaxd)
-            REAL                    ::  q(3)
-            REAL                    ::  integrand(atoms%jmtd)
-            REAL                    ::  rarr(maxval(hybdat%nbands))
-            REAL, ALLOCATABLE   ::  olapcb(:)
-            REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
-            TYPE(t_mat), ALLOCATABLE :: z(:)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat, nkpti)
+      COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
+      COMPLEX, ALLOCATABLE   ::  olapcv(:, :), c_phase(:)
+      COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
 
-            COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat, nkpti)
-            COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
-            COMPLEX, ALLOCATABLE   ::  olapcv(:, :), c_phase(:)
-            COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
+      CHARACTER, PARAMETER    ::  lchar(0:38) = &
+                                 (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
+                                   'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
+                                   'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
+      LOGICAL                 ::  l_mism = .true.
 
-            CHARACTER, PARAMETER    ::  lchar(0:38) =&
-                      (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',&
-                        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x',&
-                        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
-            LOGICAL                 ::  l_mism = .true.
+      allocate(z(nkpti))
+      DO ikpt = 1, nkpti
+         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+         nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+         call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
+      ENDDO
 
-            allocate(z(nkpti))
-            DO ikpt = 1, nkpti
-               CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, ikpt, cell, sym%zrfs)
-               nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-               call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
-            ENDDO
+      IF(mpi%irank == 0) WRITE(6, '(//A)') '### checkolap ###'
 
-            IF (mpi%irank == 0) WRITE (6, '(//A)') '### checkolap ###'
+      cmt = 0
 
-            cmt = 0
+      ! initialize gridf -> was done in eigen_HF_init
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
-            ! initialize gridf -> was done in eigen_HF_init
-            !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      ! read in cmt
+      DO ikpt = 1, nkpti
+         if(allocated(c_phase)) deallocate(c_phase)
+         allocate(c_phase(hybdat%nbands(ikpt)))
 
-            ! read in cmt
-            DO ikpt = 1, nkpti
-               if(allocated(c_phase)) deallocate(c_phase)
-               allocate(c_phase(hybdat%nbands(ikpt)))
+         if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
+         call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv, input, ikpt, &
+                     jsp, z(ikpt), c_phase=c_phase)
+         call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
+                       sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
+                       cmt(:hybdat%nbands(ikpt), :, :, ikpt))
+      END DO
 
-               if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
-               call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ikpt, &
-                           jsp, z(ikpt), c_phase=c_phase)
-               call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
-                             sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
-                             cmt(:hybdat%nbands(ikpt),:,:,ikpt))
+      IF(mpi%irank == 0) WRITE(6, '(/A)') ' Overlap <core|core>'
+      DO itype = 1, atoms%ntype
+         IF(atoms%ntype > 1 .AND. mpi%irank == 0) &
+            WRITE(6, '(A,I3)') ' Atom type', itype
+         DO l = 0, hybdat%lmaxc(itype)
+            DO i = 1, hybdat%nindxc(l, itype)
+               IF(mpi%irank == 0) &
+                  WRITE(6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+               DO j = 1, i
+                  integrand = hybdat%core1(:, i, l, itype)*hybdat%core1(:, j, l, itype) &
+                              + hybdat%core2(:, i, l, itype)*hybdat%core2(:, j, l, itype)
+                  IF(mpi%irank == 0) WRITE(6, '(F10.6)', advance='no') &
+                     intgrf(integrand, atoms, itype, hybdat%gridf)
+               END DO
+               IF(mpi%irank == 0) WRITE(6, *)
             END DO
+         END DO
+      END DO
 
-            IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|core>'
-            DO itype = 1, atoms%ntype
-               IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-                  WRITE (6, '(A,I3)') ' Atom type', itype
-               DO l = 0, hybdat%lmaxc(itype)
-                  DO i = 1, hybdat%nindxc(l, itype)
-                     IF (mpi%irank == 0)&
-                       WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
-                     DO j = 1, i
-                        integrand = hybdat%core1(:, i, l, itype)*hybdat%core1(:, j, l, itype)&
-                                  + hybdat%core2(:, i, l, itype)*hybdat%core2(:, j, l, itype)
-                        IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-                           intgrf(integrand, atoms, itype, hybdat%gridf)
-                     END DO
-                     IF (mpi%irank == 0) WRITE (6, *)
+      IF(mpi%irank == 0) WRITE(6, '(/A)') ' Overlap <core|basis>'
+      allocate(olapcb(maxval(mpdata%num_radfun_per_l)), olapcv(maxval(hybdat%nbands), nkpti), &
+               olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), &
+               olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), &
+               olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
+
+      DO itype = 1, atoms%ntype
+         IF(atoms%ntype > 1 .AND. mpi%irank == 0) &
+            WRITE(6, '(A,I3)') ' Atom type', itype
+         DO l = 0, hybdat%lmaxc(itype)
+            IF(l > atoms%lmax(itype)) EXIT ! very improbable case
+            IF(mpi%irank == 0) &
+               WRITE(6, "(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"// &
+                     "') ...')")(lchar(l), i=1, min(3, mpdata%num_radfun_per_l(l, itype)))
+            DO i = 1, hybdat%nindxc(l, itype)
+               IF(mpi%irank == 0) &
+                  WRITE(6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+               DO j = 1, mpdata%num_radfun_per_l(l, itype)
+
+                  integrand = hybdat%core1(:, i, l, itype)*hybdat%bas1(:, j, l, itype) &
+                              + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
+
+                  olapcb(j) = &
+                     intgrf(integrand, atoms, itype, hybdat%gridf)
+
+                  IF(mpi%irank == 0) &
+                     WRITE(6, '(F10.6)', advance='no') olapcb(j)
+               END DO
+
+               lm = sum([(mpdata%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)])
+               iatom = sum(atoms%neq(1:itype - 1)) + 1 ! take first of group of equivalent atoms
+               DO m = -l, l
+                  olapcv = 0
+                  DO j = 1, mpdata%num_radfun_per_l(l, itype)
+                     lm = lm + 1
+                     olapcv(:, :) = olapcv(:, :) + &
+                                    olapcb(j)*cmt(:maxval(hybdat%nbands), lm, iatom, :nkpti)
                   END DO
+                  rdum = sum(abs(olapcv(:, :))**2)
+                  rdum1 = maxval(abs(olapcv(:, :)))
+                  iarr = maxloc(abs(olapcv(:, :)))
+                  olapcv_avg(m, i, l, itype) = &
+                     sqrt(rdum/nkpti/sum(hybdat%nbands(:nkpti))*nkpti)
+                  olapcv_max(m, i, l, itype) = rdum1
+                  olapcv_loc(:, m, i, l, itype) = iarr
+               END DO
+               IF(mpi%irank == 0) WRITE(6, *)
+
+            END DO
+         END DO
+      END DO
+
+      IF(mpi%irank == 0) THEN
+         WRITE(6, '(/A)') ' Average overlap <core|val>'
+         DO itype = 1, atoms%ntype
+            IF(atoms%ntype > 1) write(6, '(A,I3)') ' Atom type', itype
+            DO l = 0, hybdat%lmaxc(itype)
+               DO i = 1, hybdat%nindxc(l, itype)
+                  WRITE(6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+                  WRITE(6, '('//chr(2*l + 1)//'F10.6)') &
+                     olapcv_avg(-l:l, i, l, itype)
                END DO
             END DO
+         END DO
 
-            IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|basis>'
-            allocate(olapcb(maxval(mpdata%num_radfun_per_l)), olapcv(maxval(hybdat%nbands), nkpti),&
-                      olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
-                      olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
-                      olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
+         WRITE(6, '(/A)') ' Maximum overlap <core|val> at (band/kpoint)'
+         DO itype = 1, atoms%ntype
+            IF(atoms%ntype > 1) write(6, '(A,I3)') ' Atom type', itype
+            DO l = 0, hybdat%lmaxc(itype)
+               DO i = 1, hybdat%nindxc(l, itype)
+                  WRITE(6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+                  WRITE(6, '('//chr(2*l + 1)// &
+                        '(F10.6,'' ('',I3.3,''/'',I4.3,'')''))') &
+                     (olapcv_max(m, i, l, itype), &
+                      olapcv_loc(:, m, i, l, itype), m=-l, l)
+               END DO
+            END DO
+         END DO
+      END IF ! mpi%irank == 0
 
-            DO itype = 1, atoms%ntype
-               IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-                  WRITE (6, '(A,I3)') ' Atom type', itype
-               DO l = 0, hybdat%lmaxc(itype)
-                  IF (l > atoms%lmax(itype)) EXIT ! very improbable case
-                  IF (mpi%irank == 0) &
-                      WRITE (6, "(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"//&
-                              "') ...')") (lchar(l), i=1, min(3, mpdata%num_radfun_per_l(l, itype)))
-                  DO i = 1, hybdat%nindxc(l, itype)
-                     IF (mpi%irank == 0)&
-                       WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
-                     DO j = 1, mpdata%num_radfun_per_l(l, itype)
+      deallocate(olapcb, olapcv, olapcv_avg, olapcv_max, olapcv_loc)
 
-                        integrand = hybdat%core1(:, i, l, itype)*hybdat%bas1(:, j, l, itype)&
-                                  + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
+      IF(mpi%irank == 0) WRITE(6, '(/A)') ' Overlap <basis|basis>'
 
-                        olapcb(j) = &
-                              intgrf(integrand, atoms, itype, hybdat%gridf)
+      DO itype = 1, atoms%ntype
+         IF(atoms%ntype > 1 .AND. mpi%irank == 0) &
+            WRITE(6, '(A,I3)') ' Atom type', itype
+         DO l = 0, atoms%lmax(itype)
+            DO i = 1, mpdata%num_radfun_per_l(l, itype)
+               IF(mpi%irank == 0) THEN
+                  SELECT CASE(i)
+                  CASE(1)
+                     WRITE(6, '(1x,''   u('',A,'')'')', advance='no') lchar(l)
+                  CASE(2)
+                     WRITE(6, '(1x,''udot('',A,'')'')', advance='no') lchar(l)
+                  CASE DEFAULT
+                     WRITE(6, '(1x,'' ulo('',A,'')'')', advance='no') lchar(l)
+                  END SELECT
+               END IF
+               DO j = 1, i
+                  integrand = hybdat%bas1(:, i, l, itype)*hybdat%bas1(:, j, l, itype) &
+                              + hybdat%bas2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
 
-                        IF (mpi%irank == 0)&
-                          WRITE (6, '(F10.6)', advance='no') olapcb(j)
-                     END DO
+                  IF(mpi%irank == 0) WRITE(6, '(F10.6)', advance='no') &
+                     intgrf(integrand, atoms, itype, hybdat%gridf)
+               END DO
+               IF(mpi%irank == 0) WRITE(6, *)
+            END DO
+         END DO
+      END DO
 
-                     lm = sum([(mpdata%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)])
-                     iatom = sum(atoms%neq(1:itype - 1)) + 1 ! take first of group of equivalent atoms
+      IF(.not. l_mism) RETURN
+
+      IF(mpi%irank == 0) WRITE(6, '(/A)') &
+         'Mismatch of wave functions at the MT-sphere boundaries'
+      allocate(carr1(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+      allocate(carr2(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+      allocate(carr3(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+
+      iatom = 0
+      DO itype = 1, atoms%ntype
+         DO ineq = 1, atoms%neq(itype)
+            iatom = iatom + 1
+            IF(mpi%irank == 0) THEN
+               if(atoms%nat > 1) WRITE(6, '(2X,A,I3)') 'Atom', iatom
+               WRITE(6, '(2X,A)') 'k-point    average      (   maximum    )'
+            END IF
+
+            DO ikpt = 1, nkpti
+               carr1 = 0; carr2 = 0; carr3 = 0
+
+               ! calculate k1,k2,k3
+               CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+
+               ! PW part
+               DO igpt = 1, lapw%nv(jsp)
+                  gpt = lapw%gvec(:, igpt, jsp)
+
+                  cexp = exp(img*2*pi_const* &
+                             dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
+                  q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
+
+                  qnorm = norm2(q)
+                  call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
+                  call harmonicsr(y, q, atoms%lmax(itype))
+                  y = conjg(y)
+                  lm = 0
+                  DO l = 0, atoms%lmax(itype)
+                     cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
                      DO m = -l, l
-                        olapcv = 0
-                        DO j = 1, mpdata%num_radfun_per_l(l, itype)
-                           lm = lm + 1
-                           olapcv(:, :) = olapcv(:, :) + &
-                                         olapcb(j)*cmt(:maxval(hybdat%nbands), lm, iatom, :nkpti)
-                        END DO
-                        rdum = sum(abs(olapcv(:, :))**2)
-                        rdum1 = maxval(abs(olapcv(:, :)))
-                        iarr = maxloc(abs(olapcv(:, :)))
-                        olapcv_avg(m, i, l, itype) = &
-                                sqrt(rdum/nkpti/sum(hybdat%nbands(:nkpti))*nkpti)
-                        olapcv_max(m, i, l, itype) = rdum1
-                        olapcv_loc(:, m, i, l, itype) = iarr
-                     END DO
-                     IF (mpi%irank == 0) WRITE (6, *)
-
-                  END DO
-               END DO
-            END DO
-
-            IF (mpi%irank == 0) THEN
-               WRITE (6, '(/A)') ' Average overlap <core|val>'
-               DO itype = 1, atoms%ntype
-                  IF (atoms%ntype > 1) write (6, '(A,I3)') ' Atom type', itype
-                  DO l = 0, hybdat%lmaxc(itype)
-                     DO i = 1, hybdat%nindxc(l, itype)
-                        WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
-                        WRITE (6, '('//chr(2*l + 1)//'F10.6)') &
-                                                        olapcv_avg(-l:l, i, l, itype)
+                        lm = lm + 1
+                        DO iband = 1, hybdat%nbands(ikpt)
+                           if(z(1)%l_real) THEN
+                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
+                           Else
+                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
+                           END if
+                        end DO
                      END DO
                   END DO
                END DO
 
-               WRITE (6, '(/A)') ' Maximum overlap <core|val> at (band/kpoint)'
-               DO itype = 1, atoms%ntype
-                  IF (atoms%ntype > 1) write (6, '(A,I3)') ' Atom type', itype
-                  DO l = 0, hybdat%lmaxc(itype)
-                     DO i = 1, hybdat%nindxc(l, itype)
-                        WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
-                        WRITE (6, '('//chr(2*l + 1)//&
-                                 '(F10.6,'' ('',I3.3,''/'',I4.3,'')''))')&
-                                          (olapcv_max(m, i, l, itype),&
-                                           olapcv_loc(:, m, i, l, itype), m=-l, l)
-                     END DO
-                  END DO
-               END DO
-            END IF ! mpi%irank == 0
-
-            deallocate(olapcb, olapcv, olapcv_avg, olapcv_max, olapcv_loc)
-
-            IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <basis|basis>'
-
-            DO itype = 1, atoms%ntype
-               IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-                  WRITE (6, '(A,I3)') ' Atom type', itype
+               ! MT
+               lm = 0
+               lm1 = 0
                DO l = 0, atoms%lmax(itype)
-                  DO i = 1, mpdata%num_radfun_per_l(l, itype)
-                     IF (mpi%irank == 0) THEN
-                        SELECT CASE (i)
-                        CASE (1)
-                           WRITE (6, '(1x,''   u('',A,'')'')', advance='no') lchar(l)
-                        CASE (2)
-                           WRITE (6, '(1x,''udot('',A,'')'')', advance='no') lchar(l)
-                        CASE DEFAULT
-                           WRITE (6, '(1x,'' ulo('',A,'')'')', advance='no') lchar(l)
-                        END SELECT
-                     END IF
-                     DO j = 1, i
-                        integrand = hybdat%bas1(:, i, l, itype)*hybdat%bas1(:, j, l, itype)&
-                                  + hybdat%bas2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
-
-                        IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-                              intgrf(integrand, atoms, itype, hybdat%gridf)
+                  DO m = -l, l
+                     lm = lm + 1
+                     DO n = 1, mpdata%num_radfun_per_l(l, itype)
+                        lm1 = lm1 + 1
+                        rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
+                        DO iband = 1, hybdat%nbands(ikpt)
+                           carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
+                        END DO
                      END DO
-                     IF (mpi%irank == 0) WRITE (6, *)
                   END DO
                END DO
-            END DO
+               carr1 = carr2 - carr3
 
-            IF (.not. l_mism) RETURN
-
-            IF (mpi%irank == 0) WRITE (6, '(/A)') &
-                      'Mismatch of wave functions at the MT-sphere boundaries'
-            allocate(carr1(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr2(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr3(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
-
-            iatom = 0
-            DO itype = 1, atoms%ntype
-               DO ineq = 1, atoms%neq(itype)
-                  iatom = iatom + 1
-                  IF (mpi%irank == 0) THEN
-                     if (atoms%nat > 1) WRITE (6, '(2X,A,I3)') 'Atom', iatom
-                     WRITE (6, '(2X,A)') 'k-point    average      (   maximum    )'
-                  END IF
-
-                  DO ikpt = 1, nkpti
-                     carr1 = 0; carr2 = 0; carr3 = 0
-
-                     ! calculate k1,k2,k3
-                     CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, ikpt, cell, sym%zrfs)
-
-                     ! PW part
-                     DO igpt = 1, lapw%nv(jsp)
-                        gpt = lapw%gvec(:,igpt, jsp)
-
-                        cexp = exp(img*2*pi_const* &
-                                   dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
-                        q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
-
-                        qnorm = norm2(q)
-                        call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
-                        call harmonicsr(y, q, atoms%lmax(itype))
-                        y = conjg(y)
-                        lm = 0
-                        DO l = 0, atoms%lmax(itype)
-                           cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
-                           DO m = -l, l
-                              lm = lm + 1
-                              DO iband = 1, hybdat%nbands(ikpt)
-                                 if (z(1)%l_real) THEN
-                                    carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
-                                 Else
-                                    carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
-                                 END if
-                              end DO
-                           END DO
-                        END DO
-                     END DO
-
-                     ! MT
-                     lm = 0
-                     lm1 = 0
-                     DO l = 0, atoms%lmax(itype)
-                        DO m = -l, l
-                           lm = lm + 1
-                           DO n = 1, mpdata%num_radfun_per_l(l, itype)
-                              lm1 = lm1 + 1
-                              rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
-                              DO iband = 1, hybdat%nbands(ikpt)
-                                 carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
-                              END DO
-                           END DO
-                        END DO
-                     END DO
-                     carr1 = carr2 - carr3
-
-                     rarr = 0
-                     lm = 0
-                     DO l = 0, atoms%lmax(itype)
-                        DO m = -l, l
-                           lm = lm + 1
-                           rarr = rarr + abs(carr1(:, lm))**2
-                        END DO
-                     END DO
-                     rarr = sqrt(rarr/(4*pi_const))
-                     !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
-                     !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
-                     !             CALL writeout(outtext,mpi%irank)
+               rarr = 0
+               lm = 0
+               DO l = 0, atoms%lmax(itype)
+                  DO m = -l, l
+                     lm = lm + 1
+                     rarr = rarr + abs(carr1(:, lm))**2
+                  END DO
+               END DO
+               rarr = sqrt(rarr/(4*pi_const))
+               !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
+               !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
+               !             CALL writeout(outtext,mpi%irank)
 !             IF( iatom .eq. 6 ) THEN
 !               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),[0.0,0.0,1.0] ))
 !               lm = 0
@@ -325,10 +324,10 @@
 !               END DO
 !             END IF
 
-                  END DO
-               END DO
             END DO
+         END DO
+      END DO
 
-         END SUBROUTINE checkolap
+   END SUBROUTINE checkolap
 
-      END MODULE m_checkolap
+END MODULE m_checkolap

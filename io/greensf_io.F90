@@ -11,17 +11,19 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, inFilename, l_corr)
 
       USE m_types
       USE m_cdn_io
 
-      TYPE(t_input),       INTENT(IN)  :: input
-      TYPE(t_gfinp),       INTENT(IN)  :: gfinp
-      TYPE(t_atoms),       INTENT(IN)  :: atoms
-      TYPE(t_greensf),     INTENT(IN)  :: greensf
-
-      INTEGER(HID_T),       INTENT(OUT) :: fileID
+      TYPE(t_input),                INTENT(IN)  :: input
+      TYPE(t_gfinp),                INTENT(IN)  :: gfinp
+      TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_greensf),              INTENT(IN)  :: greensf
+      CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
+      LOGICAL,          OPTIONAL,   INTENT(IN)  :: l_corr !Slightly modified IO-mode
+                                                          !for correlated green's function
+      INTEGER(HID_T),               INTENT(OUT) :: fileID
 
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
@@ -39,7 +41,11 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: dims(7)
 
       version = 1
-      filename = "greensf.hdf"
+      IF(PRESENT(inFilename)) THEN
+         filename = TRIM(ADJUSTL(inFilename))
+      ELSE
+         filename = "greensf.hdf"
+      ENDIF
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
       IF(l_exist) THEN
@@ -50,6 +56,12 @@ MODULE m_greensf_io
 
       CALL h5gcreate_f(fileID, '/meta', metaGroupID, hdfError)
       CALL io_write_attint0(metaGroupID,'version',version)
+      IF(PRESENT(l_corr)) THEN
+         CALL io_write_attlog0(metaGroupID,'Hubbard1GF',l_corr)
+      ELSE
+         CALL io_write_attlog0(metaGroupID,'Hubbard1GF',.FALSE.)
+      ENDIF
+
       CALL h5gclose_f(metaGroupID, hdfError)
 
       CALL readPrevEFermi(eFermiPrev,l_error)
@@ -100,46 +112,103 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, greensf)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, greensf, mmpmat, selfen, l_corr)
 
       USE m_types
       USE m_constants
 
+      INTEGER(HID_T),      INTENT(IN)  :: fileID
       TYPE(t_input),       INTENT(IN)  :: input
       TYPE(t_gfinp),       INTENT(IN)  :: gfinp
+      TYPE(t_atoms),       INTENT(IN)  :: atoms
       TYPE(t_greensf),     INTENT(IN)  :: greensf
-
-      INTEGER(HID_T),      INTENT(IN)  :: fileID
+      COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
+      COMPLEX, OPTIONAL,   INTENT(IN)  :: selfen(:,:,:,:,:) !Only in IO mode for Hubbard 1
+      LOGICAL, OPTIONAL,   INTENT(IN)  :: l_corr
 
       INTEGER(HID_T)       :: elementsGroupID
       INTEGER(HID_T)       :: currentelementGroupID
+      INTEGER(HID_T)       :: mmpmatSpaceID, mmpmatSetID
       INTEGER(HID_T)       :: sphavgDataSpaceID, sphavgDataSetID
       INTEGER(HID_T)       :: uuDataSpaceID, uuDataSetID
       INTEGER(HID_T)       :: udDataSpaceID, udDataSetID
       INTEGER(HID_T)       :: duDataSpaceID, duDataSetID
       INTEGER(HID_T)       :: ddDataSpaceID, ddDataSetID
+      INTEGER(HID_T)       :: selfenDataSpaceID, selfenDataSetID
 
       CHARACTER(len=30)    :: elementName
+      LOGICAL              :: l_reduced
       INTEGER              :: hdfError
       INTEGER              :: dimsInt(7)
-      INTEGER              :: i_gf
-      INTEGER              :: l(gfinp%n), lp(gfinp%n)
-      INTEGER              :: atomType(gfinp%n), atomTypep(gfinp%n)
+      INTEGER              :: i_gf,ispin,m
+      INTEGER              :: i_elem,n_elem
       INTEGER(HID_T)       :: dims(7)
+      REAL                 :: trc(input%jspins)
+
+
+      IF(PRESENT(l_corr)) THEN
+         l_reduced = l_corr
+         IF(l_corr) THEN
+            n_elem = atoms%n_hia
+         ELSE
+            n_elem = gfinp%n
+         ENDIF
+      ELSE
+         l_reduced = .FALSE.
+         n_elem = gfinp%n
+      ENDIF
 
       CALL h5gcreate_f(fileID, '/elements', elementsGroupID, hdfError)
-      CALL io_write_attint0(elementsGroupID,'NumElements',gfinp%n)
+      CALL io_write_attint0(elementsGroupID,'NumElements',n_elem)
       CALL io_write_attint0(elementsGroupID,'maxl',lmaxU_Const)
 
-      DO i_gf = 1, gfinp%n
-         WRITE(elementName,200) i_gf
+      DO i_elem = 1, n_elem
+
+         WRITE(elementName,200) i_elem
 200      FORMAT('element-',i0)
+
+         IF(l_reduced) THEN
+            i_gf = gfinp%find(atoms%lda_u(atoms%n_u+i_elem)%l,atoms%lda_u(atoms%n_u+i_elem)%atomType)
+         ELSE
+            i_gf = i_elem
+         ENDIF
 
          CALL h5gcreate_f(elementsGroupID, elementName, currentelementGroupID, hdfError)
          CALL io_write_attint0(currentelementGroupID,"l",gfinp%elem(i_gf)%l)
          CALL io_write_attint0(currentelementGroupID,"lp",gfinp%elem(i_gf)%lp)
          CALL io_write_attint0(currentelementGroupID,"atomType",gfinp%elem(i_gf)%atomType)
          CALL io_write_attint0(currentelementGroupID,"atomTypep",gfinp%elem(i_gf)%atomTypep)
+
+         !Trace of occupation matrix
+         trc=0.0
+         DO ispin = 1, input%jspins
+            DO m = -gfinp%elem(i_gf)%l, gfinp%elem(i_gf)%l
+               trc(ispin) = trc(ispin) + REAL(mmpmat(m,m,i_gf,ispin))
+            ENDDO
+         ENDDO
+         CALL io_write_attreal0(currentelementGroupID,"SpinUpTrace",trc(1))
+         IF(input%jspins.EQ.2) THEN
+            CALL io_write_attreal0(currentelementGroupID,"SpinDownTrace",trc(2))
+         ENDIF
+
+         !Occupation matrix
+         IF(gfinp%l_mperp) THEN
+            dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,3]
+            dimsInt=dims
+            CALL h5screate_simple_f(4,dims(:4),mmpmatSpaceID,hdfError)
+            CALL h5dcreate_f(currentelementGroupID, "mmpmat", H5T_NATIVE_DOUBLE, mmpmatSpaceID, mmpmatSetID, hdfError)
+            CALL h5sclose_f(mmpmatSpaceID,hdfError)
+            CALL io_write_complex3(mmpmatSetID,[-1,1,1,1],dimsInt(:4),mmpmat(:,:,i_gf,:))
+            CALL h5dclose_f(mmpmatSetID, hdfError)
+         ELSE
+            dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,input%jspins]
+            dimsInt=dims
+            CALL h5screate_simple_f(4,dims(:4),mmpmatSpaceID,hdfError)
+            CALL h5dcreate_f(currentelementGroupID, "mmpmat", H5T_NATIVE_DOUBLE, mmpmatSpaceID, mmpmatSetID, hdfError)
+            CALL h5sclose_f(mmpmatSpaceID,hdfError)
+            CALL io_write_complex3(mmpmatSetID,[-1,1,1,1],dimsInt(:4),mmpmat(:,:,i_gf,:input%jspins))
+            CALL h5dclose_f(mmpmatSetID, hdfError)
+         ENDIF
 
          !Spherically averaged greensfData
          dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]
@@ -150,7 +219,7 @@ MODULE m_greensf_io
          CALL io_write_complex5(sphavgDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf%gmmpmat(:,:,:,:,:,i_gf))
          CALL h5dclose_f(sphavgDataSetID, hdfError)
 
-         IF(.NOT.gfinp%l_sphavg) THEN
+         IF(.NOT.gfinp%l_sphavg.AND..NOT.l_reduced) THEN
 
             !uu
             dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]
@@ -189,6 +258,16 @@ MODULE m_greensf_io
             CALL h5dclose_f(ddDataSetID, hdfError)
 
             !TODO write radial functions
+         ENDIF
+
+         IF(l_reduced.AND.PRESENT(selfen)) THEN
+            dims(:5)=[2,2*(2*lmaxU_Const+1),2*(2*lmaxU_Const+1),greensf%nz,2]
+            dimsInt=dims
+            CALL h5screate_simple_f(5,dims(:5),selfenDataSpaceID,hdfError)
+            CALL h5dcreate_f(currentelementGroupID, "selfen", H5T_NATIVE_DOUBLE, selfenDataSpaceID, selfenDataSetID, hdfError)
+            CALL h5sclose_f(selfenDataSpaceID,hdfError)
+            CALL io_write_complex4(selfenDataSetID,[-1,1,1,1,1],dimsInt(:5),selfen(:,:,:,:,i_elem))
+            CALL h5dclose_f(selfenDataSetID, hdfError)
          ENDIF
 
          CALL h5gclose_f(currentelementGroupID, hdfError)

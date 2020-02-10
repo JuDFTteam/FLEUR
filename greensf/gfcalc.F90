@@ -103,22 +103,22 @@ MODULE m_gfcalc
          IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
          IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
          !Density of states from Greens function
-         CALL gfDOS(greensf,l,nType,i_gf,gfinp,input,results%ef)
+         !CALL gfDOS(greensf,l,nType,i_gf,gfinp,input,results%ef)
          !Occupation matrix
          CALL occmtx(greensf,l,nType,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
          !CALL hybridization(greensf,l,nType,gfinp,input,results%ef)
       ENDDO
       CALL timestop("Green's Function: Occupation/DOS")
-      CALL timestop("Green's Function: Postprocess")
 
 #ifdef CPP_HDF
       CALL timestart("Green's Function: IO/Write")
       CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, greensf)
-      CALL writeGreensFData(greensf_fileID, input, gfinp, greensf)
+      CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, greensf, mmpmat)
       CALL closeGreensFFile(greensf_fileID)
       CALL timestop("Green's Function: IO/Write")
 #endif
+      CALL timestop("Green's Function: Postprocess")
 
    END SUBROUTINE postProcessGF
 

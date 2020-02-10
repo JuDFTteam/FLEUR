@@ -1,4 +1,3 @@
-
 MODULE m_hyb_abcrot
 CONTAINS
    SUBROUTINE hyb_abcrot(hybinp, atoms, neig, sym,&
