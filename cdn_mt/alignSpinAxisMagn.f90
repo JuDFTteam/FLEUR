@@ -46,10 +46,14 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    END IF
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
+   thetaTemp(:)=-1*thetaTemp(:)
+   phiTemp(:)=-1*phiTemp(:)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phiTemp,-thetaTemp,den)
+   thetaTemp(:)=-1*thetaTemp(:)
+   phiTemp(:)=-1*phiTemp(:)
 
-   nococonv%alph=phiTemp+nococonv%alph
-   nococonv%beta=thetaTemp+nococonv%beta
+   nococonv%alph(:)=phiTemp(:)+nococonv%alph(:)
+   nococonv%beta(:)=thetaTemp(:)+nococonv%beta(:)
 
    write(*,*) "Noco Phi"
    write(*,*) nococonv%alph
