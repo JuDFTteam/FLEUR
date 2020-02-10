@@ -44,11 +44,11 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    DO i=1, atoms%ntype
      IF(abs(nococonv%beta(i)).GE.pimach()) THEN
        nococonv%beta(i)=mod(thetaTemp(i),pimach())
-       nococonv%alpha(i)=nococonv%alpha(i)+pimach()
+       nococonv%alph(i)=nococonv%alph(i)+pimach()
     END IF
-    IF(nococonv%beta(i).LE.0) THEN 
+    IF(nococonv%beta(i).LE.0) THEN
       nococonv%beta(i)=-mod(thetaTemp(i),pimach())
-      nococonv%alpha(i)=nococonv%alpha(i)+pimach()
+      nococonv%alph(i)=nococonv%alph(i)+pimach()
    END IF
   nococonv%alph=mod(phiTemp,2*pimach())
    write(*,*) "Noco Phi"
