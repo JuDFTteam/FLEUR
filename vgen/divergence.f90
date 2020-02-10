@@ -147,6 +147,7 @@ CONTAINS
    SUBROUTINE divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
       USE m_lh_tofrom_lm
       USE m_gradYlm
+      USE m_constants
 
       !--------------------------------------------------------------------------
       ! Use the interstitial/vacuum divergence subroutine and an external MT-gra-
