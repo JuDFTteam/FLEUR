@@ -195,9 +195,9 @@ MODULE m_hubbard1_setup
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gdft, &
-                              inFilename="greensf_DFT.hdf", l_corr=.TRUE.)
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, gu, &
-                               mmpmat, l_corr=.TRUE.)
+                              inFilename="greensf_DFT.hdf")
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+                               GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
 
@@ -284,9 +284,9 @@ MODULE m_hubbard1_setup
             !-------------------------------------
             CALL timestart("Hubbard 1: IO/Write")
             CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, &
-                                 inFilename="greensf_corr.hdf", l_corr=.TRUE.)
-            CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, gu, mmpmat, &
-                                  selfen=selfen, l_corr=.TRUE.)
+                                 inFilename="greensf_IMP.hdf")
+            CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+                                 GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
             CALL closeGreensFFile(greensf_fileID)
             CALL timestop("Hubbard 1: IO/Write")
 #endif

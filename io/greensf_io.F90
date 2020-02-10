@@ -9,9 +9,19 @@ MODULE m_greensf_io
 
    PUBLIC openGreensFFile, closeGreensFFile, writeGreensFData
 
+   PUBLIC GREENSF_GENERAL_CONST, GREENSF_HUBBARD_CONST
+
+   !---------------
+   ! Storage Types
+   !-------------------------------
+   ! GREENS_GENERAL_CONST => All Green's function elements are saved
+   ! GREENS_HUBBARD_CONST => Only Hubbard elements are saved with selfenergy (if available)
+   INTEGER,    PARAMETER :: GREENSF_GENERAL_CONST = 1
+   INTEGER,    PARAMETER :: GREENSF_HUBBARD_CONST = 2
+
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, inFilename, l_corr)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, greensf, inFilename)
 
       USE m_types
       USE m_cdn_io
@@ -21,8 +31,6 @@ MODULE m_greensf_io
       TYPE(t_atoms),                INTENT(IN)  :: atoms
       TYPE(t_greensf),              INTENT(IN)  :: greensf
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
-      LOGICAL,          OPTIONAL,   INTENT(IN)  :: l_corr !Slightly modified IO-mode
-                                                          !for correlated green's function
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
       LOGICAL           :: l_exist
@@ -56,11 +64,6 @@ MODULE m_greensf_io
 
       CALL h5gcreate_f(fileID, '/meta', metaGroupID, hdfError)
       CALL io_write_attint0(metaGroupID,'version',version)
-      IF(PRESENT(l_corr)) THEN
-         CALL io_write_attlog0(metaGroupID,'Hubbard1GF',l_corr)
-      ELSE
-         CALL io_write_attlog0(metaGroupID,'Hubbard1GF',.FALSE.)
-      ENDIF
 
       CALL h5gclose_f(metaGroupID, hdfError)
 
@@ -112,19 +115,20 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, greensf, mmpmat, selfen, l_corr)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen)
 
       USE m_types
       USE m_constants
+      USE m_juDFT
 
       INTEGER(HID_T),      INTENT(IN)  :: fileID
       TYPE(t_input),       INTENT(IN)  :: input
       TYPE(t_gfinp),       INTENT(IN)  :: gfinp
       TYPE(t_atoms),       INTENT(IN)  :: atoms
       TYPE(t_greensf),     INTENT(IN)  :: greensf
+      INTEGER,             INTENT(IN)  :: archiveType
       COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
       COMPLEX, OPTIONAL,   INTENT(IN)  :: selfen(:,:,:,:,:) !Only in IO mode for Hubbard 1
-      LOGICAL, OPTIONAL,   INTENT(IN)  :: l_corr
 
       INTEGER(HID_T)       :: elementsGroupID
       INTEGER(HID_T)       :: currentelementGroupID
@@ -136,8 +140,7 @@ MODULE m_greensf_io
       INTEGER(HID_T)       :: ddDataSpaceID, ddDataSetID
       INTEGER(HID_T)       :: selfenDataSpaceID, selfenDataSetID
 
-      CHARACTER(len=30)    :: elementName
-      LOGICAL              :: l_reduced
+      CHARACTER(len=30)    :: elementName, groupName
       INTEGER              :: hdfError
       INTEGER              :: dimsInt(7)
       INTEGER              :: i_gf,ispin,m
@@ -146,19 +149,19 @@ MODULE m_greensf_io
       REAL                 :: trc(input%jspins)
 
 
-      IF(PRESENT(l_corr)) THEN
-         l_reduced = l_corr
-         IF(l_corr) THEN
-            n_elem = atoms%n_hia
-         ELSE
-            n_elem = gfinp%n
-         ENDIF
-      ELSE
-         l_reduced = .FALSE.
-         n_elem = gfinp%n
-      ENDIF
+      SELECT CASE(archiveType)
 
-      CALL h5gcreate_f(fileID, '/elements', elementsGroupID, hdfError)
+      CASE(GREENSF_GENERAL_CONST)
+         groupName = '/GreensFunctionElements'
+         n_elem = gfinp%n
+      CASE(GREENSF_HUBBARD_CONST)
+         groupName = 'Hubbard1Elements'
+         n_elem = atoms%n_hia
+      CASE DEFAULT
+         CALL juDFT_error("Unknown GF archiveType", calledby="writeGreensFData")
+      END SELECT
+
+      CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), elementsGroupID, hdfError)
       CALL io_write_attint0(elementsGroupID,'NumElements',n_elem)
       CALL io_write_attint0(elementsGroupID,'maxl',lmaxU_Const)
 
@@ -167,11 +170,15 @@ MODULE m_greensf_io
          WRITE(elementName,200) i_elem
 200      FORMAT('element-',i0)
 
-         IF(l_reduced) THEN
-            i_gf = gfinp%find(atoms%lda_u(atoms%n_u+i_elem)%l,atoms%lda_u(atoms%n_u+i_elem)%atomType)
-         ELSE
+         SELECT CASE(archiveType)
+
+         CASE(GREENSF_GENERAL_CONST)
             i_gf = i_elem
-         ENDIF
+         CASE(GREENSF_HUBBARD_CONST)
+            i_gf = gfinp%find(atoms%lda_u(atoms%n_u+i_elem)%l,atoms%lda_u(atoms%n_u+i_elem)%atomType)
+         CASE DEFAULT
+            CALL juDFT_error("Unknown GF archiveType", calledby="writeGreensFData")
+         END SELECT
 
          CALL h5gcreate_f(elementsGroupID, elementName, currentelementGroupID, hdfError)
          CALL io_write_attint0(currentelementGroupID,"l",gfinp%elem(i_gf)%l)
@@ -219,7 +226,7 @@ MODULE m_greensf_io
          CALL io_write_complex5(sphavgDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf%gmmpmat(:,:,:,:,:,i_gf))
          CALL h5dclose_f(sphavgDataSetID, hdfError)
 
-         IF(.NOT.gfinp%l_sphavg.AND..NOT.l_reduced) THEN
+         IF(.NOT.gfinp%l_sphavg.AND.archiveType.NE.GREENSF_HUBBARD_CONST) THEN
 
             !uu
             dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]
@@ -260,7 +267,7 @@ MODULE m_greensf_io
             !TODO write radial functions
          ENDIF
 
-         IF(l_reduced.AND.PRESENT(selfen)) THEN
+         IF(archiveType.EQ.GREENSF_HUBBARD_CONST.AND.PRESENT(selfen)) THEN
             dims(:5)=[2,2*(2*lmaxU_Const+1),2*(2*lmaxU_Const+1),greensf%nz,2]
             dimsInt=dims
             CALL h5screate_simple_f(5,dims(:5),selfenDataSpaceID,hdfError)
