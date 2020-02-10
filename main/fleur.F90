@@ -486,6 +486,8 @@ CONTAINS
 !!$             END IF
 
              ! total energy
+             IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
+
              CALL timestart('determination of total energy')
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
                          xcpot,hybdat,vTot,vCoul,iter,inDen,results)
@@ -499,7 +501,6 @@ CONTAINS
 
        CALL enpara%mix(mpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = fi%field
-       IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
        ! mix fi%input and output densities
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
