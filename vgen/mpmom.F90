@@ -61,14 +61,12 @@ contains
       nat = 1
       do n = 1, atoms%ntype
         write( 6, fmt=8000 ) n
-        nd = sym%ntypsy(nat)
-        do lh = 0, sphhar%nlh(nd)
-          l = sphhar%llh(lh,nd)
-          mems = sphhar%nmem(lh,nd)
-          do mem = 1, mems
-            m = sphhar%mlh(mem,lh,nd)
-            write( 6, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
-          end do
+        do l = 0, atoms%lmax(n)
+           do m = -l, l
+              if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
+                 write( 6, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
+              end if
+           end do
         end do
         nat = nat + atoms%neq(n)
       end do

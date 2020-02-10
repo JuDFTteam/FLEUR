@@ -299,9 +299,11 @@ CONTAINS
           !
           !----> add to warped coulomb potential
           !
-          DO k = 1,stars%ng3
-             v_out_pw_w(k,js) = v_out_pw_w(k,js) + fg3(k)
-          ENDDO
+          IF (PRESENT(v_out_pw_w)) THEN
+             DO k = 1,stars%ng3
+                v_out_pw_w(k,js) = v_out_pw_w(k,js) + fg3(k)
+             ENDDO
+          END IF
        ENDIF
     END DO
   END SUBROUTINE pw_from_grid

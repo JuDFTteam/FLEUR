@@ -21,6 +21,7 @@ CONTAINS
     USE m_rotate_mt_den_tofrom_local
     USE m_sfTests
     USE m_magnMomFromDen
+    USE m_pw_tofrom_grid
     IMPLICIT NONE
     TYPE(t_mpi),       INTENT(IN)     :: mpi
     TYPE(t_oneD),      INTENT(IN)     :: oneD
@@ -43,6 +44,8 @@ CONTAINS
       TYPE(t_potden) :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
       REAL                         :: b(3,atoms%ntype),dummy1(atoms%ntype),dummy2(atoms%ntype),sfscale
+   REAL,ALLOCATABLE :: intden(:,:)
+      TYPE(t_gradients)            :: tmp_grad
 
 
 
@@ -101,6 +104,12 @@ CONTAINS
           CALL bxc(i)%resetPotDen()
           CALL corrB(i)%resetPotDen()
        END DO
+
+       CALL init_pw_grid(.FALSE.,stars,sym,cell)
+       CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
+       CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+       CALL finish_pw_grid()
+
        CALL timestart("Correcting vTot")
        CALL correctPot(vTot,cvec)
        CALL timestop("Correcting vTot")

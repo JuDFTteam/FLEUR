@@ -205,8 +205,12 @@ CONTAINS
       CALL timestop("MT divergence")
 
       CALL timestart("PW divergence")
-      
-      CALL pw_div(stars,sym,cell,noco,bxc,div)
+
+      div%pw(:,1)=CMPLX(0.0,0.0)
+
+      DO i=1,3
+         div%pw(:,1)=div%pw(:,1)+ImagUnit*(cell%bmat(i,1)*stars%kv3(1,:)+cell%bmat(i,2)*stars%kv3(2,:)+cell%bmat(i,3)*stars%kv3(3,:))*bxc(i)%pw(:,1)
+      END DO
 
       CALL timestop("PW divergence")
 
@@ -628,7 +632,10 @@ CONTAINS
 
       CALL timestart("PW potential gradient")
 
-      CALL pw_grad(stars,cell,noco,sym,pot,grad)
+     DO i=1,3
+         grad(i)%pw(:,1)=ImagUnit*(cell%bmat(i,1)*stars%kv3(1,:)+cell%bmat(i,2)*stars%kv3(2,:)+cell%bmat(i,3)*stars%kv3(3,:))*pot%pw(:,1)
+      END DO
+
 
       CALL timestop("PW potential gradient")
 
