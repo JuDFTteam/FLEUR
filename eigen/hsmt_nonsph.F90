@@ -253,7 +253,7 @@ CONTAINS
 
     INTEGER:: nn,na,ab_size,l,ll,m,i,ii
     COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab_select(:,:)
-    real :: rchi
+    complex :: cchi
 
     ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab1(lapw%nv(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab_select(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
 
@@ -270,7 +270,7 @@ CONTAINS
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
-          rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
+          cchi=MERGE(chi,chi*2,(sym%invsat(na)==0))
 
           CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
           !Calculate Hamiltonian
@@ -279,7 +279,12 @@ CONTAINS
           !Cut out of ab1 only the needed elements here
           ab_select=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
           IF (iintsp==jintsp) THEN
-             CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,CMPLX(rchi,0.0),CONJG(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+            if (isp>2) then
+              CALL hsmt_ab(sym,atoms,noco,nococonv,isp,2,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+              CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,cchi,CONJG(ab),SIZE(ab,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+            ELSE
+              CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,cchi,CONJG(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+            ENDIF
           ELSE
              !Second set of ab is needed
              CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)

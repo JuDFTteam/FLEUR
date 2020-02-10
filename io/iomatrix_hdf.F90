@@ -7,7 +7,7 @@ MODULE m_iomatrix_hdf
   IMPLICIT NONE
   PRIVATE
   PUBLIC iomatrix_hdf_close,iomatrix_hdf_open,iomatrix_hdf_write,iomatrix_hdf_read
-  
+
 CONTAINS
   SUBROUTINE  iomatrix_hdf_read(mat,nrec,did)
     CLASS(t_Mat),INTENT(INOUT)  :: mat
@@ -16,7 +16,7 @@ CONTAINS
 
     INTEGER::mpi_comm,dim(4)
 
-   
+
     INTEGER(HID_t) :: memspace,fspace,trans
     INTEGER(hsize_t):: dims(4)
     INTEGER        :: err
@@ -38,17 +38,17 @@ CONTAINS
        END IF
     TYPE is (t_mpimat)
        ALLOCATE(dat(MERGE(1,2,mat%l_real),mat%matsize1,mat%matsize2,1))
-       
+
        CALL h5dget_space_f(did,fspace,err)
        CALL priv_create_hyperslab_from_blacsdesc(mat%l_real,nrec,fspace,mat%blacsdata%blacs_desc)
        dims=SHAPE(dat)
        CALL h5screate_simple_f(4,dims,memspace,err)
        trans=gettransprop()
        CALL h5dread_f(did,H5T_NATIVE_DOUBLE,dat,dims,err,memspace,fspace,trans)
-       CALL h5sclose_f(memspace,err)                                  
+       CALL h5sclose_f(memspace,err)
        CALL h5sclose_f(fspace,err)
-       CALL cleartransprop(trans) 
-       IF (mat%l_real) THEN 
+       CALL cleartransprop(trans)
+       IF (mat%l_real) THEN
           mat%data_r=dat(1,:,:,1)
        ELSE
          mat%data_c=CMPLX(dat(1,:,:,1),dat(2,:,:,1))
@@ -60,13 +60,13 @@ CONTAINS
     CLASS(t_Mat),INTENT(IN)  :: mat
     INTEGER,INTENT(IN)       :: rec
     INTEGER(HID_t),INTENT(in)::did
-    
+
     INTEGER(HID_t) :: memspace,fspace,trans
     INTEGER(HSIZE_t):: dims(4)
     INTEGER :: err
     REAL,ALLOCATABLE :: dat(:,:,:,:)
 
-    
+
     SELECT TYPE(mat)
     TYPE is (t_mat)
        IF (mat%l_real) THEN
@@ -77,11 +77,11 @@ CONTAINS
        END IF
     TYPE is (t_mpimat)
        ALLOCATE(dat(MERGE(1,2,mat%l_real),mat%matsize1,mat%matsize2,1))
-       IF (mat%l_real) THEN 
+       IF (mat%l_real) THEN
           dat(1,:,:,1)=mat%data_r
        ELSE
          dat(1,:,:,1)=REAL(mat%data_c)
-         dat(2,:,:,1)=REAL(mat%data_c)
+         dat(2,:,:,1)=AIMAG(mat%data_c)
       ENDIF
       CALL h5dget_space_f(did,fspace,err)
       CALL priv_create_hyperslab_from_blacsdesc(mat%l_real,rec,fspace,mat%blacsdata%blacs_desc)
@@ -89,9 +89,9 @@ CONTAINS
       CALL h5screate_simple_f(4,dims,memspace,err)
       trans=gettransprop()
       CALL h5dwrite_f(did,H5T_NATIVE_DOUBLE,dat,dims,err,memspace,fspace,trans)
-      CALL h5sclose_f(memspace,err)                                  
+      CALL h5sclose_f(memspace,err)
       CALL h5sclose_f(fspace,err)
-      CALL cleartransprop(trans) 
+      CALL cleartransprop(trans)
    END SELECT
 
   END SUBROUTINE iomatrix_hdf_write
@@ -108,7 +108,7 @@ CONTAINS
     INTEGER,INTENT(in)          :: matsize,no_rec
     CHARACTER(len=*),INTENT(in) :: filename
     INTEGER(hid_t),INTENT(out)  :: fid,did
-    
+
     INTEGER :: dims(4),err
     LOGICAL :: l_exist
     INTEGER(HID_T)  :: access_prp
@@ -143,7 +143,7 @@ CONTAINS
     LOGICAL,INTENT(IN) :: l_real
     INTEGER,INTENT(in) :: nrec,blacsdesc(9)
     INTEGER(hid_t),INTENT(in):: sid
-    
+
     INTEGER(hsize_t):: start(4),COUNT(4),stride(4),bloc(4)
     INTEGER         :: nprow,npcol,myrow,mycol,block_row,block_col,matsize,blacs_ctxt,err
     LOGICAL         :: ok
@@ -168,7 +168,7 @@ CONTAINS
        !Cut to actual sizes
        start=(/0,0,0,0/)
        count=(/MERGE(1,2,l_real),matsize,matsize,int(stride(4))/)
-       CALL h5sselect_hyperslab_f(sid,H5S_SELECT_AND_F,start,count,err) 
+       CALL h5sselect_hyperslab_f(sid,H5S_SELECT_AND_F,start,count,err)
        CALL h5sselect_valid_f(sid,ok,err)
        IF (.NOT.ok) CALL judft_error("Writing of matrix failed, BUG in parallel HDF-IO")
     ENDIF

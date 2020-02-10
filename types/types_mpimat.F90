@@ -201,13 +201,13 @@ CONTAINS
                 mat%data_c(i,j) = 0.0
              ENDIF
           ENDIF
-          IF (i_glob==j_glob) THEN
-             IF (mat%l_real) THEN
-                mat%data_r(i,j) =  mat%data_r(i,j)/2.0
-             ELSE
-                mat%data_c(i,j) =  mat%data_c(i,j)/2.0
-             ENDIF
-          ENDIF
+          !IF (i_glob==j_glob) THEN
+          !   IF (mat%l_real) THEN
+          !      mat%data_r(i,j) =  mat%data_r(i,j)/2.0
+          !   ELSE
+          !      mat%data_c(i,j) =  mat%data_c(i,j)/2.0
+          !   ENDIF
+          !ENDIF
        ENDDO
     ENDDO
 
@@ -252,9 +252,11 @@ CONTAINS
           IF (mat%l_real) THEN
              mat%data_r(i+1:,ii)=0.0
              mat1%data_r(i+1:,ii)=0.0
+             mat1%data_r(i,ii)=0.0
           ELSE
              mat%data_c(i+1:,ii)=0.0
              mat1%data_c(i+1:,ii)=0.0
+             mat1%data_c(i,ii)=0.0
           ENDIF
        ENDDO
        IF (mat%l_real) THEN
@@ -267,15 +269,15 @@ CONTAINS
     END IF
     !Now multiply the diagonal of the matrix by 1/2
 
-    ii=0
-    DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
-       ii=ii+1
-       IF (mat%l_real) THEN
-          mat%data_r(i,ii)=mat%data_r(i,ii)/2
-       ELSE
-          mat%data_c(i,ii)=mat%data_c(i,ii)/2
-       END IF
-    ENDDO
+    !ii=0
+    !DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
+    !   ii=ii+1
+    !   IF (mat%l_real) THEN
+    !      mat%data_r(i,ii)=mat%data_r(i,ii)/2
+    !   ELSE
+    !      mat%data_c(i,ii)=mat%data_c(i,ii)/2
+    !   END IF
+    !ENDDO
     CLASS default
        CALL judft_error("Inconsistent types in t_mpimat_add_transpose")
     END SELECT

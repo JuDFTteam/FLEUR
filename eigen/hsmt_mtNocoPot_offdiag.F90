@@ -47,7 +47,7 @@ CONTAINS
     !The spin1,2 matrix is calculated(real part of potential)
     CALL hsmt_nonsph(n,mpi,sym,atoms,3,1,1,chi_one,noco,nococonv,cell,lapw,td,fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
     CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,3,1,1,hmat_tmp)
-    call hmat_tmp%generate_full_matrix()
+    !call hmat_tmp%generate_full_matrix()
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
@@ -63,7 +63,7 @@ CONTAINS
     CALL hsmt_nonsph(n,mpi,sym,atoms,4,1,1,chi_one,noco,nococonv,cell,lapw,td,&
          fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
     CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,4,1,1,hmat_tmp)
-    call hmat_tmp%generate_full_matrix()
+    !call hmat_tmp%generate_full_matrix()
 
     CALL hsmt_spinor(3,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
