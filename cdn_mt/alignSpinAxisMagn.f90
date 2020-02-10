@@ -21,7 +21,7 @@ IMPLICIT NONE
 
 CONTAINS
 SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
-,sym,oneD,cell,noco,nococonv,input,atoms,den)
+,sym,oneD,cell,noco,nococonv,input,atoms,den,l_firstIt)
    TYPE(t_input), INTENT(IN)     :: input
    TYPE(t_atoms), INTENT(IN)     :: atoms
    TYPE(t_noco), INTENT(IN)      :: noco
@@ -34,14 +34,22 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_potden), INTENT(INOUT) :: den
 
+   LOGICAL                       :: l_firstIt
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    integer                       ::  i
+
+   IF (l_firstIt) THEN
+        CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%beta,nococonv%alph,den)
+        nococonv%alph=0.0
+        nococonv%beta=0.0
+   END IF
+
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phiTemp,-thetaTemp,den)
 
-   nococonv%alph=phiTemp
-   nococonv%beta=thetaTemp
+   nococonv%alph=phiTemp+nococonv%alph
+   nococonv%beta=thetaTemp+nococonv%beta
 
    write(*,*) "Noco Phi"
    write(*,*) nococonv%alph
