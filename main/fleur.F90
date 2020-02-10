@@ -156,6 +156,10 @@ CONTAINS
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
 
+    IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+          ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
+
+
     IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
        CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, fi%cell, &
                       fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
@@ -263,8 +267,6 @@ CONTAINS
        !---< gwf
 
 
-       IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-             ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
 
 
        IF (fi%noco%l_sourceFree) THEN
@@ -472,7 +474,6 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 
-IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
 
 !!$             !----> output potential and potential difference
 !!$             IF (disp) THEN
@@ -490,6 +491,8 @@ IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
                          xcpot,hybdat,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
+          IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
+
           IF (fi%hybinp%l_hybrid) CALL close_eig(eig_id)
 
        END DO forcetheoloop
