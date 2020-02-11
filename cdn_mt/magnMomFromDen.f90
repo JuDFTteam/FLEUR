@@ -80,12 +80,11 @@ END IF
 !!Calculation of Angles
    DO i=1 , atoms%ntype
       mx=moments(1,i)
-      my=moments(2,i)
+      my=-moments(2,i)
       mz=moments(3,i)
       IF (den%potdenType>1000) THEN
          CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
       END IF
-      IF(mx<0) theta_mt_avg(i)=-theta_mt_avg(i)
    ENDDO
 
 END SUBROUTINE magnMomFromDen
