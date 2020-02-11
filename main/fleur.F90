@@ -149,14 +149,14 @@ CONTAINS
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
-       IF(fi%noco%l_alignMT) THEN
-         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
-         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+       !IF(fi%noco%l_alignMT) THEN
+      !   CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
+      !   CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
        END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
-       IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-                               ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+       !IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+        !                       ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     END IF
 
 
@@ -194,6 +194,8 @@ CONTAINS
 
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.true.,l_real,fi%noco%l_soc,.false.,mpi%n_size)
+  IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+                                           ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,fi%input,fi%atoms,fi%kpts,fi%noco,l_real)
