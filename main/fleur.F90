@@ -46,7 +46,6 @@ CONTAINS
    USE m_vgen
    USE m_vgen_coulomb
    USE m_writexcstuff
-   USE m_vmatgen
    USE m_eigen
    USE m_eigenso
    USE m_fermie
@@ -67,8 +66,6 @@ CONTAINS
    USE m_metagga
    USE m_plot
    USE m_hubbard1_setup
-
-
 
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
