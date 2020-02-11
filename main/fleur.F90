@@ -140,6 +140,7 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
+    CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -149,12 +150,12 @@ CONTAINS
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
-       IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-             ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
-             IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
+       IF(fi%noco%l_alignMT) THEN
+             CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+       END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
-      IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+       IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
                                ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     END IF
 
@@ -486,7 +487,7 @@ CONTAINS
 !!$             END IF
 
              ! total energy
-             IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
+             IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
 
              CALL timestart('determination of total energy')
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
