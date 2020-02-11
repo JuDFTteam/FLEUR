@@ -47,7 +47,9 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    diffT=thetaTemp-nococonv%beta
+   WHERE (diffT.LE.10**(-4)) diffT=0.0
    diffP=phiTemp-nococonv%alph
+   WHERE (diffP.LE.10**(-4)) diffP=0.0
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,-diffT,den)
    nococonv%beta=nococonv%beta+diffT
    nococonv%alph=nococonv%alph+diffP
