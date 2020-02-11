@@ -149,8 +149,13 @@ CONTAINS
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
+       IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+             ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
+             IF (fi%noco%l_alignMT) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen,inDen)
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
+      IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+                               ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     END IF
 
 
@@ -193,8 +198,6 @@ CONTAINS
     CALL init_chase(mpi,fi%input,fi%atoms,fi%kpts,fi%noco,l_real)
 #endif
     ! Open/allocate eigenvector storage (end)
-    IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-          ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
     scfloop:DO WHILE (l_cont)
        iter = iter + 1
        IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
