@@ -15,14 +15,14 @@ CONTAINS
       ! 
       ! Non-noco: Some rescaling is done here.
       ! 
-      ! Noco: vmatgen is called to generate 2x2 interstitial V matrix.
+      ! Noco: rotate_int_den_from_local is called to generate 2x2 interstitial V matrix.
       ! 
       ! Fully fully noco: rotate_mt_den_from_local does so for the Muffin Tins.
       ! 
       ! Sourcefree: The xc-B-field is scaled up an source terms are purged out.
       !--------------------------------------------------------------------------
       USE m_constants
-      USE m_vmatgen
+      USE m_rotate_int_den_tofrom_local
       USE m_types
       USE m_rotate_mt_den_tofrom_local
       USE m_sfTests
@@ -30,6 +30,7 @@ CONTAINS
       USE m_pw_tofrom_grid
       
       IMPLICIT NONE
+
       TYPE(t_mpi),      INTENT(IN)    :: mpi
       TYPE(t_oneD),     INTENT(IN)    :: oneD
       TYPE(t_field),    INTENT(IN)    :: field
@@ -45,13 +46,14 @@ CONTAINS
       TYPE(t_sphhar),   INTENT(IN)    :: sphhar
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
 
-      TYPE(t_potden)               :: div, phi, checkdiv
-      TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
-      TYPE(t_gradients)            :: tmp_grad
+      TYPE(t_potden)                  :: div, phi, checkdiv
+      TYPE(t_potden), DIMENSION(3)    :: cvec, corrB, bxc
+      TYPE(t_gradients)               :: tmp_grad
 
-      INTEGER                      :: i, js, n
-      REAL                         :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype), sfscale
-      REAL, ALLOCATABLE            :: intden(:,:)
+      INTEGER                         :: i, js, n
+      REAL                            :: sfscale
+      REAL                            :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
+      REAL, ALLOCATABLE               :: intden(:,:)
 
       IF (.NOT.noco%l_noco) THEN
          ! Rescale vTot%pw_w with number of stars:
@@ -62,7 +64,7 @@ CONTAINS
          END DO
       ELSE IF(noco%l_noco) THEN
          ! Rotate interstital potential back to global frame:
-         CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
+         CALL rotate_int_den_from_local(stars,atoms,vacuum,sym,input,denRot,vTot)
          IF (noco%l_mtnocoPot) THEN
             ! Rotate Muffin Tin potential back to global frame:
             CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,noco,vtot)
