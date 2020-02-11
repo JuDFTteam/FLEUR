@@ -53,8 +53,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,-diffT,den)
    nococonv%beta=nococonv%beta+diffT
    nococonv%alph=nococonv%alph+diffP
-   WHERE(nococonv%beta.LE.10**(-5)) nococonv%beta=0
-   WHERE(nococonv%alph.LE.10**(-5)) nococonv%alph=0
+   WHERE(nococonv%beta.LE.10**(-5)) nococonv%beta=0.0
+   WHERE(nococonv%alph.LE.10**(-5)) nococonv%alph=0.0
 
 
    write(*,*) "Noco Phi"
