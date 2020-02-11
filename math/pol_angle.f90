@@ -27,7 +27,7 @@ CONTAINS
 
         rho = SQRT(vx**2 + vy**2)
         r   = SQRT(vx**2 + vy**2 + vz**2)
-        
+
         ! Zero vector:
         IF ( (r.LT.eps) .AND. (rho.LT.eps) ) THEN
            theta = 0.0
@@ -35,11 +35,11 @@ CONTAINS
         ! v on positive z-axis:
         ELSE IF ( (rho.LT.eps) .AND. vz.GT.0) THEN
            theta = 0.0
-           phi   = 0.0   
+           phi   = 0.0
         ! v on negative z-axis:
         ELSE IF ( (rho.LT.eps) .AND. vz.LT.0) THEN
            theta = pi
-           phi   = 0.0       
+           phi   = 0.0
         ELSE
            ! v in xy-plane:
            IF (ABS(vz).LT.eps) THEN
@@ -51,7 +51,7 @@ CONTAINS
            IF ( vz.LT.0 ) THEN
               theta = pi - theta
            END IF
-           
+
            ! v in yz-plane
            IF (ABS(vx).LT.eps) THEN
               phi = pi/2
@@ -63,16 +63,9 @@ CONTAINS
            IF ( vx.LT.0 ) phi = pi - phi
            IF ( vy.LT.0 ) phi = -phi
         END IF
-        
-        IF(phi<0) phi=phi+2*pi
-        IF(theta<0) theta=theta + 2*pi
-        IF(theta>pi) THEN 
-           theta=theta-pi
-           phi=phi+pi
-        END IF
- 
-        phi=mod(phi,2*pi)
-         
+
+
+
     END SUBROUTINE pol_angle
 
     SUBROUTINE sphericaltocart(r, theta, phi, x, y, z)
