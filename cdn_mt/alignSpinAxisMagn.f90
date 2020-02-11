@@ -83,7 +83,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    TYPE(t_oneD),INTENT(IN)	 :: oneD
    TYPE(t_cell),INTENT(IN)	 :: cell
    TYPE(t_potden), INTENT(INOUT) ::  inDen
-   TYPE(t_potden), optional INTENT(INOUT) :: den
+   TYPE(t_potden), OPTIONAL,INTENT(INOUT) :: den
 
    INTEGER                            :: i
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
