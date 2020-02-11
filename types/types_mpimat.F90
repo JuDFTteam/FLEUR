@@ -201,13 +201,13 @@ CONTAINS
                 mat%data_c(i,j) = 0.0
              ENDIF
           ENDIF
-          !IF (i_glob==j_glob) THEN
-          !   IF (mat%l_real) THEN
-          !      mat%data_r(i,j) =  mat%data_r(i,j)/2.0
-          !   ELSE
-          !      mat%data_c(i,j) =  mat%data_c(i,j)/2.0
-          !   ENDIF
-          !ENDIF
+          IF (i_glob==j_glob) THEN
+             IF (mat%l_real) THEN
+                mat%data_r(i,j) =  mat%data_r(i,j)/2.0
+             ELSE
+                mat%data_c(i,j) =  mat%data_c(i,j)/2.0
+             ENDIF
+          ENDIF
        ENDDO
     ENDDO
 

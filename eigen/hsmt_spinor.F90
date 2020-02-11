@@ -95,7 +95,7 @@ CONTAINS
     ENDDO
     IF (.not.present(angso)) RETURN !only chis are needed
   !In the first variation SOC case the off-diagonal spinors are needed
-       DO kj = 1,ki
+       DO kj = 1,size(angso,1)
           cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
           cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
           cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
