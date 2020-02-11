@@ -37,9 +37,10 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    LOGICAL                       :: l_firstIt
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
-   REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype)
+   REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype),eps
 
    INTEGER                       :: i
+   eps=0.0001
    IF(l_firstIt) THEN
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
      nococonv%alph=0.0
@@ -50,15 +51,15 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    diffT=thetaTemp-nococonv%beta
    diffP=phiTemp-nococonv%alph
    DO i=1, atoms%ntype
-     IF (abs(diffT(i)).LE.10**-4) diffT(i)=0.0
-     IF (abs(diffP(i)).LE.10**-4) diffP(i)=0.0
+     IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
+     IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
    END DO
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,-diffT,den)
    nococonv%beta=nococonv%beta+diffT
    nococonv%alph=nococonv%alph+diffP
    DO i=1, atoms%ntype
-     IF (abs(nococonv%beta(i)).LE.10**-4) nococonv%beta(i)=0.0
-     IF (abs(nococonv%alph(i)).LE.10**-4) nococonv%alph(i)=0.0
+     IF (abs(nococonv%beta(i)).LE.eps) nococonv%beta(i)=0.0
+     IF (abs(nococonv%alph(i)).LE.eps) nococonv%alph(i)=0.0
    END DO
 
 
