@@ -50,13 +50,16 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    diffT=thetaTemp-nococonv%beta
    diffP=phiTemp-nococonv%alph
    DO i=1, atoms%ntype
-     IF (abs(diffT(i))<10**(-4)) diffT(i)=0
-     IF (abs(diffP(i))<10**(-4)) diffP(i)=0
+     IF (abs(diffT(i)).LE.10**(-4)) diffT(i)=0.0
+     IF (abs(diffP(i)).LE.10**(-4)) diffP(i)=0.0
    END DO
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,-diffT,den)
    nococonv%beta=nococonv%beta+diffT
    nococonv%alph=nococonv%alph+diffP
-
+   DO i=1, atoms%ntype
+     IF (abs(nococonv%beta(i)).LE.10**(-4)) nococonv%beta(i)=0.0
+     IF (abs(nococonv%alph(i)).LE.10**(-4)) nococonv%alph(i)=0.0
+   END DO
 
 
    write(*,*) "Noco Phi"
