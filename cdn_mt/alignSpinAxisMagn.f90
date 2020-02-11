@@ -37,24 +37,20 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    LOGICAL                       :: l_firstIt
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
-   integer                       ::  i
+   REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype)
 
-   IF (l_firstIt) THEN
-        CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
-        nococonv%alph=0.0
-        nococonv%beta=0.0
+   IF(l_firstIt) THEN
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
+     nococonv%alph=0.0
+     nococonv%beta=0.0
    END IF
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-
-   thetaTemp=-1*thetaTemp
-   phiTemp=-1*phiTemp
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phiTemp,thetaTemp,den)
-   thetaTemp=-1*thetaTemp
-   phiTemp=-1*phiTemp
-
-   nococonv%alph=phiTemp+nococonv%alph
-   nococonv%beta=thetaTemp+nococonv%beta
+   diffT=thetaTemp-nococonv%beta
+   diffP=phiTemp-nococonv%alph
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,-diffT,den)
+   nococonv%beta=nococonv%beta+diffT
+   nococonv%alph=nococonv%alph+diffP
 
    write(*,*) "Noco Phi"
    write(*,*) nococonv%alph
