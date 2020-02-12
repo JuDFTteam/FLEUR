@@ -236,9 +236,8 @@ CONTAINS
        IF (fi%hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,fi%mpinp,mpdata,fi%hybinp,hybdat,fi%kpts,fi%atoms,&
-                              fi%input,mpi,fi%noco,nococonv,&
-                              fi%cell,fi%oneD,enpara,results,fi%sym,xcpot,vTot,iterHF)
+             CALL calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,enpara,&
+                              results,xcpot,vTot,iterHF)
           END SELECT
           IF(hybdat%l_calhf) THEN
              call mixing_history_reset(mpi)
