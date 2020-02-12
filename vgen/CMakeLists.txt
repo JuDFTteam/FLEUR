@@ -31,7 +31,7 @@ vgen/vgen_xcpot.F90
 vgen/vgen_finalize.F90
 vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
-vgen/rotate_int_den_tofrom_local.F90
+vgen/rotate_int_den_tofrom_local.f90
 vgen/vintcz.f90
 vgen/vis_xc.F90
 vgen/pw_tofrom_grid.F90
