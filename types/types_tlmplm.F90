@@ -29,23 +29,26 @@ MODULE m_types_tlmplm
      !(0:lmd,-llod:llod,mlotot,tspin)
      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)
      !(-llod:llod,-llod:llod,mlolotot,tspin)
-     COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:)
-     COMPLEX,ALLOCATABLE :: h_off(:,:,:,:)
+     COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
+     COMPLEX,ALLOCATABLE :: h_off(:,:,:,:,:)      !l,lp,ntype,ispin,jspin)
      REAL,ALLOCATABLE    :: e_shift(:,:)
+     !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
+     !COMPLEX,ALLOCATABLE :: h_locLO(:,:,:,:,:)  !lm+mlo,mlo,ntype,ispin,jspin
      TYPE(t_rsoc)        :: rsoc
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
   PUBLIC t_tlmplm,t_rsoc
 CONTAINS
-  SUBROUTINE tlmplm_init(td,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_offdiag)
+  SUBROUTINE tlmplm_init(td,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_noco,l_offdiag)
     USE m_judft
     CLASS(t_tlmplm),INTENT(INOUT):: td
     INTEGER,INTENT(in)           :: lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins
-    LOGICAL,INTENT(IN)           :: l_offdiag
+    LOGICAL,INTENT(IN)           :: l_offdiag,l_noco
     INTEGER :: err ,lmplmd
 
     lmplmd=(lmd*(lmd+3))/2
+
 
     IF (ALLOCATED(td%tuu)) &
          DEALLOCATE(td%tuu,td%tud,td%tdd,td%tdu,td%tdulo,td%tuulo,&
@@ -58,12 +61,12 @@ CONTAINS
     ALLOCATE(td%tuulo(0:lmd,-llod:llod,mlotot,jspins),stat=err)
     ALLOCATE(td%tuloulo(-llod:llod,-llod:llod,MAX(mlolotot,1),jspins), stat=err)
     ALLOCATE(td%ind(0:lmd,0:lmd,ntype,jspins),stat=err )
-    ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins))
+    ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins,jspins))
     ALLOCATE(td%e_shift(ntype,jspins))
     IF (l_offdiag) THEN
-       ALLOCATE(td%h_off(0:2*lmaxd+1,0:2*lmaxd+1,ntype,2))
+       ALLOCATE(td%h_off(0:2*lmaxd+1,0:2*lmaxd+1,ntype,2,2))
     ELSE
-       ALLOCATE(td%h_off(1,1,1,1))
+       ALLOCATE(td%h_off(1,1,1,1,1))
     END IF
     IF (err.NE.0) THEN
        WRITE (*,*) 'an error occured during allocation of'
@@ -71,5 +74,5 @@ CONTAINS
        CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="types_tlmplm")
     ENDIF
   END SUBROUTINE tlmplm_init
-    
+
 END MODULE m_types_tlmplm

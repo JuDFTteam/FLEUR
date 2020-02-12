@@ -8,28 +8,29 @@ MODULE m_hsmt_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,nococonv,lapw,td,usdus,fj,gj,hmat)
+  SUBROUTINE hsmt_offdiag(n,atoms,mpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_nococonv),INTENT(IN)       :: nococonv
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
+    TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
+
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: n,isp
+    INTEGER, INTENT (IN) :: n,ispin,jspin,iintsp,jintsp
     !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,iintsp,jintsp,s
+    INTEGER kii,ki,kj,l,nn,s
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
@@ -44,11 +45,7 @@ CONTAINS
 
     CALL hsmt_spinor_soc(n,1,nococonv,lapw,chi)
 
-    IF (isp==1) THEN
-       iintsp=2;jintsp=1
-    ELSE
-       iintsp=1;jintsp=2
-    ENDIF
+
 
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
@@ -93,10 +90,10 @@ CONTAINS
        DO  l = 0,atoms%lnonsph(n)
           DO kj = 1,ki
              fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
-                  fj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l,l,n,isp) + &
-                  fj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l,l+s,n,isp) + &
-                  gj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l+s,l,n,isp) + &
-                  gj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l+s,l+s,n,isp)* usdus%ddn(l,n,isp))
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l,l,n,ispin,jspin) + &
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,n,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,n,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,n,ispin,jspin)* sqrt(usdus%ddn(l,n,ispin)*usdus%ddn(l,n,jspin)))
              hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct
              hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct
              hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct

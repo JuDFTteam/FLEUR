@@ -7,7 +7,7 @@ MODULE m_hsmt_mtNocoPot_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,nococonv,cell,lapw,ud,td,fj,gj,hmat_tmp,hmat)
+  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,nococonv,cell,lapw,ud,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
     !Calculate the contribution from the local-spin-offdiagonal potential
     !The following idea is used:
     !Calculate the matrix by using non-spherical algorithm. This is done only once, since
@@ -20,6 +20,7 @@ CONTAINS
     USE m_hsmt_distspins
     USE m_hsmt_spinor
     USE m_hsmt_lo
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_mpi),INTENT(IN)        :: mpi
@@ -31,12 +32,9 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: ud
     TYPE(t_tlmplm),INTENT(IN)     :: td
+    TYPE(t_fjgj),INTENT(IN)       :: fjgj
+    INTEGER,INTENT(IN)            :: iintsp,jintsp
 
-#if defined CPP_GPU
-    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:,:),gj(:,:,:,:)
-#else
-    REAL,INTENT(IN)            :: fj(:,0:,:,:),gj(:,0:,:,:)
-#endif
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n
     COMPLEX                       :: chi_one,chi(2,2)
@@ -45,8 +43,8 @@ CONTAINS
     chi_one=1.0
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(real part of potential)
-    CALL hsmt_nonsph(n,mpi,sym,atoms,3,1,1,chi_one,noco,nococonv,cell,lapw,td,fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
-    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,3,1,1,hmat_tmp)
+    CALL hsmt_nonsph(n,mpi,sym,atoms,2,1,iintsp,iintsp,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
+    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,2,1,iintsp,jintsp,hmat_tmp)
     !call hmat_tmp%generate_full_matrix()
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
@@ -60,9 +58,8 @@ CONTAINS
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(imag part of potential)
     chi_one=CMPLX(0.,1.)
-    CALL hsmt_nonsph(n,mpi,sym,atoms,4,1,1,chi_one,noco,nococonv,cell,lapw,td,&
-         fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
-    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fj(:,0:,1,:),gj(:,0:,1,:),n,chi_one,4,1,1,hmat_tmp)
+    CALL hsmt_nonsph(n,mpi,sym,atoms,1,2,iintsp,jintsp,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
+    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,1,2,iintsp,jintsp,hmat_tmp)
     !call hmat_tmp%generate_full_matrix()
 
     CALL hsmt_spinor(3,n,nococonv,chi)

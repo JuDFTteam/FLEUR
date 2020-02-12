@@ -7,14 +7,27 @@ MODULE m_hsmt_fjgj
   USE m_juDFT
   IMPLICIT NONE
 
-  INTERFACE hsmt_fjgj
-    module procedure hsmt_fjgj_cpu
-#ifdef CPP_GPU
-    module procedure hsmt_fjgj_gpu
-#endif
-  END INTERFACE
+  PRIVATE
+  TYPE t_fjgj
+    REAL,ALLOCATABLE CPP_MANAGED     :: fj(:,:,:,:),gj(:,:,:,:)
+  CONTAINS
+    procedure :: alloc
+    procedure :: calculate => hsmt_fjgj_cpu
+  END TYPE
+  PUBLIC t_fjgj
 
 CONTAINS
+  subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
+    USE m_types
+    CLASS(t_fjgj),INTENT(OUT) :: fjgj
+    INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
+    TYPE(t_noco),INTENT(IN)   :: noco
+
+    ALLOCATE(fjgj%fj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
+    ALLOCATE(fjgj%gj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
+
+  end subroutine
+
 #ifdef CPP_GPU
 
   SUBROUTINE synth_fjgj(nv,ispin,jspins,lmax,lmaxd,apw,l_flag,rk,rmt,con1,uds,dus,us,duds,fj,gj)
@@ -23,7 +36,7 @@ CONTAINS
   INTEGER, INTENT(IN) :: nv, ispin, jspins, lmax, lmaxd
   LOGICAL, INTENT(IN) :: apw(0:lmaxd), l_flag
   REAL, INTENT(IN) :: rk(:),rmt,con1
-  REAL, INTENT(IN) :: uds(0:lmaxd,jspins),dus(0:lmaxd,jspins),us(0:lmaxd,jspins),duds(0:lmaxd,jspins) 
+  REAL, INTENT(IN) :: uds(0:lmaxd,jspins),dus(0:lmaxd,jspins),us(0:lmaxd,jspins),duds(0:lmaxd,jspins)
   REAL,INTENT(OUT),MANAGED     :: fj(:,0:,:),gj(:,0:,:)
 
   REAL gb(0:lmaxd), fb(0:lmaxd)
@@ -77,7 +90,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n
-  
+
     REAL,INTENT(OUT),MANAGED     :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
     !     .. Local Scalars ..
@@ -108,7 +121,7 @@ CONTAINS
   END SUBROUTINE hsmt_fjgj_gpu
 #endif
 
-  SUBROUTINE hsmt_fjgj_cpu(input,atoms,cell,lapw,noco,usdus,n,ispin,fj,gj)
+  SUBROUTINE hsmt_fjgj_cpu(fjgj,input,atoms,cell,lapw,noco,usdus,n,ispin)
     !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
     !radial functions at the MT boundary as contained in usdus
     USE m_constants, ONLY : fpi_const
@@ -116,6 +129,7 @@ CONTAINS
     USE m_dsphbs
     USE m_types
     IMPLICIT NONE
+    CLASS(t_fjgj),INTENT(INOUT) :: fjgj
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -125,8 +139,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n
-  
-    REAL,INTENT(OUT)     :: fj(:,0:,:,:),gj(:,0:,:,:)
+
     !     ..
     !     .. Local Scalars ..
     REAL con1,ff,gg,gs
@@ -147,11 +160,11 @@ CONTAINS
     DO lo = 1,atoms%nlo(n)
        IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
     ENDDO
-    DO intspin=1,MERGE(2,1,noco%l_noco)
+    DO intspin=1,MERGE(2,1,noco%l_ss)
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
        !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
-       !$OMP SHARED(fj,gj,intspin,n,ispin,apw)
+       !$OMP SHARED(fjgj,intspin,n,ispin,apw)
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
@@ -166,17 +179,17 @@ CONTAINS
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
              IF ( apw(l) ) THEN
-                fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
-                gj(k,l,ispin,intspin) = 0.0
+                fjgj%fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
+                fjgj%gj(k,l,ispin,intspin) = 0.0
              ELSE
                 IF (noco%l_constr.or.l_socfirst.OR.noco%l_mtNocoPot) THEN
                    DO jspin = 1, input%jspins
-                      fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                      gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                      fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                      fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
                    END DO
                 ELSE
-                   fj(k,l,ispin,intspin) = ws(ispin) * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
-                   gj(k,l,ispin,intspin) = ws(ispin) * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
+                   fjgj%fj(k,l,ispin,intspin) = ws(ispin) * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
+                   fjgj%gj(k,l,ispin,intspin) = ws(ispin) * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
                 ENDIF
              ENDIF
           ENDDO

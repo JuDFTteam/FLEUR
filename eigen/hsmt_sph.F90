@@ -17,16 +17,18 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
+   USE m_hsmt_fjgj
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: mpi
-   TYPE(t_nococonv),INTENT(IN)       :: nococonv
+   TYPE(t_nococonv),INTENT(IN)   :: nococonv
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_lapw),INTENT(IN)       :: lapw
    TYPE(t_usdus),INTENT(IN)      :: usdus
+   TYPE(t_fjgj),INTENT(IN)       :: fjgj
    CLASS(t_mat),INTENT(INOUT)    :: smat,hmat
    !     ..
    !     .. Scalar Arguments ..
@@ -36,7 +38,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    !     .. Array Arguments ..
    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
    REAL,    INTENT (IN) :: e_shift!(atoms%ntype,input%jspins)
-   REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
+
    !     ..
    !     .. Local Scalars ..
    REAL tnn(3), elall,fjkiln,gjkiln,ddnln,ski(3)
@@ -65,7 +67,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    END DO ! l
 !$OMP     PARALLEL DEFAULT(NONE)&
 !$OMP     SHARED(lapw,atoms,nococonv,mpi,input,usdus,smat,hmat)&
-!$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fj,gj,isp,fl2p1,el,e_shift,chi)&
+!$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)&
 !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
 !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
 !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
@@ -107,8 +109,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 
          DO  l = 0,atoms%lmax(n)
 
-            fjkiln = fj(ki,l,jintsp)
-            gjkiln = gj(ki,l,jintsp)
+            fjkiln = fjgj%fj(ki,l,isp,jintsp)
+            gjkiln = fjgj%gj(ki,l,isp,jintsp)
 
             IF (input%l_useapw) THEN
                w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
@@ -130,14 +132,14 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
                plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:NVEC_REM,modulo(l-1,3)) - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
             END IF ! l
 
-            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fj(kj_off:kj_vec,l,iintsp) + gjkiln*gj(kj_off:kj_vec,l,iintsp)*ddnln )
-            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fj(kj_off:kj_vec,l,iintsp) + fjkiln*gj(kj_off:kj_vec,l,iintsp) )
+            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp)*ddnln )
+            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
 
             VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
             VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
             IF (input%l_useapw) THEN
-               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fj(kj_off:kj_vec,l,iintsp) + apw_lo2*gj(kj_off:kj_vec,l,iintsp) )
+               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
             ENDIF ! useapw
 
             !--->          end loop over l
