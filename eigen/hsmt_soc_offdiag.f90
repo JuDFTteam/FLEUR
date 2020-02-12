@@ -8,10 +8,11 @@ MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -21,13 +22,12 @@ CONTAINS
     TYPE(t_sym  ),INTENT(IN)      :: sym
     TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
+    TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: n
     !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
@@ -49,7 +49,7 @@ CONTAINS
     END DO
 
     !$OMP PARALLEL DEFAULT(NONE)&
-    !$OMP SHARED(n,lapw,atoms,td,fj,gj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
+    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
     !$OMP PRIVATE(cph,nn,tnn,fct)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
@@ -91,10 +91,10 @@ CONTAINS
              !DO j2=j1,j1
                 DO kj = 1,ki
                    fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                        fj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fj(ki,l,j1)*gj(kj,l,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        gj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        gj(ki,l,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                         * angso(kj,j1,j2)
                    hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct
                    hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct
@@ -114,16 +114,17 @@ CONTAINS
     !$OMP END PARALLEL
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,usdus,fj,gj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
 
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,ud,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_setabc1lo
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -133,13 +134,12 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_usdus),INTENT(IN)      :: ud
+    TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: n
     !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
@@ -220,12 +220,12 @@ CONTAINS
                   !---> update l-diagonal hamiltonian matrix with LAPW,LO contribution
                   DO kj = 1,lapw%nv(j2)
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                    alo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    alo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    blo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fj(kj,l,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                    clo1(lo,j1)*gj(kj,l,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
+                    alo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                    alo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
+                    clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
+                    clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
                     hmat(1,1)%data_c(kj,locol)=hmat(1,1)%data_c(kj,locol) + chi(1,1,j1,j2)*fct
                     hmat(1,2)%data_c(kj,locol)=hmat(1,2)%data_c(kj,locol) + chi(1,2,j1,j2)*fct
