@@ -9,8 +9,8 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpinp, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, nococonv,cell, oneD, &
-                          enpara, results, sym, xcpot, v, iterHF)
+   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,enpara,&
+                          results,xcpot,v,iterHF)
 
       USE m_types_hybdat
       USE m_types
@@ -24,26 +24,17 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_oneD), INTENT(IN)    :: oneD
-      type(t_mpinp), intent(in)    :: mpinp
-      type(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_noco), INTENT(IN)    :: noco
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_enpara), INTENT(IN)    :: enpara
-      TYPE(t_results), INTENT(INOUT) :: results
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)    :: cell
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_potden), INTENT(IN)    :: v
-
-      INTEGER, INTENT(INOUT) :: iterHF
-      INTEGER, INTENT(IN)    :: eig_id
+      INTEGER, INTENT(IN)               :: eig_id
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(inout)     :: mpdata
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      TYPE(t_enpara), INTENT(IN)        :: enpara
+      TYPE(t_results), INTENT(INOUT)    :: results
+      TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
+      TYPE(t_potden), INTENT(IN)        :: v
+      INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
       INTEGER           :: jsp, nk, err
@@ -59,17 +50,17 @@ CONTAINS
 
       CALL timestart("hybrid code")
       INQUIRE (file="v_x.mat", exist=hybdat%l_addhf)
-      CALL open_hybinp_io1( sym%invs)
+      CALL open_hybinp_io1( fi%sym%invs)
 
-      IF (kpts%nkptf == 0) THEN
+      IF (fi%kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
-                          hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
+                          hint="to generate fi%kpts in the full BZ you should specify a k-mesh in inp.xml")
       END IF
 
       !Check if new non-local potential shall be generated
-      hybdat%l_subvxc = hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
+      hybdat%l_subvxc = fi%hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
+      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
          CALL timestop("hybrid code")
@@ -79,13 +70,13 @@ CONTAINS
       results%te_hfex%core = 0
 
       !Check if we are converged well enough to calculate a new potential
-      CALL open_hybinp_io1b( sym%invs)
+      CALL open_hybinp_io1b( fi%sym%invs)
       hybdat%l_addhf = .TRUE.
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
          if(allocated(hybdat%ne_eig)) deallocate(hybdat%ne_eig)
-         allocate(hybdat%ne_eig(kpts%nkpt), source=0)
+         allocate(hybdat%ne_eig(fi%kpts%nkpt), source=0)
 
          if(allocated(hybdat%nbands)) then
             deallocate(hybdat%nbands, stat=err, errmsg=msg)
@@ -95,21 +86,21 @@ CONTAINS
             endif
          endif
 
-         allocate(hybdat%nbands(kpts%nkptf), source=0)
+         allocate(hybdat%nbands(fi%kpts%nkptf), source=0)
 
          if(allocated(hybdat%nobd)) deallocate(hybdat%nobd)
-         allocate(hybdat%nobd(kpts%nkptf, input%jspins), source=0)
+         allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins), source=0)
 
          if(allocated(hybdat%nbasm)) deallocate(hybdat%nbasm)
-         allocate(hybdat%nbasm(kpts%nkptf), source=0)
+         allocate(hybdat%nbasm(fi%kpts%nkptf), source=0)
 
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
-         allocate(hybdat%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
+         allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
 
       hybdat%l_subvxc = (hybdat%l_subvxc .AND. hybdat%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neig, kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
 
       IF (hybdat%l_calhf) THEN
          iterHF = iterHF + 1
@@ -119,37 +110,37 @@ CONTAINS
 
          !check if z-reflection trick can be used
 
-         l_zref = (sym%zrfs .AND. (SUM(ABS(kpts%bk(3, :kpts%nkpt))) < 1e-9) .AND. .NOT. noco%l_noco)
+         l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
 
          CALL timestart("Preparation for hybrid functionals")
-         !    CALL juDFT_WARN ("hybinp functionals not working in this version")
+         !    CALL juDFT_WARN ("fi%hybinp functionals not working in this version")
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
+         CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
                          enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybinp_io2(mpdata, hybinp, hybdat, input, atoms, sym%invs)
+         CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
+         CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
 
-         CALL hf_init(eig_id, mpdata, hybinp, atoms, input,  hybdat)
+         CALL hf_init(eig_id, mpdata, fi%hybinp, fi%atoms, fi%input,  hybdat)
          CALL timestop("Preparation for hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
-         DO jsp = 1, input%jspins
+         DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
-                          mpi, noco, nococonv,cell, oneD, results, jsp, enpara, &
-                          hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
+            CALL HF_setup(mpdata,fi%hybinp, fi%input, fi%sym, fi%kpts,  fi%atoms, &
+                          mpi, fi%noco, nococonv,fi%cell, fi%oneD, results, jsp, enpara, &
+                          hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
-            DO nk = 1, kpts%nkpt
-               !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-               CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, l_zref)
-               CALL hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco,nococonv, oneD, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
+            DO nk = 1, fi%kpts%nkpt
+               !DO nk = mpi%n_start,fi%kpts%nkpt,mpi%n_stride
+               CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+               CALL hsfock(nk, fi%atoms, mpdata, fi%hybinp, lapw,  fi%kpts, jsp, fi%input, hybdat, eig_irr, fi%sym, fi%cell, &
+                           fi%noco,nococonv, fi%oneD, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")

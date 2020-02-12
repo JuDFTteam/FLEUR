@@ -479,7 +479,7 @@ SUBROUTINE read_xml_atoms(this,xml)
           END IF
           this%nlol(l,n) = this%nlol(l,n) + 1
        END DO
-       WRITE (6,*) 'this%lapw_l(n) = ',this%lapw_l(n)
+       WRITE (6,*) 'atoms%lapw_l(n) = ',this%lapw_l(n)
     END IF
 
  END DO
