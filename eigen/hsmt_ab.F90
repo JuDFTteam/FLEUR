@@ -165,18 +165,20 @@ CONTAINS
   END SUBROUTINE hsmt_ab_gpu
 #endif
 
-  SUBROUTINE hsmt_ab_cpu(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab_cpu(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_nococonv),INTENT(IN)     :: nococonv
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
+    TYPE(t_fjgj),INTENT(IN)     :: fjgj
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n,na,iintsp
@@ -184,7 +186,6 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    REAL,INTENT(IN)       :: fj(:,0:,:),gj(:,0:,:)
     COMPLEX, INTENT (OUT) :: ab(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
@@ -204,7 +205,7 @@ CONTAINS
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ab_size=lmax*(lmax+2)+1
-    l_apw=ALL(gj==0.0)
+    l_apw=ALL(fjgj%gj==0.0)
     ab=0.0
 
     np = sym%invtab(sym%ngopr(na))
@@ -224,8 +225,8 @@ CONTAINS
        END DO
     END IF
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fj,gj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n) &
+    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fjgj,abclo,cell,atoms,sym) &
+    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
     DO k = 1,lapw%nv(iintsp)
        !-->    generate spherical harmonics
@@ -236,8 +237,8 @@ CONTAINS
           ll1 = l* (l+1)
           DO m = -l,l
              term = c_ph(k,iintsp)*ylm(ll1+m+1)
-             ab(k,ll1+m+1)         = fj(k,l,iintsp)*term
-             ab(k,ll1+m+1+ab_size) = gj(k,l,iintsp)*term
+             ab(k,ll1+m+1)         = fjgj%fj(k,l,ispin,iintsp)*term
+             ab(k,ll1+m+1+ab_size) = fjgj%gj(k,l,ispin,iintsp)*term
           END DO
        END DO
        IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)

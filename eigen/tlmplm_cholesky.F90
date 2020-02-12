@@ -34,7 +34,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL temp
-    INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp
+    INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
     INTEGER lpl ,mp,n,m,s,i_u
     LOGICAL OK
     !     ..
@@ -48,14 +48,20 @@ CONTAINS
     !     ..e_shift
     jsp=jspin
     td%e_shift(:,jsp)=0.0
-    IF (jsp<3) td%e_shift(:,jsp)=e_shift_min
-
-    !Calculate overlap integrals
-    !For the off-diagonal LDA+U contributions
-    IF(jsp>=3) THEN
-        ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
-                 dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-        CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+    IF (jsp<3) THEN
+      j1=jsp;j2=jsp
+      td%e_shift(:,jsp)=e_shift_min
+    ELSE
+      !Calculate overlap integrals
+      !For the off-diagonal LDA+U contributions
+      if (jsp==3) THEN
+        j1=1;j2=2
+      ELSE
+        j1=2;j2=1
+      ENDIF
+      ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+      dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
+      CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
     ENDIF
 
     td%tdulo(:,:,:,jsp) = CMPLX(0.0,0.0)
@@ -68,12 +74,12 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21)
+    !$OMP SHARED(nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
     DO  n = 1,atoms%ntype
        CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,jspin,jsp,mpi,v,input,hub1inp,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
-          td%h_loc(:,:,n,jsp)=0.0
+          td%h_loc(:,:,n,j1,j2)=0.0
           OK=.TRUE.
           !
           !--->    generate the wavefunctions for each l
@@ -91,15 +97,15 @@ CONTAINS
                    in = td%ind(lmp,lm,n,jsp)
                    IF (in/=-9999) THEN
                       IF (in>=0) THEN
-                         td%h_loc(lm,lmp,n,jsp)    = CONJG(td%tuu(in,n,jsp))
-                         td%h_loc(lm+s,lmp,n,jsp)  = CONJG(td%tud(in,n,jsp))
-                         td%h_loc(lm,lmp+s,n,jsp)  = CONJG(td%tdu(in,n,jsp))
-                         td%h_loc(lm+s,lmp+s,n,jsp)= CONJG(td%tdd(in,n,jsp))
+                         td%h_loc(lm,lmp,n,j1,j2)    = CONJG(td%tuu(in,n,jsp))
+                         td%h_loc(lm+s,lmp,n,j1,j2)  = CONJG(td%tud(in,n,jsp))
+                         td%h_loc(lm,lmp+s,n,j1,j2)  = CONJG(td%tdu(in,n,jsp))
+                         td%h_loc(lm+s,lmp+s,n,j1,j2)= CONJG(td%tdd(in,n,jsp))
                       ELSE
-                         td%h_loc(lm,lmp,n,jsp)    = td%tuu(-in,n,jsp)
-                         td%h_loc(lm+s,lmp,n,jsp)  = td%tdu(-in,n,jsp)
-                         td%h_loc(lm,lmp+s,n,jsp)  = td%tud(-in,n,jsp)
-                         td%h_loc(lm+s,lmp+s,n,jsp)= td%tdd(-in,n,jsp)
+                         td%h_loc(lm,lmp,n,j1,j2)    = td%tuu(-in,n,jsp)
+                         td%h_loc(lm+s,lmp,n,j1,j2)  = td%tdu(-in,n,jsp)
+                         td%h_loc(lm,lmp+s,n,j1,j2)  = td%tud(-in,n,jsp)
+                         td%h_loc(lm+s,lmp+s,n,j1,j2)= td%tdd(-in,n,jsp)
                       END IF
                    END IF
                 END DO
@@ -121,18 +127,18 @@ CONTAINS
                    !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
                    !------------------------------------------------------------------------
                    IF (jsp < 3) THEN
-                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) + v%mmpMat(m,mp,i_u,jsp)
-                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
+                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
+                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
                    ELSE IF(jsp.EQ.3) THEN
-                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp  ,n,jsp) = td%h_loc(lm+s,lmp  ,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm  ,lmp+s,n,jsp) = td%h_loc(lm  ,lmp+s,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ELSE
-                     td%h_loc(lm  ,lmp  ,n,jsp) = td%h_loc(lm  ,lmp  ,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp  ,n,jsp) = td%h_loc(lm+s,lmp  ,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm  ,lmp+s,n,jsp) = td%h_loc(lm  ,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ENDIF
                 ENDDO
              ENDDO
@@ -144,19 +150,19 @@ CONTAINS
              DO lp = 0,atoms%lnonsph(n)
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
-                   td%h_loc(lmp,lmp,n,jsp)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,jsp)
-                   td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
+                   td%h_loc(lmp,lmp,n,j1,j2)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,j1,j2)
+                   td%h_loc(lmp+s,lmp+s,n,j1,j2)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,j1,j2)
                 END DO
              END DO
              IF (lmp+1.NE.s) CALL judft_error("BUG in tlmpln_cholesky")
              !Perform cholesky decomposition
              info=0
-             CALL zpotrf("L",2*s,td%h_loc(:,:,n,jsp),SIZE(td%h_loc,1),info)
+             CALL zpotrf("L",2*s,td%h_loc(:,:,n,j1,j2),SIZE(td%h_loc,1),info)
 
              !Upper part to zero
              DO l=0,2*s-1
                 DO lp=0,l-1
-                   td%h_loc(lp,l,n,jsp)=0.0
+                   td%h_loc(lp,l,n,j1,j2)=0.0
                 ENDDO
              ENDDO
 
@@ -224,20 +230,20 @@ CONTAINS
        !first ispin=2,jspin=1 case
        DO l=0,atoms%lnonsph(n)
           c=(-0.5)*CMPLX(nococonv%b_con(1,n),nococonv%b_con(2,n))
-          td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + uun21(l,n)*c
-          td%h_off(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + udn21(l,n)*c
-          td%h_off(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
-          td%h_off(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + ddn21(l,n)*c
+          td%h_off(l  ,l  ,n,1,2)     =td%h_off(l  ,l  ,n,1,2) + uun21(l,n)*c
+          td%h_off(l  ,l+s,n,1,2)     =td%h_off(l  ,l+s,n,1,2) + udn21(l,n)*c
+          td%h_off(l+s,l  ,n,1,2)     =td%h_off(l+s,l  ,n,1,2) + dun21(l,n)*c
+          td%h_off(l+s,l+s,n,1,2)     =td%h_off(l+s,l+s,n,1,2) + ddn21(l,n)*c
        ENDDO
 
 
        !then ispin=2,jspin=1 case
        DO l=0,atoms%lnonsph(n)
           c=(-0.5)*CMPLX(nococonv%b_con(1,n),-nococonv%b_con(2,n))
-          td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + uun21(l,n)*c
-          td%h_off(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + udn21(l,n)*c
-          td%h_off(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + dun21(l,n)*c
-          td%h_off(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + ddn21(l,n)*c
+          td%h_off(l  ,l  ,n,2,1)     =td%h_off(l  ,l  ,n,2,1) + uun21(l,n)*c
+          td%h_off(l  ,l+s,n,2,1)     =td%h_off(l  ,l+s,n,2,1) + udn21(l,n)*c
+          td%h_off(l+s,l  ,n,2,1)     =td%h_off(l+s,l  ,n,2,1) + dun21(l,n)*c
+          td%h_off(l+s,l+s,n,2,1)     =td%h_off(l+s,l+s,n,2,1) + ddn21(l,n)*c
        ENDDO
     END DO
   END SUBROUTINE tlmplm_constrained

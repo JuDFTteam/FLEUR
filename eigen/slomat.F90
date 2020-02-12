@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
   SUBROUTINE slomat(&
        input,atoms,sym,mpi,lapw,cell,nococonv,ntyp,na,&
-       isp,ud, alo1,blo1,clo1,fj,gj,&
+       isp,ud, alo1,blo1,clo1,fjgj,&
        iintsp,jintsp,chi,smat)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
@@ -24,6 +24,7 @@ CONTAINS
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
     USE m_types
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -32,6 +33,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)    :: mpi
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
+    TYPE(t_fjgj),INTENT(IN)   :: fjgj
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)      :: na,ntyp
@@ -41,7 +43,6 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
-    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     TYPE(t_usdus),INTENT(IN)  :: ud
     CLASS(t_mat),INTENT(INOUT) :: smat
 
@@ -90,9 +91,9 @@ CONTAINS
                 !--->          flapw basis-functions
                 DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
-                        fj(kp,l,iintsp)* ( alo1(lo) + &
+                        fjgj%fj(kp,l,isp,iintsp)* ( alo1(lo) + &
                         clo1(lo)*ud%uulon(lo,ntyp,isp))+&
-                        gj(kp,l,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
+                        fjgj%gj(kp,l,isp,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN

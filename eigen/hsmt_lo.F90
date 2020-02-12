@@ -8,11 +8,12 @@ MODULE m_hsmt_lo
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,Mpi,Noco,nococonv,Lapw,Ud,Tlmplm,Fj,Gj,N,Chi,Isp,Iintsp,Jintsp,Hmat,Smat)
+  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,Mpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,Isp,jsp,Iintsp,Jintsp,Hmat,Smat)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
     USE m_types
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_input),INTENT(IN)    :: input
@@ -24,6 +25,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
+    TYPE(t_fjgj),INTENT(IN)     :: fjgj
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -31,11 +33,9 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT(IN)   :: n
-    INTEGER, INTENT (IN) :: isp,iintsp,jintsp !spins
+    INTEGER, INTENT (IN) :: isp,jsp,iintsp,jintsp !spins
     COMPLEX, INTENT(IN)  :: chi
 
-    !Arrays
-    REAL,INTENT(IN)      :: fj(:,:,:),gj(:,:,:)
     !     ..
     !     .. Local Scalars ..
     INTEGER na,nn,usp
@@ -61,15 +61,15 @@ CONTAINS
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
 
-             IF (isp<3) THEN
+             IF (isp==jsp) THEN
                 IF (.NOT.PRESENT(smat)) CALL judft_error("Bug in hsmt_lo, called without smat")
                 CALL slomat(&
                      input,atoms,sym,mpi,lapw,cell,nococonv,n,na,&
-                     isp,ud, alo1(:,isp),blo1(:,isp),clo1(:,isp),fj,gj,&
+                     isp,ud, alo1(:,isp),blo1(:,isp),clo1(:,isp),fjgj,&
                      iintsp,jintsp,chi,smat)
              ENDIF
-             CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,&
-                  n,na,fj,gj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat)
+             CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
+                  n,na,fjgj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat)
           ENDIF
        END IF
        !--->    end loop over equivalent atoms
