@@ -2,7 +2,7 @@ MODULE m_ssomat
   USE m_judft
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE ssomat(seigvso,theta,phi,eig_id,atoms,kpts,sym,&
+  SUBROUTINE ssomat(seigvso,h_so,theta,phi,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,mpi, oneD,enpara,v,results )
     USE m_types_nococonv
     USE m_types_mat
@@ -37,6 +37,7 @@ CONTAINS
     INTEGER,INTENT(IN)             :: eig_id
     REAL,INTENT(in)                :: theta(:),phi(:) ! more than a single angle at once...
     REAL,INTENT(OUT)               :: seigvso(:)
+    REAL,INTENT(OUT)               :: h_so(:,:)
     !     ..
     !     .. Locals ..
 #ifdef CPP_MPI
@@ -50,7 +51,7 @@ CONTAINS
     COMPLEX :: c1,c2
 
     COMPLEX, ALLOCATABLE :: matel(:,:,:)
-    REAL,    ALLOCATABLE :: eig_shift(:,:,:)
+    REAL,    ALLOCATABLE :: eig_shift(:,:,:,:)
 
     COMPLEX, ALLOCATABLE :: acof(:,:,:,:,:), bcof(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:,:)
@@ -68,7 +69,7 @@ CONTAINS
 
     ! needed directly for calculating matrix elements
     seigvso=0.0
-    ALLOCATE(eig_shift(input%neig,kpts%nkpt,SIZE(theta)));eig_shift=0.0
+    ALLOCATE(eig_shift(input%neig,kpts%nkpt,0:atoms%ntype,SIZE(theta)));eig_shift=0.0
     ALLOCATE( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2),&
          bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2) )
     ALLOCATE( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat,2,2) )
@@ -98,9 +99,9 @@ CONTAINS
        zmat%l_real=.FALSE.
        IF (ALLOCATED(zmat%data_c)) DEALLOCATE(zmat%data_c)
        ALLOCATE(zmat%data_c(zMat%matsize1,zmat%matsize2))
-       CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,nk,1),zmat=zmat)
+       CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,0,nk,1),zmat=zmat)
        DO jsloc= 1,2
-          eig_shift(:,nk,1)=0.0 !not needed
+          eig_shift(:,0,nk,1)=0.0 !not needed
           CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc,oneD, &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
@@ -154,7 +155,7 @@ CONTAINS
                acof,bcof, ccof,&
                acof,bcof, ccof,&
                matel )
-          eig_shift(:,nk,nr)=matel(1,:,0)
+          eig_shift(:,0:,nk,nr)=matel(1,:,0:)
        ENDDO
     ENDDO
 
@@ -166,12 +167,15 @@ CONTAINS
        CALL MPI_REDUCE(eig_shift,eig_shift,SIZE(eig_shift),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi%mpi_comm,ierr)
     ENDIF
 #endif
-
+    h_so=0.0
     IF (mpi%irank==0) THEN
        !Sum all shift using weights
        DO nr=1,SIZE(theta)
           DO nk=1,kpts%nkpt
-             seigvso(nr)=seigvso(nr)+dot_PRODUCT(results%w_iks(:,nk,1),eig_shift(:,nk,nr))
+             seigvso(nr)=seigvso(nr)+dot_PRODUCT(results%w_iks(:,nk,1),eig_shift(:,0,nk,nr))
+             DO n=0,atoms%ntype
+               H_so(n,nr)=H_so(n,nr)+dot_PRODUCT(results%w_iks(:,nk,1),eig_shift(:,n,nk,nr))
+             enddo
           ENDDO
        ENDDO
        seigvso= results%seigv+seigvso

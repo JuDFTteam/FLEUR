@@ -6,7 +6,7 @@
 
 MODULE m_make_forcetheo
   implicit none
- 
+
 contains
   subroutine make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     use m_types
@@ -16,7 +16,7 @@ contains
     TYPE(t_cell),     INTENT(IN)     :: cell
     TYPE(t_forcetheo_data),INTENT(IN):: forcetheo_data
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
-    
+
     !Finish setup of forcetheorem
     SELECT CASE (forcetheo_data%mode)
     CASE(1)
@@ -30,12 +30,12 @@ contains
     CASE default
        ALLOCATE(t_forcetheo::forcetheo)
     END SELECT
-    
+
     SELECT TYPE(forcetheo)
     TYPE IS(t_forcetheo_mae)
        CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
     TYPE IS(t_forcetheo_dmi)
-       CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi)
+       CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi,atoms%ntype)
     TYPE IS(t_forcetheo_jij)
        CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
     TYPE IS(t_forcetheo_ssdisp)
