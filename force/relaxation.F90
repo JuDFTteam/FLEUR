@@ -87,7 +87,7 @@ CONTAINS
        !CALL read_displacements(atoms,old_displace)
        call atoms_non_displaced%read_xml(xml)
        call xml%freeResources()
-       call atoms_non_diplaced%init(cell)
+       call atoms_non_displaced%init(cell)
        old_displace=atoms%taual-atoms_non_displaced%taual
 
        displace=displace+old_displace
