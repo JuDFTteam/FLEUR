@@ -282,14 +282,14 @@ CONTAINS
             l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
             lnum(k) = l
             WRITE (6, FMT=8050) nprnc(k), kappa(k), l, fj,&
-      &                        occ(k, ispin), eig(k, ispin), rev(k, ispin)
+      &                        occ(k, isp), eig(k, isp), rev(k, isp)
          ENDDO
 !
 !--->   guess enpara if it doesn't exist, using floating energy parameters
 !
          i = atoms%jri(ntyp) - (log(4.0)/atoms%dx(ntyp) + 1.51)
-         vbar(ispin) = vr1(i, ispin)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
-         WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(ispin)
+         vbar(isp) = vr1(i, isp)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
+         WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(isp)
       ENDDO
 
 8030  FORMAT(/, /, /, ' $$$ error: not converged, dist=', f10.6,/)
