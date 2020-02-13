@@ -55,9 +55,9 @@ CONTAINS
       !Calculate overlap integrals
       !For the off-diagonal LDA+U contributions
       if (jsp==3) THEN
-        j1=1;j2=2
-      ELSE
         j1=2;j2=1
+      ELSE
+        j1=1;j2=2
       ENDIF
       ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
       dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
