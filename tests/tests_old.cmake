@@ -6,8 +6,8 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    SiFilmPlotXML  CoMCDXML Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
    KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 MnHybridNoinv
-Fe_bcc_GreensFunction )
-#Fe_bcc_FlipcdnLDA
+Fe_bcc_GreensFunction Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA)
+
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # Fe_1l_GreensFunction

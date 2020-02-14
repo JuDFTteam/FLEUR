@@ -1,4 +1,4 @@
-$test_name="FeBCCFlip: Flipcdn and noco in MT tes";
+$test_name="FeBCCFlipX: Flipcdn and noco in MT tes";
 $test_code="Fleur";
 $test_stages=2;
 $test_desc=<<EOF
