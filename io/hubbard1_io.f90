@@ -13,7 +13,6 @@ MODULE m_hubbard1_io
    !
    ! REVISION HISTORY:
    ! 20 03 2019 - Initial Version
-   ! TODO:  Replace Stop by calls to juDFT_error
    !------------------------------------------------------------------------------
 
    USE m_juDFT
@@ -168,11 +167,12 @@ MODULE m_hubbard1_io
          !----------------------------------------------
          ! Write out a warning about the sign convention
          !----------------------------------------------
-         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.ABS(hub1inp%arg_vals(i_hia,i_arg)).GT.1e-12) THEN
-            WRITE(*,*) "-----------------------------------------------------------------------------------------"
-            WRITE(*,*) "You provided a positive exchange splitting."
-            WRITE(*,*) "Due to different conventions in the solver this will result in a negative magnetic moment"
-            WRITE(*,*) "-----------------------------------------------------------------------------------------"
+         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1inp%arg_vals(i_hia,i_arg).GT.1e-12) THEN
+            WRITE(*,*) "----------------------------------------------"
+            WRITE(*,*) "You provided a positive exchange splitting.   "
+            WRITE(*,*) "Due to different conventions in the solver    "
+            WRITE(*,*) "this will result in a negative magnetic moment"
+            WRITE(*,*) "----------------------------------------------"
          ENDIF
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))),hub1inp%arg_vals(i_hia,i_arg))
       ENDDO
