@@ -42,16 +42,15 @@ if (NOT FLEUR_USE_EDSOLVER)
 endif()
 message("EDsolver Library found:${FLEUR_USE_EDSOLVER}")
 
-
 if (DEFINED CLI_FLEUR_USE_EDSOLVER)
    if (CLI_FLEUR_USE_EDSOLVER)
       if (NOT FLEUR_USE_EDSOLVER)
          if (NOT FLEUR_USE_ARPACK)
-            message(WARNING "You asked for the EDsolver library but cmake couldn't find the ARPACK library,
-                             which is a prerequisite for the EDsolver.
+            message(WARNING "You asked for the EDsolver library but cmake couldn't find the ARPACK library, \
+                             which is a prerequisite for the EDsolver. \
                              Please check your configuration or install the ARPACK library.")
          else()
-            message(WARNING "You asked for the EDsolver library but cmake couldn't find it.
+            message(WARNING "You asked for the EDsolver library but cmake couldn't find it. \
                              We will try to download and compile the EDsolver library along with FLEUR")
             if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/edsolver-library/src")
                find_package(Git REQUIRED)
@@ -60,16 +59,16 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
                execute_process(COMMAND ${GIT_EXECUTABLE} submodule update -v
                                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update)
                if( ${_res_init} GREATER 0 OR ${_res_update} GREATER 0 )
-               message(FATAL_ERROR "EDsolver source could not be downloaded.\n"
-                                   "We tried: 'git submodule init external/edsolver-library
-                                    && git submodule update' and resulted in error" )
+                  message(FATAL_ERROR "EDsolver source could not be downloaded. \
+                                       We tried: 'git submodule init external/edsolver-library \
+                                       && git submodule update' and this resulted in error" )
                endif()
                if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/edsolver-library/src")
                   #If someone has no access to the repository but tries to to git submodule init/update
                   #It will complete with no error but nothing will happen
-                  message(FATAL_ERROR "It seems that you asked for the EDsolver library to be pulled from git.
-                                       This is a private repository.
-                                       If you already have access, please configure your git to log you in automatically.
+                  message(FATAL_ERROR "It seems that you asked for the EDsolver library to be pulled from git. \
+                                       This is a private repository. \
+                                       If you already have access, please configure your git to log you in automatically. \
                                        If not contact he.janssen@fz-juelich.de")
                endif()
             endif()
