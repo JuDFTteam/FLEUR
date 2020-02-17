@@ -45,12 +45,16 @@ CONTAINS
       !input
       !
       input%delgau = input%tkb
+      if (input%jspins==1.and.(noco%l_ss.or.noco%l_noco)) call judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
       IF (noco%l_ss) noco%l_noco = .TRUE.
-      IF (noco%l_noco) input%jspins = 2
       !check for magnetism
       DO n = 1, atoms%ntype
-         IF (ANY(atoms%econf(n)%occupation(:, 1) .NE. atoms%econf(n)%occupation(:, 2))) input%jspins = 2
+         IF (ANY(atoms%econf(n)%occupation(:, 1) .NE. atoms%econf(n)%occupation(:, 2))) then
+           if (input%jspins==1) call judft_error("You cannot run set different occupations for the two spins and use jspins=1")
+           input%jspins = 2
+         endif
       ENDDO
+      if (input%jspins==0) input%jspins=1
 
       IF (ANY(atoms%nlo(:) .NE. 0)) THEN
          input%ellow = -1.8
@@ -121,7 +125,7 @@ CONTAINS
       noco%l_relax(:) = .FALSE.
       noco%alph_inp(:) = 0.0
       noco%beta_inp(:) = 0.0
-      
+
       !
       !hybinp
       !

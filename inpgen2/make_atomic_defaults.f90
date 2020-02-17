@@ -94,7 +94,7 @@ CONTAINS
             ENDDO
          ENDDO
          CALL atoms%econf(n)%init(ap(n)%econfig)
-         if (abs(ap(n)%bmu)>1E-8) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
+         if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
      ! rounding
          atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
