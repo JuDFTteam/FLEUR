@@ -188,6 +188,7 @@ CONTAINS
         !
         DO lo = 1,atoms%nlo(n)
           l = atoms%llo(lo,n)
+          if (l==0) cycle !no SOC for s-states
           DO nkvec = 1,invsfct* (2*l+1)
             locol= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
