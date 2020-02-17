@@ -153,7 +153,7 @@ CONTAINS
                ! endif
                ! if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
                ! call hybdat%olap(jsp,nk)%copy(smat,1,1)
-               CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk)
+               CALL write_olap(smat,(jsp-1)*fi%kpts%nkpt+nk)
             END IF ! fi%hybinp%l_hybrid.OR.fi%input%l_rdmft
 
             IF(fi%hybinp%l_hybrid) THEN
