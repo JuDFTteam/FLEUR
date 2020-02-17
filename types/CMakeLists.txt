@@ -12,6 +12,7 @@ types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_data.F90
 types/types_xcpot_libxc.F90
 types/types_mpi.F90
+types/types_hybmpi.f90
 types/types_lapw.F90
 types/types_enpara.F90
 types/types_tlmplm.F90
