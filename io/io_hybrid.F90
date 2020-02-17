@@ -151,9 +151,11 @@ contains
       implicit none
       TYPE(t_mat), INTENT(INOUT):: olap
       INTEGER, INTENT(IN)           :: rec, nbasfcn
-      integer :: i, j
+      integer :: i, j, id
 
-      CALL read_matrix(olap, rec, id_olap)
+      id = open_matrix(olap%l_real, olap%matsize1, 1, 1, "olap." // int2str(rec))
+      CALL read_matrix(olap, 1, id)
+      call close_matrix(id)
 
       IF(olap%l_real) THEN
          DO i = 1, nbasfcn
@@ -177,7 +179,9 @@ contains
       INTEGER, INTENT(IN)           :: rec
       integer :: id
 
-      CALL write_matrix(mat, rec, id_olap)
+      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "olap." // int2str(rec))
+      CALL write_matrix(mat, 1, id)
+      call close_matrix(id)
    END subroutine write_olap
 
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
