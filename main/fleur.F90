@@ -244,10 +244,6 @@ CONTAINS
              iter = 0
           END IF
        ENDIF
-       !RDMFT
-       IF(fi%input%l_rdmft) THEN
-          CALL open_hybinp_io1(fi%sym%invs)
-       END IF
 
        !IF(.not.fi%input%eig66(1))THEN
           CALL reset_eig(eig_id,fi%noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
