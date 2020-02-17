@@ -3,7 +3,7 @@ greensf/greensfImag.f90
 greensf/greensfImag21.f90
 greensf/onsite.f90
 greensf/kkintgr.f90
-greensf/kk_cutoff.f90
+greensf/kk_cutoff.F90
 greensf/gfcalc.F90
 greensf/crystalfield.f90
 greensf/j0.f90

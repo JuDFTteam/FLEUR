@@ -145,7 +145,6 @@ CONTAINS
                                   ,calledby="read_xml_hub1inp")
                !Check if there already is a defined exchange splitting on this orbital
                DO i = 1, this%n_exc(i_hia)-1
-                  IF(i==0) CALL juDFT_error("Interesting")
                   IF(this%exc_l(i_hia,i_exc)==this%exc_l(i_hia,i)) &
                      CALL juDFT_error("Two exchange splittings defined for equal l"&
                                      ,calledby="read_xml_hub1inp")

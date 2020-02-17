@@ -57,7 +57,7 @@
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           input_jsp=input
           input_jsp%jspins=1
-          CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
+          CALL readCoreDensity(input_jsp,atoms,rhoc,tec,qintc)
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
