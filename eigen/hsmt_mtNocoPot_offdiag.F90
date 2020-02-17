@@ -43,7 +43,7 @@ CONTAINS
     chi_one=1.0
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(real part of potential)
-    CALL hsmt_nonsph(n,mpi,sym,atoms,2,1,iintsp,iintsp,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
+    CALL hsmt_nonsph(n,mpi,sym,atoms,2,1,iintsp,jintsp,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
     CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,2,1,iintsp,jintsp,hmat_tmp)
     !call hmat_tmp%generate_full_matrix()
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
