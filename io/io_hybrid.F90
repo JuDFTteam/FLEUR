@@ -234,21 +234,4 @@ contains
       endif
       call timestop("read_z")
    END subroutine read_z
-
-   subroutine read_v_x(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
-
-      CALL read_matrix(mat, rec, id_v_x)
-   END subroutine read_v_x
-
-   subroutine write_v_x(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)           :: rec
-
-      CALL write_matrix(mat, rec, id_v_x)
-   END subroutine write_v_x
-
 end module m_io_hybinp
