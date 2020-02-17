@@ -88,7 +88,7 @@ CONTAINS
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
       CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
 
-      CALL read_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)
+      call v_x%copy(hybdat%v_x(jsp, nk), 1,1)
       ! add non-local x-potential to the hamiltonian hmat
       DO n = 1, v_x%matsize1
          DO nn = 1, n

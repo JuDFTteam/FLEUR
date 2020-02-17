@@ -173,8 +173,7 @@ CONTAINS
       deallocate(n_q)
       CALL timestop("core exchange calculation")
 
-      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, v_x)
-      CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, hybdat%v_x(jsp, nk))
 
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
