@@ -348,7 +348,8 @@ CONTAINS
       call timestop("getnorm")
 
       call timestart("Bessel calculation")
-      DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      do iqnrm = 1,nqnrm
          qnorm = qnrm(iqnrm)
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
