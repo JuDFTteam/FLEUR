@@ -102,51 +102,49 @@ CONTAINS
       hybdat%l_subvxc = (hybdat%l_subvxc .AND. hybdat%l_addhf)
       IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
 
-      IF (hybdat%l_calhf) THEN
-         iterHF = iterHF + 1
+      iterHF = iterHF + 1
 
-         !Delete broyd files
-         CALL system("rm -f broyd*")
+      !Delete broyd files
+      CALL system("rm -f broyd*")
 
-         !check if z-reflection trick can be used
+      !check if z-reflection trick can be used
 
-         l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
+      l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
 
-         CALL timestart("Preparation for hybrid functionals")
-         !    CALL juDFT_WARN ("fi%hybinp functionals not working in this version")
+      CALL timestart("Preparation for hybrid functionals")
+      !    CALL juDFT_WARN ("fi%hybinp functionals not working in this version")
 
-         !construct the mixed-basis
-         CALL timestart("generation of mixed basis")
-         write (*,*) "iterHF = ", iterHF
-         CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
-                         enpara, mpi, v, iterHF)
-         CALL timestop("generation of mixed basis")
+      !construct the mixed-basis
+      CALL timestart("generation of mixed basis")
+      write (*,*) "iterHF = ", iterHF
+      CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
+                      enpara, mpi, v, iterHF)
+      CALL timestop("generation of mixed basis")
 
-         CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
+      CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
 
-         CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
+      CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
 
-         CALL hf_init(eig_id, mpdata, fi%hybinp, fi%atoms, fi%input,  hybdat)
-         CALL timestop("Preparation for hybrid functionals")
-         CALL timestart("Calculation of non-local HF potential")
-         DO jsp = 1, fi%input%jspins
-            call timestart("HF_setup")
-            CALL HF_setup(mpdata,fi%hybinp, fi%input, fi%sym, fi%kpts,  fi%atoms, &
-                          mpi, fi%noco, nococonv,fi%cell, fi%oneD, results, jsp, enpara, &
-                          hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
-            call timestop("HF_setup")
+      CALL hf_init(eig_id, mpdata, fi%hybinp, fi%atoms, fi%input,  hybdat)
+      CALL timestop("Preparation for hybrid functionals")
+      CALL timestart("Calculation of non-local HF potential")
+      DO jsp = 1, fi%input%jspins
+         call timestart("HF_setup")
+         CALL HF_setup(mpdata,fi%hybinp, fi%input, fi%sym, fi%kpts,  fi%atoms, &
+                       mpi, fi%noco, nococonv,fi%cell, fi%oneD, results, jsp, enpara, &
+                       hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
+         call timestop("HF_setup")
 
-            DO nk = 1, fi%kpts%nkpt
-               !DO nk = mpi%n_start,fi%kpts%nkpt,mpi%n_stride
-               CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
-               CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
-            END DO
+         DO nk = 1, fi%kpts%nkpt
+            !DO nk = mpi%n_start,fi%kpts%nkpt,mpi%n_stride
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+            CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
+                        nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
          END DO
-         CALL timestop("Calculation of non-local HF potential")
-         CALL close_eig(eig_id)
+      END DO
+      CALL timestop("Calculation of non-local HF potential")
+      CALL close_eig(eig_id)
 
-      ENDIF
       CALL timestop("hybrid code")
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

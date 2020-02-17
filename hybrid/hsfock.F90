@@ -120,66 +120,62 @@ CONTAINS
       call read_olap(olap, fi%kpts%nkpt*(jsp - 1) + nk, nbasfcn)
       call timestop("read in olap")
 
-      IF(hybdat%l_calhf) THEN
-         ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
-         IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
-         IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
-         ! calculate all symmetrie operations, which yield k invariant
 
-         allocate(parent(fi%kpts%nkptf), stat=ok)
-         IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
-         parent = 0
+      ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
+      IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
+      IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
+      ! calculate all symmetrie operations, which yield k invariant
 
-         call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
+      allocate(parent(fi%kpts%nkptf), stat=ok)
+      IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
+      parent = 0
 
-         if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
-         call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nk, jsp, z, c_phase=c_phase)
+      call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
 
-         CALL timestart("symm_hf")
-         CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
+      if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nk, jsp, z, c_phase=c_phase)
 
-         CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
-                      fi%noco, nococonv, fi%oneD, z, c_phase, jsp, &
-                      rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
-         CALL timestop("symm_hf")
+      CALL timestart("symm_hf")
+      CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
 
-         ! remove weights(wtkpt) in w_iks
-         DO ikpt = 1, fi%kpts%nkptf
-            DO iband = 1, fi%input%neig
-               ikpt0 = fi%kpts%bkp(ikpt)
-               wl_iks(iband, ikpt) = results%w_iks(iband, ikpt0, jsp)/(fi%kpts%wtkpt(ikpt0)*fi%kpts%nkptf)
-            END DO
+      CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
+                   fi%noco, nococonv, fi%oneD, z, c_phase, jsp, &
+                   rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
+      CALL timestop("symm_hf")
+
+      ! remove weights(wtkpt) in w_iks
+      DO ikpt = 1, fi%kpts%nkptf
+         DO iband = 1, fi%input%neig
+            ikpt0 = fi%kpts%bkp(ikpt)
+            wl_iks(iband, ikpt) = results%w_iks(iband, ikpt0, jsp)/(fi%kpts%wtkpt(ikpt0)*fi%kpts%nkptf)
          END DO
+      END DO
 
-         ! calculate contribution from valence electrons to the
-         ! HF exchange
-         ex%l_real = fi%sym%invs
-         CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD, nsest, indx_sest, &
-                                  mpi, ex)
+      ! calculate contribution from valence electrons to the
+      ! HF exchange
+      ex%l_real = fi%sym%invs
+      CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, mnobd, lapw, &
+                               eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD, nsest, indx_sest, &
+                               mpi, ex)
 
-         CALL timestart("core exchange calculation")
+      CALL timestart("core exchange calculation")
 
-         ! calculate contribution from the core states to the HF exchange
-         IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            call judft_error('HSE not implemented in hsfock')
-         ELSE
-            CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
-                                mpdata, fi%hybinp, hybdat, jsp, &
-                                lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
-            CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
-         END IF
+      ! calculate contribution from the core states to the HF exchange
+      IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+         call judft_error('HSE not implemented in hsfock')
+      ELSE
+         CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
+                             mpdata, fi%hybinp, hybdat, jsp, &
+                             lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+         CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
+      END IF
 
-         deallocate(n_q)
-         CALL timestop("core exchange calculation")
+      deallocate(n_q)
+      CALL timestop("core exchange calculation")
 
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, v_x)
-
-         CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
-      END IF ! hybdat%l_calhf
+      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, v_x)
+      CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
 
       CALL timestop("total time hsfock")
-
    END SUBROUTINE hsfock
-
 END MODULE m_hsfock
