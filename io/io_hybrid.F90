@@ -13,35 +13,6 @@ module m_io_hybinp
    integer, save :: id_olap, id_z, id_v_x, id_coulomb, id_coulomb_spm
    !public:: open_hybinp_io,read_cmt,write_cmt
 contains
-
-   SUBROUTINE open_hybinp_io1(l_real)
-      implicit none
-
-      LOGICAL, INTENT(IN)          :: l_real
-      LOGICAL :: opened = .false.
-
-      if(opened) return
-      opened = .true.
-
-      !print *,"Open olap.mat"
-      id_olap = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "olap.mat")
-      !print *,"Open z.mat"
-      id_z = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "z.mat")
-   END SUBROUTINE open_hybinp_io1
-
-   SUBROUTINE open_hybinp_io1b(l_real)
-      implicit none
-
-      LOGICAL, INTENT(IN)          :: l_real
-      LOGICAL :: opened = .false.
-
-      if(opened) return
-      opened = .true.
-
-      !print *,"Open v_x.mat"
-      id_v_x = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "v_x.mat")
-   END SUBROUTINE open_hybinp_io1b
-
    SUBROUTINE open_hybinp_io2(mpdata, hybinp, hybdat, input, atoms, l_real)
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
@@ -53,17 +24,6 @@ contains
       INTEGER:: irecl_coulomb
       LOGICAL :: opened = .FALSE.
 
-      if(opened) return
-      opened = .true.
-      OPEN(unit=777, file='cmt', form='unformatted', access='direct',&
-           &     recl=input%neig*hybdat%maxlmindx*atoms%nat*16)
-
-#ifdef CPP_NOSPMVEC
-      irecl_coulomb = hybdat%maxbasm1*(hybdat%maxbasm1 + 1)*8/2
-      if(.not. l_real) irecl_coulomb = irecl_coulomb*2
-      OPEN(unit=778, file='coulomb', form='unformatted', access='direct', recl=irecl_coulomb)
-      id_coulomb = 778
-#else
       ! if the sparse matrix technique is used, several entries of the
       ! matrix vanish so that the size of each entry is smaller
       irecl_coulomb = (atoms%ntype*(maxval(hybinp%lcutm1) + 1)*(maxval(mpdata%num_radbasfn) - 1)**2 &
@@ -74,7 +34,6 @@ contains
       if(.not. l_real) irecl_coulomb = irecl_coulomb*2
       OPEN(unit=778, file='coulomb1', form='unformatted', access='direct', recl=irecl_coulomb)
       id_coulomb_spm = 778
-#endif
    END SUBROUTINE open_hybinp_io2
 
    subroutine write_coulomb(nk, l_real, coulomb)
