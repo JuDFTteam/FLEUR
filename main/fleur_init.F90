@@ -154,7 +154,7 @@ CONTAINS
     call hybinp%init(atoms, cell, input, oneD, sym, xcpot)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
-    CALL prp_xcfft(stars,input,cell,xcpot)
+    CALL prp_xcfft(mpi,stars,input,cell,xcpot)
     CALL convn(mpi%irank==0,atoms,stars)
     if (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
     if (mpi%isize>1) call field%mpi_bc(mpi%mpi_comm,0)
