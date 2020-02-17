@@ -6,17 +6,6 @@
 
 MODULE m_hsfock
 
-   USE m_judft
-   USE m_types
-   USE m_intgrf
-   USE m_wrapper
-   USE m_io_hybinp
-   USE m_hsefunctional
-   USE m_symm_hf
-   USE m_exchange_valence_hf
-   USE m_exchange_core
-   USE m_symmetrizeh
-
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 !     This module is the driver routine for the calculation of the Hartree    c
 !     Fock exchange term by using the mixed basis set.                        c
@@ -55,9 +44,20 @@ MODULE m_hsfock
 CONTAINS
 
    SUBROUTINE hsfock(fi, nk, mpdata, lapw, jsp, hybdat, &
-                     eig_irr,nococonv,&
+                     eig_irr, nococonv, &
                      results, mnobd, xcpot, mpi)
 
+      use m_ex_to_vx
+      USE m_judft
+      USE m_types
+      USE m_intgrf
+      USE m_wrapper
+      USE m_io_hybinp
+      USE m_hsefunctional
+      USE m_symm_hf
+      USE m_exchange_valence_hf
+      USE m_exchange_core
+      USE m_symmetrizeh
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -75,7 +75,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
-      REAL, INTENT(IN)    :: eig_irr(:,:)
+      REAL, INTENT(IN)    :: eig_irr(:, :)
 
       ! local scalars
       INTEGER                 ::  i, j, l, itype
@@ -101,7 +101,7 @@ CONTAINS
 
       REAL                    ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
 
-      TYPE(t_mat)             :: olap, trafo, invtrafo, ex, tmp, v_x, z
+      TYPE(t_mat)             :: olap, ex, v_x, z
 
       CALL timestart("total time hsfock")
 
@@ -115,10 +115,10 @@ CONTAINS
 
       ! read in lower triangle part of overlap matrix from direct acces file olap
       call timestart("read in olap")
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
+      nbasfcn = lapw%hyb_num_bas_fun(fi)
       call olap%alloc(fi%sym%invs, nbasfcn)
       call read_olap(olap, fi%kpts%nkpt*(jsp - 1) + nk)
-      IF (olap%l_real) THEN
+      IF(olap%l_real) THEN
          DO i = 1, nbasfcn
             DO j = 1, i
                olap%data_r(i, j) = olap%data_r(j, i)
@@ -134,27 +134,26 @@ CONTAINS
       END IF
       call timestop("read in olap")
 
-      IF (hybdat%l_calhf) THEN
+      IF(hybdat%l_calhf) THEN
          ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
-         IF (nk == 1 .and. mpi%irank == 0) WRITE (*, *) 'calculate new HF matrix'
-         IF (nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
+         IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
+         IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
          ! calculate all symmetrie operations, which yield k invariant
 
          allocate(parent(fi%kpts%nkptf), stat=ok)
-         IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
+         IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
          parent = 0
-
 
          call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
 
          if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
-         call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z, c_phase=c_phase)
+         call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nk, jsp, z, c_phase=c_phase)
 
          CALL timestart("symm_hf")
          CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(fi%kpts, nk, fi%sym,  hybdat, eig_irr, fi%input,fi%atoms, mpdata, fi%hybinp, fi%cell, lapw,&
-                       fi%noco, nococonv, fi%oneD, z, c_phase, jsp, &
+         CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
+                      fi%noco, nococonv, fi%oneD, z, c_phase, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -169,18 +168,18 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = fi%sym%invs
-         CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell,  fi%input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD,nsest, indx_sest, &
+         CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, mnobd, lapw, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD, nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")
 
          ! calculate contribution from the core states to the HF exchange
-         IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+         IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oneD, &
-                                mpdata, fi%hybinp, hybdat,  jsp, &
+            CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
+                                mpdata, fi%hybinp, hybdat, jsp, &
                                 lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
          END IF
@@ -188,33 +187,7 @@ CONTAINS
          deallocate(n_q)
          CALL timestop("core exchange calculation")
 
-         CALL timestart("time for performing T^-1*mat_ex*T^-1*")
-         !calculate trafo from wavefunctions to APW basis
-         IF (fi%input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
-
-         call olap%multiply(z, trafo)
-
-         CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
-         CALL trafo%TRANSPOSE(invtrafo)
-
-         DO i = 1, hybdat%nbands(nk)
-            DO j = 1, i - 1
-               IF (ex%l_real) THEN
-                  ex%data_r(i, j) = ex%data_r(j, i)
-               ELSE
-                  ex%data_c(i, j) = conjg(ex%data_c(j, i))
-               END IF
-            ENDDO
-         ENDDO
-
-         CALL ex%multiply(invtrafo, tmp)
-         CALL trafo%multiply(tmp, v_x)
-
-         CALL timestop("time for performing T^-1*mat_ex*T^-1*")
-
-         call timestart("symmetrizeh")
-         CALL symmetrizeh(fi%atoms, fi%kpts%bkf(:, nk), jsp, lapw, fi%sym, hybdat%kveclo_eig, fi%cell, nsymop, psym, v_x)
-         call timestop("symmetrizeh")
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, v_x)
 
          CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
       END IF ! hybdat%l_calhf

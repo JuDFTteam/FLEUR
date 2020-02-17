@@ -6,6 +6,7 @@
 
 MODULE m_types_lapw
   USE m_judft
+  use m_types_fleurinput
   use m_types_nococonv
   IMPLICIT NONE
   PRIVATE
@@ -39,6 +40,7 @@ MODULE m_types_lapw
      PROCEDURE,PASS :: init =>lapw_init
      PROCEDURE,PASS :: alloc =>lapw_alloc
      PROCEDURE,PASS :: phase_factors =>lapw_phase_factors
+     procedure,pass :: hyb_num_bas_fun=>hyb_num_bas_fun
      PROCEDURE,NOPASS:: dim_nvd
      PROCEDURE,NOPASS:: dim_nv2d
      PROCEDURE,NOPASS:: dim_nbasfcn
@@ -48,6 +50,17 @@ MODULE m_types_lapw
 
 
 CONTAINS
+   function hyb_num_bas_fun(lapw, fi) result(nbasfcn)
+      implicit NONE
+      class(t_lapw), intent(in)         :: lapw
+      type(t_fleurinput), intent(in)    :: fi
+
+      integer :: nbasfcn
+
+      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, &
+                      lapw%nv(1) + fi%atoms%nlotot, &
+                      fi%noco%l_noco)
+   end function hyb_num_bas_fun
 
   subroutine lapw_init_dim(nvd_in,nv2d_in,nbasfcn_in)
     IMPLICIT NONE
