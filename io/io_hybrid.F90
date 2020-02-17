@@ -147,12 +147,28 @@ contains
       read(id_coulomb, rec=nk) coulomb
    end subroutine read_coulomb_c
 
-   subroutine read_olap(mat, rec)
+   subroutine read_olap(olap, rec, nbasfcn)
       implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
+      TYPE(t_mat), INTENT(INOUT):: olap
+      INTEGER, INTENT(IN)           :: rec, nbasfcn
+      integer :: i, j
 
-      CALL read_matrix(mat, rec, id_olap)
+      CALL read_matrix(olap, rec, id_olap)
+
+      IF(olap%l_real) THEN
+         DO i = 1, nbasfcn
+            DO j = 1, i
+               olap%data_r(i, j) = olap%data_r(j, i)
+            END DO
+         END DO
+      ELSE
+         DO i = 1, nbasfcn
+            DO j = 1, i
+               olap%data_c(i, j) = CONJG(olap%data_c(j, i))
+            END DO
+         END DO
+         olap%data_c = conjg(olap%data_c)
+      END IF
    END subroutine read_olap
 
    subroutine write_olap(mat, rec)

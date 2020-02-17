@@ -555,23 +555,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 
             CALL olap%alloc(sym%invs,nbasfcn)
-            CALL read_olap(olap, kpts%nkpt*(jspin-1)+ikpt)
-            IF (olap%l_real) THEN
-               DO i = 1, nbasfcn
-                  DO j = 1, i
-                     olap%data_r(i,j) = olap%data_r(j,i)
-                  END DO
-               END DO
-            ELSE
-               DO i = 1, nbasfcn
-                  DO j = 1, i
-                     olap%data_c(i,j) = CONJG(olap%data_c(j,i))
-                  END DO
-               END DO
-               olap%data_c = conjg(olap%data_c)
-            END IF
-
-
+            CALL read_olap(olap, kpts%nkpt*(jspin-1)+ikpt, nbasfcn)
 
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 

@@ -117,21 +117,7 @@ CONTAINS
       call timestart("read in olap")
       nbasfcn = lapw%hyb_num_bas_fun(fi)
       call olap%alloc(fi%sym%invs, nbasfcn)
-      call read_olap(olap, fi%kpts%nkpt*(jsp - 1) + nk)
-      IF(olap%l_real) THEN
-         DO i = 1, nbasfcn
-            DO j = 1, i
-               olap%data_r(i, j) = olap%data_r(j, i)
-            END DO
-         END DO
-      ELSE
-         DO i = 1, nbasfcn
-            DO j = 1, i
-               olap%data_c(i, j) = CONJG(olap%data_c(j, i))
-            END DO
-         END DO
-         olap%data_c = conjg(olap%data_c)
-      END IF
+      call read_olap(olap, fi%kpts%nkpt*(jsp - 1) + nk, nbasfcn)
       call timestop("read in olap")
 
       IF(hybdat%l_calhf) THEN
