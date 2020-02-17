@@ -50,7 +50,7 @@ contains
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
       integer, intent(in)            :: num_radfun_per_l(:, :)
-      integer                        :: ok(12)
+      integer                        :: ok(13)
 
       ok = -1
       allocate(hybdat%lmaxc(fi%atoms%ntype), &
@@ -81,6 +81,8 @@ contains
                                -fi%atoms%lmaxd:fi%atoms%lmaxd, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1)), &
                stat=ok(12), source=0.0)
 
+      allocate(hybdat%v_x(fi%input%jspins, fi%kpts%nkpt), stat=ok(13))
+
       if(any(ok /= 0)) then
          write(*, *) "allocation of hybdat failed. Error in array no.:"
          write(*, *) maxloc(abs(ok))
@@ -104,6 +106,7 @@ contains
       if(allocated(hybdat%fac)) deallocate(hybdat%fac)
       if(allocated(hybdat%sfac)) deallocate(hybdat%sfac)
       if(allocated(hybdat%gauntarr)) deallocate(hybdat%gauntarr)
+      if(allocated(hybdat%v_x)) deallocate(hybdat%v_x)
    end subroutine free_hybdat
 
    subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
