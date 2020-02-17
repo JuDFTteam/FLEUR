@@ -182,7 +182,7 @@ MODULE m_tetrahedronInit
       IF(l_dos) THEN
          ALLOCATE(dos_weights(ne+2),source=0.0)
          ALLOCATE(occ_weights(ne+2),source=0.0)
-         DO iband = 1, neig(ikpt)
+         DO iband = 1, MIN(neig(ikpt),SIZE(eig,1))
             occ_weights(2:ne+1) = weights(1:ne,iband)
             occ_weights(1) = end_weights(1,iband)
             occ_weights(ne+2) = end_weights(2,iband)
@@ -192,7 +192,7 @@ MODULE m_tetrahedronInit
       ENDIF
 
       IF(PRESENT(bounds)) THEN
-         DO iband = 1, neig(ikpt)
+         DO iband = 1, MIN(neig(ikpt),SIZE(eig,1))
             !--------------------------------------------------------------
             !Find the range where the weights are bigger than weightCutoff
             !--------------------------------------------------------------
