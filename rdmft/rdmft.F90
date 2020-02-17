@@ -8,9 +8,9 @@ MODULE m_rdmft
 
 CONTAINS
 
-SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,nococonv,xcpot,mpinp,mpdata,hybinp, hybdat,&
-                 gfinp,hub1inp,results,coreSpecInput,archiveType,outDen)
+SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
+                 sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
+                 results,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -46,32 +46,17 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IMPLICIT NONE
 
    TYPE(t_mpi),           INTENT(IN)    :: mpi
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-   TYPE(t_sliceplot),     INTENT(IN)    :: sliceplot
-   TYPE(t_cell),          INTENT(IN)    :: cell
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   type(t_fleurinput), intent(in)    :: fi
    TYPE(t_enpara),        INTENT(INOUT) :: enpara
    TYPE(t_stars),         INTENT(IN)    :: stars
-   TYPE(t_vacuum),        INTENT(IN)    :: vacuum
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
-   TYPE(t_sym),           INTENT(IN)    :: sym
-   TYPE(t_field),         INTENT(IN)    :: field
    TYPE(t_potden),        INTENT(INOUT) :: vTot
    TYPE(t_potden),        INTENT(INOUT) :: vCoul
-   TYPE(t_oneD),          INTENT(IN)    :: oneD
-   TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_nococonv),      INTENT(INOUT) :: nococonv
    TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-   TYPE(t_mpinp),         INTENT(IN)    :: mpinp
    TYPE(t_mpdata),        intent(inout) :: mpdata
-   TYPE(t_hybinp),        INTENT(IN)    :: hybinp
    TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
-   TYPE(t_gfinp),         INTENT(IN)    :: gfinp
-   TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
    TYPE(t_results),       INTENT(INOUT) :: results
-   TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(INOUT) :: outDen
 
    INTEGER,               INTENT(IN)    :: eig_id
@@ -103,17 +88,17 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
 
-   INTEGER                              :: nsest(input%neig) ! probably too large
-   INTEGER                              :: indx_sest(input%neig,input%neig) ! probably too large
-   INTEGER                              :: rrot(3,3,sym%nsym)
-   INTEGER                              :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
-   INTEGER                              :: lowestState(kpts%nkpt,input%jspins)
-   INTEGER                              :: highestState(kpts%nkpt,input%jspins)
-   INTEGER                              :: neigTemp(kpts%nkpt,input%jspins)
+   INTEGER                              :: nsest(fi%input%neig) ! probably too large
+   INTEGER                              :: indx_sest(fi%input%neig,fi%input%neig) ! probably too large
+   INTEGER                              :: rrot(3,3,fi%sym%nsym)
+   INTEGER                              :: psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
+   INTEGER                              :: lowestState(fi%kpts%nkpt,fi%input%jspins)
+   INTEGER                              :: highestState(fi%kpts%nkpt,fi%input%jspins)
+   INTEGER                              :: neigTemp(fi%kpts%nkpt,fi%input%jspins)
 
-   REAL                                 :: wl_iks(input%neig,kpts%nkptf)
+   REAL                                 :: wl_iks(fi%input%neig,fi%kpts%nkptf)
 
-   REAL                                 :: vmd(atoms%ntype), zintn_r(atoms%ntype), dpj(atoms%jmtd), mt(atoms%jmtd,atoms%ntype)
+   REAL                                 :: vmd(fi%atoms%ntype), zintn_r(fi%atoms%ntype), dpj(fi%atoms%jmtd), mt(fi%atoms%jmtd,fi%atoms%ntype)
 
    REAL, ALLOCATABLE                    :: overallVCoulSSDen(:,:,:)
    REAL, ALLOCATABLE                    :: vTotSSDen(:,:,:)
@@ -142,7 +127,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
 
-   complex :: c_phase(input%neig)
+   complex :: c_phase(fi%input%neig)
 
 #endif
 
@@ -153,24 +138,24 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ! General initializations
    mixParam = 0.0001
    lagrangeMultiplier = 0.1 !results%ef
-   spinDegenFac = 2.0 / input%jspins ! This factor is used to compensate the missing second spin in non-spinpolarized calculations
+   spinDegenFac = 2.0 / fi%input%jspins ! This factor is used to compensate the missing second spin in non-spinpolarized calculations
 
    neigTemp(:,:) = results%neig(:,:)
 
    ! Determine which states have to be considered
    lowestState(:,:) = -1
    highestState(:,:) = -1
-   DO jspin = 1, input%jspins
-      jsp = MERGE(1,jspin,noco%l_noco)
-      DO ikpt = 1, kpts%nkpt
+   DO jspin = 1, fi%input%jspins
+      jsp = MERGE(1,jspin,fi%noco%l_noco)
+      DO ikpt = 1, fi%kpts%nkpt
          ! determine lowest state
          DO iBand = 1, results%neig(ikpt,jsp)
-            IF((results%w_iks(iBand,ikpt,jspin) / kpts%wtkpt(ikpt)).LT.(1.0-input%rdmftOccEps)) THEN
+            IF((results%w_iks(iBand,ikpt,jspin) / fi%kpts%wtkpt(ikpt)).LT.(1.0-fi%input%rdmftOccEps)) THEN
                lowestState(ikpt,jspin) = iBand
                EXIT
             END IF
          END DO
-         lowestState(ikpt,jspin) = lowestState(ikpt,jspin) - input%rdmftStatesBelow
+         lowestState(ikpt,jspin) = lowestState(ikpt,jspin) - fi%input%rdmftStatesBelow
          DO iBand = lowestState(ikpt,jspin)-1, 1, -1
             IF((results%eig(iBand+1,ikpt,jsp) - results%eig(iBand,ikpt,jsp)).GT.degenEps) THEN
                EXIT
@@ -181,12 +166,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          ! determine highest state
          DO iBand = results%neig(ikpt,jsp)-1, 1, -1
-            IF((results%w_iks(iBand,ikpt,jspin) / kpts%wtkpt(ikpt)).GT.(0.0+input%rdmftOccEps)) THEN
+            IF((results%w_iks(iBand,ikpt,jspin) / fi%kpts%wtkpt(ikpt)).GT.(0.0+fi%input%rdmftOccEps)) THEN
                highestState(ikpt,jspin) = iBand
                EXIT
             END IF
          END DO
-         highestState(ikpt,jspin) = highestState(ikpt,jspin) + input%rdmftStatesAbove
+         highestState(ikpt,jspin) = highestState(ikpt,jspin) + fi%input%rdmftStatesAbove
          IF((results%neig(ikpt,jsp)-1).LT.highestState(ikpt,jspin)) THEN
             WRITE(6,*) 'Error: Not enough states calculated:'
             WRITE(6,*) 'ikpt, jsp: ', ikpt, jsp
@@ -216,7 +201,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    END IF
 
    ! Move occupations of relevant states well into allowed region
-   numRelevantStates = SUM(highestState(:,:)) - SUM(lowestState(:,:)) + input%jspins*kpts%nkpt
+   numRelevantStates = SUM(highestState(:,:)) - SUM(lowestState(:,:)) + fi%input%jspins*fi%kpts%nkpt
    ALLOCATE(occupationVec(numRelevantStates))
    occupationVec(:) = 0.0
    sumOcc = 0.0
@@ -225,37 +210,37 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    addChargeWeight = 0.0
    subChargeWeight = 0.0
    iState = 0
-   DO jspin = 1, input%jspins
-      jsp = MERGE(1,jspin,noco%l_noco)
-      DO ikpt = 1, kpts%nkpt
+   DO jspin = 1, fi%input%jspins
+      jsp = MERGE(1,jspin,fi%noco%l_noco)
+      DO ikpt = 1, fi%kpts%nkpt
          DO iBand = lowestState(ikpt,jspin), highestState(ikpt,jspin)
             iState = iState + 1
-            occupationVec(iState) = results%w_iks(iBand,ikpt,jsp) / (kpts%wtkpt(ikpt))
+            occupationVec(iState) = results%w_iks(iBand,ikpt,jsp) / (fi%kpts%wtkpt(ikpt))
             sumOcc = sumOcc + results%w_iks(iBand,ikpt,jsp)
             IF(occupationVec(iState).LT.0.0001) THEN
-               addCharge = addCharge + (0.0001-occupationVec(iState))*kpts%wtkpt(ikpt)
-               addChargeWeight = addChargeWeight + kpts%wtkpt(ikpt)
+               addCharge = addCharge + (0.0001-occupationVec(iState))*fi%kpts%wtkpt(ikpt)
+               addChargeWeight = addChargeWeight + fi%kpts%wtkpt(ikpt)
             END IF
             IF(occupationVec(iState).GT.0.9999) THEN
-               subCharge = subCharge + (occupationVec(iState)-0.9999)*kpts%wtkpt(ikpt)
-               subChargeWeight = subChargeWeight + kpts%wtkpt(ikpt)
+               subCharge = subCharge + (occupationVec(iState)-0.9999)*fi%kpts%wtkpt(ikpt)
+               subChargeWeight = subChargeWeight + fi%kpts%wtkpt(ikpt)
             END IF
          END DO
       END DO
    END DO
    iState = 0
-   DO jspin = 1, input%jspins
-      jsp = MERGE(1,jspin,noco%l_noco)
-      DO ikpt = 1, kpts%nkpt
+   DO jspin = 1, fi%input%jspins
+      jsp = MERGE(1,jspin,fi%noco%l_noco)
+      DO ikpt = 1, fi%kpts%nkpt
          DO iBand = lowestState(ikpt,jspin), highestState(ikpt,jspin)
             iState = iState + 1
             IF(occupationVec(iState).LT.0.0001) THEN
-               occupationVec(iState) = occupationVec(iState) + 0.5*(subCharge+addCharge)*(kpts%wtkpt(ikpt)/addChargeWeight)
+               occupationVec(iState) = occupationVec(iState) + 0.5*(subCharge+addCharge)*(fi%kpts%wtkpt(ikpt)/addChargeWeight)
             END IF
             IF(occupationVec(iState).GT.0.9999) THEN
-               occupationVec(iState) = occupationVec(iState) - 0.5*(subCharge+addCharge)*(kpts%wtkpt(ikpt)/subChargeWeight)
+               occupationVec(iState) = occupationVec(iState) - 0.5*(subCharge+addCharge)*(fi%kpts%wtkpt(ikpt)/subChargeWeight)
             END IF
-            results%w_iks(iBand,ikpt,jsp) = occupationVec(iState) * kpts%wtkpt(ikpt)
+            results%w_iks(iBand,ikpt,jsp) = occupationVec(iState) * fi%kpts%wtkpt(ikpt)
          END DO
       END DO
    END DO
@@ -265,38 +250,38 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    results%neig(:,:) = highestState(:,:) + 1
 
-   ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
-   ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
-   ALLOCATE(dEdOcc(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+   ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:fi%kpts%nkpt,1:fi%input%jspins)),fi%kpts%nkpt,fi%input%jspins))
+   ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:fi%kpts%nkpt,1:fi%input%jspins)),fi%kpts%nkpt,fi%input%jspins))
+   ALLOCATE(dEdOcc(MAXVAL(results%neig(1:fi%kpts%nkpt,1:fi%input%jspins)),fi%kpts%nkpt,fi%input%jspins))
 
-   ALLOCATE(zintn_rSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
-   ALLOCATE(vmdSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+   ALLOCATE(zintn_rSSDen(MAXVAL(results%neig(1:fi%kpts%nkpt,1:fi%input%jspins)),fi%kpts%nkpt,fi%input%jspins))
+   ALLOCATE(vmdSSDen(MAXVAL(results%neig(1:fi%kpts%nkpt,1:fi%input%jspins)),fi%kpts%nkpt,fi%input%jspins))
 
    zintn_rSSDen(:,:,:) = 0.0
    vmdSSDen(:,:,:) = 0.0
 
-   CALL regCharges%init(input,atoms)
-   CALL dos%init(input,atoms,kpts,vacuum)
-   CALL moments%init(mpi,input,sphhar,atoms)
-   CALL overallDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-   CALL overallVCoul%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTCOUL)
+   CALL regCharges%init(fi%input,fi%atoms)
+   CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%vacuum)
+   CALL moments%init(mpi,fi%input,sphhar,fi%atoms)
+   CALL overallDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
+   CALL overallVCoul%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTCOUL)
    IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
-   ALLOCATE(vTot%pw_w(SIZE(overallDen%pw,1),input%jspins))
-   DO jspin = 1, input%jspins
+   ALLOCATE(vTot%pw_w(SIZE(overallDen%pw,1),fi%input%jspins))
+   DO jspin = 1, fi%input%jspins
       CALL convol(stars,vTot%pw_w(:,jspin),vTot%pw(:,jspin),stars%ufft)
    END DO
 
-   CALL vTotTemp%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
+   CALL vTotTemp%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
    vTotTemp = vTot
 
    DO jsp = 1,SIZE(vTot%mt,4)
-      DO iAtom = 1,atoms%ntype
-         vTotTemp%mt(:atoms%jri(iAtom),0,iAtom,jsp)  = sfp_const * vTot%mt(:atoms%jri(iAtom),0,iAtom,jsp) / atoms%rmsh(:atoms%jri(iAtom),iAtom)
+      DO iAtom = 1,fi%atoms%ntype
+         vTotTemp%mt(:fi%atoms%jri(iAtom),0,iAtom,jsp)  = sfp_const * vTot%mt(:fi%atoms%jri(iAtom),0,iAtom,jsp) / fi%atoms%rmsh(:fi%atoms%jri(iAtom),iAtom)
       END DO
    END DO
 
    vCoul%pw_w = CMPLX(0.0,0.0)
-   DO jspin = 1, input%jspins
+   DO jspin = 1, fi%input%jspins
       CALL convol(stars,vCoul%pw_w(:,jspin),vCoul%pw(:,jspin),stars%ufft)
    END DO
 
@@ -305,10 +290,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ! Calculate all single state densities
 
    numStates = 0
-   DO jspin = 1, input%jspins
-      jsp = MERGE(1,jspin,noco%l_noco)
+   DO jspin = 1, fi%input%jspins
+      jsp = MERGE(1,jspin,fi%noco%l_noco)
 
-      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jsp)
+      CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,jsp)
 
       DO ikpt_i = 1, SIZE(mpi%k_list)
          ikpt= mpi%k_list(ikpt_i)
@@ -325,45 +310,45 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             ! Call cdnval to construct density
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
-            CALL singleStateDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-            CALL cdnval(eig_id,mpi,kpts,jsp,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                        sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments,&
-                        gfinp,hub1inp)
+            CALL singleStateDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
+            CALL cdnval(eig_id,mpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+                        sphhar,fi%sym,vTot,fi%oned,cdnvalJob,singleStateDen,regCharges,dos,results,moments,&
+                        fi%gfinp,fi%hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
             IF (mpi%irank.EQ.0) THEN
-               CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+               CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
                                  0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
 #ifdef CPP_MPI
-            CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,singleStateDen)
+            CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
 #endif
             ! For each state calculate Integral over KS effective potential times single state density
             potDenInt = 0.0
-            CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTotTemp,singleStateDen,potDenInt)
+            CALL int_nv(jsp,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,fi%oned,vTotTemp,singleStateDen,potDenInt)
             vTotSSDen(iBand,ikpt,jsp) = potDenInt
 
             mt(:,:) = 0.0
-            DO iType = 1, atoms%ntype
-               DO i = 1, atoms%jri(iType)
+            DO iType = 1, fi%atoms%ntype
+               DO i = 1, fi%atoms%jri(iType)
                   mt(i,iType) = singleStateDen%mt(i,0,iType,jsp)
                END DO
 
-               DO j = 1,atoms%jri(iType)
-                  dpj(j) = mt(j,iType)/atoms%rmsh(j,iType)
+               DO j = 1,fi%atoms%jri(iType)
+                  dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
                END DO
-               CALL intgr3(dpj,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),rhs)
+               CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
-               zintn_r(iType) = atoms%neq(iType)*atoms%zatom(iType)*sfp_const*rhs/2.0
+               zintn_r(iType) = fi%atoms%neq(iType)*fi%atoms%zatom(iType)*sfp_const*rhs/2.0
                zintn_rSSDen(iBand,ikpt,jsp) = zintn_rSSDen(iBand,ikpt,jsp) + zintn_r(iType)
 
-               CALL intgr3(mt(1,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),totz)
+               CALL intgr3(mt(1,iType),fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),totz)
 
-!               vmd(iType) = atoms%rmt(iType)*vCoul%mt(atoms%jri(iType),0,iType,1)/sfp_const + atoms%zatom(iType) - totz*sfp_const
+!               vmd(iType) = fi%atoms%rmt(iType)*vCoul%mt(fi%atoms%jri(iType),0,iType,1)/sfp_const + fi%atoms%zatom(iType) - totz*sfp_const
                vmd(iType) = -totz*sfp_const
-               vmd(iType) = -atoms%neq(iType)*atoms%zatom(iType)*vmd(iType)/ (2.0*atoms%rmt(iType))
+               vmd(iType) = -fi%atoms%neq(iType)*fi%atoms%zatom(iType)*vmd(iType)/ (2.0*fi%atoms%rmt(iType))
 
                vmdSSDen(iBand,ikpt,jsp) = vmdSSDen(iBand,ikpt,jsp) + vmd(iType)
             END DO
@@ -381,31 +366,31 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IF(ALLOCATED(hybdat%nobd)) DEALLOCATE(hybdat%nobd)
    IF(ALLOCATED(hybdat%nbasm)) DEALLOCATE(hybdat%nbasm)
    IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
-   ALLOCATE(hybdat%ne_eig(kpts%nkpt),hybdat%nbands(kpts%nkpt),hybdat%nobd(kpts%nkptf,input%jspins))
-   ALLOCATE(hybdat%nbasm(kpts%nkptf))
-   ALLOCATE(hybdat%div_vv(input%neig,kpts%nkpt,input%jspins))
+   ALLOCATE(hybdat%ne_eig(fi%kpts%nkpt),hybdat%nbands(fi%kpts%nkpt),hybdat%nobd(fi%kpts%nkptf,fi%input%jspins))
+   ALLOCATE(hybdat%nbasm(fi%kpts%nkptf))
+   ALLOCATE(hybdat%div_vv(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
 
-   l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
+   l_zref = (fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-!   CALL open_hybinp_io1(sym%invs)
+!   CALL open_fi%hybinp_io1(fi%sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpinp,mpdata,hybinp, hybdat,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybinp_io2(mpdata, hybinp,hybdat,input,atoms,sym%invs)
+   CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
 
-   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,hybdat,xcpot)
+   CALL coulombmatrix(mpi,fi%atoms,fi%kpts,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,xcpot)
 
-   CALL hf_init(eig_id,mpdata,hybinp,atoms,input,hybdat)
+   CALL hf_init(eig_id,mpdata,fi,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
    maxHistoryLength = 7*numStates
    maxHistoryLength = 5*numStates
 
-   ALLOCATE(parent(kpts%nkptf))
-   ALLOCATE(exDiag(input%neig,ikpt,input%jspins))
+   ALLOCATE(parent(fi%kpts%nkptf))
+   ALLOCATE(exDiag(fi%input%neig,ikpt,fi%input%jspins))
    ALLOCATE(lastGradient(numStates+1))
    ALLOCATE(lastParameters(numStates+1))
    lastGradient = 0.0
@@ -427,8 +412,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       convIter = convIter + 1
       WRITE(*,'(a,i7)') 'convIter: ', convIter
 
-      DO jspin = 1, input%jspins
-         DO ikpt = 1,kpts%nkpt
+      DO jspin = 1, fi%input%jspins
+         DO ikpt = 1,fi%kpts%nkpt
             WRITE(*,*) 'jspin, ikpt: ', jspin, ikpt
             WRITE(*,'(10f11.6)') results%w_iks(1:10,ikpt,jspin)
          END DO
@@ -436,23 +421,23 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       ! Calculate overall density with current occupation numbers (don't forget core electron density)
       CALL overallDen%resetPotDen()
-      jspmax = input%jspins
-      IF (noco%l_mperp) jspmax = 1
+      jspmax = fi%input%jspins
+      IF (fi%noco%l_mperp) jspmax = 1
 
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
-         CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                     sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments,&
-                     gfinp,hub1inp)
+         CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,jspin)
+         CALL cdnval(eig_id,mpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+                     sphhar,fi%sym,vTot,fi%oned,cdnvalJob,overallDen,regCharges,dos,results,moments,&
+                     fi%gfinp,fi%hub1inp)
       END DO
 
-      CALL cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
+      CALL cdncore(mpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
+                   stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
-         CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
+         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,fi%noco%l_noco,.TRUE.,.true.,fix)
       END IF
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallDen)
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
 #endif
 
       ! Calculate Coulomb potential for overall density (+including external potential)
@@ -460,32 +445,32 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,mpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1),stars%ufft)   ! Is there a problem with a second spin?!
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallVCoul)
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallVCoul)
 #endif
 
       overallVCoulSSDen = 0.0
-      DO jspin = 1, input%jspins
-         jsp = MERGE(1,jspin,noco%l_noco)
-         DO ikpt = 1, kpts%nkpt
+      DO jspin = 1, fi%input%jspins
+         jsp = MERGE(1,jspin,fi%noco%l_noco)
+         DO ikpt = 1, fi%kpts%nkpt
             DO iBand = 1, highestState(ikpt,jsp)
                ! Read the single-state density from disc
                filename = ''
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
                IF (mpi%irank.EQ.0) THEN
-                  CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                                   CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
+                  CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,&
+                                   CDN_input_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
 #ifdef CPP_MPI
-               CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,singleStateDen)
+               CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
 #endif
 
                ! For each state calculate integral over Coulomb potential times single state density
                potDenInt = 0.0
-               CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
+               CALL int_nv(1,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,fi%oned,vCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
                overallVCoulSSDen(iBand,ikpt,jsp) = potDenInt
             END DO
          END DO
@@ -494,16 +479,16 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       ! Construct exchange matrix diagonal
 
       exDiag = 0.0
-      DO jspin = 1, input%jspins
-         jsp = MERGE(1,jspin,noco%l_noco)
+      DO jspin = 1, fi%input%jspins
+         jsp = MERGE(1,jspin,fi%noco%l_noco)
          ! remove weights(wtkpt) in w_iks
          wl_iks = 0.0
-         DO ikptf=1,kpts%nkptf
-            ikpt = kpts%bkp(ikptf)
+         DO ikptf=1,fi%kpts%nkptf
+            ikpt = fi%kpts%bkp(ikptf)
             DO iBand=1, results%neig(ikpt,jsp)
-               wl_iks(iBand,ikptf) = results%w_iks(iBand,ikpt,jspin) / (kpts%wtkpt(ikpt))!*kpts%nkptf) Last term to be included after applying functional
+               wl_iks(iBand,ikptf) = results%w_iks(iBand,ikpt,jspin) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf) Last term to be included after applying functional
                wl_iks(iBand,ikptf) = sqrt(wl_iks(iBand,ikptf)) ! For Müller functional
-               wl_iks(iBand,ikptf) = wl_iks(iBand,ikptf) / kpts%nkptf ! This is the last part of two lines above
+               wl_iks(iBand,ikptf) = wl_iks(iBand,ikptf) / fi%kpts%nkptf ! This is the last part of two lines above
             END DO
          END DO
 
@@ -519,43 +504,43 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,nococonv,&
-                       cell,oneD,results,jspin,enpara,&
-                       hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
+         CALL HF_setup(mpdata,fi%hybinp,fi%input,fi%sym,fi%kpts,fi%atoms,mpi,fi%noco,nococonv,&
+                       fi%cell,fi%oned,results,jspin,enpara,&
+                       hybdat,fi%sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
 
          mnobd = MAXVAL(hybdat%nobd(:,jsp))
 
-         DO ikpt = 1,kpts%nkpt
+         DO ikpt = 1,fi%kpts%nkpt
 
-            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,ikpt,cell,l_zref)
+            CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
 
             parent = 0
-            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
+            CALL zMat%init(olap%l_real,nbasfcn,fi%input%neig)
 
-            if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
-            call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, ikpt, jsp, zMat, c_phase=c_phase)
+            if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
+            call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
 
-            CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,&
-                         noco,nococonv, oneD, zMat, c_phase,jspin,&
+            call symm_hf_init(fi%sym,fi%kpts,ikpt,nsymop,rrot,psym)
+            call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
+                         fi%noco,nococonv, fi%oned, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
-            exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
-                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nococonv,oneD,nsest,indx_sest,&
+            exMat%l_real=fi%sym%invs
+            CALL exchange_valence_hf(ikpt,fi%kpts,nkpt_EIBZ, fi%sym,fi%atoms,mpdata,fi%hybinp,fi%cell,fi%input,jspin,hybdat,mnobd,lapw,&
+                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,fi%noco,nococonv,fi%oned,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,input,atoms,cell, kpts, sym, noco,nococonv, oneD,&
-                                mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
+            CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
+                                mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
                                 1.0,results,exMat)
 
-            !Start of workaround for increased functionality of symmetrizeh (call it))
+            !Start of workaround for increased functionality of fi%symmetrizeh (call it))
 
-            nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+            nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
 
-            CALL olap%alloc(sym%invs,nbasfcn)
-            CALL read_olap(olap, kpts%nkpt*(jspin-1)+ikpt, nbasfcn)
+            CALL olap%alloc(fi%sym%invs,nbasfcn)
+            CALL read_olap(olap, fi%kpts%nkpt*(jspin-1)+ikpt, nbasfcn)
 
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
@@ -577,7 +562,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             CALL exMat%multiply(invtrafo,tmpMat)
             CALL trafo%multiply(tmpMat,exMatLAPW)
 
-            CALL symmetrizeh(atoms,kpts%bkf(:,ikpt),jspin,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,exMatLAPW)
+            call symmetrizeh(fi%atoms,fi%kpts%bkf(:,ikpt),jspin,lapw,fi%sym,hybdat%kveclo_eig,fi%cell,nsymop,psym,exMatLAPW)
 
             IF (.NOT.exMatLAPW%l_real) exMatLAPW%data_c=conjg(exMatLAPW%data_c)
             zMat%matsize1=MIN(zMat%matsize1,exMatLAPW%matsize2)
@@ -592,7 +577,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                END IF
             END DO
 
-            !End of workaround for increased functionality of symmetrizeh (call it))
+            !End of workaround for increased functionality of fi%symmetrizeh (call it))
 
 !            DO iBand = 1, highestState(ikpt,jsp)
 !               IF (exMat%l_real) THEN
@@ -608,12 +593,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       occSum = 0.0
       gradSum = 0.0
-      DO ispin = 1, input%jspins
-         isp = MERGE(1,ispin,noco%l_noco)
-!         CALL cdnvalJob%init(mpi,input,kpts,noco,results,isp,banddos=banddos)
-         DO ikpt = 1, kpts%nkpt
+      DO ispin = 1, fi%input%jspins
+         isp = MERGE(1,ispin,fi%noco%l_noco)
+!         CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
+         DO ikpt = 1, fi%kpts%nkpt
             DO iBand = 1, highestState(ikpt,isp)
-               occStateI = results%w_iks(iBand,ikpt,isp) / (kpts%wtkpt(ikpt))!*kpts%nkptf)
+               occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)
                occStateI = MAX(occStateI,minOcc)
 
                occStateI = MIN(occStateI,1.0-minOcc)
@@ -637,7 +622,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
                occSum = occSum + results%w_iks(iBand,ikpt,isp)
 
-               exchangeTerm = - rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt) * spinDegenFac !*kpts%nkptf
+               exchangeTerm = - rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * fi%kpts%wtkpt(ikpt) * spinDegenFac !*fi%kpts%nkptf
 
                dEdOcc(iBand,ikpt,isp) = +((spinDegenFac * results%eig(iBand,ikpt,isp)) - vTotSSDen(iBand,ikpt,isp) + &
                                           overallVCoulSSDen(iBand,ikpt,isp) - &
@@ -645,7 +630,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
                theta = ASIN(SQRT(occStateI))! * 2.0 /  pi_const
                dEdOcc(iBand,ikpt,isp) = 2.0 * sin(theta) * cos(theta) * dEdOcc(iBand,ikpt,isp)
-!               dEdOcc(iBand,ikpt,isp) = dEdOcc(iBand,ikpt,isp) + 2.0 * COS(theta) * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt) * spinDegenFac
+!               dEdOcc(iBand,ikpt,isp) = dEdOcc(iBand,ikpt,isp) + 2.0 * COS(theta) * exDiag(iBand,ikpt,isp) * fi%kpts%wtkpt(ikpt) * spinDegenFac
 
                WRITE(*,*) 'ENERGY GRADIENT CONTRIBUTIONS'
                WRITE(*,*) 'ispin, ikpt, iBand, weight', ispin, ikpt, iBand, results%w_iks(iBand,ikpt,isp)
@@ -662,7 +647,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             END DO
          END DO
       END DO
-      lagrangeMultiplier = -gradSum / numStates ! occSum  !(input%zelec/(2.0/REAL(input%jspins)))
+      lagrangeMultiplier = -gradSum / numStates ! occSum  !(fi%input%zelec/(2.0/REAL(fi%input%jspins)))
 
    WRITE(*,*) 'lagrangeMultiplier: ', lagrangeMultiplier
 
@@ -682,12 +667,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       gradient = 0.0
       parameters = 0.0
       iState = 0
-      DO ispin = 1, input%jspins
-         isp = MERGE(1,ispin,noco%l_noco)
-         DO ikpt = 1, kpts%nkpt
+      DO ispin = 1, fi%input%jspins
+         isp = MERGE(1,ispin,fi%noco%l_noco)
+         DO ikpt = 1, fi%kpts%nkpt
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
-               occStateI = results%w_iks(iBand,ikpt,isp) / kpts%wtkpt(ikpt)
+               occStateI = results%w_iks(iBand,ikpt,isp) / fi%kpts%wtkpt(ikpt)
 
                occStateI = MAX(occStateI,minOcc)
                occStateI = MIN(occStateI,1.0-minOcc)
@@ -697,7 +682,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                WRITE(7865,'(i7,4f15.10)') iState, occStateI, theta, sin(theta), cos(theta)
 
 !               occStateI = MAX(occStateI,minOcc)
-               equalityLinCombi(iState) = kpts%wtkpt(ikpt)
+               equalityLinCombi(iState) = fi%kpts%wtkpt(ikpt)
 
 !               dEdOcc(iBand,ikpt,isp) = dEdOcc(iBand,ikpt,isp) + lagrangeMultiplier
 
@@ -705,13 +690,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
                gradient(iState) = dEdOcc(iBand,ikpt,isp) + lagrangeMultiplier
 
-               gradient(numStates+1) = gradient(numStates+1) + occStateI * kpts%wtkpt(ikpt)
+               gradient(numStates+1) = gradient(numStates+1) + occStateI * fi%kpts%wtkpt(ikpt)
 !               parameters(iState) = theta !occStateI
                parameters(iState) = occStateI
             END DO
          END DO
       END DO
-      equalityCriterion = input%zelec/(2.0/REAL(input%jspins))
+      equalityCriterion = fi%input%zelec/(2.0/REAL(fi%input%jspins))
       gradient(numStates+1) = gradient(numStates+1) - equalityCriterion ! This should actually always be 0.0
       parameters(numStates+1) = lagrangeMultiplier
 
@@ -727,15 +712,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       WRITE(3555,*) 'Occupation numbers:'
       iState = 0
-      DO ispin = 1, input%jspins
-         isp = MERGE(1,ispin,noco%l_noco)
-         DO ikpt = 1, kpts%nkpt
+      DO ispin = 1, fi%input%jspins
+         isp = MERGE(1,ispin,fi%noco%l_noco)
+         DO ikpt = 1, fi%kpts%nkpt
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
 !               parameters(iState) = (SIN(parameters(iState)*0.5*pi_const))**2.0
                WRITE(3555,'(3i7,f15.10)') iBand, ikpt, isp, parameters(iState)
-               results%w_iks(iBand,ikpt,isp) = parameters(iState) * kpts%wtkpt(ikpt)
-!               results%w_iks(iBand,ikpt,isp) = MERGE(parameters(iState) * kpts%wtkpt(ikpt),0.0,parameters(iState).GT.minOcc)
+               results%w_iks(iBand,ikpt,isp) = parameters(iState) * fi%kpts%wtkpt(ikpt)
+!               results%w_iks(iBand,ikpt,isp) = MERGE(parameters(iState) * fi%kpts%wtkpt(ikpt),0.0,parameters(iState).GT.minOcc)
             END DO
          END DO
       END DO
@@ -758,20 +743,20 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
-               enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
+   CALL cdngen(eig_id,mpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
+               enpara,fi%cell,fi%noco,nococonv,vTot,results,fi%oned,fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0
-   DO ispin = 1, input%jspins
-      isp = MERGE(1,ispin,noco%l_noco)
-!      CALL cdnvalJob%init(mpi,input,kpts,noco,results,isp,banddos=banddos)
-      DO ikpt = 1, kpts%nkpt
+   DO ispin = 1, fi%input%jspins
+      isp = MERGE(1,ispin,fi%noco%l_noco)
+!      CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
+      DO ikpt = 1, fi%kpts%nkpt
          DO iBand = 1, highestState(ikpt,isp)
-            occStateI = results%w_iks(iBand,ikpt,isp) / (kpts%wtkpt(ikpt))!*kpts%nkptf)
+            occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)
             rdmftFunctionalValue = 0.5*SQRT(occStateI) ! for Müller functional
 
-            exchangeTerm = -rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt) * spinDegenFac !*kpts%nkptf
+            exchangeTerm = -rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * fi%kpts%wtkpt(ikpt) * spinDegenFac !*fi%kpts%nkptf
 
             rdmftEnergy = rdmftEnergy + exchangeTerm + &
                           occStateI * ((spinDegenFac*results%eig(iBand,ikpt,isp)) - vTotSSDen(iBand,ikpt,isp) + &
@@ -797,26 +782,26 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ! Madelung term (taken from totale):
 
    mt=0.0
-   DO iType = 1, atoms%ntype
-      DO i = 1, atoms%jri(iType)
-         mt(i,iType) = outDen%mt(i,0,iType,1) + outDen%mt(i,0,iType,input%jspins)
+   DO iType = 1, fi%atoms%ntype
+      DO i = 1, fi%atoms%jri(iType)
+         mt(i,iType) = outDen%mt(i,0,iType,1) + outDen%mt(i,0,iType,fi%input%jspins)
       END DO
    END DO
-   IF (input%jspins.EQ.1) mt=mt/2.0 !we just added the same value twice
+   IF (fi%input%jspins.EQ.1) mt=mt/2.0 !we just added the same value twice
 
-   DO iType = 1, atoms%ntype
-      DO j = 1,atoms%jri(iType)
-         dpj(j) = mt(j,iType)/atoms%rmsh(j,iType)
+   DO iType = 1, fi%atoms%ntype
+      DO j = 1,fi%atoms%jri(iType)
+         dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
       END DO
-      CALL intgr3(dpj,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),rhs)
+      CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
-      zintn_r(iType) = atoms%neq(iType)*atoms%zatom(iType)*sfp_const*rhs/2.
+      zintn_r(iType) = fi%atoms%neq(iType)*fi%atoms%zatom(iType)*sfp_const*rhs/2.
       rdmftEnergy = rdmftEnergy - zintn_r(iType)
 
-      CALL intgr3(mt(1,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),totz)
+      CALL intgr3(mt(1,iType),fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),totz)
 
-      vmd(iType) = atoms%rmt(iType)*vCoul%mt(atoms%jri(iType),0,iType,1)/sfp_const + atoms%zatom(iType) - totz*sfp_const
-      vmd(iType) = -atoms%neq(iType)*atoms%zatom(iType)*vmd(iType)/ (2.0*atoms%rmt(iType))
+      vmd(iType) = fi%atoms%rmt(iType)*vCoul%mt(fi%atoms%jri(iType),0,iType,1)/sfp_const + fi%atoms%zatom(iType) - totz*sfp_const
+      vmd(iType) = -fi%atoms%neq(iType)*fi%atoms%zatom(iType)*vmd(iType)/ (2.0*fi%atoms%rmt(iType))
 
       rdmftEnergy = rdmftEnergy + vmd(iType)
 

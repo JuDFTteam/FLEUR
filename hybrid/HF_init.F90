@@ -1,35 +1,32 @@
 MODULE m_hf_init
    !
-   !     preparations for HF and hybinp functional calculation
+   !     preparations for HF and fi%hybinp functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(eig_id, mpdata, hybinp, atoms, input, hybdat)
+   SUBROUTINE hf_init(eig_id, mpdata,fi, hybdat)
       USE m_types
       USE m_hybrid_core
       USE m_util
       use m_intgrf
-      USE m_io_hybinp
       USE m_types_hybdat
       IMPLICIT NONE
       integer, intent(in)               :: eig_id
       TYPE(t_mpdata), intent(inout)     :: mpdata
-      TYPE(t_hybinp), INTENT(IN)        :: hybinp
-      TYPE(t_atoms), INTENT(IN)         :: atoms
-      TYPE(t_input), INTENT(IN)         :: input
+      type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
       INTEGER:: l, m, i, l1, l2, m1, m2
 
 
       !initialize hybdat%gridf for radial integration
-      CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
+      CALL intgrf_init(fi%atoms%ntype, fi%atoms%jmtd, fi%atoms%jri, fi%atoms%dx, fi%atoms%rmsh, hybdat%gridf)
       ! preparations for core states
-      CALL core_init( input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
-      hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
+      CALL core_init( fi%input, fi%atoms, hybdat%lmaxcd, hybdat%maxindxc)
+      hybdat%maxfac = max(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 2*hybdat%lmaxcd + 2*fi%atoms%lmaxd + 1)
 
       !Alloc variables
       call hybdat%free()
-      call hybdat%allocate(atoms, hybinp, mpdata%num_radfun_per_l)
+      call hybdat%allocate(fi, mpdata%num_radfun_per_l)
 
       hybdat%eig_id = eig_id
       ! pre-calculate gaunt coefficients
@@ -40,9 +37,9 @@ CONTAINS
          hybdat%sfac(i) = hybdat%sfac(i - 1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
       END DO
 
-      DO l2 = 0, atoms%lmaxd
-         DO l1 = 0, atoms%lmaxd
-            DO l = abs(l1 - l2), min(l1 + l2, maxval(hybinp%lcutm1))
+      DO l2 = 0, fi%atoms%lmaxd
+         DO l1 = 0, fi%atoms%lmaxd
+            DO l = abs(l1 - l2), min(l1 + l2, maxval(fi%hybinp%lcutm1))
                DO m = -l, l
                   DO m1 = -l1, l1
                      m2 = m1 + m ! Gaunt condition -m1+m2-m = 0

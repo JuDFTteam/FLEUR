@@ -447,9 +447,9 @@ CONTAINS
           IF (fi%input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
-                   CALL rdmft(eig_id,mpi,input_soc,fi%kpts,fi%banddos,fi%sliceplot,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                              sphhar,fi%sym,fi%field,vTot,vCoul,fi%oneD,fi%noco,nococonv,xcpot,fi%mpinp,mpdata,fi%hybinp,hybdat,&
-                              fi%gfinp,fi%hub1inp,results,fi%corespecinput,archiveType,outDen)
+                   CALL rdmft(eig_id,mpi,fi,enpara,stars,&
+                              sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
+                              results,archiveType,outDen)
              END SELECT
           END IF
 
