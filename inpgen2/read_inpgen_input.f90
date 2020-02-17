@@ -68,6 +68,7 @@ CONTAINS
     endif
 
     aa=0.0
+    input%jspins=0
     DO WHILE(ios==0)
        READ(98,"(a)",iostat=ios) line
        IF (ios.NE.0) EXIT
