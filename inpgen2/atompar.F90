@@ -209,7 +209,8 @@ contains
 
     REAL:: id,z,rmt,dx,bmu
     INTEGER:: jri,lmax,lnonsph,ncst,nc,io_stat,nz
-    CHARACTER(len=100)::econfig,lo,element,name
+    CHARACTER(len=100)::econfig,lo,element,name,str
+    INTEGER :: first_i,last_i,sep_i
 
     NAMELIST /atom/ id,z,rmt,dx,jri,lmax,lnonsph,ncst,econfig,bmu,lo,element,name
 
@@ -247,7 +248,24 @@ contains
     IF (LEN_TRIM(econfig)==0)THEN
        ap=find_atompar(nz,rmt)
        econfig=ap%econfig
-       IF (LEN_TRIM(lo)==0) lo=ap%lo
+       IF (LEN_TRIM(lo)==0) then
+         lo=ap%lo
+       else
+         !No electron config was given but additional LOs, hence we have to transfer core states to valence
+         str=adjustL(lo)
+         do while (len_trim(str)>0)
+           first_i=index(econfig,str(1:2))
+           sep_i=index(econfig,"|")
+           do while(first_i>0.and.first_i<sep_i)
+             last_i=index(econfig(first_i+1:)," ")+first_i
+             if (last_i>sep_i) last_i=sep_i-1
+             econfig=econfig(:first_i-1)//econfig(last_i+1:sep_i)//econfig(first_i:last_i)//" "//econfig(sep_i+1:)
+             first_i=index(econfig,str(1:2))
+             sep_i=index(econfig,"|")
+           end do
+           str=adjustl(str(3:))
+         end do
+       endif
     END IF
 
     ap=t_atompar(id=NINT(id),nucnumber=nz,rmt=rmt,dx=dx,jri=jri,lmax=lmax,lnonsph=lnonsph,lo=lo,bmu=bmu,econfig=econfig,desc=name)
