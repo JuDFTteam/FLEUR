@@ -51,7 +51,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    diffT=thetaTemp-nococonv%beta
-   diffP=-(phiTemp-nococonv%alph)
+   diffP=phiTemp-nococonv%alph
    DO i=1, atoms%ntype
      IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
      IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
