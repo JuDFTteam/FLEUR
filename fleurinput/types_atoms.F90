@@ -294,6 +294,10 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpath=xpaths
     this%lmax(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmax'))
     this%lnonsph(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lnonsphr'))
+    IF (this%lmax(n)<this%lnonsph(n)) THEN
+      this%lnonsph(n)=this%lmax(n)
+      call judft_warn("lnonsph cannot be larger than lmax")
+    ENDIF
     this%lapw_l(n) = -1
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW').EQ.1) &
          this%lapw_l(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW'))
