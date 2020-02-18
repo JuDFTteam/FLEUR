@@ -43,7 +43,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    eps=0.0001
    zeros(:)=0.0
    IF(l_firstIt) THEN
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      nococonv%alph=0.0
      nococonv%beta=0.0
    END IF
