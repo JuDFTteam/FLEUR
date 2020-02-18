@@ -55,7 +55,7 @@ CONTAINS
       atoms%lapw_l=0
       atoms%speciesname=""
 
-      atoms%nz(:) = NINT(atoms%zatom(:))
+      atoms%nz(:) = floor(atoms%zatom(:))
       atoms%rmt(:) = 999.9
       atoms%l_geo(:) = .TRUE.
       atoms%flipSpinPhi=0.0
