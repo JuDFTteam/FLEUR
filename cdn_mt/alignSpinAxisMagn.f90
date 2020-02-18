@@ -92,12 +92,11 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype), zeros(atoms%ntype)
    REAL                          :: moments(3,atoms%ntype)
    zeros(:)=0.0
-
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    IF (present(den)) THEN
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
    END IF
    nococonv%alph=0
    nococonv%beta=0
