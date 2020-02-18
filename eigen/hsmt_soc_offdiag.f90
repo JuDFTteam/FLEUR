@@ -239,6 +239,7 @@ CONTAINS
                       DO nkvecp = 1,invsfct* (2*l+1)
                         kj=lapw%kvec(nkvecp,ilo,na) !this LO is attached to this k+G
                         lorow= lapw%nv(1)+lapw%index_lo(ilo,na)+nkvecp !local row
+                        if (lorow>locol) cycle
                         fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                         alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
                         alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
@@ -246,8 +247,8 @@ CONTAINS
                         blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
                         blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
                         blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplopd(n,ilo,j1,j2)+ &
-                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j1) + &
-                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j1)+ &
+                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
+                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
                         * angso(kj,j1,j2)
                         hmat(1,1)%data_c(lorow,locol)=hmat(1,1)%data_c(lorow,locol) + chi(1,1,j1,j2)*fct
