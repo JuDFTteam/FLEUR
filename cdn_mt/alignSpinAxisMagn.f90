@@ -45,8 +45,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    IF(l_firstIt) THEN
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
-     nococonv%alph=0.0
-     nococonv%beta=0.0
+     nococonv%alph=zeros
+     nococonv%beta=zeros
    END IF
 
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
@@ -98,8 +98,8 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
    END IF
-   nococonv%alph=0
-   nococonv%beta=0
+   nococonv%alph=zeros
+   nococonv%beta=zeros
 
 
 END SUBROUTINE rotateMagnetFromSpinAxis
