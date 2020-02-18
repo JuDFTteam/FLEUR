@@ -88,15 +88,18 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    TYPE(t_potden), OPTIONAL,INTENT(INOUT) :: den
 
    INTEGER                            :: i
-   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
+   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype), zeros(atoms%ntype)
    REAL                          :: moments(3,atoms%ntype)
+   zeros(:)=0.0
 
-
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,inDen)
-   IF (present(den)) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,nococonv%beta,den)
-
-     nococonv%alph=0
-     nococonv%beta=0
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
+   CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
+   IF (present(den)) THEN
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
+   END IF
+   nococonv%alph=0
+   nococonv%beta=0
 
 
 END SUBROUTINE rotateMagnetFromSpinAxis
