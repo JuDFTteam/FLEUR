@@ -87,10 +87,10 @@ CONTAINS
     isigma_z=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,3),chi))
     DO j1=1,2
        DO j2=1,2
-          chi_so(1,1,j1,j2)=chi(1,j1)*CONJG(chi(1,j2))
-          chi_so(2,1,j1,j2)=chi(2,j1)*CONJG(chi(1,j2))
-          chi_so(2,2,j1,j2)=chi(2,j1)*CONJG(chi(2,j2))
-          chi_so(1,2,j1,j2)=chi(1,j1)*CONJG(chi(2,j2))
+          chi_so(1,1,j1,j2)=chi(1,j2)*CONJG(chi(1,j1))
+          chi_so(2,1,j1,j2)=chi(2,j2)*CONJG(chi(1,j1))
+          chi_so(2,2,j1,j2)=chi(2,j2)*CONJG(chi(2,j1))
+          chi_so(1,2,j1,j2)=chi(1,j2)*CONJG(chi(2,j1))
        ENDDO
     ENDDO
     IF (.not.present(angso)) RETURN !only chis are needed

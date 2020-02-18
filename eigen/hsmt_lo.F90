@@ -54,7 +54,7 @@ CONTAINS
              !--->          set up the a,b and c  coefficients
              !--->          for the local orbitals, if necessary.
              !--->          actually, these are the fj,gj equivalents
-             DO usp=merge(1,isp,isp>2),merge(2,isp,isp>2)
+             DO usp=min(isp,jsp),max(isp,jsp)
                CALL setabc1lo(atoms,n,ud,usp,alo1,blo1,clo1)
              enddo
 
