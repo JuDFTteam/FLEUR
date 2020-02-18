@@ -56,7 +56,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
      IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
    END DO
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
-   CALL flipcden(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
    nococonv%beta=nococonv%beta+diffT
    nococonv%alph=nococonv%alph+diffP
    DO i=1, atoms%ntype
