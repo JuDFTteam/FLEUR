@@ -71,7 +71,9 @@ CONTAINS
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 
-    INTEGER::numberNodes
+    CHARACTER(len=300) :: xPathA, xPathB
+    INTEGER::numberNodes,iType,i,na
+    LOGICAL::l_orbcomp
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
@@ -106,6 +108,23 @@ CONTAINS
        this%e_mcd_lo = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyLo'))
        this%e_mcd_up = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyUp'))
     END IF
+
+    na = 0
+    DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
+       WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
+       DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
+          na = na + 1
+          WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/relPos[',i,']'
+          l_orbcomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
+          IF(l_orbcomp) THEN
+             IF(this%l_orb) THEN
+                CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+             END IF
+             this%l_orb = .TRUE.
+             this%orbCompAtom = na
+          ENDIF
+       ENDDO
+    ENDDO
 
     ! Read in optional parameter for unfolding bandstructure of supercell
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand')
