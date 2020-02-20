@@ -466,7 +466,7 @@
             END IF
 
             OPEN (18,FILE='bands'//spin12(jspin))
-            ntb = minval(results%neig(:,jspin))
+            ntb = minval(results%neig(:,jsp))
             kx(1) = 0.0
             vkr(:,1)=matmul(kpts%bk(:,1),cell%bmat)
             DO k = 2, kpts%nkpt
