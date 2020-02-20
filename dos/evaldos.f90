@@ -164,7 +164,7 @@
                      DO l = 1, results%neig(k,jsp)
                         qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
                      END DO
-                     DO l = results%neig(k,jspin)+1, input%neig
+                     DO l = results%neig(k,jsp)+1, input%neig
                         qal(i,l,k) = 0.0
                      END DO
                   END DO
@@ -218,7 +218,7 @@
             DO i = 1 , results%neig(k,jsp)
                ev(i,k) = results%eig(i,k,jsp)*hartree_to_ev_const - efermi
             ENDDO
-            DO i = results%neig(k,jspin) + 1, input%neig
+            DO i = results%neig(k,jsp) + 1, input%neig
                ev(i,k) = 9.9e+99
             ENDDO
 !
@@ -299,12 +299,12 @@
                ELSE
                  write(*,*) efermi
                  CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
-                               itetra,efermi,voltet,e,results%neig(:,jspin), ev,qal, g)
+                               itetra,efermi,voltet,e,results%neig(:,jsp), ev,qal, g)
                  IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
                ENDIF
             ELSE
                !Alternative tetrahedron method
-               CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jspin),ev,qal,g)
+               CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jsp),ev,qal,g)
             ENDIF
          ELSE
 !
@@ -312,7 +312,7 @@
 !
             IF ( .not.l_mcd ) THEN
             CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
-                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
+                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
                  results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
