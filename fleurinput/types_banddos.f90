@@ -15,9 +15,11 @@ MODULE m_types_banddos
      LOGICAL :: band =.FALSE.
      LOGICAL :: l_mcd =.FALSE.
      LOGICAL :: l_orb =.FALSE.
+     LOGICAL :: l_jDOS = .FALSE.
      LOGICAL :: vacdos =.FALSE.
      INTEGER :: ndir =0
      INTEGER :: orbCompAtom=0
+     INTEGER :: jDOSAtom=0
      REAL    :: e1_dos=0.5
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
@@ -49,9 +51,11 @@ CONTAINS
     CALL mpi_bc(this%band ,rank,mpi_comm)
     CALL mpi_bc(this%l_mcd ,rank,mpi_comm)
     CALL mpi_bc(this%l_orb ,rank,mpi_comm)
+    CALL mpi_bc(this%l_jDOS,rank,mpi_comm)
     CALL mpi_bc(this%vacdos ,rank,mpi_comm)
     CALL mpi_bc(this%ndir ,rank,mpi_comm)
     CALL mpi_bc(this%orbCompAtom,rank,mpi_comm)
+    CALL mpi_bc(this%jDOSAtom,rank,mpi_comm)
     CALL mpi_bc(this%e1_dos,rank,mpi_comm)
     CALL mpi_bc(this%e2_dos,rank,mpi_comm)
     CALL mpi_bc(this%sig_dos,rank,mpi_comm)
@@ -101,7 +105,7 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/magneticCircularDichroism')
 
     IF ((this%l_mcd).AND.(numberNodes.EQ.0)) THEN
-       CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
+       CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "read_xml_banddos")
     END IF
 
     IF (numberNodes.EQ.1) THEN
@@ -118,13 +122,24 @@ CONTAINS
           l_orbcomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
           IF(l_orbcomp) THEN
              IF(this%l_orb) THEN
-                CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+                CALL juDFT_error("Multiple orbcomp flags set.", calledby = "read_xml_banddos")
              END IF
              this%l_orb = .TRUE.
              this%orbCompAtom = na
           ENDIF
+          l_jDOS = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@jDOS'))
+          IF(l_jDOS) THEN
+             IF(this%l_jDOS) THEN
+                CALL juDFT_error("Multiple jDOS flags set.", calledby="read_xml_banddos")
+             ENDIF
+             this%l_jDOS = .TRUE.
+             this%jDOSAtom = na
+          ENDIF
        ENDDO
     ENDDO
+    IF(this%l_orb.AND.this%l_jDOS) THEN
+       CALL juDFT_error("Both jDOS and orbcomp flag set", calledby="read_xml_banddos")
+    ENDIF
 
     ! Read in optional parameter for unfolding bandstructure of supercell
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand')
