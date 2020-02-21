@@ -228,7 +228,7 @@
          sym%invsatnr(na) = 0
       END DO
 
-      IF (.not.(noco%l_soc.and.((atoms%n_u+atoms%n_hia>0)))) THEN
+      IF (.not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)) THEN
       IF (sym%invs) THEN
          WRITE (6,FMT=*)
          nat1 = 1

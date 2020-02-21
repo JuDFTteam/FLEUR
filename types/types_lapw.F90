@@ -453,7 +453,7 @@ CONTAINS
     REAL, PARAMETER :: eps = 1.0E-8
     REAL, PARAMETER :: linindq = 1.0e-4
 
-    l_real = sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_hia+atoms%n_u>0)
+    l_real = sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)
 
     con1=fpi_const/SQRT(cell%omtil)
     ntyp = n

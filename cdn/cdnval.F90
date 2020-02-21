@@ -125,7 +125,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
    l_dosNdir = banddos%dos.AND.(banddos%ndir.EQ.-3)
 
-   IF (noco%l_mperp.OR.gfinp%l_mperp) THEN
+   IF (noco%l_mperp.OR.banddos%l_jDOS) THEN
       ! when the off-diag. part of the desinsity matrix, i.e. m_x and
       ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
       ! is called only once. therefore, several spin loops have been
@@ -174,7 +174,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       DO ispin = jsp_start, jsp_end
          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
-      IF (noco%l_mperp.OR.gfinp%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
+      IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
@@ -232,7 +232,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
-      CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
+      CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS)
       IF (gfinp%n.GT.0.AND.input%bz_integration==3) THEN
          CALL timestart("TetrahedronWeights")
          IF(mpi%n_size>1) CALL juDFT_error("Tetra for GF and ev parallelism currently broken")
@@ -274,6 +274,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
                END IF
                IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
             ENDIF
+         ENDIF
+         !Decomposition into total angular momentum states
+         IF(banddos%dos.AND.banddos%l_jDOS) THEN
+            WRITE(*,*) jsp_start,jsp_end
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 

@@ -134,7 +134,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !called once and both spin directions are calculated in a single run.
    results%force=0.0
    jspmax = input%jspins
-   IF (noco%l_mperp) jspmax = 1
+   IF (noco%l_mperp.OR.banddos%l_jDOS) jspmax = 1
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)

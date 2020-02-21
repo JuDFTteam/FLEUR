@@ -48,7 +48,7 @@ CONTAINS
       !Generated wigner symbols for LDA+U (includes DFT+HubbardI)
       IF (ALLOCATED(sym%d_wgn)) DEALLOCATE (sym%d_wgn)
       ALLOCATE (sym%d_wgn(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, lmaxU_const, sym%nop))
-      IF (atoms%n_u + gfinp%n .GT. 0) THEN !replace with atoms%n_u+gfinp%n
+      IF (atoms%n_u+gfinp%n.GT.0) THEN
          CALL d_wigner(sym%nop, sym%mrot, cell%bmat, lmaxU_const, sym%d_wgn)
          !For spin-offdiagonal parts, we need additional phase factors
          IF (noco%l_mperp) THEN

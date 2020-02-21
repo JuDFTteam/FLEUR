@@ -479,7 +479,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
             CALL zMat%init(l_real,nbasfcn,numbands)
             CALL read_eig(eig_id,nk,jsp,zmat=zMat)
-	    CALL eigVecCoeffs%init(input,atoms,noco,jsp,numbands)
+	    CALL eigVecCoeffs%init(input,atoms,jsp,numbands,noco%l_mperp)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
 !            DO i=1,atoms%nat
 !	    	ngopr_temp(i)=sym%ngopr(i)
