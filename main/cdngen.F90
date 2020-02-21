@@ -91,6 +91,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_mcd)           :: mcd
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
+   TYPE(t_jDOS)          :: jDOS
    TYPE(t_cdnvalJob)     :: cdnvalJob
    TYPE(t_greensfCoeffs) :: greensfCoeffs
    TYPE(t_potden)        :: val_den, core_den
@@ -112,6 +113,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,input,atoms,kpts)
    CALL slab%init(banddos,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,atoms,kpts)
+   CALL jDOS%init(input,banddos,atoms,kpts)
 
    IF(gfinp%n.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
