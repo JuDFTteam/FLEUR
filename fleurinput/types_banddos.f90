@@ -77,7 +77,7 @@ CONTAINS
 
     CHARACTER(len=300) :: xPathA, xPathB
     INTEGER::numberNodes,iType,i,na
-    LOGICAL::l_orbcomp
+    LOGICAL::l_orbcomp,l_jDOS
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
