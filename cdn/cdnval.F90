@@ -146,7 +146,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
    ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
    ! density without the atomic sphere approximation for the magnet. density. It is not completely implemented (lo's missing).
-   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,noco%l_mtnocopot.OR.noco%l_mperp)
+   CALL denCoeffsOffdiag%init(atoms,noco,banddos,sphhar,noco%l_mtnocopot.OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
@@ -174,7 +174,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       DO ispin = jsp_start, jsp_end
          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
-      IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
+      IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
