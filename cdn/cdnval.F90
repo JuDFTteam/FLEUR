@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
+                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfCoeffs)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -46,6 +46,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
    USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
    USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
+   USE m_jDOS
    USE m_abcrot2
    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
    USE m_corespec_io, only : corespec_init
@@ -87,6 +88,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
+   TYPE(t_jDOS),          OPTIONAL, INTENT(INOUT) :: jDOS
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
 
    ! Scalar Arguments
@@ -278,6 +280,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             WRITE(*,*) jsp_start,jsp_end
+            IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
+               CALL jDOS_comp(ikpt,noccbd,ev_list,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+            ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
