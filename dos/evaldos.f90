@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                         efermiarg,bandgap,l_mcd,mcd,slab,orbcomp)
+                         efermiarg,bandgap,l_mcd,mcd,slab,orbcomp,jDOS)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -44,6 +44,7 @@
       TYPE(t_mcd),INTENT(IN)         :: mcd
       TYPE(t_slab),INTENT(IN)        :: slab
       TYPE(t_orbcomp),INTENT(IN)     :: orbcomp
+      TYPE(t_jDOS),INTENT(IN)        :: jDOS
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
@@ -52,14 +53,14 @@
 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
-      INTEGER  icore,qdim,n_orb,ncored,jsp
+      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra,col,jj,iBand
+      INTEGER  icore,qdim,n_orb,ncored,jsp,n_jDOS
       REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
-      LOGICAL  l_tria,l_orbcomp,l_error
+      LOGICAL  l_tria,l_orbcomp,l_error,l_jDOS
 
       INTEGER  itria(3,2*kpts%nkpt),itetra(4,6*kpts%nkpt)
-      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
+      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(3)
       REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
@@ -73,6 +74,7 @@
       ncored =  MAX(0,MAXVAL(mcd%ncore))
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
+      l_jDOS = banddos%l_jDOS
       IF (banddos%ndir.EQ.-3) THEN
         qdim = 2*slab%nsld
         n_orb = 0
@@ -82,6 +84,13 @@
            qdim = 23
         END IF
       ENDIF
+
+      IF(l_jDOS) THEN
+         qdim = 6
+         n_jDOS = banddos%jDOSAtom
+         WRITE(*,*) 'DOS: jDOS', n_jDOS
+      ENDIF
+
       ALLOCATE( qal(qdim,input%neig,kpts%nkpt),&
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,input%neig,kpts%nkpt),&
      &          qlay(input%neig,vacuum%layerd,2))
@@ -150,12 +159,12 @@
             jsp = MERGE(1,jspin,noco%l_noco)
             ntb = max(ntb,results%neig(k,jsp))
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,input%neig/))
-            IF (.NOT.l_orbcomp) THEN
+            IF (.NOT.l_orbcomp.AND..NOT.l_jDOS) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
                qal(lmax*atoms%ntype+2,:,k)=dos%qvac(:,1,k,jspin) ! vacuum 1
                qal(lmax*atoms%ntype+3,:,k)=dos%qvac(:,2,k,jspin) ! vacuum 2
                qal(lmax*atoms%ntype+1,:,k)=dos%qis(:,k,jspin)    ! interstitial
-            ELSE
+            ELSE IF(l_orbcomp) THEN
                IF (n_orb == 0) THEN
                   qal(1:slab%nsld,:,k)             = slab%qintsl(:,:,k,jspin)
                   qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
@@ -169,12 +178,25 @@
                      END DO
                   END DO
                END IF
+            ELSE IF(l_jDOS) THEN
+               i = 0
+               DO l= 1, 3
+                 DO jj = 1, 2
+                    i = i+1
+                    DO iBand = 1, results%neig(k,jsp)
+                       qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)
+                    END DO
+                    DO iBand = results%neig(k,jsp)+1, input%neig
+                       qal(i,iBand,k) = 0.0
+                    END DO
+                 ENDDO
+               ENDDO
             END IF
 !
 !     set vacuum partial charge zero, if bulk calculation
 !     otherwise, write vacuum charge in correct arrays
 !
-            IF ((.NOT.input%film).AND.(banddos%ndir.NE.-3)) THEN
+            IF ((.NOT.input%film).AND.(banddos%ndir.NE.-3).AND..NOT.l_jDOS) THEN
                DO n = 1,input%neig
                   qal(lmax*atoms%ntype+2,n,k) = 0.0
                   qal(lmax*atoms%ntype+3,n,k) = 0.0
@@ -196,7 +218,7 @@
 !     calculate interstitial dos if not noco
 !     in the noco case, qis has been calculated in pwden and is read in from tmp_dos
 !
-            IF ((.NOT.noco%l_noco).AND.(banddos%ndir.NE.-3)) THEN
+            IF ((.NOT.noco%l_noco).AND.(banddos%ndir.NE.-3).AND..NOT.l_jDOS) THEN
                DO i = 1 , input%neig
                   qal(lmax*atoms%ntype+1,i,k) = 1.
                   DO nl = 1 , atoms%ntype
@@ -282,7 +304,7 @@
          ALLOCATE (g(ned,3*atoms%ntype*ncored))
         ENDIF
 !
-         IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3) ) THEN
+         IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3).and..not.l_jDOS) THEN
 !
 !     DOS calculation: use triangular method!!
 !
@@ -330,7 +352,7 @@
 
 !*** sum up for all atoms
 
-         IF (banddos%ndir.NE.-3) THEN
+         IF (banddos%ndir.NE.-3.AND..NOT.l_jDOS) THEN
             DO l = 1 , atoms%ntype
                l1 = lmax*(l-1) + 1
                l2 = lmax*l
@@ -341,7 +363,7 @@
                   ENDDO
                ENDDO
             ENDDO
-         ELSEIF (n_orb == 0) THEN
+         ELSEIF (n_orb == 0.AND..not.l_jDOS) THEN
             DO l = 1, slab%nsld
                nl = slab%nsld+l
                DO i = 1 , ned
@@ -355,33 +377,48 @@
          IF (atoms%ntype >= 20.AND.banddos%projdos.NE.0) OPEN (1337,FILE="PROJDOS"//spin12(jspin))
 
          DO i = 1 , ned
-           totdos = 0.0
-           IF (banddos%ndir.NE.-3) THEN
-             DO nl = 1 , atoms%ntype
-                totdos = totdos + gpart(i,nl)*atoms%neq(nl)
-             ENDDO
-             totdos = totdos + g(i,lmax*atoms%ntype+1) + g(i,lmax*atoms%ntype+2) *&
-                  (3 - vacuum%nvac) + g(i,lmax*atoms%ntype+3)*(vacuum%nvac - 1)
-             IF (atoms%ntype < 20) THEN
-                WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
-                     g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3),&
-                     (gpart(i,l),l=1,atoms%ntype), (g(i,l),l=1,atoms%ntype*lmax)
-             ELSE
-             WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
-                  g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
-             IF(banddos%projdos.NE.0) WRITE (1337,99001)  e(i),(g(i,l),l=lmax*(banddos%projdos-1)+1,lmax*banddos%projdos)
-          ENDIF
-       ELSEIF (n_orb == 0) THEN
-          DO nl = 1, slab%nsld
-             totdos = totdos + gpart(i,nl)
-          ENDDO
-          WRITE (18,99001)  e(i),totdos,(gpart(i,nl),nl=1,slab%nsld), (g(i,l),l=1,2*slab%nsld)
-           ELSE
-             DO nl = 1 , 23
-                totdos = totdos + g(i,nl)
-             ENDDO
-             WRITE (18,99001)  e(i),totdos,(g(i,l),l=1,23)
-           ENDIF
+            totdos = 0.0
+            IF (banddos%ndir.NE.-3.AND..NOT.l_jDOS) THEN
+               DO nl = 1 , atoms%ntype
+                  totdos = totdos + gpart(i,nl)*atoms%neq(nl)
+               ENDDO
+               totdos = totdos + g(i,lmax*atoms%ntype+1) + g(i,lmax*atoms%ntype+2) *&
+                    (3 - vacuum%nvac) + g(i,lmax*atoms%ntype+3)*(vacuum%nvac - 1)
+               IF (atoms%ntype < 20) THEN
+                  WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
+                       g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3),&
+                       (gpart(i,l),l=1,atoms%ntype), (g(i,l),l=1,atoms%ntype*lmax)
+               ELSE
+                  WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
+                       g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
+                  IF(banddos%projdos.NE.0) WRITE (1337,99001)  e(i),(g(i,l),l=lmax*(banddos%projdos-1)+1,lmax*banddos%projdos)
+               ENDIF
+             ELSEIF (l_orbcomp) THEN
+                IF(n_orb == 0) THEN
+                   DO nl = 1, slab%nsld
+                      totdos = totdos + gpart(i,nl)
+                   ENDDO
+                   WRITE (18,99001)  e(i),totdos,(gpart(i,nl),nl=1,slab%nsld), (g(i,l),l=1,2*slab%nsld)
+                ELSE
+                   DO nl = 1 , 23
+                      totdos = totdos + g(i,nl)
+                   ENDDO
+                   WRITE (18,99001)  e(i),totdos,(g(i,l),l=1,23)
+                ENDIF
+             ELSEIF(l_jDOS) THEN
+                DO nl = 1 , 6
+                   totdos = totdos + g(i,nl)
+                ENDDO
+                ldos= 0.0
+                col = 0
+                DO l = 1, 3
+                  DO jj = 1, 2
+                    col = col +1
+                    ldos(l) = ldos(l) + g(i,col)
+                  ENDDO
+                ENDDO
+                WRITE(18,99001) e(i),totdos,(ldos(l),l=1,3),(g(i,l),l=1,6)
+             ENDIF
          ENDDO
          CLOSE (18)
          IF (atoms%ntype >= 20.AND.banddos%projdos.NE.0) CLOSE (1337)

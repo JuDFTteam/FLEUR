@@ -12,7 +12,7 @@ MODULE m_doswrite
   !
 CONTAINS
   SUBROUTINE doswrite(eig_id,kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+                      sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,jDOS,oneD)
     USE m_types
     USE m_evaldos
     USE m_cdninf
@@ -30,6 +30,7 @@ CONTAINS
     TYPE(t_dos),INTENT(IN)       :: dos
     TYPE(t_slab),INTENT(IN)      :: slab
     TYPE(t_orbcomp),INTENT(IN)   :: orbcomp
+    TYPE(t_jDOS),INTENT(IN)      :: jDOS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(IN)       :: mcd
@@ -105,7 +106,7 @@ CONTAINS
     !     write DOS/VACDOS     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                    results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp)
+                    results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp,jDOS)
     END IF
 
     !     Now write to vacwave if nstm=3 

@@ -170,7 +170,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL closeBandDOSFile(banddosFile_id)
 #endif
          CALL timestart("cdngen: dos")
-         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,&
+                       slab,orbcomp,jDOS,oneD)
          IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
             CALL Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
