@@ -123,7 +123,7 @@ PRIVATE
    TYPE t_jDOS
 
       REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
+      REAL, ALLOCATABLE    :: qmtp(:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => jDOS_init
@@ -487,11 +487,11 @@ SUBROUTINE jDOS_init(thisjDOS,input,banddos,atoms,kpts)
 
    !jDOS is under ndir = -5 at the moment
    IF ((banddos%ndir.EQ.-5).AND.banddos%dos) THEN
-      ALLOCATE(thisjDOS%comp(input%neig,7,atoms%nat,kpts%nkpt,input%jspins),source = 0.0)
-      ALLOCATE(thisjDOS%qmtp(input%neig,atoms%nat,kpts%nkpt,input%jspins),source = 0.0)
+      ALLOCATE(thisjDOS%comp(input%neig,0:3,2,atoms%nat,kpts%nkpt),source = 0.0)
+      ALLOCATE(thisjDOS%qmtp(input%neig,atoms%nat,kpts%nkpt),source = 0.0)
    ELSE
-      ALLOCATE(thisjDOS%comp(1,1,1,1,input%jspins),source = 0.0)
-      ALLOCATE(thisjDOS%qmtp(1,1,1,input%jspins),source = 0.0)
+      ALLOCATE(thisjDOS%comp(1,1,1,1,1),source = 0.0)
+      ALLOCATE(thisjDOS%qmtp(1,1,1),source = 0.0)
    END IF
 
 END SUBROUTINE jDOS_init

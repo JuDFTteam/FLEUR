@@ -37,10 +37,10 @@ MODULE m_jDOS
       DO iType = 1, atoms%ntype
          DO nn =1, atoms%neq(iType)
             natom = SUM(atoms%neq(:iType-1)) + nn
-            DO l = 0, lmax
-               DO jj = -1, 1, 2
+            DO l = 1, lmax
+               DO jj = 1, 2
                   ! j = l +- 1/2
-                  j = (2*l+jj)/2.0
+                  j = l + (jj-1.5)
                   mj = -j
                   DO WHILE(mj <= j)
                      !mj = -l-+1/2, .... , l+-1/2
@@ -64,11 +64,22 @@ MODULE m_jDOS
                      ENDIF
 
                      DO iBand = 1, noccbd
-                        aup   = facup   * eigVecCoeffs%acof(iBand,lmup  ,natom,1)
-                        adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,2)
-                        bup   = facup   * eigVecCoeffs%bcof(iBand,lmup  ,natom,1)
-                        bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,2)
 
+                        IF(ABS(mup) <= l) THEN
+                           aup   = facup   * eigVecCoeffs%acof(iBand,lmup  ,natom,1)
+                           bup   = facup   * eigVecCoeffs%bcof(iBand,lmup  ,natom,1)
+                        ELSE
+                           aup = 0.0
+                           bup = 0.0
+                        ENDIF
+
+                        IF(ABS(mdown) <= l) THEN
+                           adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,2)
+                           bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,2)
+                        ELSE
+                           adown = 0.0
+                           bdown = 0.0
+                        ENDIF
                         !c := norm of facup |up> + facdown |down>
                         !We have to write it out explicitely because
                         !of the offdiagonal scalar products that appear
@@ -83,8 +94,8 @@ MODULE m_jDOS
 
                         !TODO: LOs
 
-                        jDOS%comp(ev_list(iBand),l,INT(jj*0.5+0.5),natom,ikpt) = &
-                           jDOS%comp(ev_list(iBand),l,INT(jj*0.5+0.5),natom,ikpt) + c
+                        jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) = &
+                           jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) + c
 
                      ENDDO
                      mj = mj + 1
