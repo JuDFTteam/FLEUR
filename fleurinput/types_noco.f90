@@ -18,6 +18,8 @@ MODULE m_types_noco
     LOGICAL:: l_mtNocoPot = .FALSE.
     LOGICAL:: l_alignMT = .FALSE.
     LOGICAL:: l_sourceFree = .FALSE.
+    LOGICAL:: l_scaleMag = .FALSE.
+    REAL   :: mag_scale=1.0
     REAL   :: mix_b=0.0
     LOGICAL:: l_spav= .FALSE.
     REAL   :: theta_inp=0.0
@@ -57,6 +59,8 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_mtNocoPot ,rank,mpi_comm)
      CALL mpi_bc(this%l_alignMT ,rank,mpi_comm)
      CALL mpi_bc(this%l_sourceFree ,rank,mpi_comm)
+     CALL mpi_bc(this%l_scaleMag ,rank,mpi_comm)
+     CALL mpi_bc(this%mag_scale ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss_inp)
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
@@ -106,6 +110,8 @@ MODULE m_types_noco
          this%l_mtNocoPot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
          this%l_alignMT = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_alignMT'))
          this%l_sourceFree = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sourceFree'))
+         this%l_scaleMag = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_scaleMag'))
+         this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
          this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
          READ(valueString,*) this%qss_inp
