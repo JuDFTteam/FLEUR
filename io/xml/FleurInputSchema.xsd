@@ -96,6 +96,8 @@
       <xsd:attribute default="F" name="l_mtNocoPot" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_alignMT" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_scaleMag" type="FleurBool" use="optional"/>
+      <xsd:attribute default="1.0" name="mag_scale" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OneDParamType">

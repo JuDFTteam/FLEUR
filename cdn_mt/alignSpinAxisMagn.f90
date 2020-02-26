@@ -45,15 +45,17 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
 
    IF(l_firstIt) THEN
-! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0! 
+! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+     !Setting angles to zero since we want our spinQ Axis to remain the same when writing out the density.
      nococonv%alph=zeros
      nococonv%beta=zeros
    END IF
 ! Get magnetization direction
    CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
    phiTemp(:)=(-1)*phiTemp(:)
+   !Calculate angular rotation which has to be done.
    diffT=thetaTemp-nococonv%beta
    diffP=phiTemp-nococonv%alph
    DO i=1, atoms%ntype
@@ -95,8 +97,8 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype), zeros(atoms%ntype)
    REAL                          :: moments(3,atoms%ntype)
    zeros(:)=0.0
-! Backwards rotation so SQA and magnetization don't align anymore. This is needed since you otherwise run into issues in the mixing since you mix cdn's which have been rotated 
-! in different directions.  
+! Backwards rotation so SQA and magnetization don't align anymore. This is needed since you otherwise run into issues in the mixing since you mix cdn's which have been rotated
+! in different directions.
    CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    IF (present(den)) THEN

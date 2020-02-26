@@ -59,13 +59,14 @@ contains
     type(t_potden)                   :: resDen, vYukawa
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
-    LOGICAL                          :: l_densitymatrix
+    LOGICAL                          :: l_densitymatrix,l_firstItU
     INTEGER                          :: it,maxiter
     INTEGER                          :: indStartHIA, indEndHIA
 
 
     CALL timestart("Charge Density Mixing")
     l_densitymatrix=.FALSE.
+    l_firstItU=.FALSE.
     !The density/potential matrices for DFT+U are split into two parts
     ! 1:atoms%n_u Are the elements for normal DFT+U 
     ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
@@ -74,13 +75,10 @@ contains
     indEndHIA = atoms%n_u + atoms%n_hia
 
     IF (atoms%n_u>0) THEN
-       l_densitymatrix=.NOT.input%ldaulinmix
+       l_firstItU = ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)
+       l_densitymatrix=.NOT.input%ldaulinmix.AND..NOT.l_firstItU
        IF (mpi%irank==0) CALL u_mix(input,atoms,noco,inDen%mmpMat,outDen%mmpMat)
-       IF (ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)) THEN
-          l_densitymatrix=.FALSE.
-          inDen%mmpMat=outDen%mmpMat
-       ENDIF
-    ENDIF 
+    ENDIF
 
     CALL timestart("Reading of distances")
     CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
@@ -148,10 +146,11 @@ contains
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     CALL sm(it)%to_density(inDen)
-    IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
+    IF (atoms%n_u>0.AND.l_firstItU) THEN
        !No density matrix was present
        !but is now created...
        inden%mmpMAT(:,:,:atoms%n_u,:)=outden%mmpMat(:,:,:atoms%n_u,:)
+       !Delete the history without U
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF

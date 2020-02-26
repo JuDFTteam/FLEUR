@@ -269,13 +269,8 @@ CONTAINS
 
 
 
-       IF (fi%noco%l_sourceFree) THEN
-          sfscale=1.0
-          IF (xcpot%needs_grad()) THEN
-             sfscale=1.14
-          ELSE
-             sfscale=1.12
-          END IF
+       IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
+          sfscale=fi%noco%mag_scale
           CALL inDen%SpinsToChargeAndMagnetisation()
           inDen%mt(:,0:,:,  2:4) = sfscale*inDen%mt(:,0:,:,2:4)
           inDen%pw(:,       2:3) = sfscale*inDen%pw(:,     2:3)
@@ -289,7 +284,7 @@ CONTAINS
                  fi%cell,fi%oneD,fi%sliceplot,mpi,results,fi%noco,nococonv,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-       IF (fi%noco%l_sourceFree) THEN
+       IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
           CALL inDen%SpinsToChargeAndMagnetisation()
           inDen%mt(:,0:,:,  2:4) = inDen%mt(:,0:,:,2:4)/sfscale
           inDen%pw(:,       2:3) = inDen%pw(:,     2:3)/sfscale
