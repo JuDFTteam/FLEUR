@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       jspin,jsp,mpi,v,input,hub1inp,td,ud)
+       jspin1,jspin2,jsp,mpi,v,input,hub1inp,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
-    INTEGER, INTENT (IN) :: n,jspin !atom index,physical spin&spin index for data
+    INTEGER, INTENT (IN) :: n,jspin1,jspin2,jsp !atom index,physical spin&spin index for data
 
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:,:)
     INTEGER,ALLOCATABLE :: indt(:)
@@ -38,7 +38,7 @@ CONTAINS
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2,jsp
+    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u
     LOGICAL l_remove
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
@@ -52,7 +52,6 @@ CONTAINS
     ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
 
-    jsp=jspin
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) THEN
       vr0(:,0)=0.0
@@ -60,15 +59,9 @@ CONTAINS
       vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(jsp-2,n) !Add constraining field
     ENDIF
 
-    DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
+    DO i=min(jspin1,jspin2),max(jspin1,jspin2)
        CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1inp%l_dftspinpol)
     ENDDO
-    IF (jspin>2) THEN
-       jspin1=1
-       jspin2=2
-    ELSE
-       jspin1=jspin;jspin2=jspin
-    END IF
     na=SUM(atoms%neq(:n-1))+1
     nsym = sym%ntypsy(na)
     nh = sphhar%nlh(nsym)
@@ -92,7 +85,7 @@ CONTAINS
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
-          DO lh = MERGE(1,0,jspin<3), nh
+          DO lh = MERGE(1,0,jsp<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
@@ -140,7 +133,7 @@ CONTAINS
           lmp = lp* (lp+1) + mp
           lmpl = (lmp* (lmp+1))/2
           !--->    loop over lattice harmonics
-          DO lh = MERGE(1,0,jspin<3), nh
+          DO lh = MERGE(1,0,jsp<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin0 = abs(lp-lamda)
              IF (lmin0.GT.lp) CYCLE
@@ -201,8 +194,8 @@ CONTAINS
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
-           CALL tlo(atoms,sym,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
-            na,flo,f,g,ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
+           CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
+            na,flo,f,g,ud, td)
     ENDIF
   END SUBROUTINE tlmplm
 END MODULE m_tlmplm

@@ -1,5 +1,5 @@
 MODULE m_tlmplm_cholesky
-  use m_judft
+  USE m_judft
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
@@ -35,8 +35,9 @@ CONTAINS
     !     .. Local Scalars ..
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
-    INTEGER lpl ,mp,n,m,s,i_u
+    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax
     LOGICAL OK
+    COMPLEX :: one
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
@@ -49,149 +50,151 @@ CONTAINS
     jsp=jspin
     td%e_shift(:,jsp)=0.0
     IF (jsp<3) THEN
-      j1=jsp;j2=jsp
-      td%e_shift(:,jsp)=e_shift_min
+       jmin=jsp;jmax=jsp
+       td%e_shift(:,jsp)=e_shift_min
     ELSE
-      !Calculate overlap integrals
-      !For the off-diagonal LDA+U contributions
-      if (jsp==3) THEN
-        j1=2;j2=1
-      ELSE
-        j1=1;j2=2
-      ENDIF
-      ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
-      dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-      CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+       !Calculate overlap integrals
+       !For the off-diagonal LDA+U contributions
+       jmin=1;jmax=2
     ENDIF
 
-    td%tdulo(:,:,:,jsp) = CMPLX(0.0,0.0)
-    td%tuulo(:,:,:,jsp) = CMPLX(0.0,0.0)
-    td%tuloulo(:,:,:,jsp) = CMPLX(0.0,0.0)
-
-
+    !ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+    !dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
+    !CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+    !ENDIF
     td%h_off=0.0
-    !$OMP PARALLEL DO DEFAULT(NONE)&
-    !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
-    !$OMP PRIVATE(lmplm,lp,m,mp,n)&
-    !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
-    DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,jspin,jsp,mpi,v,input,hub1inp,td,ud)
-       OK=.FALSE.
-       cholesky_loop:DO WHILE(.NOT.OK)
-          td%h_loc(:,:,n,j1,j2)=0.0
-          OK=.TRUE.
-          !
-          !--->    generate the wavefunctions for each l
-          !
-          s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
-          !Setup local hamiltonian
-          DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
-             lp=FLOOR(SQRT(1.0*lmp))
-             mp=lmp-lp*(lp+1)
-             IF (lp>atoms%lmax(n).OR.ABS(mp)>lp) STOP "BUG"
-             !--->             loop over l,m
-             DO l = 0,atoms%lnonsph(n)
+
+    DO j1=jmin,jmax
+       j2=MERGE(j1,3-j1,jsp<3)
+       one=MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
+       one=MERGE(CONJG(one),one,j1<j2)
+       td%tdulo(:,:,:,jsp) = CMPLX(0.0,0.0)
+       td%tuulo(:,:,:,jsp) = CMPLX(0.0,0.0)
+       td%tuloulo(:,:,:,jsp) = CMPLX(0.0,0.0)
+
+
+       !$OMP PARALLEL DO DEFAULT(NONE)&
+       !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
+       !$OMP PRIVATE(lmplm,lp,m,mp,n)&
+       !$OMP PRIVATE(OK,s,in,info)&
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
+       DO  n = 1,atoms%ntype
+          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,mpi,v,input,hub1inp,td,ud)
+          OK=.FALSE.
+          cholesky_loop:DO WHILE(.NOT.OK)
+             OK=.TRUE.
+             !
+             !--->    generate the wavefunctions for each l
+             !
+             s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
+             !Setup local hamiltonian
+             DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
+                lp=FLOOR(SQRT(1.0*lmp))
+                mp=lmp-lp*(lp+1)
+                IF (lp>atoms%lmax(n).OR.ABS(mp)>lp) STOP "BUG"
+                !--->             loop over l,m
+                DO l = 0,atoms%lnonsph(n)
+                   DO m = -l,l
+                      lm = l* (l+1) + m
+                      in = td%ind(lmp,lm,n,jsp)
+                      IF (in/=-9999) THEN
+                         IF (in>=0) THEN
+                            td%h_loc(lm,lmp,n,j1,j2)    = td%h_loc(lm,lmp,n,j1,j2)     + one*CONJG(td%tuu(in,n,jsp))
+                            td%h_loc(lm+s,lmp,n,j1,j2)  = td%h_loc(lm+s,lmp,n,j1,j2)   + one*CONJG(td%tud(in,n,jsp))
+                            td%h_loc(lm,lmp+s,n,j1,j2)  = td%h_loc(lm,lmp+s,n,j1,j2)   + one*CONJG(td%tdu(in,n,jsp))
+                            td%h_loc(lm+s,lmp+s,n,j1,j2)= td%h_loc(lm+s,lmp+s,n,j1,j2) + one*CONJG(td%tdd(in,n,jsp))
+                         ELSE
+                            td%h_loc(lm,lmp,n,j1,j2)    = td%h_loc(lm,lmp,n,j1,j2)     + one*td%tuu(-in,n,jsp)
+                            td%h_loc(lm+s,lmp,n,j1,j2)  = td%h_loc(lm+s,lmp,n,j1,j2)   + one*td%tdu(-in,n,jsp)
+                            td%h_loc(lm,lmp+s,n,j1,j2)  = td%h_loc(lm,lmp+s,n,j1,j2)   + one*td%tud(-in,n,jsp)
+                            td%h_loc(lm+s,lmp+s,n,j1,j2)= td%h_loc(lm+s,lmp+s,n,j1,j2) + one*td%tdd(-in,n,jsp)
+                         END IF
+                      END IF
+                   END DO
+                END DO
+             ENDDO
+             !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
+             DO i_u=1,atoms%n_u+atoms%n_hia
+                IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
+                !Found a "U" for this atom type
+                l=atoms%lda_u(i_u)%l
+                lp=atoms%lda_u(i_u)%l
                 DO m = -l,l
                    lm = l* (l+1) + m
-                   in = td%ind(lmp,lm,n,jsp)
-                   IF (in/=-9999) THEN
-                      IF (in>=0) THEN
-                         td%h_loc(lm,lmp,n,j1,j2)    = CONJG(td%tuu(in,n,jsp))
-                         td%h_loc(lm+s,lmp,n,j1,j2)  = CONJG(td%tud(in,n,jsp))
-                         td%h_loc(lm,lmp+s,n,j1,j2)  = CONJG(td%tdu(in,n,jsp))
-                         td%h_loc(lm+s,lmp+s,n,j1,j2)= CONJG(td%tdd(in,n,jsp))
+                   DO mp = -lp,lp
+                      lmp = lp* (lp+1) + mp
+                      !------------------------------------------------------------------------
+                      ! For jsp >= 3 the convention is:
+                      !      -jsp=3 => real part of the off-diagonal hamiltonian
+                      !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
+                      !------------------------------------------------------------------------
+                      IF (jsp < 3) THEN
+                         td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
+                         td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
+                      ELSE IF(jsp.EQ.3) THEN
+                         td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                         td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                         td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                         td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                       ELSE
-                         td%h_loc(lm,lmp,n,j1,j2)    = td%tuu(-in,n,jsp)
-                         td%h_loc(lm+s,lmp,n,j1,j2)  = td%tdu(-in,n,jsp)
-                         td%h_loc(lm,lmp+s,n,j1,j2)  = td%tud(-in,n,jsp)
-                         td%h_loc(lm+s,lmp+s,n,j1,j2)= td%tdd(-in,n,jsp)
-                      END IF
-                   END IF
-                END DO
+                         td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                         td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                         td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                         td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                      ENDIF
+                   ENDDO
+                ENDDO
              END DO
-          ENDDO
-          !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
-          DO i_u=1,atoms%n_u+atoms%n_hia
-             IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
-             !Found a "U" for this atom type
-             l=atoms%lda_u(i_u)%l
-             lp=atoms%lda_u(i_u)%l
-             DO m = -l,l
-                lm = l* (l+1) + m
-                DO mp = -lp,lp
-                   lmp = lp* (lp+1) + mp
-                   !------------------------------------------------------------------------
-                   ! For jsp >= 3 the convention is:
-                   !      -jsp=3 => real part of the off-diagonal hamiltonian
-                   !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
-                   !------------------------------------------------------------------------
-                   IF (jsp < 3) THEN
-                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
-                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
-                   ELSE IF(jsp.EQ.3) THEN
-                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
-                   ELSE
-                     td%h_loc(lm  ,lmp  ,n,j1,j2) = td%h_loc(lm  ,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp  ,n,j1,j2) = td%h_loc(lm+s,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm  ,lmp+s,n,j1,j2) = td%h_loc(lm  ,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,j1,j2) = td%h_loc(lm+s,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+             IF (jsp<3) THEN
+                !Create Cholesky decomposition of local hamiltonian
+
+                !--->    Add diagonal terms to make matrix positive definite
+                DO lp = 0,atoms%lnonsph(n)
+                   DO mp = -lp,lp
+                      lmp = lp* (lp+1) + mp
+                      td%h_loc(lmp,lmp,n,j1,j2)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,j1,j2)
+                      td%h_loc(lmp+s,lmp+s,n,j1,j2)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,j1,j2)
+                   END DO
+                END DO
+                IF (lmp+1.NE.s) CALL judft_error("BUG in tlmpln_cholesky")
+                !Perform cholesky decomposition
+                info=0
+                CALL zpotrf("L",2*s,td%h_loc(:,:,n,j1,j2),SIZE(td%h_loc,1),info)
+
+                !Upper part to zero
+                DO l=0,2*s-1
+                   DO lp=0,l-1
+                      td%h_loc(lp,l,n,j1,j2)=0.0
+                   ENDDO
+                ENDDO
+
+                IF (info.NE.0) THEN
+                   td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
+                   PRINT *,"Potential shift for atom type ",n," is too small. Increasing the value to:",td%e_shift(n,jsp)
+                   IF (td%e_shift(n,jsp)>e_shift_max) THEN
+                      CALL judft_error("Potential shift at maximum")
                    ENDIF
-                ENDDO
-             ENDDO
-          END DO
-          IF (jsp<3) THEN
-             !Create Cholesky decomposition of local hamiltonian
-
-             !--->    Add diagonal terms to make matrix positive definite
-             DO lp = 0,atoms%lnonsph(n)
-                DO mp = -lp,lp
-                   lmp = lp* (lp+1) + mp
-                   td%h_loc(lmp,lmp,n,j1,j2)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,j1,j2)
-                   td%h_loc(lmp+s,lmp+s,n,j1,j2)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,j1,j2)
-                END DO
-             END DO
-             IF (lmp+1.NE.s) CALL judft_error("BUG in tlmpln_cholesky")
-             !Perform cholesky decomposition
-             info=0
-             CALL zpotrf("L",2*s,td%h_loc(:,:,n,j1,j2),SIZE(td%h_loc,1),info)
-
-             !Upper part to zero
-             DO l=0,2*s-1
-                DO lp=0,l-1
-                   td%h_loc(lp,l,n,j1,j2)=0.0
-                ENDDO
-             ENDDO
-
-             IF (info.NE.0) THEN
-                td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
-                PRINT *,"Potential shift for atom type ",n," is too small. Increasing the value to:",td%e_shift(n,jsp)
-                IF (td%e_shift(n,jsp)>e_shift_max) THEN
-                   CALL judft_error("Potential shift at maximum")
+                   OK=.FALSE.
                 ENDIF
-                OK=.FALSE.
              ENDIF
-          ENDIF
-       ENDDO cholesky_loop
-       !Now add diagonal contribution to matrices
-       IF (jsp<3) THEN
-          DO l = 0,atoms%lmax(n)
-             DO  m = -l,l
-                lm = l* (l+1) + m
-                lmplm = (lm* (lm+3))/2
-                td%tuu(lmplm,n,jsp)=td%tuu(lmplm,n,jsp) + enpara%el0(l,n,jsp)
-                td%tdd(lmplm,n,jsp)=td%tdd(lmplm,n,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
-                td%tud(lmplm,n,jsp)=td%tud(lmplm,n,jsp) + 0.5
-                td%tdu(lmplm,n,jsp)=td%tdu(lmplm,n,jsp) + 0.5
+          ENDDO cholesky_loop
+          !Now add diagonal contribution to matrices
+          IF (jsp<3) THEN
+             DO l = 0,atoms%lmax(n)
+                DO  m = -l,l
+                   lm = l* (l+1) + m
+                   lmplm = (lm* (lm+3))/2
+                   td%tuu(lmplm,n,jsp)=td%tuu(lmplm,n,jsp) + enpara%el0(l,n,jsp)
+                   td%tdd(lmplm,n,jsp)=td%tdd(lmplm,n,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
+                   td%tud(lmplm,n,jsp)=td%tud(lmplm,n,jsp) + 0.5
+                   td%tdu(lmplm,n,jsp)=td%tdu(lmplm,n,jsp) + 0.5
+                ENDDO
              ENDDO
-          ENDDO
-       ENDIF
+          ENDIF
+       ENDDO
+       !$OMP END PARALLEL DO
+       IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,nococonv,td)
     ENDDO
-    !$OMP END PARALLEL DO
-    IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1inp,ud,nococonv,td)
 
 
 
@@ -248,4 +251,4 @@ CONTAINS
     END DO
   END SUBROUTINE tlmplm_constrained
 
-  END MODULE m_tlmplm_cholesky
+END MODULE m_tlmplm_cholesky

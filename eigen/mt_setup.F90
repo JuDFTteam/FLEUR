@@ -43,6 +43,7 @@ CONTAINS
          DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(4,input%jspins,noco%l_mtNocoPot),&
          (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr,noco%l_noco)!l_offdiag
 
+    td%h_loc=0.0
     DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
        CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,mpi,vTot,input,hub1inp,td,ud)
