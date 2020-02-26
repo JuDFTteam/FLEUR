@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
-    INTEGER iri
+    INTEGER iri,i
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
@@ -67,9 +67,12 @@ CONTAINS
          &                   '  local alpha=',f9.5)
 
     IF(noco%l_alignMT) THEN
-      WRITE  (6,8400) nococonv%beta,nococonv%alph
+    DO i=1, atoms%ntype
+      WRITE  (6,8400) nococonv%beta(i),nococonv%alph(i)
       8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
+    END DO
     END IF
+
     IF (noco%l_relax(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
        !--->    it in the global spin coordinate frame
