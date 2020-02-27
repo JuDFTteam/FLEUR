@@ -520,7 +520,9 @@ CONTAINS
          if (z_in%l_real) THEN
             cdum = commonphase(zhlp(:, i), z_in%matsize1)
             if(present(c_phase)) c_phase(i) = cdum
-
+            if(abs(cdum) < 1e-30) THEN
+               call juDFT_error("cdum can't be 0")
+            endif
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                WRITE (*, *) zhlp
