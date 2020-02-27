@@ -371,9 +371,9 @@ CONTAINS
       character(len=*)         :: filename
 
       if (mat%l_real) then
-         call save_npy(filename, mat%data_r(1:matsize1,1:matsize2))
+         call save_npy(filename, mat%data_r)
       else
-         call save_npy(filename, mat%data_c(1:matsize1,1:matsize2))
+         call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
 END MODULE m_types_mat
