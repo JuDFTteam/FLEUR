@@ -455,7 +455,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
+      COMPLEX                 ::  zhlp(z_in%matsize1, nbands)
 
       call timestart("gen_zmat")
       if(present(c_phase)) c_phase = 0
