@@ -38,19 +38,23 @@ CONTAINS
 
       ! local variables
       type(t_hybmpi)    :: hybmpi
-      INTEGER           :: jsp, nk, err
+      INTEGER           :: jsp, nk, err, i
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
+      INTEGER, ALLOCATABLE :: k_list(:)
 
       ! open(7465, file="iter_translator.txt", position="append")
       ! write (7465,*) iter, iterHF
       ! close(7465)
 
       CALL timestart("hybrid code")
+
       call hybmpi%copy_mpi(mpi)
+      call split_k_to_comm(fi, hybmpi, k_list)
+
       INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
       IF (fi%kpts%nkptf == 0) THEN
@@ -99,11 +103,15 @@ CONTAINS
                       enpara, mpi, v, iterHF)
       CALL timestop("generation of mixed basis")
 
+
       if(mpi%irank == 0) then
          CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
-
          CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
+         call close_hybinp_io2()
       endif
+
+      call hybmpi%barrier()
+      CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
 
       CALL hf_init(eig_id, mpdata, fi, hybdat)
       CALL timestop("Preparation for hybrid functionals")
@@ -116,8 +124,8 @@ CONTAINS
                        hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
          call timestop("HF_setup")
 
-         DO nk = 1, fi%kpts%nkpt
-            !DO nk = mpi%n_start,fi%kpts%nkpt,mpi%n_stride
+         DO i = 1,size(k_list)
+            nk = k_list(i)
             CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
             CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
                         nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
@@ -155,5 +163,23 @@ CONTAINS
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
+
+      subroutine split_k_to_comm(fi, hybmpi, k_list)
+         implicit none
+
+         type(t_fleurinput), intent(in)      :: fi
+         type(t_hybmpi), intent(in)          :: hybmpi
+         integer, allocatable, intent(inout) :: k_list(:)
+         integer   :: i
+
+         if(allocated(k_list)) deallocate(k_list)
+         allocate(k_list(0))
+
+         if(fi%kpts%nkpt < hybmpi%size) call judft_error("not enough k-points for mpis")
+
+         do i = hybmpi%rank+1,fi%kpts%nkpt,hybmpi%size
+            k_list = [k_list, i]
+         enddo
+      end subroutine split_k_to_comm
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid
