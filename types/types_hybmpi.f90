@@ -11,6 +11,8 @@ MODULE m_types_hybmpi
       type(t_hybmpi), allocatable :: subcomm
    contains
       procedure :: copy_mpi => t_hybmpi_copy_mpi
+      procedure :: barrier => t_hybmpi_barrier
+      procedure :: split => t_hybmpi_split
    END TYPE t_hybmpi
 contains
    subroutine t_hybmpi_copy_mpi(hybmpi, mpi)
@@ -43,4 +45,15 @@ contains
       call MPI_comm_size(hybmpi%subcomm, hybmpi%subcomm%size, ierr)
       if(ierr /= 0) call judft_error("MPI sizing failed")
    end subroutine t_hybmpi_split
+
+   subroutine t_hybmpi_barrier(hybmpi)
+      use m_judft
+      implicit none
+      class(t_hybmpi), intent(inout) :: hybmpi
+      integer :: ierr
+
+      call MPI_Barrier(hybmpi%comm, ierr)
+      if(ierr /= 0) call juDFT_error("barrier failed on process: " // &
+                                      int2str(hybmpi%rank))
+   end subroutine t_hybmpi_barrier
 END MODULE m_types_hybmpi
