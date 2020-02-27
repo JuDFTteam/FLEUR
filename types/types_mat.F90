@@ -370,6 +370,7 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       character(len=*)         :: filename
 
+      call judft_warn("save_npy doesn't know about matsize1/2")
       if (mat%l_real) then
          call save_npy(filename, mat%data_r)
       else
