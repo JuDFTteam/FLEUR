@@ -22,7 +22,6 @@ contains
       TYPE(t_atoms), INTENT(IN)   :: atoms
       LOGICAL, INTENT(IN)         :: l_real
       INTEGER:: irecl_coulomb
-      LOGICAL :: opened = .FALSE.
 
       ! if the sparse matrix technique is used, several entries of the
       ! matrix vanish so that the size of each entry is smaller
@@ -35,6 +34,12 @@ contains
       OPEN(unit=778, file='coulomb1', form='unformatted', access='direct', recl=irecl_coulomb)
       id_coulomb_spm = 778
    END SUBROUTINE open_hybinp_io2
+
+   subroutine close_hybinp_io2
+      implicit none
+
+      close(778)
+   end subroutine close_hybinp_io2
 
    subroutine write_coulomb(nk, l_real, coulomb)
       implicit none
@@ -55,8 +60,6 @@ contains
       real, intent(in) :: coulomb_mt2(:, :, :, :), coulomb_mt3(:, :, :)
       real, intent(in) :: coulomb_mtir(:)
       integer, intent(in) :: nk
-
-      !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
       write(id_coulomb_spm, rec=nk) coulomb_mt1, coulomb_mt2, coulomb_mt3, coulomb_mtir
    end subroutine write_coulomb_spm_r
 
@@ -175,6 +178,8 @@ contains
       call timestart("read_z")
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+         ! z_out%matsize2 = hybdat%nbands(ik)
+         ! call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
          if(present(parent_z)) call parent_z%copy(z_out,1,1)
       else
          if(present(parent_z)) then
@@ -188,10 +193,11 @@ contains
          iop = kpts%bksym(ik) ! connecting symm
 
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
+         ! ptr_mat%matsize2 = hybdat%nbands(ik)
+         ! call ptr_mat%save_npy("z_ik=" // int2str(ik) // "_ikp=" // int2str(ikp) // ".npy")
 
          CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
-
          call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
                                   hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
