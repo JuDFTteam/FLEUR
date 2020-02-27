@@ -130,7 +130,7 @@ CONTAINS
       IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
       parent = 0
 
-      call z%init(olap%l_real, nbasfcn, hybdat%nbands(nk))
+      call z%init(olap%l_real, nbasfcn, fi%input%neig)
 
       if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nk, jsp, z, c_phase=c_phase)
