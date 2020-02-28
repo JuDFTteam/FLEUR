@@ -27,6 +27,7 @@ contains
     use m_qfix
     use m_types
     use m_umix
+    use m_checkMMPmat
     USE m_kerker
     use m_pulay
     use m_a_pulay
@@ -155,14 +156,22 @@ contains
        CALL mixvector_reset()
     ENDIF
 
-    IF(atoms%n_hia>0) THEN
-      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
-      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
+
+    IF(atoms%n_u>0.AND.l_densitymatrix.AND.mpi%irank.EQ.0) THEN
+       !When the mixing of the density matrix is done together
+       !with the charge density depending on the mixing scheme
+       !it can become unstable
+       !Check whether the mixed density matrix makes sense
+       CALL checkMMPmat(1,atoms%n_u,atoms,input,inden%mmpMat)
     ENDIF
 
-    IF (atoms%n_hia>0.AND.l_runhia) THEN
-      CALL mixing_history_reset(mpi)
-      CALL mixvector_reset()
+    IF(atoms%n_hia>0) THEN
+       !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
+       inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
+       IF(l_runhia) THEN
+          CALL mixing_history_reset(mpi)
+          CALL mixvector_reset()
+       ENDIF
     ENDIF
 
     if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then 
