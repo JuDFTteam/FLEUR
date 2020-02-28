@@ -7,7 +7,6 @@ contains
       use, intrinsic :: iso_c_binding
       implicit none
 
-#ifdef __linux__ 
       interface 
          function findmycpu() bind(c)
             use, intrinsic :: iso_c_binding
@@ -33,12 +32,12 @@ contains
 
       do i = 1,size(cpu)
          if(count(cpu(i) == cpu) /= 1) then
+            write (*,*) "The OMP parallelism seems to be weird"
             call judft_warn("Multiple OMPs on one core: There are " // &
                            int2str(count(cpu(i) == cpu)) // " on cpu " // &
-                           int2str(cpu))
+                           int2str(cpu(i)))
             exit
          endif
       enddo
-#endif
    end subroutine omp_checker
 end module m_omp_checker
