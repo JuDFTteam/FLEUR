@@ -75,6 +75,8 @@
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
       l_jDOS = banddos%l_jDOS
+      n_orb = 0
+      n_jDOS = 0
       IF (banddos%ndir.EQ.-3) THEN
         qdim = 2*slab%nsld
         n_orb = 0
@@ -184,7 +186,7 @@
                  DO jj = 1, 2
                     i = i+1
                     DO iBand = 1, results%neig(k,jsp)
-                       qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)
+                       qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
                     END DO
                     DO iBand = results%neig(k,jsp)+1, input%neig
                        qal(i,iBand,k) = 0.0

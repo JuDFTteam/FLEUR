@@ -30,42 +30,39 @@ MODULE m_jDOS
 
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
 
-      INTEGER :: iType,iBand,nn,natom,l,jj,lmup,lmdown
-      REAL    :: j,mj,mup,mdown,facup,facdown,c
+      INTEGER :: iType,iBand,nn,natom,l,jj,lmup,lmdown,j_ind,spin
+      REAL    :: j,mj,mup,mdown,facup,facdown,c(6),tot
       COMPLEX :: aup,bup,adown,bdown
 
       DO iType = 1, atoms%ntype
          DO nn =1, atoms%neq(iType)
             natom = SUM(atoms%neq(:iType-1)) + nn
-            DO l = 1, lmax
-               DO jj = 1, 2
-                  ! j = l +- 1/2
-                  j = l + (jj-1.5)
-                  mj = -j
-                  DO WHILE(mj <= j)
-                     !mj = -l-+1/2, .... , l+-1/2
+            DO iBand = 1, noccbd
+               j_ind = 0
+               c = 0.0
+               tot = 0.0
+               DO l = 1, lmax
+                  DO jj = 1, 2
+                     j_ind = j_ind+1
+                     ! j = l +- 1/2
+                     j = l + (jj-1.5)
+                     mj = -j
+                     DO WHILE(mj <= j)
+                        !mj = -l-+1/2, .... , l+-1/2
 
-                     mup   = mj - 0.5
-                     mdown = mj + 0.5
+                        mup   = mj - 0.5
+                        mdown = mj + 0.5
 
-                     lmup   = l*(l+1) + INT(mup)
-                     lmdown = l*(l+1) + INT(mdown)
-
-                     IF(ABS(mup) <= l) THEN
-                        facup = clebsch(REAL(l),0.5,mup,0.5,j,mj)
-                     ELSE
-                        facup = 0.0
-                     ENDIF
-
-                     IF(ABS(mdown) <= l) THEN
-                        facdown = clebsch(REAL(l),0.5,mdown,-0.5,j,mj)
-                     ELSE
-                        facdown = 0.0
-                     ENDIF
-
-                     DO iBand = 1, noccbd
+                        IF(input%jspins.EQ.1) THEN
+                           mdown = mdown * (-1)
+                           spin = 1
+                        ELSE
+                           spin = 2
+                        ENDIF
 
                         IF(ABS(mup) <= l) THEN
+                           lmup   = l*(l+1) + INT(mup)
+                           facup = clebsch(REAL(l),0.5,mup,0.5,j,mj)
                            aup   = facup   * eigVecCoeffs%acof(iBand,lmup  ,natom,1)
                            bup   = facup   * eigVecCoeffs%bcof(iBand,lmup  ,natom,1)
                         ELSE
@@ -74,31 +71,39 @@ MODULE m_jDOS
                         ENDIF
 
                         IF(ABS(mdown) <= l) THEN
-                           adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,2)
-                           bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,2)
+                           lmdown = l*(l+1) + INT(mdown)
+                           facdown = clebsch(REAL(l),0.5,mdown,-0.5,j,mj)
+                           adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,spin)
+                           bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,spin)
                         ELSE
                            adown = 0.0
                            bdown = 0.0
                         ENDIF
+
                         !c := norm of facup |up> + facdown |down>
                         !We have to write it out explicitely because
                         !of the offdiagonal scalar products that appear
-                        c =         aup  *CONJG(aup)   &
-                           +        adown*CONJG(adown) &
-                           +        bup  *CONJG(bup)    * usdus%ddn(l,iType,1) &
-                           +        bdown*CONJG(bdown)  * usdus%ddn(l,iType,2) &
-                           + 2*REAL(aup  *CONJG(adown)) * denCoeffsOffdiag%uu21n(l,iType) &
-                           + 2*REAL(bup  *CONJG(bdown)) * denCoeffsOffdiag%dd21n(l,iType) &
-                           + 2*REAL(aup  *CONJG(bdown)) * denCoeffsOffdiag%ud21n(l,iType) &
-                           + 2*REAL(adown*CONJG(bup))   * denCoeffsOffdiag%du21n(l,iType)
-
-                        !TODO: LOs
-
-                        jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) = &
-                           jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) + c
-
+                        c(j_ind) = c(j_ind) + &
+                                  +        aup  *CONJG(aup)   &
+                                  +        adown*CONJG(adown) &
+                                  +        bup  *CONJG(bup)    * usdus%ddn(l,iType,1) &
+                                  +        bdown*CONJG(bdown)  * usdus%ddn(l,iType,spin) &
+                                  + 2*REAL(aup  *CONJG(adown)) * denCoeffsOffdiag%uu21n(l,iType) &
+                                  + 2*REAL(bup  *CONJG(bdown)) * denCoeffsOffdiag%dd21n(l,iType) &
+                                  + 2*REAL(aup  *CONJG(bdown)) * denCoeffsOffdiag%ud21n(l,iType) &
+                                  + 2*REAL(adown*CONJG(bup))   * denCoeffsOffdiag%du21n(l,iType)
+                        mj = mj + 1
                      ENDDO
-                     mj = mj + 1
+                     tot = tot + c(j_ind)
+                  ENDDO
+               ENDDO
+               !TODO: LOs
+               j_ind=0
+               DO l = 1, 3
+                  DO jj = 1, 2
+                     j_ind = j_ind+1
+                     jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) = c(j_ind)*100.0/tot
+                     jDOS%qmtp(ev_list(iBand),natom,ikpt) = 100.0*tot
                   ENDDO
                ENDDO
             ENDDO
