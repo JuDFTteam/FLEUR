@@ -177,6 +177,10 @@ contains
 
       call timestart("read_z")
       if(ik <= kpts%nkpt) then
+         write (*,*) "hybdat%eig_id", hybdat%eig_id
+         write (*,*) "ik", ik
+         write (*,*) "jsp", jsp
+         write (*,*) "z_out%l_real", z_out%l_real
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
          z_out%matsize2 = hybdat%nbands(ik)
          ! call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")

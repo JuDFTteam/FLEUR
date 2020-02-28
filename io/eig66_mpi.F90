@@ -219,6 +219,9 @@ CONTAINS
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
                 zmat%data_r(:,n)=REAL(tmp_cmplx)
              else
+                write (*,*) pe
+                write (*,*) d%zr_handle
+                write (*,*) e
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zr_handle,e)
                 CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
