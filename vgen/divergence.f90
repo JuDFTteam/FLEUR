@@ -574,7 +574,7 @@ CONTAINS
    SUBROUTINE divpotgrad2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
       USE m_types
-      USE m_lh_tofrom_lm
+      USE m_lattHarmsSphHarmsConv
       USE m_gradYlm
       USE m_constants
 
