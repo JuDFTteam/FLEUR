@@ -135,7 +135,7 @@ CONTAINS
          filenum = 98
          OPEN (fileNum, file=TRIM(ADJUSTL(filename)), form='formatted', status='replace')
          WRITE (fileNum, '(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.30">'
+         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.32">'
       ELSE
          fileNum = getXMLOutputUnitNumber()
          CALL openXMLElementNoAttributes('inputData')
@@ -186,8 +186,8 @@ CONTAINS
 
       IF (l_nocoOpt .OR. l_explicit) THEN
 160      FORMAT('      <nocoParams l_ss="', l1, '" l_mperp="', l1,'" l_mtNocoPot="', l1,'" l_alignMT="', l1, '" l_constr="', l1, '" l_sourceFree="', l1, &
-                '" mix_b="', f0.8, '">')
-         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT, noco%l_constr, noco%l_sourceFree, noco%mix_b
+                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8, '">')
+         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT, noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
          WRITE (fileNum, 162) noco%qss_inp
          WRITE (fileNum, '(a)') '      </nocoParams>'

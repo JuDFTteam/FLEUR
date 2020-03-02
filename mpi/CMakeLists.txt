@@ -13,5 +13,7 @@ if (${FLEUR_USE_MPI})
    mpi/mpi_reduce_potden.F90
    mpi/mpi_make_groups.F90
    mpi/mpi_dist_forcetheorem.F90
+   mpi/wrapper_sched_getcpu.c
+   mpi/omp_checker.F90
 )
 endif()

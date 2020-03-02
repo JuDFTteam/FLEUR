@@ -16,7 +16,7 @@ types_econfig.F90          types_field.F90      types_xcpot.F90
 types_enparaXML.f90        types_forcetheo_data.f90
 types_mpinp.f90            types_gfinp.F90      types_hub1inp.f90
 types_xml.f90
-calculator.f constants.f90 mpi_bc_tool.F90 ../io/xml/inputSchema.h ../io/xml/dropInputSchema.c ../io/xml/xmlInterfaceWrapper.c
+calculator.f constants.f90 mpi_bc_tool.F90 ../io/xml/inputSchema.h ../io/xml/dropInputSchema.c ../io/xml/inputSchema_old.h  ../io/xml/xmlInterfaceWrapper.c
 ../math/d_wigner.F90 ../math/inv3.f90 ../math/ExpSave.f90 ../math/grule.f90
 )
 #Set module directories

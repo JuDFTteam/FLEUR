@@ -49,24 +49,24 @@ CONTAINS
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
-    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !hmat_tmp%data_c=conjg(hmat_tmp%data_c)
     !CALL hmat_tmp%TRANSPOSE()
-    CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
-    CALL hsmt_distspins(chi,hmat_tmp,hmat)
+    !CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
+    !CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
 
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(imag part of potential)
-    chi_one=CMPLX(0.,1.)
+    !chi_one=CMPLX(0.,1.)
     CALL hsmt_nonsph(n,mpi,sym,atoms,1,2,iintsp,jintsp,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
     CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,1,2,iintsp,jintsp,hmat_tmp)
     !call hmat_tmp%generate_full_matrix()
 
-    CALL hsmt_spinor(3,n,nococonv,chi)
-    CALL hsmt_distspins(chi,hmat_tmp,hmat)
-    hmat_tmp%data_c=conjg(hmat_tmp%data_c)
-    !CALL hmat_tmp%TRANSPOSE()
     CALL hsmt_spinor(4,n,nococonv,chi)
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
+    !hmat_tmp%data_c=conjg(hmat_tmp%data_c)
+    !CALL hmat_tmp%TRANSPOSE()
+    !CALL hsmt_spinor(4,n,nococonv,chi)
+    !CALL hsmt_distspins(chi,hmat_tmp,hmat)
   END SUBROUTINE hsmt_mtNocoPot_offdiag
 END MODULE m_hsmt_mtNocoPot_offdiag

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.30">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.32">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
 
@@ -21,8 +21,7 @@
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.30"/>
-         <xsd:enumeration value="0.31"/>
+         <xsd:enumeration value="0.32"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -97,6 +96,8 @@
       <xsd:attribute default="F" name="l_mtNocoPot" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_alignMT" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_scaleMag" type="FleurBool" use="optional"/>
+      <xsd:attribute default="1.0" name="mag_scale" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OneDParamType">

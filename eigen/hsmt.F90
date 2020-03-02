@@ -91,7 +91,7 @@ CONTAINS
               !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
               !global spin-matrices.
               CALL hmat_tmp%clear();CALL smat_tmp%clear()
-              IF (ispin==jspin) THEN !local spin-digonal contribution
+              IF (ispin==jspin) THEN !local spin-diagonal contribution
                 CALL hsmt_sph(n,atoms,mpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat_tmp,hmat_tmp)
                 CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
                 CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat_tmp,smat_tmp)
