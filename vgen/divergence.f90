@@ -145,7 +145,7 @@ CONTAINS
    END SUBROUTINE divergence
 
    SUBROUTINE divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
-      USE m_lh_tofrom_lm
+      USE m_lattHarmsSphHarmsConv
       USE m_gradYlm
       USE m_constants
 
@@ -182,7 +182,7 @@ CONTAINS
 
       DO i=1,3
          DO iType=1, atoms%ntype
-            CALL lh_to_lm(sym,atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
          END DO
          IF (i==1) THEN
             CALL gradYlm(atoms,flm,grsflm1)
@@ -198,7 +198,7 @@ CONTAINS
       CALL divYlm(grsflm1(:,:indmax,:,:),grsflm2(:,:indmax,:,:),grsflm3(:,:indmax,:,:), divflm)
 
       DO iType=1, atoms%ntype
-         CALL lh_from_lm(sym,atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
+         CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
       END DO
 
       DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
