@@ -51,7 +51,7 @@ SUBROUTINE sphHarmsRepToLattHarms(sym, atoms, lattHarms, iType, funcSphHarms, fu
       iAtom = SUM(atoms%neq(:iType-1)) + 1
       ns = sym%ntypsy(iAtom)
 
-      funcSphHarms = CMPLX(0.0,0.0)
+      funcLattHarms = 0.0
 
       DO iLH = 0, lattHarms%nlh(ns)
          l = lattHarms%llh(iLH,ns)
@@ -59,11 +59,11 @@ SUBROUTINE sphHarmsRepToLattHarms(sym, atoms, lattHarms, iType, funcSphHarms, fu
             m = lattHarms%mlh(iM,iLH,ns)
             lm = l*(l+1) + m + 1
             DO iR = 1, atoms%jri(iType)
-               funcLattHarms(iR,iLH) = funcLattHarms(iR,iLH) + funcSphHarms(iR,lm) * CONJG(lattHarms%clnu(iM,iLH,ns))
+               funcLattHarms(iR,iLH) = funcLattHarms(iR,iLH) +   AL(funcSphHarms(iR,lm) * CONJG(lattHarms%clnu(iM,iLH,ns)))
             END DO
          END DO
       END DO
 
-END SUBROUTINE sphHarmsRepToLattHarms
+   END SUBROUTINE sphHarmsRepToLattHarms
 
 END MODULE m_lattHarmsSphHarmsConv
