@@ -614,7 +614,7 @@ CONTAINS
          DO lh=0, lhmax
             denloc%mt(:,lh,iType,1) = denloc%mt(:,lh,iType,1)*atoms%rmsh(:, iType)**2
          END DO ! lh
-         CALL lh_to_lm(sym,atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
+         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
       END DO
 
       CALL gradYlm(atoms,flm,grsflm)
@@ -623,7 +623,7 @@ CONTAINS
 
       DO i=1,3
          DO iType=1,atoms%ntype
-            CALL lh_from_lm(sym,atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
+            CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
          END DO
       END DO
 
