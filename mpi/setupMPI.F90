@@ -11,6 +11,7 @@ MODULE m_setupMPI
 CONTAINS
   SUBROUTINE setupMPI(nkpt,neigd,mpi)
 !$  use omp_lib
+    use m_omp_checker
     USE m_types
     USE m_available_solvers,ONLY:parallel_solver_available
     INTEGER,INTENT(in)           :: nkpt,neigd
@@ -21,6 +22,7 @@ CONTAINS
     include 'mpif.h'
     CALL MPI_COMM_SPLIT_TYPE(mpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,mpi%mpi_comm_same_node,i)
 #endif
+    call omp_checker()
     !$ omp=omp_get_max_threads()
     if (mpi%irank==0) THEN
        !print INFO on parallelization

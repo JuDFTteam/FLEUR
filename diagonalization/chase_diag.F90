@@ -91,6 +91,7 @@ CONTAINS
     USE m_types_mpimat
     USE m_types_setup
     USE m_types_mpi
+    USE m_types_lapw
     USE m_judft
     USE m_eig66_io
 
@@ -104,9 +105,9 @@ CONTAINS
     TYPE(t_noco),              INTENT(IN)    :: noco
     LOGICAL,                   INTENT(IN)    :: l_real
 
-    INTEGER                                  :: nevd, nexd
-    CHARACTER(len=1000)::arg
-
+    INTEGER             :: nevd, nexd
+    CHARACTER(len=1000) :: arg
+    TYPE(t_lapw)        :: lapw
 
     scale_distance=1E-3
     !IF (judft_was_argument("-chase_tol_scale")) THEN
