@@ -652,8 +652,7 @@ CONTAINS
          END IF
 
          !loop over all points
-         !$OMP parallel
-         !$OMP do private(ix,iy,i,j,xdnout,help,point,nt,na,pt,iv,iflag)
+
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
                DO ix = 0, grid(1)-1
@@ -772,8 +771,7 @@ CONTAINS
                END DO !x-loop
             END DO !y-loop
          END DO !z-loop
-!$OMP end do
-!$OMP end parallel
+
 
          IF (xsf) THEN
             DO i = 1, numOutFiles
