@@ -1,32 +1,25 @@
 MODULE m_BfieldtoVmat
    USE m_types
-   USE m_juDFT
    USE m_constants
 
    IMPLICIT NONE
 
 CONTAINS
 
-   SUBROUTINE BfieldtoVmat(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, factor, &
+   SUBROUTINE BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, &
                           vScal, bx, by, bz, vMat)
-      USE m_fft2d
       USE m_fft3d
-      USE m_rotdenmat
 
       TYPE(t_sym),      INTENT(IN)  :: sym
       TYPE(t_stars),    INTENT(IN)  :: stars
       TYPE(t_atoms),    INTENT(IN)  :: atoms
       TYPE(t_sphhar),   INTENT(IN)  :: sphhar
       TYPE(t_vacuum),   INTENT(IN)  :: vacuum
-      TYPE(t_input),    INTENT(IN)  :: input
-      TYPE(t_noco),     INTENT(IN)  :: noco
-      TYPE(t_nococonv), INTENT(IN)  :: nococonv
-      REAL,             INTENT(IN)  :: factor
       TYPE(t_potden),   INTENT(IN)  :: vScal, bx, by, bz
       TYPE(t_potden),   INTENT(OUT) :: vMat
 
       ! Local scalars: iteration indices, matrix elements etc.
-      INTEGER iden, ifft2, ifft3, ityp, iri, ilh, imesh
+      INTEGER iden, ifft3, ityp, iri, ilh, imesh
       REAL zero, rho_11, rho_22, rerho_21, imrho_21, cdn11, cdn22, recdn21, imcdn21
       COMPLEX czero
 
@@ -37,7 +30,6 @@ CONTAINS
 
       zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
-      ifft2 = 9*stars%mx1*stars%mx2
 
       ! Allocation of arrays and initialization of those that make up the real
       ! space density matrix.
