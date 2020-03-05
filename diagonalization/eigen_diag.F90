@@ -31,7 +31,9 @@ CONTAINS
     INTEGER,                   INTENT(INOUT) :: solver
     CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev         ! eigenvectors
-    INTEGER,                   INTENT(INOUT) :: ne         ! number of eigenpairs to be found
+    INTEGER,                   INTENT(INOUT) :: ne         ! number of eigenpairs searched (and found) on this node
+                                                           !   on input, overall number of eigenpairs searched,
+                                                           !   on output, local number of eigenpairs found
     REAL,                      INTENT(OUT)   :: eig(:)     ! eigenvalues
 
     !Only for chase

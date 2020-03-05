@@ -91,6 +91,7 @@ CONTAINS
     USE m_types_mpimat
     USE m_types_setup
     USE m_types_mpi
+    USE m_types_lapw
     USE m_judft
     USE m_eig66_io
 
@@ -104,9 +105,9 @@ CONTAINS
     TYPE(t_noco),              INTENT(IN)    :: noco
     LOGICAL,                   INTENT(IN)    :: l_real
 
-    INTEGER                                  :: nevd, nexd
-    CHARACTER(len=1000)::arg
-
+    INTEGER             :: nevd, nexd
+    CHARACTER(len=1000) :: arg
+    TYPE(t_lapw)        :: lapw
 
     scale_distance=1E-3
     !IF (judft_was_argument("-chase_tol_scale")) THEN
@@ -429,18 +430,18 @@ CONTAINS
     ENDIF
 
     !     Redistribute eigvec from ScaLAPACK distribution to each process
-    !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::zmat)
     CALL zmat%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)
     CALL zmat%copy(hmat,1,1)
 
-    !Distribute eigenvalues over PEs
-    !ne=0
-    !DO i=myid+1,nev,np
-    !   ne=ne+1
+    !Calculate number of EV found, local for PEs
+    ne=0
+    DO i=myid+1,nev,np
+       ne=ne+1
     !   eig(ne)=eigenvalues(i)
-    !ENDDO
+    ENDDO
+    !Provide eigenvalues for all PEs
     eig(:)=eigenvalues(:size(eig))
 
     CALL CPU_TIME(t4)

@@ -49,6 +49,7 @@
           INTEGER, ALLOCATABLE :: icm_local(:,:,:)
           REAL, ALLOCATABLE :: ufft_local(:), bfft_local(:)
 
+
         CALL MPI_BCAST(stars%mx1,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
         CALL MPI_BCAST(stars%mx2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
         CALL MPI_BCAST(stars%mx3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -181,10 +182,10 @@
         chunk_size = (im3+1)/mpi%isize
         leftover_size = modulo(im3+1,mpi%isize)
         IF (mpi%irank < leftover_size ) THEN
-            i3_start =  mpi%irank      * chunk_size
-            i3_end   = (mpi%irank + 1) * chunk_size  - 1
+            i3_start =  mpi%irank      * (chunk_size + 1)
+            i3_end   = (mpi%irank + 1) * (chunk_size + 1) - 1
         ELSE
-            i3_start = leftover_size * chunk_size  + (mpi%irank - leftover_size) * chunk_size
+            i3_start = leftover_size * (chunk_size + 1) + (mpi%irank - leftover_size) * chunk_size
             i3_end = (i3_start + chunk_size) - 1
         ENDIF
 #endif
@@ -352,5 +353,6 @@
 
           CALL writeStepfunction(stars)
         ENDIF ! (mpi%irank == 0)
+
       END SUBROUTINE stepf
     END MODULE m_stepf

@@ -22,7 +22,7 @@ MODULE m_xcBfield
    PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
-   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,aVec,cell)
+   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,vScal,aVec,cell)
       
       USE m_pw_tofrom_grid
       ! Contructs the exchange-correlation magnetic field from the total poten-
@@ -49,6 +49,7 @@ CONTAINS
       TYPE(t_potden),               INTENT(IN)  :: denmat
       REAL,                         INTENT(IN)  :: factor
       TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
+      TYPE(t_potden),               INTENT(OUT) :: vScal
       TYPE(t_cell),                 INTENT(IN)  :: cell
 
       TYPE(t_gradients)                         :: tmp_grad
@@ -71,6 +72,8 @@ CONTAINS
       CALL matrixsplit(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,factor,denmat, &
                        dummyDen(1),dummyDen(2),dummyDen(3),dummyDen(4))
 
+      vScal=dummyDen(1)
+
       r2=1.0
 
       ! Initialize and fill the vector field.
@@ -87,6 +90,9 @@ CONTAINS
                IF (factor==2.0) THEN
                   r2=atoms%rmsh(:,itype)**2
                END IF
+               IF (i==1) THEN
+                  vScal%mt(:,lh,itype,1) = vScal%mt(:,lh,itype,1)*r2
+               END IF
                aVec(i)%mt(:,lh,itype,1) = aVec(i)%mt(:,lh,itype,1)*r2
             END DO !lh
          END DO !itype
@@ -100,12 +106,13 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,div,phi,vCorr,cvec,corrB,checkdiv)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
       USE m_sphpts
       USE m_checkdop
+      USE m_BfieldtoVmat
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -130,7 +137,8 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
-      TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv
+      TYPE(t_potden),               INTENT(IN)     :: vScal
+      TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv, vCorr
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
 
       TYPE(t_potden)                               :: divloc
@@ -144,6 +152,10 @@ CONTAINS
       ALLOCATE(div%pw_w,mold=div%pw)
       div%pw_w = CMPLX(0.0,0.0)
 
+      !aVec(1)%mt(:,1:,:,:)=0.0
+      !aVec(2)%mt(:,1:,:,:)=0.0
+      !aVec(3)%mt(:,1:,:,:)=0.0
+
       CALL timestart("Building divergence")
       CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
       CALL timestop("Building divergence")
@@ -156,7 +168,7 @@ CONTAINS
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
-      !div%mt=0.0
+      !div%pw=CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
       CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
@@ -186,17 +198,22 @@ CONTAINS
 
       !CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      DO n=1,atoms%ntype
-         lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         DO lh=0, lhmax
-            cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(1)%mt(:,lh,n,1)=avec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(2)%mt(:,lh,n,1)=avec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(3)%mt(:,lh,n,1)=avec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-         END DO
-      END DO
+      !DO n=1,atoms%ntype
+      !   lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+      !   DO lh=0, lhmax
+      !      cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      avec(1)%mt(:,lh,n,1)=avec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      avec(2)%mt(:,lh,n,1)=avec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      avec(3)%mt(:,lh,n,1)=avec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      corrB(1)%mt(:,lh,n,1)=corrB(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      corrB(2)%mt(:,lh,n,1)=corrB(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !      corrB(3)%mt(:,lh,n,1)=corrB(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
+      !   END DO
+      !END DO
+
+      CALL BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, vScal, corrB(1), corrB(2), corrB(3), vCorr)
 
       !cvec(1)%mt(:,0:4,:,:)=0.0
       !cvec(1)%mt(:,6:,:,:)=0.0
@@ -216,7 +233,7 @@ CONTAINS
 
    END SUBROUTINE sourcefree
 
-   SUBROUTINE correctPot(vTot,c)
+   SUBROUTINE correctPot(vTot,b)
       USE m_types
 
       ! Takes a vectorial quantity c and saves its components into the appro
@@ -229,26 +246,51 @@ CONTAINS
       !       rence. Make sure this is true. Also: consider SOC, LDA+U etc.
 
       TYPE(t_potden),               INTENT(INOUT) :: vTot
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: b
 
-      REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
+      !REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
 
-      vTot%mt(:,0:,:,1)=c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,1)
-      vTot%mt(:,0:,:,2)=-c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,2)
-      vTot%mt(:,0:,:,3)=c(1)%mt(:,0:,:,1)+vTot%mt(:,0:,:,3)
-      vTot%mt(:,0:,:,4)=c(2)%mt(:,0:,:,1)+vTot%mt(:,0:,:,4)
+      vtot%mt(:,0:,:,1)=(vtot%mt(:,0:,:,1)+vtot%mt(:,0:,:,2))/2
+      vtot%mt(:,0:,:,2)=vtot%mt(:,0:,:,1)
+      vtot%mt(:,0:,:,3:4)=0.0
 
-      vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
-      vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
-      pwr=REAL(vTot%pw(1:,3)) + REAL(c(1)%pw(1:,1)) - AIMAG(c(2)%pw(1:,1))
-      pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
-      vTot%pw(1:,3)=CMPLX(pwr,pwi)
+      vTot%pw(1:,1)=(vTot%pw(1:,1)+vTot%pw(1:,2))/2
+      vTot%pw(1:,2)=vTot%pw(1:,1)
+      vTot%pw(1:,3)=CMPLX(0.0,0.0)
 
-      vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
-      vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)
-      pwr=REAL(vTot%pw_w(1:,3)) + REAL(c(1)%pw_w(1:,1)) - AIMAG(c(2)%pw_w(1:,1))
-      pwi=AIMAG(vTot%pw_w(1:,3)) + AIMAG(c(1)%pw_w(1:,1)) + REAL(c(2)%pw_w(1:,1))
-      vTot%pw_w(1:,3)=CMPLX(pwr,pwi)
+      vTot%pw_w(1:,1)=(vTot%pw_w(1:,1)+vTot%pw_w(1:,2))/2
+      vTot%pw_w(1:,2)=vTot%pw_w(1:,1)
+      vTot%pw_w(1:,3)=CMPLX(0.0,0.0)
+
+      vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+b(3)%mt(:,0:,:,1)/2
+      vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-b(3)%mt(:,0:,:,1)/2
+      vTot%mt(:,0:,:,3)=b(1)%mt(:,0:,:,1)/2
+      vTot%mt(:,0:,:,4)=b(2)%mt(:,0:,:,1)/2
+
+      vTot%pw(1:,1)=vTot%pw(1:,1)+b(3)%pw(1:,1)/2
+      vTot%pw(1:,2)=vTot%pw(1:,2)-b(3)%pw(1:,1)/2
+      vTot%pw(1:,3)=(b(1)%pw(1:,1)+ImagUnit*b(2)%pw(1:,1))/2
+
+      vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+b(3)%pw_w(1:,1)/2
+      vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-b(3)%pw_w(1:,1)/2
+      vTot%pw_w(1:,3)=(b(1)%pw_w(1:,1)+ImagUnit*b(2)%pw_w(1:,1))/2
+
+      !vTot%mt(:,0:,:,1)=c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,1)
+      !vTot%mt(:,0:,:,2)=-c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,2)
+      !vTot%mt(:,0:,:,3)=c(1)%mt(:,0:,:,1)+vTot%mt(:,0:,:,3)
+      !vTot%mt(:,0:,:,4)=c(2)%mt(:,0:,:,1)+vTot%mt(:,0:,:,4)
+
+      !vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
+      !vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
+      !pwr=REAL(vTot%pw(1:,3)) + REAL(c(1)%pw(1:,1)) - AIMAG(c(2)%pw(1:,1))
+      !pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
+      !vTot%pw(1:,3)=CMPLX(pwr,pwi)
+
+      !vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)
+      !pwr=REAL(vTot%pw_w(1:,3)) + REAL(c(1)%pw_w(1:,1)) - AIMAG(c(2)%pw_w(1:,1))
+      !pwi=AIMAG(vTot%pw_w(1:,3)) + AIMAG(c(1)%pw_w(1:,1)) + REAL(c(2)%pw_w(1:,1))
+      !vTot%pw_w(1:,3)=CMPLX(pwr,pwi)
 
       !vTot%vacz(1:,1:,1)=vTot%vacz(1:,1:,1)+c(3)%vacz(1:,1:,1)
       !vTot%vacz(1:,1:,2)=vTot%vacz(1:,1:,2)-c(3)%vacz(1:,1:,1)
