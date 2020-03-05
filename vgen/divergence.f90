@@ -634,7 +634,7 @@ CONTAINS
       CALL timestart("PW potential gradient")
 
       DO i=1,3
-         grad(i)%pw(:,1)=ImagUnit*(cell%bmat(i,1)*stars%kv3(1,:)+cell%bmat(i,2)*stars%kv3(2,:)+cell%bmat(i,3)*stars%kv3(3,:))*pot%pw(:,1)
+         grad(i)%pw(:,1)=ImagUnit*(cell%bmat(i,1)*stars%kv3(1,:)+cell%bmat(i,2)*stars%kv3(2,:)+cell%bmat(i,3)*stars%kv3(3,:))*pot%pw(:,1)/(4.0*pi_const)
       END DO
 
 
