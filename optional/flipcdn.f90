@@ -103,7 +103,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    DO itype = 1, atoms%ntype
       IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
          ! spherical and non-spherical m.t. charge density
-         DO lh = 0,sphhar%nlh(sym%ntypsy(na))
+!$OMP parallel private(rhodummy,j,rhodummyR)
+!$OMP do
+	DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                 IF (noco%l_mtNocoPot) THEN
                    rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
@@ -123,6 +125,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
                 END IF
             END DO
          END DO
+!$OMP end do
+!$OMP end parallel
       ELSE IF (l_flip(itype).AND.scaleSpin(itype)) THEN
          IF((rotAngleTheta(itype).NE.(pimach()) .OR.rotAnglePhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0.",calledby="flipcdn")
          DO lh = 0,sphhar%nlh(sym%ntypsy(na))

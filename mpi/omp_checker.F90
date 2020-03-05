@@ -32,10 +32,12 @@ contains
 
       do i = 1,size(cpu)
          if(count(cpu(i) == cpu) /= 1) then
-            write (*,*) "The OMP parallelism seems to be weird"
-            call judft_warn("Multiple OMPs on one core: There are " // &
-                           int2str(count(cpu(i) == cpu)) // " on cpu " // &
-                           int2str(cpu(i)))
+            WRITE(*,*) "The OMP parallelism seems to be weird"
+            WRITE(*,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // & 
+                       " on cpu " // int2str(cpu(i))
+            WRITE(6,*) "The OMP parallelism seems to be weird"
+            WRITE(6,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // & 
+                       " on cpu " // int2str(cpu(i))
             exit
          endif
       enddo

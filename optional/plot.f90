@@ -188,9 +188,9 @@ CONTAINS
          theta   = nococonv%beta(ityp)
          phi     = nococonv%alph(ityp)
          DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
-!$OMP parallel private (iri,cdnup,cdndown,chden,mgden,cdn11,cdn22,cdn21)
-!$OMP DO   
-            DO iri = 1,atoms%jri(ityp) 
+!$OMP parallel private (cdnup,cdndown,chden,mgden,cdn11,cdn22,cdn21)
+!$OMP DO
+            DO iri = 1,atoms%jri(ityp)
                IF (SIZE(denmat%mt,4).LE.2) THEN
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
@@ -238,8 +238,8 @@ CONTAINS
       CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,1)
 
       ! Calculate the charge and magnetization densities in the interstitial.
-!$OMP parallel private (imesh,rho_11,rho_22,rho_21r,rho_21i,mx,my,mz)
-!$OMP DO    
+!$OMP parallel private (rho_11,rho_22,rho_21r,rho_21i,mx,my,mz)
+!$OMP DO
       DO imesh = 0,ifft3-1
          rho_11  = ris(imesh,1)
          rho_22  = ris(imesh,2)
@@ -652,6 +652,7 @@ CONTAINS
          END IF
 
          !loop over all points
+
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
                DO ix = 0, grid(1)-1
