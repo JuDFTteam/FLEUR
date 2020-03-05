@@ -247,7 +247,7 @@ MODULE m_intgr
     !     ..
     !     .. Locals ..
     INTEGER :: m, n0, nsteps
-    REAL    :: tiny, yr(nr), h1, z1, ih1(nr)
+    REAL    :: tiny, h1, z1, ih1(nr)
     INTEGER :: i, j
     REAL    :: alpha
     !
@@ -271,16 +271,11 @@ MODULE m_intgr
     !
     !--->    lagrange integration for points 1<j<n0, error: h**9
     !
-    IF (n0.GT.1) THEN
-      DO i = 1,7
-        yr(i) = r(i)*y(i)
-      ENDDO
-      z1 = 0.
-      DO j = 1,n0 - 1
-        z1 = z1 + CPP_BLAS_sdot(7,a(1,j),1,yr,1)
-      ENDDO
-      z = z + z1 * h / 60480.
-    END IF
+   z1 = 0.
+   DO j = 1,n0 - 1
+     z1 = z1 + dot_product(a(:,j), r(1:7)*y(1:7))
+   ENDDO
+   z = z + z1 * h / 60480.
     !
     !--->    simpson integration
     !
@@ -289,10 +284,7 @@ MODULE m_intgr
       ih1(i) = h1 * ih(i)
     ENDDO
     DO m = 1,nsteps
-      DO i = 1,nr
-        yr(i) = ih1(i)*r(i+n0-1)
-      ENDDO
-      z = z + CPP_BLAS_sdot(nr,yr,1,y(n0),1)
+      z = z + dot_product(ih1*r(n0:n0+6),y(n0:n0+nr-1))
       n0 = n0 + nr1
     ENDDO
 
