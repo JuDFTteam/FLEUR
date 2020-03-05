@@ -5,8 +5,7 @@ jt::copyfile("files/inp2.xml","$workdir/inp.xml");
 
 jt::testrun($executable,$workdir);
 
-#now test output
-$result=jt::test_fileexists("$workdir/denIn.xsf");
+
 # unit cell
 $result+=jt::test_grepexists("$workdir/denIn.xsf",".0000000 11.36143");
 $result+=jt::test_grepexists("$workdir/denIn.xsf","1.93419");
