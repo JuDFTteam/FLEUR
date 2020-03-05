@@ -268,10 +268,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          IF (l_dosNdir) THEN
             IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,sym,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
-            IF (banddos%l_orb.AND.ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
-               CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
+            IF(banddos%l_orb) THEN
+               IF (ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
+                  CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
+               END IF
                IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
-            END IF
+            ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 

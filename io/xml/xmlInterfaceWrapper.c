@@ -46,7 +46,7 @@ int parseXMLSchema(const char* schemaFilename)
 {
    schemaDoc = xmlReadFile(schemaFilename, NULL, 0);
    //printf("Parsing XML Schema file: %s\n", schemaFilename);
-   if (schemaDoc == NULL) 
+   if (schemaDoc == NULL)
    {
       fprintf(stderr, "Failed to parse xml schema file %s\n", schemaFilename);
       return -1;
@@ -82,7 +82,7 @@ int parseXMLDocument(const char* docFilename)
 {
   xmlDocument = xmlReadFile(docFilename, NULL,0);
    xmlXIncludeProcess(xmlDocument) ;
-   if (xmlDocument == NULL) 
+   if (xmlDocument == NULL)
    {
       fprintf(stderr, "Failed to parse xml file %s\n", docFilename);
       return -1;
@@ -101,7 +101,7 @@ int validateXMLDocument()
       fprintf(stderr, "Error: schemaValidCtxt is null in validateDocument()");
       return -1;
    }
-   if (xmlDocument == NULL) 
+   if (xmlDocument == NULL)
    {
       fprintf(stderr, "Error: xmlDocument is null in validateDocument()");
       return -1;
@@ -113,18 +113,20 @@ int validateXMLDocument()
 
 int initializeXPath()
 {
-   if (xmlDocument == NULL) 
+   if (xmlDocument == NULL)
    {
       fprintf(stderr, "Error: xmlDocument is null in initializeXPath()");
       return -1;
-   }
+   } 
+   if(xPathObj) xmlXPathFreeObject(xPathObj);
+   if(xPathCtxt) xmlXPathFreeContext(xPathCtxt);
    xPathCtxt = xmlXPathNewContext(xmlDocument);
    return 0;
 }
 
 int getNumberOfXMLNodes(const unsigned char* xPathExpression)
 {
-   if (xPathCtxt == NULL) 
+   if (xPathCtxt == NULL)
    {
       fprintf(stderr, "Error: xPathCtxt is null in getNumberOfNodes(...)");
       return -1;
@@ -150,7 +152,7 @@ int getNumberOfXMLNodes(const unsigned char* xPathExpression)
 
 extern const unsigned char* getXMLAttributeValue(const unsigned char* xPathExpression)
 {
-   if (xPathCtxt == NULL) 
+   if (xPathCtxt == NULL)
    {
       fprintf(stderr, "Error: xPathCtxt is null in getAttributeValue(...)");
       return NULL;
@@ -175,7 +177,7 @@ extern const unsigned char* getXMLAttributeValue(const unsigned char* xPathExpre
 
 int setXMLAttributeValue(const unsigned char* xPathExpression,const unsigned char * value)
 {
-   if (xPathCtxt == NULL) 
+   if (xPathCtxt == NULL)
    {
       fprintf(stderr, "Error: xPathCtxt is null in getAttributeValue(...)");
       return 1;

@@ -6,10 +6,11 @@
 MODULE m_vgen_finalize
    USE m_juDFT
    USE m_xcBfield
+   USE m_plot
 
 CONTAINS
 
-   SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot)
+   SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (finalization)                          
       ! 
@@ -25,7 +26,6 @@ CONTAINS
       USE m_rotate_int_den_tofrom_local
       USE m_types
       USE m_rotate_mt_den_tofrom_local
-      USE m_sfTests
       USE m_magnMomFromDen
       USE m_pw_tofrom_grid
       
@@ -45,13 +45,14 @@ CONTAINS
       CLASS(t_xcpot),   INTENT(IN)    :: xcpot
       TYPE(t_sphhar),   INTENT(IN)    :: sphhar
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
-      TYPE(t_potden)                  :: div, phi, checkdiv
+      TYPE(t_potden)                  :: div, phi, checkdiv, vScal, vCorr
       TYPE(t_potden), DIMENSION(3)    :: cvec, corrB, bxc
       TYPE(t_gradients)               :: tmp_grad
 
-      INTEGER                         :: i, js, n
-      REAL                            :: sfscale
+      INTEGER                         :: i, js, n, lh, nat, nd
+      REAL                            :: sfscale, r2(atoms%jmtd)
       REAL                            :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
       REAL, ALLOCATABLE               :: intden(:,:)
 
@@ -71,20 +72,30 @@ CONTAINS
          END IF
       END IF
 
-      sfscale=1.0
-      IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
-         IF (xcpot%needs_grad()) THEN
-            sfscale=1.14
-         ELSE
-            sfscale=1.12
-         END IF
-         
+      IF (noco%l_mtnocoPot.AND.noco%l_scaleMag) THEN
+         sfscale=noco%mag_scale
          CALL vTot%SpinsToChargeAndMagnetisation()
          vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
          vTot%pw(:,       2:3) = sfscale*vTot%pw(:,     2:3)
          vTot%vacz(:,:,   2:4) = sfscale*vTot%vacz(:,:, 2:4)
          vTot%vacxy(:,:,:,2:3) = sfscale*vTot%vacxy(:,:,:,2:3)
          CALL vTot%ChargeAndMagnetisationToSpins()
+      END IF
+
+      IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
+
+         !DO js=1, 4
+         !   nat = 1
+         !   DO i=1, atoms%ntype
+         !      nd = sym%ntypsy(nat)
+         !      DO lh=0, sphhar%nlh(nd)
+         !         IF (MAXVAL(ABS(vTot%mt(:,lh,i,js))).LT.(1.0E-7)) THEN
+         !            vTot%mt(:,lh,i,js)=0.0
+         !         END IF
+         !      END DO
+         !      nat = nat + atoms%neq(i)
+         !   END DO
+         !END DO
 
          CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
          DO i=1,atoms%ntype
@@ -95,31 +106,61 @@ CONTAINS
          CALL timestart("Purging source terms in B-field")
 
          CALL timestart("Building B")
-         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,vTot,2.0,bxc)
+         !vTot%mt(:,0,:,1) = 3.0+4.0*atoms%rmsh(:,:)**2
+         !vTot%mt(:,0,:,2) = 3.0-4.0*atoms%rmsh(:,:)**2
+         !vTot%mt(:,0,:,3) = atoms%rmsh(:,:)**2
+         !vTot%mt(:,0,:,4) = 3.0*atoms%rmsh(:,:)
+         !vTot%mt(:,1:,:,:) = 0.0
+         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,vTot,2.0,vScal,bxc,cell)
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,div,phi,vCorr,cvec,corrB,checkdiv)
          CALL timestop("SF subroutine")
+
+         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+         !         .FALSE., .FALSE., 'div                 ', div)
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .TRUE., 'phiDiv              ', phi)
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .FALSE., 'gradPhiDiv          ', cvec(1), cvec(1), cvec(2), cvec(3))
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .FALSE., 'bCorrected          ', corrB(1), corrB(1), corrB(2), corrB(3))
 
          CALL div%resetPotDen()
          CALL checkdiv%resetPotDen()
          CALL phi%resetPotDen()
          DO i=1,3
-            CALL bxc(i)%resetPotDen()
+            !CALL bxc(i)%resetPotDen()
             CALL corrB(i)%resetPotDen()
          END DO
 
+         CALL timestart("Correcting vTot")
+         !CALL correctPot(vTot,cvec)
+         ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
+         vTot=vCorr
+
          CALL init_pw_grid(.FALSE.,stars,sym,cell)
-         DO i=1,3
-            CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
-            CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
-         END DO
+         CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,vTot%pw,tmp_grad,rho=intden)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vTot%pw,vTot%pw_w)
          CALL finish_pw_grid()
 
-         CALL timestart("Correcting vTot")
-         CALL correctPot(vTot,cvec)
          CALL timestop("Correcting vTot")
+
+         DO i=1,atoms%ntype
+            DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:i - 1)) + 1))
+               r2=atoms%rmsh(:,i)**2
+               DO js=1,4
+                  vTot%mt(:,lh,i,js) = vTot%mt(:,lh,i,js)/r2
+               END DO !js
+            END DO !lh
+         END DO !i
+
+      !CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+      !                   noco, nococonv,2.0, .FALSE., .TRUE., vTot, 'totpot              ')
 
          CALL timestop("Purging source terms in B-field")
          
@@ -129,6 +170,18 @@ CONTAINS
             8026 FORMAT(2x,'--> Bfield after SF (atom ',i2,': ','Bx 1=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
          END DO
       END IF
+
+      !if (noco%l_mtNocoPot) then
+      !   vTot%mt(:,5,:,3)=vTot%mt(:,0,:,3)
+      !   vTot%mt(:,0,:,3)=0.0
+      !   vTot%mt(:,7,:,4)=vTot%mt(:,0,:,4)
+      !   vTot%mt(:,0,:,4)=0.0
+      !end if
+
+      !CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, vTot, PLOT_POT_TOT, sliceplot)
+      !STOP
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       ! Store vTot(L=0) component as r*vTot(L=0)/sqrt(4*pi):
       ! (Used input%jspins instead of SIZE(vtot%mt,4) since

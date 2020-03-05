@@ -50,43 +50,68 @@ CONTAINS
     xml%basepath=xpath
   end subroutine
 
-  SUBROUTINE init(xml)
+  subroutine validate_with_schema(version)
     USE iso_c_binding
-    CLASS(t_xml),INTENT(IN)::xml
-
-    INTEGER                        :: errorStatus
-    CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
-    INTEGER                        :: i,numberNodes
-    CHARACTER(LEN=255)             :: xPathA,xPathB,valueString,versionString
-    REAL                           :: tempReal
+    character(len=4,kind=c_char),intent(in):: version
+    integer :: errorStatus
+    character(len=200,KIND=c_char):: schemaFilename
     INTERFACE
-       FUNCTION dropInputSchema() BIND(C, name="dropInputSchema")
-         USE iso_c_binding
-         INTEGER(c_int) dropInputSchema
-       END FUNCTION dropInputSchema
+      FUNCTION dropInputSchema(version) BIND(C, name="dropInputSchema")
+        USE iso_c_binding
+        INTEGER(c_int) ::dropInputSchema
+        CHARACTER(kind=c_char) ::version
+      END FUNCTION dropInputSchema
     END INTERFACE
-
-    if (INITIALIZED) RETURN
-    INITIALIZED=.true.
+        !Now validate with schema
     errorStatus = 0
-    errorStatus = dropInputSchema()
+    errorStatus=dropInputSchema(version//C_NULL_CHAR)
+
     IF(errorStatus.NE.0) THEN
-       CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd')
+       CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd for version '//version)
     END IF
 
     schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
+    CALL ParseSchema(schemaFilename)
+    CALL ValidateDoc()
+    CALL InitXPath()
+  end
+
+  SUBROUTINE init(xml,old_version)
+    USE iso_c_binding
+    CLASS(t_xml),INTENT(IN)::xml
+    LOGICAL,OPTIONAL,INTENT(inout):: old_version
+
+    LOGICAL                        :: l_allow_old
+    INTEGER                        :: errorStatus
+    CHARACTER(LEN=200,KIND=c_char) :: docFilename
+    INTEGER                        :: i,numberNodes
+    CHARACTER(LEN=255)             :: xPathA,xPathB,valueString,versionString
+    REAL                           :: tempReal
+
+
+    if (INITIALIZED) RETURN
+    INITIALIZED=.true.
+
+    l_allow_old=.false.
+    if (present(old_version)) then
+      l_allow_old=old_version
+      old_version=.false.
+    endif
+
+    !Open inp.xml
     docFilename = "inp.xml"//C_NULL_CHAR
     CALL InitInterface()
-    CALL ParseSchema(schemaFilename)
     CALL ParseDoc(docFilename)
-    CALL ValidateDoc()
     CALL InitXPath()
 
     ! Check version of inp.xml
     versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
-    IF((TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
-       CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
+    IF((TRIM(ADJUSTL(versionString)).NE.'0.32')) THEN
+      if (.not.l_allow_old) CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
+      old_version=.true.
     END IF
+
+    call validate_with_Schema(trim(adjustl(versionString)))
 
     ! Read in constants
     xPathA = '/fleurInput/constants/constant'

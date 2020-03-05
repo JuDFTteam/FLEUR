@@ -13,8 +13,8 @@ MODULE m_tlo
 !     p.kurz jul. 1996
 !***********************************************************************
       CONTAINS
-        SUBROUTINE tlo(atoms,sym,sphhar,jspin,jsp,ntyp,enpara,lh0,input,vr,&
-                       na,flo,f,g,usdus,uuilon,duilon,ulouilopn, tlmplm )
+        SUBROUTINE tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,ntyp,enpara,lh0,input,vr,&
+                       na,flo,f,g,usdus, tlmplm )
           !
           !*************** ABBREVIATIONS *****************************************
           ! tuulo      : t-matrix element of the lo and the apw radial fuction
@@ -37,29 +37,22 @@ MODULE m_tlo
           TYPE(t_enpara),INTENT(IN)   :: enpara
           !     ..
           !     .. Scalar Arguments ..
-          INTEGER, INTENT (IN) :: jspin,jsp,ntyp ,lh0,na
+          INTEGER, INTENT (IN) :: jspin1,jspin2,jsp,ntyp ,lh0,na
           !     ..
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd)
           REAL,    INTENT (IN) :: f(:,:,0:,:),g(:,:,0:,:) !(atoms%jmtd,2,0:atoms%lmaxd,spins)
           REAL,    INTENT (IN) :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,spins)
-          REAL,    INTENT (IN) :: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
-          REAL,    INTENT (IN) :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX cil
-          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo,jspin1,jspin2
+          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
           !     ..
           !     .. Local Arrays ..
           REAL x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
           REAL uvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd),dvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd)
           !     ..
-          IF (jspin>2) THEN
-            jspin1=1
-            jspin2=2
-          ELSE
-            jspin1=jspin;jspin2=jspin
-          END IF
+
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)
              DO lp = 0,atoms%lmax(ntyp)
@@ -179,18 +172,18 @@ MODULE m_tlo
           !---> terms have to be made hermitian. if second variation is switched
           !---> on, the t-matrices contain only the contributions from the
           !---> non-spherical hamiltonian.
-          IF (.NOT.input%secvar.and.jspin<3) THEN
+          IF (.NOT.input%secvar.and.jspin1==jspin2) THEN
              DO lo = 1,atoms%nlo(ntyp)
                 l = atoms%llo(lo,ntyp)
                 DO m = -l,l
                    lm = l* (l+1) + m
-                   tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jspin) *&
-                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) )
-                   tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jspin) *&
-                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) ) + 0.5 * usdus%uulon(lo,ntyp,jspin)
+                   tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jspin1) *&
+                        ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) )
+                   tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
+                        ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) ) + 0.5 * usdus%uulon(lo,ntyp,jspin1)
                    IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
-                      tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * uuilon(lo,ntyp)
-                      tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
+                      tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
+                      tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
                    ENDIF
                    !+apw_lo
                    IF (atoms%l_dulo(lo,ntyp)) THEN
@@ -205,9 +198,9 @@ MODULE m_tlo
                 DO lo = atoms%lo1l(lp,ntyp),lop
                    loplo = ((lop-1)*lop)/2 + lo
                    DO m = -lp,lp
-                      tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jspin)+&
-                           enpara%ello0(lo,ntyp,jspin))* usdus%uloulopn(lop,lo,ntyp,jspin) + 0.5* (ulouilopn(lop,lo,ntyp) +&
-                           ulouilopn(lo,lop,ntyp))
+                      tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jspin1)+&
+                           enpara%ello0(lo,ntyp,jspin1))* usdus%uloulopn(lop,lo,ntyp,jspin1) + 0.5* (usdus%ulouilopn(lop,lo,ntyp,jspin1) +&
+                           usdus%ulouilopn(lo,lop,ntyp,jspin1))
                    END DO
                 END DO
              END DO

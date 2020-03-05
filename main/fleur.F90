@@ -118,6 +118,7 @@ CONTAINS
 
 
 
+
     IF ( ( fi%input%preconditioning_param /= 0 ) .AND. fi%oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
@@ -149,14 +150,14 @@ CONTAINS
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
-       !IF(fi%noco%l_alignMT) THEN
-      !   CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
-      !   CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
-       !END IF
+       IF(fi%noco%l_alignMT) THEN
+         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
+         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+       END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
        !IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-        !                       ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+       !                        ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     END IF
 
 
@@ -194,7 +195,7 @@ CONTAINS
 
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.true.,l_real,fi%noco%l_soc,.false.,mpi%n_size)
-  IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
+  IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,fi%input,fi%atoms,fi%kpts,fi%noco,l_real)
@@ -262,16 +263,8 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
-
-
-
-       IF (fi%noco%l_sourceFree) THEN
-          sfscale=1.0
-          IF (xcpot%needs_grad()) THEN
-             sfscale=1.14
-          ELSE
-             sfscale=1.12
-          END IF
+       IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
+          sfscale=fi%noco%mag_scale
           CALL inDen%SpinsToChargeAndMagnetisation()
           inDen%mt(:,0:,:,  2:4) = sfscale*inDen%mt(:,0:,:,2:4)
           inDen%pw(:,       2:3) = sfscale*inDen%pw(:,     2:3)
@@ -285,7 +278,7 @@ CONTAINS
                  fi%cell,fi%oneD,fi%sliceplot,mpi,results,fi%noco,nococonv,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-       IF (fi%noco%l_sourceFree) THEN
+       IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
           CALL inDen%SpinsToChargeAndMagnetisation()
           inDen%mt(:,0:,:,  2:4) = inDen%mt(:,0:,:,2:4)/sfscale
           inDen%pw(:,       2:3) = inDen%pw(:,     2:3)/sfscale
@@ -527,8 +520,8 @@ CONTAINS
             WRITE(6,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
-         CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
+       CALL timestop("Iteration")
 
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

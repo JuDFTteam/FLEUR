@@ -1,0 +1,11 @@
+jt::copyfile("files/inp.xml","$workdir/inp.xml");
+
+jt::testrun("$executable ",$workdir);
+
+
+$result+=jt::test_fileexists("$workdir/out");
+
+$result=jt::test_grep_lastnumber("$workdir/out","nococonv%beta=","nococonv%beta*= *([^ ]*)",0.226,0.001);
+$result=jt::test_grep_lastnumber("$workdir/out","nococonv%alpha=","nococonv%alpha*= *([^ ]*)",1.45628,0.001);
+
+jt::stageresult($workdir,$result,1);
