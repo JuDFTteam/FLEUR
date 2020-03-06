@@ -30,10 +30,10 @@ MODULE m_jDOS
 
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
 
-      INTEGER :: iType,iBand,nn,natom,l,jj,j_ind,lmup,lmdown,spin,ilo
+      INTEGER :: iType,iBand,nn,natom,l,jj,j_ind,lmup,lmdown,spin,ilo,ilop
       REAL    :: j,mj,mup,mdown
       REAL    :: facup,facdown,tot
-      COMPLEX :: aup,bup,cup,adown,bdown,cdown
+      COMPLEX :: aup,bup,cup,adown,bdown,cdown,cupp,cdownp
       REAL    :: c(0:lmax*2)
 
 
@@ -51,6 +51,16 @@ MODULE m_jDOS
                         c(0) = c(0) + eigVecCoeffs%acof(iBand,0,natom,spin)*CONJG(eigVecCoeffs%acof(iBand,0,natom,spin)) &
                                     + eigVecCoeffs%bcof(iBand,0,natom,spin)*CONJG(eigVecCoeffs%bcof(iBand,0,natom,spin)) &
                                        *usdus%ddn(0,iType,spin)
+
+                        DO ilo  = 1, atoms%nlo(iType)
+                           IF(atoms%llo(ilo,iType) /= 0) CYCLE
+                           c(0) = c(0) + 2*REAL(eigVecCoeffs%acof(iBand,0,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%uulon(ilo,iType,spin) &
+                                       + 2*REAL(eigVecCoeffs%bcof(iBand,0,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%dulon(ilo,iType,spin)
+                           DO ilop  = 1, atoms%nlo(iType)
+                              IF(atoms%llo(ilo,iType) /= 0) CYCLE
+                              c(0) = c(0) + eigVecCoeffs%ccof(0,iBand,ilo,natom,spin)*CONJG(eigVecCoeffs%ccof(0,iBand,ilop,natom,spin))*usdus%uloulopn(ilo,ilop,iType,spin)
+                           ENDDO
+                        ENDDO
                      ENDDO
                      tot = tot + c(0)
                   ELSE
@@ -77,11 +87,6 @@ MODULE m_jDOS
                               facup = clebsch(REAL(l),0.5,mup,0.5,j,mj)
                               aup   = facup   * eigVecCoeffs%acof(iBand,lmup  ,natom,1)
                               bup   = facup   * eigVecCoeffs%bcof(iBand,lmup  ,natom,1)
-                              cup = 0.0
-                              DO ilo = 1, atoms%nlo(iType)
-                                 IF(atoms%llo(ilo,iType).NE.l) CYCLE
-                                 cup = facup  * eigVecCoeffs%ccof(INT(mup),iBand,ilo,natom,1)
-                              ENDDO
                            ELSE
                               aup = 0.0
                               bup = 0.0
@@ -93,21 +98,15 @@ MODULE m_jDOS
                               facdown = clebsch(REAL(l),0.5,mdown,-0.5,j,mj)
                               adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,spin)
                               bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,spin)
-                              cdown = 0.0
-                              DO ilo = 1, atoms%nlo(iType)
-                                 IF(atoms%llo(ilo,iType).NE.l) CYCLE
-                                 cdown = facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilo,natom,spin)
-                              ENDDO
                            ELSE
                               adown = 0.0
                               bdown = 0.0
-                              cdown = 0.0
                            ENDIF
 
                            !c := norm of facup |up> + facdown |down>
                            !We have to write it out explicitely because
                            !of the offdiagonal scalar products that appear
-                           c(j_ind) = c(j_ind) + &
+                           c(j_ind) = c(j_ind) &
                                      +        aup  *CONJG(aup)   &
                                      +        adown*CONJG(adown) &
                                      +        bup  *CONJG(bup)    * usdus%ddn(l,iType,1) &
@@ -116,6 +115,56 @@ MODULE m_jDOS
                                      + 2*REAL(bup  *CONJG(bdown)) * denCoeffsOffdiag%dd21n(l,iType) &
                                      + 2*REAL(aup  *CONJG(bdown)) * denCoeffsOffdiag%ud21n(l,iType) &
                                      + 2*REAL(adown*CONJG(bup))   * denCoeffsOffdiag%du21n(l,iType)
+
+                           !Local orbitals
+                           DO ilo = 1, atoms%nlo(iType)
+                              IF(atoms%llo(ilo,iType) /= l) CYCLE
+
+                              IF(ABS(mup) <= l) THEN
+                                 cup = facup  * eigVecCoeffs%ccof(INT(mup),iBand,ilo,natom,1)
+                              ELSE
+                                 cup = 0.0
+                              ENDIF
+
+                              IF(ABS(mdown) <= l) THEN
+                                 cdown = facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilo,natom,spin)
+                              ELSE
+                                 cdown = 0.0
+                              ENDIF
+
+                              !Local orbital times ab coeff contribution
+                              c(j_ind) = c(j_ind) &
+                                        + 2*REAL(aup  *CONJG(cup))   * usdus%uulon(ilo,iType,1) &
+                                        + 2*REAL(adown*CONJG(cdown)) * usdus%uulon(ilo,iType,spin) &
+                                        + 2*REAL(bup  *CONJG(cup))   * usdus%dulon(ilo,iType,1) &
+                                        + 2*REAL(bdown*CONJG(cdown)) * usdus%dulon(ilo,iType,spin) &
+                                        + 2*REAL(cup  *CONJG(adown)) * denCoeffsOffdiag%uulo21n(ilo,iType) &
+                                        + 2*REAL(cdown*CONJG(aup))   * denCoeffsOffdiag%ulou21n(ilo,iType) &
+                                        + 2*REAL(cup  *CONJG(bdown)) * denCoeffsOffdiag%dulo21n(ilo,iType) &
+                                        + 2*REAL(cdown*CONJG(bup))   * denCoeffsOffdiag%ulod21n(ilo,iType)
+
+                              !Local orbital times Local orbital contribution
+                              DO ilop = 1, atoms%nlo(iType)
+                                 IF(atoms%llo(ilop,iType) /= l) CYCLE
+
+                                 IF(ABS(mup) <= l) THEN
+                                    cupp = facup  * eigVecCoeffs%ccof(INT(mup),iBand,ilop,natom,1)
+                                 ELSE
+                                    cupp = 0.0
+                                 ENDIF
+
+                                 IF(ABS(mdown) <= l) THEN
+                                    cdownp = facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilop,natom,spin)
+                                 ELSE
+                                    cdownp = 0.0
+                                 ENDIF
+
+                                 c(j_ind) = c(j_ind) &
+                                           +        cup  *CONJG(cupp)    * usdus%uloulopn(ilo,ilop,iType,1) &
+                                           +        cdown*CONJG(cdownp)  * usdus%uloulopn(ilo,ilop,iType,spin) &
+                                           + 2*REAL(cup  *CONJG(cdownp)) * denCoeffsOffDiag%uloulop21n(ilo,ilop,iType)
+                              ENDDO
+                           ENDDO
 
                            mj = mj + 1
                         ENDDO
