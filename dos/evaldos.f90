@@ -60,7 +60,7 @@
       LOGICAL  l_tria,l_orbcomp,l_error,l_jDOS
 
       INTEGER  itria(3,2*kpts%nkpt),itetra(4,6*kpts%nkpt)
-      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(3)
+      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
       REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
@@ -88,7 +88,7 @@
       ENDIF
 
       IF(l_jDOS) THEN
-         qdim = 6
+         qdim = 7
          n_jDOS = banddos%jDOSAtom
          WRITE(*,*) 'DOS: jDOS', n_jDOS
       ENDIF
@@ -182,8 +182,8 @@
                END IF
             ELSE IF(l_jDOS) THEN
                i = 0
-               DO l= 1, 3
-                 DO jj = 1, 2
+               DO l= 0, 3
+                 DO jj = 1, MERGE(1,2,l==0)
                     i = i+1
                     DO iBand = 1, results%neig(k,jsp)
                        qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
@@ -408,18 +408,18 @@
                    WRITE (18,99001)  e(i),totdos,(g(i,l),l=1,23)
                 ENDIF
              ELSEIF(l_jDOS) THEN
-                DO nl = 1 , 6
+                DO nl = 1 , 7
                    totdos = totdos + g(i,nl)
                 ENDDO
                 ldos= 0.0
                 col = 0
-                DO l = 1, 3
-                  DO jj = 1, 2
+                DO l = 0, 3
+                  DO jj = 1, MERGE(1,2,l==0)
                     col = col +1
                     ldos(l) = ldos(l) + g(i,col)
                   ENDDO
                 ENDDO
-                WRITE(18,99001) e(i),totdos,(ldos(l),l=1,3),(g(i,l),l=1,6)
+                WRITE(18,99001) e(i),totdos,(ldos(l),l=0,3),(g(i,l),l=2,7)
              ENDIF
          ENDDO
          CLOSE (18)
