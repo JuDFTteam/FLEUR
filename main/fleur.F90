@@ -118,6 +118,7 @@ CONTAINS
 
 
 
+
     IF ( ( fi%input%preconditioning_param /= 0 ) .AND. fi%oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
@@ -265,9 +266,6 @@ CONTAINS
 !!$                   IF(wann%l_dim(3)) fi%noco%theta = tpi_const * wann%param_vec(3,pc)
 !!$                END IF
        !---< gwf
-
-
-
 
        IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
           sfscale=fi%noco%mag_scale
@@ -526,8 +524,8 @@ CONTAINS
             WRITE(6,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
-         CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
+       CALL timestop("Iteration")
 
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
