@@ -1,0 +1,13 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp1.xml","$workdir/inp.xml");
+
+jt::testrun("$executable ",$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/out","it= 15  is completed");
+$result+=jt::test_grepnumber("$workdir/out","new fermi energy",".*: *([^ ]*)",-0.0957,0.005);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-10434.5474,0.005);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for spin  1                 it=   15",": *([^ ]*)",0.0000,0.001);
+
+jt::stageresult($workdir,$result,"1");

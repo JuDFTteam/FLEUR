@@ -74,6 +74,11 @@ MODULE m_checks
         END IF
      END IF
 
+     IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
+        CALL juDFT_error("jDOS+collinear is not implemented at the moment.",&
+                         hint="If you need this feature please create an issue on the fleur git")
+     ENDIF
+
      IF (banddos%vacdos) THEN
         IF (.NOT.banddos%dos) THEN
            CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="postprocessInput")

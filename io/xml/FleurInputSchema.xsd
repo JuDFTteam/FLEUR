@@ -432,6 +432,7 @@
             <xsd:attribute name="label" type="xsd:string" use="optional"/>
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
             <xsd:attribute default="F" name="orbcomp" type="FleurBool" use="optional"/>
+            <xsd:attribute default="F" name="jDOS"    type="FleurBool" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>
