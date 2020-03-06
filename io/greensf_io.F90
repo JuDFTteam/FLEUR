@@ -46,7 +46,7 @@ MODULE m_greensf_io
       INTEGER           :: version
       INTEGER           :: dimsInt(7)
       REAL              :: eFermiPrev
-      INTEGER(HID_T)    :: dims(7)
+      INTEGER(HSIZE_T)    :: dims(7)
 
       version = 1
       IF(PRESENT(inFilename)) THEN
@@ -145,7 +145,7 @@ MODULE m_greensf_io
       INTEGER              :: dimsInt(7)
       INTEGER              :: i_gf,ispin,m
       INTEGER              :: i_elem,n_elem
-      INTEGER(HID_T)       :: dims(7)
+      INTEGER(HSIZE_T)       :: dims(7)
       REAL                 :: trc(input%jspins)
 
 
@@ -287,3 +287,4 @@ MODULE m_greensf_io
 #endif
 
 END MODULE m_greensf_io
+
