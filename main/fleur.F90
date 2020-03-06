@@ -291,13 +291,7 @@ CONTAINS
           CALL inDen%ChargeAndMagnetisationToSpins()
        END IF
 
-       IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-          CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, fi%cell, &
-                         fi%noco,nococonv, vTot, PLOT_POT_TOT, fi%sliceplot)
-          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
-          !CALL subPotDen(vxcForPlotting,vTot,vCoul)
-          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vxcForPlotting,PLOT_POT_VXC)
-       END IF
+    
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
