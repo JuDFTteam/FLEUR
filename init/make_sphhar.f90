@@ -62,6 +62,13 @@ CONTAINS
     ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))
     ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
     ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
+
+    sphhar%clnu = CMPLX(0.0,0.0)
+    sphhar%llh = 0
+    sphhar%mlh = 0
+    sphhar%nlh = 0
+    sphhar%nmem = 0
+
     ! Generate lattice harmonics
 
     IF (.NOT.oneD%odd%d1) THEN
