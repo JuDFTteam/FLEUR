@@ -25,6 +25,7 @@ CONTAINS
       USE m_types_oneD
       use m_types_input
       USE m_types_gfinp
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
       TYPE(t_sym), INTENT(INOUT) :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -47,13 +48,14 @@ CONTAINS
 
       !Generated wigner symbols for LDA+U (includes DFT+HubbardI)
       IF (ALLOCATED(sym%d_wgn)) DEALLOCATE (sym%d_wgn)
-      ALLOCATE (sym%d_wgn(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, lmaxU_const, sym%nop))
+      ALLOCATE (sym%d_wgn(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, lmaxU_const, sym%nop), &
+               source=CMPLX_NOT_INITALIZED)
       IF (atoms%n_u + gfinp%n .GT. 0) THEN !replace with atoms%n_u+gfinp%n
          CALL d_wigner(sym%nop, sym%mrot, cell%bmat, lmaxU_const, sym%d_wgn)
          !For spin-offdiagonal parts, we need additional phase factors
          IF (noco%l_mperp) THEN
             IF (ALLOCATED(sym%phase)) DEALLOCATE (sym%phase)
-            ALLOCATE (sym%phase(sym%nop), source=0.0)
+            ALLOCATE (sym%phase(sym%nop), source=REAL_NOT_INITALIZED)
             CALL angles(sym)
          ENDIF
       END IF
