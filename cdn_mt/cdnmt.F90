@@ -306,11 +306,11 @@ CONTAINS
          DO itype = 1, atoms%ntype
             natom = SUM(atoms%neq(:itype-1)) + 1
 
-            WRITE(6,8300) natom, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
+            WRITE(6,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
 8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
             WRITE(6,*)
 
-            CALL openXMLElementPoly('mtJcharge',['atomType'],[natom])
+            CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 
             attributes = ''
             WRITE(attributes(1),'(f12.7)') jDOS%occ(1,1,natom)
