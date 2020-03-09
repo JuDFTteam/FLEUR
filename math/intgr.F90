@@ -233,7 +233,62 @@ MODULE m_intgr
 
     RETURN
   END SUBROUTINE intgr2
+  !**********************************************************************
+  SUBROUTINE intgr3_modern( y, r, h, jri, z )
+    !**********************************************************************
+    !     ..
+    !     .. Arguments ..
+    INTEGER, INTENT (IN) :: jri
+    REAL,    INTENT (IN) :: h
+    REAL,    INTENT (IN) :: r(:)
+    REAL,    INTENT (IN) :: y(:)
+    REAL,    INTENT (OUT):: z
+    !     ..
+    !     .. Locals ..
+    INTEGER :: m, n0, nsteps
+    REAL    :: tiny, h1, z1, ih1(nr)
+    INTEGER :: i, j
+    REAL    :: alpha
+    !
+    !--->    integral from 0 to r1 approximated by leading term in power
+    !--->    series expansion of y(r)
+    !
+    !      DO i=1,jri
+    !        IF (abs(y(i)).LT.tiny) y(i) = tiny
+    !      ENDDO
+    !
+    z = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
+      alpha = 1.0 + log(y(2)/y(1))/h
+      IF (alpha.GT.0.0) z = r(1)*y(1)/alpha
+    ENDIF
+    !
+    !--->    determine steps and starting point for simpson
+    !
+    nsteps = (jri-1)/nr1
+    n0 = jri - nr1*nsteps
+    !
+    !--->    lagrange integration for points 1<j<n0, error: h**9
+    !
+   z1 = 0.
+   DO j = 1,n0 - 1
+     z1 = z1 + dot_product(a(:,j), r(1:7)*y(1:7))
+   ENDDO
+   z = z + z1 * h / 60480.
+    !
+    !--->    simpson integration
+    !
+    h1 = h / h0
+    DO i = 1,nr
+      ih1(i) = h1 * ih(i)
+    ENDDO
+    DO m = 1,nsteps
+      z = z + dot_product(ih1*r(n0:n0+6),y(n0:n0+nr-1))
+      n0 = n0 + nr1
+    ENDDO
 
+    RETURN
+END SUBROUTINE intgr3_modern
   !**********************************************************************
   SUBROUTINE intgr3( y, r, h, jri, z )
     !**********************************************************************
