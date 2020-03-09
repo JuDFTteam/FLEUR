@@ -127,7 +127,16 @@ CONTAINS
          WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[', n, ']'
          IF (TRIM(ADJUSTL(this%name)) == xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
       enddo
-      IF (n == 0) CALL judft_error(("No kpoints named:"//TRIM(this%name)//" found"))
+      IF (n == 0) then
+        CALL judft_warn(("No kpoints named:"//TRIM(this%name)//" found"))
+           this%nkpt=1
+           ALLOCATE (this%bk(3, this%nkpt))
+           ALLOCATE (this%wtkpt(this%nkpt))
+           this%bk=0.0
+           this%wtkpt=0.0
+           print *,"Using Gamma-point only as fallback"
+        RETURN
+      endif
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
       this%numSpecialPoints = xml%GetNumberOfNodes(TRIM(path)//"/specialPoint")

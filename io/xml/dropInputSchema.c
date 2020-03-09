@@ -35,7 +35,7 @@ int dropInputSchema(char* version)
    {
       schemaString[i] = xsd_txt[i];
    }
-   schemaString[FleurInputSchema_xsd_len] = '\0';
+   schemaString[xsd_len] = '\0';
    file = fopen("FleurInputSchema.xsd", "w");
    errorCode = fprintf(file,"%s", schemaString);
    fclose(file);
