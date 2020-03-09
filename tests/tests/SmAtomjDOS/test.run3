@@ -6,9 +6,9 @@ jt::testrun("$executable ",$workdir);
 
 #now test output
 $result=jt::test_fileexists("$workdir/out");
-#Missing test j-charges(not implemented yet)
+#Test the charges for the decomposition
+$result+=jt::test_grepexists("$workdir/out","  1    0.20741    1.93177  3.80005  0.00000  0.00000  5.83539  0.02059");
 $result+=jt::test_fileexists("$workdir/DOS.1");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.00040  0.848E+02  0.110E-17  0.171E-04  0.145E-13  0.848E+02  0.680E-12  0.171E-04  0.435E-16  0.145E-13  0.845E+02  0.297E+00"); #5/2 peak line 365
 $result+=jt::test_grepexists("$workdir/DOS.1","0.53417  0.988E+02  0.108E-18  0.321E-04  0.395E-13  0.988E+02  0.185E-04  0.136E-04  0.299E-13  0.958E-14  0.264E+00  0.986E+02"); #7/2 peak line 875
-
 jt::stageresult($workdir,$result,"3");
