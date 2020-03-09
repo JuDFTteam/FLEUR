@@ -12,7 +12,7 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,jspin,regCharges,dos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs)
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS,greensfCoeffs)
 
 #include"cpp_double.h"
     USE m_types
@@ -46,6 +46,7 @@ CONTAINS
     TYPE (t_mcd),     OPTIONAL, INTENT(INOUT) :: mcd
     TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
+    TYPE (t_jDOS),    OPTIONAL, INTENT(INOUT) :: jDOS
     TYPE (t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
     ! ..
     ! ..  Local Scalars ..
@@ -220,6 +221,32 @@ CONTAINS
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, orbcomp%qmtp(:,:,:,jspin), 1)
        DEALLOCATE (r_b)
     END IF
+
+    !+jDOS
+    IF(PRESENT(jDOS)) THEN
+      IF(jspin.EQ.1) THEN
+
+        n = SIZE(jDOS%comp)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%comp,r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,jDOS%comp,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%qmtp)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%qmtp,r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,jDOS%qmtp,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%occ)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%occ,r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,jDOS%occ,1)
+        DEALLOCATE(r_b)
+
+      ENDIF
+    ENDIF
+    !-jDOS
 
     ! -> Collect force
     IF (input%l_f) THEN
