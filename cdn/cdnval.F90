@@ -252,8 +252,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
-         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) &
-                             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
+            CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+         ENDIF
 
          IF (gfinp%n.GT.0) CALL bzIntegrationGF(atoms,gfinp,sym,input,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
                                                 results%ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
