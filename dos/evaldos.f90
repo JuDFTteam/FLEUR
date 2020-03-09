@@ -151,7 +151,7 @@
         e_grid(ned+1) = e_lo + ned*de
       ENDIF
 
-      DO jspin = 1,input%jspins
+      DO jspin = 1,MERGE(1,input%jspins,l_jDOS)
          ntb = 0
          DO k = 1,kpts%nkpt
 
