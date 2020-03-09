@@ -280,7 +280,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
-               CALL jDOS_comp(ikpt,noccbd,ev_list,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -307,8 +307,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    END DO
 #endif
 
-   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
-              vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,hub1data)
+   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+              vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,jDOS,hub1data)
 
    IF (mpi%irank==0) THEN
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)

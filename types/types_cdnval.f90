@@ -122,8 +122,9 @@ PRIVATE
 
    TYPE t_jDOS
 
-      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:,:)
+      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)  !decomposition in percent
+      REAL, ALLOCATABLE    :: qmtp(:,:,:)      !How much of the state is in the muffin-tin sphere
+      REAL, ALLOCATABLE    :: occ(:,:,:)       !Occupation of the j-states
 
       CONTAINS
          PROCEDURE,PASS :: init => jDOS_init
@@ -489,9 +490,11 @@ SUBROUTINE jDOS_init(thisjDOS,input,banddos,atoms,kpts)
    IF ((banddos%ndir.EQ.-5).AND.banddos%dos) THEN
       ALLOCATE(thisjDOS%comp(input%neig,0:3,2,atoms%nat,kpts%nkpt),source = 0.0)
       ALLOCATE(thisjDOS%qmtp(input%neig,atoms%nat,kpts%nkpt),source = 0.0)
+      ALLOCATE(thisjDOS%occ(0:3,2,atoms%nat),source=0.0)
    ELSE
       ALLOCATE(thisjDOS%comp(1,1,1,1,1),source = 0.0)
       ALLOCATE(thisjDOS%qmtp(1,1,1),source = 0.0)
+      ALLOCATE(thisjDOS%occ(1,1,1),source=0.0)
    END IF
 
 END SUBROUTINE jDOS_init

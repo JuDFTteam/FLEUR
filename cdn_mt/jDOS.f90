@@ -16,7 +16,7 @@ MODULE m_jDOS
 
    CONTAINS
 
-   SUBROUTINE jDOS_comp(ikpt,noccbd,ev_list,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+   SUBROUTINE jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_input),             INTENT(IN)     :: input
@@ -26,6 +26,7 @@ MODULE m_jDOS
       INTEGER,                   INTENT(IN)     :: ikpt
       INTEGER,                   INTENT(IN)     :: noccbd
       INTEGER,                   INTENT(IN)     :: ev_list(:)
+      REAL,                      INTENT(IN)     :: we(:)
       TYPE(t_jDOS),              INTENT(INOUT)  :: jDOS
 
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
@@ -179,6 +180,7 @@ MODULE m_jDOS
                      IF(l /= 0) j_ind = j_ind+1
                      jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) = c(j_ind)*100.0/tot
                      jDOS%qmtp(ev_list(iBand),natom,ikpt) = 100.0*tot
+                     jDOS%occ(l,jj,natom) = jDOS%occ(l,jj,natom) + we(iBand) * c(j_ind)
                   ENDDO
                ENDDO
             ENDDO
