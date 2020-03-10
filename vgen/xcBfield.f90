@@ -152,10 +152,6 @@ CONTAINS
       ALLOCATE(div%pw_w,mold=div%pw)
       div%pw_w = CMPLX(0.0,0.0)
 
-      !aVec(1)%mt(:,1:,:,:)=0.0
-      !aVec(2)%mt(:,1:,:,:)=0.0
-      !aVec(3)%mt(:,1:,:,:)=0.0
-
       CALL timestart("Building divergence")
       CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
       CALL timestop("Building divergence")
@@ -167,8 +163,6 @@ CONTAINS
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
-
-      !div%pw=CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
       CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
@@ -214,22 +208,6 @@ CONTAINS
       !END DO
 
       CALL BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, vScal, corrB(1), corrB(2), corrB(3), vCorr)
-
-      !cvec(1)%mt(:,0:4,:,:)=0.0
-      !cvec(1)%mt(:,6:,:,:)=0.0
-      !cvec(2)%mt(:,0:6,:,:)=0.0
-      !cvec(2)%mt(:,8:,:,:)=0.0
-      !cvec(1)%mt(:,5,2,:)=cvec(1)%mt(:,5,1,:)
-      !cvec(2)%mt(:,7,1,:)=cvec(1)%mt(:,5,1,:)
-      !cvec(2)%mt(:,7,2,:)=cvec(1)%mt(:,5,1,:)
-
-      !cvec(1)%mt(:,0,:,1) = atoms%rmsh(:,:)**2
-      !cvec(2)%mt(:,0,:,1) = 3.0*atoms%rmsh(:,:)
-      !cvec(3)%mt(:,0,:,1) = 4.0*atoms%rmsh(:,:)**2
-
-      !cvec(1)%mt(:,1:,:,:)=0.0
-      !cvec(2)%mt(:,1:,:,:)=0.0
-      !cvec(3)%mt(:,1:,:,:)=0.0
 
    END SUBROUTINE sourcefree
 
