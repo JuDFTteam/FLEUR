@@ -177,7 +177,8 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
       END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+      
+      IF (.FALSE.) THEN
       DO i=1,4
          DO n=1, atoms%ntype
             CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, n, vTot%mt(:,:,n,i), flm(:,:,n,i))
@@ -192,8 +193,9 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          END DO
       END DO
 
-      CALL vdiff%copyPotDen(vTot)
-      CALL vdiff%subPotDen(vTot,v2)    
+      CALL vdiff%copypotden(vTot)
+      CALL vdiff%subPotDen(vTot,v2)
+      END IF    
 
       ! Store vTot(L=0) component as r*vTot(L=0)/sqrt(4*pi):
       ! (Used input%jspins instead of SIZE(vtot%mt,4) since
