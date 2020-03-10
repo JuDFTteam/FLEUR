@@ -40,6 +40,7 @@ CONTAINS
        CALL set_special_points(kpts,judft_string_for_argument("-specialk"))
     ENDIF
 
+    PRINT *,"Processing k-point string",str
     !set name
     IF (INDEX(str,"#")>0) THEN
        name=str(:INDEX(str,"#")-1)
@@ -91,22 +92,28 @@ CONTAINS
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)
        READ(str,*) den
+       PRINT *,"Generating a k-point set with density:",den
        CALL init_by_density(kpts,den,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'nk=')==1) THEN
        str=str(4:)
        READ(str,*) nk
+       PRINT *,"Generating a k-point set with ",nk," k-points"
        CALL init_by_number(kpts,nk,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'band=')==1) THEN
        str=str(6:)
        READ(str,*) kpts%nkpt
+       PRINT *,"Generating a k-point set for bandstructures with ",kpts%nkpt," k-points"
        CALL init_special(kpts,cell,film)
     ELSEIF(INDEX(str,'grid=')==1) THEN
        str=str(6:)
        READ(str,*) grid
+       PRINT *,"Generating a k-point grid:",grid
        CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
+       PRINT *,"Reading old kpts file"
     ELSEIF(LEN_TRIM(str)<1.OR.INDEX(ADJUSTL(str),'#')==1) THEN
+       PRINT *,"Generating default k-point set"
        CALL init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
     ELSE
        CALL judft_error(("Could not process -k argument:"//str))
@@ -138,7 +145,7 @@ CONTAINS
        ll=l(INDEX(l,"=")+1:)
        READ(ll,*,iostat=err) kvec
        IF (err.NE.0) CALL judft_error("Wrong definition of special k-point:"//l)
-       CALL kpts%add_special_line(kvec,l(:INDEX(l,"l")-1))
+       CALL kpts%add_special_line(kvec,l(:INDEX(l,"=")-1))
     END DO
   END SUBROUTINE set_special_points
 
@@ -185,13 +192,14 @@ CONTAINS
     LOGICAL,INTENT(IN)         :: film
     TYPE(t_cell),INTENT(IN)    :: cell
 
-    REAL:: nextp(3),lastp(3),d(MAX(kpts%nkpt,kpts%numSpecialPoints))
+    REAL:: nextp(3),lastp(3)
+    REAL,ALLOCATABLE:: d(:)
     INTEGER :: i,ii
     INTEGER,ALLOCATABLE:: nk(:)
     IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
-    ALLOCATE(nk(kpts%numSpecialPoints-1))
+    ALLOCATE(nk(kpts%numSpecialPoints-1),d(kpts%numSpecialPoints))
     !Distances
     lastp=0
     DO i=1,kpts%numSpecialPoints

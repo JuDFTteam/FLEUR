@@ -59,7 +59,7 @@ MODULE m_types_input
      REAL :: ellow=-1.8
      REAL :: elup=1.0
      REAL :: fixed_moment = 0.0
-     LOGICAL :: l_removeMagnetisationFromInterstitial
+     LOGICAL :: l_onlyMtStDen
      CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
      LOGICAL :: l_core_confpot=.TRUE. !Former CPP_CORE
      LOGICAL :: l_useapw=.FALSE.
@@ -134,7 +134,7 @@ CONTAINS
     call mpi_bc(this%l_wann,rank,mpi_comm)
     call mpi_bc(this%secvar,rank,mpi_comm)
     call mpi_bc(this%evonly,rank,mpi_comm)
-    call mpi_bc(this%l_removeMagnetisationFromInterstitial,rank,mpi_comm)
+    call mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
 !    call mpi_bc(this%l_inpXML,rank,mpi_comm)
     call mpi_bc(this%ellow,rank,mpi_comm)
     call mpi_bc(this%elup,rank,mpi_comm)
@@ -219,7 +219,7 @@ CONTAINS
     this%jspins = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
     this%swsp = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
     this%lflip = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
-    this%l_removeMagnetisationFromInterstitial=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_removeMagnetisationFromInterstitial'))
+    this%l_onlyMtStDen=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_onlyMtStDen'))
     this%fixed_moment=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
     ! Read in optional expert modes switches
     xPathA = '/fleurInput/calculationSetup/expertModes'

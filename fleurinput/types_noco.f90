@@ -140,6 +140,11 @@ MODULE m_types_noco
             !this%b_con(2,iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
          END IF
       ENDDO
+
+    !Warning on strange choice of switches
+    IF (this%l_mtNocoPot.AND..NOT.this%l_mperp) THEN
+    	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='types_noco')
+    END IF
     END SUBROUTINE read_xml_noco
 
 

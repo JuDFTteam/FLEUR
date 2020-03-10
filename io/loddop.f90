@@ -57,7 +57,7 @@
           !      WRITE (*,FMT=8000) name
           ! 8000 FORMAT (' loddop title:',10a8)
           READ (nu,END=200,ERR=200) iop,dop,it
-          DO  jsp = 1,SIZE(fr,4)
+          DO  jsp = 1,input%jspins
              READ (nu,END=200,ERR=200) jspdum
              READ (nu,END=200,ERR=200) nn
              IF (nn/=atoms%ntype) CALL juDFT_error("nn.NE.ntype",calledby =&

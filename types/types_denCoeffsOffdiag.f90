@@ -58,7 +58,7 @@ PUBLIC t_denCoeffsOffdiag
 
 CONTAINS
 
-SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fmpl)
+SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, banddos,sphhar, l_fmpl)
 
    USE m_types_setup
 
@@ -67,12 +67,13 @@ SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fm
    CLASS(t_denCoeffsOffdiag), INTENT(INOUT) :: thisDenCoeffsOffdiag
    TYPE(t_atoms),      INTENT(IN)    :: atoms
    TYPE(t_noco),       INTENT(IN)    :: noco
+   TYPE(t_banddos),    INTENT(IN)    :: banddos
    TYPE(t_sphhar),     INTENT(IN)    :: sphhar
    LOGICAL,            INTENT(IN)    :: l_fmpl
 
    thisDenCoeffsOffdiag%l_fmpl = l_fmpl
 
-   IF (noco%l_mperp) THEN
+   IF (noco%l_mperp.OR.banddos%l_jDOS) THEN
       ALLOCATE (thisDenCoeffsOffdiag%uu21(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%ud21(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%du21(0:atoms%lmaxd,atoms%ntype))

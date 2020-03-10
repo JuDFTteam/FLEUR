@@ -7,7 +7,7 @@
       <cutoffs Kmax="3.70000000" Gmax="11.10000000" GmaxXC="9.20000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" l_removeMagnetisationFromInterstitial="F"/>
+      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" />
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="1" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>

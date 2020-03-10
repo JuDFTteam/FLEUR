@@ -1,22 +1,33 @@
 #juDFT Testscript
 #The following arguments are passed: executable, working directory
 
-jt::copyfile("files/inp2.xml","$workdir/inp.xml");
+jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
+jt::testrun("$executable ",$workdir);
 
-jt::testrun($executable,$workdir);
+$result+=jt::test_fileexists("$workdir/out");
+$result+=min(jt::test_fileexists("$workdir/cdn1"),jt::test_fileexists("$workdir/cdn.hdf"));
 
-
-# unit cell
-$result+=jt::test_grepexists("$workdir/denIn.xsf",".0000000 11.36143");
-$result+=jt::test_grepexists("$workdir/denIn.xsf","1.93419");
-# atom positions
-$result+=jt::test_grepexists("$workdir/denIn.xsf","3.35012");
-$result+=jt::test_grepexists("$workdir/denIn.xsf",".39481");
-$result+=jt::test_grepexists("$workdir/denIn.xsf","2.23341");
-# density values
-$result+=jt::test_grepexists("$workdir/denIn.xsf","2.08031175"); # line 24
-$result+=jt::test_grepexists("$workdir/denIn.xsf","7.9874788"); # line 521
-$result+=jt::test_grepexists("$workdir/denIn.xsf","10.2889353");  # line 523
-#$result+=jt::test_grepexists("$workdir/denIn.xsf","1.3672274"); # line 3018
+$result+=jt::test_fileexists("$workdir/denIn_A1.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_A2.xsf");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","1.433000");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","0.5291772");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","1.664762763");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","2.114352873");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","5.644716876");
+$result+=jt::test_grepexists("$workdir/denIn_A2.xsf","8.546990318");
+$result+=jt::test_fileexists("$workdir/denIn_A3.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_f.xsf");
+$result+=jt::test_fileexists("$workdir/vTot_f.xsf");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","1.433000");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","0.5291772");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","161.585087");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","3.73743274");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","1.65694868");
+$result+=jt::test_grepexists("$workdir/vTot_f.xsf","0.52800351");
+$result+=jt::test_fileexists("$workdir/vTot_A1.xsf");
+$result+=jt::test_fileexists("$workdir/vTot_A2.xsf");
+$result+=jt::test_fileexists("$workdir/vTot_A3.xsf");
 
 jt::stageresult($workdir,$result,"2");
