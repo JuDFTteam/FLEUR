@@ -145,9 +145,9 @@ PROGRAM inpgen
               l_explicit,l_include,"inp.xml")
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      if (.not.l_include(2)) THEN
-        inquire(file="kpts.xml",exist=l_include(2))
-        if (l_include(2)) call system("rm kpts.xml")
+      IF (.NOT.l_include(2).OR.judft_was_argument("-k")) THEN
+        !inquire(file="kpts.xml",exist=l_include(2))
+        !if (l_include(2)) call system("rm kpts.xml")
         CALL kpts%print_XML(99,"kpts.xml")
       endif
       ! Structure in  xsf-format
