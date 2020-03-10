@@ -1,13 +1,11 @@
 #juDFT Testscript
 
-jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/inp.xml","$workdir/inp.xml");
+
+jt::testrun("$executable ",$workdir);
 
 
-jt::testrun($executable,$workdir);
-
-#now test output
-$result=jt::test_fileexists("$workdir/out");
+$result+=jt::test_fileexists("$workdir/out");
 $result+=min(jt::test_fileexists("$workdir/cdn1"),jt::test_fileexists("$workdir/cdn.hdf"));
 
 jt::stageresult($workdir,$result,"1");
-

@@ -48,4 +48,6 @@ MODULE m_types_fleurinput
     type(t_gfinp)::gfinp
     type(t_hub1inp)::hub1inp
   end type
+
+
 END MODULE m_types_fleurinput

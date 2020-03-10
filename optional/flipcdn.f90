@@ -141,7 +141,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
          na = na + atoms%neq(itype)
    END DO
 
-   IF (input%l_removeMagnetisationFromInterstitial) THEN
+   IF (input%l_onlyMtStDen) THEN
 !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value.
       den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value
       den%pw(:,1)=den%pw(:,2)

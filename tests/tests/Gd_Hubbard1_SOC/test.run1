@@ -1,7 +1,6 @@
 #juDFT Testscript
 
 jt::copyfile("files/inp.xml",$workdir);
-jt::copyfile("files/sym.out",$workdir);
 
 jt::testrun("$executable ",$workdir);
 
@@ -12,11 +11,11 @@ $result+=jt::test_grepexists("$workdir/out","Hubbard 1 it=  1  is completed");
 $result+=jt::test_fileexists("$workdir/Hubbard1/hubbard1.cfg");
 $result+=jt::test_fileexists("$workdir/Hubbard1/hloc.cfg");
 #Test if the SOC parameter is correct
-$result+=jt::test_grepnumber("$workdir/Hubbard1/hloc.cfg","xiSOC","xiSOC *([^ ]*)",0.21863,0.00001);
+$result+=jt::test_grepnumber("$workdir/Hubbard1/hloc.cfg","xiSOC","xiSOC *([^ ]*)",0.21978,0.00001);
 #test for one eigval file
 $result+=jt::test_fileexists("$workdir/Hubbard1/eigval7part.dat");
 #test density matrix
-$result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",6.99925738663176,0.00001);
-$result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",0.997417814845127,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",6.99968080424677,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",0.997526549354331,0.00001);
 
 jt::stageresult($workdir,$result,"1");
