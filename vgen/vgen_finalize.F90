@@ -149,9 +149,6 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
             END DO !lh
          END DO !i
 
-      !CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-      !                   noco, nococonv,2.0, .FALSE., .TRUE., vTot, 'totpot              ')
-
          CALL timestop("Purging source terms in B-field")
 
          CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
