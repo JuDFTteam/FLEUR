@@ -14,7 +14,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    
+
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_usdus),INTENT(IN)       :: usdus
@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jsp,ne     
+    INTEGER, INTENT (IN) :: jsp,ne
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
@@ -118,30 +118,18 @@ CONTAINS
                       DO l1 = 0,atoms%lnonsph(n)         ! l', m' loop
                          DO m1 = -l1,l1
                             lm = l1* (l1+1) + m1
-                            in = tlmplm%ind(lmp,lm,n,jsp)
-                            IF (in.NE.-9999) THEN
+                            utu = CONJG(tlmplm%h_loc(lmp,lm,n,jsp,jsp))
+                            dtd = CONJG(tlmplm%h_loc(lmp+tlmplm%h_loc2(n),lm+tlmplm%h_loc2(n),n,jsp,jsp))
+                            utd = CONJG(tlmplm%h_loc(lmp+tlmplm%h_loc2(n),lm,n,jsp,jsp))
+                            dtu = CONJG(tlmplm%h_loc(lmp,lm+tlmplm%h_loc2(n),n,jsp,jsp))
+                            !--->    update ax, bx
+                            DO k = 1,ne
+                               ax(k) = ax(k) + utu*CONJG(a(k,lm))+&
+                                    utd*CONJG(b(k,lm))
+                               bx(k) = bx(k) + dtu*CONJG(a(k,lm))+&
+                                    dtd*CONJG(b(k,lm))
+                            ENDDO
 
-                               IF (in.GE.0) THEN
-                                  utu = CONJG(tlmplm%tuu(in,n,jsp))
-                                  dtu = CONJG(tlmplm%tdu(in,n,jsp))
-                                  utd = CONJG(tlmplm%tud(in,n,jsp))
-                                  dtd = CONJG(tlmplm%tdd(in,n,jsp))
-                               ELSE
-                                  im = -in
-                                  utu = tlmplm%tuu(im,n,jsp)
-                                  dtd = tlmplm%tdd(im,n,jsp)
-                                  utd = tlmplm%tdu(im,n,jsp)
-                                  dtu = tlmplm%tud(im,n,jsp)
-                               END IF
-                               !--->    update ax, bx
-                               DO k = 1,ne
-                                  ax(k) = ax(k) + utu*CONJG(a(k,lm))+&
-                                       utd*CONJG(b(k,lm))
-                                  bx(k) = bx(k) + dtu*CONJG(a(k,lm))+&
-                                       dtd*CONJG(b(k,lm))
-                               ENDDO
-
-                            ENDIF ! in =/= -9999
                          ENDDO    ! m1
                       ENDDO       ! l1
                       !

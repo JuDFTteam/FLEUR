@@ -34,14 +34,14 @@ CONTAINS
     USE m_types_xcpot_inbuild
     USE m_mpi_bc_xcpot
     USE m_prpxcfft
-    use m_make_stars
-    use m_make_sphhar
+    USE m_make_stars
+    USE m_make_sphhar
     USE m_convn
     USE m_efield
     USE m_fleurinput_postprocess
-    use m_make_forcetheo
-    use m_lapwdim
-    use m_gaunt, only: gaunt_init
+    USE m_make_forcetheo
+    USE m_lapwdim
+    USE m_gaunt, ONLY: gaunt_init
 #ifdef CPP_MPI
     !USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -79,7 +79,7 @@ CONTAINS
     TYPE(t_gfinp)    ,INTENT(OUT):: gfinp
     TYPE(t_hub1inp)  ,INTENT(OUT):: hub1inp
     TYPE(t_nococonv), INTENT(OUT):: nococonv
-    type(t_enparaXML)::enparaXML
+    TYPE(t_enparaXML)::enparaXML
     TYPE(t_forcetheo_data)::forcetheo_data
 
 
@@ -117,7 +117,7 @@ CONTAINS
           CLOSE(6)
           OPEN (6,status='SCRATCH')
        ELSE
-          IF (.not.judft_was_argument("-no_out")) &
+          IF (.NOT.judft_was_argument("-no_out")) &
                OPEN (6,file='out',form='formatted',status='unknown')
        ENDIF
        CALL writeOutHeader()
@@ -128,40 +128,39 @@ CONTAINS
     ALLOCATE(t_xcpot_inbuild::xcpot)
     !Only PE==0 reads the input and does basic postprocessing
     IF (mpi%irank.EQ.0) THEN
-      CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-                              sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
-                              wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
-      call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-      Banddos,Oned,Xcpot,Kpts,gfinp)
+       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
+            sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
+            wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
+       CALL fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
+            Banddos,Oned,Xcpot,Kpts,gfinp)
     END IF
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
          Sliceplot,Banddos,mpinp,hybinp,Oned,Corespecinput,Wann,&
          Xcpot,Forcetheo_data,Kpts,Enparaxml,gfinp,hub1inp,Mpi%Mpi_comm)
     !Remaining init is done using all PE
-    call nococonv%init(noco)
-    call nococonv%init_ss(noco,atoms)
-    CALL ylmnorm_init(max(atoms%lmaxd, 2*hybinp%lexp))
+    CALL nococonv%init(noco)
+    CALL nococonv%init_ss(noco,atoms)
+    CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(mpi%irank==0,atoms,sphhar,sym,cell,oneD)
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
-    call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
-    call lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
-    call input%init(noco,hybinp%l_hybrid,lapw_dim_nbasfcn)
-    call oned%init(atoms) !call again, because make_stars modified it :-)
-    call kpts%init(cell, sym, input%film)
-    call hybinp%init(atoms, cell, input, oneD, sym, xcpot)
-    ! Store structure data
+    CALL make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
+    CALL lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
+    CALL input%init(noco,hybinp%l_hybrid,lapw_dim_nbasfcn)
+    CALL oned%init(atoms) !call again, because make_stars modified it :-)
+    CALL kpts%init(cell, sym, input%film)
+    CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(mpi,stars,input,cell,xcpot)
     CALL convn(mpi%irank==0,atoms,stars)
-    if (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
-    if (mpi%isize>1) call field%mpi_bc(mpi%mpi_comm,0)
+    IF (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
+    IF (mpi%isize>1) CALL field%mpi_bc(mpi%mpi_comm,0)
 
     !At some point this should be enabled for noco as well
-    IF (.not.noco%l_noco) &
-    CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
+    IF (.NOT.noco%l_noco) &
+         CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 
     IF (mpi%irank.EQ.0) THEN
@@ -191,7 +190,7 @@ CONTAINS
     CALL add_usage_data("A-Types",atoms%ntype)
     CALL add_usage_data("Atoms",atoms%nat)
     CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco&
-                        .AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia.GT.0))
+         .AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia.GT.0))
     CALL add_usage_data("Spins",input%jspins)
     CALL add_usage_data("Noco",noco%l_noco)
     CALL add_usage_data("SOC",noco%l_soc)
