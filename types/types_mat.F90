@@ -34,11 +34,7 @@ MODULE m_types_mat
       PROCEDURE        :: generate_full_matrix=>t_mat_generate_full_matrix
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
-<<<<<<< HEAD
-      PROCEDURE        :: save_npy => t_mat_save_npy
-=======
       PROCEDURE        :: unsymmetry => t_mat_unsymmetry
->>>>>>> develop
    END type t_mat
    PUBLIC t_mat
 CONTAINS
