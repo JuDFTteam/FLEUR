@@ -44,7 +44,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
-    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,nn,natom,jj
+    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj
     INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
@@ -52,7 +52,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
-    CHARACTER(LEN=20) :: attributes(8)
+    CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
     !     .. Allocatable Arrays ..
@@ -304,26 +304,28 @@ CONTAINS
 8200     FORMAT(/,5x,'j-decomposed charge',/,t6,'atom',t15,'s',t24,'p1/2',t33,'p3/2',&
                    t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
          DO itype = 1, atoms%ntype
-            DO nn = 1, atoms%neq(itype)
-               natom = SUM(atoms%neq(:itype-1)) + nn
+            natom = SUM(atoms%neq(:itype-1)) + 1
 
-               WRITE(6,8300) natom, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
-8300           FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
-               WRITE(6,*)
+            WRITE(6,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
+8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
+            WRITE(6,*)
 
-               attributes = ''
-               WRITE(attributes(1),'(i0)') natom
-               WRITE(attributes(2),'(f12.7)') jDOS%occ(0,1,natom)
-               WRITE(attributes(3),'(f12.7)') jDOS%occ(1,1,natom)
-               WRITE(attributes(4),'(f12.7)') jDOS%occ(1,2,natom)
-               WRITE(attributes(5),'(f12.7)') jDOS%occ(2,1,natom)
-               WRITE(attributes(6),'(f12.7)') jDOS%occ(2,2,natom)
-               WRITE(attributes(7),'(f12.7)') jDOS%occ(3,1,natom)
-               WRITE(attributes(8),'(f12.7)') jDOS%occ(3,2,natom)
+            CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 
-               CALL writeXMLElementForm('JCharge',['atom','s   ','p12 ','p32 ','d32 ','d52 ','f52 ','f72 '],attributes,&
-                                        reshape([4,1,3,3,3,3,3,3,6,12,12,12,12,12,12,12],[8,2]))
-            ENDDO
+            attributes = ''
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,1,natom)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,1,natom)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,1,natom)
+            CALL writeXMLElementForm('lowJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
+
+            attributes = ''
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,2,natom)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,2,natom)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,2,natom)
+            CALL writeXMLElementForm('highJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
+
+            CALL closeXMLElement('mtJcharge')
+
          ENDDO
       ENDIF
     ENDIF
