@@ -1225,7 +1225,7 @@ CONTAINS
          end if
          ! write (1239,*) "unsymm coulhlp B", coulhlp%unsymmetry()
          ! write (1239,*) "ikpt =", ikpt
-         call judft_error("coulomb too unsymm")
+         ! call judft_error("coulomb too unsymm")
          coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
          call timestop("multiply inverse rhs")
       END DO
