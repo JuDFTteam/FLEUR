@@ -12,7 +12,7 @@ MODULE m_add_selfen
 
    SUBROUTINE add_selfen(g,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
 
-      USE m_gfcalc
+      USE m_greensfUtils
 
       !Calculates the interacting Green's function for the mt-sphere with
       !

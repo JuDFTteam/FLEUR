@@ -24,19 +24,19 @@ MODULE m_crystalfield
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfCoeffs,v,ef,hub1data)
+   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,v,ef,hub1data)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
-      TYPE(t_greensfCoeffs), INTENT(IN)    :: greensfCoeffs
-      TYPE(t_atoms),         INTENT(IN)    :: atoms
-      TYPE(t_gfinp),         INTENT(IN)    :: gfinp
-      TYPE(t_input),         INTENT(IN)    :: input
-      TYPE(t_nococonv),      INTENT(IN)    :: nococonv
-      TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
-      TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
-      REAL,                  INTENT(IN)    :: ef
-      TYPE(t_hub1data),      INTENT(INOUT) :: hub1data
+      TYPE(t_greensfImagPart),   INTENT(IN)    :: greensfImagPart
+      TYPE(t_atoms),             INTENT(IN)    :: atoms
+      TYPE(t_gfinp),             INTENT(IN)    :: gfinp
+      TYPE(t_input),             INTENT(IN)    :: input
+      TYPE(t_nococonv),          INTENT(IN)    :: nococonv
+      TYPE(t_hub1inp),           INTENT(IN)    :: hub1inp
+      TYPE(t_potden),            INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
+      REAL,                      INTENT(IN)    :: ef
+      TYPE(t_hub1data),          INTENT(INOUT) :: hub1data
 
       !-Local Scalars
       INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp
@@ -65,15 +65,15 @@ MODULE m_crystalfield
          CALL gfinp%eMesh(ef,del,eb)
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
-            kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
+            kkcut = greensfImagPart%kkintgr_cutoff(i_gf,jspin,2)
             norm = 0.0
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
                   DO ie = 1, kkcut
                      integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
-                                     * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin)/(3.0-input%jspins))
-                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin))/(3.0-input%jspins)
+                                     * REAL(greensfImagPart%sphavg(ie,m,mp,i_gf,jspin)/(3.0-input%jspins))
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_gf,jspin))/(3.0-input%jspins)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),del,kkcut)
                ENDDO

@@ -40,7 +40,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    USE m_unfold_band_kpts
    USE m_denMultipoleExp
-   USE m_gfcalc
+   USE m_greensfPostProcess
    USE m_angles
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -83,18 +83,18 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco)          :: noco_new
-   TYPE(t_regionCharges) :: regCharges, fake_regCharges
-   TYPE(t_dos)           :: dos, fake_dos
-   TYPE(t_moments)       :: moments, fake_moments
-   TYPE(t_results)       :: fake_results
-   TYPE(t_mcd)           :: mcd
-   TYPE(t_slab)          :: slab
-   TYPE(t_orbcomp)       :: orbcomp
-   TYPE(t_jDOS)          :: jDOS
-   TYPE(t_cdnvalJob)     :: cdnvalJob
-   TYPE(t_greensfCoeffs) :: greensfCoeffs
-   TYPE(t_potden)        :: val_den, core_den
+   TYPE(t_noco)            :: noco_new
+   TYPE(t_regionCharges)   :: regCharges, fake_regCharges
+   TYPE(t_dos)             :: dos, fake_dos
+   TYPE(t_moments)         :: moments, fake_moments
+   TYPE(t_results)         :: fake_results
+   TYPE(t_mcd)             :: mcd
+   TYPE(t_slab)            :: slab
+   TYPE(t_orbcomp)         :: orbcomp
+   TYPE(t_jDOS)            :: jDOS
+   TYPE(t_cdnvalJob)       :: cdnvalJob
+   TYPE(t_greensfImagPart) :: greensfImagPart
+   TYPE(t_potden)          :: val_den, core_den
 
 
    !Local Scalars
@@ -117,8 +117,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(gfinp%n.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
-      CALL greensfCoeffs%init(gfinp,input,atoms,noco)
       CALL gfinp%eContour(results%ef,mpi%irank,gOnsite%nz,gOnsite%e,gOnsite%de)
+      CALL greensfImagPart%init(gfinp,input,noco)
       CALL gOnsite%reset(gfinp)
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
@@ -140,13 +140,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfCoeffs)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(gfinp%n.GT.0) THEN
-        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,nococonv,vTot,&
-                           hub1inp,hub1data,results)
+        CALL greensfPostProcess(gOnsite,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,&
+                                hub1inp,hub1data,results)
       ENDIF
    ENDIF
 

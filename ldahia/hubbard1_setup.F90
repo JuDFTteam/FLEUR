@@ -6,7 +6,7 @@ MODULE m_hubbard1_setup
    USE m_uj2f
    USE m_mudc
    USE m_denmat_dist
-   USE m_gfcalc
+   USE m_greensfUtils
    USE m_hubbard1_io
    USE m_add_selfen
    USE m_mpi_bc_tool

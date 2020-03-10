@@ -1,0 +1,103 @@
+MODULE m_greensfSpinDiag
+
+   USE m_juDFT
+   USE m_types
+   USE m_constants
+
+   IMPLICIT NONE
+
+   CONTAINS
+
+   SUBROUTINE greensfSpinDiag(ikpt_i,nBands,ev_list,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin,&
+                              l_sphavg,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
+
+      INTEGER,                   INTENT(IN)     :: ikpt_i             !current k-point index in cdnvaljob%k_list
+      INTEGER,                   INTENT(IN)     :: nBands, ev_list(:) !Bands handled on this rank
+      INTEGER,                   INTENT(IN)     :: i_gf,l,lp,natom,natomp,atomType,atomTypep,spin !Information about the current element
+      LOGICAL,                   INTENT(IN)     :: l_sphavg
+      TYPE(t_sym),               INTENT(IN)     :: sym
+      TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_usdus),             INTENT(IN)     :: usdus
+      TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
+      TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
+
+      INTEGER :: iBand,it,is,isi,imat
+      INTEGER :: m,mp,lm,lmp,ilo,ilop
+      REAL    :: fac
+      COMPLEX, ALLOCATABLE :: im(:,:,:)
+      COMPLEX, ALLOCATABLE :: im_tmp(:,:,:)
+
+
+      CALL timestart("Green's Function: Spin-Diagonal")
+
+      ALLOCATE(    im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,l_sphavg)),source=cmplx_0)
+      ALLOCATE(im_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,l_sphavg)),source=cmplx_0)
+
+      fac = 1.0/(sym%invarind(natom)*atoms%neq(atomType))
+
+      !Loop through bands
+      DO iBand = 1, nBands
+         im = cmplx_0
+         DO m = -l, l
+            lm = l*(l+1)+m
+            DO mp = -lp,lp
+               lmp = l*(l+1)+mp
+
+               !-------------------------
+               !Contribution from valence states
+               !-------------------------
+               im(m,mp,1) = im(m,mp,1) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin) &
+                                       + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin) &
+                                       * usdus%ddn(l,atomType,spin)
+               IF(.NOT.l_sphavg) THEN
+                  im(m,mp,2) = im(m,mp,2) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,3) = im(m,mp,3) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,4) = im(m,mp,4) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,5) = im(m,mp,5) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
+               END IF
+
+               !------------------------------------------------------------------------------------------------------
+               ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
+               !------------------------------------------------------------------------------------------------------
+               DO ilo = 1, atoms%nlo(atomType)
+                  IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                  im(m,mp,1) = im(m,mp,1) + usdus%uulon(ilo,atomType,spin) &
+                                          * ( conjg(eigVecCoeffs%acof(   ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%ccof(m,ev_list(iBand),ilo,natom,spin) &
+                                            + conjg(eigVecCoeffs%ccof(mp,ev_list(iBand),ilo,natom,spin))*eigVecCoeffs%acof(  ev_list(iBand),lm ,natom,spin) )&
+                                          + usdus%dulon(ilo,atomType,spin) &
+                                          * ( conjg(eigVecCoeffs%bcof(   ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%ccof(m,ev_list(iBand),ilo,natom,spin) &
+                                            + conjg(eigVecCoeffs%ccof(mp,ev_list(iBand),ilo,natom,spin))*eigVecCoeffs%bcof(  ev_list(iBand),lm ,natom,spin))
+                  DO ilop = 1, atoms%nlo(atomType)
+                     IF (atoms%llo(ilop,atomType).NE.l) CYCLE
+                     im(m,mp,1) = im(m,mp,1) + usdus%uloulopn(ilo,ilop,atomType,spin) &
+                                             * conjg(eigVecCoeffs%ccof(mp,ev_list(iBand),ilop,natom,spin))*eigVecCoeffs%ccof(m,ev_list(iBand),ilo,natom,spin)
+                  ENDDO
+               ENDDO
+            ENDDO!mp
+         ENDDO !m
+         CALL timestart("GF Rotations")
+         DO it = 1,sym%invarind(natom)
+            DO imat = 1, MERGE(1,5,l_sphavg)
+               is = sym%invarop(natom,it)
+               isi = sym%invtab(is)
+               im_tmp(:,:,imat) = matmul( transpose( conjg(sym%d_wgn(:,:,l,isi)) ) , im(:,:,imat))
+               im_tmp(:,:,imat) = matmul( im_tmp(:,:,imat), sym%d_wgn(:,:,l,isi) )
+               IF(imat.EQ.1) THEN
+                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+               ELSE IF(imat.EQ.2) THEN
+                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+               ELSE IF(imat.EQ.3) THEN
+                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+               ELSE IF(imat.EQ.4) THEN
+                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+               ELSE IF(imat.EQ.5) THEN
+                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+               ENDIF
+            ENDDO
+         ENDDO!it
+         CALL timestop("GF Rotations")
+      ENDDO !iBand
+      CALL timestop("Green's Function: Spin-Diagonal")
+
+   END SUBROUTINE greensfSpinDiag
+END MODULE m_greensfSpinDiag

@@ -9,13 +9,13 @@ MODULE m_j0
 
    CONTAINS
 
-   SUBROUTINE eff_excinteraction(g0,gfinp,input,ef,g0Coeffs)
+   SUBROUTINE eff_excinteraction(g0,gfinp,input,ef,g0ImagPart)
 
-      TYPE(t_greensf),        INTENT(IN)  :: g0
-      TYPE(t_gfinp),          INTENT(IN)  :: gfinp
-      TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the bands
-      TYPE(t_input),          INTENT(IN)  :: input
-      REAL,                   INTENT(IN)  :: ef
+      TYPE(t_greensf),           INTENT(IN)  :: g0
+      TYPE(t_gfinp),             INTENT(IN)  :: gfinp
+      TYPE(t_greensfImagPart),   INTENT(IN)  :: g0ImagPart !For determining the onsite exchange splitting from the difference in the COM of the bands
+      TYPE(t_input),             INTENT(IN)  :: input
+      REAL,                      INTENT(IN)  :: ef
 
       COMPLEX integrand, sumup, sumdwn, sumupdwn
       INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
@@ -58,13 +58,13 @@ MODULE m_j0
                DO ispin = 1, input%jspins
                   int_com = 0.0
                   int_norm = 0.0
-                  n_cut = g0Coeffs%kkintgr_cutoff(i_gf,ispin,2)
+                  n_cut = g0ImagPart%kkintgr_cutoff(i_gf,ispin,2)
                   CALL gfinp%eMesh(ef,del,eb)
                   DO ie = 1, n_cut
                      DO m = -l, l
                         int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*del+eb)&
-                                                                *REAL(g0Coeffs%projdos(ie,m,m,0,i_gf,ispin))
-                        int_norm(ie,ispin) = int_norm(ie,ispin) + REAL(g0Coeffs%projdos(ie,m,m,0,i_gf,ispin))
+                                                                *REAL(g0ImagPart%sphavg(ie,m,m,i_gf,ispin))
+                        int_norm(ie,ispin) = int_norm(ie,ispin) + REAL(g0ImagPart%sphavg(ie,m,m,i_gf,ispin))
                      ENDDO
                   ENDDO
                   exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),del,n_cut)) &

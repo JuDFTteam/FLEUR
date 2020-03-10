@@ -14,7 +14,7 @@ MODULE m_kk_cutoff
       !This cutoff energy is defined so that the integral over the fDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-      COMPLEX,             INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
@@ -36,7 +36,7 @@ MODULE m_kk_cutoff
       DO ispin = 1, jspins
          DO m = -l , l
             DO i = 1, ne
-               fDOS(i,ispin) = fDOS(i,ispin) + REAL(im(i,m,m,ispin))
+               fDOS(i,ispin) = fDOS(i,ispin) + im(i,m,m,ispin)
             ENDDO
          ENDDO
       ENDDO
