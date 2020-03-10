@@ -94,7 +94,7 @@ CONTAINS
       INTEGER(MPI_ADDRESS_KIND) :: length
       INTEGER                   :: type_size
 
-      length=0   
+      length=0
       IF (present(real_data_ptr)) THEN
           length=length+1
           CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,type_size,e)
@@ -103,38 +103,38 @@ CONTAINS
           length=length+1
           CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,type_size,e)
       ENDIF
-      IF (present(int_data_ptr)) THEN 
+      IF (present(int_data_ptr)) THEN
           length=length+1
           CALL MPI_TYPE_SIZE(MPI_INTEGER,type_size,e)
       ENDIF
-      if (length.ne.1) call judft_error("Bug in eig66_mpi:create_memory") 
+      if (length.ne.1) call judft_error("Bug in eig66_mpi:create_memory")
       length=MAX(1,slot_size*local_slots)
- 
-#ifdef CPP_MPI_ALLOC      
+
+#ifdef CPP_MPI_ALLOC
       length=length*type_size
       CALL MPI_ALLOC_MEM(length,MPI_INFO_NULL,ptr,e)
       IF (e.NE.0) CPP_error("Could not allocated MPI-Data in eig66_mpi")
-#endif	
+#endif
       IF (PRESENT(real_data_ptr)) THEN
-#ifdef CPP_MPI_ALLOC         
+#ifdef CPP_MPI_ALLOC
          CALL C_F_POINTER(ptr,real_data_ptr,(/length/type_size/))
 #else
          ALLOCATE(real_data_ptr(length))
-#endif         
+#endif
       	CALL MPI_WIN_CREATE(real_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ELSEIF(PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
        CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
 #else
        ALLOCATE(int_data_ptr(length))
-#endif         
+#endif
       	CALL MPI_WIN_CREATE(int_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ELSE
-#ifdef CPP_MPI_ALLOC       
+#ifdef CPP_MPI_ALLOC
        CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
 #else
        ALLOCATE(cmplx_data_ptr(length))
-#endif   
+#endif
        CALL MPI_WIN_CREATE(cmplx_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ENDIF
 #endif
@@ -210,7 +210,7 @@ CONTAINS
           END IF
           slot=d%slot_ev(nk,jspin,n1)
           pe=d%pe_ev(nk,jspin,n1)
-          
+
           if (zmat%l_real) THEN
              if (.not.d%l_real) THEN
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
@@ -219,9 +219,6 @@ CONTAINS
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
                 zmat%data_r(:,n)=REAL(tmp_cmplx)
              else
-                write (*,*) pe
-                write (*,*) d%zr_handle
-                write (*,*) e
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zr_handle,e)
                 CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
@@ -267,7 +264,7 @@ CONTAINS
 
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
-    !write the number of eigenvalues 
+    !write the number of eigenvalues
     !only one process needs to do it
     IF (PRESENT(neig_total)) THEN
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%neig_handle,e)
@@ -278,7 +275,7 @@ CONTAINS
        DEALLOCATE(tmp_int)
     ENDIF
 
-    !write the eigenvalues 
+    !write the eigenvalues
     !only one process needs to do it
     IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
@@ -299,7 +296,7 @@ CONTAINS
     ENDIF
 
     !write the eigenvectors
-    !all procceses participate 
+    !all procceses participate
     IF (PRESENT(zmat)) THEN
        tmp_size=zmat%matsize1
        ALLOCATE(tmp_real(tmp_size))
