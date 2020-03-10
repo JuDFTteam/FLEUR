@@ -177,11 +177,10 @@ contains
 
       call timestart("read_z")
       if(ik <= kpts%nkpt) then
-         write (*,*) "hybdat%eig_id", hybdat%eig_id
-         write (*,*) "ik", ik
-         write (*,*) "jsp", jsp
-         write (*,*) "z_out%l_real", z_out%l_real
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+            if(ik == 3) then
+               write (*,*) "bp1"
+            endif
          z_out%matsize2 = hybdat%nbands(ik)
          ! call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
          if(present(parent_z)) call parent_z%copy(z_out,1,1)
@@ -195,8 +194,14 @@ contains
 
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
-
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
+         if(any(all(ptr_mat%data_r == 0, dim=1))) THEN
+            write (*,*) "bp4"
+            call judft_error("maybe_outside")
+         endif
+         if(ikp == 3) then
+            write (*,*) "bp2"
+         endif
          ptr_mat%matsize2 = hybdat%nbands(ik)
          ! call ptr_mat%save_npy("z_ik=" // int2str(ik) // "_ikp=" // int2str(ikp) // ".npy")
 
