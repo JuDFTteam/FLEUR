@@ -14,7 +14,7 @@ MODULE m_crystalfield
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_kkintgr
+   USE m_trapz
    USE m_sgml
    USE m_anglso
 

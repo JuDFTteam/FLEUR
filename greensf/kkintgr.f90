@@ -107,6 +107,8 @@ MODULE m_kkintgr
 
    COMPLEX FUNCTION g_circle(im,ne,z,del,eb)
 
+      USE m_trapz
+
       REAL,    INTENT(IN) :: im(:)
       INTEGER, INTENT(IN) :: ne
       COMPLEX, INTENT(IN) :: z
@@ -223,26 +225,5 @@ MODULE m_kkintgr
 
 
    END SUBROUTINE lorentzian_smooth
-
-   !General Purpose trapezian method integration (not used in kkintgr)
-   REAL FUNCTION trapz(y,h,n)
-
-      REAL,          INTENT(IN)     :: y(:)
-
-      INTEGER,       INTENT(IN)     :: n
-      REAL,          INTENT(IN)     :: h
-
-
-      INTEGER i
-
-      trapz = y(1)
-      DO i = 2, n-1
-         trapz = trapz + 2*y(i)
-      ENDDO
-      trapz = trapz + y(n)
-
-      trapz = trapz*h/2.0
-
-   END FUNCTION trapz
 
 END MODULE m_kkintgr

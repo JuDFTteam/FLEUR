@@ -123,6 +123,7 @@ ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90
 ${FLEUR_SRC}/math/d_wigner.F90
+${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f

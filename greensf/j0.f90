@@ -3,7 +3,7 @@ MODULE m_j0
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_kkintgr
+   USE m_trapz
 
    IMPLICIT NONE
 
