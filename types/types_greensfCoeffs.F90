@@ -65,16 +65,14 @@ MODULE m_types_greensfCoeffs
 
          lmax = lmaxU_const
 
-         IF(gfinp%n.GT.0) THEN
-            IF(gfinp%l_sphavg) THEN
-               ALLOCATE (thisGREENSFBZINTCOEFFS%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ELSE
-               ALLOCATE (thisGREENSFBZINTCOEFFS%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-               ALLOCATE (thisGREENSFBZINTCOEFFS%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-               ALLOCATE (thisGREENSFBZINTCOEFFS%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-               ALLOCATE (thisGREENSFBZINTCOEFFS%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ENDIF
-         END IF
+         IF(gfinp%l_sphavg) THEN
+            ALLOCATE (thisGREENSFBZINTCOEFFS%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+         ELSE
+            ALLOCATE (thisGREENSFBZINTCOEFFS%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (thisGREENSFBZINTCOEFFS%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (thisGREENSFBZINTCOEFFS%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (thisGREENSFBZINTCOEFFS%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+         ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_init
 
@@ -91,16 +89,15 @@ MODULE m_types_greensfCoeffs
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
-         IF(gfinp%n.GT.0) THEN
-            ALLOCATE (thisGREENSFIMAGPART%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
+         ALLOCATE (thisGREENSFIMAGPART%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
+         IF(gfinp%l_sphavg) THEN
             ALLOCATE (thisGREENSFIMAGPART%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            IF(.NOT.gfinp%l_sphavg) THEN
-               ALLOCATE (thisGREENSFIMAGPART%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-               ALLOCATE (thisGREENSFIMAGPART%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-               ALLOCATE (thisGREENSFIMAGPART%du(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-               ALLOCATE (thisGREENSFIMAGPART%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ENDIF
-         END IF
+         ELSE
+            ALLOCATE (thisGREENSFIMAGPART%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (thisGREENSFIMAGPART%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (thisGREENSFIMAGPART%du(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (thisGREENSFIMAGPART%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+         ENDIF
 
       END SUBROUTINE greensfImagPart_init
 
@@ -117,11 +114,14 @@ MODULE m_types_greensfCoeffs
          REAL,ALLOCATABLE::rtmp(:)
          CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 
-         n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
-         ALLOCATE(rtmp(n))
-         CALL MPI_REDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         IF(irank.EQ.0) CALL CPP_BLAS_scopy(n,rtmp,1,this%sphavg(:,:,:,:,spin_ind),1)
-         IF(.NOT.gfinp%l_sphavg) THEN
+         IF(gfinp%l_sphavg) THEN
+            n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
+            ALLOCATE(rtmp(n))
+            CALL MPI_REDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_scopy(n,rtmp,1,this%sphavg(:,:,:,:,spin_ind),1)
+         ELSE
+            n = SIZE(this%uu,1)*SIZE(this%uu,2)*SIZE(this%uu,3)*SIZE(this%uu,4)
+            ALLOCATE(rtmp(n))
             CALL MPI_REDUCE(this%uu(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
             IF(irank.EQ.0) CALL CPP_BLAS_scopy(n,rtmp,1,this%uu(:,:,:,:,spin_ind),1)
             CALL MPI_REDUCE(this%ud(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)

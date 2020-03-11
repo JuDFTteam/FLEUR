@@ -2,7 +2,7 @@ MODULE m_greensfCalcRealPart
 
    !------------------------------------------------------------------------------
    !
-   ! MODULE: m_onsite
+   ! MODULE: m_greensfCalcRealPart
    !
    !> @author
    !> Henning Janßen
@@ -10,7 +10,7 @@ MODULE m_greensfCalcRealPart
    ! DESCRIPTION:
    !>  This module contains the functions to calculate the imaginary part of the
    !>  onsite GF with and without radial dependence
-   !>  Further we can transform this imaginary part to obtain the onsite GF
+   !>  Further we can transform this imaginary part to obtain the Green's Function
    !>  using the Kramer Kronig Transformation
    !
    !------------------------------------------------------------------------------
@@ -58,6 +58,7 @@ MODULE m_greensfCalcRealPart
                            gfinp%ne,del,eb,et,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
          ELSE
             !For all other elements we just use ef+elup as a hard cutoff
+            !(maybe give option to specify outside of changing the realAxis grid)
             greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
             greensfImagPart%kkintgr_cutoff(i_gf,:,2) = gfinp%ne
          ENDIF
