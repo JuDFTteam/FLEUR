@@ -138,6 +138,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)    :: oneD
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
+    type(t_gfinp), intent(in)  :: gfinp
     character(len=:), allocatable :: error_output
 
     TYPE(t_atoms),INTENT(INOUT):: atoms
