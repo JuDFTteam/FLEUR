@@ -14,7 +14,8 @@ CONTAINS
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
-    use m_types_hybinp
+    USE m_types_hybinp
+    USE m_kpts_kplib
     TYPE(t_kpts),INTENT(out)   :: kpts
     TYPE(t_cell),INTENT(in)    :: cell
     TYPE(t_sym),INTENT(in)     :: sym
@@ -112,6 +113,10 @@ CONTAINS
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
        PRINT *,"Reading old kpts file"
+    ELSEIF(INDEX(str,'kplib=')==1) THEN
+       str=str(7:)
+       READ(str,*) kpts%nkpt
+       CALL kpts_kplib(cell,sym,kpts)
     ELSEIF(LEN_TRIM(str)<1.OR.INDEX(ADJUSTL(str),'#')==1) THEN
        PRINT *,"Generating default k-point set"
        CALL init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)

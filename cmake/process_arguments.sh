@@ -1,3 +1,4 @@
+
 help=0
 CLI_LIBDIR=""
 CLI_INCLUDEDIR=""
@@ -18,7 +19,8 @@ do
 	-external) shift;external_lib="$external_lib $1";;
 	-hdf5) shift; CLI_USE_HDF5=$1;;
 	-wannier) shift; CLI_USE_WANNIER=$1;;
-   -edsolver) shift; CLI_USE_EDSOLVER=$1;;
+        -edsolver) shift; CLI_USE_EDSOLVER=$1;;
+	-kplib)  CLI_USE_KPLIB=1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;

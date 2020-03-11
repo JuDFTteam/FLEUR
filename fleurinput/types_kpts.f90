@@ -10,7 +10,8 @@ MODULE m_types_kpts
    IMPLICIT NONE
    PRIVATE
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
-      character(len=20)              :: name = "default"
+      CHARACTER(len=20)              :: name = "default"
+      character(len=100)             :: comment=""
       INTEGER                        :: nkpt = 0
       INTEGER                        :: ntet = 0
       LOGICAL                        :: l_gamma = .FALSE.
