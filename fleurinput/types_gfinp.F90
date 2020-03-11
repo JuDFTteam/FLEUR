@@ -67,10 +67,12 @@ MODULE m_types_gfinp
    CONTAINS
       PROCEDURE :: read_xml   => read_xml_gfinp
       PROCEDURE :: mpi_bc     => mpi_bc_gfinp
+      PROCEDURE :: init       => init_gfinp
       PROCEDURE :: find       => find_gfelem
       PROCEDURE :: add        => add_gfelem
       PROCEDURE :: eMesh      => eMesh_gfinp
       PROCEDURE :: eContour   => eContour_gfinp
+      PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
    PUBLIC t_gfinp
 
@@ -140,7 +142,7 @@ CONTAINS
       TYPE(t_xml),INTENT(INOUT) ::xml
 
       INTEGER :: numberNodes,ntype,itype
-      INTEGER :: lmin,lmax,i
+      INTEGER :: lmin,lmax,i,l,lp
       CHARACTER(len=100)  :: xPathA,xPathS
       LOGICAL :: l_gfinfo_given,l_off,l_nn
 
@@ -217,7 +219,11 @@ CONTAINS
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
-            CALL this%add(itype,lmin,lmax,l_off,.FALSE.,.FALSE.)
+            DO l = lmin, lmax
+               DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
+                  CALL this%add(itype,l,lp)
+               ENDDO
+            ENDDO
          ENDDO
 
          !Explicit declaration of an intersite greens function element
@@ -226,8 +232,11 @@ CONTAINS
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
-            l_nn = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_nn'))
-            CALL this%add(itype,lmin,lmax,l_off,.TRUE.,l_nn)
+            DO l = lmin, lmax
+               DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
+                  CALL this%add(itype,l,lp,l_inter=.TRUE.)
+               ENDDO
+            ENDDO
          ENDDO
 
          !Declaration of a j0 calculation
@@ -235,7 +244,9 @@ CONTAINS
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/J0[',i,']'
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
-            CALL this%add(itype,lmin,lmax,.FALSE.,.FALSE.,.FALSE.)
+            DO l = lmin, lmax
+               CALL this%add(itype,l,l)
+            ENDDO
             !Add it to the j0elem array
             this%n_j0 = this%n_j0 + 1
             this%j0elem(this%n_j0)%atomType = itype
@@ -250,7 +261,7 @@ CONTAINS
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
             !No offdiagonal l-part (only a single element)
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l'))
-            CALL this%add(itype,lmin,lmin,.FALSE.,.FALSE.,.FALSE.)
+            CALL this%add(itype,l,l)
          ENDDO
       ENDDO
 
@@ -275,37 +286,71 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE add_gfelem(this,nType,lmin,lmax,l_off,l_inter,l_nn)
+   SUBROUTINE init_gfinp(this,atoms,sym)
+
+      USE m_types_atoms
+      USE m_types_sym
+
+      CLASS(t_gfinp),   INTENT(INOUT)  :: this
+      TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_sym),      INTENT(IN)     :: sym
+
+      INTEGER :: i_gf,l,lp,atomType,atomTypep
+
+      !Find the elements for which we need to compute the nearest neighbours
+      DO i_gf = 1, this%n
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+
+         IF(atomTypep==-1) THEN
+            !Replace the current element by the onsite one
+            this%elem(i_gf)%atomTypep = atomType
+            CALL this%addNearestNeighbours(1,l,lp,atomType,atoms,sym)
+         ENDIF
+      ENDDO
+
+   END SUBROUTINE init_gfinp
+
+   SUBROUTINE add_gfelem(this,nType,l,lp,nTypep,l_inter)
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       INTEGER,          INTENT(IN)     :: nType
-      INTEGER,          INTENT(IN)     :: lmin
-      INTEGER,          INTENT(IN)     :: lmax
-      LOGICAL,          INTENT(IN)     :: l_off !l!=lp
-      LOGICAL,          INTENT(IN)     :: l_inter
-      LOGICAL,          INTENT(IN)     :: l_nn
+      INTEGER,          INTENT(IN)     :: l
+      INTEGER,          INTENT(IN)     :: lp
+      INTEGER, OPTIONAL,INTENT(IN)     :: nTypep !Specify the second atom
+      LOGICAL, OPTIONAL,INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
 
-      INTEGER l,lp,i_gf
+
+      INTEGER i_gf
       LOGICAL l_found
 
-      IF(l_inter) CALL juDFT_error("Intersite greens function not yet implemented",calledby="add_gfjob")
+      IF(PRESENT(l_inter).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: l_inter and nTypep given",&
+                                                                hint="This is a bug in FLEUR, please report",calledby="add_gfelem")
 
-      !TODO: add the nearest neighbours jobs
+      !Check if this job has already been added
+      i_gf = this%find(l,nType,lp,nType,l_found)
+      IF(l_found) RETURN !Element was found
 
-      DO l = lmin, lmax
-         DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-            !Check if this job has already been added (notice 2 ntype) To be added!!
-            i_gf = this%find(l,nType,lp,nType,l_found)
-            IF(l_found) CYCLE !Element was found
-
-            this%n = this%n + 1
-            this%elem(this%n)%l = l
-            this%elem(this%n)%atomType = nType
-            this%elem(this%n)%lp = lp
-            this%elem(this%n)%atomTypep = nType !For now
-
-         ENDDO
-      ENDDO
+      this%n = this%n + 1
+      this%elem(this%n)%l = l
+      this%elem(this%n)%atomType = nType
+      this%elem(this%n)%lp = lp
+      IF(PRESENT(l_inter)) THEN
+         IF(l_inter) THEN
+            !Temporary index to mark later in gfinp%init
+            this%elem(this%n)%atomTypep = -1
+         ELSE
+            this%elem(this%n)%atomTypep = nType
+         ENDIF
+      ELSE IF(PRESENT(nTypep)) THEN
+         !Explicit declaration of element
+         this%elem(this%n)%atomTypep = nTypep
+      ELSE
+         !No intersite element
+         this%elem(this%n)%atomTypep = nType
+      ENDIF
 
    END SUBROUTINE add_gfelem
 
@@ -356,9 +401,15 @@ CONTAINS
             IF(this%elem(i_gf)%lp.NE.l) CYCLE
          ENDIF
          IF(PRESENT(nTypep)) THEN
-            IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
+            IF(nTypep/=nType) THEN
+               IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
+            ELSE
+               !The -1 will be replaced with the onsite element in init_gfinp
+               IF(this%elem(i_gf)%atomTypep.NE.nTypep.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
+            ENDIF
          ELSE
-            IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
+            !The -1 will be replaced with the onsite element in init_gfinp
+            IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
          ENDIF
          !If we are here we found the element
          IF(PRESENT(l_found)) l_found=.TRUE.
@@ -576,5 +627,51 @@ CONTAINS
       ENDIF
 
    END SUBROUTINE eContour_gfinp
+
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,atoms,sym)
+
+      USE m_types_atoms
+      USE m_types_sym
+
+      !TODO: atoms outside the unit cell
+
+      CLASS(t_gfinp),   INTENT(INOUT)  :: this
+      INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
+      INTEGER,          INTENT(IN)     :: l
+      INTEGER,          INTENT(IN)     :: lp
+      INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
+      TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_sym),      INTENT(IN)     :: sym
+
+      INTEGER :: ishell,natomp
+      REAL :: minDist
+      REAL, ALLOCATABLE :: dist(:)
+
+      IF(sym%nop>1) CALL juDFT_error("nearest neighbour GF + symmetries not implemented",&
+                                     calledby="addNearestNeighbours_gfelem")
+
+      ALLOCATE(dist(atoms%nat),source=0.0)
+      DO natomp = 1, atoms%nat
+         dist(natomp) = SQRT((atoms%taual(1,natomp) - atoms%taual(1,refAtom))**2 + &
+                             (atoms%taual(2,natomp) - atoms%taual(2,refAtom))**2 + &
+                             (atoms%taual(3,natomp) - atoms%taual(3,refAtom))**2)
+         IF(ABS(dist(natomp)).LT.1e-12) dist(natomp) = 9e99 !The atom itself was already added
+      ENDDO
+
+      ishell = 0
+      DO WHILE(ishell<=nshells)
+         !search for the atoms with the current minimal distance
+         minDist = MINVAL(dist)
+         DO natomp = 1, atoms%nat
+            IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
+               !Add the element to the gfinp%elem array
+               CALL this%add(refAtom,l,lp,nTypep=natomp)
+               dist(natomp) = 9e99 !Eliminate from the list
+            ENDIF
+         ENDDO
+         ishell = ishell + 1
+      ENDDO
+
+   END SUBROUTINE addNearestNeighbours_gfelem
 
 END MODULE m_types_gfinp
