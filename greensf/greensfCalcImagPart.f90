@@ -81,15 +81,15 @@ MODULE m_greensfCalcImagPart
                   DO iBand = 1, nBands
 
                      !Check for a non-zero weight in the energy interval
-                     l_zero = .FALSE.
+                     l_zero = .TRUE.
                      SELECT CASE(input%bz_integration)
                      CASE(0) !Histogram Method
                         j = FLOOR((eig(iBand)-eb)/del)+1
-                        IF(j.LE.gfinp%ne.AND.j.GE.1) l_zero = .false.
+                        IF(j.LE.gfinp%ne.AND.j.GE.1) l_zero = .FALSE.
                         eGrid_start = j
                         eGrid_end   = j
                      CASE(3) !Tetrahedron method
-                        IF(ANY(dosWeights(indBound(iBand,1):indBound(iBand,2),iBand).NE.0.0)) l_zero = .false.
+                        IF(ANY(dosWeights(indBound(iBand,1):indBound(iBand,2),iBand).NE.0.0)) l_zero = .FALSE.
                         eGrid_start = indBound(iBand,1)
                         eGrid_end   = indBound(iBand,2)
                      CASE DEFAULT
@@ -130,7 +130,7 @@ MODULE m_greensfCalcImagPart
          !$OMP END DO
          !$OMP END PARALLEL
 
-         DEALLOCATE(dosWeights,indBound)
+         IF(input%bz_integration==3) DEALLOCATE(dosWeights,indBound)
       ENDDO!k-point loop
 
       !Collect the results from all mpi ranks
