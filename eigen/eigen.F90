@@ -33,7 +33,7 @@ CONTAINS
       USE m_util
       USE m_io_hybinp
       !USE m_icorrkeys
-      USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
+      USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
       USE m_xmlOutput
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
@@ -279,7 +279,6 @@ CONTAINS
          END DO
       END IF
 
-      !IF (fi%hybinp%l_hybrid.OR.hybdat%l_calhf) CALL close_eig(eig_id)
 
       IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
          results%te_hfex%valence = 2*results%te_hfex%valence
