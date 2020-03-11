@@ -10,11 +10,11 @@ MODULE m_greensfBZint
 
    CONTAINS
 
-   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,ev_list,jspin,l_mperp,&
+   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,l_mperp,&
                            gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
-      INTEGER,                   INTENT(IN)     :: nBands, ev_list(:) !Bands handled on this rank
+      INTEGER,                   INTENT(IN)     :: nBands             !Bands handled on this rank
       INTEGER,                   INTENT(IN)     :: jspin              !spin index
       LOGICAL,                   INTENT(IN)     :: l_mperp
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
@@ -39,7 +39,7 @@ MODULE m_greensfBZint
       ENDIF
 
       !$OMP PARALLEL DEFAULT(NONE) &
-      !$OMP SHARED(gfinp,atoms,sym,kpts,ev_list,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
+      !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
       !$OMP SHARED(ikpt_i,ikpt,nBands,spin1,spin2) &
       !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,natomp_start,natomp_end,phase)
       !$OMP DO
@@ -72,11 +72,11 @@ MODULE m_greensfBZint
                !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                !Can these be unified ?
                !Spin diagonal elements
-               CALL greensfSpinDiag(ikpt_i,nBands,ev_list,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,&
+               CALL greensfSpinDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,&
                                     gfinp%l_sphavg,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
                IF(spin1/=spin2) THEN
                   !Spin offdiagonal elements
-                  CALL greensfSpinOffDiag(ikpt_i,nBands,ev_list,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
+                  CALL greensfSpinOffDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
                                           gfinp%l_sphavg,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
                ENDIF
 

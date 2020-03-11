@@ -246,7 +246,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ev_list,ispin,noco%l_mperp.AND.(ispin==jsp_end),&
+         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,noco%l_mperp.AND.(ispin==jsp_end),&
                                          gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
          ! perform Brillouin zone integration and summation over the
