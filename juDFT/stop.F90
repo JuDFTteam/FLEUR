@@ -162,7 +162,7 @@ CONTAINS
     ENDIF
 
     IF (callstop) THEN
-       CALL add_usage_data("Error",replace_text(message, new_line('A'), "\\n"))
+       CALL add_usage_data("Error",replace_text(message, new_line('A'), "\n"))
        !$OMP MASTER
        CALL send_usage_data()
        !$OMP END MASTER
