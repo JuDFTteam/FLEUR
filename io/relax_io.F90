@@ -170,8 +170,8 @@ CONTAINS
           ! &atoms%label(sum(atoms%neq(:indx(2)-1))+1), overlap(indx(1),indx(2)),&
           ! &NEW_LINE('A')//"Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           error_output = "Overlapping MT-spheres during relaxation: " // NEW_LINE('A') // &
-                         atoms%label(sum(atoms%neq(:indx(1)-1))+1) // " " // &
-                         atoms%label(sum(atoms%neq(:indx(2)-1))+1) // &
+                         strip(atoms%label(sum(atoms%neq(:indx(1)-1))+1)) // " " // &
+                         strip(atoms%label(sum(atoms%neq(:indx(2)-1))+1)) // &
                          " olap: "//float2str(overlap(indx(1),indx(2)))//NEW_LINE('A')//&
                          "Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           CALL judft_error(error_output)
