@@ -152,6 +152,7 @@ CONTAINS
     CALL oned%init(atoms) !call again, because make_stars modified it :-)
     CALL kpts%init(cell, sym, input%film)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
+    ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(mpi,stars,input,cell,xcpot)
     CALL convn(mpi%irank==0,atoms,stars)
@@ -214,6 +215,9 @@ CONTAINS
 
     !new check mode will only run the init-part of FLEUR
     IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
   CONTAINS
     SUBROUTINE init_wannier()
       ! Initializations for Wannier functions (start)
