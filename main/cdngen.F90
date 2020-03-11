@@ -9,7 +9,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,gOnsite,hub1data)
+                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data)
 
    !*****************************************************
    !    Charge density generator
@@ -74,7 +74,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_gfinp),INTENT(IN)         :: gfinp
    TYPE(t_hub1inp),INTENT(IN)       :: hub1inp
-   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
+   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: greensFunction
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
@@ -115,11 +115,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,atoms,kpts)
    CALL jDOS%init(input,banddos,atoms,kpts)
 
-   IF(gfinp%n.GT.0.AND.PRESENT(gOnsite)) THEN
+   IF(gfinp%n.GT.0.AND.PRESENT(greensFunction)) THEN
       !Only calculate the greens function when needed
-      CALL gfinp%eContour(results%ef,mpi%irank,gOnsite%nz,gOnsite%e,gOnsite%de)
+      CALL gfinp%eContour(results%ef,mpi%irank,greensFunction%nz,greensFunction%e,greensFunction%de)
       CALL greensfImagPart%init(gfinp,input,noco)
-      CALL gOnsite%reset(gfinp)
+      CALL greensFunction%reset(gfinp)
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 
@@ -143,9 +143,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
+   IF(PRESENT(greensFunction).AND.mpi%irank.EQ.0) THEN
       IF(gfinp%n.GT.0) THEN
-        CALL greensfPostProcess(gOnsite,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,&
+        CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,&
                                 hub1inp,hub1data,results)
       ENDIF
    ENDIF
