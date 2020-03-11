@@ -45,7 +45,7 @@ MODULE m_types_gfinp
       INTEGER :: ne = 1301
       REAL    :: ellow = -1.0
       REAL    :: elup = 1.0
-      INTEGER :: mode = -1 !Controls the shape of the complex energy contour
+      INTEGER :: mode = 2 !If no contour is specified write out the standard Semicircle contour (for inpgen)
       !Endpoints of the complex energy contour
       REAL    :: eb = -1.0
       REAL    :: et = 0.0
