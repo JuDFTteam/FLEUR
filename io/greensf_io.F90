@@ -218,15 +218,17 @@ MODULE m_greensf_io
          ENDIF
 
          !Spherically averaged greensfData
-         dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]
-         dimsInt=dims
-         CALL h5screate_simple_f(6,dims(:6),sphavgDataSpaceID,hdfError)
-         CALL h5dcreate_f(currentelementGroupID, "SphAvg", H5T_NATIVE_DOUBLE, sphavgDataSpaceID, sphavgDataSetID, hdfError)
-         CALL h5sclose_f(sphavgDataSpaceID,hdfError)
-         CALL io_write_complex5(sphavgDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf%gmmpmat(:,:,:,:,:,i_gf))
-         CALL h5dclose_f(sphavgDataSetID, hdfError)
+         IF(gfinp%l_sphavg) THEN
 
-         IF(.NOT.gfinp%l_sphavg.AND.archiveType.NE.GREENSF_HUBBARD_CONST) THEN
+            dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]
+            dimsInt=dims
+            CALL h5screate_simple_f(6,dims(:6),sphavgDataSpaceID,hdfError)
+            CALL h5dcreate_f(currentelementGroupID, "SphAvg", H5T_NATIVE_DOUBLE, sphavgDataSpaceID, sphavgDataSetID, hdfError)
+            CALL h5sclose_f(sphavgDataSpaceID,hdfError)
+            CALL io_write_complex5(sphavgDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf%gmmpmat(:,:,:,:,:,i_gf))
+            CALL h5dclose_f(sphavgDataSetID, hdfError)
+
+         ELSE IF(.NOT.gfinp%l_sphavg.AND.archiveType.NE.GREENSF_HUBBARD_CONST) THEN
 
             !uu
             dims(:6)=[2,greensf%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,MERGE(3,input%jspins,gfinp%l_mperp),2]

@@ -109,8 +109,9 @@ MODULE m_types_greensf
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
-         ALLOCATE(thisGREENSF%gmmpMat(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,gfinp%n)),source=cmplx_0)
-         IF(.NOT.gfinp%l_sphavg) THEN
+         IF(gfinp%l_sphavg) THEN
+            ALLOCATE(thisGREENSF%gmmpMat(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,gfinp%n)),source=cmplx_0)
+         ELSE
             ALLOCATE(thisGREENSF%uu(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,gfinp%n)),source=cmplx_0)
             ALLOCATE(thisGREENSF%dd(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,gfinp%n)),source=cmplx_0)
             ALLOCATE(thisGREENSF%du(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,gfinp%n)),source=cmplx_0)

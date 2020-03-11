@@ -108,10 +108,10 @@ MODULE m_greensfCalcImagPart
                         CASE DEFAULT
                         END SELECT
 
-                        greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) = greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) &
-                                                                        + AIMAG(weight * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_gf,spin_ind))
-
-                        IF(.NOT.gfinp%l_sphavg) THEN
+                        IF(gfinp%l_sphavg) THEN
+                           greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) = greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) &
+                                                                           + AIMAG(weight * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_gf,spin_ind))
+                        ELSE
                            greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &
                                                                         + AIMAG(weight * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_gf,spin_ind))
                            greensfImagPart%ud(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &

@@ -50,7 +50,7 @@ MODULE m_greensfCalcRealPart
          nType =  gfinp%elem(i_gf)%atomType
          nTypep = gfinp%elem(i_gf)%atomTypep
          CALL timestart("On-Site: Integration Cutoff")
-         IF(nType.EQ.nTypep.AND.l.EQ.lp) THEN
+         IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN
             !
             !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
             !
@@ -72,19 +72,20 @@ MODULE m_greensfCalcRealPart
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                DO m= -l,l
                   DO mp= -lp,lp
-                     CALL kkintgr(greensfImagPart%sphavg(:,m,mp,i_gf,jspin),eb,del,kkcut,&
-                                 g%gmmpMat(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
-                     IF(.NOT.gfinp%l_sphavg) THEN
+                     IF(gfinp%l_sphavg) THEN
+                        CALL kkintgr(greensfImagPart%sphavg(:,m,mp,i_gf,jspin),eb,del,kkcut,&
+                                     g%gmmpMat(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
+                     ELSE
                         ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                         ! We can do this because the radial functions are independent of E
                         CALL kkintgr(greensfImagPart%uu(:,m,mp,i_gf,jspin),eb,del,kkcut,&
-                                    g%uu(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
+                                     g%uu(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                         CALL kkintgr(greensfImagPart%dd(:,m,mp,i_gf,jspin),eb,del,kkcut,&
-                                    g%dd(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
+                                     g%dd(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                         CALL kkintgr(greensfImagPart%du(:,m,mp,i_gf,jspin),eb,del,kkcut,&
-                                    g%du(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
+                                     g%du(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                         CALL kkintgr(greensfImagPart%ud(:,m,mp,i_gf,jspin),eb,del,kkcut,&
-                                    g%ud(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
+                                     g%ud(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),gfinp%mode,g%nz,int_method(gfinp%mode))
                      ENDIF
                   ENDDO
                ENDDO

@@ -66,8 +66,9 @@ MODULE m_types_greensfCoeffs
          lmax = lmaxU_const
 
          IF(gfinp%n.GT.0) THEN
-            ALLOCATE (thisGREENSFBZINTCOEFFS%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            IF(.NOT.gfinp%l_sphavg) THEN
+            IF(gfinp%l_sphavg) THEN
+               ALLOCATE (thisGREENSFBZINTCOEFFS%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ELSE
                ALLOCATE (thisGREENSFBZINTCOEFFS%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
                ALLOCATE (thisGREENSFBZINTCOEFFS%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
                ALLOCATE (thisGREENSFBZINTCOEFFS%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
