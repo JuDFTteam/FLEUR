@@ -41,7 +41,7 @@ MODULE m_greensfSpinDiag
          DO m = -l, l
             lm = l*(l+1)+m
             DO mp = -lp,lp
-               lmp = l*(l+1)+mp
+               lmp = lp*(lp+1)+mp
 
                !-------------------------
                !Contribution from valence states
@@ -51,10 +51,10 @@ MODULE m_greensfSpinDiag
                                           + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin) &
                                           * usdus%ddn(l,atomType,spin)
                ELSE
-                  im(m,mp,1) = im(m,mp,1) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
-                  im(m,mp,2) = im(m,mp,2) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
-                  im(m,mp,3) = im(m,mp,3) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
-                  im(m,mp,4) = im(m,mp,4) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,1) = im(m,mp,1) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natomp,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,2) = im(m,mp,2) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natomp,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,3) = im(m,mp,3) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natomp,spin))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin)
+                  im(m,mp,4) = im(m,mp,4) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natomp,spin))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin)
                END IF
 
                !------------------------------------------------------------------------------------------------------
@@ -80,27 +80,29 @@ MODULE m_greensfSpinDiag
                ENDDO
             ENDDO!mp
          ENDDO !m
-         CALL timestart("GF Rotations")
-         DO it = 1,sym%invarind(natom)
-            DO imat = 1, MERGE(1,4,l_sphavg)
-               is = sym%invarop(natom,it)
-               isi = sym%invtab(is)
-               im_tmp(:,:,imat) = matmul( transpose( conjg(sym%d_wgn(:,:,l,isi)) ) , im(:,:,imat))
-               im_tmp(:,:,imat) = matmul( im_tmp(:,:,imat), sym%d_wgn(:,:,l,isi) )
-               IF(l_sphavg) THEN
-                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
-               ELSE IF(imat.EQ.1) THEN
-                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
-               ELSE IF(imat.EQ.2) THEN
-                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
-               ELSE IF(imat.EQ.3) THEN
-                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
-               ELSE IF(imat.EQ.4) THEN
-                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
-               ENDIF
-            ENDDO
-         ENDDO!it
-         CALL timestop("GF Rotations")
+         IF(natom.EQ.natomp.AND.l.EQ.lp) THEN !Rotations only for onsite l diagonal elements
+            CALL timestart("GF Rotations")
+            DO it = 1,sym%invarind(natom)
+               DO imat = 1, MERGE(1,4,l_sphavg)
+                  is = sym%invarop(natom,it)
+                  isi = sym%invtab(is)
+                  im_tmp(:,:,imat) = matmul( transpose( conjg(sym%d_wgn(:,:,l,isi)) ) , im(:,:,imat))
+                  im_tmp(:,:,imat) = matmul( im_tmp(:,:,imat), sym%d_wgn(:,:,l,isi) )
+                  IF(l_sphavg) THEN
+                     greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+                  ELSE IF(imat.EQ.1) THEN
+                     greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+                  ELSE IF(imat.EQ.2) THEN
+                     greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+                  ELSE IF(imat.EQ.3) THEN
+                     greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+                  ELSE IF(imat.EQ.4) THEN
+                     greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * im_tmp(:,:,imat))
+                  ENDIF
+               ENDDO
+            ENDDO!it
+            CALL timestop("GF Rotations")
+         ENDIF
       ENDDO !iBand
       CALL timestop("Green's Function: Spin-Diagonal")
 

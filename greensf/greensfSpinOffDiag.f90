@@ -41,7 +41,7 @@ MODULE m_greensfSpinOffDiag
          DO m = -l, l
             lm = l*(l+1)+m
             DO mp = -lp,lp
-               lmp = l*(l+1)+mp
+               lmp = lp*(lp+1)+mp
 
                !-------------------------
                !Contribution from valence states
@@ -52,10 +52,10 @@ MODULE m_greensfSpinOffDiag
                                           + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin2) * denCoeffsOffdiag%du21n(l,atomType) &
                                           + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin2) * denCoeffsOffdiag%dd21n(l,atomType)
                ELSE
-                  im(m,mp,1) = im(m,mp,1) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin2)
-                  im(m,mp,2) = im(m,mp,2) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin2)
-                  im(m,mp,3) = im(m,mp,3) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin2)
-                  im(m,mp,4) = im(m,mp,4) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natom,spin1))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin2)
+                  im(m,mp,1) = im(m,mp,1) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natomp,spin1))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin2)
+                  im(m,mp,2) = im(m,mp,2) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natomp,spin1))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin2)
+                  im(m,mp,3) = im(m,mp,3) + conjg(eigVecCoeffs%acof(ev_list(iBand),lmp,natomp,spin1))*eigVecCoeffs%bcof(ev_list(iBand),lm,natom,spin2)
+                  im(m,mp,4) = im(m,mp,4) + conjg(eigVecCoeffs%bcof(ev_list(iBand),lmp,natomp,spin1))*eigVecCoeffs%acof(ev_list(iBand),lm,natom,spin2)
                END IF
 
                !------------------------------------------------------------------------------------------------------
