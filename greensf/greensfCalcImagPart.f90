@@ -54,10 +54,9 @@ MODULE m_greensfCalcImagPart
             wtkpt = kpts%wtkpt(ikpt)
          CASE(3) !Tetrahedron method
             CALL timestart("Green's Function: TetrahedronWeights")
-            IF(mpi%n_size>1) CALL juDFT_error("Tetra for GF and ev parallelism currently broken")
             ALLOCATE(dosWeights(gfinp%ne,nBands),source=0.0)
             ALLOCATE(indBound(nBands,2),source=0)
-            CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),results%neig(:,jsp),eMesh,gfinp%ne,&
+            CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,gfinp%ne,&
                                  input%film,dosWeights,bounds=indBound,dos=.TRUE.)
             CALL timestop("Green's Function: TetrahedronWeights")
          CASE DEFAULT

@@ -39,11 +39,11 @@ MODULE m_tetrahedronInit
       REAL,          INTENT(IN)    :: eig(:,:)
       REAL,          INTENT(INOUT) :: weights(:,:)
 
-      INTEGER,       INTENT(IN)  :: neig(:)
+      INTEGER,       INTENT(IN)  :: neig
       REAL,          INTENT(IN)  :: efermi
       LOGICAL,       INTENT(IN)  :: film
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4),neigMax
+      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
       REAL    :: eMesh(1),weight_tmp(1),etetra(4),fac
 
       eMesh(1) = efermi  !Only a single energy point but getWeightSingleBand takes an array
@@ -69,13 +69,12 @@ MODULE m_tetrahedronInit
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
-            neigMax = MIN(MINVAL(neig(k(:ncorn))),SIZE(eig,1))
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(itet,neigMax,ikpt,film,ncorn,k,fac) &
+            !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
             !$OMP SHARED(kpts,eig,weights,eMesh) &
             !$OMP PRIVATE(iband,etetra,weight_tmp)
             !$OMP DO
-            DO iband = 1, neigMax
+            DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
                IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
@@ -102,13 +101,13 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(INOUT) :: weights(:,:)
       INTEGER,OPTIONAL, INTENT(INOUT) :: bounds(:,:)
 
-      INTEGER,          INTENT(IN)  :: neig(:)
+      INTEGER,          INTENT(IN)  :: neig
       INTEGER,          INTENT(IN)  :: ikpt,ne
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,          INTENT(IN)  :: film
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,k(4),neigMax
+      INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
       LOGICAL :: l_dos
       REAL    :: etetra(4),del,fac
       REAL, ALLOCATABLE :: dos_weights(:), end_weights(:,:), occ_weights(:)
@@ -121,7 +120,7 @@ MODULE m_tetrahedronInit
       IF(PRESENT(dos))THEN
          l_dos = dos.AND.ne>1
          IF(l_dos) THEN
-            ALLOCATE(end_weights(2,MAXVAL(neig)),source=0.0)
+            ALLOCATE(end_weights(2,neig),source=0.0)
          ENDIF
       ENDIF
       IF(ne>1) THEN
@@ -143,13 +142,12 @@ MODULE m_tetrahedronInit
          ELSE
             k(:ncorn) = kpts%ntetra(:ncorn,itet)
          ENDIF
-         neigMax = MIN(MINVAL(neig(k(:ncorn))),SIZE(eig,1))
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(itet,neigMax,ikpt,film,l_dos,ncorn,ne,k,fac) &
+         !$OMP SHARED(itet,neig,ikpt,film,l_dos,ncorn,ne,k,fac) &
          !$OMP SHARED(kpts,eig,weights,eMesh,end_weights,del) &
          !$OMP PRIVATE(iband,etetra)
          !$OMP DO
-         DO iband = 1, neigMax
+         DO iband = 1, neig
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
             IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
@@ -182,7 +180,7 @@ MODULE m_tetrahedronInit
       IF(l_dos) THEN
          ALLOCATE(dos_weights(ne+2),source=0.0)
          ALLOCATE(occ_weights(ne+2),source=0.0)
-         DO iband = 1, MIN(neig(ikpt),SIZE(eig,1))
+         DO iband = 1, neig
             occ_weights(2:ne+1) = weights(1:ne,iband)
             occ_weights(1) = end_weights(1,iband)
             occ_weights(ne+2) = end_weights(2,iband)
@@ -192,7 +190,7 @@ MODULE m_tetrahedronInit
       ENDIF
 
       IF(PRESENT(bounds)) THEN
-         DO iband = 1, MIN(neig(ikpt),SIZE(eig,1))
+         DO iband = 1, neig
             !--------------------------------------------------------------
             !Find the range where the weights are bigger than weightCutoff
             !--------------------------------------------------------------
