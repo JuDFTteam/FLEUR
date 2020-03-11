@@ -51,9 +51,6 @@ MODULE m_greensfBZint
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
 
-         IF(l.NE.lp) CALL juDFT_error("l-offdiagonal elements not implemented",calledby="greensfBZint")
-         IF(atomType.NE.atomTypep) CALL juDFT_error("intersite elements not implemented",calledby="greensfBZint")
-
          !Loop over equivalent atoms
          DO natom = SUM(atoms%neq(:atomType-1)) + 1, SUM(atoms%neq(:atomType))
 
@@ -72,7 +69,7 @@ MODULE m_greensfBZint
                   phase = 1.0
                ENDIF
 
-               !which scalar products for intersite (IF l_sphavg)
+               !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                !Can these be unified ?
                !Spin diagonal elements
                CALL greensfSpinDiag(ikpt_i,nBands,ev_list,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,&
