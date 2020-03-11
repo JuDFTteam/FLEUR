@@ -99,7 +99,7 @@ CONTAINS
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
-    TYPE(t_greensf)                 :: gOnsite
+    TYPE(t_greensf)                 :: greensFunction
     TYPE(t_hub1data)                :: hub1data
 
     ! local scalars
@@ -182,7 +182,7 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    IF(fi%gfinp%n>0) CALL gOnsite%init(fi%gfinp,fi%input,fi%noco)
+    IF(fi%gfinp%n>0) CALL greensFunction%init(fi%gfinp,fi%input,fi%noco)
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
 
@@ -209,7 +209,7 @@ CONTAINS
        iter = iter + 1
        IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
           hub1data%iter = hub1data%iter + 1
-          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,gOnsite,hub1data,results,inDen)
+          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,greensFunction,hub1data,results,inDen)
        ENDIF
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -423,7 +423,7 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input_soc,fi%banddos,fi%sliceplot,fi%vacuum, &
                       fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
                       enpara,fi%cell,fi%noco,nococonv,vTot,results,fi%oneD,fi%corespecinput,&
-                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1data)
+                      archiveType,xcpot,outDen,EnergyDen,greensFunction,hub1data)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
           IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
