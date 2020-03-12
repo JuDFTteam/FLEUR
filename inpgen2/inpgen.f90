@@ -42,7 +42,6 @@ PROGRAM inpgen
   use m_read_old_inp
   use m_fleurinput_read_xml
   USE m_types_mpinp
-
       IMPLICIT NONE
 
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:)
@@ -66,8 +65,9 @@ PROGRAM inpgen
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
+      TYPE(t_enparaXML):: enparaxml
 
-      CHARACTER(len=40):: kpts_str
+      CHARACTER(len=40):: kpts_str,filename
       LOGICAL          :: l_exist
       INTEGER          :: idum
 
@@ -99,11 +99,14 @@ PROGRAM inpgen
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
+         l_fullinput=.true. !will be set to false if old inp.xml is read
          call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kpts=Kpts)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kpts=Kpts,enparaXML=enparaXML,old_version=l_fullinput)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
+         CALL xcpot%init(atoms%ntype)
+         CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
@@ -139,10 +142,12 @@ PROGRAM inpgen
          call determine_includes(l_include)
          !the inp.xml file
          !CALL dump_FleurInputSchema()
+         filename="inp.xml"
+         if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
-              l_explicit,l_include,"inp.xml")
+              l_explicit,l_include,filename)
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
       IF (.NOT.l_include(2).OR.judft_was_argument("-k")) THEN

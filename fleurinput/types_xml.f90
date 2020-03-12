@@ -20,6 +20,7 @@ MODULE m_types_xml
   TYPE t_xml
      INTEGER:: id
      character(len=200):: basepath=""
+     integer           :: versionNumber=0
    CONTAINS
      PROCEDURE        :: init
      PROCEDURE        :: GetNumberOfNodes
@@ -78,14 +79,14 @@ CONTAINS
 
   SUBROUTINE init(xml,old_version)
     USE iso_c_binding
-    CLASS(t_xml),INTENT(IN)::xml
+    CLASS(t_xml),INTENT(INOUT)::xml
     LOGICAL,OPTIONAL,INTENT(inout):: old_version
 
     LOGICAL                        :: l_allow_old
     INTEGER                        :: errorStatus
-    CHARACTER(LEN=200,KIND=c_char) :: docFilename
+    CHARACTER(LEN=200,KIND=c_char) :: docFilename,versionString
     INTEGER                        :: i,numberNodes
-    CHARACTER(LEN=255)             :: xPathA,xPathB,valueString,versionString
+    CHARACTER(LEN=255)             :: xPathA,xPathB,valueString
     REAL                           :: tempReal
 
 
@@ -105,13 +106,16 @@ CONTAINS
     CALL InitXPath()
 
     ! Check version of inp.xml
-    versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
-    IF((TRIM(ADJUSTL(versionString)).NE.'0.32')) THEN
-      if (.not.l_allow_old) CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
+    versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
+    read(versionString,*) tempReal
+    xml%versionNumber=nint(tempReal*100)
+    IF(versionString.NE.'0.32') THEN
+      if (versionString=='0.30') call judft_error("Version number of inp.xml no longer supported. If you use the current development version try to simply replace 0.30 with 0.32 in inp.xml")
+      if (.not.l_allow_old) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
       old_version=.true.
     END IF
 
-    call validate_with_Schema(trim(adjustl(versionString)))
+    call validate_with_Schema(versionString)
 
     ! Read in constants
     xPathA = '/fleurInput/constants/constant'

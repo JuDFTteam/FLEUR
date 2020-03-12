@@ -9,13 +9,14 @@ MODULE m_make_xcpot
   implicit none
   private
   public make_xcpot
- 
+
 contains
   subroutine make_xcpot(xcpot,atoms,input)
-    use m_types
-    USE m_types_forcetheo_extended
+    use m_types_xcpot
+    use m_types_atoms
+    use m_types_input
     USE m_types_xcpot_libxc
-    USE m_types_xcpot_inbuild
+    !USE m_types_xcpot_inbuild
     USE m_types_xcpot_inbuild_nofunction
 
     TYPE(t_input),    INTENT(IN)     :: input
@@ -24,7 +25,7 @@ contains
 
 
     INTEGER              ::func_vxc_id_c,func_vxc_id_x,func_exc_id_c,func_exc_id_x
- 
+
     !Finish setup of xcpot
     IF (xcpot%l_libxc) THEN
        func_vxc_id_c=xcpot%func_vxc_id_c
@@ -40,7 +41,7 @@ contains
     ELSE
        SELECT TYPE(xcpot)
        CLASS is (t_xcpot_inbuild_nf)
-          CALL xcpot%init(atoms%ntype)
+          Call Xcpot%Init(Atoms%Ntype)
        CLASS DEFAULT
           CALL judft_error("Error in setup xcpot")
        END SELECT

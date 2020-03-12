@@ -111,7 +111,7 @@ CONTAINS
     core=''
     IF (nc>54) CALL judft_error("Setting the core by number only until Xe")
     DO n=1,nc
-       core=core//" "//coreStateList_const(n)
+       core=trim(adjustl(core))//" "//coreStateList_const(n)
     ENDDO
 
     CALL econf%init(core,nz)
@@ -212,13 +212,15 @@ CONTAINS
     ENDDO
     econf%num_states=econf%num_core_states
     !valence charge
-    charge=nz-SUM(ABS(kap(:econf%num_core_states))**2)*2
+    econf%valenceconfig=""
+    charge=nz-SUM(ABS(kap(:econf%num_core_states)))*2
     DO  WHILE(charge>0) !Add valence
        str=coreStateList_const(econf%num_states+1)
        PRINT*,econf%num_states,str,charge
+       econf%valenceconfig=trim(adjustl(econf%valenceconfig))//" "//str
        CALL extract_next(str,np(econf%num_states+1),kap(econf%num_states+1))
        econf%num_states=econf%num_states+1
-       charge=charge-ABS(kap(econf%num_states)**2)*2
+       charge=charge-ABS(kap(econf%num_states))*2
     ENDDO
 
     ALLOCATE(econf%nprnc(econf%num_states),econf%kappa(econf%num_states))
@@ -230,7 +232,7 @@ CONTAINS
     !last level might be partially occupied
     IF (charge<0) THEN
        str=coreStateList_const(econf%num_states)
-       CALL econf%set_occupation(str,ABS(charge)*1.,-1.)
+       CALL econf%set_occupation(str,2.*ABS(kap(econf%num_states))+charge*1.,-1.)
     END IF
   END SUBROUTINE init_nz
 

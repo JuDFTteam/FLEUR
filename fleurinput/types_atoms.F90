@@ -279,11 +279,13 @@ SUBROUTINE read_xml_atoms(this,xml)
        this%zatom(n) = 1.0e-10
     END IF
     this%zatom(n) = this%nz(n)
-    this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpinPhi'))
-    this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinTheta'))
-    this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
-
-    this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
+    if (xml%versionNumber>31) THEN
+      this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpinPhi'))
+      this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinTheta'))
+      this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
+    ELSE
+      this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
+    endif
     !Now the xml elements
     !mtSphere
     xpath=xpaths
@@ -366,6 +368,9 @@ SUBROUTINE read_xml_atoms(this,xml)
              CALL this%econf(n)%set_occupation(state,up,down)
           END DO
        END IF
+     ELSEIF (xml%versionNumber<32) then
+       CALL this%econf(n)%init_num(evaluateFirstIntOnly(xml%getAttributeValue(TRIM(xpaths)//'/@coreStates')),this%nz(n))
+       call this%econf(n)%set_initial_moment(evaluateFirstOnly(xml%getAttributeValue(TRIM(xpaths)//'/@magMom')))
     END IF
     ! Read in atom positions
     numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/relPos')
