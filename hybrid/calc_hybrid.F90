@@ -132,7 +132,6 @@ CONTAINS
          END DO
       END DO
       CALL timestop("Calculation of non-local HF potential")
-      CALL close_eig(eig_id)
 
       CALL timestop("hybrid code")
    CONTAINS

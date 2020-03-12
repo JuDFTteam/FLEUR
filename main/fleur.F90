@@ -250,12 +250,6 @@ CONTAINS
           END IF
        ENDIF
 
-       !IF(.not.fi%input%eig66(1))THEN
-          CALL reset_eig(eig_id,fi%noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
-       !END IF
-
-       !#endif
-
 !!$             DO pc = 1, wann%nparampts
 !!$                !---> gwf
 !!$                IF (wann%l_sgwf.OR.wann%l_ms) THEN
@@ -291,7 +285,7 @@ CONTAINS
           CALL inDen%ChargeAndMagnetisationToSpins()
        END IF
 
-    
+
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -480,9 +474,6 @@ CONTAINS
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
                          xcpot,hybdat,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
-
-          IF (fi%hybinp%l_hybrid) CALL close_eig(eig_id)
-
        END DO forcetheoloop
 
        CALL forcetheo%postprocess()
