@@ -505,7 +505,7 @@ CONTAINS
 
    END SUBROUTINE matrixsplit
 
-   SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                      noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
       USE m_xsf_io
@@ -539,6 +539,7 @@ CONTAINS
       TYPE(t_atoms),               INTENT(IN) :: atoms
       TYPE(t_sphhar),              INTENT(IN) :: sphhar
       TYPE(t_vacuum),              INTENT(IN) :: vacuum
+      TYPE(t_mpi),                 INTENT(IN) :: mpi
       TYPE(t_input),               INTENT(IN) :: input
       TYPE(t_oneD),                INTENT(IN) :: oneD
       TYPE(t_sym),                 INTENT(IN) :: sym
@@ -572,13 +573,14 @@ CONTAINS
       REAL,               PARAMETER   :: eps = 1.0e-15
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
-#ifdef CPP_MPI
-      include 'mpif.h'
+
       integer:: ierr,mpiSize
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
 #endif
 
       nfile = 120
-      !CALL MPI_Init(ierr)
+
       IF (PRESENT(denA2)) THEN
          ALLOCATE(den(4))
          den(1)          = denf
@@ -852,10 +854,12 @@ CONTAINS
                   tempResults(ix,iy,iz,:)=xdnout(:)
                   points(ix,iy,iz,:)=point(:)
                   END IF
+#ifdef CPP_MPI
                 DO k=0, size(tempResults(ix,iy,iz,:))
                 	CALL MPI_Reduce(tempResults(ix,iy,iz,k), tempResults(ix,iy,iz,k), rank, &
                 	MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD )
 		END DO
+#endif
                END DO !x-loop
      !$OMP end do
      !$OMP end parallel
@@ -904,7 +908,7 @@ IF (rank.EQ.0) THEN
 
    END SUBROUTINE savxsf
 
-   SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                          noco,nococonv, factor, score, potnorm, denmat, denName)
 
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
@@ -917,6 +921,7 @@ IF (rank.EQ.0) THEN
       TYPE(t_vacuum),    INTENT(IN) :: vacuum
       TYPE(t_input),     INTENT(IN) :: input
       TYPE(t_oned),      INTENT(IN) :: oneD
+      TYPE(t_mpi),       INTENT(IN) :: mpi
       TYPE(t_sym),       INTENT(IN) :: sym
       TYPE(t_cell),      INTENT(IN) :: cell
       TYPE(t_noco),      INTENT(IN) :: noco
@@ -931,12 +936,12 @@ IF (rank.EQ.0) THEN
       CALL vectorsplit(stars, atoms, sphhar, vacuum, input, factor, denmat, &
                        cden, mden)
 
-      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco,nococonv, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, noco,nococonv, &
                   score, potnorm, denName, cden, mden)
 
    END SUBROUTINE vectorplot
 
-   SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                          noco, nococonv,factor, score, potnorm, denmat, denName)
 
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
@@ -948,6 +953,7 @@ IF (rank.EQ.0) THEN
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
       TYPE(t_vacuum),    INTENT(IN) :: vacuum
       TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_mpi),       INTENT(IN) :: mpi
       TYPE(t_oneD),      INTENT(IN) :: oneD
       TYPE(t_sym),       INTENT(IN) :: sym
       TYPE(t_cell),      INTENT(IN) :: cell
@@ -963,12 +969,12 @@ IF (rank.EQ.0) THEN
       CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, factor, &
                        denmat, cden, mxden, myden, mzden)
 
-      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv,&
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, noco, nococonv,&
                   score, potnorm, denName, cden, mxden, myden, mzden)
 
    END SUBROUTINE matrixplot
 
-   SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, oneD, sym, cell, &
+   SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, mpi,oneD, sym, cell, &
                        noco, nococonv,denmat, plot_const)
 
       ! According to iplot, we process which exact plots we make after we assured
@@ -981,6 +987,7 @@ IF (rank.EQ.0) THEN
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_mpi),       INTENT(IN)    :: mpi
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
@@ -1004,16 +1011,16 @@ IF (rank.EQ.0) THEN
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input,mpi,oneD, sym, &
                                cell, noco, nococonv,factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv,factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                         noco, nococonv,score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1029,16 +1036,16 @@ IF (rank.EQ.0) THEN
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                         noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1054,16 +1061,16 @@ IF (rank.EQ.0) THEN
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                         noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1079,16 +1086,16 @@ IF (rank.EQ.0) THEN
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi , oneD, sym, cell, &
                         noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1104,16 +1111,16 @@ IF (rank.EQ.0) THEN
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input,mpi, oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi , oneD, sym, cell, &
                         noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1131,23 +1138,23 @@ IF (rank.EQ.0) THEN
          potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
                                cell, noco, nococonv, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi ,oneD, sym, cell, &
                         noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
 
    END SUBROUTINE procplot
 
-   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input,mpi, oneD, sym, cell, &
                         noco, nococonv,denmat, plot_const, sliceplot)
 
       ! Checks, based on the iplot switch that is given in the input, whether or
@@ -1159,6 +1166,7 @@ IF (rank.EQ.0) THEN
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_mpi),      INTENT(IN)    :: mpi
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
@@ -1183,7 +1191,7 @@ IF (rank.EQ.0) THEN
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
          CALL checkplotinp()
-         CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input, oneD, sym, cell, &
+         CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
                         noco, nococonv, denmat, plot_const)
       END IF
       CALL timestop("Plotting iplot plots")
@@ -1197,7 +1205,6 @@ IF (rank.EQ.0) THEN
       TYPE(t_cell),  INTENT(IN)    :: cell
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_oneD),  INTENT(IN)    :: oneD
-
       INTEGER,       INTENT(OUT)   :: iType, iAtom
       REAL,          INTENT(OUT)   :: pt(3)
       REAL,          INTENT(IN)    :: point(3)

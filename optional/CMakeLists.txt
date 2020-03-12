@@ -8,5 +8,5 @@ optional/cdnsp.f90
 optional/flipcdn.f90
 optional/outcdn.f90
 optional/stden.f90
-optional/plot.f90
+optional/plot.F90
 )
