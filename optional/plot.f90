@@ -8,9 +8,7 @@ MODULE m_plot
    USE m_juDFT
    USE m_constants
    
-#ifdef CPP_MPI
-    USE m_mpi_col_den ! collect density data from parallel nodes
-#endif
+
 
 
    IMPLICIT NONE
@@ -730,7 +728,7 @@ CONTAINS
                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
             END IF
          END IF
-        rank=1
+        rank=0
 #ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
