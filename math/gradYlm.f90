@@ -130,6 +130,8 @@ CONTAINS
     ! rDerFlhMt    : Radial derrivative of the incoming fuction
     ! r2GrFshMtNat : Expansion coefficients of the muffin-tin gradient applied to the incoming function. The coefficients are given
     !                in natural coordinates and multiplied by $r^2$
+    real,          allocatable                     :: r2FshMtre(:)
+    real,          allocatable                     :: r2FshMtim(:)
     real,          allocatable                     :: rDerFshMtre(:)
     real,          allocatable                     :: rDerFshMtim(:)
     real,          allocatable                     :: rDerJunk(:)
@@ -147,8 +149,10 @@ CONTAINS
     ! Initialization of additionaly required arrays.
     allocate( r2GrFshMt(atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3) )
     allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3) )
-    allocate( rDerFshMtre(atoms%jmtd), rDerFshMtim(atoms%jmtd), rDerJunk(atoms%jmtd), rDerFshMt(atoms%jmtd) )
+    allocate( r2FshMtre(atoms%jmtd), r2FshMtim(atoms%jmtd), rDerFshMtre(atoms%jmtd), rDerFshMtim(atoms%jmtd), rDerJunk(atoms%jmtd), rDerFshMt(atoms%jmtd) )
 
+    r2FshMtre(:) = 0.
+    r2FshMtim(:) = 0.
     rDerFshMtre(:) = 0.
     rDerFshMtim(:) = 0.
     rDerFshMt(:) = 0.
@@ -168,13 +172,15 @@ CONTAINS
               if ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) then
                 lmOutput = ( oqn_l + 1 ) * ( oqn_l + 2 ) + 1 + mqn_m - mqn_mpp
                 lmInput = oqn_l * ( oqn_l + 1 ) + 1 + mqn_m
+                r2FshMtre(:) = 0.
+                r2FshMtim(:) = 0.
                 rDerFshMtre(:) = 0.
                 rDerFshMtim(:) = 0.
                 ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),REAL(r2FshMt(:, lmInput, itype)),6,rDerFshMtre,rDerJunk)
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),AIMAG(r2FshMt(:, lmInput, itype)),6,rDerFshMtim,rDerJunk)
-                call Derivative( real(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtre )
-                call Derivative( aimag(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtim )
+                r2FshMtre(:)=real(r2FshMt(:, lmInput, itype))
+                r2FshMtim(:)=aimag(r2FshMt(:, lmInput, itype))
+                call Derivative( r2FshMtre, itype, atoms, rDerFshMtre )
+                call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
      !$OMP parallel private(imesh) default(none) shared(lmOutput, iatom, mqn_mpp,pfac,tGaunt,oqn_l,lmInput,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
@@ -193,13 +199,15 @@ CONTAINS
               if ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) then
                 lmInput = oqn_l * ( oqn_l + 1 ) + 1 + mqn_m
                 lmOutput = (oqn_l - 1) * oqn_l + 1 + mqn_m - mqn_mpp
+                r2FshMtre(:) = 0.
+                r2FshMtim(:) = 0.
                 rDerFshMtre(:) = 0.
                 rDerFshMtim(:) = 0.
                 ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),REAL(r2FshMt(:, lmInput, itype)),6,rDerFshMtre,rDerJunk)
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),AIMAG(r2FshMt(:, lmInput, itype)),6,rDerFshMtim,rDerJunk)
-                call Derivative( real(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtre )
-                call Derivative( aimag(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtim )
+                r2FshMtre(:)=real(r2FshMt(:, lmInput, itype))
+                r2FshMtim(:)=aimag(r2FshMt(:, lmInput, itype))
+                call Derivative( r2FshMtre, itype, atoms, rDerFshMtre )
+                call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
      !$OMP parallel private(imesh) default(none) shared(lmOutput, iatom, mqn_mpp,pfac,tGaunt,oqn_l,lmInput,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
