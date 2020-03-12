@@ -560,7 +560,7 @@ CONTAINS
       REAL,               ALLOCATABLE :: points(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
-      INTEGER                         :: grid(3)
+      INTEGER                         :: grid(3),k
       REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
@@ -570,8 +570,12 @@ CONTAINS
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
-      nfile = 120
+      include 'mpif.h'
+      integer:: rank,ierr,mpiSize
 
+
+      nfile = 120
+      !CALL MPI_Init(ierr)
       IF (PRESENT(denA2)) THEN
          ALLOCATE(den(4))
          den(1)          = denf
@@ -722,11 +726,15 @@ CONTAINS
             END IF
          END IF
 
+
+        CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
+        CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
+
          !loop over all points
-         !$OMP parallel shared(points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid) private(iz,iy,ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss) default(none)
-         !$OMP do
-         DO iz = 0, grid(3)-1
+         DO iz = rank*(grid(3)-1), rank*(grid(3)-1)+grid(3)-1
             DO iy = 0, grid(2)-1
+        !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,rank) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
+         !$OMP do
                DO ix = 0, grid(1)-1
 
                   point = zero + vec1*REAL(ix)/(grid(1)-1) +&
@@ -841,12 +849,19 @@ CONTAINS
                   tempResults(ix,iy,iz,:)=xdnout(:)
                   points(ix,iy,iz,:)=point(:)
                   END IF
+                DO k=0, size(tempResults(ix,iy,iz,:))
+                	CALL MPI_Reduce(tempResults(ix,iy,iz,k), tempResults(ix,iy,iz,k), rank, &
+                	MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD )
+		END DO
                END DO !x-loop
-            END DO !y-loop
-         END DO !z-loop
      !$OMP end do
      !$OMP end parallel
+            END DO !y-loop
 
+         END DO !z-loop
+
+
+   IF (rank.EQ.0) THEN
      DO iz = 0, grid(3)-1
         DO iy = 0, grid(2)-1
            DO ix = 0, grid(1)-1
@@ -860,7 +875,8 @@ CONTAINS
            END DO
         END DO
     END DO
-
+ 
+   
 
          IF (xsf) THEN
             DO i = 1, numOutFiles
@@ -871,14 +887,16 @@ CONTAINS
          END IF
          DEALLOCATE(tempResults)
          DEALLOCATE(points)
-      END DO !nplot
+END IF
+      END DO !nplo   
+IF (rank.EQ.0) THEN
 
       IF (xsf) THEN
          DO i = 1, numOutFiles
             CLOSE(nfile+i)
          END DO
       END IF
-
+ END IF
       DEALLOCATE(xdnout, outFilenames)
 
    END SUBROUTINE savxsf
