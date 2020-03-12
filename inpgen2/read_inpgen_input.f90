@@ -101,7 +101,7 @@ CONTAINS
           CASE('gen ','sym ')
              CALL judft_error("Specifying the symmetries no longer supported in inpgen")
           CASE default
-             CALL judft_error(("Unknown input in:"//line))
+             CALL judft_error(("Unknown input in:"//trim(line)))
           END SELECT
        ELSE
           IF (aa.ne.0) THEN
