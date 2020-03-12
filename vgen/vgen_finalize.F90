@@ -130,7 +130,7 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
 
          CALL timestart("Correcting vTot")
 
-         ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
+         !ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
          !vTot%pw_w=CMPLX(0.0,0.0)
          !vCorr%pw_w=CMPLX(0.0,0.0)
 
