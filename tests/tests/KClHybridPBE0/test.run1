@@ -1,7 +1,7 @@
 #juDFT Testscript
 jt::copyfile("files/inp.xml",$workdir);
 
-#if strings starts with
+#if strings starts with mpi
 if (index($executable,"mpi") == 0) {
    print LOG "ERROR! MPI is set in test.run1 for this test.";
    exit 12;
