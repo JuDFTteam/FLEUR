@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(FLEUR LANGUAGES Fortran)
+project(FLEUR LANGUAGES Fortran CXX)
 
 #These options should be adjusted
 option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
@@ -10,12 +10,14 @@ option(INPGEN_USE_kplib "Use kplib library" OFF)
 
 set(FLEUR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
-
 if (INPGEN_USE_kplib)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
    set(externallibs
 	${FLEUR_SRC}/kpoints/kplib_interface.F90
 	${FLEUR_SRC}/external/kplib/fleur_interface.cpp
 )
+else()
+   set(externallibs ${FLEUR_SRC}/kpoints/kplib_interface_dummy.F90)
 endif()
 
 add_executable(inpgen2 ${externallibs}
@@ -148,6 +150,7 @@ target_link_libraries(inpgen2 fleurinput)
 if (INPGEN_USE_kplib)
   target_link_libraries(inpgen2 kplib_static)
 endif()
+set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
 find_program(XXD_PROG xxd)
 
