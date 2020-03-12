@@ -183,16 +183,16 @@ CONTAINS
                 call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
-     !$OMP parallel private(imesh) default(none) shared(lmOutput, iatom, mqn_mpp,pfac,tGaunt,oqn_l,lmInput,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
-     !$OMP do 
+!$OMP parallel private(imesh) default(none) shared(lmOutput,iatom,mqn_mpp,pfac,tGaunt,oqn_l,lmInput,r2FshMtre,r2FshMtim,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
+!$OMP do 
                 do imesh = 1, atoms%jri(itype)
                   rDerFshMt(imesh) = cmplx(rDerFshMtre(imesh), rDerFshMtim(imesh))
                   r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) + pfac *   &
                     & (-1)**mqn_mpp * tGaunt &
                     & * (rDerFshMt(imesh) - ((oqn_l + 2)* r2FshMt(imesh, lmInput, iatom) / atoms%rmsh(imesh, itype)))
                 end do ! imesh
-     !$OMP end do
-     !$OMP end parallel
+!$OMP end do
+!$OMP end parallel
               end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 )
 
               ! l - 1 block
@@ -210,16 +210,16 @@ CONTAINS
                 call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
-     !$OMP parallel private(imesh) default(none) shared(lmOutput, iatom, mqn_mpp,pfac,tGaunt,oqn_l,lmInput,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
-     !$OMP do 
+!$OMP parallel private(imesh) default(none) shared(lmOutput,iatom,mqn_mpp,pfac,tGaunt,oqn_l,lmInput,r2FshMtre,r2FshMtim,rDerFshMtim,rDerFshMtre,rDerFshMt,itype,r2GrFshMtNat,atoms,r2FshMt)
+!$OMP do 
                 do imesh = 1, atoms%jri(itype)
                   rDerFshMt(imesh) = cmplx(rDerFshMtre(imesh), rDerFshMtim(imesh))
                   r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) + pfac *   &
                     & (-1)**mqn_mpp * tGaunt * ( rDerFshMt(imesh) + ( (oqn_l - 1) * r2FshMt(imesh, lmInput, iatom)&
                     & / atoms%rmsh(imesh, itype) ) )
                 enddo ! imesh
-     !$OMP end do
-     !$OMP end parallel
+!$OMP end do
+!$OMP end parallel
               end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 )
             end do ! mqn_m
           end do ! oqn_l
@@ -235,13 +235,13 @@ CONTAINS
         do oqn_l = 0, atoms%lmax(itype) + 1
           do mqn_m = -oqn_l, oqn_l
             lmOutput = oqn_l * (oqn_l + 1) + 1 + mqn_m
-     !$OMP parallel private(imesh) default(none) shared(r2GrFshMt,Tmatrix,r2GrFshMtNat, lmOutput, iatom,itype,atoms)
-     !$OMP do 
+!$OMP parallel private(imesh) default(none) shared(r2GrFshMt,Tmatrix,r2GrFshMtNat, lmOutput, iatom,itype,atoms)
+!$OMP do 
             do imesh = 1, atoms%jri(itype)
               r2GrFshMt(imesh, lmOutput, iatom, 1:3) = matmul( Tmatrix(1:3, 1:3), r2GrFshMtNat(imesh, lmOutput, iatom, 1:3) )
             end do ! imesh
-     !$OMP end do
-     !$OMP end parallel
+!$OMP end do
+!$OMP end parallel
           end do ! mqn_m
         end do ! oqn_l
       end do ! ieqat
