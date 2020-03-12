@@ -1,0 +1,232 @@
+MODULE m_types_greensfContourData
+   USE m_juDFT
+   USE m_types_gfinp
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+
+   TYPE t_greensfContourData
+      !This type is used in types_greensf for the storage of the energy points and weights
+      !It is defined here, because we want to use it in eContour_gfinp, without importing types_greensf
+      INTEGER :: nz = 0      !Number of points
+      COMPLEX, ALLOCATABLE :: e(:)  !energy points
+      COMPLEX, ALLOCATABLE :: de(:) !integration weights
+
+   CONTAINS
+      PROCEDURE :: init => init_greensfContourData
+      PROCEDURE :: eContour => eContour_greensfContourData
+   END TYPE t_greensfContourData
+
+   PUBLIC t_greensfContourData
+
+   CONTAINS
+
+   SUBROUTINE init_greensfContourData(this,contourInp,contour_in)
+
+      CLASS(t_greensfContourData),           INTENT(INOUT)  :: this
+      TYPE(t_contourInp),                    INTENT(IN)     :: contourInp
+      TYPE(t_greensfContourData), OPTIONAL,  INTENT(IN)     :: contour_in
+      !
+      !Setting up parameters for the energy contour if one was passed
+      !
+      IF(PRESENT(contour_in)) THEN
+         this%nz = contour_in%nz
+         ALLOCATE(this%e(this%nz),source=cmplx_0)
+         ALLOCATE(this%de(this%nz),source=cmplx_0)
+         this%e = contour_in%e
+         this%de = contour_in%de
+      ELSE
+         SELECT CASE(contourInp%shape)
+         CASE(CONTOUR_RECTANGLE_CONST)
+            this%nz = contourInp%n1+contourInp%n2+contourInp%n3+contourInp%nmatsub
+         CASE(CONTOUR_SEMICIRCLE_CONST)
+            this%nz = contourInp%ncirc
+         CASE(CONTOUR_DOS_CONST)
+            this%nz = contourInp%nDOS
+         CASE DEFAULT
+            CALL juDFT_error("No valid energy contour mode",calledby="init_contourDataType")
+         END SELECT
+
+         ALLOCATE(this%e(this%nz),source=cmplx_0)
+         ALLOCATE(this%de(this%nz),source=cmplx_0)
+      ENDIF
+
+   END SUBROUTINE init_greensfContourData
+
+   SUBROUTINE eContour_greensfContourData(this,contourInp,ef,irank)
+
+      USE m_grule
+      USE m_ExpSave
+
+      !Calculates the complex energy contour and
+      !writes it into the corresponding arrays in gf
+
+      CLASS(t_greensfContourData), INTENT(INOUT) :: this
+      TYPE(t_contourInp),          INTENT(IN)    :: contourInp
+      REAL,                        INTENT(IN)    :: ef
+      INTEGER,                     INTENT(IN)    :: irank
+
+      INTEGER iz,n,i_gf,iContour
+      REAL e1, e2, sigma
+      COMPLEX del
+      REAL r, xr
+      REAL, ALLOCATABLE :: x(:), w(:)
+
+      !Help arrays
+      ALLOCATE(x(this%nz),source=0.0)
+      ALLOCATE(w(this%nz),source=0.0)
+
+      SELECT CASE(contourInp%shape)
+
+      CASE(CONTOUR_RECTANGLE_CONST)
+         sigma = contourInp%sigma * pi_const
+         IF(contourInp%nmatsub > 0) THEN
+            e1 = ef+contourInp%eb
+            n = 0
+
+            !Left Vertical part (e1,0) -> (e1,sigma)
+            del = contourInp%nmatsub * CMPLX(0.0,sigma)
+            CALL grule(contourInp%n1,x(1:(contourInp%n1)/2),w(1:(contourInp%n1)/2))
+            x = -x
+            DO iz = 1, (contourInp%n1+3)/2-1
+               x(contourInp%n1-iz+1) = -x(iz)
+               w(contourInp%n1-iz+1) =  w(iz)
+            ENDDO
+            DO iz = 1, contourInp%n1
+               n = n + 1
+               IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
+               this%e(n)  = e1 + del + del * x(iz)
+               this%de(n) = w(iz)*del
+            ENDDO
+
+            !Horizontal Part (eb,sigma) -> (et,sigma)
+            del = (ef-30*contourInp%sigma-e1)/2.0
+            CALL grule(contourInp%n2,x(1:(contourInp%n2)/2),w(1:(contourInp%n2)/2))
+            x = -x
+            DO iz = 1, (contourInp%n2+3)/2-1
+               x(contourInp%n2-iz+1) = -x(iz)
+               w(contourInp%n2-iz+1) =  w(iz)
+            ENDDO
+            DO iz = 1, contourInp%n2
+               n = n + 1
+               IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
+               this%e(n)  = del*x(iz) + del + e1 + 2 * contourInp%nmatsub * ImagUnit * sigma
+               this%de(n) = del*w(iz)
+            ENDDO
+
+            !Right Vertical part (et,sigma) -> infty
+            CALL grule(contourInp%n3,x(1:(contourInp%n3)/2),w(1:(contourInp%n3)/2))
+            x = -x
+            DO iz = 1, (contourInp%n3+3)/2-1
+               x(contourInp%n3-iz+1) = -x(iz)
+               w(contourInp%n3-iz+1) =  w(iz)
+            ENDDO
+            del = 30*contourInp%sigma
+            DO iz = 1, contourInp%n3
+               n = n + 1
+               IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
+               this%e(n)  = del*x(iz)+ef +  2 * contourInp%nmatsub * ImagUnit * sigma
+               this%de(n) = w(iz)*del/(1.0+exp_save((REAL(this%e(n))-ef)/contourInp%sigma))
+            ENDDO
+
+            !Matsubara frequencies
+            DO iz = contourInp%nmatsub , 1, -1
+               n = n + 1
+               IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
+               this%e(n)  = ef + (2*iz-1) * ImagUnit *sigma
+               this%de(n) = -2 * ImagUnit * sigma
+            ENDDO
+         ENDIF
+      CASE(CONTOUR_SEMICIRCLE_CONST)
+
+         !Semicircle
+         e1 = ef+contourInp%eb
+         e2 = ef+contourInp%et
+
+         !Radius
+         r  = (e2-e1)*0.5
+         !midpoint
+         xr = (e2+e1)*0.5
+
+         CALL grule(contourInp%ncirc,x(1:(contourInp%ncirc)/2),w(1:(contourInp%ncirc)/2))
+
+         DO iz = 1, contourInp%ncirc/2
+            x(contourInp%ncirc-iz+1) = -x(iz)
+            w(contourInp%ncirc-iz+1) =  w(iz)
+         ENDDO
+         DO iz = 1, contourInp%ncirc
+            this%e(iz)  = xr + ImagUnit * r * EXP(ImagUnit*pi_const/2.0 * x(iz))
+            this%de(iz) = pi_const/2.0 * r * w(iz) * EXP(ImagUnit*pi_const/2.0 * x(iz))
+            !Scale the imaginary part with the given factor alpha
+            this%e(iz)  = REAL(this%e(iz))  + ImagUnit * contourInp%alpha * AIMAG(this%e(iz))
+            this%de(iz) = REAL(this%de(iz)) + ImagUnit * contourInp%alpha * AIMAG(this%de(iz))
+         ENDDO
+
+      CASE(CONTOUR_DOS_CONST)
+
+         !Equidistant contour (without vertical edges)
+         del = (contourInp%et-contourInp%eb)/REAL(this%nz-1)
+         DO iz = 1, contourInp%nDOS
+            this%e(iz) = (iz-1) * del + contourInp%eb + ImagUnit * contourInp%sigmaDOS
+            IF(contourInp%l_dosfermi) THEN
+               this%de(iz) = del * 1.0/(1.0+exp_save((REAL(this%e(iz))-ef)/contourInp%sigmaDOS))
+            ELSE
+               this%de(iz) = del
+            ENDIF
+         ENDDO
+
+      CASE DEFAULT
+         CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="eContour_gfinp")
+      END SELECT
+
+      IF(irank.EQ.0) THEN
+         !Write out the information about the energy contour
+         WRITE(6,"(A)") "---------------------------------------------"
+         WRITE(6,"(A)") " Green's function energy contour"
+         WRITE(6,"(A)") "---------------------------------------------"
+         WRITE(6,999)  TRIM(ADJUSTL(contourInp%label))
+         WRITE(6,1000) contourInp%shape
+         WRITE(6,*)
+
+         SELECT CASE(contourInp%shape)
+
+         CASE(CONTOUR_RECTANGLE_CONST)
+            WRITE(6,"(A)") "Rectangular Contour: "
+            WRITE(6,1010) this%nz, contourInp%nmatsub,contourInp%n1,contourInp%n2,contourInp%n3
+            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(6,1040) contourInp%eb,0.0
+         CASE(CONTOUR_SEMICIRCLE_CONST)
+            WRITE(6,"(A)") "Semicircle Contour: "
+            WRITE(6,1020) this%nz, contourInp%alpha
+            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(6,1040) contourInp%eb,contourInp%et
+         CASE(CONTOUR_DOS_CONST)
+            WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
+            WRITE(6,1030) this%nz, contourInp%sigmaDOS
+            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(6,1040) contourInp%eb,contourInp%et
+         CASE DEFAULT
+
+         END SELECT
+
+         !Write out points and weights
+         WRITE(6,*)
+         WRITE(6,"(A)") " Energy points: "
+         WRITE(6,"(A)") "---------------------------------------------"
+         DO iz = 1, this%nz
+            WRITE(6,1050) REAL(this%e(iz)), AIMAG(this%e(iz)), REAL(this%de(iz)), AIMAG(this%de(iz))
+         ENDDO
+
+999      FORMAT("Name of the contour:", A)
+1000     FORMAT("Using energy contour mode: ", I1)
+1010     FORMAT("nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
+1020     FORMAT("nz: ", I5.1," alpha: ", f8.4)
+1030     FORMAT("n: ", I5.1,"; sigma: ", f8.4)
+1040     FORMAT("eb: ", f8.4,"; et: ",f8.4)
+1050     FORMAT(2f8.4,"      weight: ",2e15.4)
+      ENDIF
+
+   END SUBROUTINE eContour_greensfContourData
+
+
+END MODULE m_types_greensfContourData

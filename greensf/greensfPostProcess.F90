@@ -12,7 +12,7 @@ MODULE m_greensfPostProcess
 
    CONTAINS
 
-   SUBROUTINE greensfPostProcess(greensf,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,hub1inp,hub1data,results)
+   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,hub1inp,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
@@ -27,7 +27,7 @@ MODULE m_greensfPostProcess
       TYPE(t_potden),            INTENT(IN)     :: vTot
       TYPE(t_hub1data),          INTENT(INOUT)  :: hub1data
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
-      TYPE(t_greensf),           INTENT(INOUT)  :: greensf
+      TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
@@ -42,7 +42,7 @@ MODULE m_greensfPostProcess
       !--------------------------------------------------------------------------------
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
-      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,results%ef,greensfImagPart,greensf)
+      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,results%ef,greensfImagPart,greensFunction)
       !-------------------------------------------------------------
       ! Calculate various properties from the greens function
       !-------------------------------------------------------------
@@ -51,28 +51,26 @@ MODULE m_greensfPostProcess
         CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
       ENDIF
       IF(input%jspins.EQ.2) THEN
-         CALL eff_excinteraction(greensf,gfinp,input,results%ef,greensfImagPart)
+         !CALL eff_excinteraction(greensFunction,gfinp,input,results%ef,greensfImagPart)
       ENDIF
       CALL timestart("Green's Function: Occupation/DOS")
       DO i_gf = 1, gfinp%n
-         l = gfinp%elem(i_gf)%l
-         nType = gfinp%elem(i_gf)%atomType
-         IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
-         IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
+         !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
+         !IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
          !Density of states from Greens function
-         !CALL gfDOS(greensf,l,nType,i_gf,gfinp,input,results%ef)
+         !CALL gfDOS(greensFunction,l,nType,i_gf,gfinp,input,results%ef)
          !Occupation matrix
-         CALL occmtx(greensf,l,nType,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
+         CALL occmtx(greensFunction(i_gf),i_gf,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
-         !CALL hybridization(greensf,l,nType,gfinp,input,results%ef)
+         !CALL hybridization(greensFunction(i_gf),i_gf,gfinp,input,results%ef)
       ENDDO
       CALL timestop("Green's Function: Occupation/DOS")
 
 #ifdef CPP_HDF
       CALL timestart("Green's Function: IO/Write")
-      CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, greensf)
+      CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
       CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
-                            GREENSF_GENERAL_CONST, greensf, mmpmat)
+                           GREENSF_GENERAL_CONST, greensFunction, mmpmat)
       CALL closeGreensFFile(greensf_fileID)
       CALL timestop("Green's Function: IO/Write")
 #endif

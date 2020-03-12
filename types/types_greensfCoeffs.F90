@@ -53,9 +53,9 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfBZintCoeffs_init(thisGREENSFBZINTCOEFFS,gfinp,input,jsp_start,jsp_end,nkpts,nbands)
+      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,input,jsp_start,jsp_end,nkpts,nbands)
 
-         CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)  :: thisGREENSFBZINTCOEFFS
+         CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),                INTENT(IN)     :: gfinp
          TYPE(t_input),                INTENT(IN)     :: input
          INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
@@ -66,20 +66,20 @@ MODULE m_types_greensfCoeffs
          lmax = lmaxU_const
 
          IF(gfinp%l_sphavg) THEN
-            ALLOCATE (thisGREENSFBZINTCOEFFS%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
          ELSE
-            ALLOCATE (thisGREENSFBZINTCOEFFS%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (thisGREENSFBZINTCOEFFS%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (thisGREENSFBZINTCOEFFS%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (thisGREENSFBZINTCOEFFS%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
          ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_init
 
 
-      SUBROUTINE greensfImagPart_init(thisGREENSFIMAGPART,gfinp,input,noco)
+      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco)
 
-         CLASS(t_greensfImagPart),  INTENT(INOUT)  :: thisGREENSFIMAGPART
+         CLASS(t_greensfImagPart),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),             INTENT(IN)     :: gfinp
          TYPE(t_input),             INTENT(IN)     :: input
          TYPE(t_noco),              INTENT(IN)     :: noco
@@ -89,14 +89,14 @@ MODULE m_types_greensfCoeffs
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
-         ALLOCATE (thisGREENSFIMAGPART%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
+         ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
          IF(gfinp%l_sphavg) THEN
-            ALLOCATE (thisGREENSFIMAGPART%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
          ELSE
-            ALLOCATE (thisGREENSFIMAGPART%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (thisGREENSFIMAGPART%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (thisGREENSFIMAGPART%du(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (thisGREENSFIMAGPART%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
          ENDIF
 
       END SUBROUTINE greensfImagPart_init

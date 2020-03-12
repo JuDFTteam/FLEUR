@@ -3,16 +3,13 @@ MODULE m_add_selfen
    USE m_types
    USE m_constants
    USE m_juDFT
+   USE m_greensfUtils
 
    IMPLICIT NONE
-
-   LOGICAL, PARAMETER :: l_selfenDebug = .TRUE.
 
    CONTAINS
 
    SUBROUTINE add_selfen(g,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
-
-      USE m_greensfUtils
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -27,7 +24,7 @@ MODULE m_add_selfen
       !Then the desired chemical potential is found with the bisection method
       !to the right of the maximum
 
-      TYPE(t_greensf),  INTENT(IN)     :: g
+      TYPE(t_greensf),  INTENT(IN)     :: g(:)
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_atoms),    INTENT(IN)     :: atoms
@@ -36,10 +33,10 @@ MODULE m_add_selfen
       COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:,:)
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(:,:)
-      TYPE(t_greensf),  INTENT(INOUT)  :: gp
+      TYPE(t_greensf),  INTENT(INOUT)  :: gp(:)
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm
+      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,iContour,i_gf
       INTEGER spin_match,matsize,start,end,i_match
       CHARACTER(len=6) filename
 
@@ -64,6 +61,8 @@ MODULE m_add_selfen
       DO i_hia = 1, atoms%n_hia
          l = atoms%lda_u(atoms%n_u+i_hia)%l
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+         iContour = gfinp%hiaContour(i_hia)
+         i_gf = gfinp%find(l,nType,iContour=iContour)
          ns = 2*l+1
          matsize = ns*MERGE(2,1,l_match_both_spins)
          CALL vmat%init(.false.,matsize,matsize)
@@ -72,15 +71,17 @@ MODULE m_add_selfen
             !Target occupation
             n_target = MERGE(SUM(n_occ(i_hia,:)),n_occ(i_hia,i_match),l_match_both_spins)
             WRITE(filename,9000) i_match
-            IF(l_selfenDebug) OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
+#ifdef CPP_DEPUG
+            OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
+#endif
             mu = mu_a
             start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
             end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
             DO WHILE(mu.LE.mu_b)
-               CALL gp%reset(gfinp,l,nType)
+               CALL gp(i_gf)%reset()
                mu = mu + mu_step
                DO ipm = 1, 2
-                  DO iz = 1, g%nz
+                  DO iz = 1, g(i_gf)%contour%nz
                      !Read selfenergy
                      vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
                      IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
@@ -89,21 +90,23 @@ MODULE m_add_selfen
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
+                        CALL g(i_gf)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
                      ELSE
-                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g(i_gf)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp(i_gf)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
                      ELSE
-                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp(i_gf)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
-               IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
+               CALL occmtx(gp(i_gf),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
+#ifdef CPP_DEBUG
+               !IF(err) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
+#endif
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -111,13 +114,17 @@ MODULE m_add_selfen
                      n = n + REAL(mmpMat(m,m,i_hia,ispin))
                   ENDDO
                ENDDO
-               IF(l_selfenDebug) WRITE(1337,"(2f15.8)") mu,n
+#ifdef CPP_DEBUG
+               WRITE(1337,"(2f15.8)") mu,n
+#endif
                IF(n.GT.n_max) THEN
                   mu_max = mu
                   n_max  = n
                ENDIF
             ENDDO
-            IF(l_selfenDebug) CLOSE(1337)
+#ifdef CPP_DEBUG
+            CLOSE(1337)
+#endif
 
             !Sanity check for the maximum occupation
             IF(n_max-2*ns.GT.1) THEN
@@ -130,10 +137,10 @@ MODULE m_add_selfen
             !Set up the interval for the bisection method (mu_max,mu_b)
             mu_a = mu_max
             DO
-               CALL gp%reset(gfinp,l,nType)
+               CALL gp(i_gf)%reset()
                mu = (mu_a + mu_b)/2.0
                DO ipm = 1, 2
-                  DO iz = 1, g%nz
+                  DO iz = 1, g(i_gf)%contour%nz
                      !Read selfenergy
                      vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
                      IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
@@ -142,20 +149,20 @@ MODULE m_add_selfen
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
+                        CALL g(i_gf)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
                      ELSE
-                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g(i_gf)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp(i_gf)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
                      ELSE
-                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp(i_gf)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
+               CALL occmtx(gp(i_gf),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins

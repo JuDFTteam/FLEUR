@@ -30,21 +30,21 @@ MODULE m_hubbard1_setup
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_potden),   INTENT(IN)     :: pot
-      TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
+      TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
       TYPE(t_hub1data), INTENT(INOUT)  :: hub1data
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
       INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
       INTEGER :: io_error,ierr
-      INTEGER :: indStart,indEnd
+      INTEGER :: indStart,indEnd,iContour,i_gf
       REAL    :: mu_dc,exc
       LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=2)   :: l_type
       CHARACTER(len=9)   :: l_form
-      TYPE(t_greensf)    :: gu
+      TYPE(t_greensf)    :: gu(gfinp%n)
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
@@ -54,7 +54,7 @@ MODULE m_hubbard1_setup
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL    :: n_l(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
-      COMPLEX :: e(gdft%nz)
+      COMPLEX :: e(MAXVAL(gdft(:)%contour%nz))
       COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:)
 
       !To avoid confusing structure with pre-processor-switches later on
@@ -75,12 +75,6 @@ MODULE m_hubbard1_setup
          !The onsite green's function was calculated but the solver
          !was not yet run
          !--> write out the configuration for the hubbard 1 solver
-         IF(ALL(ABS(gdft%gmmpMat(:,:,:,:,:,:)).LT.1e-12)) &
-            CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
-
-         CALL gu%init(gfinp,input,noco,nz_in=gdft%nz,e_in=gdft%e,de_in=gdft%de)
-
-         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2,atoms%n_hia),source=cmplx_0)
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
@@ -99,17 +93,26 @@ MODULE m_hubbard1_setup
             f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          END DO
 
+         DO i_gf = 1, gfinp%n
+            CALL gu(i_gf)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_gf)%contour)
+         ENDDO
+         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
 
          DO i_hia = 1, atoms%n_hia
-            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             l = atoms%lda_u(atoms%n_u+i_hia)%l
+            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+            iContour = gfinp%hiaContour(i_hia)
+            i_gf = gfinp%find(l,nType,iContour=iContour)
+            IF(ALL(ABS(gdft(i_gf)%gmmpMat).LT.1e-12)) THEN
+               CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
+            ENDIF
 
             CALL hubbard1_path(atoms,i_hia,folder)
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
             !calculate the occupation of the correlated shell
-            CALL occmtx(gdft,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
+            CALL occmtx(gdft(i_gf),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             IF(hub1data%iter.EQ.1.AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)) THEN
@@ -125,7 +128,6 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDDO
             ENDIF
-
 
             !Initial Information (We are already on irank 0)
             WRITE(6,*)
@@ -166,7 +168,7 @@ MODULE m_hubbard1_setup
                   ! Write the main config files
                   !-------------------------------------------------------
                   CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1inp,hub1data,mu_dc,n_occ,&
-                                     l_bathexist,hub1data%iter==1.AND.ALL(ABS(pot%mmpmat(:,:,indStart:indEnd,:)).LT.1e-12),.true.)
+                                     l_bathexist,hub1data%iter==1.AND.ALL(ABS(pot%mmpmat(:,:,atoms%n_u+i_hia,:)).LT.1e-12),.true.)
                ELSE
                   !If no Solver is linked we assume that the old solver is used and we write out some additional files
                   !Crystal field matrix (old version)
@@ -174,13 +176,11 @@ MODULE m_hubbard1_setup
                      CALL write_ccfmat(xPath,hub1data%ccfmat(i_hia,-l:l,-l:l),l)
                   ENDIF
                   !Energy contour (old version)
-                  IF(gfinp%mode.NE.3) THEN
-                     OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
-                     DO iz = 1, gdft%nz
-                        WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
-                     ENDDO
-                     CLOSE(unit= 1337)
-                  ENDIF
+                  OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
+                  DO iz = 1, gdft(i_gf)%contour%nz
+                     WRITE(1337,"(2f14.8)") REAL(gdft(i_gf)%contour%e(iz))*hartree_to_ev_const, AIMAG(gdft(i_gf)%contour%e(iz))*hartree_to_ev_const
+                  ENDDO
+                  CLOSE(unit= 1337)
                   !-------------------------------------------------------
                   ! Write the main config files (old version)
                   !-------------------------------------------------------
@@ -194,13 +194,11 @@ MODULE m_hubbard1_setup
          !Write out DFT Green's Function
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gdft, &
-                              inFilename="greensf_DFT.hdf")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                                GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
-
 #endif
 
          !------------------------------------------------------------
@@ -210,6 +208,8 @@ MODULE m_hubbard1_setup
          DO i_hia = 1, atoms%n_hia
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             l = atoms%lda_u(atoms%n_u+i_hia)%l
+            iContour = gfinp%hiaContour(i_hia)
+            i_gf = gfinp%find(l,nType,iContour=iContour)
 
             CALL hubbard1_path(atoms,i_hia,folder)
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
@@ -221,21 +221,21 @@ MODULE m_hubbard1_setup
                   !We have to change into the Hubbard1 directory so that the solver routines can read the config
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
 #ifdef CPP_EDSOLVER
-                  e = gdft%e*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(:,:,:,1,i_hia),1)
+                  e = gdft(i_gf)%contour%e*hartree_to_ev_const
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_gf)%contour%nz,e,selfen(:,:,:gdft(i_gf)%contour%nz,1,i_hia),1)
                   !---------------------------------------------------
                   ! Calculate selfenergy on lower contour explicitly
                   ! Mainly out of paranoia :D
                   ! No rediagonalization (last argument switches this)
                   !---------------------------------------------------
-                  e = conjg(gdft%e)*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(:,:,:,2,i_hia),0)
+                  e = conjg(gdft(i_gf)%contour%e)*hartree_to_ev_const
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_gf)%contour%nz,e,selfen(:,:,:gdft(i_gf)%contour%nz,2,i_hia),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
                ELSE
                   !If there is no linked solver library we read in the selfenergy here
-                  CALL read_selfen(xPath,selfen(:,:,:,1,i_hia),gdft%nz,2*(2*l+1),.false.)
+                  CALL read_selfen(xPath,selfen(:,:,:gdft(i_gf)%contour%nz,1,i_hia),gdft(i_gf)%contour%nz,2*(2*l+1),.false.)
                ENDIF
             ENDIF
          ENDDO
@@ -247,8 +247,10 @@ MODULE m_hubbard1_setup
             DO i_hia = 1, atoms%n_hia
                nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                l = atoms%lda_u(atoms%n_u+i_hia)%l
+               iContour = gfinp%hiaContour(i_hia)
+               i_gf = gfinp%find(l,nType,iContour=iContour)
                DO ipm = 1, 2
-                  DO iz = 1, gdft%nz
+                  DO iz = 1, gdft(i_gf)%contour%nz
                      !---------------------------------------------
                      ! Convert the selfenergy to hartree
                      !---------------------------------------------
@@ -283,8 +285,7 @@ MODULE m_hubbard1_setup
             !Write out correlated Green's Function
             !-------------------------------------
             CALL timestart("Hubbard 1: IO/Write")
-            CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, gu, &
-                                 inFilename="greensf_IMP.hdf")
+            CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
             CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                                  GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
             CALL closeGreensFFile(greensf_fileID)

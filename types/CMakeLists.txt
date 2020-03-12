@@ -28,6 +28,7 @@ types/types_gpumat.F90
 types/types_mpdata.f90
 types/types_hybdat.f90
 types/types_greensf.f90
+types/types_greensfContourData.f90
 types/types_greensfCoeffs.F90
 types/types_hub1data.f90
 types/types_nococonv.F90

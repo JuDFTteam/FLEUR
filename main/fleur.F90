@@ -99,12 +99,12 @@ CONTAINS
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
-    TYPE(t_greensf)                 :: greensFunction
     TYPE(t_hub1data)                :: hub1data
+    TYPE(t_greensf), ALLOCATABLE    :: greensFunction(:)
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF,i,n
+    INTEGER :: iter,iterHF,i,n,i_gf
     INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix, sfscale
@@ -182,7 +182,12 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    IF(fi%gfinp%n>0) CALL greensFunction%init(fi%gfinp,fi%input,fi%noco)
+    IF(fi%gfinp%n>0) THEN
+       ALLOCATE(greensFunction(fi%gfinp%n))
+       DO i_gf = 1, fi%gfinp%n
+          CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
+       ENDDO
+    ENDIF
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
 

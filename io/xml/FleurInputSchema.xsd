@@ -487,6 +487,7 @@
       <xsd:attribute name="theta" type="xsd:string" use="optional" default="0.0"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
       <xsd:attribute name="init_occ" type="xsd:string" use="required"/>
+      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ExcType">
@@ -504,6 +505,8 @@
       <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_offdiag" type="FleurBool" use="required"/>
+      <xsd:attribute default="calc" name="kkintgrCutoff" type="KKintgrCutoffType" use="optional"/>
+      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="IntersiteGFType">
@@ -511,6 +514,8 @@
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_offdiag" type="FleurBool" use="required"/>
       <xsd:attribute name="l_nearestn" type="FleurBool" use="required"/>
+      <xsd:attribute default="calc" name="kkintgrCutoff" type="KKintgrCutoffType" use="optional"/>
+      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="J0Type">
@@ -518,7 +523,22 @@
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="F" name="l_avgexc" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_eDependence" type="FleurBool" use="optional"/>
+      <xsd:attribute default="calc" name="kkintgrCutoff" type="KKintgrCutoffType" use="optional"/>
+      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
+
+   <xsd:simpleType name="KKintgrCutoffType">
+      <xsd:union>
+        <xsd:simpleType>
+          <xsd:restriction base="xsd:double"/>
+        </xsd:simpleType>
+        <xsd:simpleType>
+          <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="calc"/>
+          </xsd:restriction>
+        </xsd:simpleType>
+      </xsd:union>
+    </xsd:simpleType>
 
    <xsd:complexType name="ForceType">
       <xsd:attribute name="calculate" type="FleurBool" use="required"/>

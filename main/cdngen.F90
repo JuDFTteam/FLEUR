@@ -74,7 +74,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_gfinp),INTENT(IN)         :: gfinp
    TYPE(t_hub1inp),INTENT(IN)       :: hub1inp
-   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: greensFunction
+   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: greensFunction(:)
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
@@ -101,6 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, jspmax, ierr
    INTEGER               :: dim_idx
+   INTEGER               :: i_gf,iContour
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
@@ -117,9 +118,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(gfinp%n.GT.0.AND.PRESENT(greensFunction)) THEN
       !Only calculate the greens function when needed
-      CALL gfinp%eContour(results%ef,mpi%irank,greensFunction%nz,greensFunction%e,greensFunction%de)
+      DO i_gf = 1, gfinp%n
+         iContour = gfinp%elem(i_gf)%iContour
+         CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,mpi%irank)
+      ENDDO
       CALL greensfImagPart%init(gfinp,input,noco)
-      CALL greensFunction%reset(gfinp)
+      !CALL greensFunction%reset(gfinp)
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 

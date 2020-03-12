@@ -95,7 +95,7 @@ CONTAINS
 ! ..  Local Variables
       REAL     :: zc, sumWeight, occ(2)
       INTEGER  ::nw, idsprs, n1, n2
-      INTEGER ieq, i, k, na, n, ilo
+      INTEGER ieq, i, k, na, n, ilo,iContour
       REAL s3, ah, a, hs2, rest
       LOGICAL l_hyb, ldum
       INTEGER :: ierr
@@ -237,21 +237,28 @@ CONTAINS
          WRITE(fileNum, 205) gfinp%l_sphavg, gfinp%l_mperp
 206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" ellup="', f0.8, '"/>')
          WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
-         SELECT CASE(gfinp%mode)
-         CASE(1)
-207         FORMAT('         <contourRectangle n1="', i0, '" n2="', i0, '" n3="', i0, '" nmatsub="', i0,&
-                   '" sigma="', f0.8, '" eb="', f0.8, '"/>')
-            WRITE(fileNum, 207) gfinp%n1, gfinp%n2, gfinp%n3, gfinp%nmatsub, gfinp%sigma, gfinp%eb
-         CASE(2)
-208         FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '"/>')
-            WRITE(fileNum, 208) gfinp%ncirc, gfinp%eb, gfinp%et, gfinp%alpha
-         CASE(3)
-209         FORMAT('         <contourDOS n="', i0, '" sigma="', f0.8, '" eb="', f0.8, '" et="', f0.8, &
-                   '" analytical_cont="', l1, '" l_fermi="', l1, '"/>')
-            WRITE(fileNum, 209) gfinp%nDOS, gfinp%sigmaDOS, gfinp%eb, gfinp%et, gfinp%l_anacont, gfinp%l_dosfermi
-         CASE DEFAULT
-            CALL judft_error("Unknown green's function contour mode", calledby="w_inpXML")
-         END SELECT
+         DO iContour = 1, gfinp%numberContours
+            SELECT CASE(gfinp%contour(iContour)%shape)
+            CASE(CONTOUR_RECTANGLE_CONST)
+207            FORMAT('         <contourRectangle n1="', i0, '" n2="', i0, '" n3="', i0, '" nmatsub="', i0,&
+                      '" sigma="', f0.8, '" eb="', f0.8, '" label="', a,'"/>')
+               WRITE(fileNum, 207) gfinp%contour(iContour)%n1, gfinp%contour(iContour)%n2, gfinp%contour(iContour)%n3,&
+                                   gfinp%contour(iContour)%nmatsub, gfinp%contour(iContour)%sigma, gfinp%contour(iContour)%eb,&
+                                   gfinp%contour(iContour)%label
+            CASE(CONTOUR_SEMICIRCLE_CONST)
+208            FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '" label="', a,'"/>')
+               WRITE(fileNum, 208) gfinp%contour(iContour)%ncirc, gfinp%contour(iContour)%eb, gfinp%contour(iContour)%et,&
+                                   gfinp%contour(iContour)%alpha,gfinp%contour(iContour)%label
+            CASE(CONTOUR_DOS_CONST)
+209            FORMAT('         <contourDOS n="', i0, '" sigma="', f0.8, '" eb="', f0.8, '" et="', f0.8, &
+                      '" analytical_cont="', l1, '" l_fermi="', l1, '" label="', a,'"/>')
+               WRITE(fileNum, 209) gfinp%contour(iContour)%nDOS, gfinp%contour(iContour)%sigmaDOS, gfinp%contour(iContour)%eb,&
+                                   gfinp%contour(iContour)%et, gfinp%contour(iContour)%l_anacont, gfinp%contour(iContour)%l_dosfermi,&
+                                   gfinp%contour(iContour)%label
+            CASE DEFAULT
+               CALL judft_error("Unknown green's function contour mode", calledby="w_inpXML")
+            END SELECT
+         ENDDO
          WRITE(fileNum, '(a)') '      </greensFunction>'
       ENDIF
 

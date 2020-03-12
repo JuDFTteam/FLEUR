@@ -6,8 +6,14 @@
 MODULE m_types_gfinp
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE m_constants
    IMPLICIT NONE
    PRIVATE
+
+   !Define constants for the shape argument
+   INTEGER, PARAMETER :: CONTOUR_RECTANGLE_CONST  = 1
+   INTEGER, PARAMETER :: CONTOUR_SEMICIRCLE_CONST = 2
+   INTEGER, PARAMETER :: CONTOUR_DOS_CONST        = 3
 
    TYPE t_gfelementtype
       SEQUENCE
@@ -17,7 +23,7 @@ MODULE m_types_gfinp
       INTEGER :: lp = -1
       INTEGER :: atomType = 0
       INTEGER :: atomTypep = 0
-      CHARACTER(len=100) :: contourLabel = "default"
+      INTEGER :: iContour = 0 !Which energy contour is used
    END TYPE t_gfelementtype
 
    TYPE t_j0calctype
@@ -29,24 +35,10 @@ MODULE m_types_gfinp
       LOGICAL :: l_eDependence = .FALSE.  !Switch to output J0 with variing fermi energy (only with contourDOS)
    END TYPE t_j0calctype
 
-
-   TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
-      !General logical switches
-      LOGICAL :: l_sphavg = .TRUE.
-      LOGICAL :: l_mperp = .FALSE.
-      !Number of elements !(TODO: NAME??)
-      INTEGER :: n = 0
-      !Number of j0 calculations
-      INTEGER :: n_j0 = 0
-      !Information on the elements to be calculated
-      TYPE(t_gfelementtype), ALLOCATABLE :: elem(:)
-      !Information on the j0-elements to be calculated
-      TYPE(t_j0calctype), ALLOCATABLE    :: j0elem(:)
-      !Parameters for the energy mesh on the real axis
-      INTEGER :: ne = 1301
-      REAL    :: ellow = -1.0
-      REAL    :: elup = 1.0
-      INTEGER :: mode = 2 !If no contour is specified write out the standard Semicircle contour (for inpgen)
+   TYPE t_contourInp
+      !Contains the input parameters for a contour
+      INTEGER :: shape = 2 !If no contour is specified write out the standard Semicircle contour (for inpgen)
+      CHARACTER(len=100) :: label = "default" !name of the contour
       !Endpoints of the complex energy contour
       REAL    :: eb = -1.0
       REAL    :: et = 0.0
@@ -65,17 +57,41 @@ MODULE m_types_gfinp
       REAL    :: sigmaDOS = 0.0314
       LOGICAL :: l_anacont = .FALSE. !Determines wether to include an analytical continuation at the edges
       LOGICAL :: l_dosfermi = .FALSE.!Determines wether the integration weights include the fermi distribution
+   END TYPE t_contourInp
+
+   TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
+      !General logical switches
+      LOGICAL :: l_sphavg = .TRUE.
+      LOGICAL :: l_mperp = .FALSE.
+      !Number of elements !(TODO: NAME??)
+      INTEGER :: n = 0
+      !Number of j0 calculations
+      INTEGER :: n_j0 = 0
+      !Information on the elements to be calculated
+      TYPE(t_gfelementtype), ALLOCATABLE :: elem(:)
+      !Information on the j0-elements to be calculated
+      TYPE(t_j0calctype), ALLOCATABLE    :: j0elem(:)
+      !Parameters for the energy mesh on the real axis
+      INTEGER :: ne    = 2700
+      REAL    :: ellow = -1.0
+      REAL    :: elup  = 1.0
+      INTEGER :: numberContours = 0
+      INTEGER,            ALLOCATABLE :: hiaContour(:) !Contour indices for hubbard 1 elements
+                                                       !(because otherwise we can not get the correct gfelment without ambiguity)
+      TYPE(t_contourInp), ALLOCATABLE :: contour(:)
    CONTAINS
-      PROCEDURE :: read_xml   => read_xml_gfinp
-      PROCEDURE :: mpi_bc     => mpi_bc_gfinp
-      PROCEDURE :: init       => init_gfinp
-      PROCEDURE :: find       => find_gfelem
-      PROCEDURE :: add        => add_gfelem
-      PROCEDURE :: eMesh      => eMesh_gfinp
-      PROCEDURE :: eContour   => eContour_gfinp
+      PROCEDURE :: read_xml      => read_xml_gfinp
+      PROCEDURE :: mpi_bc        => mpi_bc_gfinp
+      PROCEDURE :: init          => init_gfinp
+      PROCEDURE :: find          => find_gfelem
+      PROCEDURE :: find_contour  => find_contour
+      PROCEDURE :: add           => add_gfelem
+      PROCEDURE :: eMesh         => eMesh_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
-   PUBLIC t_gfinp
+
+   PUBLIC t_gfinp, t_contourInp
+   PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
 
 CONTAINS
 
@@ -97,28 +113,18 @@ CONTAINS
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
       CALL mpi_bc(this%elup,rank,mpi_comm)
-      CALL mpi_bc(this%mode,rank,mpi_comm)
-      CALL mpi_bc(this%eb,rank,mpi_comm)
-      CALL mpi_bc(this%et,rank,mpi_comm)
-      CALL mpi_bc(this%n1,rank,mpi_comm)
-      CALL mpi_bc(this%n2,rank,mpi_comm)
-      CALL mpi_bc(this%n3,rank,mpi_comm)
-      CALL mpi_bc(this%nmatsub,rank,mpi_comm)
-      CALL mpi_bc(this%sigma,rank,mpi_comm)
-      CALL mpi_bc(this%ncirc,rank,mpi_comm)
-      CALL mpi_bc(this%alpha,rank,mpi_comm)
-      CALL mpi_bc(this%nDOS,rank,mpi_comm)
-      CALL mpi_bc(this%sigmaDOS,rank,mpi_comm)
-      CALL mpi_bc(this%l_anacont,rank,mpi_comm)
-      CALL mpi_bc(this%l_dosfermi,rank,mpi_comm)
+      CALL mpi_bc(this%numberContours,rank,mpi_comm)
+      CALL mpi_bc(this%hiaContour,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
       IF (myrank.NE.rank) THEN
          IF (ALLOCATED(this%elem)) DEALLOCATE(this%elem)
          IF (ALLOCATED(this%j0elem)) DEALLOCATE(this%j0elem)
+         IF (ALLOCATED(this%contour)) DEALLOCATE(this%contour)
          ALLOCATE(this%elem(this%n))
          ALLOCATE(this%j0elem(this%n_j0))
+         ALLOCATE(this%contour(this%numberContours))
       ENDIF
       DO n=1,this%n
          CALL mpi_bc(this%elem(n)%l,rank,mpi_comm)
@@ -133,6 +139,23 @@ CONTAINS
          CALL mpi_bc(this%j0elem(n)%l_avgexc,rank,mpi_comm)
          CALL mpi_bc(this%j0elem(n)%l_eDependence,rank,mpi_comm)
       ENDDO
+      DO n=1,this%numberContours
+         CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
+         !CALL mpi_bc(this%contour(n)%label,rank,mpi_comm) TODO
+         CALL mpi_bc(this%contour(n)%eb,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%et,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%n1,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%n2,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%n3,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%nmatsub,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%sigma,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%ncirc,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%alpha,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%nDOS,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%sigmaDOS,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%l_anacont,rank,mpi_comm)
+         CALL mpi_bc(this%contour(n)%l_dosfermi,rank,mpi_comm)
+      ENDDO
 #endif
 
    END SUBROUTINE mpi_bc_gfinp
@@ -142,8 +165,8 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype
-      INTEGER :: lmin,lmax,i,l,lp
+      INTEGER :: numberNodes,ntype,itype,n_hia
+      INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
       CHARACTER(len=100)  :: xPathA,xPathS,label
       LOGICAL :: l_gfinfo_given,l_off,l_nn
 
@@ -164,53 +187,83 @@ CONTAINS
          this%ellow = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
          this%elup = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@elup'))
 
-         !Information on the complex energy contour
+         !Read in the complex energy contours
+
+         !How many defined contours are there
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourRectangle'
-         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
-         IF(numberNodes.EQ.1) THEN
-            this%mode = 1
-            this%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
-            !et cannot be varied from the fermi energy for this contour
-            this%n1 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n1'))
-            this%n2 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n2'))
-            this%n3 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n3'))
-            this%nmatsub = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nmatsub'))
-            this%sigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
-         ENDIF
-
+         this%numberContours = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourSemicircle'
-         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
-         IF(numberNodes.EQ.1) THEN
-            this%mode = 2
-            this%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
-            this%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
-            this%ncirc = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n'))
-            this%alpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@alpha'))
-            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
-         ENDIF
-
+         this%numberContours = this%numberContours + xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourDOS'
-         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
-         IF(numberNodes.EQ.1) THEN
-            this%mode = 3
-            this%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
-            this%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
-            this%nDOS = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n'))
-            this%sigmaDOS = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-            this%l_anacont = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@analytical_cont'))
-            this%l_dosfermi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_fermi'))
-            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
-         ENDIF
+         this%numberContours = this%numberContours + xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
 
-         IF(this%mode.EQ.-1) CALL juDFT_error("Error reading in gf-information: No complex energy contour specified",&
-                                              calledby="read_xml_gfinp")
+         IF(this%numberContours.EQ.0) CALL juDFT_error("Error reading in gf-information: No complex energy contour specified",&
+                                                   calledby="read_xml_gfinp")
+
+         ALLOCATE(this%contour(this%numberContours))
+
+         iContour = 0
+         xPathS = '/fleurInput/calculationSetup/greensFunction'
+         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/contourRectangle')
+         DO i = 1, numberNodes
+            iContour = iContour + 1
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourRectangle[',i,']'
+            this%contour(iContour)%shape = CONTOUR_RECTANGLE_CONST
+            this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
+            !et cannot be varied from the fermi energy for this contour
+            this%contour(iContour)%n1 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n1'))
+            this%contour(iContour)%n2 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n2'))
+            this%contour(iContour)%n3 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n3'))
+            this%contour(iContour)%nmatsub = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nmatsub'))
+            this%contour(iContour)%sigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+            this%contour(iContour)%label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+         ENDDO
+
+         xPathS = '/fleurInput/calculationSetup/greensFunction'
+         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourSemicircle')
+         DO i = 1, numberNodes
+            iContour = iContour + 1
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourSemicircle[',i,']'
+            this%contour(iContour)%shape = CONTOUR_SEMICIRCLE_CONST
+            this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
+            this%contour(iContour)%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
+            this%contour(iContour)%ncirc = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n'))
+            this%contour(iContour)%alpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@alpha'))
+            this%contour(iContour)%label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+         ENDDO
+
+         xPathS = '/fleurInput/calculationSetup/greensFunction'
+         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourDOS')
+         DO i = 1, numberNodes
+            iContour = iContour + 1
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourDOS[',i,']'
+            this%contour(iContour)%shape = CONTOUR_DOS_CONST
+            this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
+            this%contour(iContour)%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
+            this%contour(iContour)%nDOS = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n'))
+            this%contour(iContour)%sigmaDOS = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+            this%contour(iContour)%l_anacont = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@analytical_cont'))
+            this%contour(iContour)%l_dosfermi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_fermi'))
+            this%contour(iContour)%label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+         ENDDO
+
+         !Check for ambigous labels
+         DO iContour = 1, this%numberContours
+            DO iContourp = iContour+1, this%numberContours
+               IF(this%contour(iContour)%label == this%contour(iContourp)%label) THEN
+                  CALL juDFT_error("Ambigous definition of energy contours", calledby="read_xml_gfinp")
+               ENDIF
+            ENDDO
+         ENDDO
+
       ENDIF
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
+      n_hia = 0
 
       ALLOCATE(this%elem(4*ntype))
       ALLOCATE(this%j0elem(4*ntype))
+      ALLOCATE(this%hiaContour(4*ntype))
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -223,9 +276,11 @@ CONTAINS
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp)
+                  CALL this%add(itype,l,lp,iContour)
                ENDDO
             ENDDO
          ENDDO
@@ -236,9 +291,11 @@ CONTAINS
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,l_inter=.TRUE.)
+                  CALL this%add(itype,l,lp,iContour,l_inter=.TRUE.)
                ENDDO
             ENDDO
          ENDDO
@@ -248,8 +305,10 @@ CONTAINS
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/J0[',i,']'
             lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
-               CALL this%add(itype,l,l)
+               CALL this%add(itype,l,l,iContour)
             ENDDO
             !Add it to the j0elem array
             this%n_j0 = this%n_j0 + 1
@@ -265,7 +324,11 @@ CONTAINS
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
             !No offdiagonal l-part (only a single element)
             l = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l'))
-            CALL this%add(itype,l,l)
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            iContour = this%find_contour(TRIM(ADJUSTL(label)))
+            CALL this%add(itype,l,l,iContour)
+            n_hia = n_hia + 1
+            this%hiaContour(n_hia) = iContour
          ENDDO
       ENDDO
 
@@ -283,8 +346,8 @@ CONTAINS
          DO i = 1, this%n_j0
             IF(this%j0elem(i)%lmin.GT.this%j0elem(i)%lmax) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
                                                                     calledby="read_xml_gfinp")
-            IF(this%j0elem(i)%l_eDependence.AND.this%mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",&
-                                                                            calledby="read_xml_gfinp")
+            !IF(this%j0elem(i)%l_eDependence.AND.this%mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",&
+            !                                                                calledby="read_xml_gfinp")
          ENDDO
       ENDIF
 
@@ -299,7 +362,7 @@ CONTAINS
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep
+      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
 
       !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
@@ -307,24 +370,26 @@ CONTAINS
          lp = this%elem(i_gf)%lp
          atomType  = this%elem(i_gf)%atomType
          atomTypep = this%elem(i_gf)%atomTypep
+         iContour = this%elem(i_gf)%iContour
 
          IF(atomTypep==-1) THEN
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(1,l,lp,atomType,atoms,sym)
+            CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,atoms,sym)
          ENDIF
       ENDDO
 
    END SUBROUTINE init_gfinp
 
-   SUBROUTINE add_gfelem(this,nType,l,lp,nTypep,l_inter)
+   SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_inter)
 
-      CLASS(t_gfinp),   INTENT(INOUT)  :: this
-      INTEGER,          INTENT(IN)     :: nType
-      INTEGER,          INTENT(IN)     :: l
-      INTEGER,          INTENT(IN)     :: lp
-      INTEGER, OPTIONAL,INTENT(IN)     :: nTypep !Specify the second atom
-      LOGICAL, OPTIONAL,INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
+      CLASS(t_gfinp),      INTENT(INOUT)  :: this
+      INTEGER,             INTENT(IN)     :: nType
+      INTEGER,             INTENT(IN)     :: l
+      INTEGER,             INTENT(IN)     :: lp
+      INTEGER,             INTENT(IN)     :: iContour
+      INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep !Specify the second atom
+      LOGICAL, OPTIONAL,   INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
 
 
       INTEGER i_gf
@@ -334,13 +399,14 @@ CONTAINS
                                                                 hint="This is a bug in FLEUR, please report",calledby="add_gfelem")
 
       !Check if this job has already been added
-      i_gf = this%find(l,nType,lp,nType,l_found)
+      i_gf = this%find(l,nType,lp,nType,iContour=iContour,l_found=l_found)
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
       this%elem(this%n)%l = l
       this%elem(this%n)%atomType = nType
       this%elem(this%n)%lp = lp
+      this%elem(this%n)%iContour = iContour
       IF(PRESENT(l_inter)) THEN
          IF(l_inter) THEN
             !Temporary index to mark later in gfinp%init
@@ -358,7 +424,7 @@ CONTAINS
 
    END SUBROUTINE add_gfelem
 
-   FUNCTION find_gfelem(this,l,nType,lp,nTypep,l_found) result(i_gf)
+   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -366,6 +432,7 @@ CONTAINS
       CLASS(t_gfinp),      INTENT(IN)    :: this
       INTEGER,             INTENT(IN)    :: l
       INTEGER,             INTENT(IN)    :: nType
+      INTEGER, OPTIONAL,   INTENT(IN)    :: iContour
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found !If this switch is not provided the program
@@ -415,11 +482,46 @@ CONTAINS
             !The -1 will be replaced with the onsite element in init_gfinp
             IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
          ENDIF
+         IF(PRESENT(iContour)) THEN
+            IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE
+         ELSE
+            IF(this%elem(i_gf)%iContour.NE.1) CYCLE
+         ENDIF
          !If we are here we found the element
          IF(PRESENT(l_found)) l_found=.TRUE.
          search = .FALSE.
       ENDDO
    END FUNCTION find_gfelem
+
+   FUNCTION find_contour(this,label) result(iContour)
+
+      !Maps between the four indices (l,lp,nType,nTypep) and the position in the
+      !gf arrays
+
+      CLASS(t_gfinp),      INTENT(IN)  :: this
+      CHARACTER(len=*),  INTENT(IN)  :: label
+
+      INTEGER :: iContour
+      LOGICAL :: search
+
+      search = .TRUE.
+      iContour = 0
+      DO WHILE(search)
+         iContour = iContour + 1
+
+         IF(iContour>this%numberContours) THEN
+               CALL juDFT_error("Energy contour not found",&
+                                hint="Check the labels of your contours",&
+                                calledby="find_contour")
+         ENDIF
+         !--------------------------------------------
+         ! Check the current element
+         !--------------------------------------------
+         IF(TRIM(ADJUSTL(this%contour(iContour)%label)).NE.TRIM(ADJUSTL(label))) CYCLE
+         search = .FALSE.
+      ENDDO
+
+   END FUNCTION find_contour
 
    SUBROUTINE eMesh_gfinp(this,ef,del_out,eb_out,et_out,eMesh)
 
@@ -454,185 +556,7 @@ CONTAINS
 
    END SUBROUTINE eMesh_gfinp
 
-   SUBROUTINE eContour_gfinp(this,ef,irank,nz,e,de)
-
-      USE m_constants
-      USE m_grule
-      USE m_ExpSave
-
-      !Calculates the complex energy contour and
-      !writes it into the corresponding arrays in gf
-
-      CLASS(t_gfinp),       INTENT(IN)    :: this
-      REAL,                 INTENT(IN)    :: ef
-      INTEGER,              INTENT(IN)    :: irank
-      INTEGER,              INTENT(IN)    :: nz
-      COMPLEX, ALLOCATABLE, INTENT(INOUT) :: e(:)
-      COMPLEX, ALLOCATABLE, INTENT(INOUT) :: de(:)
-
-      INTEGER iz,n
-      REAL e1, e2, sigma
-      COMPLEX del
-      REAL r, xr
-      REAL, ALLOCATABLE :: x(:), w(:)
-
-      !Make sure that the arrays are allocated
-      IF(.NOT.(ALLOCATED(e).AND.ALLOCATED(de))) CALL juDFT_error("e or de array not allocated",calledby="eContour_gfinp")
-
-      !Help arrays
-      ALLOCATE(x(nz),source=0.0)
-      ALLOCATE(w(nz),source=0.0)
-
-      IF(this%mode.EQ.1) THEN
-
-         sigma = this%sigma * pi_const
-         IF(this%nmatsub > 0) THEN
-            e1 = ef+this%eb
-            n = 0
-
-            !Left Vertical part (e1,0) -> (e1,sigma)
-            del = this%nmatsub * CMPLX(0.0,sigma)
-            CALL grule(this%n1,x(1:(this%n1)/2),w(1:(this%n1)/2))
-            x = -x
-            DO iz = 1, (this%n1+3)/2-1
-               x(this%n1-iz+1) = -x(iz)
-               w(this%n1-iz+1) =  w(iz)
-            ENDDO
-            DO iz = 1, this%n1
-               n = n + 1
-               IF(n.GT.nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
-               e(n)  = e1 + del + del * x(iz)
-               de(n) = w(iz)*del
-            ENDDO
-
-            !Horizontal Part (eb,sigma) -> (et,sigma)
-            del = (ef-30*this%sigma-e1)/2.0
-            CALL grule(this%n2,x(1:(this%n2)/2),w(1:(this%n2)/2))
-            x = -x
-            DO iz = 1, (this%n2+3)/2-1
-               x(this%n2-iz+1) = -x(iz)
-               w(this%n2-iz+1) =  w(iz)
-            ENDDO
-            DO iz = 1, this%n2
-               n = n + 1
-               IF(n.GT.nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
-               e(n)  = del*x(iz) + del + e1 + 2 * this%nmatsub * ImagUnit * sigma
-               de(n) = del*w(iz)
-            ENDDO
-
-            !Right Vertical part (et,sigma) -> infty
-            CALL grule(this%n3,x(1:(this%n3)/2),w(1:(this%n3)/2))
-            x = -x
-            DO iz = 1, (this%n3+3)/2-1
-               x(this%n3-iz+1) = -x(iz)
-               w(this%n3-iz+1) =  w(iz)
-            ENDDO
-            del = 30*this%sigma
-            DO iz = 1, this%n3
-               n = n + 1
-               IF(n.GT.nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
-               e(n)  = del*x(iz)+ef +  2 * this%nmatsub * ImagUnit * sigma
-               de(n) = w(iz)*del/(1.0+exp_save((REAL(e(n))-ef)/this%sigma))
-            ENDDO
-
-            !Matsubara frequencies
-            DO iz = this%nmatsub , 1, -1
-               n = n + 1
-               IF(n.GT.nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
-               e(n)  = ef + (2*iz-1) * ImagUnit *sigma
-               de(n) =  -2 * ImagUnit * sigma
-            ENDDO
-         ENDIF
-      ELSE IF(this%mode.EQ.2) THEN
-
-         !Semicircle
-         e1 = ef+this%eb
-         e2 = ef+this%et
-
-         !Radius
-         r  = (e2-e1)*0.5
-         !midpoint
-         xr = (e2+e1)*0.5
-
-         CALL grule(this%ncirc,x(1:(this%ncirc)/2),w(1:(this%ncirc)/2))
-
-         DO iz = 1, this%ncirc/2
-            x(this%ncirc-iz+1) = -x(iz)
-            w(this%ncirc-iz+1) =  w(iz)
-         ENDDO
-         DO iz = 1, this%ncirc
-            e(iz)  = xr + ImagUnit * r * EXP(ImagUnit*pi_const/2.0 * x(iz))
-            de(iz) = pi_const/2.0 * r * w(iz) * EXP(ImagUnit*pi_const/2.0 * x(iz))
-            !Scale the imaginary part with the given factor alpha
-            e(iz)  = REAL(e(iz))  + ImagUnit * this%alpha * AIMAG(e(iz))
-            de(iz) = REAL(de(iz)) + ImagUnit * this%alpha * AIMAG(de(iz))
-         ENDDO
-
-      ELSE IF(this%mode.EQ.3) THEN
-
-         !Equidistant contour (without vertical edges)
-         del = (this%et-this%eb)/REAL(nz-1)
-         DO iz = 1, this%nDOS
-            e(iz) = (iz-1) * del + this%eb + ImagUnit * this%sigmaDOS
-            IF(this%l_dosfermi) THEN
-               de(iz) = del * 1.0/(1.0+exp_save((REAL(e(iz))-ef)/this%sigmaDOS))
-            ELSE
-               de(iz) = del
-            ENDIF
-         ENDDO
-
-      ELSE
-         CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="eContour_gfinp")
-      END IF
-
-      IF(irank.EQ.0) THEN
-         !Write out the information about the energy contour
-         WRITE(6,"(A)") "---------------------------------------------"
-         WRITE(6,"(A)") " Green's function energy contour"
-         WRITE(6,"(A)") "---------------------------------------------"
-         WRITE(6,1000) this%mode
-         WRITE(6,*)
-
-         SELECT CASE(this%mode)
-
-         CASE(1)
-            WRITE(6,"(A)") "Rectangular Contour: "
-            WRITE(6,1010) nz, this%nmatsub,this%n1,this%n2,this%n3
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) this%eb,0.0
-         CASE(2)
-            WRITE(6,"(A)") "Semicircle Contour: "
-            WRITE(6,1020) nz, this%alpha
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) this%eb,this%et
-         CASE(3)
-            WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
-            WRITE(6,1030) nz, this%sigmaDOS
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) this%eb,this%et
-         CASE default
-
-         END SELECT
-
-         !Write out points and weights
-         WRITE(6,*)
-         WRITE(6,"(A)") " Energy points: "
-         WRITE(6,"(A)") "---------------------------------------------"
-         DO iz = 1, nz
-            WRITE(6,1050) REAL(e(iz)), AIMAG(e(iz)), REAL(de(iz)), AIMAG(de(iz))
-         ENDDO
-
-1000     FORMAT("Using energy contour mode: ", I1)
-1010     FORMAT("nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
-1020     FORMAT("nz: ", I5.1," alpha: ", f8.4)
-1030     FORMAT("n: ", I5.1,"; sigma: ", f8.4)
-1040     FORMAT("eb: ", f8.4,"; et: ",f8.4)
-1050     FORMAT(2f8.4,"      weight: ",2e15.4)
-      ENDIF
-
-   END SUBROUTINE eContour_gfinp
-
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,atoms,sym)
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,atoms,sym)
 
       USE m_types_atoms
       USE m_types_sym
@@ -644,6 +568,7 @@ CONTAINS
       INTEGER,          INTENT(IN)     :: l
       INTEGER,          INTENT(IN)     :: lp
       INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
+      INTEGER,          INTENT(IN)     :: iContour
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
 
@@ -669,7 +594,7 @@ CONTAINS
          DO natomp = 1, atoms%nat
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
-               CALL this%add(refAtom,l,lp,nTypep=natomp)
+               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp)
                dist(natomp) = 9e99 !Eliminate from the list
             ENDIF
          ENDDO
