@@ -7,11 +7,11 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    FePt_film_SSFT FePt_film_SSFT_LO
    KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 MnHybridNoinv
    Fe_bcc_GreensFunction Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC 
-   RelaxMTFeature SmAtomjDOS Fe_bcc_SF_LDA)
+   RelaxMTFeature SmAtomjDOS )
 
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
-# Fe_1l_GreensFunction
+# Fe_1l_GreensFunction Fe_bcc_SF_LDA
 #  CoUnfold 
 
 set(SerialOnlyTests  )
