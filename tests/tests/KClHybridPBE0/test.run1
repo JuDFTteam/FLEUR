@@ -2,12 +2,9 @@
 jt::copyfile("files/inp.xml",$workdir);
 
 #if strings starts with mpi
-if (index($executable,"mpi") == 0) {
-   print LOG "ERROR! MPI is set in test.run1 for this test.";
-   exit 12;
-}
 
-jt::testrun("mpirun -np 3 $executable ",$workdir);
+$mpi="mpirun -n 3 --allow-run-as-root ";
+jt::testrun("$executable ",$workdir);
 
 #now test output
 
