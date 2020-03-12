@@ -57,11 +57,11 @@ CONTAINS
     !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1))
-    ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2))
-    ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3))
+    ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1));td%tdulo=0.0
+    ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2));td%tuulo=0.0
+    ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3));td%tuloulo=0.0
     ALLOCATE(td%h_loc(0:2*lmd+1,0:2*lmd+1,atoms%ntype,jspins,jspins),stat=err(5));td%h_loc=0.0
-    ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6))
+    ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0
 
     ALLOCATE(td%e_shift(atoms%ntype,jspins),stat=err(7))
     IF (l_offdiag) THEN
@@ -69,6 +69,7 @@ CONTAINS
     ELSE
        ALLOCATE(td%h_off(1,1,1,1,1),stat=err(4))
     END IF
+    td%h_off=0.0
     IF (ANY(err.NE.0)) THEN
        WRITE (*,*) 'an error occured during allocation of'
        WRITE (*,*) 'the tlmplm local matrix elements'

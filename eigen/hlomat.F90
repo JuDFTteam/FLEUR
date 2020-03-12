@@ -35,7 +35,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: na,ntyp
-    INTEGER, INTENT (IN) :: isp,jsp !spin for usdus and tlmplm
+    INTEGER, INTENT (IN) :: jsp,isp !spin for usdus and tlmplm
     INTEGER, INTENT (IN) :: jintsp,iintsp
     COMPLEX, INTENT (IN) :: chi
     !     ..
@@ -61,12 +61,12 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
-    CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
+    CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
        ab(:,:,2)=ab(:,:,1)
        abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
     ELSE
-       CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
 
 
@@ -105,12 +105,12 @@ CONTAINS
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
                    s=tlmplm%h_loc2(ntyp)
-                   utu=tlmplm%h_loc(lmp,lm,ntyp,isp,jsp)
-                   dtu=tlmplm%h_loc(lmp+s,lm,ntyp,isp,jsp)
-                   utd=tlmplm%h_loc(lmp,lm+s,ntyp,isp,jsp)
-                   dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,isp,jsp)
-                   utulo = tlmplm%tuulo(lmp,m,lo+mlo,isp,jsp)
-                   dtulo = tlmplm%tdulo(lmp,m,lo+mlo,isp,jsp)
+                   utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                   dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                   utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                   dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                   utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                   dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
                    !--->                   note, that utu,dtu... are the t-matrices and
                    !--->                   not their complex conjugates as in hssphn
                    !--->                   and that a,b,alo... are the complex
@@ -190,21 +190,21 @@ CONTAINS
                          DO mp = -lp,lp
                             lmp = lp* (lp+1) + mp
                             s=tlmplm%h_loc2(ntyp)
-                            utu=tlmplm%h_loc(lmp,lm,ntyp,isp,jsp)
-                            dtu=tlmplm%h_loc(lmp+s,lm,ntyp,isp,jsp)
-                            utd=tlmplm%h_loc(lmp,lm+s,ntyp,isp,jsp)
-                            dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,isp,jsp)
-                            utulo = tlmplm%tuulo(lmp,m,lo+mlo,isp,jsp)
-                            dtulo = tlmplm%tdulo(lmp,m,lo+mlo,isp,jsp)
-                            ulotu=CONJG(tlmplm%tuulo(lm,mp,lop+mlo,isp,jsp))
-                            ulotd=CONJG(tlmplm%tdulo(lm,mp,lop+mlo,isp,jsp))
+                            utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                            dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                            utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                            dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                            utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                            dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                            ulotu=CONJG(tlmplm%tuulo(lm,mp,lop+mlo,jsp,isp))
+                            ulotd=CONJG(tlmplm%tdulo(lm,mp,lop+mlo,jsp,isp))
                             !--->                         note that lo > lop
                             IF (lo>lop) THEN
                                lolop = ((lo-1)*lo)/2 + lop
-                               ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,isp,jsp))
+                               ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,jsp,isp))
                             ELSE
                                lolop = ((lop-1)*lop)/2 + lo
-                               ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,isp,jsp))
+                               ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,jsp,isp))
                             ENDIF
                             axx=CONJG(abclo(1,m,nkvec,lo,2))*utu +&
                                  CONJG(abclo(2,m,nkvec,lo,2))*utd +&
@@ -244,16 +244,16 @@ CONTAINS
                       DO mp = -l,l
                          lmp = l* (l+1) + mp
                          s=tlmplm%h_loc2(ntyp)
-                         utu=tlmplm%h_loc(lmp,lm,ntyp,isp,jsp)
-                         dtu=tlmplm%h_loc(lmp+s,lm,ntyp,isp,jsp)
-                         utd=tlmplm%h_loc(lmp,lm+s,ntyp,isp,jsp)
-                         dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,isp,jsp)
-                         utulo = tlmplm%tuulo(lmp,m,lo+mlo,isp,jsp)
-                         dtulo = tlmplm%tdulo(lmp,m,lo+mlo,isp,jsp)
-                         ulotu = CONJG(tlmplm%tuulo(lm,mp,lo+mlo,isp,jsp))
-                         ulotd = CONJG(tlmplm%tdulo(lm,mp,lo+mlo,isp,jsp))
+                         utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                         dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                         utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                         dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                         utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                         dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                         ulotu = CONJG(tlmplm%tuulo(lm,mp,lo+mlo,jsp,isp))
+                         ulotd = CONJG(tlmplm%tdulo(lm,mp,lo+mlo,jsp,isp))
                          lolo = ((lo-1)*lo)/2 + lo
-                         ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,isp,jsp))
+                         ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,jsp,isp))
                          axx = CONJG(abclo(1,m,nkvec,lo,2))*utu +&
                               CONJG(abclo(2,m,nkvec,lo,2))*utd +&
                               CONJG(abclo(3,m,nkvec,lo,2))*utulo

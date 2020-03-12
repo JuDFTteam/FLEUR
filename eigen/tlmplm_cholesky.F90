@@ -61,15 +61,11 @@ CONTAINS
     !dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
     !CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
     !ENDIF
-    td%h_off=0.0
 
     DO j1=jmin,jmax
        j2=MERGE(j1,3-j1,jsp<3)
        one=MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
        one=MERGE(CONJG(one),one,j1<j2)
-       td%tdulo(:,:,:,j1,j2) = CMPLX(0.0,0.0)
-       td%tuulo(:,:,:,j1,j2) = CMPLX(0.0,0.0)
-       td%tuloulo(:,:,:,j1,j2) = CMPLX(0.0,0.0)
 
 
        !$OMP PARALLEL DO DEFAULT(NONE)&
