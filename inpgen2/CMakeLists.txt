@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(FLEUR LANGUAGES Fortran CPP)
+project(FLEUR LANGUAGES Fortran)
 
 #These options should be adjusted
 option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
