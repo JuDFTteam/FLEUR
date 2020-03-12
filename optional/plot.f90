@@ -569,10 +569,10 @@ CONTAINS
       REAL,               PARAMETER   :: eps = 1.0e-15
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
-
+#ifdef CPP_MPI
       include 'mpif.h'
       integer:: rank,ierr,mpiSize
-
+#endif
 
       nfile = 120
       !CALL MPI_Init(ierr)
