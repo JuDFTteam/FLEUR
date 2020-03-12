@@ -17,6 +17,7 @@ MODULE m_types_gfinp
       INTEGER :: lp = -1
       INTEGER :: atomType = 0
       INTEGER :: atomTypep = 0
+      CHARACTER(len=100) :: contourLabel = "default"
    END TYPE t_gfelementtype
 
    TYPE t_j0calctype
@@ -143,7 +144,7 @@ CONTAINS
 
       INTEGER :: numberNodes,ntype,itype
       INTEGER :: lmin,lmax,i,l,lp
-      CHARACTER(len=100)  :: xPathA,xPathS
+      CHARACTER(len=100)  :: xPathA,xPathS,label
       LOGICAL :: l_gfinfo_given,l_off,l_nn
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -175,6 +176,7 @@ CONTAINS
             this%n3 = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n3'))
             this%nmatsub = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nmatsub'))
             this%sigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
          ENDIF
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourSemicircle'
@@ -185,6 +187,7 @@ CONTAINS
             this%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
             this%ncirc = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n'))
             this%alpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@alpha'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
          ENDIF
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourDOS'
@@ -197,6 +200,7 @@ CONTAINS
             this%sigmaDOS = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
             this%l_anacont = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@analytical_cont'))
             this%l_dosfermi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_fermi'))
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
          ENDIF
 
          IF(this%mode.EQ.-1) CALL juDFT_error("Error reading in gf-information: No complex energy contour specified",&
