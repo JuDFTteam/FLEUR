@@ -120,6 +120,16 @@ PRIVATE
          PROCEDURE,PASS :: init => orbcomp_init
    END TYPE t_orbcomp
 
+   TYPE t_jDOS
+
+      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)  !decomposition in percent
+      REAL, ALLOCATABLE    :: qmtp(:,:,:)      !How much of the state is in the muffin-tin sphere
+      REAL, ALLOCATABLE    :: occ(:,:,:)       !Occupation of the j-states
+
+      CONTAINS
+         PROCEDURE,PASS :: init => jDOS_init
+   END TYPE t_jDOS
+
    TYPE t_cdnvalJob
       LOGICAL              :: l_evp
       INTEGER, ALLOCATABLE :: k_list(:)
@@ -144,7 +154,7 @@ PRIVATE
    END TYPE t_gVacMap
 
 PUBLIC t_orb, t_denCoeffs, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_moments, t_orbcomp, t_cdnvalJob, t_gVacMap
+PUBLIC t_mcd, t_moments, t_orbcomp, t_jDOS, t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
@@ -333,7 +343,7 @@ SUBROUTINE slab_init(thisSlab,banddos,atoms,cell,input,kpts)
 END SUBROUTINE slab_init
 
 
-SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,noco,jspin,noccbd)
+SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
 
    USE m_types_setup
 
@@ -342,16 +352,16 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,noco,jspin,noccbd)
    CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
 
    TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_input),         INTENT(IN)    :: input
 
    INTEGER,               INTENT(IN)    :: jspin, noccbd
+   LOGICAL,               INTENT(IN)    :: l_bothSpins
 
    IF(ALLOCATED(thisEigVecCoeffs%acof)) DEALLOCATE(thisEigVecCoeffs%acof)
    IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
-   IF (noco%l_mperp) THEN
+   IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
@@ -461,6 +471,33 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
    thisOrbcomp%qmtp = 0.0
 
 END SUBROUTINE orbcomp_init
+
+SUBROUTINE jDOS_init(thisjDOS,input,banddos,atoms,kpts)
+
+   USE m_types_setup
+   USE m_types_kpts
+
+   IMPLICIT NONE
+
+   CLASS(t_jDOS),         INTENT(INOUT) :: thisjDOS
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_banddos),       INTENT(IN)    :: banddos
+
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
+
+   !jDOS is under ndir = -5 at the moment
+   IF ((banddos%ndir.EQ.-5).AND.banddos%dos) THEN
+      ALLOCATE(thisjDOS%comp(input%neig,0:3,2,atoms%nat,kpts%nkpt),source = 0.0)
+      ALLOCATE(thisjDOS%qmtp(input%neig,atoms%nat,kpts%nkpt),source = 0.0)
+      ALLOCATE(thisjDOS%occ(0:3,2,atoms%nat),source=0.0)
+   ELSE
+      ALLOCATE(thisjDOS%comp(1,1,1,1,1),source = 0.0)
+      ALLOCATE(thisjDOS%qmtp(1,1,1),source = 0.0)
+      ALLOCATE(thisjDOS%occ(1,1,1),source=0.0)
+   END IF
+
+END SUBROUTINE jDOS_init
 
 SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 

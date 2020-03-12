@@ -118,6 +118,7 @@ CONTAINS
 
 
 
+
     IF ( ( fi%input%preconditioning_param /= 0 ) .AND. fi%oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
@@ -139,6 +140,12 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
+
+    !Warning on strange choice of switches before starting density is generated.
+    IF (fi%input%l_onlyMtStDen.AND..NOT.fi%noco%l_mtNocoPot) THEN
+    	CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.",calledby='types_input')
+    END IF
+
     CALL inDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
@@ -155,8 +162,6 @@ CONTAINS
        END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
-       !IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-       !                        ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     END IF
 
 
@@ -266,9 +271,6 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
-
-
-
        IF (fi%noco%l_mtnocoPot.AND.fi%noco%l_scaleMag) THEN
           sfscale=fi%noco%mag_scale
           CALL inDen%SpinsToChargeAndMagnetisation()
@@ -293,13 +295,7 @@ CONTAINS
           CALL inDen%ChargeAndMagnetisationToSpins()
        END IF
 
-       IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-          CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, fi%cell, &
-                         fi%noco,nococonv, vTot, PLOT_POT_TOT, fi%sliceplot)
-          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
-          !CALL subPotDen(vxcForPlotting,vTot,vCoul)
-          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vxcForPlotting,PLOT_POT_VXC)
-       END IF
+    
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -526,8 +522,8 @@ CONTAINS
             WRITE(6,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
-         CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
+       CALL timestop("Iteration")
 
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

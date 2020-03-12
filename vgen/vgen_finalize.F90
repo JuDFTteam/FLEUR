@@ -6,19 +6,22 @@
 MODULE m_vgen_finalize
    USE m_juDFT
    USE m_xcBfield
+   USE m_plot
+   USE m_constants
+   USE m_lattHarmsSphHarmsConv
 
 CONTAINS
 
-   SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot)
+   SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !--------------------------------------------------------------------------
-      ! FLAPW potential generator (finalization)                          
-      ! 
+      ! FLAPW potential generator (finalization)
+      !
       ! Non-noco: Some rescaling is done here.
-      ! 
+      !
       ! Noco: rotate_int_den_from_local is called to generate 2x2 interstitial V matrix.
-      ! 
+      !
       ! Fully fully noco: rotate_mt_den_from_local does so for the Muffin Tins.
-      ! 
+      !
       ! Sourcefree: The xc-B-field is scaled up an source terms are purged out.
       !--------------------------------------------------------------------------
       USE m_constants
@@ -27,7 +30,7 @@ CONTAINS
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
       USE m_pw_tofrom_grid
-      
+
       IMPLICIT NONE
 
       TYPE(t_mpi),      INTENT(IN)    :: mpi
@@ -44,15 +47,22 @@ CONTAINS
       CLASS(t_xcpot),   INTENT(IN)    :: xcpot
       TYPE(t_sphhar),   INTENT(IN)    :: sphhar
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
-      TYPE(t_potden)                  :: div, phi, checkdiv
+      TYPE(t_potden)                  :: div, phi, checkdiv, vScal, vCorr, v2, vdiff
       TYPE(t_potden), DIMENSION(3)    :: cvec, corrB, bxc
       TYPE(t_gradients)               :: tmp_grad
 
-      INTEGER                         :: i, js, n, lh, nat, nd
-      REAL                            :: sfscale
+      INTEGER                         :: i, js, n, lh, nat, nd, indmax
+      REAL                            :: sfscale, r2(atoms%jmtd)
       REAL                            :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
       REAL, ALLOCATABLE               :: intden(:,:)
+
+COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
+
+      indmax=(atoms%lmaxd+1)**2
+
+      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype,4))
 
       IF (.NOT.noco%l_noco) THEN
          ! Rescale vTot%pw_w with number of stars:
@@ -82,19 +92,6 @@ CONTAINS
 
       IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
 
-         !DO js=1, 4
-         !   nat = 1
-         !   DO i=1, atoms%ntype
-         !      nd = sym%ntypsy(nat)
-         !      DO lh=0, sphhar%nlh(nd)
-         !         IF (MAXVAL(ABS(vTot%mt(:,lh,i,js))).LT.(1.0E-7)) THEN
-         !            vTot%mt(:,lh,i,js)=0.0
-         !         END IF
-         !      END DO
-         !      nat = nat + atoms%neq(i)
-         !   END DO
-         !END DO
-
          CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
          DO i=1,atoms%ntype
             WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
@@ -104,17 +101,24 @@ CONTAINS
          CALL timestart("Purging source terms in B-field")
 
          CALL timestart("Building B")
-         !vTot%mt(:,0,:,1) = 3.0+4.0*atoms%rmsh(:,:)**2
-         !vTot%mt(:,0,:,2) = 3.0-4.0*atoms%rmsh(:,:)**2
-         !vTot%mt(:,0,:,3) = atoms%rmsh(:,:)**2
-         !vTot%mt(:,0,:,4) = 3.0*atoms%rmsh(:,:)
-         !vTot%mt(:,1:,:,:) = 0.0
-         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,vTot,2.0,bxc,cell)
+         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,vTot,2.0,vScal,bxc,cell)
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,div,phi,vCorr,cvec,corrB,checkdiv)
          CALL timestop("SF subroutine")
+
+         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+         !         .FALSE., .FALSE., 'div                 ', div)
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .TRUE., 'phiDiv              ', phi)
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .FALSE., 'gradPhiDiv          ', cvec(1), cvec(1), cvec(2), cvec(3))
+
+      !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
+      !            .FALSE., .FALSE., 'bCorrected          ', corrB(1), corrB(1), corrB(2), corrB(3))
 
          CALL div%resetPotDen()
          CALL checkdiv%resetPotDen()
@@ -124,19 +128,29 @@ CONTAINS
             CALL corrB(i)%resetPotDen()
          END DO
 
+         CALL timestart("Correcting vTot")
+         !CALL correctPot(vTot,cvec)
+         ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
+         vTot=vCorr
+
          CALL init_pw_grid(.FALSE.,stars,sym,cell)
-         DO i=1,3
-            CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
-            CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
-         END DO
+         CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,vTot%pw,tmp_grad,rho=intden)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vTot%pw,vTot%pw_w)
          CALL finish_pw_grid()
 
-         CALL timestart("Correcting vTot")
-         CALL correctPot(vTot,cvec)
          CALL timestop("Correcting vTot")
 
+         DO i=1,atoms%ntype
+            DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:i - 1)) + 1))
+               r2=atoms%rmsh(:,i)**2
+               DO js=1,4
+                  vTot%mt(:,lh,i,js) = vTot%mt(:,lh,i,js)/r2
+               END DO !js
+            END DO !lh
+         END DO !i
+
          CALL timestop("Purging source terms in B-field")
-         
+
          CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
          DO i=1,atoms%ntype
             WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
@@ -151,10 +165,39 @@ CONTAINS
       !   vTot%mt(:,0,:,4)=0.0
       !end if
 
+      IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
+         !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
+         !CALL subPotDen(vxcForPlotting,vTot,vCoul)
+         !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vxcForPlotting,PLOT_POT_VXC)
+      END IF
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      
+      IF (.FALSE.) THEN
+      DO i=1,4
+         DO n=1, atoms%ntype
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, n, vTot%mt(:,:,n,i), flm(:,:,n,i))
+         END DO
+      END DO
+
+      CALL v2%copypotden(vTot)
+
+      DO i=1,4
+         DO n=1, atoms%ntype
+            CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, n, flm(:,:,n,i), v2%mt(:,:,n,i))
+         END DO
+      END DO
+
+      CALL vdiff%copypotden(vTot)
+      CALL vdiff%subPotDen(vTot,v2)
+      END IF    
+
       ! Store vTot(L=0) component as r*vTot(L=0)/sqrt(4*pi):
       ! (Used input%jspins instead of SIZE(vtot%mt,4) since
       ! the off diagonal part of VTot%mt needs no rescaling!)
-      DO js = 1, input%jspins 
+      DO js = 1, input%jspins
          DO n = 1, atoms%ntype
             vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
          END DO ! n
@@ -164,7 +207,7 @@ CONTAINS
       ! (This normalization is needed for gw!)
       DO js = 1, SIZE(vCoul%pw_w,2)
          DO i = 1, stars%ng3
-            vcoul%pw_w(i,js) = vcoul%pw_w(i,js) / stars%nstr(i)  
+            vcoul%pw_w(i,js) = vcoul%pw_w(i,js) / stars%nstr(i)
          END DO
       END DO
 

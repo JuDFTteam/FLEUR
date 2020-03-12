@@ -1,3 +1,4 @@
+
 help=0
 CLI_LIBDIR=""
 CLI_INCLUDEDIR=""
@@ -18,7 +19,8 @@ do
 	-external) shift;external_lib="$external_lib $1";;
 	-hdf5) shift; CLI_USE_HDF5=$1;;
 	-wannier) shift; CLI_USE_WANNIER=$1;;
-   -edsolver) shift; CLI_USE_EDSOLVER=$1;;
+        -edsolver) shift; CLI_USE_EDSOLVER=$1;;
+	-kplib)  CLI_USE_KPLIB=1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
@@ -84,7 +86,7 @@ General options:
  
 Command line options to switch on/off features. These options overwrite the results of 
 the test and might lead to the configuration to fail. 
-  -hdf5     [TRUE|FALSE] : use HDF5 library
+  -hdf5     [TRUE|FALSE] : use HDF5 library (if the library is not found and a git-version is used, try to compile it)
   -wannier  [TRUE|FALSE] : use Wannier90 library
   -mpi      [TRUE|FALSE] : compile the MPI parallel version
   -libxc    [TRUE|FALSE] : use libxc library
@@ -92,7 +94,7 @@ the test and might lead to the configuration to fail.
 
 Command line option to compile external libraries:
   -external # : download and compile external libraries before building FLEUR
-                currently 'hdf5','libxc' and 'chase' are possible options. The switch 
+                currently 'xml2', 'elpa' and 'chase' are possible options. The switch 
                 can be specified multiple times
 
 Options to specify Fortran/Linker flags:

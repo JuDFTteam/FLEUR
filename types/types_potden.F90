@@ -48,11 +48,10 @@ MODULE m_types_potden
   END TYPE t_potden
 
 CONTAINS
-  subroutine collect(this,mpi_comm,l_collmmp)
+  subroutine collect(this,mpi_comm)
     use m_mpi_bc_tool
     implicit none
     class(t_potden),INTENT(INOUT) :: this
-    LOGICAL, OPTIONAL, INTENT(IN) :: l_collmmp
     integer :: mpi_comm
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -83,19 +82,10 @@ CONTAINS
     endif
     !density matrix
     if (allocated(this%mmpMat)) then
-       IF(PRESENT(l_collmmp)) THEN
-         IF(l_collmmp) THEN
-           ALLOCATE(ctmp(size(this%mmpMat)))
-           CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
-           if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
-           deallocate(ctmp)
-         ENDIF
-       ELSE
-         ALLOCATE(ctmp(size(this%mmpMat)))
-         CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
-         if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
-         deallocate(ctmp)
-       ENDIF
+       ALLOCATE(ctmp(size(this%mmpMat)))
+       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+       if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+       deallocate(ctmp)
     endif
 #endif
   end subroutine collect
@@ -317,7 +307,7 @@ CONTAINS
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraDim)))
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)

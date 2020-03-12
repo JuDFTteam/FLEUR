@@ -56,10 +56,10 @@ MODULE m_rot_gf
                   ELSE IF(imat.EQ.5) THEN
                      curr_dos(:,:,:) = greensfCoeffs%du(:,:,:,nn,i_gf,ispin)
                   ENDIF
-                  !DO m = -l ,l
-                  !   IF(ANY(AIMAG(curr_dos(:,m,m)).GT.0.0).AND.ispin<3) CALL juDFT_error("curr_dos>0")
-                  !ENDDO
-                  DO it = 1, sym%invarind(natom)
+                  DO m = -l ,l
+                     IF(ANY(AIMAG(curr_dos(:,m,m)).GT.0.0).AND.ispin<3) CALL juDFT_error("curr_dos>0")
+                  ENDDO
+                  DO it = 1, MERGE(1,sym%invarind(natom),ispin==3) !Offdiagonal rotations deactivated at the moment
                      is = sym%invarop(natom,it)
                      isi = sym%invtab(is)
                      d_mat(:,:) = cmplx(0.0,0.0)

@@ -146,10 +146,10 @@ CONTAINS
       COMPLEX czero, cdn21
 
       ! Local arrays: densities in real space and off-diagonal elements.
-      REAL,    ALLOCATABLE        :: rvacxy(:,:,:,:), ris(:,:), fftwork(:)
+      REAL,    ALLOCATABLE        :: rvacxy(:,:,:,:), ris(:,:), ris2(:,:), fftwork(:)
       REAL,    ALLOCATABLE        :: rho(:,:,:,:), rht(:,:,:)
-      COMPLEX, ALLOCATABLE        :: qpw(:,:), rhtxy(:,:,:,:)
-      COMPLEX, ALLOCATABLE        :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
+      COMPLEX, ALLOCATABLE        :: qpw(:,:), qpww(:,:), rhtxy(:,:,:,:)
+      COMPLEX, ALLOCATABLE        :: cdom(:), cdomw(:), cdomvz(:,:), cdomvxy(:,:,:)
 
       zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -158,10 +158,11 @@ CONTAINS
       ! Allocation of arrays and initialization of those that make up the real
       ! space density matrix.
       ALLOCATE (rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4), qpw(stars%ng3,4), &
+                qpww(stars%ng3,4), ris2(0:27*stars%mx1*stars%mx2*stars%mx3-1,4), &
                 rht(vacuum%nmzd,2,4), rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4), &
                 cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,stars%ng2-1,2), &
                 cdom(stars%ng3), fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1), &
-                ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4), &
+                ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4), cdomw(stars%ng3), &
                 rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4))
 
       rho(:,:,:,:) = zero; qpw(:,:) = czero; cdom(:) = czero
@@ -173,20 +174,29 @@ CONTAINS
 
       rho(:,0:,1:,:input%jspins)    = denmat%mt(:,0:,1:,:input%jspins)
       qpw(1:,:input%jspins)         = denmat%pw(1:,:input%jspins)
+      IF (ALLOCATED(denmat%pw_w)) THEN
+         qpww(1:,:input%jspins)        = denmat%pw_w(1:,:input%jspins)
+      END IF
       rht(1:,1:,:input%jspins)      = denmat%vacz(1:,1:,:input%jspins)
       rhtxy(1:,1:,1:,:input%jspins) = denmat%vacxy(1:,1:,1:,:input%jspins)
 
       IF(noco%l_noco) THEN
          cdom = denmat%pw(:,3)
+         IF (ALLOCATED(denmat%pw_w)) THEN
+           cdomw = denmat%pw_w(:,3)
+         END IF
          cdomvz(:,:) = CMPLX(denmat%vacz(:,:,3),denmat%vacz(:,:,4))
          cdomvxy = denmat%vacxy(:,:,:,3)
       END IF
 
       ! Calculate the charge and magnetization densities in the muffin tins.
+
       DO ityp = 1,atoms%ntype
          theta   = nococonv%beta(ityp)
          phi     = nococonv%alph(ityp)
          DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
+!$OMP parallel private(iri,cdnup,cdndown,chden,mgden,cdn11,cdn21,cdn22)
+!$OMP do
             DO iri = 1,atoms%jri(ityp)
                IF (SIZE(denmat%mt,4).LE.2) THEN
                   cdnup   = rho(iri,ilh,ityp,1)
@@ -219,6 +229,8 @@ CONTAINS
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                END IF
             END DO
+!$OMP end do
+!$OMP end parallel
          END DO
       END DO
 
@@ -226,13 +238,21 @@ CONTAINS
       ! interstitial (qpw) to real space (ris).
       DO iden = 1,2
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
+         IF (ALLOCATED(denmat%pw_w)) THEN
+            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,1)
+         END IF
       END DO
 
       ! Also do that for the off-diagonal part. Real part goes into index
       ! 3 and imaginary part into index 4.
       CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,1)
+      IF (ALLOCATED(denmat%pw_w)) THEN
+         CALL fft3d(ris2(0,3),ris2(0,4),cdomw(1),stars,1)
+      END IF
 
       ! Calculate the charge and magnetization densities in the interstitial.
+!$OMP parallel private(imesh,rho_11,rho_22,rho_21r,rhotot,rho_21i,mx,my,mz)
+!$OMP do
       DO imesh = 0,ifft3-1
          rho_11  = ris(imesh,1)
          rho_22  = ris(imesh,2)
@@ -242,18 +262,38 @@ CONTAINS
          mx      =  2*rho_21r
          my      = -2*rho_21i
          mz      = (rho_11-rho_22)
-
          ris(imesh,1) = rhotot
          ris(imesh,2) = mx
          ris(imesh,3) = my
          ris(imesh,4) = mz
+
+         IF (ALLOCATED(denmat%pw_w)) THEN
+            rho_11  = ris2(imesh,1)
+            rho_22  = ris2(imesh,2)
+            rho_21r = ris2(imesh,3)
+            rho_21i = ris2(imesh,4)
+            rhotot  = rho_11 + rho_22
+            mx      =  2*rho_21r
+            my      = -2*rho_21i
+            mz      = (rho_11-rho_22)
+            ris2(imesh,1) = rhotot
+            ris2(imesh,2) = mx
+            ris2(imesh,3) = my
+            ris2(imesh,4) = mz
+         END IF
       END DO
+!$OMP end do
+!$OMP end parallel
 
       ! Invert the transformation to put the four densities back into
       ! reciprocal space.
       DO iden = 1,4
          fftwork=zero
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         fftwork=zero
+         IF (ALLOCATED(denmat%pw_w)) THEN
+            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
+         END IF
       END DO
 
       ! As above, but for the vacuum components in xy- and z-direction.
@@ -281,6 +321,8 @@ CONTAINS
 
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
+              !$OMP parallel private(imesh,rho_11,rho_22,rhotot,rho_21r,rho_21i,mx,my,mz)
+              !$OMP do
                DO imesh = 0,ifft2-1
                   rho_11  = rvacxy(imesh,imz,ivac,1)
                   rho_22  = rvacxy(imesh,imz,ivac,2)
@@ -296,8 +338,12 @@ CONTAINS
                   rvacxy(imesh,imz,ivac,3) = my
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
-            END DO
+               !$OMP end do
+               !$OMP end parallel
 
+            END DO
+            !$OMP parallel private(imz,rho_11,rho_22,rho_21r,rho_21i,mx,my,mz)
+            !$OMP do
             DO imz = vacuum%nmzxyd+1,vacuum%nmzd
                rho_11  = rht(imz,ivac,1)
                rho_22  = rht(imz,ivac,2)
@@ -313,6 +359,8 @@ CONTAINS
                rht(imz,ivac,3) = my
                rht(imz,ivac,4) = mz
             END DO
+            !$OMP end do
+            !$OMP end parallel
          END DO
 
          DO iden = 1,4
@@ -367,6 +415,18 @@ CONTAINS
          mzden%pw(1:,1) = qpw(1:,4)
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
          mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+
+         IF (ALLOCATED(denmat%pw_w)) THEN
+            ALLOCATE (cden%pw_w,  mold=cden%pw)
+            ALLOCATE (mxden%pw_w, mold=mxden%pw)
+            ALLOCATE (myden%pw_w, mold=myden%pw)
+            ALLOCATE (mzden%pw_w, mold=mzden%pw)
+            cden%pw_w(1:,1) = qpww(1:,1)
+            mxden%pw_w(1:,1) = qpww(1:,2)
+            myden%pw_w(1:,1) = qpww(1:,3)
+            mzden%pw_w(1:,1) = qpww(1:,4)
+         END IF
+
       ELSE
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
@@ -421,6 +481,19 @@ CONTAINS
          mzden%pw(1:,1) = qpw(1:,4)
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
          mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+
+         IF (ALLOCATED(denmat%pw_w)) THEN
+            ALLOCATE (cden%pw_w,  mold=cden%pw)
+            ALLOCATE (mxden%pw_w, mold=mxden%pw)
+            ALLOCATE (myden%pw_w, mold=myden%pw)
+            ALLOCATE (mzden%pw_w, mold=mzden%pw)
+            qpww(1:,:) = qpww(1:,:)/2.0
+            qpww(1:,3) = -qpww(1:,3)
+            cden%pw_w(1:,1) = qpww(1:,1)
+            mxden%pw_w(1:,1) = qpww(1:,2)
+            myden%pw_w(1:,1) = qpww(1:,3)
+            mzden%pw_w(1:,1) = qpww(1:,4)
+         END IF
 
       END IF
 
@@ -483,6 +556,8 @@ CONTAINS
 
       TYPE(t_potden),     ALLOCATABLE :: den(:)
       REAL,               ALLOCATABLE :: xdnout(:)
+      REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
+      REAL,               ALLOCATABLE :: points(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
       INTEGER                         :: grid(3)
@@ -517,6 +592,9 @@ CONTAINS
          numInDen        = 1
          numOutFiles     = 1
       END IF
+      ALLOCATE(outFilenames(numOutFiles))
+      ALLOCATE(xdnout(numOutFiles))
+
 
       DO i = 1, numInDen
 
@@ -558,8 +636,7 @@ CONTAINS
       !   END IF
       !END IF
       xsf=sliceplot%format==PLOT_XSF_FORMAT
-      ALLOCATE(outFilenames(numOutFiles))
-      ALLOCATE(xdnout(numOutFiles))
+
 
       IF (numOutFiles.EQ.1) THEN
          outFilenames(1) = TRIM(denName)
@@ -591,6 +668,8 @@ CONTAINS
         twodim=sliceplot%plot(nplo)%twodim
         cartesian=sliceplot%plot(nplo)%cartesian
         grid=sliceplot%plot(nplo)%grid
+        ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
+        ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
         vec1=sliceplot%plot(nplo)%vec1
         vec2=sliceplot%plot(nplo)%vec2
         vec3=sliceplot%plot(nplo)%vec3
@@ -644,6 +723,8 @@ CONTAINS
          END IF
 
          !loop over all points
+         !$OMP parallel shared(points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid) private(iz,iy,ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss) default(none)
+         !$OMP do
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
                DO ix = 0, grid(1)-1
@@ -754,14 +835,31 @@ CONTAINS
                   END IF ! (polar)
                   IF (xsf) THEN
                      DO i = 1, numOutFiles
-                        WRITE(nfile+i,*) xdnout(i)
+                        tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
                   ELSE
-                     WRITE(nfile,'(10e15.7)') point ,xdnout
+                  tempResults(ix,iy,iz,:)=xdnout(:)
+                  points(ix,iy,iz,:)=point(:)
                   END IF
                END DO !x-loop
             END DO !y-loop
          END DO !z-loop
+     !$OMP end do
+     !$OMP end parallel
+
+     DO iz = 0, grid(3)-1
+        DO iy = 0, grid(2)-1
+           DO ix = 0, grid(1)-1
+             IF (xsf) THEN
+               DO i = 1, numOutFiles
+                 WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
+               END DO
+             ELSE
+               WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
+             END IF
+           END DO
+        END DO
+    END DO
 
 
          IF (xsf) THEN
@@ -771,7 +869,8 @@ CONTAINS
          ELSE
             CLOSE(nfile)
          END IF
-
+         DEALLOCATE(tempResults)
+         DEALLOCATE(points)
       END DO !nplot
 
       IF (xsf) THEN

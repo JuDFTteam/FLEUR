@@ -91,6 +91,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_mcd)           :: mcd
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
+   TYPE(t_jDOS)          :: jDOS
    TYPE(t_cdnvalJob)     :: cdnvalJob
    TYPE(t_greensfCoeffs) :: greensfCoeffs
    TYPE(t_potden)        :: val_den, core_den
@@ -112,6 +113,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,input,atoms,kpts)
    CALL slab%init(banddos,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,atoms,kpts)
+   CALL jDOS%init(input,banddos,atoms,kpts)
 
    IF(gfinp%n.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
@@ -132,13 +134,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !called once and both spin directions are calculated in a single run.
    results%force=0.0
    jspmax = input%jspins
-   IF (noco%l_mperp) jspmax = 1
+   IF (noco%l_mperp.OR.banddos%l_jDOS) jspmax = 1
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfCoeffs)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
@@ -168,7 +170,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL closeBandDOSFile(banddosFile_id)
 #endif
          CALL timestart("cdngen: dos")
-         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,&
+                       slab,orbcomp,jDOS,oneD)
          IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
             CALL Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
