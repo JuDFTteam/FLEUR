@@ -1,6 +1,12 @@
 module m_juDFT_string
    implicit none
    character(len=3), parameter :: whitespaces = " " // achar(9) // achar(13) ! list of all whitespaces
+
+
+   interface int2str
+      module procedure int2str_int4, int2str_int8
+   end interface int2str
+
 contains
    function strip(input) result(output)
       implicit none
@@ -35,7 +41,7 @@ contains
       endif
    end function str2int
 
-   function int2str(num) result(ret_str)
+   function int2str_int4(num) result(ret_str)
       implicit none
       integer, intent(in)            :: num
       character(len=:), allocatable  :: ret_str
@@ -43,7 +49,17 @@ contains
       allocate(character(100) :: ret_str)
       write (ret_str,*) num
       ret_str = strip(ret_str)
-   end function int2str
+   end function int2str_int4
+
+   function int2str_int8(num) result(ret_str)
+      implicit none
+      integer(8), intent(in)            :: num
+      character(len=:), allocatable  :: ret_str
+
+      allocate(character(100) :: ret_str)
+      write (ret_str,*) num
+      ret_str = strip(ret_str)
+   end function int2str_int8
 
    function float2str(num) result(ret_str)
       implicit none
