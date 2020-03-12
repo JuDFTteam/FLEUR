@@ -102,6 +102,7 @@ CONTAINS
       DO iden = 1,2
          fftwork=zero
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         fftwork=zero
          CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
       END DO
 

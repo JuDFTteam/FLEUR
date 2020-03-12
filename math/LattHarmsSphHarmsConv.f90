@@ -59,7 +59,7 @@ SUBROUTINE sphHarmsRepToLattHarms(sym, atoms, lattHarms, iType, funcSphHarms, fu
             m = lattHarms%mlh(iM,iLH,ns)
             lm = l*(l+1) + m + 1
             DO iR = 1, atoms%jri(iType)
-               funcLattHarms(iR,iLH) = funcLattHarms(iR,iLH) + REAL(funcSphHarms(iR,lm) * lattHarms%clnu(2-iM,iLH,ns))
+               funcLattHarms(iR,iLH) = funcLattHarms(iR,iLH) + REAL(funcSphHarms(iR,lm) * CONJG(lattHarms%clnu(iM,iLH,ns)))
             END DO
          END DO
       END DO

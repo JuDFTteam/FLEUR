@@ -65,6 +65,14 @@ CONTAINS
                         MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
+      IF (noco%l_sourceFree) THEN
+         CALL magnMomFromDen(input,atoms,noco,den,b,dummy1,dummy2)
+         DO i=1,atoms%ntype
+            WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+            8025 FORMAT(2x,'Magmom before SF [local frame, atom ',i2,']: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
+         END DO
+      END IF
+
       IF (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
@@ -105,14 +113,6 @@ CONTAINS
       ! b)
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
-      
-      IF (noco%l_sourceFree) THEN
-         CALL magnMomFromDen(input,atoms,noco,den,b,dummy1,dummy2)
-         DO i=1,atoms%ntype
-            WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
-            8025 FORMAT(2x,'--> MagMom before SF (atom ',i2,': ','mx 1=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
-         END DO
-      END IF
 
       ! c)
       IF (noco%l_noco) THEN
