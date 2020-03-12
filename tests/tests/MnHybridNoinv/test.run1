@@ -13,9 +13,10 @@ jt::testrun("$executable ",$workdir);
 $result=jt::test_grepnumber("$workdir/out",
                             "HF total energy="," *= *([^ ]*)",
                             -2317.1756358345,0.000001);
-
+                            
 $result+=jt::test_grepexists("$workdir/out",
                               "HF total energy.*-2317.16697943");
+
 
 # Test of bandgap from 2nd HF iteration
 $result+=jt::test_grepnumber("$workdir/out",
@@ -30,7 +31,8 @@ $result+=jt::test_grepnumber("$workdir/out",
                             2.47449,0.0001);
 
 $result+=jt::test_grepnumber("$workdir/out",
-                          "> mm       2",
-                          ".*:\s*()[^\s]* htr)",
+                          "\-\-> mm       2",
+                          "\-\-> mm       2\s*([^\s]*)",
                           -2.47449,0.0001);
+
 jt::stageresult($workdir,$result,"1");
