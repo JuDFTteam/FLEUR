@@ -7,6 +7,11 @@ MODULE m_plot
    USE m_types
    USE m_juDFT
    USE m_constants
+   
+#ifdef CPP_MPI
+    USE m_mpi_col_den ! collect density data from parallel nodes
+#endif
+
 
    IMPLICIT NONE
 
@@ -560,7 +565,7 @@ CONTAINS
       REAL,               ALLOCATABLE :: points(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
-      INTEGER                         :: grid(3),k
+      INTEGER                         :: grid(3),k,rank
       REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
@@ -571,7 +576,7 @@ CONTAINS
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 #ifdef CPP_MPI
       include 'mpif.h'
-      integer:: rank,ierr,mpiSize
+      integer:: ierr,mpiSize
 #endif
 
       nfile = 120
@@ -725,11 +730,11 @@ CONTAINS
                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
             END IF
          END IF
-
-
+        rank=1
+#ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
-
+#endif
          !loop over all points
          DO iz = rank*(grid(3)-1), rank*(grid(3)-1)+grid(3)-1
             DO iy = 0, grid(2)-1
