@@ -447,7 +447,7 @@ CONTAINS
 
       search = .TRUE.
       IF(PRESENT(l_unique)) l_unique = .TRUE.
-      IF(PRESENT(l_unique).OR.PRESENT(uniqueMax).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
+      IF((PRESENT(l_unique).OR.PRESENT(uniqueMax)).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
          CALL juDFT_error("Not provided uniqueMax AND l_unique", hint="This is a bug in FLEUR please report",calledby="find_gfelem")
       ENDIF
       i_gf = 0
