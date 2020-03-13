@@ -625,7 +625,7 @@ CONTAINS
             END DO
             CLOSE (17)
          ELSE IF (score) THEN
-            CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
+                  IF (mpi%irank == 0) CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
          END IF
       END DO
 
@@ -684,10 +684,10 @@ CONTAINS
         vec3=sliceplot%plot(nplo)%vec3
         zero=sliceplot%plot(nplo)%zero
         filename=sliceplot%plot(nplo)%filename
-         IF (twodim.AND.ANY(grid(1:2)<1)) &
-            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
-         IF (.NOT.twodim.AND.ANY(grid<1)) &
-            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+         IF (twodim.AND.ANY(grid(1:2)<1).AND.mpi%irank == 0) &
+                  CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+         IF (.NOT.twodim.AND.ANY(grid<1).AND.mpi%irank == 0) &
+                   CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (twodim) grid(3) = 1
 
          !calculate cartesian coordinates if needed
@@ -699,17 +699,17 @@ CONTAINS
          END IF
 
          !Open the file
-         IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
+         IF (filename =="default".AND.mpi%irank == 0) WRITE(filename,'(a,i2)') "plot",nplo
 
          IF (xsf) THEN
             DO i = 1, numOutFiles
-               CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+               IF (mpi%irank == 0) CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
             END DO
          ELSE
             OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
          END IF
 
-         IF (twodim) THEN
+         IF (twodim.AND.mpi%irank == 0) THEN
             IF (numOutFiles.EQ.1) THEN
                WRITE(nfile,'(3a15)') 'x','y','f'
             ELSE IF (numOutFiles.EQ.2) THEN
@@ -866,7 +866,6 @@ CONTAINS
             END DO !y-loop
 
          END DO !z-loop
-
 
    IF (rank.EQ.0) THEN
      DO iz = 0, grid(3)-1
@@ -1166,7 +1165,7 @@ IF (rank.EQ.0) THEN
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_mpi),      INTENT(IN)    :: mpi
+      TYPE(t_mpi),       INTENT(IN)    :: mpi
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
@@ -1185,16 +1184,21 @@ IF (rank.EQ.0) THEN
       ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
-
-      CALL timestart("Plotting iplot plots")
-
+      IF (mpi%irank == 0) THEN
+      	CALL timestart("Plotting iplot plots")    
+      END IF
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
+      	IF (mpi%irank == 0) THEN
          CALL checkplotinp()
+	END IF
          CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
                         noco, nococonv, denmat, plot_const)
       END IF
-      CALL timestop("Plotting iplot plots")
+      IF (mpi%irank == 0) THEN
+      	CALL timestop("Plotting iplot plots")    
+      END IF
+  
    END SUBROUTINE makeplots
 
    SUBROUTINE getMTSphere(input, cell, atoms, oneD, point, iType, iAtom, pt)
