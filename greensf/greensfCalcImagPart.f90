@@ -67,10 +67,11 @@ MODULE m_greensfCalcImagPart
          END SELECT
 
          !Loop over Green's Function elements
-         !$OMP PARALLEL DEFAULT(NONE) &
+         !$OMP PARALLEL &
          !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
          !$OMP SHARED(ikpt_i,ikpt,ev_list,nBands,del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
-         !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero.atomType,atomTypep,iContour,l_unique,dummyInd,i_elem)
+         !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero)&
+         !$OMP PRIVATE(atomType,atomTypep,iContour,l_unique,dummyInd,i_elem)
          !$OMP DO
          DO i_gf = 1, gfinp%n
 
