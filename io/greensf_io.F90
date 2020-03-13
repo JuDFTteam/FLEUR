@@ -110,7 +110,6 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: duDataSpaceID, duDataSetID
       INTEGER(HID_T)    :: ddDataSpaceID, ddDataSetID
       INTEGER(HID_T)    :: selfenDataSpaceID, selfenDataSetID
-      INTEGER(HID_T)    :: energyContourGroupID
       INTEGER(HID_T)    :: energyPointsSpaceID, energyPointsSetID
       INTEGER(HID_T)    :: energyWeightsSpaceID, energyWeightsSetID
 
@@ -192,28 +191,23 @@ MODULE m_greensf_io
             CALL h5dclose_f(mmpmatSetID, hdfError)
          ENDIF
 
-         !Write out the energy contour and integration weights
-         CALL h5gcreate_f(currentelementGroupID, '/energyContour', energyContourGroupID, hdfError)
-         CALL io_write_attint0(energyContourGroupID,'nz',greensf(i_gf)%contour%nz)
-         !CALL io_write_attint0(energyContourGroupID,'shape',gfinp%mode) !Replace with string description
+         CALL io_write_attint0(currentelementGroupID,'nz',greensf(i_gf)%contour%nz)
+         !CALL io_write_attint0(currentelementGroupID,'shape',gfinp%mode) !Replace with string description
 
          dims(:2)=[2,greensf(i_gf)%contour%nz]
          dimsInt=dims
          CALL h5screate_simple_f(2,dims(:2),energyPointsSpaceID,hdfError)
-         CALL h5dcreate_f(energyContourGroupID, "Points", H5T_NATIVE_DOUBLE, energyPointsSpaceID, energyPointsSetID, hdfError)
+         CALL h5dcreate_f(currentelementGroupID, "ContourPoints", H5T_NATIVE_DOUBLE, energyPointsSpaceID, energyPointsSetID, hdfError)
          CALL h5sclose_f(energyPointsSpaceID,hdfError)
          CALL io_write_complex1(energyPointsSetID,[-1,1],dimsInt(:2),greensf(i_gf)%contour%e)
          CALL h5dclose_f(energyPointsSetID, hdfError)
-
          dims(:2)=[2,greensf(i_gf)%contour%nz]
          dimsInt=dims
          CALL h5screate_simple_f(2,dims(:2),energyWeightsSpaceID,hdfError)
-         CALL h5dcreate_f(energyContourGroupID, "Weights", H5T_NATIVE_DOUBLE, energyWeightsSpaceID, energyWeightsSetID, hdfError)
+         CALL h5dcreate_f(currentelementGroupID, "IntegrationWeights", H5T_NATIVE_DOUBLE, energyWeightsSpaceID, energyWeightsSetID, hdfError)
          CALL h5sclose_f(energyWeightsSpaceID,hdfError)
          CALL io_write_complex1(energyWeightsSetID,[-1,1],dimsInt(:2),greensf(i_gf)%contour%de)
          CALL h5dclose_f(energyWeightsSetID, hdfError)
-
-         CALL h5gclose_f(energyContourGroupID, hdfError)
 
 
          !Spherically averaged greensfData
