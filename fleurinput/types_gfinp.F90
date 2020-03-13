@@ -205,7 +205,7 @@ CONTAINS
 
          iContour = 0
          xPathS = '/fleurInput/calculationSetup/greensFunction'
-         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/contourRectangle')
+         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourRectangle')
          DO i = 1, numberNodes
             iContour = iContour + 1
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourRectangle[',i,']'
@@ -247,11 +247,10 @@ CONTAINS
             this%contour(iContour)%l_dosfermi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_fermi'))
             this%contour(iContour)%label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
          ENDDO
-
          !Check for ambigous labels
          DO iContour = 1, this%numberContours
             DO iContourp = iContour+1, this%numberContours
-               IF(this%contour(iContour)%label == this%contour(iContourp)%label) THEN
+               IF(TRIM(ADJUSTL(this%contour(iContour)%label)) == TRIM(ADJUSTL(this%contour(iContourp)%label))) THEN
                   CALL juDFT_error("Ambigous definition of energy contours", calledby="read_xml_gfinp")
                ENDIF
             ENDDO
