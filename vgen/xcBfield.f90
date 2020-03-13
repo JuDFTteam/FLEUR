@@ -185,28 +185,6 @@ CONTAINS
          CALL corrB(i)%addPotDen(aVec(i),cvec(i))
       ENDDO
 
-      CALL checkdiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
-                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
-                                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
-
-      !CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
-
-      !DO n=1,atoms%ntype
-      !   lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-      !   DO lh=0, lhmax
-      !      cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(1)%mt(:,lh,n,1)=avec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(2)%mt(:,lh,n,1)=avec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(3)%mt(:,lh,n,1)=avec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(1)%mt(:,lh,n,1)=corrB(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(2)%mt(:,lh,n,1)=corrB(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(3)%mt(:,lh,n,1)=corrB(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !   END DO
-      !END DO
-
       CALL BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, vScal, corrB(1), corrB(2), corrB(3), vCorr)
 
    END SUBROUTINE sourcefree
