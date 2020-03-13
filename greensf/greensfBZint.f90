@@ -26,9 +26,12 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,natom,natomp,natomp_start,natomp_end
+      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
+      INTEGER :: natom,natomp,natomp_start,natomp_end
+      INTEGER :: dummyInd,i_elem
       INTEGER :: spin1,spin2
       COMPLEX :: phase
+      LOGICAL :: l_unique
 
       IF(l_mperp) THEN
          spin1 = 2
@@ -41,7 +44,8 @@ MODULE m_greensfBZint
       !$OMP PARALLEL DEFAULT(NONE) &
       !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
       !$OMP SHARED(ikpt_i,ikpt,nBands,spin1,spin2) &
-      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,natomp_start,natomp_end,phase)
+      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,iContour)&
+      !$OMP PRIVATE(natomp_start,natomp_end,phase,dummyInd,i_elem,l_unique)
       !$OMP DO
       DO i_gf = 1, gfinp%n
 
@@ -50,6 +54,16 @@ MODULE m_greensfBZint
          lp = gfinp%elem(i_gf)%lp
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
+         iContour  = gfinp%elem(i_gf)%iContour
+
+         !Is this the first element with this l,lp,atomType,atomTypep combination
+         dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                               uniqueMax=i_gf,l_unique=l_unique)
+
+         IF(.NOT.l_unique) CYCLE
+
+         i_elem = gfinp%uniqueElements(indMax=i_gf)
+
 
          !Loop over equivalent atoms
          DO natom = SUM(atoms%neq(:atomType-1)) + 1, SUM(atoms%neq(:atomType))
@@ -72,11 +86,11 @@ MODULE m_greensfBZint
                !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                !Can these be unified ?
                !Spin diagonal elements
-               CALL greensfSpinDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,&
+               CALL greensfSpinDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,&
                                     gfinp%l_sphavg,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
                IF(spin1/=spin2) THEN
                   !Spin offdiagonal elements
-                  CALL greensfSpinOffDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
+                  CALL greensfSpinOffDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
                                           gfinp%l_sphavg,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
                ENDIF
 

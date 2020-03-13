@@ -25,8 +25,10 @@ MODULE m_greensfCalcImagPart
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
 
 
-      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
-      LOGICAL  :: l_zero
+      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,atomType,atomTypep,iContour
+      INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
+      INTEGER  :: dummyInd,i_elem
+      LOGICAL  :: l_zero,l_unique
       REAL     :: del,eb,wtkpt
       COMPLEX  :: fac,weight
       INTEGER, ALLOCATABLE :: ev_list(:)
@@ -68,14 +70,28 @@ MODULE m_greensfCalcImagPart
          !$OMP PARALLEL DEFAULT(NONE) &
          !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
          !$OMP SHARED(ikpt_i,ikpt,ev_list,nBands,del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
-         !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero)
+         !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero)&
+         !$OMP PRIVATE(atomType,atomTypep,iContour,l_unique,dummyInd,i_elem)
          !$OMP DO
          DO i_gf = 1, gfinp%n
 
             CALL timestart("Green's Function: Imaginary Part")
 
+            !Get the information about the current element
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
+            atomType  = gfinp%elem(i_gf)%atomType
+            atomTypep = gfinp%elem(i_gf)%atomTypep
+            iContour  = gfinp%elem(i_gf)%iContour
+
+            !Is this the first element with this l,lp,atomType,atomTypep combination
+            dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                                  uniqueMax=i_gf,l_unique=l_unique)
+
+            IF(.NOT.l_unique) CYCLE
+
+            i_elem = gfinp%uniqueElements(indMax=i_gf)
+
             DO m = -l, l
                DO mp = -lp, lp
                   DO iBand = 1, nBands
@@ -108,17 +124,17 @@ MODULE m_greensfCalcImagPart
                         END SELECT
 
                         IF(gfinp%l_sphavg) THEN
-                           greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) = greensfImagPart%sphavg(ie,m,mp,i_gf,spin_ind) &
-                                                                           + AIMAG(weight * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_gf,spin_ind))
+                           greensfImagPart%sphavg(ie,m,mp,i_elem,spin_ind) = greensfImagPart%sphavg(ie,m,mp,i_elem,spin_ind) &
+                                                                           + AIMAG(weight * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_elem,spin_ind))
                         ELSE
-                           greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &
-                                                                        + AIMAG(weight * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_gf,spin_ind))
-                           greensfImagPart%ud(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &
-                                                                        + AIMAG(weight * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_gf,spin_ind))
-                           greensfImagPart%du(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &
-                                                                        + AIMAG(weight * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_gf,spin_ind))
-                           greensfImagPart%dd(ie,m,mp,i_gf,spin_ind) = greensfImagPart%uu(ie,m,mp,i_gf,spin_ind) &
-                                                                        + AIMAG(weight * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_gf,spin_ind))
+                           greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                                                                        + AIMAG(weight * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%ud(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                                                                        + AIMAG(weight * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%du(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                                                                        + AIMAG(weight * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%dd(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                                                                        + AIMAG(weight * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind))
                         ENDIF
 
                      ENDDO!ie
