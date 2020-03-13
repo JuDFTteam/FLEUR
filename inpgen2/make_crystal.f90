@@ -11,7 +11,7 @@ CONTAINS
     USE m_types_atoms
     USE m_types_noco
     USE m_make_spacegroup
-    use m_make_atom_groups
+    USE m_make_atom_groups
     !USE m_generator
     IMPLICIT NONE
     !===> Arguments
@@ -46,9 +46,11 @@ CONTAINS
     !---> read in atomic positions and shift to (-1/2,1/2] in lattice
     !---> coords. also read in identification (atomic) number (atomid)
     !---> to distinguish different atom types (need not be atomic number)
-    if (film) atompos(3,:)=atompos(3,:)/cell%amat(3,3)
-    DO n=1,size(atompos,2)
-      atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
+    IF (film) THEN
+       atompos(3,:)=atompos(3,:)/cell%amat(3,3)
+    ENDIF
+    DO n=1,SIZE(atompos,2)
+       atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
     ENDDO
 
     !--->    calculate space group symmetry
@@ -70,7 +72,7 @@ CONTAINS
           WRITE(*,*) 'Shifting crystal by:'
           WRITE(*,'(3f15.10)') -0.5*sym%tau(:,inversionOp)            ! changed to minus
           WRITE(*,*) ''
-          DO k = 1, size(atomid)
+          DO k = 1, SIZE(atomid)
              atompos(:,k) = atompos(:,k) - 0.5*sym%tau(:,inversionOp) ! GB`18
           END DO
           CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
