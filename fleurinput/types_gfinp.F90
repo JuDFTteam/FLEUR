@@ -617,20 +617,45 @@ CONTAINS
 
    END SUBROUTINE eMesh_gfinp
 
-   FUNCTION uniqueElements_gfinp(this,ind,indUnique) result(uniqueElements)
+   SUBROUTINE uniqueElements_gfinp(this,uniqueElements,ind,indUnique)
 
-      CLASS(t_gfinp),   INTENT(IN) :: this
-      INTEGER, OPTIONAL,INTENT(IN) :: ind
-      INTEGER, OPTIONAL,INTENT(INOUT) :: indUnique !Finds the corresponding unique Element for a given ind
+      CLASS(t_gfinp),   INTENT(IN)     :: this
+      INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
+      INTEGER, OPTIONAL,INTENT(IN)     :: ind
+      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind
 
-      INTEGER :: uniqueElements,maxGF
+      INTEGER :: maxGF
       INTEGER :: l,lp,atomType,atomTypep,dummyInd,iContour,i_gf
       LOGICAL :: l_unique
 
       uniqueElements = 0
 
+      IF(PRESENT(ind)) THEN
+         maxGF = ind
+      ELSE
+         maxGF = this%n
+      ENDIF
+      DO i_gf = 1, maxGF
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         iContour  = this%elem(i_gf)%iContour
+         dummyInd = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                              uniqueMax=i_gf,l_unique=l_unique)
+         IF(l_unique) THEN
+            uniqueElements = uniqueElements +1
+         ENDIF
+      ENDDO
+
+      IF(uniqueElements==0.AND.maxGF/=0) THEN
+         CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",&
+                          calledby="uniqueElements_gfinp")
+      ENDIF
+
       IF(PRESENT(indUnique)) THEN
-         IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",calledby="uniqueElements_gfinp")
+         IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",&
+                                                calledby="uniqueElements_gfinp")
          l  = this%elem(ind)%l
          lp = this%elem(ind)%lp
          atomType  = this%elem(ind)%atomType
@@ -639,30 +664,11 @@ CONTAINS
 
          indUnique = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
                                uniqueMax=ind,l_unique=l_unique)
-      ELSE
-         IF(PRESENT(ind)) THEN
-            maxGF = ind
-         ELSE
-            maxGF = this%n
-         ENDIF
-         DO i_gf = 1, maxGF
-            l  = this%elem(i_gf)%l
-            lp = this%elem(i_gf)%lp
-            atomType  = this%elem(i_gf)%atomType
-            atomTypep = this%elem(i_gf)%atomTypep
-            iContour  = this%elem(i_gf)%iContour
-            dummyInd = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                                 uniqueMax=i_gf,l_unique=l_unique)
-            IF(l_unique) THEN
-               uniqueElements = uniqueElements +1
-            ENDIF
-         ENDDO
-         IF(uniqueElements==0.AND.maxGF/=0) THEN
-            CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",calledby="uniqueElements_gfinp")
-         ENDIF
       ENDIF
 
 
-   END FUNCTION uniqueElements_gfinp
+
+
+   END SUBROUTINE uniqueElements_gfinp
 
 END MODULE m_types_gfinp

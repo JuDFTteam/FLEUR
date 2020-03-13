@@ -25,10 +25,10 @@ MODULE m_greensfCalcImagPart
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
 
 
-      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,atomType,atomTypep,iContour
+      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
-      INTEGER  :: dummyInd,i_elem
-      LOGICAL  :: l_zero,l_unique
+      INTEGER  :: indUnique,i_elem
+      LOGICAL  :: l_zero
       REAL     :: del,eb,wtkpt
       COMPLEX  :: fac,weight
       INTEGER, ALLOCATABLE :: ev_list(:)
@@ -67,30 +67,24 @@ MODULE m_greensfCalcImagPart
          END SELECT
 
          !Loop over Green's Function elements
-         !$OMP PARALLEL &
+         !$OMP PARALLEL DEFAULT(NONE) &
          !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
          !$OMP SHARED(ikpt_i,ikpt,ev_list,nBands,del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
          !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero)&
-         !$OMP PRIVATE(atomType,atomTypep,iContour,l_unique,dummyInd,i_elem)
+         !$OMP PRIVATE(indUnique,i_elem)
          !$OMP DO
          DO i_gf = 1, gfinp%n
 
             !Get the information about the current element
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
-            atomType  = gfinp%elem(i_gf)%atomType
-            atomTypep = gfinp%elem(i_gf)%atomTypep
-            iContour  = gfinp%elem(i_gf)%iContour
 
-            !Is this the first element with this l,lp,atomType,atomTypep combination
-            dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                                  uniqueMax=i_gf,l_unique=l_unique)
+            CALL gfinp%uniqueElements(i_elem,ind=i_gf,indUnique=indUnique)
+            eGrid_start = kpts%get_nk((/0.0,0.0,0.0/))
+            IF(i_gf/=indUnique) CYCLE
 
-            IF(.NOT.l_unique) CYCLE
 
             CALL timestart("Green's Function: Imaginary Part")
-
-            i_elem = gfinp%uniqueElements(ind=i_gf)
 
             DO m = -l, l
                DO mp = -lp, lp

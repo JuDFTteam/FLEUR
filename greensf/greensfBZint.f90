@@ -26,12 +26,11 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
+      INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end
-      INTEGER :: dummyInd,i_elem
+      INTEGER :: i_elem
       INTEGER :: spin1,spin2
       COMPLEX :: phase
-      LOGICAL :: l_unique
 
       IF(l_mperp) THEN
          spin1 = 2
@@ -41,11 +40,11 @@ MODULE m_greensfBZint
          spin2 = jspin
       ENDIF
 
-      !$OMP PARALLEL &
+      !$OMP PARALLEL DEFAULT(SHARED) &
       !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
       !$OMP SHARED(ikpt_i,ikpt,nBands,spin1,spin2) &
-      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,iContour) &
-      !$OMP PRIVATE(natomp_start,natomp_end,phase,dummyInd,i_elem,l_unique)
+      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp) &
+      !$OMP PRIVATE(natomp_start,natomp_end,phase,indUnique,i_elem)
       !$OMP DO
       DO i_gf = 1, gfinp%n
 
@@ -54,16 +53,10 @@ MODULE m_greensfBZint
          lp = gfinp%elem(i_gf)%lp
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
-         iContour  = gfinp%elem(i_gf)%iContour
 
-         !Is this the first element with this l,lp,atomType,atomTypep combination
-         dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                               uniqueMax=i_gf,l_unique=l_unique)
+         CALL gfinp%uniqueElements(i_elem,ind=i_gf,indUnique=indUnique)
 
-         IF(.NOT.l_unique) CYCLE
-
-         i_elem = gfinp%uniqueElements(ind=i_gf)
-
+         IF(i_gf/=indUnique) CYCLE
 
          !Loop over equivalent atoms
          DO natom = SUM(atoms%neq(:atomType-1)) + 1, SUM(atoms%neq(:atomType))
