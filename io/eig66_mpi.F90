@@ -196,12 +196,6 @@ CONTAINS
           w_iks(:SIZE(tmp_real))=tmp_real
        END IF
        DEALLOCATE(tmp_real)
-       if(present(zmat)) then
-          if(any(all(zmat%data_r == 0, dim=1))) then
-             write (*,*) "bp3"
-             call juDFT_error("some_zmat has to be non-zero")
-          endif
-       endif
     ENDIF
 
     IF (PRESENT(zmat)) THEN
