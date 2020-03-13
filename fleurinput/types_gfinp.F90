@@ -617,17 +617,24 @@ CONTAINS
 
    END SUBROUTINE eMesh_gfinp
 
-   FUNCTION uniqueElements_gfinp(this) result(uniqueElements)
+   FUNCTION uniqueElements_gfinp(this,indMax) result(uniqueElements)
 
       CLASS(t_gfinp),   INTENT(IN) :: this
+      INTEGER, OPTIONAL,INTENT(IN) :: indMax
 
-      INTEGER :: uniqueElements
+      INTEGER :: uniqueElements,maxGF
       INTEGER :: l,lp,atomType,atomTypep,dummyInd,iContour,i_gf
       LOGICAL :: l_unique
 
       uniqueElements = 0
 
-      DO i_gf = 1, this%n
+      IF(PRESENT(indMax)) THEN
+         maxGF = indMax
+      ELSE
+         maxGF = this%n
+      ENDIF
+
+      DO i_gf = 1, maxGF
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
          atomType  = this%elem(i_gf)%atomType
@@ -640,7 +647,7 @@ CONTAINS
          ENDIF
       ENDDO
 
-      IF(uniqueElements==0) THEN
+      IF(uniqueElements==0.AND.maxGF/=0) THEN
          CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",calledby="uniqueElements_gfinp")
       ENDIF
 
