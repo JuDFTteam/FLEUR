@@ -88,6 +88,7 @@ MODULE m_types_gfinp
       PROCEDURE :: add           => add_gfelem
       PROCEDURE :: eMesh         => eMesh_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
+      PROCEDURE :: uniqueElements => uniqueElements_gfinp
    END TYPE t_gfinp
 
    PUBLIC t_gfinp, t_contourInp
@@ -424,6 +425,53 @@ CONTAINS
 
    END SUBROUTINE add_gfelem
 
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,atoms,sym)
+
+      USE m_types_atoms
+      USE m_types_sym
+
+      !TODO: atoms outside the unit cell
+
+      CLASS(t_gfinp),   INTENT(INOUT)  :: this
+      INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
+      INTEGER,          INTENT(IN)     :: l
+      INTEGER,          INTENT(IN)     :: lp
+      INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
+      INTEGER,          INTENT(IN)     :: iContour
+      TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_sym),      INTENT(IN)     :: sym
+
+      INTEGER :: ishell,natomp
+      REAL :: minDist
+      REAL, ALLOCATABLE :: dist(:)
+
+      IF(sym%nop>1) CALL juDFT_error("nearest neighbour GF + symmetries not implemented",&
+                                     calledby="addNearestNeighbours_gfelem")
+
+      ALLOCATE(dist(atoms%nat),source=0.0)
+      DO natomp = 1, atoms%nat
+         dist(natomp) = SQRT((atoms%taual(1,natomp) - atoms%taual(1,refAtom))**2 + &
+                             (atoms%taual(2,natomp) - atoms%taual(2,refAtom))**2 + &
+                             (atoms%taual(3,natomp) - atoms%taual(3,refAtom))**2)
+         IF(ABS(dist(natomp)).LT.1e-12) dist(natomp) = 9e99 !The atom itself was already added
+      ENDDO
+
+      ishell = 0
+      DO WHILE(ishell<=nshells)
+         !search for the atoms with the current minimal distance
+         minDist = MINVAL(dist)
+         DO natomp = 1, atoms%nat
+            IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
+               !Add the element to the gfinp%elem array
+               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp)
+               dist(natomp) = 9e99 !Eliminate from the list
+            ENDIF
+         ENDDO
+         ishell = ishell + 1
+      ENDDO
+
+   END SUBROUTINE addNearestNeighbours_gfelem
+
    FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_unique,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
@@ -569,51 +617,33 @@ CONTAINS
 
    END SUBROUTINE eMesh_gfinp
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,atoms,sym)
+   FUNCTION uniqueElements_gfinp(this) result(uniqueElements)
 
-      USE m_types_atoms
-      USE m_types_sym
+      CLASS(t_gfinp),   INTENT(IN) :: this
 
-      !TODO: atoms outside the unit cell
+      INTEGER :: uniqueElements
+      INTEGER :: l,lp,atomType,atomTypep,dummyInd,iContour,i_gf
+      LOGICAL :: l_unique
 
-      CLASS(t_gfinp),   INTENT(INOUT)  :: this
-      INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
-      INTEGER,          INTENT(IN)     :: l
-      INTEGER,          INTENT(IN)     :: lp
-      INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
-      INTEGER,          INTENT(IN)     :: iContour
-      TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_sym),      INTENT(IN)     :: sym
+      uniqueElements = 0
 
-      INTEGER :: ishell,natomp
-      REAL :: minDist
-      REAL, ALLOCATABLE :: dist(:)
-
-      IF(sym%nop>1) CALL juDFT_error("nearest neighbour GF + symmetries not implemented",&
-                                     calledby="addNearestNeighbours_gfelem")
-
-      ALLOCATE(dist(atoms%nat),source=0.0)
-      DO natomp = 1, atoms%nat
-         dist(natomp) = SQRT((atoms%taual(1,natomp) - atoms%taual(1,refAtom))**2 + &
-                             (atoms%taual(2,natomp) - atoms%taual(2,refAtom))**2 + &
-                             (atoms%taual(3,natomp) - atoms%taual(3,refAtom))**2)
-         IF(ABS(dist(natomp)).LT.1e-12) dist(natomp) = 9e99 !The atom itself was already added
+      DO i_gf = 1, this%n
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         iContour  = this%elem(i_gf)%iContour
+         dummyInd = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                              uniqueMax=i_gf,l_unique=l_unique)
+         IF(l_unique) THEN
+            uniqueElements = uniqueElements +1
+         ENDIF
       ENDDO
 
-      ishell = 0
-      DO WHILE(ishell<=nshells)
-         !search for the atoms with the current minimal distance
-         minDist = MINVAL(dist)
-         DO natomp = 1, atoms%nat
-            IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
-               !Add the element to the gfinp%elem array
-               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp)
-               dist(natomp) = 9e99 !Eliminate from the list
-            ENDIF
-         ENDDO
-         ishell = ishell + 1
-      ENDDO
+      IF(uniqueElements==0) THEN
+         CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",calledby="uniqueElements_gfinp")
+      ENDIF
 
-   END SUBROUTINE addNearestNeighbours_gfelem
+   END FUNCTION uniqueElements_gfinp
 
 END MODULE m_types_gfinp
