@@ -113,7 +113,8 @@ CONTAINS
                                       atoms%ntype,atoms%n_u,2,.TRUE.,.TRUE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
-
+                                     
+      ALLOCATE (vMat%pw_w, mold=vMat%pw)
       vMat%mt(:,0:,1:,1:4) = rho(:,0:,1:,1:4)
       vMat%pw(1:,1:3) = qpw(1:,1:3)
       vMat%pw_w(1:,1:3) = qpww(1:,1:3)

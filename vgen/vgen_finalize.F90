@@ -130,9 +130,9 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
 
          CALL timestart("Correcting vTot")
 
-         ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
+         !ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
          !vTot%pw_w=CMPLX(0.0,0.0)
-         vCorr%pw_w=CMPLX(0.0,0.0)
+         !vCorr%pw_w=CMPLX(0.0,0.0)
 
          !CALL correctPot(vTot,cvec)
 
@@ -145,13 +145,13 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
             END DO !i
          END DO !js
 
-         CALL init_pw_grid(.FALSE.,stars,sym,cell)
-         CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vCorr%pw,tmp_grad,rho=intden)
-         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vCorr%pw,vCorr%pw_w)
+         !CALL init_pw_grid(.FALSE.,stars,sym,cell)
+         !CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vCorr%pw,tmp_grad,rho=intden)
+         !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vCorr%pw,vCorr%pw_w)
          !intden=0.0
          !CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vTot%pw,tmp_grad,rho=intden)
          !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vTot%pw,vTot%pw_w)
-         CALL finish_pw_grid()
+         !CALL finish_pw_grid()
 
          vTot=vCorr
 
