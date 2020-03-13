@@ -9,6 +9,6 @@ $result+=jt::test_grepexists("$workdir/out","SF");
 $result+=jt::test_grep_lastnumber("$workdir/out","Magmom before SF","mz *= *([^ ]*)",2.37929,0.001);
 $result+=jt::test_grep_lastnumber("$workdir/out","Bfield before SF","Bz *= *([^ ]*)",-1.17291,0.001);
 $result+=jt::test_grep_lastnumber("$workdir/out","Bfield after SF","Bz *= *([^ ]*)",-1.06968,0.001);
-$result+=jt::test_grep_lastnumber("$workdir/out","local frame: mx=","mz *= *([^ ]*)",1.99349,0.001);
+$result+=jt::test_grep_lastnumber("$workdir/out","local frame: mx=","mz *= *([^ ]*)",1.98655,0.001);
 
 jt::stageresult($workdir,$result,1);
