@@ -61,17 +61,20 @@ MODULE m_types_greensfCoeffs
          INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
          INTEGER,                      INTENT(IN)     :: nkpts,nbands !number of kpts and bands handled by this rank
 
-         INTEGER lmax
+         INTEGER lmax, uniqueElements
 
          lmax = lmaxU_const
 
+         !Determine number of unique gf elements
+         uniqueElements = gfinp%uniqueElements()
+
          IF(gfinp%l_sphavg) THEN
-            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
          ELSE
-            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
-            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,MAX(1,gfinp%n),jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
+            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
          ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_init
@@ -84,19 +87,22 @@ MODULE m_types_greensfCoeffs
          TYPE(t_input),             INTENT(IN)     :: input
          TYPE(t_noco),              INTENT(IN)     :: noco
 
-         INTEGER lmax,spin_dim
+         INTEGER lmax,spin_dim, uniqueElements
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
+         !Determine number of unique gf elements
+         uniqueElements = gfinp%uniqueElements()
+
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
          IF(gfinp%l_sphavg) THEN
-            ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
          ELSE
-            ALLOCATE (this%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (this%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
-            ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,MAX(1,gfinp%n),spin_dim),source=0.0)
+            ALLOCATE (this%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
+            ALLOCATE (this%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
+            ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
+            ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
          ENDIF
 
       END SUBROUTINE greensfImagPart_init

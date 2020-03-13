@@ -75,8 +75,6 @@ MODULE m_greensfCalcImagPart
          !$OMP DO
          DO i_gf = 1, gfinp%n
 
-            CALL timestart("Green's Function: Imaginary Part")
-
             !Get the information about the current element
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
@@ -89,6 +87,8 @@ MODULE m_greensfCalcImagPart
                                   uniqueMax=i_gf,l_unique=l_unique)
 
             IF(.NOT.l_unique) CYCLE
+
+            CALL timestart("Green's Function: Imaginary Part")
 
             i_elem = gfinp%uniqueElements(ind=i_gf)
 
