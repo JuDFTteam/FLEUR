@@ -166,33 +166,33 @@ MODULE m_occmtx
             DO i = 1, 2*ns
                WRITE(6,"(14f8.4)") gmat%data_r(i,:)
             ENDDO
-            WRITE(6,"(1x,A,f8.4)") "Spin-Up trace: ", nup
-            WRITE(6,"(1x,A,f8.4)") "Spin-Down trace: ", ndwn
+            WRITE(6,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(6,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
-            !Obtain the conversion matrix to the |J,mj> basis
-            CALL cmat%init(.TRUE.,2*ns,2*ns)
-            CALL lsTOjmj(cmat,l)
+            !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
+            !CALL cmat%init(.TRUE.,2*ns,2*ns)
+            !CALL lsTOjmj(cmat,l)
             !Perform the transformation
-            jmat%data_r = matmul(gmat%data_r,cmat%data_r)
-            jmat%data_r = matmul(transpose(cmat%data_r),jmat%data_r)
+            !jmat%data_r = matmul(gmat%data_r,cmat%data_r)
+            !jmat%data_r = matmul(transpose(cmat%data_r),jmat%data_r)
             !Calculate the low/high j trace
-            nlow = 0.0
-            DO i = 1, ns-1
-               nlow = nlow + jmat%data_r(i,i)
-            ENDDO
-            nhi = 0.0
-            DO i = ns, 2*ns
-               nhi = nhi + jmat%data_r(i,i)
-            ENDDO
+            !nlow = 0.0
+            !DO i = 1, ns-1
+            !   nlow = nlow + jmat%data_r(i,i)
+            !ENDDO
+            !nhi = 0.0
+            !DO i = ns, 2*ns
+            !   nhi = nhi + jmat%data_r(i,i)
+            !ENDDO
 
             !Write to file
-            WRITE(6,"(A)") "In the |J,mj> basis:"
-            DO i = 1, 2*ns
-               WRITE(6,"(14f8.4)") jmat%data_r(i,:)
-            ENDDO
-            WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
-            WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
-            WRITE(6,*)
+            !WRITE(6,"(A)") "In the |J,mj> basis:"
+            !DO i = 1, 2*ns
+            !   WRITE(6,"(14f8.4)") jmat%data_r(i,:)
+            !ENDDO
+            !WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
+            !WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
+            !WRITE(6,*)
          ENDIF
       ENDIF
 
