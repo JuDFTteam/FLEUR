@@ -24,7 +24,6 @@ MODULE m_xcBfield
 CONTAINS
    SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,vScal,aVec,cell)
       
-      USE m_pw_tofrom_grid
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
       ! the implementation of source free fields and therefore only applicable in
@@ -77,13 +76,11 @@ CONTAINS
       r2=1.0
 
       ! Initialize and fill the vector field.
-      !CALL init_pw_grid(.FALSE.,stars,sym,cell)
       DO i=1,3
          CALL aVec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
                      POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
-         !avec(i)%pw_w=CMPLX(0.0,0.0)
          aVec(i)%mt(:,:,:,:) = dummyDen(i+1)%mt(:,:,:,:)
          DO itype=1,atoms%ntype
             DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1))
@@ -97,22 +94,21 @@ CONTAINS
             END DO !lh
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
-         !CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,avec(i)%pw,tmp_grad,rho=intden)
-         !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,avec(i)%pw,avec(i)%pw_w)
+         aVec(i)%pw_w(1:,:)        = dummyDen(i+1)%pw_w(1:,:)
          aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
          aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
       END DO !i
-      !CALL finish_pw_grid()
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,div,phi,vCorr,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,div,phi,vCorr,cvec,corrB)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
       USE m_sphpts
       USE m_checkdop
       USE m_BfieldtoVmat
+      USE m_pw_tofrom_grid
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -138,13 +134,16 @@ CONTAINS
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
       TYPE(t_potden),               INTENT(IN)     :: vScal
-      TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv, vCorr
+      TYPE(t_potden),               INTENT(OUT)    :: div, phi,  vCorr
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
 
       TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
       INTEGER                                      :: n, jr, lh, lhmax, jcut, nat ,i
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
+      REAL, ALLOCATABLE                            :: intden(:,:)
+      TYPE(t_gradients)               :: tmp_grad
+
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -169,7 +168,7 @@ CONTAINS
       CALL timestop("Building potential")
 
       DO i=1,3
-         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
          cvec(i)%pw_w=CMPLX(0.0,0.0)
       ENDDO
@@ -178,8 +177,19 @@ CONTAINS
       CALL divpotgrad2(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
+      CALL init_pw_grid(.FALSE.,stars,sym,cell)
       DO i=1,3
-         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
+         cvec(i)%pw=CMPLX(0.0,0.0)
+         cvec(i)%pw_w=CMPLX(0.0,0.0)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+         DEALLOCATE(intden)
+      END DO !i
+      CALL finish_pw_grid()
+
+      DO i=1,3
+         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                          POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
          corrB(i)%pw_w=CMPLX(0.0,0.0)
          CALL corrB(i)%addPotDen(aVec(i),cvec(i))

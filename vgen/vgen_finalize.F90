@@ -29,7 +29,7 @@ CONTAINS
       USE m_types
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
-      USE m_pw_tofrom_grid
+
 
       IMPLICIT NONE
 
@@ -49,9 +49,8 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
-      TYPE(t_potden)                  :: div, phi, checkdiv, vScal, vCorr, v2, vdiff
+      TYPE(t_potden)                  :: div, phi, vScal, vCorr, v2, vdiff
       TYPE(t_potden), DIMENSION(3)    :: cvec, corrB, bxc
-      TYPE(t_gradients)               :: tmp_grad
 
       INTEGER                         :: i, js, n, lh, nat, nd, indmax
       REAL                            :: sfscale, r2(atoms%jmtd)
@@ -105,7 +104,7 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,div,phi,vCorr,cvec,corrB,checkdiv)
+         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,div,phi,vCorr,cvec,corrB)
          CALL timestop("SF subroutine")
 
          !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
@@ -121,7 +120,6 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          !            .FALSE., .FALSE., 'bCorrected          ', corrB(1), corrB(1), corrB(2), corrB(3))
 
          CALL div%resetPotDen()
-         CALL checkdiv%resetPotDen()
          CALL phi%resetPotDen()
 
          DO i=1,3
@@ -129,12 +127,6 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          END DO
 
          CALL timestart("Correcting vTot")
-
-         !ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
-         !vTot%pw_w=CMPLX(0.0,0.0)
-         vCorr%pw_w=CMPLX(0.0,0.0)
-
-         !CALL correctPot(vTot,cvec)
 
          DO js=1,4
             DO i=1,atoms%ntype
@@ -144,13 +136,6 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
                END DO !lh
             END DO !i
          END DO !js
-
-         CALL init_pw_grid(.FALSE.,stars,sym,cell)
-         CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vCorr%pw,tmp_grad,rho=intden)
-         vCorr%pw=CMPLX(0.0,0.0)
-         vCorr%pw_w=CMPLX(0.0,0.0)
-         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vCorr%pw,vCorr%pw_w)
-         CALL finish_pw_grid()
 
          vTot=vCorr
 
