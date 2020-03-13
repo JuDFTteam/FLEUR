@@ -114,18 +114,22 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes(xPathA)
 
     IF (numberNodes.EQ.1) THEN
-       this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-       this%polar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@polar'))
-       this%format = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@format'))
-       xPathA = '/fleurInput/output/plotting/plot'
-       numberNodes = xml%GetNumberOfNodes(xPathA)
-       allocate(this%plot(numberNodes))
-       do i = 1, numberNodes
-         write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
-         call xml%set_basepath(xPathA)
-         call this%plot(i)%read_xml(xml)
-         call xml%set_basepath('')
-       end do
+      if (xml%versionNumber>31) then
+        this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
+        this%polar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@polar'))
+        this%format = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@format'))
+        xPathA = '/fleurInput/output/plotting/plot'
+        numberNodes = xml%GetNumberOfNodes(xPathA)
+        allocate(this%plot(numberNodes))
+        do i = 1, numberNodes
+          write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
+          call xml%set_basepath(xPathA)
+          call this%plot(i)%read_xml(xml)
+          call xml%set_basepath('')
+        end do
+      ELSE
+        call judft_warn("Plotting output switches not read. Too old xml version")
+      ENDIF
     END IF
 
     xPathA = '/fleurInput/output/chargeDensitySlicing'

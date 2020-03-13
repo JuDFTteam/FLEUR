@@ -10,7 +10,8 @@ MODULE m_types_kpts
    IMPLICIT NONE
    PRIVATE
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
-      character(len=20)              :: name = "default"
+      CHARACTER(len=20)              :: name = "default"
+      character(len=100)             :: comment=""
       INTEGER                        :: nkpt = 0
       INTEGER                        :: ntet = 0
       LOGICAL                        :: l_gamma = .FALSE.
@@ -127,7 +128,16 @@ CONTAINS
          WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[', n, ']'
          IF (TRIM(ADJUSTL(this%name)) == xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
       enddo
-      IF (n == 0) CALL judft_error(("No kpoints named:"//TRIM(this%name)//" found"))
+      IF (n == 0) then
+        CALL judft_warn(("No kpoints named:"//TRIM(this%name)//" found"))
+           this%nkpt=1
+           ALLOCATE (this%bk(3, this%nkpt))
+           ALLOCATE (this%wtkpt(this%nkpt))
+           this%bk=0.0
+           this%wtkpt=0.0
+           print *,"Using Gamma-point only as fallback"
+        RETURN
+      endif
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
       this%numSpecialPoints = xml%GetNumberOfNodes(TRIM(path)//"/specialPoint")
@@ -144,28 +154,27 @@ CONTAINS
             this%specialPoints(2, n) = evaluatefirst(str)
             this%specialPoints(3, n) = evaluatefirst(str)
          ENDDO
-      ELSE
-         n = xml%GetNumberOfNodes(TRIM(path)//'/kPoint')
-         IF (n .NE. this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//this%name))
-         ALLOCATE (this%bk(3, this%nkpt))
-         ALLOCATE (this%wtkpt(this%nkpt))
-         DO n = 1, this%nkpt
-            WRITE (path2, "(a,a,i0,a)") trim(adjustl(path)), "/kPoint[", n, "]"
-            this%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
-            str = xml%getAttributeValue(path2)
-            this%bk(1, n) = evaluatefirst(str)
-            this%bk(2, n) = evaluatefirst(str)
-            this%bk(3, n) = evaluatefirst(str)
-         ENDDO
-         this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
-         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
-         DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") trim(path), "/tetraeder/tet[", n, "]"
-            this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
-            str = xml%getAttributeValue(path2)
-            READ (str, *) this%ntetra(:, n)
-         ENDDO
-      END IF
+      ENDIF
+      n = xml%GetNumberOfNodes(TRIM(path)//'/kPoint')
+      IF (n .NE. this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//this%name))
+      ALLOCATE (this%bk(3, this%nkpt))
+      ALLOCATE (this%wtkpt(this%nkpt))
+      DO n = 1, this%nkpt
+         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", n, "]"
+         this%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
+         str = xml%getAttributeValue(path2)
+         this%bk(1, n) = evaluatefirst(str)
+         this%bk(2, n) = evaluatefirst(str)
+         this%bk(3, n) = evaluatefirst(str)
+      ENDDO
+      this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
+      ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
+      DO n = 1, this%ntet
+         WRITE (path2, "(a,a,i0,a)") TRIM(path), "/tetraeder/tet[", n, "]"
+         this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
+         str = xml%getAttributeValue(path2)
+         READ (str, *) this%ntetra(:, n)
+      ENDDO
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
    END SUBROUTINE read_xml_kpts
 

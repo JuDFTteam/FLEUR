@@ -167,8 +167,8 @@ CONTAINS
 
 
 
-    IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-       CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, fi%cell, &
+    IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+       CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                       fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
     END IF
 
@@ -416,12 +416,12 @@ CONTAINS
                       archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1data)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
-          IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+          IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
 !               CDN including core charge
-               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
 !                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 !!               CDN subtracted by core charge
-               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
 !                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
           END IF
 
@@ -487,7 +487,7 @@ CONTAINS
             IF(fi%noco%l_alignMT) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
                   ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 !Plots of mixed density
-       IF ((fi%sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+!       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
 !               CDN including core charge
 !                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
 !                               fi%cell, fi%noco, outDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
@@ -495,7 +495,7 @@ CONTAINS
 !                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
 !                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
 !                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-       END IF
+ !      END IF
 
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter

@@ -185,33 +185,11 @@ CONTAINS
          CALL corrB(i)%addPotDen(aVec(i),cvec(i))
       ENDDO
 
-      CALL checkdiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
-                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
-                                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
-
-      !CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
-
-      !DO n=1,atoms%ntype
-      !   lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-      !   DO lh=0, lhmax
-      !      cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(1)%mt(:,lh,n,1)=avec(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(2)%mt(:,lh,n,1)=avec(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      avec(3)%mt(:,lh,n,1)=avec(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(1)%mt(:,lh,n,1)=corrB(1)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(2)%mt(:,lh,n,1)=corrB(2)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !      corrB(3)%mt(:,lh,n,1)=corrB(3)%mt(:,lh,n,1)!/(atoms%rmsh(:, n)**2)
-      !   END DO
-      !END DO
-
       CALL BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, vScal, corrB(1), corrB(2), corrB(3), vCorr)
 
    END SUBROUTINE sourcefree
 
-   SUBROUTINE correctPot(vTot,b)
+   SUBROUTINE correctPot(vTot,c)
       USE m_types
 
       ! Takes a vectorial quantity c and saves its components into the appro
@@ -224,45 +202,45 @@ CONTAINS
       !       rence. Make sure this is true. Also: consider SOC, LDA+U etc.
 
       TYPE(t_potden),               INTENT(INOUT) :: vTot
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: b
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c
 
-      !REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
+      REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
 
-      vtot%mt(:,0:,:,1)=(vtot%mt(:,0:,:,1)+vtot%mt(:,0:,:,2))/2
-      vtot%mt(:,0:,:,2)=vtot%mt(:,0:,:,1)
-      vtot%mt(:,0:,:,3:4)=0.0
+      !vtot%mt(:,0:,:,1)=(vtot%mt(:,0:,:,1)+vtot%mt(:,0:,:,2))/2
+      !vtot%mt(:,0:,:,2)=vtot%mt(:,0:,:,1)
+      !vtot%mt(:,0:,:,3:4)=0.0
 
-      vTot%pw(1:,1)=(vTot%pw(1:,1)+vTot%pw(1:,2))/2
-      vTot%pw(1:,2)=vTot%pw(1:,1)
-      vTot%pw(1:,3)=CMPLX(0.0,0.0)
+      !vTot%pw(1:,1)=(vTot%pw(1:,1)+vTot%pw(1:,2))/2
+      !vTot%pw(1:,2)=vTot%pw(1:,1)
+      !vTot%pw(1:,3)=CMPLX(0.0,0.0)
 
-      vTot%pw_w(1:,1)=(vTot%pw_w(1:,1)+vTot%pw_w(1:,2))/2
-      vTot%pw_w(1:,2)=vTot%pw_w(1:,1)
-      vTot%pw_w(1:,3)=CMPLX(0.0,0.0)
+      !vTot%pw_w(1:,1)=(vTot%pw_w(1:,1)+vTot%pw_w(1:,2))/2
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,1)
+      !vTot%pw_w(1:,3)=CMPLX(0.0,0.0)
 
-      vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+b(3)%mt(:,0:,:,1)/2
-      vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-b(3)%mt(:,0:,:,1)/2
-      vTot%mt(:,0:,:,3)=b(1)%mt(:,0:,:,1)/2
-      vTot%mt(:,0:,:,4)=b(2)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+b(3)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-b(3)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,3)=b(1)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,4)=b(2)%mt(:,0:,:,1)/2
 
-      vTot%pw(1:,1)=vTot%pw(1:,1)+b(3)%pw(1:,1)/2
-      vTot%pw(1:,2)=vTot%pw(1:,2)-b(3)%pw(1:,1)/2
-      vTot%pw(1:,3)=(b(1)%pw(1:,1)+ImagUnit*b(2)%pw(1:,1))/2
+      !vTot%pw(1:,1)=vTot%pw(1:,1)+b(3)%pw(1:,1)/2
+      !vTot%pw(1:,2)=vTot%pw(1:,2)-b(3)%pw(1:,1)/2
+      !vTot%pw(1:,3)=(b(1)%pw(1:,1)+ImagUnit*b(2)%pw(1:,1))/2
 
-      vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+b(3)%pw_w(1:,1)/2
-      vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-b(3)%pw_w(1:,1)/2
-      vTot%pw_w(1:,3)=(b(1)%pw_w(1:,1)+ImagUnit*b(2)%pw_w(1:,1))/2
+      !vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+b(3)%pw_w(1:,1)/2
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-b(3)%pw_w(1:,1)/2
+      !vTot%pw_w(1:,3)=(b(1)%pw_w(1:,1)+ImagUnit*b(2)%pw_w(1:,1))/2
 
-      !vTot%mt(:,0:,:,1)=c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,1)
-      !vTot%mt(:,0:,:,2)=-c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,2)
-      !vTot%mt(:,0:,:,3)=c(1)%mt(:,0:,:,1)+vTot%mt(:,0:,:,3)
-      !vTot%mt(:,0:,:,4)=c(2)%mt(:,0:,:,1)+vTot%mt(:,0:,:,4)
+      vTot%mt(:,0:,:,1)=c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,1)
+      vTot%mt(:,0:,:,2)=-c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,2)
+      vTot%mt(:,0:,:,3)=c(1)%mt(:,0:,:,1)+vTot%mt(:,0:,:,3)
+      vTot%mt(:,0:,:,4)=c(2)%mt(:,0:,:,1)+vTot%mt(:,0:,:,4)
 
-      !vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
-      !vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
-      !pwr=REAL(vTot%pw(1:,3)) + REAL(c(1)%pw(1:,1)) - AIMAG(c(2)%pw(1:,1))
-      !pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
-      !vTot%pw(1:,3)=CMPLX(pwr,pwi)
+      vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
+      vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
+      pwr=REAL(vTot%pw(1:,3)) + REAL(c(1)%pw(1:,1)) - AIMAG(c(2)%pw(1:,1))
+      pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
+      vTot%pw(1:,3)=CMPLX(pwr,pwi)
 
       !vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
       !vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)

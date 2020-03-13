@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "inputSchema.h"
 #include "inputSchema_old.h"
-
+#include <string.h>
 /*
  * This method together with the variables defined in inputSchema.h
  * writes out the file FleurInputSchema.xsd.
@@ -35,7 +35,7 @@ int dropInputSchema(char* version)
    {
       schemaString[i] = xsd_txt[i];
    }
-   schemaString[FleurInputSchema_xsd_len] = '\0';
+   schemaString[xsd_len] = '\0';
    file = fopen("FleurInputSchema.xsd", "w");
    errorCode = fprintf(file,"%s", schemaString);
    fclose(file);

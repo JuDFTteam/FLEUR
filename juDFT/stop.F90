@@ -50,6 +50,7 @@ CONTAINS
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
     USE m_judft_usage
+    use m_juDFT_string
     USE m_judft_xmloutput
     IMPLICIT NONE
     CHARACTER*(*),INTENT(IN)          :: message
@@ -161,7 +162,7 @@ CONTAINS
     ENDIF
 
     IF (callstop) THEN
-       CALL add_usage_data("Error",message)
+       CALL add_usage_data("Error",replace_text(message, new_line('A'), " "))
        !$OMP MASTER
        CALL send_usage_data()
        !$OMP END MASTER
