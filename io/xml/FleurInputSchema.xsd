@@ -697,12 +697,14 @@
 
    <xsd:complexType name="GFGeneralType">
       <xsd:sequence>
-         <xsd:element maxOccurs="1" minOccurs="0" name="realAxis" type="ERealAxisType"/>
-         <xsd:choice>
-            <xsd:element name="contourRectangle" type="EContourRectangleType"/>
-            <xsd:element name="contourSemicircle" type="EContourSemicircleType"/>
-            <xsd:element name="contourDOS" type="EContourDOSType"/>
-         </xsd:choice>
+         <xsd:element name="realAxis" type="ERealAxisType"/>
+         <xsd:sequence>
+            <xsd:choice maxOccurs="unbounded" minOccurs="1">
+               <xsd:element name="contourRectangle" type="EContourRectangleType"/>
+               <xsd:element name="contourSemicircle" type="EContourSemicircleType"/>
+               <xsd:element name="contourDOS" type="EContourDOSType"/>
+            </xsd:choice>
+         </xsd:sequence>
       </xsd:sequence>
       <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
       <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
