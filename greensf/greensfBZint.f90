@@ -62,7 +62,7 @@ MODULE m_greensfBZint
 
          IF(.NOT.l_unique) CYCLE
 
-         i_elem = gfinp%uniqueElements(indMax=i_gf)
+         i_elem = gfinp%uniqueElements(ind=i_gf)
 
 
          !Loop over equivalent atoms

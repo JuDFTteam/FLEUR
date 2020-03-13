@@ -90,7 +90,7 @@ MODULE m_greensfCalcImagPart
 
             IF(.NOT.l_unique) CYCLE
 
-            i_elem = gfinp%uniqueElements(indMax=i_gf)
+            i_elem = gfinp%uniqueElements(ind=i_gf)
 
             DO m = -l, l
                DO mp = -lp, lp

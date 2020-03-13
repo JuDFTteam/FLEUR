@@ -38,7 +38,7 @@ MODULE m_greensfCalcRealPart
       TYPE(t_input),          INTENT(IN)     :: input
       REAL,                   INTENT(IN)     :: ef
 
-      INTEGER i_gf,i_elem,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom,contourShape
+      INTEGER i_gf,i_elem,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom,contourShape,dummy
       REAL    fac,del,eb,et
 
       !Get the information on the real axis energy mesh
@@ -51,7 +51,7 @@ MODULE m_greensfCalcRealPart
          nTypep = gfinp%elem(i_gf)%atomTypep
          contourShape = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
 
-         i_elem = gfinp%uniqueElements(indMax=i_gf)
+         dummy = gfinp%uniqueElements(ind=i_gf,indUnique=i_elem)
 
          CALL timestart("On-Site: Integration Cutoff")
          IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN
