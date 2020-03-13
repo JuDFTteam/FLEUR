@@ -107,11 +107,11 @@ CONTAINS
           IF (aa.ne.0) THEN
              !cell was set already, so list of atoms follow
              READ(line,*,iostat=ios) n
-             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//line))
+             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//trim(line)))
              ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
              DO i=1,n
                 READ(98,"(a)",iostat=ios) line
-                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//line))
+                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//trim(line)))
                 atom_id(i)=evaluatefirst(line)
                 atom_pos(1,i)=evaluatefirst(line)
                 atom_pos(2,i)=evaluatefirst(line)
