@@ -44,8 +44,7 @@ MODULE m_greensfBZint
       !$OMP PARALLEL DEFAULT(NONE) &
       !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
       !$OMP SHARED(ikpt_i,ikpt,nBands,spin1,spin2) &
-      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,iContour)&
-      !$OMP PRIVATE(natomp_start,natomp_end,phase,dummyInd,i_elem,l_unique)
+      !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,iContour,natomp_start,natomp_end,phase,dummyInd,i_elem,l_unique)
       !$OMP DO
       DO i_gf = 1, gfinp%n
 
