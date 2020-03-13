@@ -132,7 +132,7 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
 
          !ALLOCATE (vCorr%pw_w,  mold=vCorr%pw)
          !vTot%pw_w=CMPLX(0.0,0.0)
-         !vCorr%pw_w=CMPLX(0.0,0.0)
+         vCorr%pw_w=CMPLX(0.0,0.0)
 
          !CALL correctPot(vTot,cvec)
 
@@ -145,13 +145,12 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
             END DO !i
          END DO !js
 
-         !CALL init_pw_grid(.FALSE.,stars,sym,cell)
-         !CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vCorr%pw,tmp_grad,rho=intden)
-         !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vCorr%pw,vCorr%pw_w)
-         !intden=0.0
-         !CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vTot%pw,tmp_grad,rho=intden)
-         !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vTot%pw,vTot%pw_w)
-         !CALL finish_pw_grid()
+         CALL init_pw_grid(.FALSE.,stars,sym,cell)
+         CALL pw_to_grid(.FALSE.,3,.FALSE.,stars,cell,vCorr%pw,tmp_grad,rho=intden)
+         vCorr%pw=CMPLX(0.0,0.0)
+         vCorr%pw_w=CMPLX(0.0,0.0)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,vCorr%pw,vCorr%pw_w)
+         CALL finish_pw_grid()
 
          vTot=vCorr
 
@@ -166,7 +165,7 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          END DO
       END IF
 
-      IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+      IF ((sliceplot%iplot.NE.0 )) THEN
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
