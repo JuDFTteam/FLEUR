@@ -11,6 +11,8 @@ MODULE m_kkintgr
    !>  Performs the Kramer-Kronig-Transformation to obtain the Green's function
    !>  in the complex plane from the imaginary part calculated on the real axis
    !
+   ! TODO: Look at FFT for Transformation
+   !       How to do changing imaginary parts
    !------------------------------------------------------------------------------
    USE ieee_arithmetic
    USE m_constants
@@ -39,43 +41,44 @@ MODULE m_kkintgr
       USE m_smooth
 
       !Information about the integrand
-      REAL,          INTENT(IN)  :: im(:)      !Imaginary part of the green's function on the real axis
-      REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
-      REAL,          INTENT(IN)  :: del         !Energy step on the real axis
-      INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
+      REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
+      REAL,          INTENT(IN)     :: eb          !Bottom energy cutoff
+      REAL,          INTENT(IN)     :: del         !Energy step on the real axis
+      INTEGER,       INTENT(IN)     :: ne          !Number of energy points on the real axis
 
       !Information about the complex energy contour
-      COMPLEX,       INTENT(INOUT) :: g(:)       !Green's function on the complex plane
-      COMPLEX,       INTENT(IN)  :: ez(:)      !Complex energy contour
-      LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
-      INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
-      INTEGER,       INTENT(IN)  :: nz          !Number of energy points on the complex contour
+      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
+      COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
+      LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
+      INTEGER,       INTENT(IN)     :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
+      INTEGER,       INTENT(IN)     :: nz          !Number of energy points on the complex contour
 
       !Information about the method
-      INTEGER,       INTENT(IN)  :: method      !Integer associated with the method to be used (definitions above)
+      INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      REAL ::  im_calc(ne),e(ne)  !Array where the smoothed version of im is stored
+      REAL ::  e(ne)  
+      REAL ::  im_calc(ne) !Array where the smoothed version of im is stored
 
-      INTEGER  iz,n1,n2,i,count
+      INTEGER  iz,n1,n2,i
       REAL     sigma,re_n1,re_n2,im_n1,im_n2
 
       DO i = 1, ne
          e(i) = (i-1) * del + eb
       ENDDO
-
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
       !$OMP SHARED(g,ez,im,e) &
       !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
+      sigma = 0.0
       !$OMP DO
       DO iz = 1, nz
          IF(method.EQ.3) THEN
             g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
          ELSE
-            IF(AIMAG(ez(iz)).NE.0.0.AND.AIMAG(ez(iz)).NE.sigma) THEN
+            IF(ABS(AIMAG(ez(iz))).GT.1e-12.AND.ABS(AIMAG(ez(iz))-sigma).GT.1e-12) THEN
                !Sigma is changed, so we need to smooth here
-               im_calc = im !Get the original version
+               im_calc = im(:ne) !Get the original version
                sigma = AIMAG(ez(iz))
                CALL smooth(e,im_calc,sigma,ne)
             ENDIF
@@ -137,7 +140,12 @@ MODULE m_kkintgr
       REAL    y,im_ire
 
       re_ire = 0.0
-      im_ire = MERGE(im(ire),0.0,(ire.LE.ne).AND.(ire.GE.1))
+      IF(ire.LE.ne.AND.ire.GE.1) THEN
+         im_ire = im(ire)
+      ELSE
+         im_ire = 0.0
+      ENDIF
+
       SELECT CASE(method)
 
       CASE (method_maclaurin)
