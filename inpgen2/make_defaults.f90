@@ -28,7 +28,7 @@ CONTAINS
     USE m_types_hybinp
     USE m_juDFT
 
-    TYPE(t_atoms), INTENT(IN)    ::atoms
+    TYPE(t_atoms), INTENT(INOUT) ::atoms
     TYPE(t_sym), INTENT(IN)      ::sym
     TYPE(t_cell), INTENT(INOUT)  ::cell
 
@@ -122,6 +122,7 @@ CONTAINS
              vacuum%dvac=2*min_dtild-vacuum%dvac
           ENDIF
           vacuum%dvac = round_to_deci(vacuum%dvac, 2)
+          atoms%taual(3,:)=atoms%taual(3,:)*cell%amat(3,3)/(vacuum%dvac+2.5)
           cell%amat(3,3)=vacuum%dvac+2.5
        ENDIF
 

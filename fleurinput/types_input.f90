@@ -59,7 +59,7 @@ MODULE m_types_input
   REAL :: ellow=-1.8
   REAL :: elup=1.0
   REAL :: fixed_moment = 0.0
-  LOGICAL :: l_onlyMtStDen
+  LOGICAL :: l_onlyMtStDen=.FALSE.
   CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
   LOGICAL :: l_core_confpot=.TRUE. !Former CPP_CORE
   LOGICAL :: l_useapw=.FALSE.

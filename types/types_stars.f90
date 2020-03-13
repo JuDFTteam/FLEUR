@@ -127,8 +127,8 @@ CONTAINS
     CALL mpi_bc(this%pgfft,rank,mpi_comm)
     CALL mpi_bc(this%pgfft2,rank,mpi_comm)
     CALL mpi_bc(this%ft2_gfx,rank,mpi_comm)
-    CALL mpi_bc(this%ft2_gfy,rank,mpi_comm)
-
+    CALL mpi_bc(this%ustep,rank,mpi_comm)
+    CALL mpi_bc(this%ufft,rank,mpi_comm)
 
 
   END SUBROUTINE mpi_bc_stars
