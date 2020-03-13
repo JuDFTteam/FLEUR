@@ -17,7 +17,7 @@ CONTAINS
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
-    
+
     !==> Local Variables
     CHARACTER(len=40) :: latsys
     REAL    :: a0,a_rho
@@ -35,7 +35,7 @@ CONTAINS
     REAL :: lmat(3,3,8)
     DATA  lmat /  1.0,  0.0,  0.0,  &   ! 1: primitive     : P
          0.0,  1.0,  0.0,&
-         0.0,  0.0,  1.0, & 
+         0.0,  0.0,  1.0, &
          0.0,  0.5,  0.5,  &   ! 2: face-centered : F
          0.5,  0.0,  0.5,&
          0.5,  0.5,  0.0,&
@@ -44,7 +44,7 @@ CONTAINS
          0.5,  0.5, -0.5,&
          0.5, msqrt32, 0.0,  &   ! 4: hexagonal-P   : hP, hcp
          0.5,  sqrt32, 0.0,&
-         0.0,     0.0, 1.0, &  
+         0.0,     0.0, 1.0, &
          0.0, -1.0,  1.0,  &   ! 5: hexagonal-R   : hR, trigonal
          sqrt32,  0.5,  1.0,&
          msqrt32,  0.5,  1.0, &
@@ -62,13 +62,13 @@ CONTAINS
     NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma
 
     noangles = .false.
-    latsys = ' ' ; a0 = 0.0   
-    a = 0.0      ; b = 0.0    ; c = 0.0 
-    alpha = 0.0  ; beta = 0.0 ; gamma = 0.0   
+    latsys = ' ' ; a0 = 0.0
+    a = 0.0      ; b = 0.0    ; c = 0.0
+    alpha = 0.0  ; beta = 0.0 ; gamma = 0.0
     scale = 0.0  ; mat = 0.0
 
     READ (line,lattice,iostat=ios)
-    if (ios.ne.0) call judft_error(("Error reading lattice:"//line))
+    if (ios.ne.0) call judft_error(("Error reading lattice:"//trim(line)))
 
     IF ( abs(a0) < eps ) a0 = 1.0
     IF ( abs(a)  < eps ) a  = 1.0
@@ -79,9 +79,9 @@ CONTAINS
     IF ( abs(gamma)  < eps ) gamma  = 90.0
 
     IF ( alpha > pi_const ) THEN     ! deg
-       ar = alpha * pi_const / 180.0 
-       br = beta  * pi_const / 180.0 
-       cr = gamma * pi_const / 180.0 
+       ar = alpha * pi_const / 180.0
+       br = beta  * pi_const / 180.0
+       cr = gamma * pi_const / 180.0
     ELSE                       ! radians
        ar = alpha
        br = beta
@@ -257,7 +257,7 @@ CONTAINS
 
        IF ( a.NE.b ) err = 61
 
-       !===>  8: orthorhombic-P   (oP) 
+       !===>  8: orthorhombic-P   (oP)
 
     ELSEIF ( latsys =='orthorhombic-P'.OR.latsys =='oP'.OR.&
          latsys =='simple-orthorhombic' ) THEN
@@ -269,7 +269,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       !===>  9: orthorhombic-F   (oF) 
+       !===>  9: orthorhombic-F   (oF)
 
     ELSEIF ( latsys =='orthorhombic-F'.OR.latsys =='oF'.OR.&
          latsys =='orF'.OR. latsys =='face-centered-orthorhombic' ) THEN
@@ -281,7 +281,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       !===> 10: orthorhombic-I   (oI) 
+       !===> 10: orthorhombic-I   (oI)
 
     ELSEIF ( latsys =='orthorhombic-I'.OR.latsys =='oI'.OR.&
          latsys =='orI'.OR. latsys =='body-centered-orthorhombic' ) THEN
@@ -293,7 +293,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       !===> 11: orthorhombic-S   (oS) (oC) 
+       !===> 11: orthorhombic-S   (oS) (oC)
 
     ELSEIF ( latsys =='orthorhombic-S'.OR.latsys =='orthorhombic-C'.OR.&
          latsys =='oS'.OR.latsys =='oC'.OR.latsys =='orC'.OR.&
@@ -330,7 +330,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       !===> 12: monoclinic-P     (mP) 
+       !===> 12: monoclinic-P     (mP)
     ELSEIF ( latsys =='monoclinic-P'.OR.latsys =='mP'.OR.&
          latsys =='moP'.OR. latsys =='simple-monoclinic' ) THEN
 
@@ -339,18 +339,18 @@ CONTAINS
 
        IF ( (abs(alpha-90.0)<eps).AND.(abs(beta-90.0)<eps) ) THEN
           IF ( ABS(gamma - 90.0) <eps )  CALL juDFT_error("no monoclinic angle!",calledby ="lattice2")
-       ELSE 
+       ELSE
           CALL juDFT_error("lattice2: Please take gamma as monoclinic angle!")
        ENDIF
        CALL brvmat ( alpha, beta, gamma, am )
        a1 = a*am(:,1)
        a2 = b*am(:,2)
-       a3 = c*am(:,3) 
+       a3 = c*am(:,3)
        scale = 1.0
 
        CALL angles( am )
 
-       !===> 13: monoclinic-C (mC) 
+       !===> 13: monoclinic-C (mC)
     ELSEIF ( latsys =='monoclinic-C'.OR.latsys =='mC'.OR.latsys =='moC'.OR.&
          latsys =='centered-monoclinic' ) THEN
 
@@ -377,7 +377,7 @@ CONTAINS
        a2 = am(:,2)
        a3 = am(:,3)
        CALL angles( am )
-       scale = 1.0 
+       scale = 1.0
 
        !===> 13b monoclinic-B (mB)
     ELSEIF ( latsys =='monoclinic-B'.OR.latsys =='mB'.OR.latsys =='moB'.OR.&
@@ -399,7 +399,7 @@ CONTAINS
        a2 = am(:,2)
        a3 = am(:,3)
        CALL angles( am )
-       scale = 1.0 
+       scale = 1.0
 
        !===> 13c monoclinic-I (mI)
     ELSEIF ( latsys =='monoclinic-I'.OR.latsys =='mI'.OR.latsys =='moI' ) THEN
@@ -420,9 +420,9 @@ CONTAINS
        a2 = am(:,2)
        a3 = am(:,3)
        CALL angles( am )
-       scale = 1.0 
+       scale = 1.0
 
-       !===> 14: triclinic        (aP) 
+       !===> 14: triclinic        (aP)
 
     ELSEIF ( latsys =='aP' .OR. latsys =='triclinic' .OR. latsys =='tcl' )  THEN
 
@@ -482,7 +482,7 @@ CONTAINS
        WRITE (6,'("vector ",i1," : ",3f9.5,5x," length : ",f9.5)') j,am(:,j),al(j)
     ENDDO
 
-    DO i1 = 1, 2 
+    DO i1 = 1, 2
        DO i2 = i1+1, 3
           ca = 0.0
           DO i = 1, 3
@@ -517,7 +517,7 @@ CONTAINS
     ca = cos(alpha*pi_const/180); cb = cos(beta*pi_const/180)
     cg = cos(gamma*pi_const/180); sg = sin(gamma*pi_const/180)
     c1 = (ca - cg*cb ) / sg
-    c2 = sqrt( 1 - cb**2 - c1**2 ) 
+    c2 = sqrt( 1 - cb**2 - c1**2 )
 
     am(1,1) = 1.0 ; am(2,1) = 0.0 ; am(3,1) = 0.0
     am(1,2) = cg  ; am(2,2) = sg  ; am(3,2) = 0.0
