@@ -855,10 +855,10 @@ CONTAINS
                   points(ix,iy,iz,:)=point(:)
                   END IF
 #ifdef CPP_MPI
-                DO k=0, size(tempResults(ix,iy,iz,:))
-                	CALL MPI_Reduce(tempResults(ix,iy,iz,k), tempResults(ix,iy,iz,k), rank, &
-                	MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD )
-		END DO
+                !DO k=0, size(tempResults(ix,iy,iz,:))
+                	!CALL MPI_Reduce(tempResults(ix,iy,iz,k), tempResults(ix,iy,iz,k), rank, &
+                	!MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD )
+		!END DO
 #endif
                END DO !x-loop
      !$OMP end do
