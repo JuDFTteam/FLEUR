@@ -80,7 +80,7 @@ MODULE m_greensfCalcImagPart
             lp = gfinp%elem(i_gf)%lp
 
             CALL gfinp%uniqueElements(i_elem,ind=i_gf,indUnique=indUnique)
-            eGrid_start = kpts%get_nk((/0.0,0.0,0.0/))
+
             IF(i_gf/=indUnique) CYCLE
 
 
