@@ -23,6 +23,8 @@ MODULE m_plot
    !
    !
    ! A. Neukirchen & R. Hilgers, September 2019
+   !
+   !Added OMP+MPI Parallelization, R. Hilgers March 2020
    !------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
@@ -730,11 +732,15 @@ CONTAINS
                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
             END IF
          END IF
+!Serial defaults
         rank=0
+	mpiSize=1
 #ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
 #endif
+         write(*,*) "Process"
+         write(*,*) rank
          !loop over all points
          DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
             DO iy = 0, grid(2)-1
@@ -854,21 +860,15 @@ CONTAINS
                   tempResults(ix,iy,iz,:)=xdnout(:)
                   points(ix,iy,iz,:)=point(:)
                   END IF
-#ifdef CPP_MPI
-                !DO k=0, size(tempResults(ix,iy,iz,:))
-                	!CALL MPI_Reduce(tempResults(ix,iy,iz,k), tempResults(ix,iy,iz,k), rank, &
-                	!MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD )
-		!END DO
-#endif
                END DO !x-loop
      !$OMP end do
      !$OMP end parallel
             END DO !y-loop
-
          END DO !z-loop
-
-   IF (rank.EQ.0) THEN
-     DO iz = 0, grid(3)-1
+!Print out results of the different MPI processes in correct order.
+DO k=0, mpiSize
+   IF(rank.EQ.k) THEN
+     DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
         DO iy = 0, grid(2)-1
            DO ix = 0, grid(1)-1
              IF (xsf) THEN
@@ -880,10 +880,14 @@ CONTAINS
              END IF
            END DO
         END DO
-    END DO
- 
+     END DO
+   END IF
+#ifdef CPP_MPI
+   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
+ END DO
    
-
+IF (rank.EQ.0) THEN
          IF (xsf) THEN
             DO i = 1, numOutFiles
                CALL xsf_WRITE_endblock(nfile+i,twodim)
@@ -891,9 +895,9 @@ CONTAINS
          ELSE
             CLOSE(nfile)
          END IF
+END IF
          DEALLOCATE(tempResults)
          DEALLOCATE(points)
-END IF
       END DO !nplo   
 IF (rank.EQ.0) THEN
 
