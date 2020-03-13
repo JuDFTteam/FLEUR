@@ -93,8 +93,17 @@ MODULE m_kkintgr
             !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
             !Imaginary Part (0 outside of the energy range)
-            im_n1 = MERGE(im_calc(n1),0.0,(n1.LE.ne).AND.(n1.GE.1))
-            im_n2 = MERGE(im_calc(n2),0.0,(n2.LE.ne).AND.(n2.GE.1))
+            IF(n1.LE.ne.AND.n1.GE.1) THEN
+               im_n1 = im_calc(n1)
+            ELSE
+               im_n1 = 0.0
+            ENDIF
+            IF(n2.LE.ne.AND.n2.GE.1) THEN
+               im_n2 = im_calc(n2)
+            ELSE
+               im_n2 = 0.0
+            ENDIF
+            
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
             IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
