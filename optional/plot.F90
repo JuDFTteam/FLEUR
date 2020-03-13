@@ -739,8 +739,6 @@ CONTAINS
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
 #endif
-         write(*,*) "Process"
-         write(*,*) rank
          !loop over all points
          DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
             DO iy = 0, grid(2)-1
