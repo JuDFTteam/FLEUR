@@ -27,6 +27,7 @@ MODULE m_types_mat
       PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
       PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
       PROCEDURE        :: move => t_mat_move                  !> move data into another t_mat (overloaded for t_mpimat)
+      procedure        :: allocated => t_mat_allocated
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
       GENERIC          :: init => init_details, init_template
@@ -37,6 +38,17 @@ MODULE m_types_mat
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+  function t_mat_allocated(mat) result(var_alloc)
+     implicit none
+     class(t_mat), intent(in) :: mat
+     logical :: var_alloc
+
+     if(mat%l_real) then
+        var_alloc = allocated(mat%data_r)
+     else
+        var_alloc = allocated(mat%data_c)
+     endif
+  end function t_mat_allocated
 
   SUBROUTINE t_mat_generate_full_matrix(mat)
     IMPLICIT NONE
@@ -373,10 +385,11 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       character(len=*)         :: filename
 
+      call judft_warn("save_npy doesn't know about matsize1/2")
       if (mat%l_real) then
-!         call save_npy(filename, mat%data_r)
+         call save_npy(filename, mat%data_r)
       else
-!         call save_npy(filename, mat%data_c)
+         call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
 

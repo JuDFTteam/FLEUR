@@ -83,9 +83,10 @@ CONTAINS
 
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
-      CALL zmat%init(sym%invs, nbasfcn, hybdat%nbands(kpts%bkp(nk)))
+      CALL zmat%init(sym%invs, nbasfcn, input%neig)
       if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
       call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
+      ! zmat%matsize2 = hybdat%nbands(nk)
       call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, zmat, jsp, nk, c_phase, cmt)
       call zmat%free()

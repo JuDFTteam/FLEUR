@@ -455,7 +455,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(z_in%matsize1, input%neig)
+      COMPLEX                 ::  zhlp(z_in%matsize1, nbands)
 
       call timestart("gen_zmat")
       if(present(c_phase)) c_phase = 0
@@ -518,9 +518,14 @@ CONTAINS
 
       DO i = 1, nbands
          if (z_in%l_real) THEN
+            if(i == 35 .and. nk == 3 .and. iop == 10) then
+               write (*,*) "nice bp eh?"
+            endif
             cdum = commonphase(zhlp(:, i), z_in%matsize1)
             if(present(c_phase)) c_phase(i) = cdum
-
+            if(abs(cdum) < 1e-30) THEN
+               call juDFT_error("commonphase can't be 0.")
+            endif
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                WRITE (*, *) zhlp

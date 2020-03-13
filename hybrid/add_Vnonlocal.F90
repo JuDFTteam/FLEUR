@@ -108,12 +108,7 @@ CONTAINS
          WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
       END IF
 
-      ! read in lower triangle part of overlap matrix from direct acces file olap
-      CALL olap%init(hmat%l_real, nbasfcn, nbasfcn)
-      CALL read_olap(olap, kpts%nkpt*(jsp - 1) + nk)
-      IF (.NOT. olap%l_real) olap%data_c = conjg(olap%data_c)
-
-      CALL z%init(olap%l_real, nbasfcn, input%neig)
+      CALL z%init(hmat%l_real, nbasfcn, input%neig)
 
       call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z)
 

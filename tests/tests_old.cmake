@@ -6,13 +6,13 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    SiFilmPlotXML PlotDenandPot SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
    KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 MnHybridNoinv
-   Fe_bcc_GreensFunction Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC 
-   RelaxMTFeature SmAtomjDOS Fe_bcc_SF_LDA)
+   Fe_bcc_GreensFunction Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   RelaxMTFeature SmAtomjDOS) #  Fe_bcc_SF_LDA
 
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # Fe_1l_GreensFunction
-#  CoUnfold 
+#  CoUnfold
 
 set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)

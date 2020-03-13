@@ -90,6 +90,7 @@ contains
     use m_types
     use m_DoubleFactorial
     use m_SphBessel
+    use m_juDFT
     implicit none
 
     type(t_input),  intent(in)        :: input
@@ -130,6 +131,7 @@ contains
       end if
       do nl = 0, sphhar%nlh(ns)
         l = sphhar%llh(nl,ns)
+        if(jm < 2) call juDFT_error("This would be uninit in integr3.")
         do j = 1, jm
           if ( potdenType /= POTDEN_TYPE_POTYUK ) then
             f(j) = atoms%rmsh(j,n) ** l * rho(j,nl,n)

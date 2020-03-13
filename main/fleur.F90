@@ -249,16 +249,6 @@ CONTAINS
              iter = 0
           END IF
        ENDIF
-       !RDMFT
-       IF(fi%input%l_rdmft) THEN
-          CALL open_hybinp_io1(fi%sym%invs)
-       END IF
-
-       !IF(.not.fi%input%eig66(1))THEN
-          CALL reset_eig(eig_id,fi%noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
-       !END IF
-
-       !#endif
 
 !!$             DO pc = 1, wann%nparampts
 !!$                !---> gwf
@@ -295,7 +285,7 @@ CONTAINS
           CALL inDen%ChargeAndMagnetisationToSpins()
        END IF
 
-    
+
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -312,9 +302,9 @@ CONTAINS
           CALL enpara%update(mpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vToT,fi%hub1inp)
           CALL timestop("Updating energy parameters")
           !IF(.not.fi%input%eig66(1))THEN
-            CALL eigen(mpi,stars,sphhar,fi%atoms,xcpot,fi%sym,fi%kpts,fi%vacuum,fi%input,&
-                       fi%cell,enpara,fi%banddos,fi%noco,nococonv,fi%oneD,mpdata,fi%hybinp,hybdat,&
-                       iter,eig_id,results,inDen,vTemp,vx,fi%hub1inp,hub1data)
+            CALL eigen(fi,mpi,stars,sphhar,xcpot,&
+                       enpara,nococonv,mpdata,hybdat,&
+                       iter,eig_id,results,inDen,vTemp,vx,hub1data)
           !ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -438,9 +428,9 @@ CONTAINS
           IF (fi%input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
-                   CALL rdmft(eig_id,mpi,input_soc,fi%kpts,fi%banddos,fi%sliceplot,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                              sphhar,fi%sym,fi%field,vTot,vCoul,fi%oneD,fi%noco,nococonv,xcpot,fi%mpinp,mpdata,fi%hybinp,hybdat,&
-                              fi%gfinp,fi%hub1inp,results,fi%corespecinput,archiveType,outDen)
+                   CALL rdmft(eig_id,mpi,fi,enpara,stars,&
+                              sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
+                              results,archiveType,outDen)
              END SELECT
           END IF
 
@@ -484,9 +474,6 @@ CONTAINS
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
                          xcpot,hybdat,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
-
-          IF (fi%hybinp%l_hybrid) CALL close_eig(eig_id)
-
        END DO forcetheoloop
 
        CALL forcetheo%postprocess()
