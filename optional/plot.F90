@@ -736,7 +736,7 @@ CONTAINS
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
 #endif
          !loop over all points
-         DO iz = rank*(grid(3)-1), rank*(grid(3)-1)+grid(3)-1
+         DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
             DO iy = 0, grid(2)-1
         !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,rank) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
          !$OMP do
