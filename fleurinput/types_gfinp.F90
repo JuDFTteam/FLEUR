@@ -74,7 +74,7 @@ MODULE m_types_gfinp
       !Parameters for the energy mesh on the real axis
       INTEGER :: ne    = 2700
       REAL    :: ellow = -1.0
-      REAL    :: elup  = 1.0
+      REAL    :: elup  =  1.0
       INTEGER :: numberContours = 0
       INTEGER,            ALLOCATABLE :: hiaContour(:) !Contour indices for hubbard 1 elements
                                                        !(because otherwise we can not get the correct gfelment without ambiguity)
@@ -424,7 +424,7 @@ CONTAINS
 
    END SUBROUTINE add_gfelem
 
-   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,l_found) result(i_gf)
+   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_unique,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -435,14 +435,21 @@ CONTAINS
       INTEGER, OPTIONAL,   INTENT(IN)    :: iContour
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
+      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !These arguments will return whether there
+      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_unique   !is an element before uniqueMax with the same l,lp,nType,nTypep combination
+                                                       !but different contour
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found !If this switch is not provided the program
-                                                  !will terminate with an error message if the
-                                                  !element is not found (for adding elements)
+                                                    !will terminate with an error message if the
+                                                    !element is not found (for adding elements)
 
       INTEGER :: i_gf
       LOGICAL :: search
 
       search = .TRUE.
+      IF(PRESENT(l_unique)) l_unique = .TRUE.
+      IF(PRESENT(l_unique).OR.PRESENT(uniqueMax).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
+         CALL juDFT_error("Not provided uniqueMax AND l_unique", hint="This is a bug in FLEUR please report",calledby="find_gfelem")
+      ENDIF
       i_gf = 0
 
       DO WHILE(search)
@@ -481,6 +488,12 @@ CONTAINS
          ELSE
             !The -1 will be replaced with the onsite element in init_gfinp
             IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
+         ENDIF
+         !If we are here and smaller than uniqueMax the element is not unique
+         IF(PRESENT(uniqueMax)) THEN
+            IF(i_gf<uniqueMax) THEN
+               l_unique = .FALSE.
+            ENDIF
          ENDIF
          IF(PRESENT(iContour)) THEN
             IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE
