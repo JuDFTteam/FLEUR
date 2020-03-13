@@ -43,16 +43,16 @@
          <xsd:element name="coreElectrons" type="CoreElectronsType"/>
          <xsd:element name="magnetism" type="MagnetismType"/>
          <xsd:element name="bzIntegration" type="BZIntegrationType"/>
-	 <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
-          <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
+         <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="soc" type="SOCType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="NocoParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="oneDParams" type="OneDParamType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="expertModes" type="ExpertModeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
-	      <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
-	      <xsd:element maxOccurs="1" minOccurs="0" name="greensFunction" type="GFGeneralType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="greensFunction" type="GFGeneralType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinSpiralQPointMesh" type="SpinSpiralQPointMeshType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fields" type="FieldType"/>
@@ -374,13 +374,13 @@
          <xsd:element name="atomicCutoffs" type="AtomicCutoffsType"/>
          <xsd:element name="electronConfig" type="ElectronConfigType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
-	      <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisMTType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisMTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="special" type="SpecialType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="J0" type="J0Type"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="intersiteGF" type="IntersiteGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
