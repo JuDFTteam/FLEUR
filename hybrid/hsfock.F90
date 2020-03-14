@@ -31,7 +31,6 @@ MODULE m_hsfock
 !         nbands  :=   number of bands for which the exchange matrix (mat_ex) c
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
-!         mnobd   :=   maximum number of occupied bands                       c
 !         parent  :=   parent(ikpt) points to the symmetry equivalent point   c
 !                      under the little group of kpoint nk                    c
 !         symop   :=   symop(ikpt) points to the symmetry operation, which    c
@@ -45,7 +44,7 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, nk, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, &
-                     results, mnobd, xcpot, mpi)
+                     results, xcpot, mpi)
 
       use m_ex_to_vx
       USE m_judft
@@ -72,7 +71,6 @@ CONTAINS
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
       INTEGER, INTENT(IN)    :: nk
-      INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
       REAL, INTENT(IN)    :: eig_irr(:, :)
@@ -154,7 +152,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, mnobd, lapw, &
+      CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, lapw, &
                                eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD, nsest, indx_sest, &
                                mpi, ex)
 

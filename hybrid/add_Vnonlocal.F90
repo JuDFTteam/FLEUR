@@ -101,12 +101,14 @@ CONTAINS
             ENDIF
          END DO
       END DO
+#ifdef CPP_EXPLICIT_HYB
       ! calculate HF energy
       IF (hybdat%l_calhf) THEN
          WRITE (6, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
 
          WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
       END IF
+#endif
 
       CALL z%init(hmat%l_real, nbasfcn, input%neig)
 

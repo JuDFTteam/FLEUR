@@ -128,7 +128,7 @@ CONTAINS
             nk = k_list(i)
             CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
             CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
-                        nococonv, results, MAXVAL(hybdat%nobd(:,jsp)), xcpot, mpi)
+                        nococonv, results, xcpot, mpi)
          END DO
       END DO
       CALL timestop("Calculation of non-local HF potential")
