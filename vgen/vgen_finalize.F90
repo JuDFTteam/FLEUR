@@ -91,12 +91,14 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
 
       IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
 
-         CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
-         DO i=1,atoms%ntype
-            WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
-            8025 FORMAT(2x,'Bfield before SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
-         END DO
-
+         IF (mpi%irank == 0) THEN
+            CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
+            DO i=1,atoms%ntype
+               WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+               8025 FORMAT(2x,'Bfield before SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
+            END DO
+         END IF
+         
          CALL timestart("Purging source terms in B-field")
 
          CALL timestart("Building B")
@@ -143,11 +145,14 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
 
          CALL timestop("Purging source terms in B-field")
 
-         CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
-         DO i=1,atoms%ntype
-            WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
-            8026 FORMAT(2x,'Bfield after SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
-         END DO
+         IF (mpi%irank == 0) THEN
+            CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
+            DO i=1,atoms%ntype
+               WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+               8026 FORMAT(2x,'Bfield after SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
+            END DO
+         END IF
+         
       END IF
 
       IF ((sliceplot%iplot.NE.0 )) THEN
