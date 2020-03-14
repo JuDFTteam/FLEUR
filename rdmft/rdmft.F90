@@ -73,7 +73,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_lapw)                         :: lapw
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
-   INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF, mnobd
+   INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF
    INTEGER                              :: iState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
    REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
@@ -510,8 +510,6 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         mnobd = MAXVAL(hybdat%nobd(:,jsp))
-
          DO ikpt = 1,fi%kpts%nkpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
@@ -528,7 +526,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(ikpt,fi%kpts,nkpt_EIBZ, fi%sym,fi%atoms,mpdata,fi%hybinp,fi%cell,fi%input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,fi%kpts,nkpt_EIBZ, fi%sym,fi%atoms,mpdata,fi%hybinp,fi%cell,fi%input,jspin,hybdat,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,fi%noco,nococonv,fi%oned,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
