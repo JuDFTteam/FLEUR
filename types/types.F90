@@ -11,6 +11,7 @@ MODULE m_types
   USE m_types_xcpot
   USE m_types_lapw
   USE m_types_mpi
+  use m_types_hybmpi
   USE m_types_tlmplm
   USE m_types_misc
   USE m_types_setup

@@ -126,5 +126,10 @@ then
     echo "set(CLI_WARN_ONLY 1)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_KPLIB" ]
+then
+    echo "set(CLI_FLEUR_USE_KPLIB 1)"  >>config.cmake
+fi
+
 
 

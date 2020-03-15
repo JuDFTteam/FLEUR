@@ -13,3 +13,6 @@
 [submodule "edsolver-library"]
 	path = external/edsolver-library
 	url = gitlab@iffgit.fz-juelich.de:janssen/edsolver-library.git
+[submodule "external/kplib/kplib"]
+	path = external/kplib/kplib
+	url = https://gitlab.com/muellergroup/kplib.git

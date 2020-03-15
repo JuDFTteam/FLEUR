@@ -1,6 +1,8 @@
 #juDFT Testscript
 
 jt::copyfile("files/inp.xml",$workdir);
+#if strings starts with mpi
+$mpi="mpirun -n 3 --allow-run-as-root ";
 
 jt::testrun("$executable ",$workdir);
 

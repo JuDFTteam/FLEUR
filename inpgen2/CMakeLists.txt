@@ -1,16 +1,26 @@
 cmake_minimum_required(VERSION 3.0)
-project(FLEUR LANGUAGES Fortran)
+project(FLEUR LANGUAGES Fortran CXX)
 
 #These options should be adjusted
 option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 #In addition you might want to set
 #set(JUDFT_LIBRARIES "-lsomething")
 #set(JUFDT_COMPILEOPTS "-r8")
-
+option(INPGEN_USE_kplib "Use kplib library" OFF)
 
 set(FLEUR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
-add_executable(inpgen2
+if (INPGEN_USE_kplib)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+   set(externallibs
+	${FLEUR_SRC}/kpoints/kplib_interface.F90
+	${FLEUR_SRC}/external/kplib/fleur_interface.cpp
+)
+else()
+   set(externallibs ${FLEUR_SRC}/kpoints/kplib_interface_dummy.F90)
+endif()
+
+add_executable(inpgen2 ${externallibs}
 dropDefaults.c
 default_econfig.h
 inpgen_help.f90
@@ -137,6 +147,11 @@ target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(inpgen2 juDFT)
 target_link_libraries(inpgen2 fleurinput)
+
+if (INPGEN_USE_kplib)
+  target_link_libraries(inpgen2 kplib_static)
+endif()
+set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
 find_program(XXD_PROG xxd)
 

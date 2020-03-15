@@ -134,19 +134,26 @@ CONTAINS
 
      scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale'))
      path=trim(path)//'/bravaisMatrix'
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
-     this%amat(1,1) = evaluateFirst(valueString)
-     this%amat(2,1) = evaluateFirst(valueString)
-     this%amat(3,1) = evaluateFirst(valueString)
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
-     this%amat(1,2) = evaluateFirst(valueString)
-     this%amat(2,2) = evaluateFirst(valueString)
-     this%amat(3,2) = evaluateFirst(valueString)
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-3')))
-     this%amat(1,3) = evaluateFirst(valueString)
-     this%amat(2,3) = evaluateFirst(valueString)
-     this%amat(3,3) = evaluateFirst(valueString)
-
+     if (xml%GetNumberOfNodes(path)>0) then
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
+       this%amat(1,1) = evaluateFirst(valueString)
+       this%amat(2,1) = evaluateFirst(valueString)
+       this%amat(3,1) = evaluateFirst(valueString)
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
+       this%amat(1,2) = evaluateFirst(valueString)
+       this%amat(2,2) = evaluateFirst(valueString)
+       this%amat(3,2) = evaluateFirst(valueString)
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-3')))
+       this%amat(1,3) = evaluateFirst(valueString)
+       this%amat(2,3) = evaluateFirst(valueString)
+       this%amat(3,3) = evaluateFirst(valueString)
+     elseif (xml%versionNumber<32) THEN
+       CALL judft_warn("FLEUR no longer supports the construction of the Bravais Matrix",hint="You might try to run with -warn_only and adjust the matrix afterwards.")
+       this%amat=0.0
+       this%amat(1,1)=10.0
+       this%amat(2,2)=10.0
+       this%amat(3,3)=10.0
+     endif
      IF (dvac>0) THEN
         this%amat(3,3)=dtild
      ENDIF

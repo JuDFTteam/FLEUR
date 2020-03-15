@@ -2,6 +2,7 @@ set(fleur_F90 ${fleur_F90}
    hybrid/calc_cmt.f90
    hybrid/hyb_abcrot.F90
    hybrid/exchange_core.F90
+   hybrid/ex_to_vx.f90
    hybrid/mixedbasis.F90
    hybrid/symmetrizeh.F90
    hybrid/checkolap.F90

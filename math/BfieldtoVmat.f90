@@ -102,6 +102,7 @@ CONTAINS
       DO iden = 1,2
          fftwork=zero
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         fftwork=zero
          CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
       END DO
 
@@ -112,7 +113,8 @@ CONTAINS
                                       atoms%ntype,atoms%n_u,2,.TRUE.,.TRUE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
-
+                                     
+      ALLOCATE (vMat%pw_w, mold=vMat%pw)
       vMat%mt(:,0:,1:,1:4) = rho(:,0:,1:,1:4)
       vMat%pw(1:,1:3) = qpw(1:,1:3)
       vMat%pw_w(1:,1:3) = qpww(1:,1:3)
