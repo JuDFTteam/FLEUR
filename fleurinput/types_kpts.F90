@@ -367,7 +367,9 @@ CONTAINS
 
       do ikpt = 1, kpts%nkptf
          k = kpts%bkf(:,ikpt)
-         write (*,"(I3,A,F8.4,F8.4,F8.4)") ikpt, ": ", kpts%bkf(:,ikpt)
+#ifdef CPP_EXPLICIT_HYB
+         write (*,"(I5,A,F8.4,F8.4,F8.4)") ikpt, ": ", kpts%bkf(:,ikpt)
+#endif
          if(abs(k(2)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(1) = nkpt3(1) + 1
          if(abs(k(1)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(2) = nkpt3(2) + 1
          if(abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
