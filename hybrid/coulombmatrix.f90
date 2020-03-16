@@ -1199,7 +1199,6 @@ CONTAINS
          !         ELSE
          !calculate inverse overlap-matrix
 
-         write (1239,*) "unsymm olapm", olapm%unsymmetry()
          CALL olapm%inverse()
          !         END IF
 
@@ -1209,8 +1208,6 @@ CONTAINS
          else
             call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
          endif
-         write (1239,*) "unsymm coulhlp A", coulhlp%unsymmetry()
-         write (1239,*) "unsymm olapm^-1", olapm%unsymmetry()
          call timestart("multiply inverse rhs")
          if (olapm%l_real) THEN
             !multiply with inverse olap from right hand side
@@ -1223,8 +1220,6 @@ CONTAINS
             !multiply with inverse olap from left side
             coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
          end if
-         write (1239,*) "unsymm coulhlp B", coulhlp%unsymmetry()
-         write (1239,*) "ikpt =", ikpt
          coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
          call timestop("multiply inverse rhs")
       END DO
