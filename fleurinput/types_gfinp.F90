@@ -386,7 +386,7 @@ CONTAINS
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
-      CLASS(t_gfinp),   INTENT(IN)     :: gfinp
+      TYPE(t_gfinp),   INTENT(IN)     :: gfinp
       INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind
