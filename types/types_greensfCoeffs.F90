@@ -66,7 +66,7 @@ MODULE m_types_greensfCoeffs
          lmax = lmaxU_const
 
          !Determine number of unique gf elements
-         CALL gfinp%uniqueElements(uniqueElements)
+         CALL uniqueElements(gfinp,uniqueElements)
 
          IF(gfinp%l_sphavg) THEN
             ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:jsp_end),source=cmplx_0)
@@ -93,7 +93,7 @@ MODULE m_types_greensfCoeffs
          lmax = lmaxU_const
 
          !Determine number of unique gf elements
-         CALL gfinp%uniqueElements(uniqueElements)
+         CALL uniqueElements(gfinp,uniqueElements)
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
          IF(gfinp%l_sphavg) THEN

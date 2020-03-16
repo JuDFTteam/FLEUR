@@ -51,7 +51,7 @@ MODULE m_greensfCalcRealPart
          nTypep = gfinp%elem(i_gf)%atomTypep
          contourShape = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
 
-         CALL gfinp%uniqueElements(dummy,ind=i_gf,indUnique=i_elem)
+         CALL uniqueElements(gfinp,dummy,ind=i_gf,indUnique=i_elem)
 
          CALL timestart("On-Site: Integration Cutoff")
          IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN

@@ -79,7 +79,7 @@ MODULE m_greensfCalcImagPart
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
 
-            CALL gfinp%uniqueElements(i_elem,ind=i_gf,indUnique=indUnique)
+            CALL uniqueElements(gfinp,i_elem,ind=i_gf,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
 
