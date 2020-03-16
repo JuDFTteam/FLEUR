@@ -44,7 +44,7 @@ MODULE m_hubbard1_setup
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=2)   :: l_type
       CHARACTER(len=9)   :: l_form
-      TYPE(t_greensf)    :: gu(gfinp%n)
+      TYPE(t_greensf),ALLOCATABLE :: gu(:)
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
@@ -93,16 +93,16 @@ MODULE m_hubbard1_setup
             f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          END DO
 
-         DO i_gf = 1, gfinp%n
-            CALL gu(i_gf)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_gf)%contour)
-         ENDDO
-         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
 
+         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
+         ALLOCATE(gu(atoms%n_hia))
          DO i_hia = 1, atoms%n_hia
             l = atoms%lda_u(atoms%n_u+i_hia)%l
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             i_gf = gfinp%hiaElem(i_hia)
-            IF(ALL(ABS(gdft(i_gf)%gmmpMat).LT.1e-12)) THEN
+            CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
+
+            IF(ALL(ABS(gdft(i_hia)%gmmpMat).LT.1e-12)) THEN
                CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
             ENDIF
 
@@ -111,7 +111,7 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
             !calculate the occupation of the correlated shell
-            CALL occmtx(gdft(i_gf),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
+            CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             IF(hub1data%iter.EQ.1.AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)) THEN
@@ -219,21 +219,21 @@ MODULE m_hubbard1_setup
                   !We have to change into the Hubbard1 directory so that the solver routines can read the config
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
 #ifdef CPP_EDSOLVER
-                  e = gdft(i_gf)%contour%e*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_gf)%contour%nz,e,selfen(:,:,:gdft(i_gf)%contour%nz,1,i_hia),1)
+                  e = gdft(i_hia)%contour%e*hartree_to_ev_const
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1)
                   !---------------------------------------------------
                   ! Calculate selfenergy on lower contour explicitly
                   ! Mainly out of paranoia :D
                   ! No rediagonalization (last argument switches this)
                   !---------------------------------------------------
-                  e = conjg(gdft(i_gf)%contour%e)*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_gf)%contour%nz,e,selfen(:,:,:gdft(i_gf)%contour%nz,2,i_hia),0)
+                  e = conjg(gdft(i_hia)%contour%e)*hartree_to_ev_const
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
                ELSE
                   !If there is no linked solver library we read in the selfenergy here
-                  CALL read_selfen(xPath,selfen(:,:,:gdft(i_gf)%contour%nz,1,i_hia),gdft(i_gf)%contour%nz,2*(2*l+1),.false.)
+                  CALL read_selfen(xPath,selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),gdft(i_hia)%contour%nz,2*(2*l+1),.false.)
                ENDIF
             ENDIF
          ENDDO
@@ -247,7 +247,7 @@ MODULE m_hubbard1_setup
                l = atoms%lda_u(atoms%n_u+i_hia)%l
                i_gf = gfinp%hiaElem(i_hia)
                DO ipm = 1, 2
-                  DO iz = 1, gdft(i_gf)%contour%nz
+                  DO iz = 1, gdft(i_hia)%contour%nz
                      !---------------------------------------------
                      ! Convert the selfenergy to hartree
                      !---------------------------------------------
