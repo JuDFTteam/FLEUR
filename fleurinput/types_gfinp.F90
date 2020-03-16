@@ -76,9 +76,8 @@ MODULE m_types_gfinp
       REAL    :: ellow = -1.0
       REAL    :: elup  =  1.0
       INTEGER :: numberContours = 0
-      INTEGER,            ALLOCATABLE :: hiaContour(:) !Contour indices for hubbard 1 elements
-                                                       !(because otherwise we can not get the correct gfelment without ambiguity)
       TYPE(t_contourInp), ALLOCATABLE :: contour(:)
+      INTEGER, ALLOCATABLE :: hiaElem(:)
    CONTAINS
       PROCEDURE :: read_xml      => read_xml_gfinp
       PROCEDURE :: mpi_bc        => mpi_bc_gfinp
@@ -115,7 +114,7 @@ CONTAINS
       CALL mpi_bc(this%ellow,rank,mpi_comm)
       CALL mpi_bc(this%elup,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
-      CALL mpi_bc(this%hiaContour,rank,mpi_comm)
+      CALL mpi_bc(this%hiaElem,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -263,7 +262,7 @@ CONTAINS
 
       ALLOCATE(this%elem(4*ntype))
       ALLOCATE(this%j0elem(4*ntype))
-      ALLOCATE(this%hiaContour(4*ntype))
+      ALLOCATE(this%hiaElem(4*ntype))
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -328,7 +327,7 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             CALL this%add(itype,l,l,iContour)
             n_hia = n_hia + 1
-            this%hiaContour(n_hia) = iContour
+            this%hiaElem(n_hia) = this%n
          ENDDO
       ENDDO
 
@@ -363,6 +362,7 @@ CONTAINS
       TYPE(t_sym),      INTENT(IN)     :: sym
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
+      INTEGER :: hiaElem(atoms%n_hia)
 
       !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
@@ -379,6 +379,12 @@ CONTAINS
          ENDIF
       ENDDO
 
+      !Reallocate with correct size
+      !hiaElem = this%hiaElem(:atoms%n_hia)
+      !IF(ALLOCATED(this%hiaElem)) DEALLOCATE(this%hiaElem)
+      !ALLOCATE(this%hiaElem(atoms%n_hia))
+      !this%hiaElem = hiaElem
+
    END SUBROUTINE init_gfinp
 
    SUBROUTINE uniqueElements_gfinp(gfinp,uniqueElements,ind,indUnique)
@@ -386,7 +392,7 @@ CONTAINS
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
-      TYPE(t_gfinp),   INTENT(IN)     :: gfinp
+      TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind

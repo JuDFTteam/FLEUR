@@ -37,7 +37,7 @@ MODULE m_hubbard1_setup
 
       INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
       INTEGER :: io_error,ierr
-      INTEGER :: indStart,indEnd,iContour,i_gf
+      INTEGER :: indStart,indEnd,i_gf
       REAL    :: mu_dc,exc
       LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
@@ -101,8 +101,7 @@ MODULE m_hubbard1_setup
          DO i_hia = 1, atoms%n_hia
             l = atoms%lda_u(atoms%n_u+i_hia)%l
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            iContour = gfinp%hiaContour(i_hia)
-            i_gf = gfinp%find(l,nType,iContour=iContour)
+            i_gf = gfinp%hiaElem(i_hia)
             IF(ALL(ABS(gdft(i_gf)%gmmpMat).LT.1e-12)) THEN
                CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
             ENDIF
@@ -208,8 +207,7 @@ MODULE m_hubbard1_setup
          DO i_hia = 1, atoms%n_hia
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             l = atoms%lda_u(atoms%n_u+i_hia)%l
-            iContour = gfinp%hiaContour(i_hia)
-            i_gf = gfinp%find(l,nType,iContour=iContour)
+            i_gf = gfinp%hiaElem(i_hia)
 
             CALL hubbard1_path(atoms,i_hia,folder)
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
@@ -247,8 +245,7 @@ MODULE m_hubbard1_setup
             DO i_hia = 1, atoms%n_hia
                nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                l = atoms%lda_u(atoms%n_u+i_hia)%l
-               iContour = gfinp%hiaContour(i_hia)
-               i_gf = gfinp%find(l,nType,iContour=iContour)
+               i_gf = gfinp%hiaElem(i_hia)
                DO ipm = 1, 2
                   DO iz = 1, gdft(i_gf)%contour%nz
                      !---------------------------------------------

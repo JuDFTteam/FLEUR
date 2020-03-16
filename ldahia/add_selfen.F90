@@ -36,7 +36,7 @@ MODULE m_add_selfen
       TYPE(t_greensf),  INTENT(INOUT)  :: gp(:)
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,iContour,i_gf
+      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,i_gf
       INTEGER spin_match,matsize,start,end,i_match
       CHARACTER(len=6) filename
 
@@ -61,8 +61,7 @@ MODULE m_add_selfen
       DO i_hia = 1, atoms%n_hia
          l = atoms%lda_u(atoms%n_u+i_hia)%l
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-         iContour = gfinp%hiaContour(i_hia)
-         i_gf = gfinp%find(l,nType,iContour=iContour)
+         i_gf = gfinp%hiaElem(i_hia)
          ns = 2*l+1
          matsize = ns*MERGE(2,1,l_match_both_spins)
          CALL vmat%init(.false.,matsize,matsize)

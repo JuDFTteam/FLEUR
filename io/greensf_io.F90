@@ -149,7 +149,7 @@ MODULE m_greensf_io
          CASE(GREENSF_GENERAL_CONST)
             i_gf = i_elem
          CASE(GREENSF_HUBBARD_CONST)
-            i_gf = gfinp%find(atoms%lda_u(atoms%n_u+i_elem)%l,atoms%lda_u(atoms%n_u+i_elem)%atomType,iContour=gfinp%hiaContour(i_elem))
+            i_gf = gfinp%hiaElem(i_elem)
          CASE DEFAULT
             CALL juDFT_error("Unknown GF archiveType", calledby="writeGreensFData")
          END SELECT

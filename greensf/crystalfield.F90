@@ -50,8 +50,8 @@ MODULE m_crystalfield
 
          l     = atoms%lda_u(atoms%n_u+i_hia)%l
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-         iContour = gfinp%hiaContour(i_hia)
-         i_gf = gfinp%find(l,nType,iContour=iContour)
+
+         i_gf = gfinp%hiaElem(i_hia)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
