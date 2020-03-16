@@ -140,7 +140,7 @@
       <xsd:attribute default="F" name="l_J" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
-     <xsd:attribute default="F" name="l_removeMagnetisationFromInterstitial" type="FleurBool" use="optional"/>
+     <xsd:attribute default="F" name="l_onlyMtStDen" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="fixed_moment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -432,6 +432,7 @@
             <xsd:attribute name="label" type="xsd:string" use="optional"/>
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
             <xsd:attribute default="F" name="orbcomp" type="FleurBool" use="optional"/>
+            <xsd:attribute default="F" name="jDOS"    type="FleurBool" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>
@@ -737,18 +738,13 @@
    </xsd:complexType>
 
 
-   <xsd:complexType name="KPointCountType">
-      <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="specialPoint" type="SpecialPointType"/>
-      </xsd:sequence>
-      <xsd:attribute name="count" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute name="gamma" type="FleurBool" use="required"/>
-   </xsd:complexType>
+  
 
    <xsd:complexType name="KPointListType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="1" name="kPoint" type="KPointType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="tetraeder" type="TetraederType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="specialPoint" type="SpecialPointType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
       <xsd:attribute name="count" type="xsd:nonNegativeInteger" use="optional"/>
@@ -769,17 +765,7 @@
       </xsd:simpleContent>
    </xsd:complexType>
 
-   <xsd:complexType name="KPointDensityType">
-      <xsd:attribute name="denX" type="xsd:double" use="required"/>
-      <xsd:attribute name="denY" type="xsd:double" use="required"/>
-      <xsd:attribute name="denZ" type="xsd:double" use="required"/>
-      <xsd:attribute name="gamma" type="FleurBool" use="required"/>
-   </xsd:complexType>
-
-   <xsd:complexType name="KPointListFileType">
-      <xsd:attribute name="filename" type="xsd:string" use="required"/>
-   </xsd:complexType>
-
+  
    <xsd:complexType name="SpecialPointType">
       <xsd:simpleContent>
          <xsd:extension base="String3DVecType">
@@ -1065,12 +1051,7 @@
       </xsd:restriction>
    </xsd:simpleType>
 
-   <xsd:simpleType name="KPointSetPurposeEnum">
-      <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="bands"/>
-         <xsd:enumeration value="GW"/>
-      </xsd:restriction>
-   </xsd:simpleType>
+ 
 
    <xsd:simpleType name="RDMFTFunctionalEnum">
       <xsd:restriction base="xsd:string">

@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv5(bandoi, bandof, ik, iq, &
+   SUBROUTINE wavefproducts_noinv(bandoi, bandof, ik, iq, &
                                     input, jsp, cell, atoms, mpdata, hybinp,&
                                    hybdat, kpts, lapw, sym, noco,nococonv, oneD,&
                                    nkqpt, cprod)
@@ -53,7 +53,7 @@ CONTAINS
          call juDFT_error('wavefproducts: k-point not found')
       endif
 
-      call wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t,&
+      call wavefproducts_noinv_IS(bandoi, bandof, ik, iq, g_t,&
                                          input, jsp, cell, atoms, mpdata, hybinp,&
                                         hybdat, kpts, lapw, sym, noco, nococonv,&
                                         nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
@@ -65,9 +65,9 @@ CONTAINS
 
       call timestop("wavefproducts_noinv5")
 
-   END SUBROUTINE wavefproducts_noinv5
+   END SUBROUTINE wavefproducts_noinv
 
-   subroutine wavefproducts_noinv5_IS(bandoi, bandof, ik, iq, g_t, &
+   subroutine wavefproducts_noinv_IS(bandoi, bandof, ik, iq, g_t, &
                                        input, jsp, cell, atoms, mpdata, hybinp,&
                                       hybdat, kpts, lapw, sym, noco,nococonv,&
                                       nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
@@ -208,7 +208,7 @@ CONTAINS
       call timestop("calc convolution")
 
       call timestop("wavefproducts_noinv5 IR")
-   end subroutine wavefproducts_noinv5_IS
+   end subroutine wavefproducts_noinv_IS
 
 
    subroutine wavefproducts_noinv_MT(bandoi, bandof, ik, iq, &

@@ -348,7 +348,8 @@ CONTAINS
       call timestop("getnorm")
 
       call timestart("Bessel calculation")
-      DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      do iqnrm = 1,nqnrm
          qnorm = qnrm(iqnrm)
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
@@ -1197,12 +1198,16 @@ CONTAINS
          !           DEALLOCATE(invevec)!,involapm)
          !         ELSE
          !calculate inverse overlap-matrix
+
          CALL olapm%inverse()
          !         END IF
 
          !unpack matrix coulomb
-         CALL coulhlp%from_packed(sym%invs, nbasm1(ikpt), REAL(coulomb(:, ikpt)), coulomb(:, ikpt))
-
+         if(sym%invs) then
+            call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
+         else
+            call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
+         endif
          call timestart("multiply inverse rhs")
          if (olapm%l_real) THEN
             !multiply with inverse olap from right hand side
@@ -1263,8 +1268,12 @@ CONTAINS
          endif
          ! unpack coulomb into coulhlp
 
-         call coulhlp%from_packed(sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
-
+         !call coulhlp%from_packed(sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
+         if(sym%invs) then
+            call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
+         else
+            call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
+         endif
          ! only one processor per k-point calculates MT convolution
          IF (calc_mt(ikpt)) THEN
 

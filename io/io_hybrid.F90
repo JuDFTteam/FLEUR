@@ -13,35 +13,6 @@ module m_io_hybinp
    integer, save :: id_olap, id_z, id_v_x, id_coulomb, id_coulomb_spm
    !public:: open_hybinp_io,read_cmt,write_cmt
 contains
-
-   SUBROUTINE open_hybinp_io1(l_real)
-      implicit none
-
-      LOGICAL, INTENT(IN)          :: l_real
-      LOGICAL :: opened = .false.
-
-      if(opened) return
-      opened = .true.
-
-      !print *,"Open olap.mat"
-      id_olap = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "olap.mat")
-      !print *,"Open z.mat"
-      id_z = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "z.mat")
-   END SUBROUTINE open_hybinp_io1
-
-   SUBROUTINE open_hybinp_io1b(l_real)
-      implicit none
-
-      LOGICAL, INTENT(IN)          :: l_real
-      LOGICAL :: opened = .false.
-
-      if(opened) return
-      opened = .true.
-
-      !print *,"Open v_x.mat"
-      id_v_x = OPEN_MATRIX(l_real, lapw_dim_nbasfcn, 1, 1, "v_x.mat")
-   END SUBROUTINE open_hybinp_io1b
-
    SUBROUTINE open_hybinp_io2(mpdata, hybinp, hybdat, input, atoms, l_real)
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
@@ -51,19 +22,7 @@ contains
       TYPE(t_atoms), INTENT(IN)   :: atoms
       LOGICAL, INTENT(IN)         :: l_real
       INTEGER:: irecl_coulomb
-      LOGICAL :: opened = .FALSE.
 
-      if(opened) return
-      opened = .true.
-      OPEN(unit=777, file='cmt', form='unformatted', access='direct',&
-           &     recl=input%neig*hybdat%maxlmindx*atoms%nat*16)
-
-#ifdef CPP_NOSPMVEC
-      irecl_coulomb = hybdat%maxbasm1*(hybdat%maxbasm1 + 1)*8/2
-      if(.not. l_real) irecl_coulomb = irecl_coulomb*2
-      OPEN(unit=778, file='coulomb', form='unformatted', access='direct', recl=irecl_coulomb)
-      id_coulomb = 778
-#else
       ! if the sparse matrix technique is used, several entries of the
       ! matrix vanish so that the size of each entry is smaller
       irecl_coulomb = (atoms%ntype*(maxval(hybinp%lcutm1) + 1)*(maxval(mpdata%num_radbasfn) - 1)**2 &
@@ -74,8 +33,13 @@ contains
       if(.not. l_real) irecl_coulomb = irecl_coulomb*2
       OPEN(unit=778, file='coulomb1', form='unformatted', access='direct', recl=irecl_coulomb)
       id_coulomb_spm = 778
-#endif
    END SUBROUTINE open_hybinp_io2
+
+   subroutine close_hybinp_io2
+      implicit none
+
+      close(778)
+   end subroutine close_hybinp_io2
 
    subroutine write_coulomb(nk, l_real, coulomb)
       implicit none
@@ -96,8 +60,6 @@ contains
       real, intent(in) :: coulomb_mt2(:, :, :, :), coulomb_mt3(:, :, :)
       real, intent(in) :: coulomb_mtir(:)
       integer, intent(in) :: nk
-
-      !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
       write(id_coulomb_spm, rec=nk) coulomb_mt1, coulomb_mt2, coulomb_mt3, coulomb_mtir
    end subroutine write_coulomb_spm_r
 
@@ -147,20 +109,41 @@ contains
       read(id_coulomb, rec=nk) coulomb
    end subroutine read_coulomb_c
 
-   subroutine read_olap(mat, rec)
+   subroutine read_olap(olap, rec, nbasfcn)
       implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
+      TYPE(t_mat), INTENT(INOUT):: olap
+      INTEGER, INTENT(IN)           :: rec, nbasfcn
+      integer :: i, j, id
 
-      CALL read_matrix(mat, rec, id_olap)
+      id = open_matrix(olap%l_real, olap%matsize1, 1, 1, "olap." // int2str(rec))
+      CALL read_matrix(olap, 1, id)
+      call close_matrix(id)
+
+      IF(olap%l_real) THEN
+         DO i = 1, nbasfcn
+            DO j = 1, i
+               olap%data_r(i, j) = olap%data_r(j, i)
+            END DO
+         END DO
+      ELSE
+         DO i = 1, nbasfcn
+            DO j = 1, i
+               olap%data_c(i, j) = CONJG(olap%data_c(j, i))
+            END DO
+         END DO
+         olap%data_c = conjg(olap%data_c)
+      END IF
    END subroutine read_olap
 
    subroutine write_olap(mat, rec)
       implicit none
       TYPE(t_mat), INTENT(IN)   :: mat
       INTEGER, INTENT(IN)           :: rec
+      integer :: id
 
-      CALL write_matrix(mat, rec, id_olap)
+      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "olap." // int2str(rec))
+      CALL write_matrix(mat, 1, id)
+      call close_matrix(id)
    END subroutine write_olap
 
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
@@ -195,6 +178,8 @@ contains
       call timestart("read_z")
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+         z_out%matsize2 = hybdat%nbands(ik)
+         ! call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
          if(present(parent_z)) call parent_z%copy(z_out,1,1)
       else
          if(present(parent_z)) then
@@ -206,12 +191,12 @@ contains
 
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
-
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
+         ptr_mat%matsize2 = hybdat%nbands(ik)
+         ! call ptr_mat%save_npy("z_ik=" // int2str(ik) // "_ikp=" // int2str(ikp) // ".npy")
 
          CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
-
          call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
                                   hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
@@ -221,18 +206,25 @@ contains
 
    subroutine read_v_x(mat, rec)
       implicit none
-      TYPE(t_mat), INTENT(INOUT):: mat
-      INTEGER, INTENT(IN)           :: rec
+      TYPE(t_mat), INTENT(INOUT)  :: mat
+      INTEGER, INTENT(IN)         :: rec
+      integer                     :: id
 
-      CALL read_matrix(mat, rec, id_v_x)
+      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "v_x." // int2str(rec))
+      CALL read_matrix(mat, 1, id)
+      call close_matrix(id)
    END subroutine read_v_x
 
    subroutine write_v_x(mat, rec)
+      use m_juDFT
       implicit none
       TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)           :: rec
+      INTEGER, INTENT(IN)       :: rec
+      integer :: id
 
-      CALL write_matrix(mat, rec, id_v_x)
+      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "v_x." // int2str(rec))
+      CALL write_matrix(mat, 1, id)
+      call close_matrix(id)
    END subroutine write_v_x
 
 end module m_io_hybinp

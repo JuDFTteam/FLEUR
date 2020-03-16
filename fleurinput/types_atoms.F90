@@ -519,6 +519,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  this%jmtd = MAXVAL(this%jri(:))
  ALLOCATE(this%rmsh(this%jmtd,this%ntype))
  ALLOCATE(this%volmts(this%ntype))
+ this%rmsh = 0.0
  na = 0
  DO iType = 1, this%ntype
     ! Calculate mesh for valence states

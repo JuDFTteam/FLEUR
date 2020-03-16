@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "inputSchema.h"
 #include "inputSchema_old.h"
-
+#include <string.h>
 /*
  * This method together with the variables defined in inputSchema.h
  * writes out the file FleurInputSchema.xsd.

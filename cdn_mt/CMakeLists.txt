@@ -15,6 +15,7 @@ cdn_mt/magMoms.f90
 cdn_mt/magDiMom.f90
 cdn_mt/orbMagMoms.f90
 cdn_mt/orb_comp2.f90
+cdn_mt/jDOS.f90
 cdn_mt/radfun.f90
 cdn_mt/resMoms.f90
 cdn_mt/rhomt.f90

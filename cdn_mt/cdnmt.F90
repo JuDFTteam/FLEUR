@@ -10,8 +10,8 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(mpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1inp,hub1data)
+  SUBROUTINE cdnmt(mpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1inp,jDOS,hub1data)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -27,8 +27,10 @@ CONTAINS
     TYPE(t_atoms),   INTENT(IN)    :: atoms
     TYPE(t_sym),     INTENT(IN)    :: sym
     TYPE(t_enpara),  INTENT(IN)    :: enpara
+    TYPE(t_banddos), INTENT(IN)    :: banddos
     TYPE(t_hub1inp), INTENT(IN)    :: hub1inp
     TYPE(t_moments), INTENT(INOUT) :: moments
+    TYPE(t_jDOS), OPTIONAL, INTENT(IN) :: jDOS
     TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
     !     .. Scalar Arguments ..
@@ -42,7 +44,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
-    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb
+    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj
     INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
@@ -290,10 +292,44 @@ CONTAINS
           WRITE(attributes(4),'(f12.7)') qmtl(1,ispin,itype)
           WRITE(attributes(5),'(f12.7)') qmtl(2,ispin,itype)
           WRITE(attributes(6),'(f12.7)') qmtl(3,ispin,itype)
-          CALL writeXMLElementForm('mtCharge',(/'atomType','total   ','s       ','p       ','d       ','f       '/),attributes,&
+          CALL writeXMLElementForm('mtCharge',(/'atomType','total   ','s       ','p       ','d       ','f       '/),attributes(:6),&
                                    reshape((/8,5,1,1,1,1,6,12,12,12,12,12/),(/6,2/)))
        ENDDO
     ENDDO
+
+
+    IF(banddos%l_jDOS) THEN
+      IF(PRESENT(jDOS)) THEN
+         WRITE(6,8200)
+8200     FORMAT(/,5x,'j-decomposed charge',/,t6,'atom',t15,'s',t24,'p1/2',t33,'p3/2',&
+                   t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
+         DO itype = 1, atoms%ntype
+            natom = SUM(atoms%neq(:itype-1)) + 1
+
+            WRITE(6,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
+8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
+            WRITE(6,*)
+
+            CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
+
+            attributes = ''
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,1,natom)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,1,natom)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,1,natom)
+            CALL writeXMLElementForm('lowJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
+
+            attributes = ''
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,2,natom)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,2,natom)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,2,natom)
+            CALL writeXMLElementForm('highJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
+
+            CALL closeXMLElement('mtJcharge')
+
+         ENDDO
+      ENDIF
+    ENDIF
+
 
    ENDIF !(mpi%irank==0) THEN
     CALL timestop("cdnmt")

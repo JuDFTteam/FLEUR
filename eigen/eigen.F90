@@ -17,9 +17,9 @@ CONTAINS
    !> 4. writing (saving) of eigenvectors
    !>
    !>@author D. Wortmann
-   SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                    cell,enpara,banddos,noco,nococonv,oneD,mpdata,hybinp,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1inp,hub1data)
+   SUBROUTINE eigen(fi,mpi,stars,sphhar,xcpot,&
+                    enpara,nococonv,mpdata,hybdat,&
+                    iter,eig_id,results,inden,v,vx,hub1data)
 
 #include"cpp_double.h"
       USE m_types
@@ -33,7 +33,7 @@ CONTAINS
       USE m_util
       USE m_io_hybinp
       !USE m_icorrkeys
-      USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
+      USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
       USE m_xmlOutput
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
@@ -43,28 +43,19 @@ CONTAINS
       USE m_types_mpimat
 
       IMPLICIT NONE
+
+      type(t_fleurinput), intent(in)    :: fi
       TYPE(t_results),INTENT(INOUT):: results
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: mpi
 
-      TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_mpdata), intent(inout):: mpdata
-      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
-      TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_vacuum),INTENT(IN)    :: vacuum
-      TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
-      TYPE(t_banddos),INTENT(IN)   :: banddos
-      TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_stars),INTENT(IN)     :: stars
-      TYPE(t_cell),INTENT(IN)      :: cell
-      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
-      TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_potden),INTENT(IN)    :: inden !
-      TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
       TYPE(t_hub1data),INTENT(INOUT):: hub1data
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
@@ -87,9 +78,9 @@ CONTAINS
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
-      INTEGER              :: neigBuffer(kpts%nkpt,input%jspins)
+      INTEGER              :: neigBuffer(fi%kpts%nkpt,fi%input%jspins)
 
-      COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
+      COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure mpi case
 
       INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:)
       REAL,    ALLOCATABLE :: bkpt(:)
@@ -104,24 +95,24 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
 
-      ! Variables for HF or hybinp functional calculation
-      INTEGER                   :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt), dealloc_stat
+      ! Variables for HF or fi%hybinp functional calculation
+      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
 
-      call ud%init(atoms,input%jspins)
-      ALLOCATE(eig(input%neig))
+      call ud%init(fi%atoms,fi%input%jspins)
+      ALLOCATE(eig(fi%input%neig))
       ALLOCATE(bkpt(3))
-      ALLOCATE(eigBuffer(input%neig,kpts%nkpt,input%jspins))
-      ALLOCATE(nvBuffer(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)),nvBufferTemp(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)))
+      ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
+      ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
+      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
 
       ! check if z-reflection trick can be used
-      l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
+      l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (mpi%n_size > 1) l_zref = .FALSE.
 
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,v)
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,v)
 #endif
 
       !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
@@ -130,7 +121,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,v,mpi,results,td,ud)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,mpi,results,td,ud)
 
       neigBuffer = 0
       results%neig = 0
@@ -140,45 +131,51 @@ CONTAINS
       nvBuffer = 0
       nvBufferTemp = 0
 
-      DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+      DO jsp = 1,MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(mpi%k_list)
             nk=mpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,l_zref, mpi)
+            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts,fi%atoms,fi%sym,nk,fi%cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,mpi,hybinp,enpara,input,vacuum,noco,nococonv,sym,&
-                               stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
+            CALL eigen_hssetup(jsp,mpi,fi%hybinp,enpara,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
+                               stars,fi%cell,sphhar,fi%atoms,ud,td,v,lapw,l_real,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
 
-            IF(hybinp%l_hybrid.OR.input%l_rdmft) THEN
+            IF(fi%hybinp%l_hybrid.OR.fi%input%l_rdmft) THEN
 
                ! Write overlap matrix smat to direct access file olap
                ! print *,"Wrong overlap matrix used, fix this later"
-               CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
-            END IF ! hybinp%l_hybrid.OR.input%l_rdmft
 
-            IF(hybinp%l_hybrid) THEN
-               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,cell,sym,mpdata,hybinp,hybdat,&
-                                                      input,kpts,jsp,results,xcpot,noco,nococonv,hmat)
+               ! if(.not. allocated(hybdat%olap)) THEN
+               !    allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
+               ! endif
+               ! if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
+               ! call hybdat%olap(jsp,nk)%copy(smat,1,1)
+               CALL write_olap(smat,(jsp-1)*fi%kpts%nkpt+nk)
+            END IF ! fi%hybinp%l_hybrid.OR.fi%input%l_rdmft
+
+            IF(fi%hybinp%l_hybrid) THEN
+               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,fi%atoms,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,&
+                                                      fi%input,fi%kpts,jsp,results,xcpot,fi%noco,nococonv,hmat)
 
                IF(hybdat%l_subvxc) THEN
-                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,&
-                              mpdata,hybinp,hybdat,enpara%el0,enpara%ello0,sym,&
-                              cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
+                  CALL subvxc(lapw,fi%kpts%bk(:,nk),fi%input,jsp,v%mt(:,0,:,:),fi%atoms,ud,&
+                              mpdata,fi%hybinp,hybdat,enpara%el0,enpara%ello0,fi%sym,&
+                              fi%cell,sphhar,stars,xcpot,mpi,fi%oneD,hmat,vx)
                END IF
-            END IF ! hybinp%l_hybrid
+            END IF ! fi%hybinp%l_hybrid
 
             l_wu=.FALSE.
-            ne_all=input%neig
+            ne_all=fi%input%neig
             IF(ne_all < 0) ne_all = lapw%nmat
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
+            CALL symmetrize_matrix(mpi,fi%noco,fi%kpts,nk,hmat,smat)
 
-            IF (banddos%unfoldband) THEN
+            IF (fi%banddos%unfoldband) THEN
                select type(smat)
                type is (t_mat)
                   allocate(t_mat::smat_unfold)
@@ -197,7 +194,7 @@ CONTAINS
 
             ! Solve generalized eigenvalue problem.
             !     ne_all ... number of eigenpairs searched (and found) on this node
-            !                on input, overall number of eigenpairs searched,
+            !                on fi%input, overall number of eigenpairs searched,
             !                on output, local number of eigenpairs found
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
@@ -215,7 +212,7 @@ CONTAINS
             ! Collect number of all eigenvalues
             ne_found=ne_all
             CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
-            ne_all=MIN(input%neig,ne_all)
+            ne_all=MIN(fi%input%neig,ne_all)
 #else
             ne_found=ne_all
 #endif
@@ -239,10 +236,10 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            IF (banddos%unfoldband) THEN
-               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",&
+            IF (fi%banddos%unfoldband) THEN
+               IF(modulo (fi%kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number fi%kpts needs to be multiple of number mpi threads",&
                    hint=errmsg, calledby="eigen.F90")
-               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
+               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,mpi)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
                if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
@@ -254,14 +251,14 @@ CONTAINS
          END DO  k_loop
       END DO ! spin loop ends
 
-      neigd2 = MIN(input%neig,lapw%dim_nbasfcn())
+      neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
-      IF (banddos%unfoldband) THEN
+      IF (fi%banddos%unfoldband) THEN
          results%unfolding_weights = CMPLX(0.0,0.0)
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
       END IF
-      CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*fi%input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),size(nvbuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
       CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
@@ -275,16 +272,15 @@ CONTAINS
          WRITE(6,'(a)') ''
          WRITE(6,'(a)') '              basis set size:'
          WRITE(6,'(a)') '      jsp    ikpt     nv      LOs  overall'
-         DO jsp = 1, MERGE(1,input%jspins,noco%l_noco)
-            DO nk = 1, kpts%nkpt
-               WRITE(6,'(5i8)') jsp, nk, nvBufferTemp(nk,jsp), atoms%nlotot, nvBufferTemp(nk,jsp) + atoms%nlotot
+         DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
+            DO nk = 1, fi%kpts%nkpt
+               WRITE(6,'(5i8)') jsp, nk, nvBufferTemp(nk,jsp), fi%atoms%nlotot, nvBufferTemp(nk,jsp) + fi%atoms%nlotot
             END DO
          END DO
       END IF
 
-      !IF (hybinp%l_hybrid.OR.hybdat%l_calhf) CALL close_eig(eig_id)
 
-      IF( input%jspins .EQ. 1 .AND. hybinp%l_hybrid ) THEN
+      IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
          results%te_hfex%valence = 2*results%te_hfex%valence
          IF(hybdat%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
       END IF

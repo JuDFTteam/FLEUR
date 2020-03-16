@@ -3,8 +3,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 {
 function clone_from_git(){
-    rm -rf $DIR/* $DIR/.??*
-    git clone https://iffgit.fz-juelich.de/fleur/fleur.git $DIR
+     rm -rf $DIR/configure.sh
+    cd $DIR
+    git init .	
+    git remote add -f origin  https://iffgit.fz-juelich.de/fleur/fleur.git 
     git checkout release
     echo "Current FLEUR source code obtained from iffgit.fz-juelich.de"
     echo "Restart the configure.sh script"

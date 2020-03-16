@@ -3,7 +3,7 @@
 MODULE m_make_spacegroup
   USE m_juDFT
   PRIVATE
-  public make_spacegroup
+  PUBLIC make_spacegroup
   !********************************************************************
   !  Generate the spacegroup given the cell and the atomic positions/ids
   !  Takes into account the symmetry reductions needed for films,soc&SSDW
@@ -25,7 +25,7 @@ CONTAINS
     IMPLICIT NONE
     LOGICAL,INTENT(in)         :: film
     TYPE(t_noco),INTENT(in)    :: noco
-    TYPE(t_cell),intent(in)    :: cell
+    TYPE(t_cell),INTENT(in)    :: cell
     REAL,INTENT(IN)            :: pos(:,:),atomid(:)
     TYPE(t_sym),INTENT(inout)  :: sym
 
@@ -43,17 +43,17 @@ CONTAINS
     INTEGER mtmp(3,3),mp(3,3),ntype,nat
     INTEGER u,v,w
     INTEGER i,j,k,n,mop,nc,NEW,ns,nt,ntypm,ind(1),iTr,maxTrVecs
-    INTEGER ity(size(atomid)),npaint,ipaint(size(atomid))
+    INTEGER ity(SIZE(atomid)),npaint,ipaint(SIZE(atomid))
     INTEGER ios,istep0, binSize, maxBinSize
-    INTEGER locBinDim(3), secondAtom(size(atomid))
+    INTEGER locBinDim(3), secondAtom(SIZE(atomid))
     INTEGER binDim(3), iBin(3)
-    INTEGER trIndices(size(atomid))
+    INTEGER trIndices(SIZE(atomid))
     CHARACTER(len=30) :: filen
 
-    REAL    posr(3,size(atomid)),rtau(3),tr(3)
-    REAL    ttau(3,nop48),trs(3,size(atomid))
+    REAL    posr(3,SIZE(atomid)),rtau(3),tr(3)
+    REAL    ttau(3,nop48),trs(3,SIZE(atomid))
     REAL    eps7
-    REAL    trVecs(3,size(atomid))
+    REAL    trVecs(3,SIZE(atomid))
 
     LOGICAL lnew,lclose, foundOne, boundary(3)
     LOGICAL l_exist
@@ -97,8 +97,8 @@ CONTAINS
     ENDDO
 
     !---> sanity check: atoms must be distinct
-    DO n = 1, size(atomid)
-       DO i = n+1, size(atomid)
+    DO n = 1, SIZE(atomid)
+       DO i = n+1, SIZE(atomid)
           IF ( ALL( ABS( pos(:,n) - pos(:,i) ) < eps7 ) ) THEN
              WRITE(6,'(/," Error in atomic positions: atoms",i5," and",i5," (at least) are the same")') n,i
              CALL juDFT_error("atom positions",calledby="spg_gen")
@@ -111,7 +111,7 @@ CONTAINS
 
     ntypm = 1
     ity(1) = 1
-    DO n=2, size(atomid)
+    DO n=2, SIZE(atomid)
        lnew = .TRUE.
        DO i=1,n-1
           IF ( ABS( atomid(i)-atomid(n) ) < eps7 ) THEN
@@ -141,7 +141,7 @@ CONTAINS
 
     !---> check if this is a supercell
 
-    nat = size(atomid)
+    nat = SIZE(atomid)
     CALL super_check(nat,pos,ity,ntypm,ns,trs)
 
     !---> determine the independent atoms in the supercell and
@@ -220,7 +220,7 @@ CONTAINS
           !!       2. Sort atoms into "location bins"
           !!          (position vectors are in the region -0.5 to 0.5)
 
-          binDim(:) = CEILING(size(atomid)**(1.0/3.0)*0.5)
+          binDim(:) = CEILING(SIZE(atomid)**(1.0/3.0)*0.5)
           !TODO: The dimension binDim should better be adjusted to the unit cell shape.
           !      This simple setting might be bad for very elongated unit cells.
 
@@ -462,6 +462,8 @@ CONTAINS
     !      endif
 
 
+    IF (ALLOCATED(sym%mrot)) DEALLOCATE(sym%mrot)
+    IF (ALLOCATED(sym%tau)) DEALLOCATE(sym%tau)
 
     ALLOCATE ( sym%mrot(3,3,nops),sym%tau(3,nops) )
     sym%nop=nops
@@ -529,60 +531,60 @@ CONTAINS
 
     END FUNCTION l_rotmatch
 
-     SUBROUTINE close_pt(nops,mrot,mtable)
+    SUBROUTINE close_pt(nops,mrot,mtable)
 
-   IMPLICIT NONE
+      IMPLICIT NONE
 
-   INTEGER, INTENT (IN)  :: nops,mrot(3,3,nops)
-   INTEGER, INTENT (OUT) :: mtable(nops,nops)   ! table(i,j) = {R_i|0}{R_j|0}
+      INTEGER, INTENT (IN)  :: nops,mrot(3,3,nops)
+      INTEGER, INTENT (OUT) :: mtable(nops,nops)   ! table(i,j) = {R_i|0}{R_j|0}
 
-   INTEGER              :: i,j,k,mp(3,3),map(nops)
+      INTEGER              :: i,j,k,mp(3,3),map(nops)
 
-   ! loop over all operations
-   DO j = 1, nops
+      ! loop over all operations
+      DO j = 1, nops
 
-      map(1:nops) = 0
+         map(1:nops) = 0
 
-      ! multiply {R_j|0}{R_i|0}
-      DO i = 1, nops
-         mp = matmul( mrot(:,:,j) , mrot(:,:,i) )
+         ! multiply {R_j|0}{R_i|0}
+         DO i = 1, nops
+            mp = MATMUL( mrot(:,:,j) , mrot(:,:,i) )
 
-         ! determine which operation this is
-         DO k = 1, nops
-            IF ( all( mp(:,:)==mrot(:,:,k) ) ) THEN
-               IF ( map(i) .eq. 0 ) THEN
-                  map(i) = k
-               ELSE
-                  WRITE (6,'(" Symmetry error : multiple ops")')
-                  CALL juDFT_error("close_pt: Multiple ops (Bravais)",calledby ="closure")
+            ! determine which operation this is
+            DO k = 1, nops
+               IF ( ALL( mp(:,:)==mrot(:,:,k) ) ) THEN
+                  IF ( map(i) .EQ. 0 ) THEN
+                     map(i) = k
+                  ELSE
+                     WRITE (6,'(" Symmetry error : multiple ops")')
+                     CALL juDFT_error("close_pt: Multiple ops (Bravais)",calledby ="closure")
+                  END IF
                END IF
+            END DO
+
+            IF (map(i).EQ.0) THEN
+               WRITE(6,*) 'Symmetry operations:'
+               DO k = 1, nops
+                  WRITE(6,*) 'Matrix ', k, ':'
+                  WRITE(6,'(3i7)') mrot(:,1,k)
+                  WRITE(6,'(3i7)') mrot(:,2,k)
+                  WRITE(6,'(3i7)') mrot(:,3,k)
+                  WRITE(6,*) ''
+               END DO
+               WRITE (6,'(" Group not closed (Bravais lattice)")')
+               WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
+               WRITE(6,*) ''
+               WRITE(6,*) 'Expected product of operations ', j, ' and ', i, ':'
+               WRITE(6,'(3i7)') mp(:,1)
+               WRITE(6,'(3i7)') mp(:,2)
+               WRITE(6,'(3i7)') mp(:,3)
+               WRITE(6,*) ''
+               CALL juDFT_error("close_pt:Not closed",calledby="closure")
             END IF
          END DO
-
-         IF (map(i).eq.0) THEN
-            WRITE(6,*) 'Symmetry operations:'
-            DO k = 1, nops
-               WRITE(6,*) 'Matrix ', k, ':'
-               WRITE(6,'(3i7)') mrot(:,1,k)
-               WRITE(6,'(3i7)') mrot(:,2,k)
-               WRITE(6,'(3i7)') mrot(:,3,k)
-               WRITE(6,*) ''
-            END DO
-            WRITE (6,'(" Group not closed (Bravais lattice)")')
-            WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
-            WRITE(6,*) ''
-            WRITE(6,*) 'Expected product of operations ', j, ' and ', i, ':'
-            WRITE(6,'(3i7)') mp(:,1)
-            WRITE(6,'(3i7)') mp(:,2)
-            WRITE(6,'(3i7)') mp(:,3)
-            WRITE(6,*) ''
-            CALL juDFT_error("close_pt:Not closed",calledby="closure")
-         END IF
+         mtable(j,1:nops) = map(1:nops)
       END DO
-      mtable(j,1:nops) = map(1:nops)
-   END DO
 
- END SUBROUTINE close_pt
+    END SUBROUTINE close_pt
 
 
   END SUBROUTINE make_spacegroup

@@ -80,14 +80,17 @@ CONTAINS
        CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0(:,1),f2(:,1),pot%mmpMat,results%e_ldau)
 
        !spin off-diagonal elements (no rotation yet)
-       IF(noco%l_mperp) THEN
+       IF(noco%l_mtNocoPot) THEN
           IF(ANY(atoms%lda_u(:)%phi.NE.0.0).OR.ANY(atoms%lda_u(:)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
           CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,pot%mmpMat(:,:,:,3),e_off)
           results%e_ldau = results%e_ldau + e_off
+       ELSE IF(noco%l_mperp.AND.mpi%irank.EQ.0) THEN
+          WRITE(*,*) "Offdiagonal LDA+U ignored"
+          WRITE(6,*) "The offdiagonal contributions to LDA+U only enters into the Hamiltonian if l_mtNocoPot is also true"
        ENDIF
 
        IF (mpi%irank.EQ.0) THEN
-          DO jspin = 1,MERGE(3,input%jspins,noco%l_mperp)
+          DO jspin = 1,MERGE(3,input%jspins,noco%l_mtNocoPot)
              WRITE (6,'(a7,i3)') 'spin #',jspin
              DO i_u = 1, n_u
                 itype = atoms%lda_u(i_u)%atomType
@@ -111,7 +114,7 @@ CONTAINS
              END DO
           END DO
           WRITE (6,*) results%e_ldau
-          IF(noco%l_mperp) WRITE(6,*) e_off
+          IF(noco%l_mtNocoPot) WRITE(6,*) e_off
        ENDIF
        DEALLOCATE (u,n_mmp)
     ELSE

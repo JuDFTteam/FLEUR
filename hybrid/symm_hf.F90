@@ -65,7 +65,7 @@ CONTAINS
          END IF
       END DO
 
-      WRITE(6, '(A,i3)') ' nk', nk
+      WRITE(6, '(A,i3)') 'current nk: ', nk
       WRITE(6, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
       WRITE(6, '(A,i3)') ' Number of elements in the little group:', nsymop
 
@@ -259,12 +259,12 @@ CONTAINS
 
       ! number of different degenerate bands/states
       nddb = count(degenerat >= 1)
-
+#ifdef CPP_EXPLICIT_HYB
       WRITE(6, *) ' Degenerate states:'
       DO iband = 1, hybdat%nbands(nk)/5 + 1
          WRITE(6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
       END DO
-
+#endif
       ! read in cmt and z at current k-point (nk)
       call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
                           sym, oneD, zmat, jsp, nk, c_phase, cmt)

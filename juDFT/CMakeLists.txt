@@ -43,7 +43,6 @@ check_para.F90
 xmlOutput.F90
 round.f90
 npy.f90
-endian_swap.f90
 round.f90
 )
 if (JUDFT_USE_MPI)

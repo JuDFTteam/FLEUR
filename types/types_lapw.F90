@@ -6,6 +6,7 @@
 
 MODULE m_types_lapw
   USE m_judft
+  use m_types_fleurinput
   use m_types_nococonv
   IMPLICIT NONE
   PRIVATE
@@ -39,6 +40,7 @@ MODULE m_types_lapw
      PROCEDURE,PASS :: init =>lapw_init
      PROCEDURE,PASS :: alloc =>lapw_alloc
      PROCEDURE,PASS :: phase_factors =>lapw_phase_factors
+     procedure,pass :: hyb_num_bas_fun=>hyb_num_bas_fun
      PROCEDURE,NOPASS:: dim_nvd
      PROCEDURE,NOPASS:: dim_nv2d
      PROCEDURE,NOPASS:: dim_nbasfcn
@@ -48,6 +50,17 @@ MODULE m_types_lapw
 
 
 CONTAINS
+   function hyb_num_bas_fun(lapw, fi) result(nbasfcn)
+      implicit NONE
+      class(t_lapw), intent(in)         :: lapw
+      type(t_fleurinput), intent(in)    :: fi
+
+      integer :: nbasfcn
+
+      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, &
+                      lapw%nv(1) + fi%atoms%nlotot, &
+                      fi%noco%l_noco)
+   end function hyb_num_bas_fun
 
   subroutine lapw_init_dim(nvd_in,nv2d_in,nbasfcn_in)
     IMPLICIT NONE
@@ -437,7 +450,7 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX term1
     REAL th,con1
-    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,nintsp
+    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,nintsp,k_start
     LOGICAL linind,enough,l_lo1,l_real
     !     ..
     !     .. Local Arrays ..
@@ -453,7 +466,7 @@ CONTAINS
     REAL, PARAMETER :: eps = 1.0E-8
     REAL, PARAMETER :: linindq = 1.0e-4
 
-    l_real = sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_hia+atoms%n_u>0)
+    l_real = sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)
 
     con1=fpi_const/SQRT(cell%omtil)
     ntyp = n
@@ -490,14 +503,42 @@ CONTAINS
     nkvec(:,:) = 0
     cwork(:,:,:,:) = CMPLX(0.0,0.0)
     enough=.FALSE.
-    DO k = 1,MIN(lapw%nv(1),lapw%nv(nintsp))
-       IF (ANY(lapw%rk(k,:nintsp).LT.eps)) CYCLE
+
+    IF (noco%l_ss) THEN
+       k_start = 2  ! avoid k=1 !!! GB16
+    ELSE
+       k_start = 1
+    ENDIF
+
+    DO k = k_start,MIN(lapw%nv(1),lapw%nv(nintsp))
+!       IF (ANY(lapw%rk(k,:nintsp).LT.eps)) CYCLE
        IF (.NOT.enough) THEN
           DO iintsp = 1,nintsp
 
              !-->        generate spherical harmonics
              vmult(:) =  gkrot(:,k,iintsp)
              CALL ylm4(atoms%lnonsph(ntyp),vmult, ylm)
+             l_lo1=.false.
+             IF ((lapw%rk(k,iintsp).LT.eps).AND.(.not.noco%l_ss)) THEN
+                l_lo1=.true.
+             ELSE
+                l_lo1=.false.
+             ENDIF
+            ! --> here comes a part of abccoflo()
+             IF ( l_lo1) THEN
+                DO lo = 1,atoms%nlo(ntyp)
+                   IF ((nkvec(lo,iintsp).EQ.0).AND.(atoms%llo(lo,ntyp).EQ.0)) THEN
+                      enough = .false.
+                      nkvec(lo,iintsp) = 1
+                      lapw%kvec(nkvec(lo,iintsp),lo,na) = k
+                      term1 = con1* ((atoms%rmt(ntyp)**2)/2)
+                      cwork(0,1,lo,iintsp) = term1 / sqrt(2*tpi_const)
+                      IF((sym%invsat(na).EQ.1).OR.(sym%invsat(na).EQ.2)) THEN
+                         cwork(1,1,lo,iintsp) = conjg(term1) / sqrt(2*tpi_const)
+                      ENDIF
+                   ENDIF
+                ENDDO
+             ELSE
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
                 DO lo = 1,atoms%nlo(ntyp)
@@ -553,6 +594,7 @@ CONTAINS
                    CALL juDFT_error("not enough lin. indep. clo-vectors" ,calledby ="vec_for_lo")
                 END IF
              ! -- >        end of abccoflo-part
+            ENDIF
           ENDDO
        ENDIF
 

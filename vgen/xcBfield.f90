@@ -22,9 +22,8 @@ MODULE m_xcBfield
    PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
-   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,aVec,cell)
+   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,denmat,factor,vScal,aVec,cell)
       
-      USE m_pw_tofrom_grid
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
       ! the implementation of source free fields and therefore only applicable in
@@ -49,6 +48,7 @@ CONTAINS
       TYPE(t_potden),               INTENT(IN)  :: denmat
       REAL,                         INTENT(IN)  :: factor
       TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
+      TYPE(t_potden),               INTENT(OUT) :: vScal
       TYPE(t_cell),                 INTENT(IN)  :: cell
 
       TYPE(t_gradients)                         :: tmp_grad
@@ -71,41 +71,44 @@ CONTAINS
       CALL matrixsplit(sym,stars,atoms,sphhar,vacuum,input,noco,nococonv,factor,denmat, &
                        dummyDen(1),dummyDen(2),dummyDen(3),dummyDen(4))
 
+      vScal=dummyDen(1)
+
       r2=1.0
 
       ! Initialize and fill the vector field.
-      !CALL init_pw_grid(.FALSE.,stars,sym,cell)
       DO i=1,3
          CALL aVec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
                      POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
-         !avec(i)%pw_w=CMPLX(0.0,0.0)
          aVec(i)%mt(:,:,:,:) = dummyDen(i+1)%mt(:,:,:,:)
          DO itype=1,atoms%ntype
             DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1))
                IF (factor==2.0) THEN
                   r2=atoms%rmsh(:,itype)**2
                END IF
+               IF (i==1) THEN
+                  vScal%mt(:,lh,itype,1) = vScal%mt(:,lh,itype,1)*r2
+               END IF
                aVec(i)%mt(:,lh,itype,1) = aVec(i)%mt(:,lh,itype,1)*r2
             END DO !lh
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
-         !CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,avec(i)%pw,tmp_grad,rho=intden)
-         !CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,avec(i)%pw,avec(i)%pw_w)
+         aVec(i)%pw_w(1:,:)        = dummyDen(i+1)%pw_w(1:,:)
          aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
          aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
       END DO !i
-      !CALL finish_pw_grid()
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,div,phi,vCorr,cvec,corrB)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
       USE m_sphpts
       USE m_checkdop
+      USE m_BfieldtoVmat
+      USE m_pw_tofrom_grid
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -130,13 +133,17 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
-      TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv
+      TYPE(t_potden),               INTENT(IN)     :: vScal
+      TYPE(t_potden),               INTENT(OUT)    :: div, phi,  vCorr
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
 
       TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
       INTEGER                                      :: n, jr, lh, lhmax, jcut, nat ,i
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
+      REAL, ALLOCATABLE                            :: intden(:,:)
+      TYPE(t_gradients)               :: tmp_grad
+
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -156,14 +163,12 @@ CONTAINS
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
-      !div%mt=0.0
-
       CALL timestart("Building potential")
       CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
       CALL timestop("Building potential")
 
       DO i=1,3
-         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
          cvec(i)%pw_w=CMPLX(0.0,0.0)
       ENDDO
@@ -172,47 +177,25 @@ CONTAINS
       CALL divpotgrad2(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
+      CALL init_pw_grid(.FALSE.,stars,sym,cell)
       DO i=1,3
-         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
+         cvec(i)%pw=CMPLX(0.0,0.0)
+         cvec(i)%pw_w=CMPLX(0.0,0.0)
+         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+         DEALLOCATE(intden)
+      END DO !i
+      CALL finish_pw_grid()
+
+      DO i=1,3
+         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                          POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
          corrB(i)%pw_w=CMPLX(0.0,0.0)
          CALL corrB(i)%addPotDen(aVec(i),cvec(i))
       ENDDO
 
-      CALL checkdiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
-                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
-                                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
-
-      !CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
-
-      DO n=1,atoms%ntype
-         lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         DO lh=0, lhmax
-            cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(1)%mt(:,lh,n,1)=avec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(2)%mt(:,lh,n,1)=avec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            avec(3)%mt(:,lh,n,1)=avec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-         END DO
-      END DO
-
-      !cvec(1)%mt(:,0:4,:,:)=0.0
-      !cvec(1)%mt(:,6:,:,:)=0.0
-      !cvec(2)%mt(:,0:6,:,:)=0.0
-      !cvec(2)%mt(:,8:,:,:)=0.0
-      !cvec(1)%mt(:,5,2,:)=cvec(1)%mt(:,5,1,:)
-      !cvec(2)%mt(:,7,1,:)=cvec(1)%mt(:,5,1,:)
-      !cvec(2)%mt(:,7,2,:)=cvec(1)%mt(:,5,1,:)
-
-      !cvec(1)%mt(:,0,:,1) = atoms%rmsh(:,:)**2
-      !cvec(2)%mt(:,0,:,1) = 3.0*atoms%rmsh(:,:)
-      !cvec(3)%mt(:,0,:,1) = 4.0*atoms%rmsh(:,:)**2
-
-      !cvec(1)%mt(:,1:,:,:)=0.0
-      !cvec(2)%mt(:,1:,:,:)=0.0
-      !cvec(3)%mt(:,1:,:,:)=0.0
+      CALL BfieldtoVmat(sym, stars, atoms, sphhar, vacuum, vScal, corrB(1), corrB(2), corrB(3), vCorr)
 
    END SUBROUTINE sourcefree
 
@@ -233,6 +216,31 @@ CONTAINS
 
       REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
 
+      !vtot%mt(:,0:,:,1)=(vtot%mt(:,0:,:,1)+vtot%mt(:,0:,:,2))/2
+      !vtot%mt(:,0:,:,2)=vtot%mt(:,0:,:,1)
+      !vtot%mt(:,0:,:,3:4)=0.0
+
+      !vTot%pw(1:,1)=(vTot%pw(1:,1)+vTot%pw(1:,2))/2
+      !vTot%pw(1:,2)=vTot%pw(1:,1)
+      !vTot%pw(1:,3)=CMPLX(0.0,0.0)
+
+      !vTot%pw_w(1:,1)=(vTot%pw_w(1:,1)+vTot%pw_w(1:,2))/2
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,1)
+      !vTot%pw_w(1:,3)=CMPLX(0.0,0.0)
+
+      !vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+b(3)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-b(3)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,3)=b(1)%mt(:,0:,:,1)/2
+      !vTot%mt(:,0:,:,4)=b(2)%mt(:,0:,:,1)/2
+
+      !vTot%pw(1:,1)=vTot%pw(1:,1)+b(3)%pw(1:,1)/2
+      !vTot%pw(1:,2)=vTot%pw(1:,2)-b(3)%pw(1:,1)/2
+      !vTot%pw(1:,3)=(b(1)%pw(1:,1)+ImagUnit*b(2)%pw(1:,1))/2
+
+      !vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+b(3)%pw_w(1:,1)/2
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-b(3)%pw_w(1:,1)/2
+      !vTot%pw_w(1:,3)=(b(1)%pw_w(1:,1)+ImagUnit*b(2)%pw_w(1:,1))/2
+
       vTot%mt(:,0:,:,1)=c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,1)
       vTot%mt(:,0:,:,2)=-c(3)%mt(:,0:,:,1)+vTot%mt(:,0:,:,2)
       vTot%mt(:,0:,:,3)=c(1)%mt(:,0:,:,1)+vTot%mt(:,0:,:,3)
@@ -244,11 +252,11 @@ CONTAINS
       pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
       vTot%pw(1:,3)=CMPLX(pwr,pwi)
 
-      vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
-      vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)
-      pwr=REAL(vTot%pw_w(1:,3)) + REAL(c(1)%pw_w(1:,1)) - AIMAG(c(2)%pw_w(1:,1))
-      pwi=AIMAG(vTot%pw_w(1:,3)) + AIMAG(c(1)%pw_w(1:,1)) + REAL(c(2)%pw_w(1:,1))
-      vTot%pw_w(1:,3)=CMPLX(pwr,pwi)
+      !vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
+      !vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)
+      !pwr=REAL(vTot%pw_w(1:,3)) + REAL(c(1)%pw_w(1:,1)) - AIMAG(c(2)%pw_w(1:,1))
+      !pwi=AIMAG(vTot%pw_w(1:,3)) + AIMAG(c(1)%pw_w(1:,1)) + REAL(c(2)%pw_w(1:,1))
+      !vTot%pw_w(1:,3)=CMPLX(pwr,pwi)
 
       !vTot%vacz(1:,1:,1)=vTot%vacz(1:,1:,1)+c(3)%vacz(1:,1:,1)
       !vTot%vacz(1:,1:,2)=vTot%vacz(1:,1:,2)-c(3)%vacz(1:,1:,1)

@@ -3,6 +3,8 @@
 jt::copyfile("files/inp.xml",$workdir);
 jt::copyfile("files/sym.out",$workdir);
 
+
+$mpi="mpirun -n 3 --allow-run-as-root ";
 jt::testrun("$executable ",$workdir);
 
 #now test output

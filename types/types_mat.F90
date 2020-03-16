@@ -18,23 +18,37 @@ MODULE m_types_mat
       PROCEDURE        :: alloc => t_mat_alloc                !> allocate the data-arrays
       PROCEDURE        :: multiply => t_mat_multiply            !> do a matrix-matrix multiply
       PROCEDURE        :: transpose => t_mat_transpose          !> transpose the matrix
-      PROCEDURE        :: from_packed => t_mat_from_packed      !> initialized from a packed-storage matrix
+      PROCEDURE        :: from_packed_real => t_mat_from_packed_real
+      PROCEDURE        :: from_packed_cmplx => t_mat_from_packed_cmplx !> initialized from a packed-storage matrix
+      generic          :: from_packed => from_packed_real,from_packed_cmplx
       PROCEDURE        :: inverse => t_mat_inverse             !> invert the matrix
       PROCEDURE        :: linear_problem => t_mat_lproblem    !> Solve linear equation
       PROCEDURE        :: to_packed => t_mat_to_packed          !> convert to packed-storage matrix
       PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
       PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
       PROCEDURE        :: move => t_mat_move                  !> move data into another t_mat (overloaded for t_mpimat)
+      procedure        :: allocated => t_mat_allocated
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
       GENERIC          :: init => init_details, init_template
       PROCEDURE        :: generate_full_matrix=>t_mat_generate_full_matrix
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
-!      PROCEDURE        :: save_npy => t_mat_save_npy
+      PROCEDURE        :: unsymmetry => t_mat_unsymmetry
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+  function t_mat_allocated(mat) result(var_alloc)
+     implicit none
+     class(t_mat), intent(in) :: mat
+     logical :: var_alloc
+
+     if(mat%l_real) then
+        var_alloc = allocated(mat%data_r)
+     else
+        var_alloc = allocated(mat%data_c)
+     endif
+  end function t_mat_allocated
 
   SUBROUTINE t_mat_generate_full_matrix(mat)
     IMPLICIT NONE
@@ -230,32 +244,45 @@ CONTAINS
       end IF
    end SUBROUTINE t_mat_transpose
 
-   SUBROUTINE t_mat_from_packed(mat1, l_real, matsize, packed_r, packed_c)
+   SUBROUTINE t_mat_from_packed_real(mat1, matsize, packed_r)
       use m_judft
       CLASS(t_mat), INTENT(INOUT)       :: mat1
       INTEGER, INTENT(IN)               :: matsize
-      LOGICAL, INTENT(IN)               :: l_real
       REAL, INTENT(IN)                  :: packed_r(:)
-      COMPLEX, INTENT(IN)               :: packed_c(:)
 
       INTEGER:: n, nn, i
-      call timestart("t_mat_from_packed")
-      call mat1%alloc(l_real, matsize, matsize)
+      call timestart("t_mat_from_packed_real")
+      call mat1%alloc(.true., matsize, matsize)
       i = 1
       DO n = 1, matsize
          DO nn = 1, n
-            if (l_real) THEN
-               mat1%data_r(n, nn) = packed_r(i)
-               mat1%data_r(nn, n) = packed_r(i)
-            else
-               mat1%data_c(n, nn) = conjg(packed_c(i))
-               mat1%data_c(nn, n) = packed_c(i)
-            end if
+            mat1%data_r(n, nn) = packed_r(i)
+            mat1%data_r(nn, n) = packed_r(i)
             i = i + 1
          end DO
       end DO
-      call timestop("t_mat_from_packed")
-   end SUBROUTINE t_mat_from_packed
+      call timestop("t_mat_from_packed_real")
+   end SUBROUTINE t_mat_from_packed_real
+
+   SUBROUTINE t_mat_from_packed_cmplx(mat1, matsize, packed_c)
+      use m_judft
+      CLASS(t_mat), INTENT(INOUT)       :: mat1
+      INTEGER, INTENT(IN)               :: matsize
+      COMPLEX, INTENT(IN)               :: packed_c(:)
+
+      INTEGER:: n, nn, i
+      call timestart("t_mat_from_packed_cmplx")
+      call mat1%alloc(.false., matsize, matsize)
+      i = 1
+      DO n = 1, matsize
+         DO nn = 1, n
+            mat1%data_c(n, nn) = conjg(packed_c(i))
+            mat1%data_c(nn, n) = packed_c(i)
+            i = i + 1
+         end DO
+      end DO
+      call timestop("t_mat_from_packed_cmplx")
+   end SUBROUTINE t_mat_from_packed_cmplx
 
    function t_mat_to_packed(mat) result(packed)
       CLASS(t_mat), INTENT(IN)       :: mat
@@ -358,10 +385,24 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       character(len=*)         :: filename
 
+      call judft_warn("save_npy doesn't know about matsize1/2")
       if (mat%l_real) then
-!         call save_npy(filename, mat%data_r)
+         call save_npy(filename, mat%data_r)
       else
-!         call save_npy(filename, mat%data_c)
+         call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
+
+   function t_mat_unsymmetry(mat) result(unsymmetry)
+      implicit none
+      class(t_mat), intent(in) :: mat
+      real                     :: unsymmetry
+
+      if(mat%l_real) THEN
+         unsymmetry = norm2(mat%data_r - transpose(mat%data_r))
+      else
+         unsymmetry = norm2(abs(mat%data_c - transpose(mat%data_c)))
+      endif
+   end function t_mat_unsymmetry
+
 END MODULE m_types_mat

@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
 
-   SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, mnobd, lapw, &
+   SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco,nococonv, oneD, nsest, indx_sest, &
                                   mpi, mat_ex)
 
@@ -95,7 +95,6 @@ CONTAINS
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
       INTEGER, INTENT(IN)    :: ik, nkpt_EIBZ
-      INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
       INTEGER, INTENT(IN)    ::  n_q(:)
@@ -129,8 +128,8 @@ CONTAINS
       COMPLEX              :: dcprod(hybdat%nbands(ik), hybdat%nbands(ik), 3)
       COMPLEX              :: exch_vv(hybdat%nbands(ik), hybdat%nbands(ik))
       COMPLEX              :: hessian(3, 3)
-      COMPLEX              :: proj_ibsc(3, mnobd, hybdat%nbands(ik))
-      COMPLEX              :: olap_ibsc(3, 3, mnobd, mnobd)
+      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik))
+      COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:,jsp)), MAXVAL(hybdat%nobd(:,jsp)))
       REAL                 :: carr1_v_r(hybdat%maxbasm1)
       COMPLEX              :: carr1_v_c(hybdat%maxbasm1)
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
@@ -165,9 +164,9 @@ CONTAINS
       ! determine package size loop over the occupied bands
       rdum = hybdat%maxbasm1*hybdat%nbands(ik)*4/1048576.
       psize = 1
-      DO iband = mnobd, 1, -1
+      DO iband = MAXVAL(hybdat%nobd(:,jsp)), 1, -1
          ! ensure that the packages have equal size
-         IF (modulo(mnobd, iband) == 0) THEN
+         IF (modulo(MAXVAL(hybdat%nobd(:,jsp)), iband) == 0) THEN
             ! choose packet size such that cprod is smaller than memory threshold
             IF (rdum*iband <= maxmem) THEN
                psize = iband
@@ -176,7 +175,7 @@ CONTAINS
          END IF
       END DO
 
-      IF (psize /= mnobd) THEN
+      IF (psize /= MAXVAL(hybdat%nobd(:,jsp))) THEN
          WRITE (6, '(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybinp%bands in packages', &
             ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
       END IF
@@ -225,14 +224,14 @@ CONTAINS
             END IF
          END IF
 
-         DO ibando = 1, mnobd, psize
+         DO ibando = 1, MAXVAL(hybdat%nobd(:,jsp)), psize
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv5(ibando, ibando + psize - 1, input, jsp, atoms, &
+               CALL wavefproducts_inv(ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                        noco,nococonv, oneD, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv5(ibando, ibando + psize - 1, ik, iq, input, jsp, &
+               CALL wavefproducts_noinv(ibando, ibando + psize - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
                                          sym, noco,nococonv, oneD, nkqpt, cprod_vv_c)
             END IF
@@ -345,7 +344,7 @@ CONTAINS
 
             IF (ibs_corr) THEN
                CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp,&
-                                   lapw, kpts, cell, mnobd, &
+                                   lapw, kpts, cell, MAXVAL(hybdat%nobd(:,jsp)), &
                                    sym, noco,nococonv, proj_ibsc, olap_ibsc)
             END IF
          END IF

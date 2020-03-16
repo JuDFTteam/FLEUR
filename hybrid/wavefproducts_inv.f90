@@ -13,7 +13,7 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv5(bandoi, bandof, input,&
+   SUBROUTINE wavefproducts_inv(bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                  cell, sym, noco, nococonv, oneD, nkqpt, cprod)
 
@@ -68,13 +68,13 @@ CONTAINS
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                 cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call wavefproducts_inv5_MT(bandoi, bandof,&
+      call wavefproducts_inv_MT(bandoi, bandof,&
                                 input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
-   END SUBROUTINE wavefproducts_inv5
+   END SUBROUTINE wavefproducts_inv
 
    subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
@@ -201,7 +201,7 @@ CONTAINS
 
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv5_MT(bandoi, bandof,&
+   subroutine wavefproducts_inv_MT(bandoi, bandof,&
                                    input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt,  cprod)
      use m_calc_cmt
@@ -1031,5 +1031,5 @@ CONTAINS
         iiatom = iiatom + atoms%neq(itype)
         lm_00 = lm_00 + atoms%neq(itype)*ioffset
      END DO  !itype
-   end subroutine wavefproducts_inv5_MT
+   end subroutine wavefproducts_inv_MT
 end module m_wavefproducts_inv

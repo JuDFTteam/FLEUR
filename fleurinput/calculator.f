@@ -73,7 +73,7 @@
          WRITE(*,"(2a,f0.10)") TRIM(var_names(n)),' = ',var_values(n)
       ENDDO
 
-      CALL juDFT_error("Error in expression",calledby="calculator")
+      CALL juDFT_error("Error in expression:"//m,calledby="calculator")
       END SUBROUTINE
       !> 
       SUBROUTINE priv_init()
