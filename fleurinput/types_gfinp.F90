@@ -380,10 +380,10 @@ CONTAINS
       ENDDO
 
       !Reallocate with correct size
-      !hiaElem = this%hiaElem(:atoms%n_hia)
-      !IF(ALLOCATED(this%hiaElem)) DEALLOCATE(this%hiaElem)
-      !ALLOCATE(this%hiaElem(atoms%n_hia))
-      !this%hiaElem = hiaElem
+      hiaElem = this%hiaElem(:atoms%n_hia)
+      IF(ALLOCATED(this%hiaElem)) DEALLOCATE(this%hiaElem)
+      ALLOCATE(this%hiaElem(atoms%n_hia))
+      this%hiaElem = hiaElem
 
    END SUBROUTINE init_gfinp
 
