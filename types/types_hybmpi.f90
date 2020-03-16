@@ -8,7 +8,7 @@ MODULE m_types_hybmpi
       INTEGER :: comm
       INTEGER :: rank
       INTEGER :: size
-      type(t_hybmpi), allocatable :: subcomm
+      type(t_hybmpi), pointer :: subcomm
    contains
       procedure :: copy_mpi => t_hybmpi_copy_mpi
       procedure :: barrier => t_hybmpi_barrier
@@ -33,7 +33,7 @@ contains
       integer, intent(in)            :: color
       integer, intent(in), optional  :: key
       integer :: ierr, use_key
-
+#ifdef CPP_MPI
       use_key = MERGE(key, hybmpi%rank, present(key))
       allocate(hybmpi%subcomm)
       call MPI_Comm_split(hybmpi%comm, color, use_key, hybmpi%subcomm, ierr)
@@ -44,6 +44,7 @@ contains
 
       call MPI_comm_size(hybmpi%subcomm, hybmpi%subcomm%size, ierr)
       if(ierr /= 0) call judft_error("MPI sizing failed")
+#endif
    end subroutine t_hybmpi_split
 
    subroutine t_hybmpi_barrier(hybmpi)
@@ -51,9 +52,10 @@ contains
       implicit none
       class(t_hybmpi), intent(inout) :: hybmpi
       integer :: ierr
-
+#ifdef CPP_MPI
       call MPI_Barrier(hybmpi%comm, ierr)
       if(ierr /= 0) call juDFT_error("barrier failed on process: " // &
                                       int2str(hybmpi%rank))
+#endif
    end subroutine t_hybmpi_barrier
 END MODULE m_types_hybmpi
