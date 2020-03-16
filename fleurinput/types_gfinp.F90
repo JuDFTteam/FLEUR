@@ -92,7 +92,7 @@ MODULE m_types_gfinp
 
    PUBLIC t_gfinp, t_contourInp
    PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
-   PUBLIC uniqueElements
+   PUBLIC uniqueElements_gfinp
 
 CONTAINS
 
@@ -381,12 +381,12 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   SUBROUTINE uniqueElements(gfinp,uniqueElements,ind,indUnique)
+   SUBROUTINE uniqueElements_gfinp(gfinp,uniqueElements,ind,indUnique)
 
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
-      TYPE(t_gfinp),    INTENT(IN)     :: gfinp
+      CLASS(t_gfinp),   INTENT(IN)     :: gfinp
       INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind
@@ -433,7 +433,7 @@ CONTAINS
                                uniqueMax=ind,l_unique=l_unique)
       ENDIF
 
-   END SUBROUTINE uniqueElements
+   END SUBROUTINE uniqueElements_gfinp
 
    SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_inter)
 

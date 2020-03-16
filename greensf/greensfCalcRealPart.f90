@@ -31,7 +31,7 @@ MODULE m_greensfCalcRealPart
 
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_gfinp),          INTENT(IN)     :: gfinp
-      TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart     !This is INTENT(INOUT) because the projected dos is useful for other things 
+      TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart     !This is INTENT(INOUT) because the projected dos is useful for other things
       TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
       TYPE(t_sym),            INTENT(IN)     :: sym
       TYPE(t_noco),           INTENT(IN)     :: noco
@@ -51,7 +51,7 @@ MODULE m_greensfCalcRealPart
          nTypep = gfinp%elem(i_gf)%atomTypep
          contourShape = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
 
-         CALL uniqueElements(gfinp,dummy,ind=i_gf,indUnique=i_elem)
+         CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
 
          CALL timestart("On-Site: Integration Cutoff")
          IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN
