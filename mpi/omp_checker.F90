@@ -1,13 +1,13 @@
 module m_omp_checker
-   
+
 contains
    subroutine omp_checker()
       use omp_lib
       use m_judft
       use, intrinsic :: iso_c_binding
       implicit none
-
-      interface 
+#ifndef __PGI
+      interface
          function findmycpu() bind(c)
             use, intrinsic :: iso_c_binding
             integer(kind=c_int) :: findmycpu
@@ -33,13 +33,14 @@ contains
       do i = 1,size(cpu)
          if(count(cpu(i) == cpu) /= 1) then
             WRITE(*,*) "The OMP parallelism seems to be weird"
-            WRITE(*,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // & 
+            WRITE(*,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                        " on cpu " // int2str(cpu(i))
             WRITE(6,*) "The OMP parallelism seems to be weird"
-            WRITE(6,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // & 
+            WRITE(6,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                        " on cpu " // int2str(cpu(i))
             exit
          endif
       enddo
+#endif
    end subroutine omp_checker
 end module m_omp_checker
