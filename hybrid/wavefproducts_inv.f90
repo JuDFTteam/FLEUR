@@ -14,7 +14,7 @@ module m_wavefproducts_inv
 
 CONTAINS
    SUBROUTINE wavefproducts_inv(bandoi, bandof, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
+                                 jsp, atoms, lapw, kpts, mpi, nk, iq, hybdat, mpdata, hybinp,&
                                  cell, sym, noco, nococonv, oneD, nkqpt, cprod)
 
 
@@ -29,6 +29,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
+      TYPE(t_mpi), intent(in)       :: mpi
       TYPE(t_atoms), INTENT(IN)     :: atoms
       TYPE(t_lapw), INTENT(IN)      :: lapw
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -65,7 +66,7 @@ CONTAINS
 
 
       call wavefproducts_inv_IS(bandoi, bandof,  input,&
-                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
+                                jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                 cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(bandoi, bandof,&
@@ -77,7 +78,7 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv
 
    subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
+                                 jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                  cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
      implicit NONE
@@ -91,6 +92,7 @@ CONTAINS
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
      TYPE(t_lapw), INTENT(IN)      :: lapw
+     TYPE(t_mpi), intent(in)       :: mpi
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
      TYPE(t_mat), intent(inout)    :: z_k_p, z_kqpt_p
      ! - scalars -
@@ -104,7 +106,7 @@ CONTAINS
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
-     INTEGER                 ::    ngpt0, n1, n2, nbasfcn
+     INTEGER                 ::    ngpt0, n1, n2, nbasfcn, ierr
      REAL                    ::    rdum, rdum1
      TYPE(t_lapw)            ::    lapw_nkqpt
      type(t_mat)             ::    z_k, z_kqpt
@@ -139,6 +141,7 @@ CONTAINS
                  c_phase=c_phase_k, parent_z=z_k_p)
      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
+      call MPI_Barrier(mpi%mpi_comm, ierr)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&

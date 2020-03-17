@@ -228,7 +228,7 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(ibando, ibando + psize - 1, input, jsp, atoms, &
-                                       lapw, kpts, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
+                                       lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                        noco,nococonv, oneD, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv(ibando, ibando + psize - 1, ik, iq, input, jsp, &

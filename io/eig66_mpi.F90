@@ -213,23 +213,41 @@ CONTAINS
 
           if (zmat%l_real) THEN
              if (.not.d%l_real) THEN
+                call timestart("MPI_WIN_LOCK")
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
+                call timestop("MPI_WIN_LOCK")
+                call timestart("MPI_GET")
                 CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
+                call timestop("MPI_GET")
+                call timestart("MPI_WIN_UNLOCK")
                 CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
+                call timestop("MPI_WIN_UNLOCK")
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
                 zmat%data_r(:,n)=REAL(tmp_cmplx)
              else
+                call timestart("MPI_WIN_LOCK")
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zr_handle,e)
+                call timestop("MPI_WIN_LOCK")
+                call timestart("MPI_GET")
                 CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
+                call timestop("MPI_GET")
+                call timestart("MPI_WIN_UNLOCK")
                 CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
+                call timestop("MPI_WIN_UNLOCK")
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
                 zmat%data_r(:,n)=tmp_real
              endif
           ELSE
              if (d%l_real) call judft_error("Could not read complex data, only real data is stored",calledby="eig66_mpi%read_eig")
+             call timestart("MPI_WIN_LOCK")
              CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
+             call timestop("MPI_WIN_LOCK")
+             call timestart("MPI_GET")
              CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
+             call timestop("MPI_GET")
+             call timestart("MPI_WIN_UNLOCK")
              CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
+             call timestop("MPI_WIN_UNLOCK")
              !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
              zmat%data_c(:,n)=tmp_cmplx
           ENDIF

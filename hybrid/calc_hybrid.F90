@@ -132,7 +132,11 @@ CONTAINS
          END DO
       END DO
       CALL timestop("Calculation of non-local HF potential")
-
+#ifdef CPP_MPI
+      call timestart("Hybrid imbalance")
+      call MPI_Barrier(mpi%mpi_comm, err)
+      call timestop("Hybrid imbalance")
+#endif
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
