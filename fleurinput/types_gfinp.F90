@@ -131,6 +131,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%atomType,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%lp,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%atomTypep,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%iContour,rank,mpi_comm)
       ENDDO
       DO n=1,this%n_j0
          CALL mpi_bc(this%j0elem(n)%atomType,rank,mpi_comm)
