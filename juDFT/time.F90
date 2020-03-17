@@ -265,7 +265,7 @@ CONTAINS
    END SUBROUTINE priv_writetimes
 
    !<-- S:writetimes()
-   
+
    RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr, opt_idstr)
       use m_judft_string
       IMPLICIT NONE
@@ -279,15 +279,15 @@ CONTAINS
 
       INTEGER          :: n
       REAL             :: time
-      CHARACTER(LEN=30):: timername 
+      CHARACTER(LEN=30):: timername
       CHARACTER(LEN=:), allocatable :: idstr
-   
+
       if(present(opt_idstr)) then
          idstr = opt_idstr
       else
          idstr = ""
       endif
-     
+
       IF (timer%starttime > 0) THEN
          time = timer%time + cputime() - timer%starttime
          timername = timer%name//" not term."
@@ -295,18 +295,18 @@ CONTAINS
          time = timer%time
          timername = timer%name
       ENDIF
-      
-      if(level > 1 ) outstr = outstr // nl 
+
+      if(level > 1 ) outstr = outstr // nl
       outstr = outstr // idstr // "{"
       idstr = idstr // repeat(" ", indent_spaces)
 
       outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
-      outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)      
+      outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)
       if(level > 1) then
          outstr = outstr // ","
          outstr = outstr // nl // idstr // '"mintime"   : '  // float2str(timer%mintime)// ','
          outstr = outstr // nl // idstr // '"maxtime"   : '  // float2str(timer%maxtime)// ','
-         outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls) 
+         outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls)
       endif
 
       time = 0
@@ -315,17 +315,17 @@ CONTAINS
       ENDDO
       if(timer%n_subtimers > 0) then
          !add comma behind ncalls
-         outstr = outstr // "," 
-         outstr = outstr // nl // idstr // '"subtimers": '  // "[" 
+         outstr = outstr // ","
+         outstr = outstr // nl // idstr // '"subtimers": '  // "["
          idstr = idstr // repeat(" ", indent_spaces)
          DO n = 1, timer%n_subtimers
             CALL priv_genjson(timer%subtimer(n)%p, level + 1, outstr, idstr)
             if(n /= timer%n_subtimers) outstr = outstr // ","
          ENDDO
-         idstr  = idstr(:len(idstr)-indent_spaces) 
-         outstr = outstr // nl // idstr // ']' 
+         idstr  = idstr(:len(idstr)-indent_spaces)
+         outstr = outstr // nl // idstr // ']'
       endif
-      idstr  = idstr(:len(idstr)-indent_spaces) 
+      idstr  = idstr(:len(idstr)-indent_spaces)
       outstr = outstr // nl // idstr // "}"
    END SUBROUTINE priv_genjson
 
@@ -383,10 +383,10 @@ CONTAINS
       IF (irank==0.OR.judft_was_argument("-all_times")) THEN
          json_str = ""
          CALL priv_genjson(globaltimer, 1, json_str)
-         IF (irank==0) THEN
+         IF (.not. judft_was_argument("-all_times")) THEN
             OPEN(32, file="juDFT_times.json")
          ELSE
-            WRITE(filename,"(a,i0,a)") "juDFT_times.",irank,".json"
+            WRITE(filename,"(a,i0.4,a)") "juDFT_times_pe=",irank,".json"
             OPEN(32, file=trim(filename))
          END IF
          write (32,"(A)") json_str
@@ -644,4 +644,3 @@ CONTAINS
       END IF
    END SUBROUTINE juDFT_time_lastlocation
 END MODULE m_juDFT_time
-
