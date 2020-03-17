@@ -66,6 +66,7 @@ MODULE m_greensfCalcImagPart
                               hint="Choose either hist or tetra",calledby="greensfCalcImagPart")
          END SELECT
 
+         CALL timestart("Green's Function: Imaginary Part")
          !Loop over Green's Function elements
          !$OMP PARALLEL DEFAULT(NONE) &
          !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
@@ -82,9 +83,6 @@ MODULE m_greensfCalcImagPart
             CALL uniqueElements_gfinp(gfinp,i_elem,ind=i_gf,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
-
-
-            CALL timestart("Green's Function: Imaginary Part")
 
             DO m = -l, l
                DO mp = -lp, lp
@@ -135,10 +133,10 @@ MODULE m_greensfCalcImagPart
                   ENDDO!ib
                ENDDO!mp
             ENDDO!m
-            CALL timestop("Green's Function: Imaginary Part")
          ENDDO!i_gf
          !$OMP END DO
          !$OMP END PARALLEL
+         CALL timestop("Green's Function: Imaginary Part")
 
          IF(input%bz_integration==3) DEALLOCATE(dosWeights,indBound)
       ENDDO!k-point loop

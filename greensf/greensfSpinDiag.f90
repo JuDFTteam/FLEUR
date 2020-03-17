@@ -28,8 +28,6 @@ MODULE m_greensfSpinDiag
       COMPLEX, ALLOCATABLE :: im_tmp(:,:,:)
 
 
-      CALL timestart("Green's Function: Spin-Diagonal")
-
       ALLOCATE(    im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,4,l_sphavg)),source=cmplx_0)
       ALLOCATE(im_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,4,l_sphavg)),source=cmplx_0)
 
@@ -81,7 +79,6 @@ MODULE m_greensfSpinDiag
             ENDDO!mp
          ENDDO !m
          IF(natom.EQ.natomp.AND.l.EQ.lp) THEN !Rotations only for onsite l diagonal elements
-            CALL timestart("GF Rotations")
             DO it = 1,sym%invarind(natom)
                DO imat = 1, MERGE(1,4,l_sphavg)
                   is = sym%invarop(natom,it)
@@ -101,10 +98,8 @@ MODULE m_greensfSpinDiag
                   ENDIF
                ENDDO
             ENDDO!it
-            CALL timestop("GF Rotations")
          ENDIF
       ENDDO !iBand
-      CALL timestop("Green's Function: Spin-Diagonal")
 
    END SUBROUTINE greensfSpinDiag
 END MODULE m_greensfSpinDiag

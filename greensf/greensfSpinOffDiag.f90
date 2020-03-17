@@ -28,7 +28,6 @@ MODULE m_greensfSpinOffDiag
       COMPLEX, ALLOCATABLE :: im(:,:,:)
       COMPLEX, ALLOCATABLE :: im_tmp(:,:,:)
 
-      CALL timestart("Green's Function: Spin-OffDiagonal")
 
       ALLOCATE(    im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,4,l_sphavg)),source=cmplx_0)
       ALLOCATE(im_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,4,l_sphavg)),source=cmplx_0)
@@ -80,7 +79,6 @@ MODULE m_greensfSpinOffDiag
          ENDDO !m
 
          IF(.FALSE.) THEN !Rotations do not work for offdiagonal elements
-            CALL timestart("GF Rotations")
             DO it = 1,sym%invarind(natom)
                DO imat = 1, MERGE(1,4,l_sphavg)
                   is = sym%invarop(natom,it)
@@ -101,7 +99,6 @@ MODULE m_greensfSpinOffDiag
                   ENDIF
                ENDDO
             ENDDO!it
-            CALL timestop("GF Rotations")
          ELSE
             DO imat = 1, MERGE(1,4,l_sphavg)
                IF(l_sphavg) THEN
@@ -118,7 +115,6 @@ MODULE m_greensfSpinOffDiag
             ENDDO
          ENDIF
       ENDDO !iBand
-      CALL timestop("Green's Function: Spin-OffDiagonal")
 
    END SUBROUTINE greensfSpinOffDiag
 END MODULE m_greensfSpinOffDiag
