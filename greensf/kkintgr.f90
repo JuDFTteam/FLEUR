@@ -52,15 +52,15 @@ MODULE m_kkintgr
       !Information about the method
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      REAL ::  e(ne)
-      REAL ::  im_calc(ne) !Array where the smoothed version of im is stored
-
-      INTEGER  iz,n1,n2,i
-      REAL     sigma,re_n1,re_n2,im_n1,im_n2
+      INTEGER  :: iz,n1,n2,i
+      REAL     ::  e(ne)
+      REAL     ::  im_calc(ne) !Array where the smoothed version of im is stored
+      REAL     :: sigma,re_n1,re_n2,im_n1,im_n2
 
       DO i = 1, ne
          e(i) = (i-1) * del + eb
       ENDDO
+
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
@@ -88,6 +88,7 @@ MODULE m_kkintgr
             !Interpolate to the energy ez(iz)
             !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
+
             !Imaginary Part (0 outside of the energy range)
             IF(n1.LE.ne.AND.n1.GE.1) THEN
                im_n1 = im_calc(n1)
@@ -99,7 +100,7 @@ MODULE m_kkintgr
             ELSE
                im_n2 = 0.0
             ENDIF
-            
+
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
             IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
