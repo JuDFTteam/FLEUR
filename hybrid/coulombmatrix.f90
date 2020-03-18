@@ -141,7 +141,7 @@ CONTAINS
       TYPE(t_mat)                :: olapm, coulhlp
 
       CALL timestart("Coulomb matrix setup")
-      if(mpi%root()) write (*,*) "start of coulomb calculation"
+      if(mpi%is_root()) write (*,*) "start of coulomb calculation"
 
       svol = SQRT(cell%vol)
       fcoulfac = 4*pi_const/cell%vol
@@ -788,7 +788,7 @@ CONTAINS
 
          call timestart("loop 4:")
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
-            if(mpi%root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
+            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate(carr2a((hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
