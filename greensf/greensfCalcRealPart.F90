@@ -47,7 +47,8 @@ MODULE m_greensfCalcRealPart
       INTEGER :: spin_cut,nn,natom,contourShape,dummy
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
-      REAL    :: fac,del,eb,et
+      LOGICAL :: l_onsite,l_fixedCutoffset
+      REAL    :: fac,del,eb,et,fixedCutoff
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,et)
@@ -101,10 +102,14 @@ MODULE m_greensfCalcRealPart
          nType =  gfinp%elem(i_gf)%atomType
          nTypep = gfinp%elem(i_gf)%atomTypep
          contourShape = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
+         l_fixedCutoffset = gfinp%elem(i_gf)%l_fixedCutoffset
+         fixedCutoff = gfinp%elem(i_gf)%fixedCutoff
 
          CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
 
-         IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN
+         !Is the current element suitable for automatic finding of the cutoff
+         l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg
+         IF(l_onsite.AND..NOT.l_fixedCutoffset) THEN
             !
             !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
             !
@@ -112,6 +117,9 @@ MODULE m_greensfCalcRealPart
             CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,l,input%jspins,&
                            gfinp%ne,del,eb,et,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
             CALL timestop("On-Site: Integration Cutoff")
+         ELSE IF (l_fixedCutoffset) THEN
+            greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
+            greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
          ELSE
             !For all other elements we just use ef+elup as a hard cutoff
             !(maybe give option to specify outside of changing the realAxis grid)

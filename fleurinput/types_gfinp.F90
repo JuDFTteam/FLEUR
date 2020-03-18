@@ -24,6 +24,8 @@ MODULE m_types_gfinp
       INTEGER :: atomType = 0
       INTEGER :: atomTypep = 0
       INTEGER :: iContour = 0 !Which energy contour is used
+      LOGICAL :: l_fixedCutoffset = .FALSE.
+      REAL    :: fixedCutoff = 0.0
    END TYPE t_gfelementtype
 
    TYPE t_j0calctype
@@ -132,6 +134,8 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%lp,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%atomTypep,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%iContour,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%l_fixedCutoffset,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%fixedCutoff,rank,mpi_comm)
       ENDDO
       DO n=1,this%n_j0
          CALL mpi_bc(this%j0elem(n)%atomType,rank,mpi_comm)
@@ -142,7 +146,7 @@ CONTAINS
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
-         !CALL mpi_bc(this%contour(n)%label,rank,mpi_comm) TODO
+         !CALL mpi_bc(this%contour(n)%label,rank,mpi_comm) !Should not be necessary
          CALL mpi_bc(this%contour(n)%eb,rank,mpi_comm)
          CALL mpi_bc(this%contour(n)%et,rank,mpi_comm)
          CALL mpi_bc(this%contour(n)%n1,rank,mpi_comm)
@@ -168,8 +172,9 @@ CONTAINS
 
       INTEGER :: numberNodes,ntype,itype,n_hia
       INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
-      CHARACTER(len=100)  :: xPathA,xPathS,label
-      LOGICAL :: l_gfinfo_given,l_off,l_nn
+      REAL    :: fixedCutoff
+      CHARACTER(len=100)  :: xPathA,xPathS,label,cutoffArg
+      LOGICAL :: l_gfinfo_given,l_off,l_nn,l_fixedCutoffset
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -278,9 +283,15 @@ CONTAINS
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
+            cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
+            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+               l_fixedCutoffset = .FALSE.
+            ELSE
+               fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+            ENDIF
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour)
+                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
                ENDDO
             ENDDO
          ENDDO
@@ -292,10 +303,16 @@ CONTAINS
             lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
             l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
+            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+               l_fixedCutoffset = .FALSE.
+            ELSE
+               fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+            ENDIF
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour,l_inter=.TRUE.)
+                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff,l_inter=.TRUE.)
                ENDDO
             ENDDO
          ENDDO
@@ -308,7 +325,7 @@ CONTAINS
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
-               CALL this%add(itype,l,l,iContour)
+               CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
             ENDDO
             !Add it to the j0elem array
             this%n_j0 = this%n_j0 + 1
@@ -326,7 +343,13 @@ CONTAINS
             l = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l'))
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
-            CALL this%add(itype,l,l,iContour)
+            cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
+            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+               l_fixedCutoffset = .FALSE.
+            ELSE
+               fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+            ENDIF
+            CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = this%n
          ENDDO
@@ -376,7 +399,8 @@ CONTAINS
          IF(atomTypep==-1) THEN
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,atoms,sym)
+            CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
+                                           this%elem(i_gf)%fixedCutoff,atoms,sym)
          ENDIF
       ENDDO
 
@@ -442,7 +466,7 @@ CONTAINS
 
    END SUBROUTINE uniqueElements_gfinp
 
-   SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_inter)
+   SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: nType
@@ -450,6 +474,8 @@ CONTAINS
       INTEGER,             INTENT(IN)     :: lp
       INTEGER,             INTENT(IN)     :: iContour
       INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep !Specify the second atom
+      LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
+      REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
 
 
@@ -482,10 +508,18 @@ CONTAINS
          !No intersite element
          this%elem(this%n)%atomTypep = nType
       ENDIF
+      IF(PRESENT(l_fixedCutoffset)) THEN
+         IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
+                                                        hint="This is a bug in FLEUR please report",calledby="add_gfelem")
+         this%elem(this%n)%l_fixedCutoffset = l_fixedCutoffset
+         IF(l_fixedCutoffset) THEN
+            this%elem(this%n)%fixedCutoff = fixedCutoff
+         ENDIF
+      ENDIF
 
    END SUBROUTINE add_gfelem
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,atoms,sym)
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,atoms,sym)
 
       USE m_types_atoms
       USE m_types_sym
@@ -498,6 +532,8 @@ CONTAINS
       INTEGER,          INTENT(IN)     :: lp
       INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
       INTEGER,          INTENT(IN)     :: iContour
+      LOGICAL,          INTENT(IN)     :: l_fixedCutoffset
+      REAL,             INTENT(IN)     :: fixedCutoff
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
 
@@ -523,7 +559,7 @@ CONTAINS
          DO natomp = 1, atoms%nat
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
-               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp)
+               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
                dist(natomp) = 9e99 !Eliminate from the list
             ENDIF
          ENDDO
