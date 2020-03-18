@@ -181,9 +181,6 @@ CONTAINS
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
-
-      IF (mpi%irank == 0) WRITE (6, '(/A)', advance='no') 'Setup for symmetry...'
-      CALL cpu_TIME(time1)
       ! calculate rotations in reciprocal space
       DO isym = 1, sym%nsym
          IF (isym <= sym%nop) THEN
@@ -269,10 +266,6 @@ CONTAINS
       END DO
       deallocate(iarr)
 
-      IF (mpi%irank == 0) WRITE (6, '(12X,A)', advance='no') 'done'
-      CALL cpu_TIME(time2)
-      IF (mpi%irank == 0) WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-
       ! Distribute the work as equally as possible over the processes
       ikptmin = 1
       ikptmax = kpts%nkpt
@@ -280,9 +273,6 @@ CONTAINS
       igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
       nkminmax = kpts%nkpt
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Preparations...'
-      CALL cpu_TIME(time1)
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
@@ -399,20 +389,9 @@ CONTAINS
       END DO
       call timestop("Bessel calculation")
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(18X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)', advance='no') '( Timing:', time2 - time1, ' )'
-         WRITE (6, *)
-      END IF
-
       !
       !     (1) Case < MT | v | MT >
       !
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< MT | v | MT > contribution...'
-
-      CALL cpu_TIME(time1)
 
       IF (ANY(calc_mt)) THEN
 
@@ -541,22 +520,11 @@ CONTAINS
       END DO
       IF (ANY(calc_mt)) deallocate(coulmat)
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(2X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)', advance='no') '( Timing:', time2 - time1, ' )'
-         WRITE (6, *)
-      END IF
-
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
          !
          !     (2) Case < MT | v | PW >
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< MT | v | PW > contribution...'
-
-         CALL cpu_TIME(time1)
 
          !     (2a) r in MT, r' everywhere
          !     (2b) r,r' in same MT
@@ -699,23 +667,10 @@ CONTAINS
 
          deallocate(coulmat, olap, integral)
 
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
-
          !
          !     (3) Case < PW | v | PW >
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< PW | v | PW > contribution...'
-
-         CALL cpu_TIME(time1)
-
          !     (3a) r,r' everywhere; r everywhere, r' in MT; r in MT, r' everywhere
-
-         CALL cpu_TIME(time1)
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
          call timestart("calc smat")
          allocate(smat(mpdata%num_gpts(), mpdata%num_gpts()))
@@ -1060,18 +1015,10 @@ CONTAINS
          call timestop("loop 2")
          deallocate(carr2)
 
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
 
          !
          !     Symmetry-equivalent G vectors
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Symm.-equiv. matrix elements...'
-         CALL cpu_TIME(time1)
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
@@ -1131,15 +1078,9 @@ CONTAINS
          call timestop("loop 3")
          call timestart("gap 1:")
          deallocate(carr2, iarr, pgptm1)
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
       END IF
       deallocate(qnrm, pqnrm)
 
-      CALL cpu_TIME(time1)
       IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          !
          ! The HSE functional is realized subtracting erf/r from
@@ -1153,8 +1094,6 @@ CONTAINS
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Transform to biorthogonal set...'
-      CALL cpu_TIME(time1)
       call timestop("gap 1:")
       call timestart("calc eigenvalues olap_pw")
       DO ikpt = ikptmin, ikptmax
@@ -1226,16 +1165,8 @@ CONTAINS
       END DO
       call timestop("calc eigenvalues olap_pw")
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(1X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-      END IF
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Writing of data to file...'
-      CALL cpu_TIME(time1)
       !
       ! rearrange coulomb matrix
       !
@@ -1532,13 +1463,6 @@ CONTAINS
       else
          deallocate(coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
       end if
-
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(7X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-      END IF
-
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
@@ -1818,8 +1742,6 @@ CONTAINS
       !
       !     Real-space sum
       !
-      CALL cpu_TIME(time1)
-
       call timestart("realspace sum")
       DO ic2 = 1, atoms%nat
          DO ic1 = 1, atoms%nat
@@ -1910,9 +1832,6 @@ CONTAINS
 
       deallocate(ptsh, radsh)
 
-      CALL cpu_TIME(time2)
-      IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
-      CALL cpu_TIME(time1)
 
       IF (first) WRITE (6, '(/A)') 'Fourier-space sum'
 
@@ -1994,9 +1913,6 @@ CONTAINS
          END DO
       END DO
       call timestop("fourierspace sum")
-
-      CALL cpu_TIME(time2)
-      IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
 
       !
       !     Add contribution for l=0 to diagonal elements and rescale structure constants
