@@ -263,6 +263,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%speciesname(this%ntype))
  this%lapw_l(:) = -1
  this%n_u = 0
+ this%bmu = 0.0
  na=0
  DO n = 1, this%ntype
     !in Species:
