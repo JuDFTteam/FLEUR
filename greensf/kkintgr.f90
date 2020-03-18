@@ -23,15 +23,12 @@ MODULE m_kkintgr
    INTEGER, PARAMETER :: method_maclaurin = 1
    INTEGER, PARAMETER :: method_deriv     = 2
 
-   INTEGER, PARAMETER :: rectangular      = 1
-   INTEGER, PARAMETER :: semicircle       = 2
-
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8
 
    CONTAINS
 
-   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,shape,nz,method)
+   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,nz,method)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
       !Re(G(E+i * delta)) = -1/pi * int_bot^top dE' P(1/(E-E')) * Im(G(E'+i*delta))
@@ -50,13 +47,12 @@ MODULE m_kkintgr
       COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
       COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
-      INTEGER,       INTENT(IN)     :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
       INTEGER,       INTENT(IN)     :: nz          !Number of energy points on the complex contour
 
       !Information about the method
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      REAL ::  e(ne)  
+      REAL ::  e(ne)
       REAL ::  im_calc(ne) !Array where the smoothed version of im is stored
 
       INTEGER  iz,n1,n2,i
@@ -67,7 +63,7 @@ MODULE m_kkintgr
       ENDDO
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
+      !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
       !$OMP SHARED(g,ez,im,e) &
       !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
       sigma = 0.0
