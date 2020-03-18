@@ -80,11 +80,11 @@ MODULE m_greensfBZint
                !Can these be unified ?
                !Spin diagonal elements
                CALL greensfSpinDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,&
-                                    gfinp%l_sphavg,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
+                                    gfinp%l_sphavg,phase,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
                IF(spin1/=spin2) THEN
                   !Spin offdiagonal elements
                   CALL greensfSpinOffDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                          gfinp%l_sphavg,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
+                                          gfinp%l_sphavg,phase,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
                ENDIF
 
             ENDDO !natomp

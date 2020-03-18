@@ -9,12 +9,13 @@ MODULE m_greensfSpinOffDiag
    CONTAINS
 
    SUBROUTINE greensfSpinOffDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                 l_sphavg,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
+                                 l_sphavg,atomPhase,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i !current k-point index in cdnvaljob%k_list
       INTEGER,                   INTENT(IN)     :: nBands !Bands handled on this rank
       INTEGER,                   INTENT(IN)     :: i_gf,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2 !Information about the current element
       LOGICAL,                   INTENT(IN)     :: l_sphavg
+      COMPLEX,                   INTENT(IN)     :: atomPhase
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffdiag
@@ -83,7 +84,7 @@ MODULE m_greensfSpinOffDiag
                DO imat = 1, MERGE(1,4,l_sphavg)
                   is = sym%invarop(natom,it)
                   isi = sym%invtab(is)
-                  phase = exp(ImagUnit*sym%phase(isi))
+                  phase = exp(ImagUnit*sym%phase(isi)) * atomPhase
                   im_tmp(-l:l,-l:l,imat) = matmul( transpose( conjg(sym%d_wgn(-l:l,-l:l,l,isi)) ) , im(-l:l,-l:l,imat))
                   im_tmp(-l:l,-l:l,imat) = matmul( im_tmp(-l:l,-l:l,imat), sym%d_wgn(-l:l,-l:l,l,isi) )
                   IF(l_sphavg) THEN
@@ -102,15 +103,15 @@ MODULE m_greensfSpinOffDiag
          ELSE
             DO imat = 1, MERGE(1,4,l_sphavg)
                IF(l_sphavg) THEN
-                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) + im(:,:,imat)
+                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) + atomPhase * im(:,:,imat)
                ELSE IF(imat.EQ.1) THEN
-                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) + im(:,:,imat)
+                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) + atomPhase * im(:,:,imat)
                ELSE IF(imat.EQ.2) THEN
-                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) + im(:,:,imat)
+                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) + atomPhase * im(:,:,imat)
                ELSE IF(imat.EQ.3) THEN
-                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) + im(:,:,imat)
+                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) + atomPhase * im(:,:,imat)
                ELSE IF(imat.EQ.4) THEN
-                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) + im(:,:,imat)
+                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) + atomPhase * im(:,:,imat)
                ENDIF
             ENDDO
          ENDIF
