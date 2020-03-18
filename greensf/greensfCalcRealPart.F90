@@ -91,7 +91,6 @@ MODULE m_greensfCalcRealPart
       ENDIF
 #endif
 
-      WRITE(*,*) mpi%irank,i_gf_start,i_gf_end,spin_start,spin_end
       DO i_gf = i_gf_start, i_gf_end
 
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
