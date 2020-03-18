@@ -23,6 +23,7 @@ MODULE m_add_selfen
       !search for the maximum occupation
       !Then the desired chemical potential is found with the bisection method
       !to the right of the maximum
+      !TODO: Parallelization (MPI over hubbard 1 elements OMP over chemical potentials??)
 
       TYPE(t_greensf),  INTENT(IN)     :: g(:)
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
@@ -77,10 +78,10 @@ MODULE m_add_selfen
             start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
             end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
             DO WHILE(mu.LE.mu_b)
-               CALL gp(i_gf)%reset()
+               CALL gp(i_hia)%reset()
                mu = mu + mu_step
                DO ipm = 1, 2
-                  DO iz = 1, g(i_gf)%contour%nz
+                  DO iz = 1, g(i_hia)%contour%nz
                      !Read selfenergy
                      vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
                      IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
