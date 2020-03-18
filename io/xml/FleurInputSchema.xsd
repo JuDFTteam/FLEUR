@@ -519,15 +519,6 @@
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="J0Type">
-      <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute default="F" name="l_avgexc" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_eDependence" type="FleurBool" use="optional"/>
-      <xsd:attribute default="calc" name="kkintgrCutoff" type="KKintgrCutoffType" use="optional"/>
-      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
-   </xsd:complexType>
-
    <xsd:simpleType name="KKintgrCutoffType">
       <xsd:union>
         <xsd:simpleType>

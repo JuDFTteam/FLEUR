@@ -55,9 +55,6 @@ MODULE m_greensfPostProcess
          IF(atoms%n_hia.GT.0.AND.ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
-         IF(input%jspins.EQ.2) THEN
-            !CALL eff_excinteraction(greensFunction,gfinp,input,results%ef,greensfImagPart)
-         ENDIF
          CALL timestart("Green's Function: Occupation/DOS")
          DO i_gf = 1, gfinp%n
             !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE

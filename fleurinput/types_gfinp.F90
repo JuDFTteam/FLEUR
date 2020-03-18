@@ -28,15 +28,6 @@ MODULE m_types_gfinp
       REAL    :: fixedCutoff = 0.0
    END TYPE t_gfelementtype
 
-   TYPE t_j0calctype
-      SEQUENCE
-      INTEGER :: atomType = 0             !atom Type for which to calculate J0
-      INTEGER :: lmin = -1                !Minimum l considered
-      INTEGER :: lmax = -1                !Maximum l considered
-      LOGICAL :: l_avgexc = .FALSE.       !Determines whether to average over the exchange splittings for all l
-      LOGICAL :: l_eDependence = .FALSE.  !Switch to output J0 with variing fermi energy (only with contourDOS)
-   END TYPE t_j0calctype
-
    TYPE t_contourInp
       !Contains the input parameters for a contour
       INTEGER :: shape = 2 !If no contour is specified write out the standard Semicircle contour (for inpgen)
@@ -71,8 +62,6 @@ MODULE m_types_gfinp
       INTEGER :: n_j0 = 0
       !Information on the elements to be calculated
       TYPE(t_gfelementtype), ALLOCATABLE :: elem(:)
-      !Information on the j0-elements to be calculated
-      TYPE(t_j0calctype), ALLOCATABLE    :: j0elem(:)
       !Parameters for the energy mesh on the real axis
       INTEGER :: ne    = 2700
       REAL    :: ellow = -1.0
@@ -122,10 +111,8 @@ CONTAINS
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
       IF (myrank.NE.rank) THEN
          IF (ALLOCATED(this%elem)) DEALLOCATE(this%elem)
-         IF (ALLOCATED(this%j0elem)) DEALLOCATE(this%j0elem)
          IF (ALLOCATED(this%contour)) DEALLOCATE(this%contour)
          ALLOCATE(this%elem(this%n))
-         ALLOCATE(this%j0elem(this%n_j0))
          ALLOCATE(this%contour(this%numberContours))
       ENDIF
       DO n=1,this%n
@@ -136,13 +123,6 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%iContour,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_fixedCutoffset,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%fixedCutoff,rank,mpi_comm)
-      ENDDO
-      DO n=1,this%n_j0
-         CALL mpi_bc(this%j0elem(n)%atomType,rank,mpi_comm)
-         CALL mpi_bc(this%j0elem(n)%lmin,rank,mpi_comm)
-         CALL mpi_bc(this%j0elem(n)%lmax,rank,mpi_comm)
-         CALL mpi_bc(this%j0elem(n)%l_avgexc,rank,mpi_comm)
-         CALL mpi_bc(this%j0elem(n)%l_eDependence,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -267,7 +247,6 @@ CONTAINS
       n_hia = 0
 
       ALLOCATE(this%elem(4*ntype))
-      ALLOCATE(this%j0elem(4*ntype))
       ALLOCATE(this%hiaElem(4*ntype))
 
       DO itype = 1, ntype
@@ -317,25 +296,6 @@ CONTAINS
             ENDDO
          ENDDO
 
-         !Declaration of a j0 calculation
-         DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/J0')
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/J0[',i,']'
-            lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
-            lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
-            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
-            iContour = this%find_contour(TRIM(ADJUSTL(label)))
-            DO l = lmin, lmax
-               CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
-            ENDDO
-            !Add it to the j0elem array
-            this%n_j0 = this%n_j0 + 1
-            this%j0elem(this%n_j0)%atomType = itype
-            this%j0elem(this%n_j0)%lmin     = lmin
-            this%j0elem(this%n_j0)%lmax     = lmax
-            this%j0elem(this%n_j0)%l_avgexc = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_avgexc'))
-            this%j0elem(this%n_j0)%l_eDependence = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_eDependence'))
-         ENDDO
-
          !Declaration of a DFT+Hubbard 1 calculation
          DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/ldaHIA')
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
@@ -365,13 +325,6 @@ CONTAINS
          IF(this%elup.LT.this%ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="read_xml_gfinp")
          IF(ANY(this%elem(:this%n)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="read_xml_gfinp")
          IF(ANY(this%elem(:this%n)%l.GT.3)) CALL juDFT_error("Green's function only implemented for l<=3",calledby="read_xml_gfinp")
-
-         DO i = 1, this%n_j0
-            IF(this%j0elem(i)%lmin.GT.this%j0elem(i)%lmax) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
-                                                                    calledby="read_xml_gfinp")
-            !IF(this%j0elem(i)%l_eDependence.AND.this%mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",&
-            !                                                                calledby="read_xml_gfinp")
-         ENDDO
       ENDIF
 
    END SUBROUTINE read_xml_gfinp
