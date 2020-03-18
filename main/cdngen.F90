@@ -48,10 +48,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IMPLICIT NONE
 
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
-
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
    TYPE(t_mpi),INTENT(IN)           :: mpi
@@ -116,7 +112,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,atoms,kpts)
    CALL jDOS%init(input,banddos,atoms,kpts)
 
-   IF(gfinp%n.GT.0.AND.PRESENT(greensFunction)) THEN
+   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
       DO i_gf = 1, gfinp%n
          iContour = gfinp%elem(i_gf)%iContour
@@ -147,11 +143,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(greensFunction).AND.mpi%irank.EQ.0) THEN
-      IF(gfinp%n.GT.0) THEN
-        CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,nococonv,vTot,&
-                                hub1inp,hub1data,results)
-      ENDIF
+   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
+     CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+                             nococonv,vTot,hub1inp,hub1data,results)
    ENDIF
 
    call val_den%copyPotDen(outDen)

@@ -20,31 +20,83 @@ MODULE m_greensfCalcRealPart
    USE m_constants
    USE m_kkintgr
    USE m_kk_cutoff
-
    IMPLICIT NONE
+
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
 
    INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,mpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_gfinp),          INTENT(IN)     :: gfinp
-      TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart     !This is INTENT(INOUT) because the projected dos is useful for other things
-      TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
       TYPE(t_sym),            INTENT(IN)     :: sym
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_input),          INTENT(IN)     :: input
+      TYPE(t_mpi),            INTENT(IN)     :: mpi
       REAL,                   INTENT(IN)     :: ef
+      TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart
+      TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
 
-      INTEGER i_gf,i_elem,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom,contourShape,dummy
-      REAL    fac,del,eb,et
+      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType
+      INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep
+      INTEGER :: spin_cut,nn,natom,contourShape,dummy
+      INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
+      INTEGER :: n_gf_task,extra
+      REAL    :: fac,del,eb,et
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,et)
 
-      DO i_gf = 1, gfinp%n
+      nspins = MERGE(3,input%jspins,gfinp%l_mperp)
+
+      !Distribute the Calculations
+#ifdef CPP_MPI
+      IF(mpi%isize>1) THEN
+         IF(gfinp%n>=mpi%isize) THEN
+            !Just distribute the individual gf elements over the ranks
+            n_gf_task = FLOOR(REAL(gfinp%n)/(mpi%isize))
+            extra = gfinp%n - n_gf_task*mpi%isize
+            i_gf_start = mpi%irank*n_gf_task + 1 + extra
+            i_gf_end = (mpi%irank+1)*n_gf_task   + extra
+            IF(mpi%irank < extra) THEN
+               i_gf_start = i_gf_start - (extra - mpi%irank)
+               i_gf_end = i_gf_end - (extra - mpi%irank - 1)
+            ENDIF
+            spin_start = 1
+            spin_end   = nspins
+         ELSE IF(gfinp%n*nspins>=mpi%isize) THEN
+            !Just fill up the ranks
+            i_gf_start = mpi%irank + 1
+            i_gf_end   = mpi%irank + 1
+            spin_start = 1
+            spin_end   = nspins
+         ELSE
+            !If there are few enough gf elements then distribute the spins
+            spin_start = MOD(mpi%irank,nspins) + 1
+            spin_end   = MOD(mpi%irank,nspins) + 1
+            i_gf_start = mpi%irank + 1 - nspins * FLOOR(REAL(mpi%irank)/nspins)
+            i_gf_end   = mpi%irank + 1 - nspins * FLOOR(REAL(mpi%irank)/nspins)
+         ENDIF
+      ELSE
+         !Distribute nothing
+         i_gf_start = 1
+         i_gf_end = gfinp%n
+         spin_start = 1
+         spin_end   = nspins
+      ENDIF
+#endif
+
+      WRITE(*,*) mpi%irank,i_gf_start,i_gf_end,spin_start,spin_end
+      DO i_gf = i_gf_start, i_gf_end
+
+         IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
+
+         !Get the information of ith current element
          l =      gfinp%elem(i_gf)%l
          lp =     gfinp%elem(i_gf)%lp
          nType =  gfinp%elem(i_gf)%atomType
@@ -53,25 +105,26 @@ MODULE m_greensfCalcRealPart
 
          CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
 
-         CALL timestart("On-Site: Integration Cutoff")
          IF(nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg) THEN
             !
             !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
             !
+            CALL timestart("On-Site: Integration Cutoff")
             CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,l,input%jspins,&
                            gfinp%ne,del,eb,et,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
+            CALL timestop("On-Site: Integration Cutoff")
          ELSE
             !For all other elements we just use ef+elup as a hard cutoff
             !(maybe give option to specify outside of changing the realAxis grid)
             greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
             greensfImagPart%kkintgr_cutoff(i_gf,:,2) = gfinp%ne
          ENDIF
-         CALL timestop("On-Site: Integration Cutoff")
+
          !
          !Perform the Kramers-Kronig-Integration if not already calculated
          !
-         CALL timestart("On-Site: Kramer-Kronigs-Integration")
-         DO jspin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
+         CALL timestart("Green's Function: Kramer-Kronigs-Integration")
+         DO jspin = spin_start, spin_end
             spin_cut = MERGE(1,jspin,jspin.GT.2)
             kkcut = greensfImagPart%kkintgr_cutoff(i_gf,spin_cut,2)
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
@@ -96,7 +149,12 @@ MODULE m_greensfCalcRealPart
                ENDDO
             ENDDO
          ENDDO
-         CALL timestop("On-Site: Kramer-Kronigs-Integration")
+         CALL timestop("Green's Function: Kramer-Kronigs-Integration")
+      ENDDO
+
+      !Collect all the greensFuntions
+      DO i_gf = 1, gfinp%n
+         CALL g(i_gf)%collect(gfinp,mpi%mpi_comm)
       ENDDO
 
    END SUBROUTINE greensfCalcRealPart

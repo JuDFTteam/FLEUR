@@ -3,7 +3,7 @@ greensf/greensfSpinDiag.f90
 greensf/greensfSpinOffDiag.f90
 greensf/greensfBZint.f90
 greensf/greensfCalcImagPart.f90
-greensf/greensfCalcRealPart.f90
+greensf/greensfCalcRealPart.F90
 greensf/greensfUtils.f90
 greensf/greensfPostProcess.F90
 greensf/kkintgr.f90
