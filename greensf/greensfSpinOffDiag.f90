@@ -84,8 +84,8 @@ MODULE m_greensfSpinOffDiag
                   is = sym%invarop(natom,it)
                   isi = sym%invtab(is)
                   phase = exp(ImagUnit*sym%phase(isi))
-                  im_tmp(:,:,imat) = matmul( transpose( conjg(sym%d_wgn(:,:,l,isi)) ) , im(:,:,imat))
-                  im_tmp(:,:,imat) = matmul( im_tmp(:,:,imat), sym%d_wgn(:,:,l,isi) )
+                  im_tmp(-l:l,-l:l,imat) = matmul( transpose( conjg(sym%d_wgn(-l:l,-l:l,l,isi)) ) , im(-l:l,-l:l,imat))
+                  im_tmp(-l:l,-l:l,imat) = matmul( im_tmp(-l:l,-l:l,imat), sym%d_wgn(-l:l,-l:l,l,isi) )
                   IF(l_sphavg) THEN
                      greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) + CONJG(fac * phase * im_tmp(:,:,imat))
                   ELSE IF(imat.EQ.1) THEN

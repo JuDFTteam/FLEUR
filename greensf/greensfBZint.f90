@@ -40,7 +40,7 @@ MODULE m_greensfBZint
          spin2 = jspin
       ENDIF
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
-      !$OMP PARALLEL DEFAULT(SHARED) &
+      !$OMP PARALLEL DEFAULT(NONE) &
       !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
       !$OMP SHARED(ikpt_i,ikpt,nBands,spin1,spin2) &
       !$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp) &
