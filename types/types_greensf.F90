@@ -51,7 +51,9 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
 
       CONTAINS
-         PROCEDURE, PASS :: init    => greensf_init
+         PROCEDURE, PASS :: init    => init_greensf
+         PROCEDURE       :: mpi_bc  => mpi_bc_greensf
+         PROCEDURE       :: collect => collect_greensf
          PROCEDURE       :: get     => get_gf
          PROCEDURE       :: set     => set_gf
          PROCEDURE       :: reset   => reset_gf
@@ -61,7 +63,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(this,i_gf,gfinp,input,noco,contour_in)
+      SUBROUTINE init_greensf(this,i_gf,gfinp,input,noco,contour_in)
 
          CLASS(t_greensf),    INTENT(INOUT)  :: this
          INTEGER,             INTENT(IN)     :: i_gf
@@ -88,7 +90,63 @@ MODULE m_types_greensf
             ALLOCATE(this%ud(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
          ENDIF
 
-      END SUBROUTINE greensf_init
+      END SUBROUTINE init_greensf
+
+      SUBROUTINE mpi_bc_greensf(this,mpi_comm,irank)
+         USE m_mpi_bc_tool
+         CLASS(t_greensf), INTENT(INOUT)::this
+         INTEGER, INTENT(IN):: mpi_comm
+         INTEGER, INTENT(IN), OPTIONAL::irank
+         INTEGER ::rank,myrank,n,ierr
+         IF (PRESENT(irank)) THEN
+            rank = irank
+         ELSE
+            rank = 0
+         END IF
+
+         CALL this%contour%mpi_bc(mpi_comm,irank)
+
+         CALL mpi_bc(this%gmmpMat,rank,mpi_comm)
+         CALL mpi_bc(this%uu,rank,mpi_comm)
+         CALL mpi_bc(this%ud,rank,mpi_comm)
+         CALL mpi_bc(this%du,rank,mpi_comm)
+         CALL mpi_bc(this%dd,rank,mpi_comm)
+
+      END SUBROUTINE mpi_bc_greensf
+
+      SUBROUTINE collect_greensf(this,gfinp,mpi_comm)
+
+         CLASS(t_greensf),     INTENT(INOUT) :: this
+         TYPE(t_gfinp),        INTENT(IN)    :: gfinp
+         INTEGER,              INTENT(IN)    :: mpi_comm
+#ifdef CPP_MPI
+         include 'mpif.h'
+#include"cpp_double.h"
+         INTEGER:: ierr,irank,n
+         COMPLEX,ALLOCATABLE::ctmp(:)
+
+         CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+
+         IF(gfinp%l_sphavg) THEN
+            n = SIZE(this%gmmpMat)
+            ALLOCATE(ctmp(n))
+            CALL MPI_REDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+         ELSE
+            n = SIZE(this%gmmpMat)
+            ALLOCATE(ctmp(n))
+            CALL MPI_REDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
+            CALL MPI_REDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
+            CALL MPI_REDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
+            CALL MPI_REDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+         ENDIF
+         DEALLOCATE(ctmp)
+#endif
+      END SUBROUTINE collect_greensf
 
       SUBROUTINE get_gf(this,i_gf,gmat,gfinp,input,iz,l_conjg,spin,u,udot)
 
