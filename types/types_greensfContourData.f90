@@ -13,8 +13,9 @@ MODULE m_types_greensfContourData
       COMPLEX, ALLOCATABLE :: de(:) !integration weights
 
    CONTAINS
-      PROCEDURE :: init => init_greensfContourData
-      PROCEDURE :: eContour => eContour_greensfContourData
+      PROCEDURE,PASS :: init       => init_greensfContourData
+      PROCEDURE      :: eContour   => eContour_greensfContourData
+      PROCEDURE      :: mpi_bc     => mpi_bc_greensfContourData
    END TYPE t_greensfContourData
 
    PUBLIC t_greensfContourData
@@ -52,6 +53,24 @@ MODULE m_types_greensfContourData
       ENDIF
 
    END SUBROUTINE init_greensfContourData
+
+   SUBROUTINE mpi_bc_greensfContourData(this,mpi_comm,irank)
+         USE m_mpi_bc_tool
+         CLASS(t_greensfContourData), INTENT(INOUT)::this
+         INTEGER, INTENT(IN):: mpi_comm
+         INTEGER, INTENT(IN), OPTIONAL::irank
+         INTEGER ::rank,myrank,n,ierr
+         IF (PRESENT(irank)) THEN
+            rank = irank
+         ELSE
+            rank = 0
+         END IF
+
+         CALL mpi_bc(this%nz,rank,mpi_comm)
+         CALL mpi_bc(this%e,rank,mpi_comm)
+         CALL mpi_bc(this%de,rank,mpi_comm)
+
+   END SUBROUTINE mpi_bc_greensfContourData
 
    SUBROUTINE eContour_greensfContourData(this,contourInp,ef,irank)
 
