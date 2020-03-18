@@ -69,7 +69,7 @@ MODULE m_greensfCalcRealPart
             ENDIF
             spin_start = 1
             spin_end   = nspins
-         ELSE IF(gfinp%n*nspins>=mpi%isize) THEN
+         ELSE IF(gfinp%n*nspins>mpi%isize) THEN
             !Just fill up the ranks
             i_gf_start = mpi%irank + 1
             i_gf_end   = mpi%irank + 1
