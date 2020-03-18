@@ -18,7 +18,7 @@ MODULE m_types_mpi
       !Communicator for PE on same node
       INTEGER :: mpi_comm_same_node
    CONTAINS
-      procedure :: root => mpi_root()
+      procedure :: root => mpi_root
    END TYPE t_mpi
 contains
    function mpi_root(mpi) result(is_root)
