@@ -17,5 +17,14 @@ MODULE m_types_mpi
       INTEGER, ALLOCATABLE :: ev_list(:)
       !Communicator for PE on same node
       INTEGER :: mpi_comm_same_node
+   CONTAINS
+      procedure :: root => mpi_root()
    END TYPE t_mpi
+contains
+   function mpi_root(mpi) result(is_root)
+      implicit none 
+      class(t_mpi), intent(in) :: mpi
+      logical :: is_root 
+      is_root = mpi%irank == 0
+   end function mpi_root
 END MODULE m_types_mpi
