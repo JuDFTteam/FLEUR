@@ -12,10 +12,10 @@ module m_wavefproducts_inv
    USE m_io_hybinp
    USE m_wavefproducts_aux
 
-CONTAINS
-   SUBROUTINE wavefproducts_inv(bandoi, bandof, input,&
-                                 jsp, atoms, lapw, kpts, mpi, nk, iq, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco, nococonv, oneD, nkqpt, cprod)
+CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
+   SUBROUTINE wavefproducts_inv(input,&
+                                jsp, atoms, lapw, kpts, mpi, nk, iq, hybdat, mpdata, hybinp,&
+                                cell, sym, noco, nococonv, oneD, nkqpt, cprod)
 
 
 
@@ -35,12 +35,11 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
       ! - scalars -
-      INTEGER, INTENT(IN)      :: bandoi, bandof
       INTEGER, INTENT(IN)      :: jsp, nk, iq
       INTEGER, INTENT(INOUT)   :: nkqpt
 
       ! - arrays -
-      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
+      REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
 
       ! - local scalars -
       INTEGER                 ::    g_t(3)
@@ -65,19 +64,18 @@ CONTAINS
 
 
 
-      call wavefproducts_inv_IS(bandoi, bandof,  input,&
+      call wavefproducts_inv_IS(input,&
                                 jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                 cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call wavefproducts_inv_MT(bandoi, bandof,&
-                                input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
+      call wavefproducts_inv_MT(input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv
 
-   subroutine wavefproducts_inv_IS(bandoi, bandof,  input,&
+   subroutine wavefproducts_inv_IS(input,&
                                  jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                  cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
@@ -96,12 +94,11 @@ CONTAINS
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
      TYPE(t_mat), intent(inout)    :: z_k_p, z_kqpt_p
      ! - scalars -
-     INTEGER, INTENT(IN)      :: bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)      :: cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
+     REAL, INTENT(INOUT)      :: cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
      complex, intent(inout)   :: c_phase_k(hybdat%nbands(nk)), c_phase_kqpt(hybdat%nbands(nkqpt))
 
      ! - local scalars -
@@ -115,8 +112,8 @@ CONTAINS
      INTEGER, ALLOCATABLE    ::    pointer(:, :, :), gpt0(:, :)
      INTEGER                 ::    g(3)
 
-     REAL                    ::    rarr1(bandoi:bandof)
-     REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(nk))
+     REAL                    ::    rarr1(1:MAXVAL(hybdat%nobd(:, jsp)))
+     REAL                    ::    rarr2(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
      REAL, ALLOCATABLE       ::    z0(:, :)
 
 
@@ -156,16 +153,16 @@ CONTAINS
 
      !(2) calculate convolution
      call timestart("calc convolution")
-     allocate(z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
+     allocate(z0(1:MAXVAL(hybdat%nobd(:, jsp)), ngpt0), stat=ok, source=0.0)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
 
      call timestart("step function")
      DO ig2 = 1, lapw_nkqpt%nv(jsp)
-        rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
+        rarr1 = z_kqpt%data_r(ig2, 1:MAXVAL(hybdat%nobd(:, jsp)))
         DO ig = 1, ngpt0
            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
            rdum = REAL(hybdat%stepfunc(g(1), g(2), g(3)))
-           DO n2 = bandoi, bandof
+           DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
               z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
            END DO
         END DO
@@ -187,7 +184,7 @@ CONTAINS
 
            DO n1 = 1, hybdat%nbands(nk)
               rdum1 = z_k%data_r(ig1, n1)
-              DO n2 = bandoi, bandof
+              DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
                  rarr2(n2, n1) = rarr2(n2, n1) + rdum1*z0(n2, ig2)
               END DO
            END DO
@@ -203,8 +200,7 @@ CONTAINS
 
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv_MT(bandoi, bandof,&
-                                   input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
+   subroutine wavefproducts_inv_MT(input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt,  cprod)
      use m_calc_cmt
      implicit NONE
@@ -222,13 +218,12 @@ CONTAINS
      type(t_mat), intent(in)       :: z_k_p, z_kqpt_p
 
      ! - scalars -
-     INTEGER, INTENT(IN)      :: bandoi, bandof
      INTEGER, INTENT(IN)      :: nk, iq, jsp
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
      complex, intent(in)        :: c_phase_k(hybdat%nbands(nk)), c_phase_kqpt(hybdat%nbands(nkqpt))
-     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, hybdat%nbands(nk))
+     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
 
      ! - local scalars -
      INTEGER                 ::    i, iband
@@ -250,8 +245,8 @@ CONTAINS
 
      REAL                    ::    cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
      REAL                    ::    cmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, atoms%nat)
-     REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(nk))
-     REAL                    ::    rarr3(2, bandoi:bandof, hybdat%nbands(nk))
+     REAL                    ::    rarr2(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
+     REAL                    ::    rarr3(2, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
 
      COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :), ccmt_nk2(:, :, :)
@@ -416,7 +411,7 @@ CONTAINS
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                    rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
                                    ! loop over occupied bands
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
 
                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
                                     + rdum1*cmt_nkqpt(ibando, lmp2, iatom1) + rdum2*cmt_nkqpt(ibando, lmp2, iatom2)
@@ -438,7 +433,7 @@ CONTAINS
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
                                    ! loop over occupied bands
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
                                     + rdum1*cmt_nkqpt(ibando, lmp1, iatom1) + rdum2*cmt_nkqpt(ibando, lmp1, iatom2)
 
@@ -464,7 +459,7 @@ CONTAINS
                        rfac1 = sin(rdum)/sqrt(2.0)
                        rfac2 = cos(rdum)/sqrt(2.0)
                        DO iband = 1, hybdat%nbands(nk)
-                          DO ibando = bandoi, bandof
+                          DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                              rdum1 = rarr3(1, ibando, iband)
                              rdum2 = rarr3(2, ibando, iband)
                              add1 = rdum1*rfac2 + rdum2*rfac1
@@ -548,7 +543,7 @@ CONTAINS
                              DO iband = 1, hybdat%nbands(nk)
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
-                                DO ibando = bandoi, bandof
+                                DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                 END DO  ! ibando
                              END DO  ! iband
@@ -560,7 +555,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp1, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -582,7 +577,7 @@ CONTAINS
                              DO iband = 1, hybdat%nbands(nk)
                                 rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                 IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
-                                DO ibando = bandoi, bandof
+                                DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                 END DO  ! ibando
                              END DO  ! iband
@@ -594,7 +589,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -630,7 +625,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -650,7 +645,7 @@ CONTAINS
                                    DO iband = 1, hybdat%nbands(nk)
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                      DO ibando = bandoi, bandof
+                                      DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                       END DO  ! ibando
                                    END DO  ! iband
@@ -675,7 +670,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -696,7 +691,7 @@ CONTAINS
                                    DO iband = 1, hybdat%nbands(nk)
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m1) + sign(1, m2) == 0) rdum1 = fac*rdum1
-                                      DO ibando = bandoi, bandof
+                                      DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                       END DO  ! ibando
                                    END DO  ! iband
@@ -712,7 +707,7 @@ CONTAINS
                        ! go to lm mixed basis startindx for l and m
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                        DO iband = 1, hybdat%nbands(nk)
-                          DO ibando = bandoi, bandof
+                          DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                              rdum = rarr2(ibando, iband)
                              DO i = 1, mpdata%num_radbasfn(l, itype)
                                 j = lm1 + i
@@ -765,7 +760,7 @@ CONTAINS
                           IF (abs(rdum) > 1e-12) THEN
                              DO iband = 1, hybdat%nbands(nk)
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                DO ibando = bandoi, bandof
+                                DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                 END DO  ! ibando
                              END DO  ! iband
@@ -781,7 +776,7 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp4, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -797,7 +792,7 @@ CONTAINS
                     ! go to lm mixed basis startindx for l and m
                     lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                     DO iband = 1, hybdat%nbands(nk)
-                       DO ibando = bandoi, bandof
+                       DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                           rdum = rarr2(ibando, iband)
                           DO i = 1, mpdata%num_radbasfn(l, itype)
                              j = lm1 + i
@@ -834,7 +829,7 @@ CONTAINS
                              DO iband = 1, hybdat%nbands(nk)
                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
-                                DO ibando = bandoi, bandof
+                                DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                 END DO  ! ibando
                              END DO  ! iband
@@ -846,7 +841,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp1, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -868,7 +863,7 @@ CONTAINS
                              DO iband = 1, hybdat%nbands(nk)
                                 rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                 IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
-                                DO ibando = bandoi, bandof
+                                DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                 END DO  ! ibando
                              END DO  ! iband
@@ -880,7 +875,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                    IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -918,7 +913,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!-moneplm*monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -939,7 +934,7 @@ CONTAINS
                                    DO iband = 1, hybdat%nbands(nk)
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!monepl1m1*moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                      DO ibando = bandoi, bandof
+                                      DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                       END DO  ! ibando
                                    END DO  ! iband
@@ -965,7 +960,7 @@ CONTAINS
                                 DO iband = 1, hybdat%nbands(nk)
                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                    IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = rdum1*fac
-                                   DO ibando = bandoi, bandof
+                                   DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                    END DO  ! ibando
                                 END DO  ! iband
@@ -985,7 +980,7 @@ CONTAINS
                                    DO iband = 1, hybdat%nbands(nk)
                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!-monepl1m1*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                       IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                      DO ibando = bandoi, bandof
+                                      DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                       END DO  ! ibando
                                    END DO  ! iband
@@ -1006,7 +1001,7 @@ CONTAINS
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
 
                        DO iband = 1, hybdat%nbands(nk)
-                          DO ibando = bandoi, bandof
+                          DO ibando = 1, MAXVAL(hybdat%nobd(:, jsp))
                              rdum = rarr2(ibando, iband)
                              DO i = 1, mpdata%num_radbasfn(l, itype)
                                 j = lm1 + i

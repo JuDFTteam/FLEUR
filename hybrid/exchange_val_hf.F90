@@ -206,11 +206,11 @@ CONTAINS
          END IF
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(1, MAXVAL(hybdat%nobd(:, jsp)), input, jsp, atoms, &
+            CALL wavefproducts_inv(input, jsp, atoms, &
                                    lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                    noco, nococonv, oneD, nkqpt, cprod_vv_r)
          ELSE
-            CALL wavefproducts_noinv(1, MAXVAL(hybdat%nobd(:, jsp)), ik, iq, input, jsp, &
+            CALL wavefproducts_noinv(ik, iq, input, jsp, &
                                      cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
                                      sym, noco, nococonv, oneD, nkqpt, cprod_vv_c)
          END IF
