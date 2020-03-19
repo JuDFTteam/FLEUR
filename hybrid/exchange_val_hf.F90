@@ -108,7 +108,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                 ::  iband, iband1, ibando, jq, iq
-      INTEGER                 ::  i
+      INTEGER                 ::  i, ierr
       INTEGER                 ::  j
       INTEGER                 ::  n, n1, n2, nn, nn2
       INTEGER                 ::  nkqpt
@@ -201,7 +201,8 @@ CONTAINS
       END IF
 
       exch_vv = 0
-
+      write (1237,*) "nk=", ik, "num_q=", nkpt_EIBZ
+      
       DO jq = 1, nkpt_EIBZ
 
          iq = pointer_EIBZ(jq)
@@ -311,7 +312,10 @@ CONTAINS
             call timestop("exchange matrix")
          END DO !ibando
       END DO  !jq
-
+            
+      call timestart("post wavef barrier")
+      call MPI_Barrier(mpi%mpi_comm, ierr)
+      call timestop("post wavef barrier")
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
 !      DO n2=1,n1
