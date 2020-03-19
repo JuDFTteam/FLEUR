@@ -198,7 +198,7 @@ CONTAINS
          END IF
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(fi, jsp, lapw, mpi, ik, iq, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
+            CALL wavefproducts_inv(fi, jsp, lapw, mpi, z_k, ik, iq, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
          ELSE
             CALL wavefproducts_noinv(ik, iq, fi, jsp, mpdata, hybdat, lapw, &
                                      nococonv, nkqpt, cprod_vv_c)

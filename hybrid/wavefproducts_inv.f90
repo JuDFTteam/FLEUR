@@ -13,13 +13,14 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS 
-   SUBROUTINE wavefproducts_inv(fi, jsp, lapw, mpi, nk, iq, hybdat, mpdata,&
+   SUBROUTINE wavefproducts_inv(fi, jsp, lapw, mpi, z_k, nk, iq, hybdat, mpdata,&
                                 nococonv, nkqpt, cprod)
       IMPLICIT NONE
       type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata
       type(t_nococonv), intent(in)  :: nococonv
       TYPE(t_mpi), intent(in)       :: mpi
+      type(t_mat), intent(in)       :: z_k  ! = z_k_p since nk < nkpt
       TYPE(t_lapw), INTENT(IN)      :: lapw
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
@@ -34,7 +35,7 @@ CONTAINS
       INTEGER                 ::    g_t(3)
       REAL                    ::    kqpt(3), kqpthlp(3)
 
-      type(t_mat) :: z_k_p, z_kqpt_p
+      type(t_mat) ::  z_kqpt_p
       complex, allocatable :: c_phase_k(:), c_phase_kqpt(:)
 
 
@@ -54,17 +55,17 @@ CONTAINS
 
 
       call wavefproducts_inv_IS(fi, jsp, lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
-                                nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi,nococonv, jsp, nk, iq, hybdat, mpdata,&
-                                nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv
 
    subroutine wavefproducts_inv_IS(fi,jsp,lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
-                                 nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                 nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
      implicit NONE
      type(t_fleurinput), intent(in):: fi
@@ -73,7 +74,8 @@ CONTAINS
      TYPE(t_lapw), INTENT(IN)      :: lapw
      TYPE(t_mpi), intent(in)       :: mpi
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-     TYPE(t_mat), intent(inout)    :: z_k_p, z_kqpt_p
+     TYPE(t_mat), intent(in)       :: z_k ! = z_k_p since nk < nkpt
+     TYPE(t_mat), intent(inout)    :: z_kqpt_p
      ! - scalars -
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nkqpt
@@ -87,7 +89,7 @@ CONTAINS
      INTEGER                 ::    ngpt0, n1, n2, nbasfcn, ierr
      REAL                    ::    rdum, rdum1
      TYPE(t_lapw)            ::    lapw_nkqpt
-     type(t_mat)             ::    z_k, z_kqpt
+     type(t_mat)             ::    z_kqpt
 
      ! - local arrays -
      INTEGER, ALLOCATABLE    ::    pointer(:, :, :), gpt0(:, :)
@@ -106,17 +108,11 @@ CONTAINS
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
-     nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
-     call z_k%alloc(.true., nbasfcn, fi%input%neig)
-     call z_k_p%init(z_k)
-
      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, fi%atoms, fi%noco)
      call z_kqpt%alloc(.true., nbasfcn, fi%input%neig)
      call z_kqpt_p%init(z_kqpt)
 
-     ! read in z at k-point nk and nkqpt
-     call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
-                 c_phase=c_phase_k, parent_z=z_k_p)
+     ! read in z at k-point nkqpt
      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nkqpt, jsp, z_kqpt, &
                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
@@ -189,7 +185,8 @@ CONTAINS
      TYPE(t_mpdata), INTENT(IN)   :: mpdata
      type(t_nococonv), intent(in)  :: nococonv
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-     type(t_mat), intent(in)       :: z_k_p, z_kqpt_p
+     type(t_mat), intent(in)       :: z_k_p
+     type(t_mat), intent(in)       :: z_kqpt_p
 
      ! - scalars -
      INTEGER, INTENT(IN)      :: nk, iq, jsp
