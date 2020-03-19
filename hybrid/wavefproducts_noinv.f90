@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv(ik, iq, fi, jsp,mpdata,hybdat, lapw, nococonv, nkqpt, cprod)
+   SUBROUTINE wavefproducts_noinv(z_k, ik, iq, fi, jsp,mpdata,hybdat, lapw, nococonv, nkqpt, cprod)
       USE m_types
       use m_juDFT
       use m_constants, only: cmplx_0
@@ -13,6 +13,7 @@ CONTAINS
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+      type(t_mat), intent(in)         :: z_k ! z_k is also z_k_p since ik < nkpt
 
 !     - scalars -
       INTEGER, INTENT(IN)        ::  ik, iq, jsp
@@ -26,9 +27,9 @@ CONTAINS
       REAL                 :: kqpt(3), kqpthlp(3)
       complex              :: c_phase_k(hybdat%nbands(ik))
       complex, allocatable :: c_phase_kqpt(:)
-      type(t_mat)          :: z_k_p, z_kqpt_p
+      type(t_mat)          :: z_kqpt_p
 
-      call timestart("wavefproducts_noinv5")
+      call timestart("wavefproducts_noinv")
       cprod = cmplx_0; nkqpt = 0
 
       ! calculate nkpqt
@@ -43,12 +44,12 @@ CONTAINS
       endif
 
       call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, mpdata, hybdat, lapw, nococonv,&
-                                  nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                  nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_noinv_MT(fi, ik, iq, nococonv, mpdata, hybdat, &
-                                   jsp, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                   jsp, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call timestop("wavefproducts_noinv5")
+      call timestop("wavefproducts_noinv")
 
    END SUBROUTINE wavefproducts_noinv
 
@@ -65,7 +66,8 @@ CONTAINS
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
-      type(t_mat), intent(inout)      :: z_k_p, z_kqpt_p
+      type(t_mat), intent(in)         :: z_k_p
+      type(t_mat), intent(inout)      :: z_kqpt_p
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3)
@@ -93,7 +95,7 @@ CONTAINS
 
       COMPLEX                 ::  carr1(1:MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX                 ::  carr(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
-      TYPE(t_mat)             ::  z_nk, z_kqpt
+      TYPE(t_mat)             ::  z_kqpt
       COMPLEX, ALLOCATABLE    ::  z0(:,:)
 
 
@@ -104,17 +106,11 @@ CONTAINS
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
       CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
-      nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
-      call z_nk%alloc(.false., nbasfcn, fi%input%neig)
-      call z_k_p%init(z_nk)
-
       nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, fi%atoms, fi%noco)
       call z_kqpt%alloc(.false., nbasfcn, fi%input%neig)
       call z_kqpt_p%init(z_kqpt)
 
       ! read in z at k-point ik and nkqpt
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ik, jsp, z_nk, &
-                  c_phase=c_phase_k, parent_z=z_k_p)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nkqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
@@ -166,10 +162,10 @@ CONTAINS
             IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
             DO n1 = 1, hybdat%nbands(ik)
-               if(z_nk%l_real) then
-                  cdum1 = z_nk%data_r(ig1, n1)
+               if(z_k_p%l_real) then
+                  cdum1 = z_k_p%data_r(ig1, n1)
                ELSE
-                  cdum1 = conjg(z_nk%data_c(ig1, n1))
+                  cdum1 = conjg(z_k_p%data_c(ig1, n1))
                endif
                DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
                   carr(n2, n1) = carr(n2, n1) + cdum1*z0(n2, ig2)
