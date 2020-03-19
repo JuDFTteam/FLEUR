@@ -18,6 +18,8 @@ MODULE m_types_tlmplm
      COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
      COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: ulotu(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: ulotd(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:,:)
      !(-llod:llod,-llod:llod,mlolotot,tspin)
@@ -59,6 +61,8 @@ CONTAINS
     !    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
     ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1));td%tdulo=0.0
     ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2));td%tuulo=0.0
+    ALLOCATE(td%ulotd(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(8));td%ulotd=0.0
+    ALLOCATE(td%ulotu(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(9));td%ulotu=0.0
     ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3));td%tuloulo=0.0
     ALLOCATE(td%h_loc(0:2*lmd+1,0:2*lmd+1,atoms%ntype,jspins,jspins),stat=err(5));td%h_loc=0.0
     ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0

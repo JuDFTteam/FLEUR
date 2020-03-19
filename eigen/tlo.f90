@@ -139,6 +139,11 @@ CONTAINS
                         tlmplm%tuulo(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*uvulo(lo,lp,lh)
                    tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) = &
                         tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*dvulo(lo,lp,lh)
+                  cil = ((ImagUnit** (l-lp))*conjg(sphhar%clnu(mem,lh,sym%ntypsy(na))))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                  tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) = &
+                        tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*uvulo(lo,lp,lh)
+                   tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) = &
+                        tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*dvulo(lo,lp,lh)
                 END DO
              END DO
           END DO
@@ -163,7 +168,7 @@ CONTAINS
                    IF ((ABS(l-lpp).LE.lp) .AND. (lp.LE. (l+lpp)) .AND.&
                         (MOD(l+lp+lpp,2).EQ.0) .AND. (ABS(m).LE.l)) THEN
                       cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,sym%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                      tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) = tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) + one*cil*ulovulo(loplo,lh)
+                      tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) = tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) + conjg(one)*cil*ulovulo(loplo,lh)
                    END IF
                 END DO
              END DO
@@ -207,6 +212,5 @@ CONTAINS
           END DO
        END DO
     END IF
-
   END SUBROUTINE tlo
 END MODULE m_tlo
