@@ -89,7 +89,6 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    CHARACTER(LEN=20)                    :: filename
 
    INTEGER                              :: nsest(fi%input%neig) ! probably too large
-   INTEGER                              :: indx_sest(fi%input%neig,fi%input%neig) ! probably too large
    INTEGER                              :: rrot(3,3,fi%sym%nsym)
    INTEGER                              :: psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
    INTEGER                              :: lowestState(fi%kpts%nkpt,fi%input%jspins)
@@ -121,6 +120,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    REAL, ALLOCATABLE                    :: occupationVec(:)
 
+   INTEGER, ALLOCATABLE                 :: indx_sest(:,:)
    INTEGER, ALLOCATABLE                 :: parent(:)
    INTEGER, ALLOCATABLE                 :: pointer_EIBZ(:)
    INTEGER, ALLOCATABLE                 :: n_q(:)
@@ -524,6 +524,9 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
             call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
 
+            ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
+            indx_sest = 0
+
             call symm_hf_init(fi%sym,fi%kpts,ikpt,nsymop,rrot,psym)
             call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
                          fi%noco,nococonv, fi%oned, zMat, c_phase,jspin,&
@@ -536,6 +539,8 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
                                 mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
                                 1.0,results,exMat)
+
+            DEALLOCATE(indx_sest)
 
             !Start of workaround for increased functionality of fi%symmetrizeh (call it))
 
