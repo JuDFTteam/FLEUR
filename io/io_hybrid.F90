@@ -179,8 +179,10 @@ contains
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
          z_out%matsize2 = hybdat%nbands(ik)
-         if(present(parent_z)) call parent_z%copy(z_out,1,1)
-         parent_z%matsize2=z_out%matsize2
+         if(present(parent_z)) then
+            call parent_z%copy(z_out,1,1)
+            parent_z%matsize2=z_out%matsize2
+         endif
       else
          if(present(parent_z)) then
             ptr_mat => parent_z
