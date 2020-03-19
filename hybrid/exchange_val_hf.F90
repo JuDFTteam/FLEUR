@@ -59,10 +59,8 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-
-   SUBROUTINE exchange_valence_hf(ik, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell, input, jsp, hybdat, lapw, &
-                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nococonv, oneD, nsest, indx_sest, &
-                                  mpi, mat_ex)
+   SUBROUTINE exchange_valence_hf(ik, fi, nkpt_EIBZ,  mpdata,  jsp, hybdat, lapw, eig_irr, results, &
+                                  pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -75,20 +73,13 @@ CONTAINS
 
       IMPLICIT NONE
 
+      type(t_fleurinput), intent(in)    :: fi
       TYPE(t_results), INTENT(IN)    :: results
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN) :: nococonv
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)    :: cell
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
-      type(t_oneD), intent(in)    :: oneD
       TYPE(t_mat), INTENT(INOUT) :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
@@ -122,7 +113,7 @@ CONTAINS
       LOGICAL, SAVE           ::  initialize = .true.
 
       ! local arrays
-      COMPLEX              :: exchcorrect(kpts%nkptf)
+      COMPLEX              :: exchcorrect(fi%kpts%nkptf)
       COMPLEX              :: dcprod(hybdat%nbands(ik), hybdat%nbands(ik), 3)
       COMPLEX              :: exch_vv(hybdat%nbands(ik), hybdat%nbands(ik))
       COMPLEX              :: hessian(3, 3)
@@ -134,22 +125,22 @@ CONTAINS
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
 
-      REAL                 :: coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(hybinp%lcutm1), atoms%ntype)
-      REAL                 :: coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1) + 1, atoms%nat)
-      REAL                 :: coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, atoms%nat, atoms%nat)
-      COMPLEX              :: coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1) + 1, atoms%nat)
-      COMPLEX              :: coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, atoms%nat, atoms%nat)
+      REAL                 :: coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype)
+      REAL                 :: coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat)
+      REAL                 :: coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat)
+      COMPLEX              :: coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat)
+      COMPLEX              :: coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat)
 
-      REAL                 :: coulomb_mtir_r(((maxval(hybinp%lcutm1) + 1)**2*atoms%nat + maxval(mpdata%n_g))* &
-                                             ((maxval(hybinp%lcutm1) + 1)**2*atoms%nat + maxval(mpdata%n_g) + 1)/2)
-      COMPLEX              :: coulomb_mtir_c(((maxval(hybinp%lcutm1) + 1)**2*atoms%nat + maxval(mpdata%n_g))* &
-                                             ((maxval(hybinp%lcutm1) + 1)**2*atoms%nat + maxval(mpdata%n_g) + 1)/2)
+      REAL                 :: coulomb_mtir_r(((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g))* &
+                                             ((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g) + 1)/2)
+      COMPLEX              :: coulomb_mtir_c(((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g))* &
+                                             ((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g) + 1)/2)
 
-      LOGICAL              :: occup(input%neig)
+      LOGICAL              :: occup(fi%input%neig)
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
-         call calc_divergence(cell, kpts, divergence)
+         call calc_divergence(fi%cell, fi%kpts, divergence)
          PRINT *, "Divergence:", divergence
          initialize = .false.
       END IF
@@ -181,7 +172,6 @@ CONTAINS
       END IF
 
       exch_vv = 0
-      write (1237, *) "nk=", ik, "num_q=", nkpt_EIBZ
 
       DO jq = 1, nkpt_EIBZ
 
@@ -193,26 +183,26 @@ CONTAINS
 
          ! read in coulomb matrix from direct access file coulomb
          IF (mat_ex%l_real) THEN
-            CALL read_coulomb_spm_r(kpts%bkp(iq), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
+            CALL read_coulomb_spm_r(fi%kpts%bkp(iq), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
          ELSE
-            CALL read_coulomb_spm_c(kpts%bkp(iq), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
+            CALL read_coulomb_spm_c(fi%kpts%bkp(iq), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
          END IF
 
-         IF (kpts%bkp(iq) /= iq) THEN
-            IF ((kpts%bksym(iq) > sym%nop) .and. (.not. mat_ex%l_real)) THEN
+         IF (fi%kpts%bkp(iq) /= iq) THEN
+            IF ((fi%kpts%bksym(iq) > fi%sym%nop) .and. (.not. mat_ex%l_real)) THEN
                coulomb_mt2_c = conjg(coulomb_mt2_c)
                coulomb_mtir_c = conjg(coulomb_mtir_c)
             END IF
          END IF
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(input, jsp, atoms, &
-                                   lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
-                                   noco, nococonv, oneD, nkqpt, cprod_vv_r)
+            CALL wavefproducts_inv(fi%input, jsp, fi%atoms, &
+                                   lapw, fi%kpts, mpi, ik, iq, hybdat, mpdata, fi%hybinp, fi%cell, fi%sym, &
+                                   fi%noco, nococonv, fi%oneD, nkqpt, cprod_vv_r)
          ELSE
-            CALL wavefproducts_noinv(ik, iq, input, jsp, &
-                                     cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
-                                     sym, noco, nococonv, oneD, nkqpt, cprod_vv_c)
+            CALL wavefproducts_noinv(ik, iq, fi%input, jsp, &
+                                     fi%cell, fi%atoms, mpdata, fi%hybinp, hybdat, fi%kpts, lapw, &
+                                     fi%sym, fi%noco, nococonv, fi%oneD, nkqpt, cprod_vv_c)
          END IF
 
          ! The sparse matrix technique is not feasible for the HSE
@@ -224,23 +214,23 @@ CONTAINS
             iband1 = hybdat%nobd(nkqpt, jsp)
 
             exch_vv = exch_vv + &
-                      dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, iq), iq, &
-                                             kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
-                                             hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+                      dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
+                                             fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
+                                             fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                              mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                                              hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-                                             sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+                                             fi%sym%invsat, fi%sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                                              cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
          END IF
 
          ! the Coulomb matrix is only evaluated at the irrecuible k-points
          ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
          ! from IBZ to current k-point
-         IF (kpts%bkp(iq) /= iq) THEN
+         IF (fi%kpts%bkp(iq) /= iq) THEN
             CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(iq), :, :), cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                            carr3_vv_c(:hybdat%nbasm(iq), :, :), cprod_vv_c(:hybdat%nbasm(iq), :, :), &
-                           MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik), iq, sym, &
-                           mpdata, hybinp, hybdat, kpts, atoms, phase_vv)
+                           MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik), iq, fi%sym, &
+                           mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, phase_vv)
             IF (mat_ex%l_real) THEN
                cprod_vv_r(:hybdat%nbasm(iq), :, :) = carr3_vv_r(:hybdat%nbasm(iq), :, :)
             ELSE
@@ -261,11 +251,11 @@ CONTAINS
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0
-                  CALL spmvec_invs(atoms, mpdata, hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
+                  CALL spmvec_invs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
                                    coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                ELSE
                   carr1_v_c(:n) = 0
-                  CALL spmvec_noinvs(atoms, mpdata, hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
+                  CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                      coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                END IF
                call timestop("sparse matrix products")
@@ -312,8 +302,8 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., input, atoms, mpdata, hybinp, &
-                                cell, hybdat, kpts, sym, noco, nococonv, lapw, oneD, jsp, eig_irr)
+            CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., fi%input, fi%atoms, mpdata, fi%hybinp, &
+                                fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, lapw, fi%oneD, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybdat%nbands(ik)
@@ -324,9 +314,9 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(ik, atoms, input, jsp, hybdat, mpdata, hybinp, &
-                                   lapw, kpts, cell, MAXVAL(hybdat%nobd(:, jsp)), &
-                                   sym, noco, nococonv, proj_ibsc, olap_ibsc)
+               CALL ibs_correction(ik, fi%atoms, fi%input, jsp, hybdat, mpdata, fi%hybinp, &
+                                   lapw, fi%kpts, fi%cell, MAXVAL(hybdat%nobd(:, jsp)), &
+                                   fi%sym, fi%noco, nococonv, proj_ibsc, olap_ibsc)
             END IF
          END IF
 
@@ -367,9 +357,9 @@ CONTAINS
 
                         ! ibs correction
                         IF (ibs_corr) THEN
-                           hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/cell%omtil
+                           hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/fi%cell%omtil
                            DO iband = 1, hybdat%nbands(ik)
-                              hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/cell%omtil
+                              hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/fi%cell%omtil
                            END DO
                         END IF
                      END DO
@@ -385,7 +375,7 @@ CONTAINS
                   END IF
 
                   exchcorrect(1) = fpi_const/3*(hessian(1, 1) + hessian(2, 2) + hessian(3, 3))
-                  exch0 = exchcorrect(1)/kpts%nkptf
+                  exch0 = exchcorrect(1)/fi%kpts%nkptf
                END IF
 
                ! tail correction/contribution from all other k-points (it  goes into exchcorrect )
@@ -396,7 +386,7 @@ CONTAINS
                !multiply divergent contribution with occupation number;
                !this only affects metals
                IF (n1 == nn2) THEN
-                  cdum2 = fpi_const/cell%omtil*divergence*wl_iks(n1, ik)*kpts%nkptf
+                  cdum2 = fpi_const/fi%cell%omtil*divergence*wl_iks(n1, ik)*fi%kpts%nkptf
                END IF
 
                ! due to the symmetrization afterwards the factor 1/n_q(1) must be added

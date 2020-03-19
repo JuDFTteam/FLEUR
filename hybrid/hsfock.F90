@@ -151,9 +151,8 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(nk, fi%kpts, nkpt_EIBZ, fi%sym, fi%atoms, mpdata, fi%hybinp, fi%cell, fi%input, jsp, hybdat, lapw, &
-                               eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, fi%noco, nococonv, fi%oneD, nsest, indx_sest, &
-                               mpi, ex)
+      CALL exchange_valence_hf(nk, fi, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
 
