@@ -95,11 +95,11 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
-      complex                  :: c_phase(hybdat%nbands(nk))
+      complex                  :: c_phase_k(hybdat%nbands(nk))
 
       REAL                    ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
 
-      TYPE(t_mat)             :: olap, ex, v_x, z
+      TYPE(t_mat)             :: olap, ex, v_x, z_k
 
       CALL timestart("total time hsfock")
 
@@ -128,15 +128,15 @@ CONTAINS
       IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
       parent = 0
 
-      call z%init(olap%l_real, nbasfcn, fi%input%neig)
-
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nk, jsp, z, c_phase=c_phase)
-
+      call z_k%init(olap%l_real, nbasfcn, fi%input%neig)
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
+                   c_phase=c_phase_k, parent_z=z_k_p)
+      
       CALL timestart("symm_hf")
       CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
-                   fi%noco, nococonv, fi%oneD, z, c_phase, jsp, &
+                   fi%noco, nococonv, fi%oneD, z_k, c_phase_k, jsp, &
                    rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
       CALL timestop("symm_hf")
 
@@ -151,7 +151,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(nk, fi, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
@@ -169,7 +169,7 @@ CONTAINS
       deallocate(n_q)
       CALL timestop("core exchange calculation")
 
-      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, olap, ex, v_x)
+      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, olap, ex, v_x)
       CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
 
       CALL timestop("total time hsfock")

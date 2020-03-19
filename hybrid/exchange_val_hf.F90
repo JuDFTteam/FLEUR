@@ -59,7 +59,7 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(ik, fi, nkpt_EIBZ,  mpdata,  jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, nkpt_EIBZ,  mpdata,  jsp, hybdat, lapw, eig_irr, results, &
                                   pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
@@ -74,14 +74,15 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
-      TYPE(t_results), INTENT(IN)    :: results
-      TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_nococonv), INTENT(IN) :: nococonv
-      TYPE(t_lapw), INTENT(IN)    :: lapw
-      TYPE(t_mat), INTENT(INOUT) :: mat_ex
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+      type(t_mat), intent(in)           :: z_k, z_k_p
+      TYPE(t_results), INTENT(IN)       :: results
+      TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
+      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_mpdata), intent(inout)     :: mpdata
+      TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      TYPE(t_lapw), INTENT(IN)          :: lapw
+      TYPE(t_mat), INTENT(INOUT)        :: mat_ex
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
