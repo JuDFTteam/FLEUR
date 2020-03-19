@@ -113,8 +113,6 @@ CONTAINS
       INTEGER                 ::  n, n1, n2, nn, nn2
       INTEGER                 ::  nkqpt
       INTEGER                 ::  ok
-      INTEGER                 ::  psize
-      REAL                    ::  rdum
 
       REAL, SAVE             ::  divergence
 
@@ -161,41 +159,23 @@ CONTAINS
       ! the sum over the inner occupied valence states is restricted to the EIBZ(k)
       ! the contribution of the Gamma-point is treated separately (see below)
 
-      ! determine package size loop over the occupied bands
-      rdum = hybdat%maxbasm1*hybdat%nbands(ik)*4/1048576.
-      psize = 1
-      DO iband = MAXVAL(hybdat%nobd(:,jsp)), 1, -1
-         ! ensure that the packages have equal size
-         IF (modulo(MAXVAL(hybdat%nobd(:,jsp)), iband) == 0) THEN
-            ! choose packet size such that cprod is smaller than memory threshold
-            IF (rdum*iband <= maxmem) THEN
-               psize = iband
-               EXIT
-            END IF
-         END IF
-      END DO
-
-      IF (psize /= MAXVAL(hybdat%nobd(:,jsp))) THEN
-         WRITE (6, '(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybinp%bands in packages', &
-            ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
-      END IF
-      allocate(phase_vv(psize, hybdat%nbands(ik)), stat=ok)
+      allocate(phase_vv(MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik)), stat=ok)
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       phase_vv = 0
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
          allocate(cprod_vv_c(hybdat%maxbasm1, 0, 0), carr3_vv_c(hybdat%maxbasm1, 0, 0))
-         allocate(cprod_vv_r(hybdat%maxbasm1, psize, hybdat%nbands(ik)), stat=ok)
+         allocate(cprod_vv_r(hybdat%maxbasm1, MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_r(hybdat%maxbasm1, psize, hybdat%nbands(ik)), stat=ok)
+         allocate(carr3_vv_r(hybdat%maxbasm1, MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_r = 0; carr3_vv_r = 0
       ELSE
          allocate(cprod_vv_r(hybdat%maxbasm1, 0, 0), carr3_vv_r(hybdat%maxbasm1, 0, 0))
-         allocate(cprod_vv_c(hybdat%maxbasm1, psize, hybdat%nbands(ik)), stat=ok)
+         allocate(cprod_vv_c(hybdat%maxbasm1, MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_c(hybdat%maxbasm1, psize, hybdat%nbands(ik)), stat=ok)
+         allocate(carr3_vv_c(hybdat%maxbasm1, MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_c = 0; carr3_vv_c = 0
       END IF
@@ -225,14 +205,14 @@ CONTAINS
             END IF
          END IF
 
-         DO ibando = 1, MAXVAL(hybdat%nobd(:,jsp)), psize
+         DO ibando = 1, MAXVAL(hybdat%nobd(:,jsp)), MAXVAL(hybdat%nobd(:,jsp))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(ibando, ibando + psize - 1, input, jsp, atoms, &
+               CALL wavefproducts_inv(ibando, ibando + MAXVAL(hybdat%nobd(:,jsp)) - 1, input, jsp, atoms, &
                                        lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                        noco,nococonv, oneD, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv(ibando, ibando + psize - 1, ik, iq, input, jsp, &
+               CALL wavefproducts_noinv(ibando, ibando + MAXVAL(hybdat%nobd(:,jsp)) - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
                                          sym, noco,nococonv, oneD, nkqpt, cprod_vv_c)
             END IF
@@ -250,7 +230,7 @@ CONTAINS
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                 mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, ibando, psize, indx_sest, &
+                                                hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, ibando, MAXVAL(hybdat%nobd(:,jsp)), indx_sest, &
                                                 sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                                                 cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
             END IF
@@ -261,7 +241,7 @@ CONTAINS
             IF (kpts%bkp(iq) /= iq) THEN
                CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(iq), :, :), cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                                carr3_vv_c(:hybdat%nbasm(iq), :, :), cprod_vv_c(:hybdat%nbasm(iq), :, :), &
-                               psize, hybdat%nbands(ik), iq, sym, &
+                               MAXVAL(hybdat%nobd(:,jsp)), hybdat%nbands(ik), iq, sym, &
                                mpdata, hybinp, hybdat, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
                   cprod_vv_r(:hybdat%nbasm(iq), :, :) = carr3_vv_r(:hybdat%nbasm(iq), :, :)
@@ -276,7 +256,7 @@ CONTAINS
 
             call timestart("exchange matrix")
             DO n1 = 1, hybdat%nbands(ik)
-               DO iband = 1, psize
+               DO iband = 1, MAXVAL(hybdat%nobd(:,jsp))
                   IF ((ibando + iband - 1) > hybdat%nobd(nkqpt,jsp)) CYCLE
 
                   cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
