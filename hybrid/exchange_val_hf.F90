@@ -278,9 +278,6 @@ CONTAINS
          call timestop("exchange matrix")
       END DO  !jq
 
-      call timestart("post wavef barrier")
-      call MPI_Barrier(mpi%mpi_comm, ierr)
-      call timestop("post wavef barrier")
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
 !      DO n2=1,n1
