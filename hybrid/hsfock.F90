@@ -130,7 +130,7 @@ CONTAINS
 
       call z_k%init(olap%l_real, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
-                   c_phase=c_phase_k, parent_z=z_k_p)
+                   c_phase=c_phase_k)
       
       CALL timestart("symm_hf")
       CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)

@@ -74,7 +74,7 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
-      type(t_mat), intent(in)           :: z_k, z_k_p
+      type(t_mat), intent(in)           :: z_k
       TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
       TYPE(t_mpi), INTENT(IN)           :: mpi
@@ -97,6 +97,7 @@ CONTAINS
 
       REAL, INTENT(IN)    ::  eig_irr(:, :)
       REAL, INTENT(IN)    ::  wl_iks(:, :)
+      complex, intent(in) :: c_phase_k(hybdat%nbands(ik))
 
       ! local scalars
       INTEGER                 ::  iband, iband1, jq, iq
