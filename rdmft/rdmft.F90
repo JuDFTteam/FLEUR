@@ -519,7 +519,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             END IF
 
             parent = 0
-            CALL zMat%init(olap%l_real,nbasfcn,fi%input%neig)
+            CALL zMat%init(fi%sym%invs,nbasfcn,fi%input%neig)
 
             if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
             call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
