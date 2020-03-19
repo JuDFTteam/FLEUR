@@ -497,9 +497,6 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE (hybdat%pntgptd)
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
-
-         call mpdata%free()
-
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE (hybdat%nindxp1)
 
          results%neig(:,:) = neigTemp(:,:)
@@ -513,6 +510,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          DO ikpt = 1,fi%kpts%nkpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
+
+            nbasfcn = 0
+            IF(fi%noco%l_noco) then
+               nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
+            ELSE
+               nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+            END IF
 
             parent = 0
             CALL zMat%init(olap%l_real,nbasfcn,fi%input%neig)
