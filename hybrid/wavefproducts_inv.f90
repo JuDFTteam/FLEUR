@@ -12,25 +12,14 @@ module m_wavefproducts_inv
    USE m_io_hybinp
    USE m_wavefproducts_aux
 
-CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
-   SUBROUTINE wavefproducts_inv(input,&
-                                jsp, atoms, lapw, kpts, mpi, nk, iq, hybdat, mpdata, hybinp,&
-                                cell, sym, noco, nococonv, oneD, nkqpt, cprod)
-
-
-
+CONTAINS 
+   SUBROUTINE wavefproducts_inv(fi, jsp, lapw, mpi, nk, iq, hybdat, mpdata,&
+                                nococonv, nkqpt, cprod)
       IMPLICIT NONE
+      type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata
-      TYPE(t_hybinp), INTENT(IN)    :: hybinp
-      TYPE(t_input), INTENT(IN)     :: input
-      type(t_oneD), intent(in)      :: oneD
-      TYPE(t_noco), INTENT(IN)      :: noco
       type(t_nococonv), intent(in)  :: nococonv
-      TYPE(t_sym), INTENT(IN)       :: sym
-      TYPE(t_cell), INTENT(IN)      :: cell
-      TYPE(t_kpts), INTENT(IN)      :: kpts
       TYPE(t_mpi), intent(in)       :: mpi
-      TYPE(t_atoms), INTENT(IN)     :: atoms
       TYPE(t_lapw), INTENT(IN)      :: lapw
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
@@ -51,44 +40,36 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
 
       CALL timestart("wavefproducts_inv5")
       cprod = 0.0;nkqpt=-1
-      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
+      kqpthlp = fi%kpts%bkf(:, nk) + fi%kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
-      kqpt = kpts%to_first_bz(kqpthlp)
+      kqpt = fi%kpts%to_first_bz(kqpthlp)
       g_t = nint(kqpt - kqpthlp)
 
       ! determine number of kqpt
-      nkqpt = kpts%get_nk(kqpt)
+      nkqpt = fi%kpts%get_nk(kqpt)
       allocate(c_phase_k(hybdat%nbands(nk)))
-      allocate(c_phase_kqpt(hybdat%nbands(kpts%bkp(nkqpt))))
-      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
+      allocate(c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(nkqpt))))
+      IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
 
 
-      call wavefproducts_inv_IS(input,&
-                                jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      call wavefproducts_inv_IS(fi, jsp, lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
+                                nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call wavefproducts_inv_MT(input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      call wavefproducts_inv_MT(fi,nococonv, jsp, nk, iq, hybdat, mpdata,&
+                                nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv
 
-   subroutine wavefproducts_inv_IS(input,&
-                                 jsp, atoms, lapw, kpts, mpi, nk, iq, g_t, hybdat, mpdata, hybinp,&
-                                 cell, sym, noco,nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+   subroutine wavefproducts_inv_IS(fi,jsp,lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
+                                 nococonv, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
      implicit NONE
+     type(t_fleurinput), intent(in):: fi
      TYPE(t_mpdata), intent(in)  :: mpdata
-     TYPE(t_hybinp), INTENT(IN)    :: hybinp
-     TYPE(t_input), INTENT(IN)     :: input
-     TYPE(t_noco), INTENT(IN)      :: noco
      TYPE(t_nococonv), INTENT(IN)  :: nococonv
-     TYPE(t_sym), INTENT(IN)       :: sym
-     TYPE(t_cell), INTENT(IN)      :: cell
-     TYPE(t_kpts), INTENT(IN)      :: kpts
-     TYPE(t_atoms), INTENT(IN)     :: atoms
      TYPE(t_lapw), INTENT(IN)      :: lapw
      TYPE(t_mpi), intent(in)       :: mpi
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -124,26 +105,26 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
      !
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
-     CALL lapw_nkqpt%init(input, noco, nococonv, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-     nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
-     call z_k%alloc(.true., nbasfcn, input%neig)
+     CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
+     nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
+     call z_k%alloc(.true., nbasfcn, fi%input%neig)
      call z_k_p%init(z_k)
 
-     nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
-     call z_kqpt%alloc(.true., nbasfcn, input%neig)
+     nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, fi%atoms, fi%noco)
+     call z_kqpt%alloc(.true., nbasfcn, fi%input%neig)
      call z_kqpt_p%init(z_kqpt)
 
      ! read in z at k-point nk and nkqpt
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z_k, &
+     call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                  c_phase=c_phase_k, parent_z=z_k_p)
-     call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
+     call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nkqpt, jsp, z_kqpt, &
                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
        + maxval(abs(mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(iq), iq))), dim=2) + 1
 
-     call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
+     call hybdat%set_stepfunction(fi%cell, fi%atoms, g, sqrt(fi%cell%omtil))
      !
      ! convolute phi(n,k) with the step function and store in cpw0
      !
@@ -200,20 +181,13 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
 
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv_MT(input,atoms, cell, noco,nococonv, oneD, jsp, kpts, nk, iq, hybdat, mpdata, hybinp,&
-                                   sym, nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt,  cprod)
+   subroutine wavefproducts_inv_MT(fi, nococonv, jsp, nk, iq, hybdat, mpdata,&
+                                   nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt,  cprod)
      use m_calc_cmt
      implicit NONE
-     TYPE(t_input),INTENT(IN)      :: input
+     type(t_fleurinput), intent(in):: fi
      TYPE(t_mpdata), INTENT(IN)   :: mpdata
-     TYPE(t_hybinp), INTENT(IN)    :: hybinp
-     TYPE(t_sym), INTENT(IN)       :: sym
-     TYPE(t_kpts), INTENT(IN)      :: kpts
-     TYPE(t_atoms), INTENT(IN)     :: atoms
-     type(t_cell), intent(in)      :: cell
      type(t_nococonv), intent(in)  :: nococonv
-     type(t_noco), intent(in)      :: noco
-     type(t_oneD), intent(in)      :: oneD
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
      type(t_mat), intent(in)       :: z_k_p, z_kqpt_p
 
@@ -241,68 +215,68 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
      LOGICAL                 ::    offdiag
 
      ! - local arrays -
-     INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
+     INTEGER                 ::    lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
-     REAL                    ::    cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
-     REAL                    ::    cmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, atoms%nat)
+     REAL                    ::    cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
+     REAL                    ::    cmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, fi%atoms%nat)
      REAL                    ::    rarr2(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
      REAL                    ::    rarr3(2, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
 
-     COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
+     COMPLEX                 ::    cmplx_exp(fi%atoms%nat), cexp_nk(fi%atoms%nat)
      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :), ccmt_nk2(:, :, :)
      COMPLEX, ALLOCATABLE    ::    ccmt_nkqpt(:, :, :)
 
      ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
-     DO itype = 1, atoms%ntype
-        DO l = 0, atoms%lmax(itype)
+     DO itype = 1, fi%atoms%ntype
+        DO l = 0, fi%atoms%lmax(itype)
            lmstart(l, itype) = sum([(mpdata%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)])
         END DO
      END DO
 
      ! read in cmt coefficient at k-point nk
-     !ccmt_nkqpt(input%neig, hybdat%maxlmindx, atoms%nat), &
-     allocate(ccmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat), &
-              ccmt_nk2(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat), &
-              ccmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, atoms%nat), &
+     !ccmt_nkqpt(input%neig, hybdat%maxlmindx, fi%atoms%nat), &
+     allocate(ccmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat), &
+              ccmt_nk2(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat), &
+              ccmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, fi%atoms%nat), &
               source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
 
-     call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
-                         sym, oneD, z_k_p, jsp, nk, c_phase_k, ccmt_nk)
+     call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+                         fi%sym, fi%oneD, z_k_p, jsp, nk, c_phase_k, ccmt_nk)
 
      !read in cmt coefficients at k+q point
-     call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
-                         sym, oneD, z_kqpt_p, jsp, nkqpt, c_phase_kqpt, ccmt_nkqpt)
+     call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+                         fi%sym, fi%oneD, z_kqpt_p, jsp, nkqpt, c_phase_kqpt, ccmt_nkqpt)
 
      iatom = 0
-     DO itype = 1, atoms%ntype
-        DO ieq = 1, atoms%neq(itype)
+     DO itype = 1, fi%atoms%ntype
+        DO ieq = 1, fi%atoms%neq(itype)
            iatom = iatom + 1
 
            cmplx_exp(iatom) = exp((-img)*tpi_const* &
-                                  dot_product(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
+                                  dot_product(fi%kpts%bkf(:, iq) + fi%kpts%bkf(:, nk), fi%atoms%taual(:, iatom)))
 
            cexp_nk(iatom) = exp((-img)*tpi_const* &
-                                dot_product(kpts%bkf(:, nk), atoms%taual(:, iatom)))
+                                dot_product(fi%kpts%bkf(:, nk), fi%atoms%taual(:, iatom)))
         END DO
      END DO
 
      rfac = 1./sqrt(2.0)
      cfac = -img/sqrt(2.0)
      iatom = 0
-     DO itype = 1, atoms%ntype
-        DO ieq = 1, atoms%neq(itype)
+     DO itype = 1, fi%atoms%ntype
+        DO ieq = 1, fi%atoms%neq(itype)
            iatom = iatom + 1
            ! determine the number of the inverse symmetric atom belonging to iatom
-           IF (sym%invsatnr(iatom) == 0) THEN
+           IF (fi%sym%invsatnr(iatom) == 0) THEN
               iiatom = iatom
            ELSE
-              iiatom = sym%invsatnr(iatom)
+              iiatom = fi%sym%invsatnr(iatom)
            END IF
            ! the cmt coefficients at iatom and iiatom are made real in one step
            IF (iiatom < iatom) CYCLE
            lm1 = 0
-           DO l = 0, atoms%lmax(itype)
+           DO l = 0, fi%atoms%lmax(itype)
               DO m = -l, l
                  rdum = (-1)**(l + m)
                  DO p = 1, mpdata%num_radfun_per_l(l, itype)
@@ -354,22 +328,22 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
      iatom1 = 0
      iiatom = 0
 
-     DO itype = 1, atoms%ntype
-        ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, hybinp%lcutm1(itype))])
+     DO itype = 1, fi%atoms%ntype
+        ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, fi%hybinp%lcutm1(itype))])
         lm_0 = lm_00
-        DO ieq = 1, atoms%neq(itype)
+        DO ieq = 1, fi%atoms%neq(itype)
            iatom1 = iatom1 + 1
-           IF (sym%invsatnr(iatom1) == 0) THEN
+           IF (fi%sym%invsatnr(iatom1) == 0) THEN
               iatom2 = iatom1
            ELSE
-              iatom2 = sym%invsatnr(iatom1)
+              iatom2 = fi%sym%invsatnr(iatom1)
            END IF
            IF (iatom1 > iatom2) CYCLE
 
            IF (iatom1 /= iatom2) THEN
               call timestart("iatom1 neq iatom2")
               ! loop over l of mixed basis
-              DO l = 0, hybinp%lcutm1(itype)
+              DO l = 0, fi%hybinp%lcutm1(itype)
                  ! loop over basis functions products, which belong to l
                  DO n = 1, hybdat%nindxp1(l, itype)
 
@@ -455,7 +429,7 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                        lm2 = lm + (iatom2 - 1 - iiatom)*ioffset + ishift
 
-                       rdum = tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, iatom1))
+                       rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
                        rfac1 = sin(rdum)/sqrt(2.0)
                        rfac2 = cos(rdum)/sqrt(2.0)
                        DO iband = 1, hybdat%nbands(nk)
@@ -489,7 +463,7 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
 
               ! loop over l of mixed basis
               monepl = -1
-              DO l = 0, hybinp%lcutm1(itype)
+              DO l = 0, fi%hybinp%lcutm1(itype)
                  monepl = -monepl
                  ! loop over basis functions products, which belong to l
                  DO n = 1, hybdat%nindxp1(l, itype)
@@ -1025,8 +999,8 @@ CONTAINS ! 1, MAXVAL(hybdat%nobd(:, jsp)),
 
            lm_0 = lm_00
         END DO !ieq
-        iiatom = iiatom + atoms%neq(itype)
-        lm_00 = lm_00 + atoms%neq(itype)*ioffset
+        iiatom = iiatom + fi%atoms%neq(itype)
+        lm_00 = lm_00 + fi%atoms%neq(itype)*ioffset
      END DO  !itype
    end subroutine wavefproducts_inv_MT
 end module m_wavefproducts_inv
