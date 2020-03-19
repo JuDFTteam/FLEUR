@@ -550,11 +550,9 @@ CONTAINS
                   call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't stop here!
                endif
 
-               call timestart("harmonics")
                call ylm4(2, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1)
                call ylm4(2, MATMUL(mpdata%g(:, igptp), cell%bmat), y2)
                call ylm4(hybinp%lexp, q, y)
-               call timestop("harmonics")
                y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
                iy = 0
@@ -752,9 +750,7 @@ CONTAINS
                iqnrm = pqnrm(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
 
-               call timestart("harmonics")
                call ylm4(hybinp%lexp, q, y)
-               call timestop("harmonics")
 
                y = CONJG(y)
                lm = 0
@@ -1802,11 +1798,8 @@ CONTAINS
                   END DO
                END IF
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
-               call timestart("harmonics")
                call ylm4(maxl, ra, y)
-               call timestop("harmonics")
                y = CONJG(y)
-               call timestart("kloop")
                DO ikpt = 1, kpts%nkpt
                   rdum = kpts%bk(1, ikpt)*ptsh(1, i) + kpts%bk(2, ikpt)*ptsh(2, i) + kpts%bk(3, ikpt)*ptsh(3, i)
                   cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*rdum)
@@ -1823,7 +1816,6 @@ CONTAINS
                      END IF
                   END DO
                END DO
-               call timestop("kloop")
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
@@ -1883,10 +1875,8 @@ CONTAINS
             END IF
 
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
-            call timestart("harmonics")
             call ylm4(maxl, ka, y)
             IF(norm2(ka(:)).LT.1.0e-16) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
-            call timestop("harmonics")
             cdum = 1.0
             lm = 0
             DO l = 0, maxl
