@@ -107,7 +107,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:,:)
 
       ! local scalars
-      INTEGER                 ::  iband, iband1, ibando, jq, iq
+      INTEGER                 ::  iband, iband1, jq, iq
       INTEGER                 ::  i, ierr
       INTEGER                 ::  j
       INTEGER                 ::  n, n1, n2, nn, nn2
@@ -205,14 +205,13 @@ CONTAINS
             END IF
          END IF
 
-         DO ibando = 1, MAXVAL(hybdat%nobd(:,jsp)), MAXVAL(hybdat%nobd(:,jsp))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(ibando, ibando + MAXVAL(hybdat%nobd(:,jsp)) - 1, input, jsp, atoms, &
+               CALL wavefproducts_inv(1, 1 + MAXVAL(hybdat%nobd(:,jsp)) - 1, input, jsp, atoms, &
                                        lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                        noco,nococonv, oneD, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv(ibando, ibando + MAXVAL(hybdat%nobd(:,jsp)) - 1, ik, iq, input, jsp, &
+               CALL wavefproducts_noinv(1, 1 + MAXVAL(hybdat%nobd(:,jsp)) - 1, ik, iq, input, jsp, &
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
                                          sym, noco,nococonv, oneD, nkqpt, cprod_vv_c)
             END IF
@@ -230,7 +229,7 @@ CONTAINS
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                 mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, ibando, MAXVAL(hybdat%nobd(:,jsp)), indx_sest, &
+                                                hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:,jsp)), indx_sest, &
                                                 sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                                                 cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
             END IF
@@ -257,9 +256,9 @@ CONTAINS
             call timestart("exchange matrix")
             DO n1 = 1, hybdat%nbands(ik)
                DO iband = 1, MAXVAL(hybdat%nobd(:,jsp))
-                  IF ((ibando + iband - 1) > hybdat%nobd(nkqpt,jsp)) CYCLE
+                  IF ((1 + iband - 1) > hybdat%nobd(nkqpt,jsp)) CYCLE
 
-                  cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
+                  cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                   call timestart("sparse matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
@@ -290,7 +289,6 @@ CONTAINS
                END DO
             END DO  !n1
             call timestop("exchange matrix")
-         END DO !ibando
       END DO  !jq
             
       call timestart("post wavef barrier")
