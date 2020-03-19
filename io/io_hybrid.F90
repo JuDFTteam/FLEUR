@@ -179,8 +179,8 @@ contains
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
          z_out%matsize2 = hybdat%nbands(ik)
-         ! call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
          if(present(parent_z)) call parent_z%copy(z_out,1,1)
+         parent_z%matsize2=z_out%matsize2
       else
          if(present(parent_z)) then
             ptr_mat => parent_z
@@ -193,7 +193,6 @@ contains
          iop = kpts%bksym(ik) ! connecting symm
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
          ptr_mat%matsize2 = hybdat%nbands(ik)
-         ! call ptr_mat%save_npy("z_ik=" // int2str(ik) // "_ikp=" // int2str(ikp) // ".npy")
 
          CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
