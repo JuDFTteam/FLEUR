@@ -198,9 +198,8 @@ CONTAINS
          IF (mat_ex%l_real) THEN
             CALL wavefproducts_inv(fi, jsp, lapw, mpi, ik, iq, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
          ELSE
-            CALL wavefproducts_noinv(ik, iq, fi%input, jsp, &
-                                     fi%cell, fi%atoms, mpdata, fi%hybinp, hybdat, fi%kpts, lapw, &
-                                     fi%sym, fi%noco, nococonv, fi%oneD, nkqpt, cprod_vv_c)
+            CALL wavefproducts_noinv(ik, iq, fi, jsp, mpdata, hybdat, lapw, &
+                                     nococonv, nkqpt, cprod_vv_c)
          END IF
 
          ! The sparse matrix technique is not feasible for the HSE
