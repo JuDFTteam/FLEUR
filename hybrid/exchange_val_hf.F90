@@ -206,11 +206,11 @@ CONTAINS
          END IF
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(1, 1 + MAXVAL(hybdat%nobd(:, jsp)) - 1, input, jsp, atoms, &
+            CALL wavefproducts_inv(1, MAXVAL(hybdat%nobd(:, jsp)), input, jsp, atoms, &
                                    lapw, kpts, mpi, ik, iq, hybdat, mpdata, hybinp, cell, sym, &
                                    noco, nococonv, oneD, nkqpt, cprod_vv_r)
          ELSE
-            CALL wavefproducts_noinv(1, 1 + MAXVAL(hybdat%nobd(:, jsp)) - 1, ik, iq, input, jsp, &
+            CALL wavefproducts_noinv(1, MAXVAL(hybdat%nobd(:, jsp)), ik, iq, input, jsp, &
                                      cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, &
                                      sym, noco, nococonv, oneD, nkqpt, cprod_vv_c)
          END IF
@@ -255,7 +255,7 @@ CONTAINS
          call timestart("exchange matrix")
          DO n1 = 1, hybdat%nbands(ik)
             DO iband = 1, MAXVAL(hybdat%nobd(:, jsp))
-               IF ((1 + iband - 1) > hybdat%nobd(nkqpt, jsp)) CYCLE
+               IF ((iband) > hybdat%nobd(nkqpt, jsp)) CYCLE
 
                cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                call timestart("sparse matrix products")
