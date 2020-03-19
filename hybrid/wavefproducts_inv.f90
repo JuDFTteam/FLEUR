@@ -141,7 +141,6 @@ CONTAINS
                  c_phase=c_phase_k, parent_z=z_k_p)
      call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nkqpt, jsp, z_kqpt, &
                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
-      call MPI_Barrier(mpi%mpi_comm, ierr)
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
