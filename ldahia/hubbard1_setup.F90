@@ -18,6 +18,7 @@ MODULE m_hubbard1_setup
    IMPLICIT NONE
 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
+   CHARACTER(len=30), PARAMETER :: out_file    = "out"
 
    CONTAINS
 
@@ -38,6 +39,7 @@ MODULE m_hubbard1_setup
       INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd,i_gf
+      INTEGER :: hubbardioUnit
       REAL    :: mu_dc,exc
       LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
@@ -219,15 +221,24 @@ MODULE m_hubbard1_setup
                   !We have to change into the Hubbard1 directory so that the solver routines can read the config
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
 #ifdef CPP_EDSOLVER
+                  !Open the output file for the solver
+                  hubbardioUnit = 4000+i_hia
+                  OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(out_file)),&
+                       status="replace", action="write", iostat=io_error)
+                  IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
                   e = gdft(i_hia)%contour%e*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
+                                         selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1,hubbardioUnit)
                   !---------------------------------------------------
                   ! Calculate selfenergy on lower contour explicitly
                   ! Mainly out of paranoia :D
                   ! No rediagonalization (last argument switches this)
                   !---------------------------------------------------
                   e = conjg(gdft(i_hia)%contour%e)*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
+                                         selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0,hubbardioUnit)
+                  CLOSE(hubbardioUnit, iostat=io_error)
+                  IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
