@@ -52,19 +52,22 @@ CONTAINS
   END SUBROUTINE synth_ab
 
 
-  SUBROUTINE hsmt_ab_gpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab_gpu(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, GPU version
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
     USE cudafor
     USE nvtx
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_fjgj),INTENT(IN)     :: fjgj
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n,na,iintsp
@@ -72,7 +75,6 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    REAL, DEVICE, INTENT(IN)       :: fj(:,:,:),gj(:,:,:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
@@ -105,7 +107,7 @@ CONTAINS
 
     np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
-    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
+    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
     c_ph_dev=c_ph
 
     IF (np==1) THEN
@@ -130,7 +132,7 @@ CONTAINS
     loop_size = max(lapw%nv(1)/(grid*block),1)   !number of iterations performed by each thread
     if (loop_size * grid*block < lapw%nv(1)) loop_size = loop_size + 1
     CALL synth_ab<<<grid,block>>>(loop_size,lapw%nv(1),lmax,ab_size,gkrot_dev,&
-                                  fj(:,:,iintsp),gj(:,:,iintsp),c_ph_dev(:,iintsp),ab)
+                                  fjgj%fj(:,:,ispin,iintsp),fjgj%gj(:,:,ispin,iintsp),c_ph_dev(:,iintsp),ab)
 
     IF (PRESENT(abclo)) THEN
        print*, "Ooooops, TODO in hsmt_ab"

@@ -43,7 +43,7 @@ CONTAINS
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
     h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp,jsp))
 
-       CALL priv_noMPI(n,mpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,h_loc_dev,fj,gj,hmat)
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,h_loc_dev,fjgj,hmat)
 #else
        CALL priv_noMPI(n,mpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,td,fjgj,hmat)
 #endif
@@ -54,12 +54,13 @@ CONTAINS
   END SUBROUTINE hsmt_nonsph
 
 #if defined CPP_GPU
-  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
+  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,h_loc_dev,fjgj,hmat)
 !Calculate overlap matrix, GPU version
 !note that basically all matrices in the GPU version are conjugates of their cpu counterparts
     USE m_hsmt_ab
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
+    USE m_hsmt_fjgj
     USE m_ylm
   !   cublas: required to use generic BLAS interface
   !   cudafor: required to use CUDA runtime API routines
@@ -72,17 +73,18 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_fjgj),INTENT(IN)     :: fjgj
     COMPLEX, INTENT(IN),DEVICE  :: h_loc_dev(:,:)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp,jsp
     COMPLEX,INTENT(in)   :: chi
     !     ..
     !     .. Array Arguments ..
-    REAL,   INTENT(IN),   DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 
     INTEGER:: nn,na,ab_size,l,ll,m
@@ -108,7 +110,7 @@ CONTAINS
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
 
-          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj_dev,gj_dev,ab_dev,ab_size,.TRUE.)
+          CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,n,na,cell,lapw,fjgj,ab_dev,ab_size,.TRUE.)
 
           !Calculate Hamiltonian
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
@@ -120,7 +122,7 @@ CONTAINS
              call nvtxEndRange()
           ELSE  !here the l_ss off-diagonal part starts
              !Second set of ab is needed
-             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj_dev,gj_dev,ab_dev,ab_size,.TRUE.)
+             CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab_dev,ab_size,.TRUE.)
              CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
                         h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab2_dev,SIZE(ab2_dev,1))
              !Multiply for Hamiltonian
