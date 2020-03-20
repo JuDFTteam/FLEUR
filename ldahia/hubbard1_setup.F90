@@ -202,6 +202,7 @@ MODULE m_hubbard1_setup
          CALL timestop("Hubbard 1: IO/Write")
 #endif
 
+         IF(mpi%irank.EQ.0 .AND. l_linkedsolver) WRITE(*,*) "Calculating new density matrix ..."
          !------------------------------------------------------------
          ! This loop runs the solver if it is available
          ! If not the program terminates here
