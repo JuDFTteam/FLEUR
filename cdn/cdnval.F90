@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfCoeffs)
+                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -39,8 +39,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_pwden
    USE m_forcea8
    USE m_checkdopall
-   USE m_tetrahedronInit
-   USE m_gfcalc
+   USE m_greensfBZint
+   USE m_greensfCalcImagPart
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -83,13 +83,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
    TYPE(t_moments),       INTENT(INOUT) :: moments
-   TYPE(t_hub1data),      OPTIONAL, INTENT(INOUT) :: hub1data
-   TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
-   TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
-   TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
-   TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
-   TYPE(t_jDOS),          OPTIONAL, INTENT(INOUT) :: jDOS
-   TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
+   TYPE(t_hub1data),       OPTIONAL, INTENT(INOUT) :: hub1data
+   TYPE(t_coreSpecInput),  OPTIONAL, INTENT(IN)    :: coreSpecInput
+   TYPE(t_mcd),            OPTIONAL, INTENT(INOUT) :: mcd
+   TYPE(t_slab),           OPTIONAL, INTENT(INOUT) :: slab
+   TYPE(t_orbcomp),        OPTIONAL, INTENT(INOUT) :: orbcomp
+   TYPE(t_jDOS),           OPTIONAL, INTENT(INOUT) :: jDOS
+   TYPE(t_greensfImagPart),OPTIONAL, INTENT(INOUT) :: greensfImagPart
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -108,18 +108,17 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-   REAL,    ALLOCATABLE :: dosWeights(:,:),resWeights(:,:),eMesh(:)
-   INTEGER, ALLOCATABLE :: dosBound(:,:)
 
-   TYPE (t_lapw)             :: lapw
-   TYPE (t_orb)              :: orb
-   TYPE (t_denCoeffs)        :: denCoeffs
-   TYPE (t_denCoeffsOffdiag) :: denCoeffsOffdiag
-   TYPE (t_force)            :: force
-   TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
-   TYPE (t_usdus)            :: usdus
-   TYPE (t_mat)              :: zMat
-   TYPE (t_gVacMap)          :: gVacMap
+   TYPE (t_lapw)              :: lapw
+   TYPE (t_orb)               :: orb
+   TYPE (t_denCoeffs)         :: denCoeffs
+   TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
+   TYPE (t_force)             :: force
+   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs
+   TYPE (t_usdus)             :: usdus
+   TYPE (t_mat)               :: zMat
+   TYPE (t_gVacMap)           :: gVacMap
+   TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
 
    CALL timestart("cdnval")
 
@@ -151,6 +150,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    CALL denCoeffsOffdiag%init(atoms,noco,banddos,sphhar,noco%l_mtnocopot.OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
+
+   !Greens function always considers the empty states
+   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
@@ -187,9 +189,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
 
    jsp = MERGE(1,jspin,noco%l_noco)
-
-   !Get the energy mesh for the tetrahedron method
-   IF(gfinp%n>0) CALL gfinp%eMesh(results%ef,eMesh=eMesh)
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
@@ -235,16 +234,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS)
-      IF (gfinp%n.GT.0.AND.input%bz_integration==3) THEN
-         CALL timestart("TetrahedronWeights")
-         IF(mpi%n_size>1) CALL juDFT_error("Tetra for GF and ev parallelism currently broken")
-         ALLOCATE(dosWeights(gfinp%ne,noccbd),source=0.0)
-         ALLOCATE(resWeights(gfinp%ne,noccbd),source=0.0)
-         ALLOCATE(dosBound(noccbd,2))
-         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),results%neig(:,jsp),eMesh,gfinp%ne,&
-                              input%film,dosWeights,bounds=dosBound,dos=.TRUE.)
-         CALL timestop("TetrahedronWeights")
-      ENDIF
+
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,oneD,&
@@ -256,8 +246,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF (gfinp%n.GT.0) CALL bzIntegrationGF(atoms,gfinp,sym,input,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
-                                                results%ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
+         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,noco%l_mperp.AND.(ispin==jsp_end),&
+                                         gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
@@ -292,7 +282,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
-      IF (gfinp%n.GT.0.AND.input%bz_integration==3) DEALLOCATE(dosWeights,resWeights,dosBound)
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
@@ -304,9 +293,17 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,ispin,regCharges,dos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS,greensfCoeffs)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
+
+   IF(gfinp%n>0) THEN
+      !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
+      DO ispin = MERGE(1,jspin,noco%l_mperp),MERGE(3,jspin,noco%l_mperp)
+         CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
+                                  results,greensfBZintCoeffs,greensfImagPart)
+      ENDDO
+   ENDIF
 
    CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
               vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,jDOS,hub1data)
