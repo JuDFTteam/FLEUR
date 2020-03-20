@@ -11,6 +11,8 @@ MODULE m_kkintgr
    !>  Performs the Kramer-Kronig-Transformation to obtain the Green's function
    !>  in the complex plane from the imaginary part calculated on the real axis
    !
+   ! TODO: Look at FFT for Transformation
+   !       How to do changing imaginary parts
    !------------------------------------------------------------------------------
    USE ieee_arithmetic
    USE m_constants
@@ -21,15 +23,12 @@ MODULE m_kkintgr
    INTEGER, PARAMETER :: method_maclaurin = 1
    INTEGER, PARAMETER :: method_deriv     = 2
 
-   INTEGER, PARAMETER :: rectangular      = 1
-   INTEGER, PARAMETER :: semicircle       = 2
-
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8
 
    CONTAINS
 
-   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,shape,nz,method)
+   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,nz,method)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
       !Re(G(E+i * delta)) = -1/pi * int_bot^top dE' P(1/(E-E')) * Im(G(E'+i*delta))
@@ -39,25 +38,24 @@ MODULE m_kkintgr
       USE m_smooth
 
       !Information about the integrand
-      REAL,          INTENT(IN)  :: im(:)      !Imaginary part of the green's function on the real axis
-      REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
-      REAL,          INTENT(IN)  :: del         !Energy step on the real axis
-      INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
+      REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
+      REAL,          INTENT(IN)     :: eb          !Bottom energy cutoff
+      REAL,          INTENT(IN)     :: del         !Energy step on the real axis
+      INTEGER,       INTENT(IN)     :: ne          !Number of energy points on the real axis
 
       !Information about the complex energy contour
-      COMPLEX,       INTENT(INOUT) :: g(:)       !Green's function on the complex plane
-      COMPLEX,       INTENT(IN)  :: ez(:)      !Complex energy contour
-      LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
-      INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
-      INTEGER,       INTENT(IN)  :: nz          !Number of energy points on the complex contour
+      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
+      COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
+      LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
+      INTEGER,       INTENT(IN)     :: nz          !Number of energy points on the complex contour
 
       !Information about the method
-      INTEGER,       INTENT(IN)  :: method      !Integer associated with the method to be used (definitions above)
+      INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      REAL ::  im_calc(ne),e(ne)  !Array where the smoothed version of im is stored
-
-      INTEGER  iz,n1,n2,i,count
-      REAL     sigma,re_n1,re_n2,im_n1,im_n2
+      INTEGER  :: iz,n1,n2,i
+      REAL     ::  e(ne)
+      REAL     ::  im_calc(ne) !Array where the smoothed version of im is stored
+      REAL     :: sigma,re_n1,re_n2,im_n1,im_n2
 
       DO i = 1, ne
          e(i) = (i-1) * del + eb
@@ -65,17 +63,18 @@ MODULE m_kkintgr
 
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
+      !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
       !$OMP SHARED(g,ez,im,e) &
       !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
+      sigma = 0.0
       !$OMP DO
       DO iz = 1, nz
          IF(method.EQ.3) THEN
             g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
          ELSE
-            IF(AIMAG(ez(iz)).NE.0.0.AND.AIMAG(ez(iz)).NE.sigma) THEN
+            IF(ABS(AIMAG(ez(iz))).GT.1e-12.AND.ABS(AIMAG(ez(iz))-sigma).GT.1e-12) THEN
                !Sigma is changed, so we need to smooth here
-               im_calc = im !Get the original version
+               im_calc = im(:ne) !Get the original version
                sigma = AIMAG(ez(iz))
                CALL smooth(e,im_calc,sigma,ne)
             ENDIF
@@ -89,9 +88,19 @@ MODULE m_kkintgr
             !Interpolate to the energy ez(iz)
             !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
+
             !Imaginary Part (0 outside of the energy range)
-            im_n1 = MERGE(im_calc(n1),0.0,(n1.LE.ne).AND.(n1.GE.1))
-            im_n2 = MERGE(im_calc(n2),0.0,(n2.LE.ne).AND.(n2.GE.1))
+            IF(n1.LE.ne.AND.n1.GE.1) THEN
+               im_n1 = im_calc(n1)
+            ELSE
+               im_n1 = 0.0
+            ENDIF
+            IF(n2.LE.ne.AND.n2.GE.1) THEN
+               im_n2 = im_calc(n2)
+            ELSE
+               im_n2 = 0.0
+            ENDIF
+
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
             IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
@@ -106,6 +115,8 @@ MODULE m_kkintgr
    END SUBROUTINE kkintgr
 
    COMPLEX FUNCTION g_circle(im,ne,z,del,eb)
+
+      USE m_trapz
 
       REAL,    INTENT(IN) :: im(:)
       INTEGER, INTENT(IN) :: ne
@@ -135,7 +146,12 @@ MODULE m_kkintgr
       REAL    y,im_ire
 
       re_ire = 0.0
-      im_ire = MERGE(im(ire),0.0,(ire.LE.ne).AND.(ire.GE.1))
+      IF(ire.LE.ne.AND.ire.GE.1) THEN
+         im_ire = im(ire)
+      ELSE
+         im_ire = 0.0
+      ENDIF
+
       SELECT CASE(method)
 
       CASE (method_maclaurin)
@@ -223,26 +239,5 @@ MODULE m_kkintgr
 
 
    END SUBROUTINE lorentzian_smooth
-
-   !General Purpose trapezian method integration (not used in kkintgr)
-   REAL FUNCTION trapz(y,h,n)
-
-      REAL,          INTENT(IN)     :: y(:)
-
-      INTEGER,       INTENT(IN)     :: n
-      REAL,          INTENT(IN)     :: h
-
-
-      INTEGER i
-
-      trapz = y(1)
-      DO i = 2, n-1
-         trapz = trapz + 2*y(i)
-      ENDDO
-      trapz = trapz + y(n)
-
-      trapz = trapz*h/2.0
-
-   END FUNCTION trapz
 
 END MODULE m_kkintgr

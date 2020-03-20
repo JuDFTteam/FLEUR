@@ -9,7 +9,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,gOnsite,hub1data)
+                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data)
 
    !*****************************************************
    !    Charge density generator
@@ -40,17 +40,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    USE m_unfold_band_kpts
    USE m_denMultipoleExp
-   USE m_gfcalc
+   USE m_greensfPostProcess
    USE m_angles
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
 
    IMPLICIT NONE
-
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
 
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
@@ -74,7 +70,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_gfinp),INTENT(IN)         :: gfinp
    TYPE(t_hub1inp),INTENT(IN)       :: hub1inp
-   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
+   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: greensFunction(:)
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
@@ -83,24 +79,25 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco)          :: noco_new
-   TYPE(t_regionCharges) :: regCharges, fake_regCharges
-   TYPE(t_dos)           :: dos, fake_dos
-   TYPE(t_moments)       :: moments, fake_moments
-   TYPE(t_results)       :: fake_results
-   TYPE(t_mcd)           :: mcd
-   TYPE(t_slab)          :: slab
-   TYPE(t_orbcomp)       :: orbcomp
-   TYPE(t_jDOS)          :: jDOS
-   TYPE(t_cdnvalJob)     :: cdnvalJob
-   TYPE(t_greensfCoeffs) :: greensfCoeffs
-   TYPE(t_potden)        :: val_den, core_den
+   TYPE(t_noco)            :: noco_new
+   TYPE(t_regionCharges)   :: regCharges, fake_regCharges
+   TYPE(t_dos)             :: dos, fake_dos
+   TYPE(t_moments)         :: moments, fake_moments
+   TYPE(t_results)         :: fake_results
+   TYPE(t_mcd)             :: mcd
+   TYPE(t_slab)            :: slab
+   TYPE(t_orbcomp)         :: orbcomp
+   TYPE(t_jDOS)            :: jDOS
+   TYPE(t_cdnvalJob)       :: cdnvalJob
+   TYPE(t_greensfImagPart) :: greensfImagPart
+   TYPE(t_potden)          :: val_den, core_den
 
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, jspmax, ierr
    INTEGER               :: dim_idx
+   INTEGER               :: i_gf,iContour
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
@@ -115,11 +112,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,atoms,kpts)
    CALL jDOS%init(input,banddos,atoms,kpts)
 
-   IF(gfinp%n.GT.0.AND.PRESENT(gOnsite)) THEN
+   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
-      CALL greensfCoeffs%init(gfinp,input,atoms,noco)
-      CALL gfinp%eContour(results%ef,mpi%irank,gOnsite%nz,gOnsite%e,gOnsite%de)
-      CALL gOnsite%reset(gfinp)
+      DO i_gf = 1, gfinp%n
+         iContour = gfinp%elem(i_gf)%iContour
+         CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,mpi%irank)
+      ENDDO
+      CALL greensfImagPart%init(gfinp,input,noco)
+      !CALL greensFunction%reset(gfinp)
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 
@@ -140,14 +140,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfCoeffs)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
-      IF(gfinp%n.GT.0) THEN
-        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,gfinp,input,sym,noco,nococonv,vTot,&
-                           hub1inp,hub1data,results)
-      ENDIF
+   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
+     CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+                             nococonv,vTot,hub1inp,hub1data,results)
    ENDIF
 
    call val_den%copyPotDen(outDen)

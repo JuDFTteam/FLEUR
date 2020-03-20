@@ -38,7 +38,7 @@ if ($mpi="sequential"){
 print "MPI:$mpi\n";
 
 my $workdir="$ENV{PWD}/Testing/work";
-system("rm $workdir/*");
+system("rm -r $workdir/*");
 chdir($dir);
 
 judft_tests::execute_test($testdir,$executable,$mpi,$workdir);
