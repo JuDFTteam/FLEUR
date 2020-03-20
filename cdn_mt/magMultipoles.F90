@@ -44,7 +44,7 @@ CONTAINS
     CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, 1.0, &
          outden, cden, m_den(1), m_den(2), m_den(3))
     !Calcalate divergence
-    CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
+    CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
     CALL mt_moments( input, atoms, sym,sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
     WRITE(6,*) "Magnetic Multipoles:"
