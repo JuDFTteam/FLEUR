@@ -19,8 +19,9 @@ CONTAINS
       USE m_hf_init
       USE m_hf_setup
       USE m_hsfock
-      USE m_eig66_io
       USE m_io_hybinp
+      USE m_eig66_io
+      use m_eig66_mpi
 
       IMPLICIT NONE
 
@@ -47,7 +48,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: k_list(:)
 
       CALL timestart("hybrid code")
-      call sync_eig()
+      call sync_eig(eig_id)
 
       call hybmpi%copy_mpi(mpi)
       call split_k_to_comm(fi, hybmpi, k_list)
@@ -135,7 +136,7 @@ CONTAINS
       call timestop("Hybrid imbalance")
 #endif
 
-      call sync_eig()
+      call sync_eig(eig_id)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
