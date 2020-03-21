@@ -232,31 +232,6 @@ CONTAINS
           slot=d%slot_ev(nk,jspin,n1)
           pe=d%pe_ev(nk,jspin,n1)
 
-<<<<<<< HEAD
-          if (zmat%l_real) THEN
-             if (.not.d%l_real) THEN
-                call timestart("MPI_WIN_LOCK")
-                CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
-                call timestop("MPI_WIN_LOCK")
-                call timestart("MPI_GET")
-                CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
-                call timestop("MPI_GET")
-                call timestart("MPI_WIN_UNLOCK")
-                CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
-                call timestop("MPI_WIN_UNLOCK")
-                !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
-                zmat%data_r(:,n)=REAL(tmp_cmplx)
-             else
-                call timestart("MPI_WIN_LOCK")
-                CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zr_handle,e)
-                call timestop("MPI_WIN_LOCK")
-                call timestart("MPI_GET")
-                CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
-                call timestop("MPI_GET")
-                call timestart("MPI_WIN_UNLOCK")
-                CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
-                call timestop("MPI_WIN_UNLOCK")
-=======
           IF (zmat%l_real) THEN
              IF (.NOT.d%l_real) THEN
                 IF (d%read_epoch) THEN
@@ -283,23 +258,10 @@ CONTAINS
                    CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
                    CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
                 ENDIF
->>>>>>> develop
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
                 zmat%data_r(:,n)=tmp_real
              ENDIF
           ELSE
-<<<<<<< HEAD
-             if (d%l_real) call judft_error("Could not read complex data, only real data is stored",calledby="eig66_mpi%read_eig")
-             call timestart("MPI_WIN_LOCK")
-             CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
-             call timestop("MPI_WIN_LOCK")
-             call timestart("MPI_GET")
-             CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
-             call timestop("MPI_GET")
-             call timestart("MPI_WIN_UNLOCK")
-             CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
-             call timestop("MPI_WIN_UNLOCK")
-=======
              IF (d%l_real) CALL judft_error("Could not read complex data, only real data is stored",calledby="eig66_mpi%read_eig")
 
              IF (d%read_epoch) THEN
@@ -313,7 +275,6 @@ CONTAINS
                 CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
              ENDIF
->>>>>>> develop
              !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
              zmat%data_c(:,n)=tmp_cmplx
           ENDIF
