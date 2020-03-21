@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv(z_k, ik, iq, fi, jsp,mpdata,hybdat, lapw, nococonv, nkqpt, cprod)
+   SUBROUTINE wavefproducts_noinv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod)
       USE m_types
       use m_juDFT
       use m_constants, only: cmplx_0
