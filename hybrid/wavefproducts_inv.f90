@@ -12,14 +12,12 @@ module m_wavefproducts_inv
    USE m_io_hybinp
    USE m_wavefproducts_aux
 
-CONTAINS 
-   SUBROUTINE wavefproducts_inv(fi, jsp, lapw, mpi, z_k, nk, iq, hybdat, mpdata,&
-                                nococonv, nkqpt, cprod)
+CONTAINS    
+   SUBROUTINE wavefproducts_inv(fi, nk, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod)
       IMPLICIT NONE
       type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata
       type(t_nococonv), intent(in)  :: nococonv
-      TYPE(t_mpi), intent(in)       :: mpi
       type(t_mat), intent(in)       :: z_k  ! = z_k_p since nk < nkpt
       TYPE(t_lapw), INTENT(IN)      :: lapw
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -54,7 +52,7 @@ CONTAINS
 
 
 
-      call wavefproducts_inv_IS(fi, jsp, lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
+      call wavefproducts_inv_IS(fi, jsp, lapw, nk, iq, g_t, hybdat, mpdata,&
                                 nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi,nococonv, jsp, nk, iq, hybdat, mpdata,&
@@ -64,7 +62,7 @@ CONTAINS
 
    END SUBROUTINE wavefproducts_inv
 
-   subroutine wavefproducts_inv_IS(fi,jsp,lapw, mpi, nk, iq, g_t, hybdat, mpdata,&
+   subroutine wavefproducts_inv_IS(fi,jsp,lapw, nk, iq, g_t, hybdat, mpdata,&
                                  nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
      implicit NONE
@@ -72,7 +70,6 @@ CONTAINS
      TYPE(t_mpdata), intent(in)  :: mpdata
      TYPE(t_nococonv), INTENT(IN)  :: nococonv
      TYPE(t_lapw), INTENT(IN)      :: lapw
-     TYPE(t_mpi), intent(in)       :: mpi
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
      TYPE(t_mat), intent(in)       :: z_k ! = z_k_p since nk < nkpt
      TYPE(t_mat), intent(inout)    :: z_kqpt_p

@@ -175,7 +175,7 @@ CONTAINS
 
       exch_vv = 0
 
-      DO jq = 1, nkpt_EIBZ
+      DO jq = nkpt_EIBZ, 1, -1
 
          iq = pointer_EIBZ(jq)
 
@@ -198,7 +198,7 @@ CONTAINS
          END IF
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(fi, jsp, lapw, mpi, z_k, ik, iq, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
+            CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
          ELSE
             CALL wavefproducts_noinv(z_k, ik, iq, fi, jsp, mpdata, hybdat, lapw, nococonv, nkqpt, cprod_vv_c)
          END IF
