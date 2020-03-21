@@ -289,10 +289,10 @@ CONTAINS
 
     TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
     INTEGER:: e
-
+#ifdef CPP_MPI3
     CALL priv_find_data(id,d)
 
-#ifdef CPP_MPI3
+
     IF (d%read_epoch) THEN
        d%read_epoch=.FALSE.
        CALL MPI_FENCE(MPI_MODE_NOSTORE,d%eig_handle,e)
@@ -309,7 +309,6 @@ CONTAINS
        CALL MPI_FENCE(MPI_MODE_NOPUT,d%w_iks_handle,e)
     ENDIF
 #endif
-
   END SUBROUTINE sync_eig
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)

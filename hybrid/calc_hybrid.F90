@@ -19,8 +19,9 @@ CONTAINS
       USE m_hf_init
       USE m_hf_setup
       USE m_hsfock
-      USE m_eig66_io
       USE m_io_hybinp
+      USE m_eig66_io
+      use m_eig66_mpi
 
       IMPLICIT NONE
 
@@ -46,11 +47,8 @@ CONTAINS
       REAL, ALLOCATABLE :: eig_irr(:, :)
       INTEGER, ALLOCATABLE :: k_list(:)
 
-      ! open(7465, file="iter_translator.txt", position="append")
-      ! write (7465,*) iter, iterHF
-      ! close(7465)
-
       CALL timestart("hybrid code")
+      call sync_eig(eig_id)
 
       call hybmpi%copy_mpi(mpi)
       call split_k_to_comm(fi, hybmpi, k_list)
@@ -132,7 +130,13 @@ CONTAINS
          END DO
       END DO
       CALL timestop("Calculation of non-local HF potential")
+#ifdef CPP_MPI
+      call timestart("Hybrid imbalance")
+      call MPI_Barrier(mpi%mpi_comm, err)
+      call timestop("Hybrid imbalance")
+#endif
 
+      call sync_eig(eig_id)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
