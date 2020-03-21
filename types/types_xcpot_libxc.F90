@@ -60,7 +60,7 @@ CONTAINS
       INTEGER, INTENT(IN)                 :: vxc_id_x, vxc_id_c ! potential functional
       INTEGER, INTENT(IN)                 :: exc_id_x, exc_id_c ! energy functionals
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
-      INTEGER                             :: errors(4)
+      !INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
       INTEGER :: err
