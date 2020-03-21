@@ -6,7 +6,8 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    SiFilmPlotXML PlotDenandPot SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
    KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 MnHybridNoinv
-   Fe_bcc_GreensFunction Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   Fe_bcc_GreensFunction GreensFunction_MultiContour 
+   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
    RelaxMTFeature Fe_bcc_SF_LDA SmAtomjDOS) 
 
 #Currently disabled Tests (Hybrid+Greenfct)
@@ -55,8 +56,8 @@ endif()
 
 #Tests for EDsolver
 if (${FLEUR_USE_EDSOLVER})
-   set(Testdirs ${Testdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
-   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
+   set(Testdirs ${Testdirs} Gd_Hubbard1 Gd_Hubbard1_SOC Gd_Hubbard1_noSYM)
+   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1 Gd_Hubbard1_SOC Gd_Hubbard1_noSYM)
 endif()
 
 #The serial tests

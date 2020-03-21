@@ -9,7 +9,7 @@ MODULE m_hybridization
 
    CONTAINS
 
-   SUBROUTINE hybridization(gf,l,nType,gfinp,input,ef)
+   SUBROUTINE hybridization(gf,i_gf,gfinp,input,ef)
 
       !------------------------------------------------------
       ! Evaluates the hybridization function
@@ -18,8 +18,7 @@ MODULE m_hybridization
       ! \Delta(E) = -1/(pi*N_l) Im TR[G^-1_{DFT}(E+i\delta)]
       !------------------------------------------------------
 
-      INTEGER,         INTENT(IN) :: l
-      INTEGER,         INTENT(IN) :: nType
+      INTEGER,         INTENT(IN) :: i_gf
       TYPE(t_greensf), INTENT(IN) :: gf
       TYPE(t_gfinp),   INTENT(IN) :: gfinp
       TYPE(t_input),   INTENT(IN) :: input
@@ -29,20 +28,23 @@ MODULE m_hybridization
       INTEGER io_error,iz,i,ipm
       REAL v_low,v_high,nf,avg_delta,ellow,elup
       COMPLEX tr
-      REAL Delta(gf%nz) !Hybridization function
+      REAL Delta(gf%contour%nz) !Hybridization function
+      INTEGER contourShape
 
       !Open file
       OPEN(unit=1337,file="hybridization.dat",status="replace",action="write",iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO error",calledby="hybridization")
 
+      contourShape = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
+
       Delta = 0.0
-      DO iz = 1, gf%nz
+      DO iz = 1, gf%contour%nz
          tr = 0.0
          DO ipm = 1, 2
             !--------------------------------------------------
             ! Get the full Greens function matrix for the current energy point
             !--------------------------------------------------
-            CALL gf%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
+            CALL gf%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
             !--------------------------------------------------
             ! Invert the matrix using the routines in types_mat
             !--------------------------------------------------
@@ -53,7 +55,7 @@ MODULE m_hybridization
             ENDDO
          ENDDO
          Delta(iz) = -1/(tpi_const*gmat%matsize1) * AIMAG(tr)
-         WRITE(1337,"(2f14.8)") REAL(gf%e(iz)-ef)*hartree_to_ev_const, Delta(iz)
+         WRITE(1337,"(2f14.8)") REAL(gf%contour%e(iz)-ef)*hartree_to_ev_const, Delta(iz)
          !Free up the gmat matrix (it is initialized in gf%get)
          CALL gmat%free()
       ENDDO
@@ -61,7 +63,7 @@ MODULE m_hybridization
       CLOSE(unit=1337,iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO error",calledby="hybridization")
 
-      IF(gfinp%mode.EQ.3) THEN
+      IF(contourShape.EQ.CONTOUR_DOS_CONST) THEN
          !-----------------------------------------------------
          ! Try to fit a bath state to this configuration
          !-----------------------------------------------------
@@ -72,17 +74,16 @@ MODULE m_hybridization
          ! Average the hybridization function over this interval
          !-----------------------------------------------------
          avg_delta = 0.0
-         DO iz = 1, gf%nz
-            IF(REAL(gf%e(iz)).LT.ef+ellow.OR.REAL(gf%e(iz)).GT.ef+elup) CYCLE
-            avg_delta = avg_delta + Delta(iz)*hartree_to_ev_const*REAL(gf%de(iz))*&
-                                    pi_const*(gfinp%sigmaDOS**2)/(REAL(gf%e(iz)**2+gfinp%sigmaDOS**2))
+         DO iz = 1, gf%contour%nz
+            IF(REAL(gf%contour%e(iz)).LT.ef+ellow.OR.REAL(gf%contour%e(iz)).GT.ef+elup) CYCLE
+            avg_delta = avg_delta + Delta(iz)*hartree_to_ev_const*REAL(gf%contour%de(iz))
          ENDDO
          WRITE(*,*) avg_delta
          !low J
-         nf = 2*l
+         nf = 2*gfinp%elem(i_gf)%l
          v_low = sqrt(-avg_delta/(nf))
          !high J
-         nf = 2*l+2
+         nf = 2*gfinp%elem(i_gf)%l+2
          v_high = sqrt(-avg_delta/(nf))
          WRITE(*,*) v_low,v_high
       ENDIF

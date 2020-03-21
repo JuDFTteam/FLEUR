@@ -33,7 +33,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr!, only : intgr2, intgrt, intgr5
+    use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -171,18 +171,7 @@ contains
         if (.not.dosf) THEN
          call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
          call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
-        ! Source-free testwise
         else
-           !if (l==5) THEN
-            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**(4*l)
-          !end if
-           !call intgrtlog(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
-           !call intgrtlog(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
-           !call intgr4(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
-           !call intgr4(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
-           !call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
-           !call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
-           !integral_3(1:imax)=(integral_2(imax)-integral_2(1:imax))*green_1(imax)
            call sfint(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
            call sfint(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
         end if
