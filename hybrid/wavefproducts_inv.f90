@@ -105,7 +105,7 @@ CONTAINS
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
-     nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, fi%atoms, fi%noco)
+     nbasfcn = lapw_nkqpt%hyb_num_bas_fun(fi)
      call z_kqpt%alloc(.true., nbasfcn, fi%input%neig)
      call z_kqpt_p%init(z_kqpt)
 
