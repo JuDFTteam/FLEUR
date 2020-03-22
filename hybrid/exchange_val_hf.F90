@@ -242,9 +242,7 @@ CONTAINS
 
          call timestart("exchange matrix")
          DO n1 = 1, hybdat%nbands(ik)
-            DO iband = 1, MAXVAL(hybdat%nobd(:, jsp))
-               IF ((iband) > hybdat%nobd(nkqpt, jsp)) CYCLE
-
+            DO iband = 1, hybdat%nobd(nkqpt, jsp)
                cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
