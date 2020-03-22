@@ -36,12 +36,10 @@ MODULE m_coulombmatrix
 CONTAINS
 
    SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
-      USE m_types_hybdat
       USE m_types
+      USE m_types_hybdat
       USE m_juDFT
       USE m_constants, ONLY: pi_const
-      USE m_olap, ONLY: olap_pw
-      use m_types_hybdat
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -1092,73 +1090,7 @@ CONTAINS
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
       call timestart("calc eigenvalues olap_pw")
-      DO ikpt = ikptmin, ikptmax
-
-         !calculate IR overlap-matrix
-         call timestart("olapm alloc")
-         CALL olapm%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
-         call timestop("olapm alloc")
-
-         CALL olap_pw(olapm, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
-
-         !         !calculate eigenvalues of olapm
-         !         ALLOCATE( eval(ngptm(ikpt)),evec(ngptm(ikpt),ngptm(ikpt)) )
-         !         CALL diagonalize(evec,eval,olapm)
-         !
-         !         !
-         !         ! small eigenvalues lead to inaccuries in the inversion
-         !         ! however it seems that these do not play an important role
-         !         ! for the HF exchange
-         !         ! thus we do not do a SingularValueDecomposition
-         !         !
-         !
-         !         IF( any(eval .le. 1E-06 ) ) THEN
-         ! !           WRITE(*,*) count( eval .le. 1E-06 )
-         ! !           WRITE(*,*) 'eval .le. 1E-06'
-         ! !           ALLOCATE( involapm(ngptm(ikpt),ngptm(ikpt)) )
-         !           olapm = 0
-         !           DO i = 1,ngptm(ikpt)
-         !             IF( eval(i) .le. 1E-06) CYCLE
-         !             olapm(i,i) = 1/eval(i)
-         !           END DO
-         !
-         !           ALLOCATE( invevec(ngptm(ikpt),ngptm(ikpt)) )
-         ! if (sym%invs) then
-         !           invevec =         transpose(evec)
-         ! else
-         !           invevec = conjg( transpose(evec) )
-         ! endif
-         !
-         !           olapm   = matmul(evec,matmul(olapm,invevec) )
-         !
-         !           DEALLOCATE(invevec)!,involapm)
-         !         ELSE
-         !calculate inverse overlap-matrix
-
-         CALL olapm%inverse()
-         !         END IF
-
-         !unpack matrix coulomb
-         if(sym%invs) then
-            call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
-         else
-            call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
-         endif
-         call timestart("multiply inverse rhs")
-         if (olapm%l_real) THEN
-            !multiply with inverse olap from right hand side
-            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
-            !multiply with inverse olap from left side
-            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
-         else
-            !multiply with inverse olap from right hand side
-            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
-            !multiply with inverse olap from left side
-            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
-         end if
-         coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
-         call timestop("multiply inverse rhs")
-      END DO
+      call apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
       call timestop("calc eigenvalues olap_pw")
 
 
@@ -2178,6 +2110,53 @@ CONTAINS
 
    END FUNCTION sphbessel_integral
 
-   !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
+      USE m_olap, ONLY: olap_pw
+      USE m_types
+      use m_judft
+      implicit none
+      type(t_mpdata), intent(in) :: mpdata
+      type(t_atoms), intent(in)  :: atoms 
+      type(t_cell), intent(in)   :: cell 
+      type(t_hybdat), intent(in) :: hybdat
+      type(t_sym), intent(in)    :: sym
+      type(t_kpts), intent(in)   :: kpts
+      COMPLEX, intent(inout)     :: coulomb(:, :)
+
+      type(t_mat)     :: olapm, coulhlp
+      integer         :: ikpt, nbasm
+
+      
+      DO ikpt = 1, kpts%nkpt
+         nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
+         !calculate IR overlap-matrix
+         CALL olapm%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
+         CALL olap_pw(olapm, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+
+         CALL olapm%inverse()
+
+         !unpack matrix coulomb
+         if(sym%invs) then
+            call coulhlp%from_packed(nbasm, REAL(coulomb(:, ikpt)))
+         else
+            call coulhlp%from_packed(nbasm, coulomb(:, ikpt))
+         endif
+         call timestart("multiply inverse rhs")
+         if (olapm%l_real) THEN
+            !multiply with inverse olap from right hand side
+            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
+            !multiply with inverse olap from left side
+            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
+         else
+            !multiply with inverse olap from right hand side
+            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
+            !multiply with inverse olap from left side
+            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
+         end if
+         call olapm%free()
+         coulomb(:(nbasm*(nbasm + 1))/2, ikpt) = coulhlp%to_packed()
+         call timestop("multiply inverse rhs")
+      enddo
+   end subroutine apply_inverse_olaps
 
 END MODULE m_coulombmatrix
