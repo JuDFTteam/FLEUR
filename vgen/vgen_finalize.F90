@@ -49,19 +49,13 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
-      TYPE(t_potden)                  :: div, phi, vScal, vCorr, v2, vdiff
-      TYPE(t_potden), DIMENSION(3)    :: cvec, corrB, bxc
+      TYPE(t_potden)                  :: vScal, vCorr
+      TYPE(t_potden), DIMENSION(3)    :: bxc
 
-      INTEGER                         :: i, js, n, lh, nat, nd, indmax
+      INTEGER                         :: i, js, n, lh, nat, nd
       REAL                            :: sfscale, r2(atoms%jmtd)
       REAL                            :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
       REAL, ALLOCATABLE               :: intden(:,:)
-
-COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
-
-      indmax=(atoms%lmaxd+1)**2
-
-      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype,4))
 
       IF (.NOT.noco%l_noco) THEN
          ! Rescale vTot%pw_w with number of stars:
@@ -106,27 +100,8 @@ COMPLEX, ALLOCATABLE :: flm(:,:,:,:)
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,div,phi,vCorr,cvec,corrB)
+         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,vCorr)
          CALL timestop("SF subroutine")
-
-         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
-         !         .FALSE., .FALSE., 'div                 ', div)
-
-         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
-         !            .FALSE., .TRUE., 'phiDiv              ', phi)
-
-         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
-         !            .FALSE., .FALSE., 'gradPhiDiv          ', cvec(1), cvec(1), cvec(2), cvec(3))
-
-         !CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, nococonv, &
-         !            .FALSE., .FALSE., 'bCorrected          ', corrB(1), corrB(1), corrB(2), corrB(3))
-
-         CALL div%resetPotDen()
-         CALL phi%resetPotDen()
-
-         DO i=1,3
-            CALL corrB(i)%resetPotDen()
-         END DO
 
          CALL timestart("Correcting vTot")
 

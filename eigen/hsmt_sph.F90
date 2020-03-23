@@ -1,4 +1,4 @@
-!--------------------------------------------------------------------------------
+! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -206,7 +206,7 @@ END SUBROUTINE hsmt_sph_cpu
    REAL,INTENT(INOUT) :: smat_data(:,:),hmat_data(:,:)
    !+APW
    REAL,INTENT(IN),OPTIONAL   :: uds(0:lmaxd),dus(0:lmaxd),us(0:lmaxd),duds(0:lmaxd)
-   REAL,INTENT(IN),OPTIONAL   :: rmt
+   REAL,INTENT(IN),VALUE,OPTIONAL   :: rmt
    !-APW
 
    REAL,   PARAMETER :: tpi_const=2.*3.1415926535897932
@@ -305,7 +305,7 @@ REAL, VALUE,INTENT(IN)    :: e_shift
 COMPLEX,INTENT(INOUT) :: smat_data(:,:),hmat_data(:,:)
 !+APW
 REAL,INTENT(IN),OPTIONAL   :: uds(0:lmaxd),dus(0:lmaxd),us(0:lmaxd),duds(0:lmaxd)
-REAL,INTENT(IN),OPTIONAL   :: rmt
+REAL,INTENT(IN),OPTIONAL,VALUE   :: rmt
 !-APW
 
 REAL,   PARAMETER :: tpi_const=2.*3.1415926535897932
@@ -389,7 +389,7 @@ END SUBROUTINE HsmtSphGpuKernel_cmplx
 SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
-   USE nvtx
+   !USE nvtx
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: mpi
@@ -417,9 +417,10 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    REAL,MANAGED :: fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
    REAL,MANAGED :: fl2p1bt(0:atoms%lmaxd)
    REAL,MANAGED :: qssbti(3),qssbtj(3)
+   REAL,DEVICE,ALLOCATABLE  :: taual_dev(:,:)
    INTEGER, DEVICE :: nv_dev(2)
 
-   call nvtxStartRange("hsmt_sph",2)
+   !call nvtxStartRange("hsmt_sph",2)
    CALL timestart("spherical setup")
    print*, "HsmtSph_GPU"
 
@@ -433,6 +434,8 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
 
    ! pretty ugly solution
+   ALLOCATE(taual_dev(3,size(atoms%taual,2)))
+   taual_dev=atoms%taual
    nv_dev = lapw%nv
    loop_size = 1
    block = 32   ! number of threads in a block
@@ -442,11 +445,13 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    IF (input%l_useapw) THEN
       !TODO!!!!
       ! APW case is not testet
+      call judft_error("APW not working on GPU")
+#if 1==2
       IF (smat%l_real) THEN
          CALL HsmtSphGpuKernel_real<<<grid,block>>>(loop_size,iintsp,jintsp,nv_dev,&
                                                     atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1,&
                                             lapw%nv(jintsp), mpi%n_size,SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),&
-                                                    qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,&
+                                                    qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual_dev,&
                                                     usdus%ddn(:,n,isp),el(:,n,isp),e_shift,&
                                                     smat%data_r,hmat%data_r,&
                                            usdus%uds(:,n,isp),usdus%dus(:,n,isp),usdus%us(:,n,isp),usdus%duds(:,n,isp),atoms%rmt(n))
@@ -454,29 +459,33 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
          CALL HsmtSphGpuKernel_cmplx<<<grid,block>>>(loop_size,iintsp,jintsp,nv_dev,&
                                                      atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1,&
                                             lapw%nv(jintsp), mpi%n_size,SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),&
-                                                   chi,qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,&
+                                                   chi,qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual_dev,&
                                                      usdus%ddn(:,n,isp),el(:,n,isp),e_shift,&
                                                      smat%data_c,hmat%data_c,&
                                            usdus%uds(:,n,isp),usdus%dus(:,n,isp),usdus%us(:,n,isp),usdus%duds(:,n,isp),atoms%rmt(n))
       ENDIF
+#endif
    ELSE
       IF (smat%l_real) THEN
+#if 1==2
          CALL HsmtSphGpuKernel_real<<<grid,block>>>(loop_size,iintsp,jintsp,nv_dev,&
                                                     atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1,&
                                             lapw%nv(jintsp), mpi%n_size,SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),&
-                                                    qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,&
+                                                    qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual_dev,&
                                                     usdus%ddn(:,n,isp),el(:,n,isp),e_shift,smat%data_r,hmat%data_r)
       ELSE
          CALL HsmtSphGpuKernel_cmplx<<<grid,block>>>(loop_size,iintsp,jintsp,nv_dev,&
                                                      atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1,&
                                             lapw%nv(jintsp), mpi%n_size,SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),&
-                                                   chi,qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,&
+                                                   chi,qssbti,qssbtj,lapw%gvec,lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual_dev,&
                                                      usdus%ddn(:,n,isp),el(:,n,isp),e_shift,smat%data_c,hmat%data_c)
+#endif
       ENDIF
    ENDIF
+   call judft_error("hsmt broken for GPU")
    CALL timestop("spherical setup")
 
-   call nvtxEndRange
+   !call nvtxEndRange
    RETURN
 END SUBROUTINE hsmt_sph_gpu
 #endif

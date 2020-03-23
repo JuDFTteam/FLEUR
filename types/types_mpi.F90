@@ -4,18 +4,27 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_mpi
-  TYPE t_mpi
-     !k-point parallelism
-     INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
-     INTEGER :: irank    !< rank of task in mpi_comm
-     INTEGER :: isize    !< no of tasks in mpi_comm
-     INTEGER,ALLOCATABLE :: k_list(:)
-     !Eigenvalue parallelism
-     INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
-     INTEGER :: n_rank   !< rank in sub_comm
-     INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
-     INTEGER,ALLOCATABLE :: ev_list(:)
-     !Communicator for PE on same node
-     INTEGER :: mpi_comm_same_node
-  END TYPE t_mpi
+   TYPE t_mpi
+      !k-point parallelism
+      INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
+      INTEGER :: irank    !< rank of task in mpi_comm
+      INTEGER :: isize    !< no of tasks in mpi_comm
+      INTEGER, ALLOCATABLE :: k_list(:)
+      !Eigenvalue parallelism
+      INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
+      INTEGER :: n_rank   !< rank in sub_comm
+      INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
+      INTEGER, ALLOCATABLE :: ev_list(:)
+      !Communicator for PE on same node
+      INTEGER :: mpi_comm_same_node
+   CONTAINS
+      procedure :: is_root => mpi_is_root
+   END TYPE t_mpi
+contains
+   function mpi_is_root(mpi) result(is_root)
+      implicit none 
+      class(t_mpi), intent(in) :: mpi
+      logical :: is_root 
+      is_root = mpi%irank == 0
+   end function mpi_is_root
 END MODULE m_types_mpi

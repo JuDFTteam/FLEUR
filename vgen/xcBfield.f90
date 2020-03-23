@@ -101,7 +101,7 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,div,phi,vCorr,cvec,corrB)
+   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,vCorr)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -134,10 +134,10 @@ CONTAINS
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
       TYPE(t_potden),               INTENT(IN)     :: vScal
-      TYPE(t_potden),               INTENT(OUT)    :: div, phi,  vCorr
-      TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
+      TYPE(t_potden),               INTENT(OUT)    :: vCorr
 
-      TYPE(t_potden)                               :: divloc
+      TYPE(t_potden)                               :: div, phi, divloc
+      TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
       TYPE(t_atoms)                                :: atloc
       INTEGER                                      :: n, jr, lh, lhmax, jcut, nat ,i
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
@@ -152,7 +152,7 @@ CONTAINS
       div%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building divergence")
-      CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
+      CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
       CALL timestop("Building divergence")
 
       ! Local atoms variable with no charges;
@@ -174,7 +174,7 @@ CONTAINS
       ENDDO
 
       CALL timestart("Building correction field")
-      CALL divpotgrad2(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL divpotgrad(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
       CALL init_pw_grid(.FALSE.,stars,sym,cell)

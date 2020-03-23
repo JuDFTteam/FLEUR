@@ -470,7 +470,6 @@ CONTAINS
     USE m_types_atoms
     USE m_types_input
     USE m_types_vacuum
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
     INTEGER,INTENT(IN)             :: mpi_comm

@@ -29,9 +29,7 @@ math/intgr.F90
 math/trapz.f90
 math/ylm4.F90
 math/grule.f90
-math/lh_tofrom_lm.f90
 math/gradYlm.f90
-math/analysistests.f90
 math/pol_angle.f90
 math/BfieldtoVmat.f90
 )

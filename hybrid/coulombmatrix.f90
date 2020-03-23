@@ -36,12 +36,10 @@ MODULE m_coulombmatrix
 CONTAINS
 
    SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
-      USE m_types_hybdat
       USE m_types
+      USE m_types_hybdat
       USE m_juDFT
       USE m_constants, ONLY: pi_const
-      USE m_olap, ONLY: olap_pw
-      use m_types_hybdat
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -141,6 +139,7 @@ CONTAINS
       TYPE(t_mat)                :: olapm, coulhlp
 
       CALL timestart("Coulomb matrix setup")
+      if(mpi%is_root()) write (*,*) "start of coulomb calculation"
 
       svol = SQRT(cell%vol)
       fcoulfac = 4*pi_const/cell%vol
@@ -180,9 +179,6 @@ CONTAINS
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
-
-      IF (mpi%irank == 0) WRITE (6, '(/A)', advance='no') 'Setup for symmetry...'
-      CALL cpu_TIME(time1)
       ! calculate rotations in reciprocal space
       DO isym = 1, sym%nsym
          IF (isym <= sym%nop) THEN
@@ -268,10 +264,6 @@ CONTAINS
       END DO
       deallocate(iarr)
 
-      IF (mpi%irank == 0) WRITE (6, '(12X,A)', advance='no') 'done'
-      CALL cpu_TIME(time2)
-      IF (mpi%irank == 0) WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-
       ! Distribute the work as equally as possible over the processes
       ikptmin = 1
       ikptmax = kpts%nkpt
@@ -279,9 +271,6 @@ CONTAINS
       igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
       nkminmax = kpts%nkpt
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Preparations...'
-      CALL cpu_TIME(time1)
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
@@ -398,20 +387,9 @@ CONTAINS
       END DO
       call timestop("Bessel calculation")
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(18X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)', advance='no') '( Timing:', time2 - time1, ' )'
-         WRITE (6, *)
-      END IF
-
       !
       !     (1) Case < MT | v | MT >
       !
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< MT | v | MT > contribution...'
-
-      CALL cpu_TIME(time1)
 
       IF (ANY(calc_mt)) THEN
 
@@ -540,22 +518,11 @@ CONTAINS
       END DO
       IF (ANY(calc_mt)) deallocate(coulmat)
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(2X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)', advance='no') '( Timing:', time2 - time1, ' )'
-         WRITE (6, *)
-      END IF
-
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
          !
          !     (2) Case < MT | v | PW >
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< MT | v | PW > contribution...'
-
-         CALL cpu_TIME(time1)
 
          !     (2a) r in MT, r' everywhere
          !     (2b) r,r' in same MT
@@ -581,11 +548,9 @@ CONTAINS
                   call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't stop here!
                endif
 
-               call timestart("harmonics")
                call ylm4(2, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1)
                call ylm4(2, MATMUL(mpdata%g(:, igptp), cell%bmat), y2)
                call ylm4(hybinp%lexp, q, y)
-               call timestop("harmonics")
                y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
                iy = 0
@@ -698,23 +663,10 @@ CONTAINS
 
          deallocate(coulmat, olap, integral)
 
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
-
          !
          !     (3) Case < PW | v | PW >
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') '< PW | v | PW > contribution...'
-
-         CALL cpu_TIME(time1)
-
          !     (3a) r,r' everywhere; r everywhere, r' in MT; r in MT, r' everywhere
-
-         CALL cpu_TIME(time1)
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
          call timestart("calc smat")
          allocate(smat(mpdata%num_gpts(), mpdata%num_gpts()))
@@ -787,7 +739,7 @@ CONTAINS
 
          call timestart("loop 4:")
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
-
+            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate(carr2a((hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
@@ -796,9 +748,7 @@ CONTAINS
                iqnrm = pqnrm(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
 
-               call timestart("harmonics")
                call ylm4(hybinp%lexp, q, y)
-               call timestop("harmonics")
 
                y = CONJG(y)
                lm = 0
@@ -1059,18 +1009,10 @@ CONTAINS
          call timestop("loop 2")
          deallocate(carr2)
 
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
 
          !
          !     Symmetry-equivalent G vectors
          !
-
-         IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Symm.-equiv. matrix elements...'
-         CALL cpu_TIME(time1)
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
@@ -1130,15 +1072,9 @@ CONTAINS
          call timestop("loop 3")
          call timestart("gap 1:")
          deallocate(carr2, iarr, pgptm1)
-         IF (mpi%irank == 0) THEN
-            WRITE (6, '(2X,A)', advance='no') 'done'
-            CALL cpu_TIME(time2)
-            WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-         END IF
       END IF
       deallocate(qnrm, pqnrm)
 
-      CALL cpu_TIME(time1)
       IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          !
          ! The HSE functional is realized subtracting erf/r from
@@ -1152,89 +1088,13 @@ CONTAINS
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Transform to biorthogonal set...'
-      CALL cpu_TIME(time1)
       call timestop("gap 1:")
       call timestart("calc eigenvalues olap_pw")
-      DO ikpt = ikptmin, ikptmax
-
-         !calculate IR overlap-matrix
-         call timestart("olapm alloc")
-         CALL olapm%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
-         call timestop("olapm alloc")
-
-         CALL olap_pw(olapm, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
-
-         !         !calculate eigenvalues of olapm
-         !         ALLOCATE( eval(ngptm(ikpt)),evec(ngptm(ikpt),ngptm(ikpt)) )
-         !         CALL diagonalize(evec,eval,olapm)
-         !
-         !         !
-         !         ! small eigenvalues lead to inaccuries in the inversion
-         !         ! however it seems that these do not play an important role
-         !         ! for the HF exchange
-         !         ! thus we do not do a SingularValueDecomposition
-         !         !
-         !
-         !         IF( any(eval .le. 1E-06 ) ) THEN
-         ! !           WRITE(*,*) count( eval .le. 1E-06 )
-         ! !           WRITE(*,*) 'eval .le. 1E-06'
-         ! !           ALLOCATE( involapm(ngptm(ikpt),ngptm(ikpt)) )
-         !           olapm = 0
-         !           DO i = 1,ngptm(ikpt)
-         !             IF( eval(i) .le. 1E-06) CYCLE
-         !             olapm(i,i) = 1/eval(i)
-         !           END DO
-         !
-         !           ALLOCATE( invevec(ngptm(ikpt),ngptm(ikpt)) )
-         ! if (sym%invs) then
-         !           invevec =         transpose(evec)
-         ! else
-         !           invevec = conjg( transpose(evec) )
-         ! endif
-         !
-         !           olapm   = matmul(evec,matmul(olapm,invevec) )
-         !
-         !           DEALLOCATE(invevec)!,involapm)
-         !         ELSE
-         !calculate inverse overlap-matrix
-
-         CALL olapm%inverse()
-         !         END IF
-
-         !unpack matrix coulomb
-         if(sym%invs) then
-            call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
-         else
-            call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
-         endif
-         call timestart("multiply inverse rhs")
-         if (olapm%l_real) THEN
-            !multiply with inverse olap from right hand side
-            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
-            !multiply with inverse olap from left side
-            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
-         else
-            !multiply with inverse olap from right hand side
-            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
-            !multiply with inverse olap from left side
-            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
-         end if
-         coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
-         call timestop("multiply inverse rhs")
-      END DO
+      call apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
       call timestop("calc eigenvalues olap_pw")
 
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(1X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-      END IF
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
-
-      IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Writing of data to file...'
-      CALL cpu_TIME(time1)
       !
       ! rearrange coulomb matrix
       !
@@ -1531,13 +1391,6 @@ CONTAINS
       else
          deallocate(coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
       end if
-
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(7X,A)', advance='no') 'done'
-         CALL cpu_TIME(time2)
-         WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
-      END IF
-
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
@@ -1817,8 +1670,6 @@ CONTAINS
       !
       !     Real-space sum
       !
-      CALL cpu_TIME(time1)
-
       call timestart("realspace sum")
       DO ic2 = 1, atoms%nat
          DO ic1 = 1, atoms%nat
@@ -1879,11 +1730,8 @@ CONTAINS
                   END DO
                END IF
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
-               call timestart("harmonics")
                call ylm4(maxl, ra, y)
-               call timestop("harmonics")
                y = CONJG(y)
-               call timestart("kloop")
                DO ikpt = 1, kpts%nkpt
                   rdum = kpts%bk(1, ikpt)*ptsh(1, i) + kpts%bk(2, ikpt)*ptsh(2, i) + kpts%bk(3, ikpt)*ptsh(3, i)
                   cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*rdum)
@@ -1900,7 +1748,6 @@ CONTAINS
                      END IF
                   END DO
                END DO
-               call timestop("kloop")
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
@@ -1909,9 +1756,6 @@ CONTAINS
 
       deallocate(ptsh, radsh)
 
-      CALL cpu_TIME(time2)
-      IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
-      CALL cpu_TIME(time1)
 
       IF (first) WRITE (6, '(/A)') 'Fourier-space sum'
 
@@ -1963,10 +1807,8 @@ CONTAINS
             END IF
 
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
-            call timestart("harmonics")
             call ylm4(maxl, ka, y)
             IF(norm2(ka(:)).LT.1.0e-16) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
-            call timestop("harmonics")
             cdum = 1.0
             lm = 0
             DO l = 0, maxl
@@ -1993,9 +1835,6 @@ CONTAINS
          END DO
       END DO
       call timestop("fourierspace sum")
-
-      CALL cpu_TIME(time2)
-      IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
 
       !
       !     Add contribution for l=0 to diagonal elements and rescale structure constants
@@ -2271,6 +2110,53 @@ CONTAINS
 
    END FUNCTION sphbessel_integral
 
-   !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
+      USE m_olap, ONLY: olap_pw
+      USE m_types
+      use m_judft
+      implicit none
+      type(t_mpdata), intent(in) :: mpdata
+      type(t_atoms), intent(in)  :: atoms 
+      type(t_cell), intent(in)   :: cell 
+      type(t_hybdat), intent(in) :: hybdat
+      type(t_sym), intent(in)    :: sym
+      type(t_kpts), intent(in)   :: kpts
+      COMPLEX, intent(inout)     :: coulomb(:, :)
+
+      type(t_mat)     :: olapm, coulhlp
+      integer         :: ikpt, nbasm
+
+      
+      DO ikpt = 1, kpts%nkpt
+         nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
+         !calculate IR overlap-matrix
+         CALL olapm%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
+         CALL olap_pw(olapm, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+
+         CALL olapm%inverse()
+
+         !unpack matrix coulomb
+         if(sym%invs) then
+            call coulhlp%from_packed(nbasm, REAL(coulomb(:, ikpt)))
+         else
+            call coulhlp%from_packed(nbasm, coulomb(:, ikpt))
+         endif
+         call timestart("multiply inverse rhs")
+         if (olapm%l_real) THEN
+            !multiply with inverse olap from right hand side
+            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
+            !multiply with inverse olap from left side
+            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
+         else
+            !multiply with inverse olap from right hand side
+            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
+            !multiply with inverse olap from left side
+            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
+         end if
+         call olapm%free()
+         coulomb(:(nbasm*(nbasm + 1))/2, ikpt) = coulhlp%to_packed()
+         call timestop("multiply inverse rhs")
+      enddo
+   end subroutine apply_inverse_olaps
 
 END MODULE m_coulombmatrix
