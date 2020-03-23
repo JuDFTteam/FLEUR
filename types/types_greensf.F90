@@ -369,12 +369,12 @@ MODULE m_types_greensf
 
          CLASS(t_greensf),       INTENT(INOUT)  :: this
 
-         IF(ALLOCATED(this%gmmpMat)) this%gmmpMat(:,:,:,:,:) = cmplx_0
+         IF(ALLOCATED(this%gmmpMat)) this%gmmpMat = cmplx_0
          IF(ALLOCATED(this%uu)) THEN
-            this%uu(:,:,:,:,:) = cmplx_0
-            this%ud(:,:,:,:,:) = cmplx_0
-            this%du(:,:,:,:,:) = cmplx_0
-            this%dd(:,:,:,:,:) = cmplx_0
+            this%uu = cmplx_0
+            this%ud = cmplx_0
+            this%du = cmplx_0
+            this%dd = cmplx_0
          ENDIF
 
       END SUBROUTINE reset_gf
