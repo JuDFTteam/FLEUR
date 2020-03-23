@@ -2123,17 +2123,16 @@ CONTAINS
       type(t_kpts), intent(in)   :: kpts
       COMPLEX, intent(inout)     :: coulomb(:, :)
 
-      type(t_mat)     :: olapm, coulhlp
+      type(t_mat)     :: olap, tmp, coulhlp, coul_submtx
       integer         :: ikpt, nbasm
 
-      
+
+      call timestart("solve olap linear eq. sys")
       DO ikpt = 1, kpts%nkpt
          nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
+         CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
          !calculate IR overlap-matrix
-         CALL olapm%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
-         CALL olap_pw(olapm, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
-
-         CALL olapm%inverse()
+         CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
 
          !unpack matrix coulomb
          if(sym%invs) then
@@ -2141,22 +2140,46 @@ CONTAINS
          else
             call coulhlp%from_packed(nbasm, coulomb(:, ikpt))
          endif
-         call timestart("multiply inverse rhs")
-         if (olapm%l_real) THEN
-            !multiply with inverse olap from right hand side
-            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
-            !multiply with inverse olap from left side
-            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
+
+         ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
+         ! rewritten as O * x = C         
+
+         call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+         if(coulhlp%l_real) then
+            coul_submtx%data_r = coulhlp%data_r(hybdat%nbasp + 1:, :)
+         else 
+            coul_submtx%data_c = coulhlp%data_c(hybdat%nbasp + 1:, :)
+         endif
+         
+         call olap%linear_problem(coul_submtx)
+
+         if(coulhlp%l_real) then
+            coulhlp%data_r(hybdat%nbasp + 1:, :) = coul_submtx%data_r 
+            coul_submtx%data_r = transpose(coulhlp%data_r(:, hybdat%nbasp + 1:)) 
+         else 
+            coulhlp%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
+            coul_submtx%data_c = conjg(transpose(coulhlp%data_c(:, hybdat%nbasp + 1:)))
+         endif
+
+         ! perform  coulhlp%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
+         ! rewritten as O^T * x^T = C^T
+
+         ! reload O, since the solver destroys it. 
+         CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+         ! Notice O = O^T since it's symmetric
+         call olap%linear_problem(coul_submtx)
+
+         if(coulhlp%l_real) then
+            coulhlp%data_r(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
          else
-            !multiply with inverse olap from right hand side
-            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
-            !multiply with inverse olap from left side
-            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
-         end if
-         call olapm%free()
+            coulhlp%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
+         endif
+
+         call coul_submtx%free()
+         call olap%free()
          coulomb(:(nbasm*(nbasm + 1))/2, ikpt) = coulhlp%to_packed()
-         call timestop("multiply inverse rhs")
       enddo
+      call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
 END MODULE m_coulombmatrix
