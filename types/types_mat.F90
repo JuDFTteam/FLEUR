@@ -27,6 +27,7 @@ MODULE m_types_mat
       PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
       PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
       PROCEDURE        :: move => t_mat_move                  !> move data into another t_mat (overloaded for t_mpimat)
+      PROCEDURE        :: save_npy => t_mat_save_npy
       procedure        :: allocated => t_mat_allocated
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
@@ -83,7 +84,7 @@ CONTAINS
           .OR. (mat%matsize1 .NE. vec%matsize1)) &
          CALL judft_error("Invalid matices in t_mat_lproblem")
       IF (mat%l_real) THEN
-         IF (ALL(ABS(mat%data_r - TRANSPOSE(mat%data_r)) < 1E-8)) THEN
+         IF (mat%unsymmetry() < 1E-8) THEN
             !Matrix is symmetric
             CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1,&
                                 vec%data_r, vec%matsize1, INFO)
@@ -99,10 +100,15 @@ CONTAINS
                IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
             END IF
          ELSE
-            CALL judft_error("TODO: mode not implemented in t_mat_lproblem")
+            allocate(ipiv(mat%matsize1))
+            call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
+            if(info /= 0) call judft_error("Error in dgesv for lproblem")
          END IF
       ELSE
-         CALL judft_error("TODO: mode not implemented in t_mat_lproblem")
+         ! I don't to do the whole testing for symmetry:
+         allocate(ipiv(mat%matsize1))
+         call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
+         if(info /= 0) call judft_error("Error in zgesv for lproblem")
       ENDIF
    END SUBROUTINE t_mat_lproblem
 
@@ -295,7 +301,10 @@ CONTAINS
          DO nn = 1, n
             if (mat%l_real) THEN
                packed(i) = (mat%data_r(n, nn) + mat%data_r(nn, n))/2.
-               if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
+               if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) then
+                  call judft_warn("Large unsymmetry in matrix packing n = " // int2str(n) // " nn = " // int2str(nn) // new_line("A") //&
+                                  "mat%data_r(n, nn) = " // float2str(mat%data_r(n, nn)) // " mat%data_r(nn, n) = " // float2str(mat%data_r(nn, n)) )
+               endif
             else
                packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
                if (abs(conjg(mat%data_c(n, nn)) - mat%data_c(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
@@ -385,7 +394,6 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       character(len=*)         :: filename
 
-      call judft_warn("save_npy doesn't know about matsize1/2")
       if (mat%l_real) then
          call save_npy(filename, mat%data_r)
       else
@@ -397,11 +405,19 @@ CONTAINS
       implicit none
       class(t_mat), intent(in) :: mat
       real                     :: unsymmetry
+      integer                  :: n
 
-      if(mat%l_real) THEN
-         unsymmetry = norm2(mat%data_r - transpose(mat%data_r))
-      else
-         unsymmetry = norm2(abs(mat%data_c - transpose(mat%data_c)))
+      unsymmetry = 0.0
+
+      if(mat%matsize1 /= mat%matsize2) then 
+         call judft_error("Rectangular matricies can't be symmetric")
+      else 
+         n = mat%matsize1
+         if(mat%l_real) THEN
+            unsymmetry = maxval(mat%data_r(:n,:n) - transpose(mat%data_r(:n,:n)) )
+         else
+            unsymmetry = maxval(abs(mat%data_c(:n,:n) - conjg(transpose(mat%data_c(:n,:n))) ))
+         endif
       endif
    end function t_mat_unsymmetry
 
