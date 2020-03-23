@@ -80,8 +80,8 @@ MODULE m_greensfCalcRealPart
             !If there are few enough gf elements then distribute the spins
             spin_start = MOD(mpi%irank,nspins) + 1
             spin_end   = MOD(mpi%irank,nspins) + 1
-            i_gf_start = mpi%irank + 1 - nspins * FLOOR(REAL(mpi%irank)/nspins)
-            i_gf_end   = mpi%irank + 1 - nspins * FLOOR(REAL(mpi%irank)/nspins)
+            i_gf_start = 1 + FLOOR(REAL(mpi%irank)/nspins)
+            i_gf_end   = 1 + FLOOR(REAL(mpi%irank)/nspins)
          ENDIF
       ELSE
          !Distribute nothing
