@@ -23,9 +23,15 @@ CONTAINS
 !     - local -
       INTEGER                  :: i, j, itype, icent, ineq
       REAL                     :: g, r, fgr
-      COMPLEX, PARAMETER        :: img = (0.0, 1.0)
+      COMPLEX, PARAMETER       :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
 
+      if(olap%l_real) then
+         olap%data_r = 0
+      else 
+         olap%data_c = 0
+      endif
+      
       call timestart("olap_pw")
       DO i = 1, ngpt
          DO j = 1, i
