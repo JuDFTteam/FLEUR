@@ -41,7 +41,8 @@ MODULE m_hubbard1_setup
       INTEGER :: indStart,indEnd,i_gf
       INTEGER :: hubbardioUnit
       REAL    :: mu_dc,exc
-      LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
+      LOGICAL :: l_selfenexist,l_exist,l_linkedsolver
+      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,occ_err
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=2)   :: l_type
@@ -115,18 +116,24 @@ MODULE m_hubbard1_setup
             !calculate the occupation of the correlated shell
             CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
 
+            l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
-            IF(hub1data%iter.EQ.1.AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)) THEN
-               n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
-               DO i_exc = 1, hub1inp%n_exc(i_hia)
-                  hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
-               ENDDO
-            ELSE
-               n_l(i_hia,:) = 0.0
-               DO ispin = 1, input%jspins
-                  DO m = -l, l
-                     n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
+            IF(l_firstIT_HIA) THEN
+               IF(hub1inp%init_occ(i_hia) > -9e98) THEN
+                  n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
+               ELSE
+                  n_l(i_hia,:) = 0.0
+                  DO ispin = 1, input%jspins
+                     DO m = -l, l
+                        n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
+                     ENDDO
                   ENDDO
+               ENDIF
+
+               DO i_exc = 1, hub1inp%n_exc(i_hia)
+                  IF(hub1inp%init_mom(i_hia,i_exc) > -9e98) THEN
+                     hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
+                  ENDIF
                ENDDO
             ENDIF
 
