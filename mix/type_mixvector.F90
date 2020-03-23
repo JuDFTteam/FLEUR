@@ -344,6 +344,7 @@ CONTAINS
        IF (sym%invs2) iv2 = 1
 
        ALLOCATE(g_vac(vac_length_g), wght(vacuum%nmzd))
+       g_vac(:) = 0.0
        dvol = cell%area*vacuum%delz
        ! nvac=1 if (zrfs.or.invs)
        IF (vacuum%nvac .EQ. 1) dvol = dvol + dvol
