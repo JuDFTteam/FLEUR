@@ -110,7 +110,10 @@ class TestEnv:
                      self.errors += 1
                exp_idx += 1
                found = True
-      
+      if(len(expected) != exp_idx):
+         self.log_error("Number of expected values disagree with found values.")
+         self.log_error(f"before_str: '{before_str}''")
+         sys.exit(1)
       if(not found):
          self.log_error(f"{before_str} not found in file")
          sys.exit(1)
