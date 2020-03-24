@@ -1,0 +1,96 @@
+import sys
+import argparse
+import os
+import logging
+import shutil
+import subprocess
+
+class TestEnv:
+   binary = ""
+   testdir = ""
+   workdir = ""
+   parallel = False
+   nprocs = -1
+
+   def __init__(self):
+      parser = argparse.ArgumentParser(description='get test-dir and bin-dir')
+      parser.add_argument("--bindir", type=str, nargs=1, required=True, help="location of fleur executable")
+      parser.add_argument("--testdir", type=str, nargs=1, required=True, help="where to execute tests")
+      parser.add_argument("--nprocs", type=int, nargs='?', default=2, help="number of parallel mpi-processes")
+      args = parser.parse_args()
+
+      self.setup_logger(args)
+      self.setup_env(args)
+      self.find_binary(args)
+      self.nprocs = args.nprocs
+
+   def find_binary(self, args):      
+      fleur_dir = args.bindir[0]
+      if(fleur_dir[-1] == "/"):
+         fleur_dir = fleur_dir[:-1]
+
+      if(os.path.isfile(f"{fleur_dir}/fleur_MPI")):
+         self.binary = f"{fleur_dir}/fleur_MPI"
+         logging.info(f"Use {self.binary} as executable")
+         self.parallel = True
+
+      elif(os.path.isfile(f"{fleur_dir}/fleur")):
+         self.binary = f"{fleur_dir}/fleur"
+         logging.info(f"Use {self.binary} as executable") 
+         self.parallel = False
+
+      elif(os.path.isfile(f"{fleur_dir}/inpgen2")):
+         self.binary = f"{fleur_dir}/inpgen2"
+         logging.info(f"Use {self.binary} as executable")
+         self.parallel = False
+
+      else:
+         logging.warning("Can not find any executables")
+         sys.exit(1)
+   
+   def setup_logger(self,args):
+      logging.basicConfig(filename=f"{args.testdir[0]}/test.log",level=logging.DEBUG, format='%(asctime)s %(message)s')
+      logging.info("###############################################################")
+
+   def setup_env(self, args):
+      self.testdir = args.testdir[0]
+      if(self.testdir[-1] == "/"):
+         self.testdir = self.testdir[:-1]
+
+      self.workdir = f"{self.testdir}/work"
+      if(os.path.isdir(self.workdir)):
+         shutil.rmtree(self.workdir)
+      os.makedirs(self.workdir)
+      os.chdir(self.workdir)
+   
+   def log_info(self, text):
+      logging.info(text)
+   
+   def log_warn(self, text):
+      logging.warn(text)
+   
+   def log_error(self, text):
+      logging.error(text)
+
+   def run(self,arg_list):
+      self.log_info(f"Start running command: \n {arg_list}")
+      with open(f"{self.workdir}/stdout", "w") as f_stdout:
+         with open(f"{self.workdir}/stderr", "w") as f_stderr:
+            subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
+      self.log_info("Finished running")
+
+   
+   def check_value_outfile(self, before_str, after_str, expected, delta):
+      exp_idx = 0
+      with open(f"{self.workdir}/out", "r") as f:
+         for line in f.readlines():
+            if((before_str in line) and (after_str in line)):
+               value = float(line.split(before_str)[-1].split(after_str)[0])
+
+               if(expected[exp_idx] is not None):
+                  if(abs(value - expected[exp_idx]) < delta):
+                     self.log_info(f"[{exp_idx}]: {before_str} found: {value} PASSED expected: {expected[exp_idx]}")
+                  else:
+                     self.log_info(f"{before_str} found: {value} FAILED expected: {expected[exp_idx]}")
+               exp_idx += 1
+
