@@ -66,9 +66,6 @@ MODULE m_hubbard1_setup
 
       e = 0.0
 
-      !Positions of the DFT+HIA elements in all DFT+U related arrays
-      indStart = atoms%n_u+1
-      indEnd   = atoms%n_u+atoms%n_hia
 
 
       IF(mpi%irank.EQ.0) THEN
@@ -83,6 +80,10 @@ MODULE m_hubbard1_setup
          !Remove everything from the last iteration (Good Idea??)
          CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
 
+         !Positions of the DFT+HIA elements in all DFT+U related arrays
+         indStart = atoms%n_u+1
+         indEnd   = atoms%n_u+atoms%n_hia
+
          ! calculate slater integrals from u and j
          CALL uj2f(input%jspins,atoms%lda_u(indStart:indEnd),atoms%n_hia,f0,f2,f4,f6)
 
@@ -93,28 +94,27 @@ MODULE m_hubbard1_setup
             f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          END DO
 
-         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
-         ALLOCATE(gu(atoms%n_hia))
-
          DO i_hia = 1, atoms%n_hia
             l = atoms%lda_u(atoms%n_u+i_hia)%l
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             i_gf = gfinp%hiaElem(i_hia)
-            CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
 
             IF(ALL(ABS(gdft(i_hia)%gmmpMat).LT.1e-12)) THEN
                CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
             ENDIF
 
+            !Create Subfolder (if there are multiple Hubbard 1 procedures)
             CALL hubbard1_path(atoms,i_hia,folder)
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
-            !calculate the occupation of the correlated shell
+            !-------------------------------------------------------
+            ! Calculate the DFT occupation of the correlated shell
+            !-------------------------------------------------------
             CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
 
-            l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
+            l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
             IF(l_firstIT_HIA) THEN
                IF(hub1inp%init_occ(i_hia) > -9e98) THEN
                   n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
@@ -134,6 +134,9 @@ MODULE m_hubbard1_setup
                ENDDO
             ENDIF
 
+            !Nearest Integer occupation
+            n_occ = ANINT(SUM(n_l(i_hia,:)))
+
             !Initial Information (We are already on irank 0)
             WRITE(6,*)
             WRITE(6,9010) nType
@@ -152,25 +155,21 @@ MODULE m_hubbard1_setup
             !--------------------------------------------------------------------------
             CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),input%jspins,mu_dc)
 
-            IF(mpi%irank.EQ.0) THEN
-               !Nearest Integer occupation
-               n_occ = ANINT(SUM(n_l(i_hia,:)))
-               !-------------------------------------------------------
-               ! Check for additional input files
-               !-------------------------------------------------------
-               !Is a crystal field matrix present in the work directory (overwrites the calculated matrix)
-               INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-               IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1data%ccfmat(i_hia,-l:l,-l:l),l)
-               !Is a bath parameter file present
-               INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
-               !Copy the bath file to the Hubbard 1 solver if its present
-               IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
-               !-------------------------------------------------------
-               ! Write the main config files
-               !-------------------------------------------------------
-               CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                         hub1inp,hub1data,mu_dc,n_occ,l_bathexist,l_firstIT_HIA)
-            ENDIF
+            !-------------------------------------------------------
+            ! Check for additional input files
+            !-------------------------------------------------------
+            !Is a crystal field matrix present in the work directory (overwrites the calculated matrix)
+            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
+            IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1data%ccfmat(i_hia,-l:l,-l:l),l)
+            !Is a bath parameter file present
+            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
+            !Copy the bath file to the Hubbard 1 solver if its present
+            IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+            !-------------------------------------------------------
+            ! Write the main config files
+            !-------------------------------------------------------
+            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
+                                      hub1inp,hub1data,mu_dc,n_occ,l_bathexist,l_firstIT_HIA)
          ENDDO
 
 #ifdef CPP_HDF
@@ -186,15 +185,17 @@ MODULE m_hubbard1_setup
 #endif
 
          IF(mpi%irank.EQ.0) WRITE(*,*) "Calculating new density matrix ..."
+         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
+         ALLOCATE(gu(atoms%n_hia))
          !------------------------------------------------------------
-         ! This loop runs the solver if it is available
-         ! If not the program terminates here
+         ! This loop runs the solver
          !------------------------------------------------------------
          DO i_hia = 1, atoms%n_hia
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             l = atoms%lda_u(atoms%n_u+i_hia)%l
             i_gf = gfinp%hiaElem(i_hia)
 
+            CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
             CALL hubbard1_path(atoms,i_hia,folder)
             WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
             IF(mpi%irank.EQ.0) THEN
