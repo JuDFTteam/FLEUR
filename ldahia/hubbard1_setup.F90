@@ -135,6 +135,13 @@ MODULE m_hubbard1_setup
                      hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
                   ENDIF
                ENDDO
+            ELSE
+               n_l(i_hia,:) = 0.0
+               DO ispin = 1, input%jspins
+                  DO m = -l, l
+                     n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
+                  ENDDO
+               ENDDO
             ENDIF
             !Nearest Integer occupation
             n_occ = ANINT(SUM(n_l(i_hia,:)))
