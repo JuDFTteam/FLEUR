@@ -328,6 +328,9 @@ MODULE m_hubbard1_setup
       IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
 
+
+      results%last_mmpMatdistance = 0.0
+      results%last_occdistance = 0.0
       IF(mpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
             !----------------------------------------------------------------------
