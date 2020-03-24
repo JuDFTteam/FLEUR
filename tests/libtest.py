@@ -93,21 +93,28 @@ class TestEnv:
    def check_value_outfile(self, before_str, after_str, expected, delta):
       exp_idx = 0
       with open(f"{self.workdir}/out", "r") as f:
+         found = False
          for line in f.readlines():
-            if((before_str in line) and (after_str in line)):
+            if(before_str in line):
                value_string = line.split(before_str)[-1]
                value_string = value_string.split(after_str)
                # remove empty strings
                value_string = [i for i in value_string if i is not ""][0]
                value = float(value_string)
-
+               
                if(expected[exp_idx] is not None):
                   if(abs(value - expected[exp_idx]) < delta):
-                     self.log_info(f"[{exp_idx}]: {before_str} found: {value} PASSED expected: {expected[exp_idx]}")
+                     self.log_info(f"PASSED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
                   else:
-                     self.log_info(f"[{exp_idx}]: {before_str} found: {value} FAILED expected: {expected[exp_idx]}")
+                     self.log_info(f"FAILED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
                      self.errors += 1
                exp_idx += 1
+               found = True
+      
+      if(not found):
+         self.log_error(f"{before_str} not found in file")
+         sys.exit(1)
+
       if(self.errors != 0):
          sys.exit(1)
 

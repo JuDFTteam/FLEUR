@@ -9,11 +9,11 @@ from shutil import copyfile
 
 try:
    te = TestEnv()
-   te.log_info("FeHybridPBE0 test")
+   te.log_info("MnHybridNoinv test")
    copyfile(f"{test_loc}/files/inp.xml", f"{te.workdir}/inp.xml")
 
    # special for this hybrid test:
-   te.nprocs = 3
+   te.nprocs = 2
 
    if(te.parallel):
       te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary])
@@ -21,12 +21,20 @@ try:
       te.run([te.binary])
 
 
-   te.check_value_outfile("HF total energy=", "htr", [-1272.72894, -1272.7324763242], 0.000001)
+   te.check_value_outfile("HF total energy=", "htr", [-2317.16697943, -2317.1756358345], 0.000001)
 
-   exp_mm1 = 27*[None]
-   exp_mm1[14] = 3.40037
-   exp_mm1[-1] = 3.42075
+   exp_mm1 = 32*[None]
+   exp_mm1[-1] = 2.47449
    te.check_value_outfile("--> mm       1", " ", exp_mm1, 0.00001)
+
+   exp_mm2 = 32*[None]
+   exp_mm2[-1] =-2.47449
+   te.check_value_outfile("--> mm       2", " ", exp_mm2, 0.00001)
+
+   # only check the last bandgap
+   exp_bandgap = 32 * [None]
+   exp_bandgap[-1] = 0.087531
+   te.check_value_outfile("bandgap                     :", "htr", exp_bandgap, 0.0001)
 
 except Exception as e:
    te.log_error(f"Error: {e}")
