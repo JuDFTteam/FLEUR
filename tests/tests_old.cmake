@@ -5,7 +5,6 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    CoMCDXML Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
-    FeHybridPBE0 MnHybridNoinv
    Fe_bcc_GreensFunction GreensFunction_MultiContour 
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
     Fe_bcc_SF_LDA SmAtomjDOS) 
@@ -90,3 +89,5 @@ endif()
 #Hybrid tests
 add_test("KClHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/KClHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
 add_test("GaAsHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/GaAsHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+add_test("FeHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/FeHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+#add_test("MnHybridNoinv" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/MnHybridNoinv/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)

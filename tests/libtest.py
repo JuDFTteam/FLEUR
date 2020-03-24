@@ -11,6 +11,7 @@ class TestEnv:
    workdir = ""
    parallel = False
    nprocs = -1
+   errors = 0
 
    def __init__(self):
       parser = argparse.ArgumentParser(description='get test-dir and bin-dir')
@@ -23,6 +24,15 @@ class TestEnv:
       self.setup_env(args)
       self.find_binary(args)
       self.nprocs = args.nprocs
+   
+   def __del__(self):
+      self.log_info(f"called __del__ errors = {self.errors}")
+      raise SystemExit
+      sys.exit(self.errors)
+
+   def __exit__(self):
+      self.log_info(f"called __exit__ errors = {self.errors}")
+      sys.exit(self.errors)
 
    def find_binary(self, args):      
       fleur_dir = args.bindir[0]
@@ -85,12 +95,19 @@ class TestEnv:
       with open(f"{self.workdir}/out", "r") as f:
          for line in f.readlines():
             if((before_str in line) and (after_str in line)):
-               value = float(line.split(before_str)[-1].split(after_str)[0])
+               value_string = line.split(before_str)[-1]
+               value_string = value_string.split(after_str)
+               # remove empty strings
+               value_string = [i for i in value_string if i is not ""][0]
+               value = float(value_string)
 
                if(expected[exp_idx] is not None):
                   if(abs(value - expected[exp_idx]) < delta):
                      self.log_info(f"[{exp_idx}]: {before_str} found: {value} PASSED expected: {expected[exp_idx]}")
                   else:
-                     self.log_info(f"{before_str} found: {value} FAILED expected: {expected[exp_idx]}")
+                     self.log_info(f"[{exp_idx}]: {before_str} found: {value} FAILED expected: {expected[exp_idx]}")
+                     self.errors += 1
                exp_idx += 1
+      if(self.errors != 0):
+         sys.exit(1)
 
