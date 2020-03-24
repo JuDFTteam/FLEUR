@@ -62,17 +62,13 @@ MODULE m_hubbard1_setup
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL    :: n_l(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
-      COMPLEX :: e(MAXVAL(gdft(:)%contour%nz))
+      COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:),ctmp(:)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
-
-      e = 0.0
-
-
 
       IF(mpi%irank.EQ.0) THEN
          !-------------------------------------------
@@ -101,6 +97,7 @@ MODULE m_hubbard1_setup
          END DO
 
          DO i_hia = 1, atoms%n_hia
+
             l = atoms%lda_u(atoms%n_u+i_hia)%l
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
             i_gf = gfinp%hiaElem(i_hia)
@@ -139,18 +136,20 @@ MODULE m_hubbard1_setup
                   ENDIF
                ENDDO
             ENDIF
-
             !Nearest Integer occupation
             n_occ = ANINT(SUM(n_l(i_hia,:)))
 
             !Initial Information (We are already on irank 0)
             WRITE(6,*)
             WRITE(6,9010) nType
+9010        FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
             WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
             WRITE(6,*)
             WRITE(6,"(A)") "Occupation from DFT-Green's function:"
             WRITE(6,9020) 'spin-up','spin-dn'
+9020        FORMAT(TR8,A7,TR3,A7)
             WRITE(6,9030) n_l(i_hia,:)
+9030        FORMAT(TR7,f8.4,TR2,f8.4)
 
             !--------------------------------------------------------------------------
             ! Calculate the chemical potential for the solver
@@ -171,6 +170,7 @@ MODULE m_hubbard1_setup
             INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
             !Copy the bath file to the Hubbard 1 solver if its present
             IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
@@ -180,18 +180,6 @@ MODULE m_hubbard1_setup
       ENDIF !mpi%irank == 0
 
       IF(mpi%irank.EQ.0) THEN
-#ifdef CPP_HDF
-         !------------------------------
-         !Write out DFT Green's Function
-         !------------------------------
-         CALL timestart("Hubbard 1: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
-                               GREENSF_HUBBARD_CONST, gdft, mmpmat)
-         CALL closeGreensFFile(greensf_fileID)
-         CALL timestop("Hubbard 1: IO/Write")
-#endif
-
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
@@ -238,6 +226,8 @@ MODULE m_hubbard1_setup
          CALL hubbard1_path(atoms,i_hia,folder)
          WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
 
+         ALLOCATE(e(gdft(i_hia)%contour%nz),source=cmplx_0)
+
          CALL timestart("Hubbard 1: EDsolver")
          !We have to change into the Hubbard1 directory so that the solver routines can read the config
          CALL CHDIR(TRIM(ADJUSTL(xPath)))
@@ -263,6 +253,8 @@ MODULE m_hubbard1_setup
 #endif
          CALL CHDIR(TRIM(ADJUSTL(cwd)))
          CALL timestop("Hubbard 1: EDsolver")
+
+         DEALLOCATE(e)
 
          !-------------------------------------------
          ! Postprocess selfenergy
@@ -300,7 +292,7 @@ MODULE m_hubbard1_setup
 
       ENDDO
 
-      !Collect important stuff
+      !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%collect(gfinp,mpi%mpi_comm)
       ENDDO
@@ -308,10 +300,19 @@ MODULE m_hubbard1_setup
 
       IF(mpi%irank.EQ.0) THEN
 #ifdef CPP_HDF
+
+         !------------------------------
+         !Write out DFT Green's Function
+         !------------------------------
+         CALL timestart("Hubbard 1: IO/Write")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+                               GREENSF_HUBBARD_CONST, gdft, mmpmat)
+         CALL closeGreensFFile(greensf_fileID)
+
          !-------------------------------------
          !Write out correlated Green's Function
          !-------------------------------------
-         CALL timestart("Hubbard 1: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
@@ -341,11 +342,6 @@ MODULE m_hubbard1_setup
 
       !Broadcast the density matrix
       CALL mpi_bc(den%mmpMat,mpi%irank,mpi%mpi_comm)
-
-      !FORMAT Statements:
-9010  FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
-9020  FORMAT(TR8,A7,TR3,A7)
-9030  FORMAT(TR7,f8.4,TR2,f8.4)
 
    END SUBROUTINE hubbard1_setup
 
