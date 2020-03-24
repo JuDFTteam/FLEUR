@@ -3,17 +3,20 @@ enable_testing()
 set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
-   SiFilmPlotXML PlotDenandPot SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML
+   CoMCDXML Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
-   KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 MnHybridNoinv
    Fe_bcc_GreensFunction GreensFunction_MultiContour 
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   RelaxMTFeature Fe_bcc_SF_LDA SmAtomjDOS) 
+    Fe_bcc_SF_LDA SmAtomjDOS) 
 
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # Fe_1l_GreensFunction
 #  CoUnfold
+
+#Tests to renable soon
+#RelaxMTFeature
+#SiFilmPlotXML PlotDenandPot SiFilmSlicePlotXML
 
 set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
@@ -82,3 +85,9 @@ if (${FLEUR_USE_MPI})
     add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
    endforeach(test)
 endif()
+
+#Hybrid tests
+add_test("KClHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/KClHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+add_test("GaAsHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/GaAsHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+add_test("FeHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/FeHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+add_test("MnHybridNoinv" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/MnHybridNoinv/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)

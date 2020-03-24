@@ -117,6 +117,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       DO i_gf = 1, gfinp%n
          iContour = gfinp%elem(i_gf)%iContour
          CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,mpi%irank)
+         CALL greensFunction(i_gf)%reset()
       ENDDO
       CALL greensfImagPart%init(gfinp,input,noco)
       !CALL greensFunction%reset(gfinp)
