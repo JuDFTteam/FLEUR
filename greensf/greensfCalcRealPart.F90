@@ -22,10 +22,6 @@ MODULE m_greensfCalcRealPart
    USE m_kk_cutoff
    IMPLICIT NONE
 
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
-
    INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
    CONTAINS

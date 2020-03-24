@@ -110,7 +110,6 @@ CONTAINS
     REAL    :: fix, sfscale
 
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER :: ierr(2)
 #endif
     REAL, ALLOCATABLE :: flh(:,:),flh2(:,:)
@@ -212,6 +211,9 @@ CONTAINS
     ! Open/allocate eigenvector storage (end)
     scfloop:DO WHILE (l_cont)
        iter = iter + 1
+       DO i_gf = 1, fi%gfinp%n
+          CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
+       ENDDO
        IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
           hub1data%iter = hub1data%iter + 1
           CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&

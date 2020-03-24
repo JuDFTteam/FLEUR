@@ -9,7 +9,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
+   SUBROUTINE add_selfen(g,i_hia,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -25,21 +25,22 @@ MODULE m_add_selfen
       !to the right of the maximum
       !TODO: Parallelization (MPI over hubbard 1 elements OMP over chemical potentials??)
 
-      TYPE(t_greensf),  INTENT(IN)     :: g(:)
+      TYPE(t_greensf),  INTENT(IN)     :: g
+      INTEGER,          INTENT(IN)     :: i_hia
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:,:)
+      COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:)
       REAL,             INTENT(IN)     :: ef
-      REAL,             INTENT(IN)     :: n_occ(:,:)
-      TYPE(t_greensf),  INTENT(INOUT)  :: gp(:)
-      COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
+      REAL,             INTENT(IN)     :: n_occ(:)
+      TYPE(t_greensf),  INTENT(INOUT)  :: gp
+      COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,i_gf
+      INTEGER l,nType,ns,ispin,m,mp,iz,ipm,i_gf
       INTEGER spin_match,matsize,start,end,i_match
-      CHARACTER(len=6) filename
+      CHARACTER(len=7) filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
       REAL mu,n,n_target
@@ -59,147 +60,149 @@ MODULE m_add_selfen
       !Are we matching the spin polarized self-energy with one chemical potential
       l_match_both_spins = spin_match.EQ.1!.AND.input%jspins.EQ.2
 
-      DO i_hia = 1, atoms%n_hia
-         l = atoms%lda_u(atoms%n_u+i_hia)%l
-         nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-         i_gf = gfinp%hiaElem(i_hia)
-         ns = 2*l+1
-         matsize = ns*MERGE(2,1,l_match_both_spins)
-         CALL vmat%init(.false.,matsize,matsize)
-         !Search for the maximum of occupation
-         DO i_match = 1, spin_match
-            !Target occupation
-            n_target = MERGE(SUM(n_occ(i_hia,:)),n_occ(i_hia,i_match),l_match_both_spins)
-            WRITE(filename,9000) i_match
+      l = atoms%lda_u(atoms%n_u+i_hia)%l
+      nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+      i_gf = gfinp%hiaElem(i_hia)
+      ns = 2*l+1
+      matsize = ns*MERGE(2,1,l_match_both_spins)
+      CALL vmat%init(.false.,matsize,matsize)
+
+      !Search for the maximum of occupation
+      DO i_match = 1, spin_match
+         !Target occupation
+         n_target = MERGE(SUM(n_occ(:)),n_occ(i_match),l_match_both_spins)
 #ifdef CPP_DEPUG
-            OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
+         WRITE(filename,9000) i_hia,i_match
+         OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
-            mu = mu_a
-            start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
-            end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
-            DO WHILE(mu.LE.mu_b)
-               CALL gp(i_hia)%reset()
-               mu = mu + mu_step
-               DO ipm = 1, 2
-                  DO iz = 1, g(i_hia)%contour%nz
-                     !Read selfenergy
-                     vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
-                     IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
-                        !Dismiss spin-off-diagonal elements
-                        vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                        vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                     ENDIF
-                     IF(l_match_both_spins) THEN
-                        CALL g(i_hia)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                     ELSE
-                        CALL g(i_hia)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                     ENDIF
-                     CALL add_pot(gmat,vmat,mu)
-                     IF(l_match_both_spins) THEN
-                        CALL gp(i_hia)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                     ELSE
-                        CALL gp(i_hia)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                     ENDIF
-                     CALL gmat%free()
-                  ENDDO
+         mu = mu_a
+         start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
+         end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
+         DO WHILE(mu.LE.mu_b)
+            CALL gp%reset()
+            mu = mu + mu_step
+            DO ipm = 1, 2
+               DO iz = 1, g%contour%nz
+                  !Read selfenergy
+                  vmat%data_c = selfen(start:end,start:end,iz,ipm)
+                  IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
+                     !Dismiss spin-off-diagonal elements
+                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
+                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
+                  ENDIF
+                  IF(l_match_both_spins) THEN
+                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+                  ELSE
+                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
+                  ENDIF
+                  CALL add_pot(gmat,vmat,mu)
+                  IF(l_match_both_spins) THEN
+                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+                  ELSE
+                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
+                  ENDIF
+                  CALL gmat%free()
                ENDDO
-               CALL occmtx(gp(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
+            ENDDO
+            CALL occmtx(gp,i_gf,gfinp,input,mmpMat,err,check=.TRUE.)
 #ifdef CPP_DEBUG
-               !IF(err) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
+            !IF(err) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
 #endif
-               !Calculate the trace
-               n = 0.0
-               DO ispin = 1, input%jspins
-                  DO m = -l, l
-                     n = n + REAL(mmpMat(m,m,i_hia,ispin))
-                  ENDDO
+            !Calculate the trace
+            n = 0.0
+            DO ispin = 1, input%jspins
+               DO m = -l, l
+                  n = n + REAL(mmpMat(m,m,ispin))
                ENDDO
-#ifdef CPP_DEBUG
-               WRITE(1337,"(2f15.8)") mu,n
-#endif
-               IF(n.GT.n_max) THEN
-                  mu_max = mu
-                  n_max  = n
-               ENDIF
             ENDDO
 #ifdef CPP_DEBUG
-            CLOSE(1337)
+            WRITE(1337+i_hia,"(2f15.8)") mu,n
 #endif
-
-            !Sanity check for the maximum occupation
-            IF(n_max-2*ns.GT.1) THEN
-               !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
-               CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",calledby="add_selfen")
+            IF(n.GT.n_max) THEN
+               mu_max = mu
+               n_max  = n
             ENDIF
-
-            IF(n_max-n_target.LT.0.0) CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",calledby="add_selfen")
-
-            !Set up the interval for the bisection method (mu_max,mu_b)
-            mu_a = mu_max
-            DO
-               CALL gp(i_hia)%reset()
-               mu = (mu_a + mu_b)/2.0
-               DO ipm = 1, 2
-                  DO iz = 1, g(i_hia)%contour%nz
-                     !Read selfenergy
-                     vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
-                     IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
-                        !Dismiss spin-off-diagonal elements
-                        vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                        vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                     ENDIF
-                     IF(l_match_both_spins) THEN
-                        CALL g(i_hia)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                     ELSE
-                        CALL g(i_hia)%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                     ENDIF
-                     CALL add_pot(gmat,vmat,mu)
-                     IF(l_match_both_spins) THEN
-                        CALL gp(i_hia)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                     ELSE
-                        CALL gp(i_hia)%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                     ENDIF
-                     CALL gmat%free()
-                  ENDDO
-               ENDDO
-               CALL occmtx(gp(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
-               !Calculate the trace
-               n = 0.0
-               DO ispin = 1, input%jspins
-                  DO m = -l, l
-                     n = n + REAL(mmpMat(m,m,i_hia,ispin))
-                  ENDDO
-               ENDDO
-               IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.1e-4) THEN
-                  !We found the chemical potential to within the desired accuracy
-                  WRITE(6,"(A)") "Calculated mu to match Self-energy to DFT-GF"
-                  WRITE(6,"(TR3,A4,f8.4)") "mu = ", mu
-                  !----------------------------------------------------
-                  ! Check if the final mmpMat contains invalid elements
-                  !----------------------------------------------------
-                  IF(err) CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
-                  EXIT
-               ELSE IF((n - n_target).GT.0) THEN
-                  !The occupation is to big --> choose the right interval
-                  mu_a = mu
-               ELSE IF((n - n_target).LT.0) THEN
-                  !The occupation is to small --> choose the left interval
-                  mu_b = mu
-               ENDIF
-            ENDDO
          ENDDO
-         CALL vmat%free()
-         !Test throw out elements smaller than 1e-4
-         DO ispin = 1, input%jspins
-            DO m = -l, l
-               DO mp=-l, l
-                  IF(ABS(mmpMat(m,mp,i_hia,ispin)).LT.1e-4) mmpMat(m,mp,i_hia,ispin) = 0.0
+#ifdef CPP_DEBUG
+         CLOSE(1337+i_hia)
+#endif
+
+         !Sanity check for the maximum occupation
+         IF(n_max-2*ns.GT.1) THEN
+            !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",calledby="add_selfen")
+         ENDIF
+
+         IF(n_max-n_target.LT.0.0) CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",&
+                                                    calledby="add_selfen")
+
+         !Set up the interval for the bisection method (mu_max,mu_b)
+         mu_a = mu_max
+         DO
+            CALL gp%reset()
+            mu = (mu_a + mu_b)/2.0
+            DO ipm = 1, 2
+               DO iz = 1, g%contour%nz
+                  !Read selfenergy
+                  vmat%data_c = selfen(start:end,start:end,iz,ipm)
+                  IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
+                     !Dismiss spin-off-diagonal elements
+                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
+                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
+                  ENDIF
+                  IF(l_match_both_spins) THEN
+                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+                  ELSE
+                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
+                  ENDIF
+                  CALL add_pot(gmat,vmat,mu)
+                  IF(l_match_both_spins) THEN
+                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+                  ELSE
+                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
+                  ENDIF
+                  CALL gmat%free()
                ENDDO
+            ENDDO
+            CALL occmtx(gp,i_gf,gfinp,input,mmpMat,err,check=.TRUE.) !check makes sure that the elements are reasonable
+            !Calculate the trace
+            n = 0.0
+            DO ispin = 1, input%jspins
+               DO m = -l, l
+                  n = n + REAL(mmpMat(m,m,ispin))
+               ENDDO
+            ENDDO
+            IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.1e-4) THEN
+               !We found the chemical potential to within the desired accuracy
+#ifdef CPP_DEBUG
+               WRITE(*,"(A)") "Calculated mu to match Self-energy to DFT-GF"
+               WRITE(*,"(TR3,A4,f8.4)") "mu = ", mu
+#endif
+               !----------------------------------------------------
+               ! Check if the final mmpMat contains invalid elements
+               !----------------------------------------------------
+               IF(err) CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
+               EXIT
+            ELSE IF((n - n_target).GT.0) THEN
+               !The occupation is to big --> choose the right interval
+               mu_a = mu
+            ELSE IF((n - n_target).LT.0) THEN
+               !The occupation is to small --> choose the left interval
+               mu_b = mu
+            ENDIF
+         ENDDO
+      ENDDO
+      CALL vmat%free()
+      !Test throw out elements smaller than 1e-4
+      DO ispin = 1, input%jspins
+         DO m = -l, l
+            DO mp=-l, l
+               IF(ABS(mmpMat(m,mp,ispin)).LT.1e-4) mmpMat(m,mp,ispin) = 0.0
             ENDDO
          ENDDO
       ENDDO
 
-9000  FORMAT("mu_",I1)
+9000  FORMAT("mu_",I2.2,"_",I1)
 
    END SUBROUTINE add_selfen
 

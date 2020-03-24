@@ -17,6 +17,11 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
+#include"cpp_double.h"
+
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
    CHARACTER(len=30), PARAMETER :: out_file    = "out"
 
@@ -36,10 +41,11 @@ MODULE m_hubbard1_setup
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
-      INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
+      INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm,n
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd,i_gf
       INTEGER :: hubbardioUnit
+      INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
       REAL    :: mu_dc
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,occ_err
 
@@ -57,7 +63,7 @@ MODULE m_hubbard1_setup
       REAL    :: n_l(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX :: e(MAXVAL(gdft(:)%contour%nz))
-      COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:),ctmp(:)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -69,9 +75,9 @@ MODULE m_hubbard1_setup
 
 
       IF(mpi%irank.EQ.0) THEN
-         !The onsite green's function was calculated but the solver
-         !was not yet run
-         !--> write out the configuration for the hubbard 1 solver
+         !-------------------------------------------
+         ! Create the Input for the Hubbard 1 Solver
+         !-------------------------------------------
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
@@ -171,7 +177,9 @@ MODULE m_hubbard1_setup
             CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
                                       hub1inp,hub1data,mu_dc,n_occ,l_bathexist,l_firstIT_HIA)
          ENDDO
+      ENDIF !mpi%irank == 0
 
+      IF(mpi%irank.EQ.0) THEN
 #ifdef CPP_HDF
          !------------------------------
          !Write out DFT Green's Function
@@ -184,73 +192,96 @@ MODULE m_hubbard1_setup
          CALL timestop("Hubbard 1: IO/Write")
 #endif
 
-         IF(mpi%irank.EQ.0) WRITE(*,*) "Calculating new density matrix ..."
-         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
-         ALLOCATE(gu(atoms%n_hia))
-         !------------------------------------------------------------
-         ! This loop runs the solver
-         !------------------------------------------------------------
-         DO i_hia = 1, atoms%n_hia
-            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            l = atoms%lda_u(atoms%n_u+i_hia)%l
-            i_gf = gfinp%hiaElem(i_hia)
+         WRITE(*,*) "Calculating new density matrix ..."
+      ENDIF
 
-            CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
-            CALL hubbard1_path(atoms,i_hia,folder)
-            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-            IF(mpi%irank.EQ.0) THEN
-               CALL timestart("Hubbard 1: EDsolver")
-               !We have to change into the Hubbard1 directory so that the solver routines can read the config
-               CALL CHDIR(TRIM(ADJUSTL(xPath)))
-#ifdef CPP_EDSOLVER
-               !Open the output file for the solver
-               hubbardioUnit = 4000+i_hia
-               OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(out_file)),&
-                    status="replace", action="write", iostat=io_error)
-               IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
-               e = gdft(i_hia)%contour%e*hartree_to_ev_const
-               CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
-                                      selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1,hubbardioUnit)
-               !---------------------------------------------------
-               ! Calculate selfenergy on lower contour explicitly
-               ! Mainly out of paranoia :D
-               ! No rediagonalization (last argument switches this)
-               !---------------------------------------------------
-               e = conjg(gdft(i_hia)%contour%e)*hartree_to_ev_const
-               CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
-                                      selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0,hubbardioUnit)
-               CLOSE(hubbardioUnit, iostat=io_error)
-               IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
+      ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
+      ALLOCATE(gu(atoms%n_hia))
+
+      !Argument order different because n_l is not allocatable
+      CALL mpi_bc(mpi%irank,mpi%mpi_comm,n_l)
+      !Broadcast important stuff
+      DO i_hia = 1, atoms%n_hia
+         i_gf = gfinp%hiaElem(i_hia)
+         CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
+      ENDDO
+
+#ifdef CPP_MPI
+      !distribute the individual hubbard1 elements over the ranks
+      n_hia_task = FLOOR(REAL(atoms%n_hia)/(mpi%isize))
+      extra = atoms%n_hia - n_hia_task*mpi%isize
+      i_hia_start = mpi%irank*n_hia_task + 1 + extra
+      i_hia_end   =(mpi%irank+1)*n_hia_task   + extra
+      IF(mpi%irank < extra) THEN
+         i_hia_start = i_hia_start - (extra - mpi%irank)
+         i_hia_end   = i_hia_end   - (extra - mpi%irank - 1)
+      ENDIF
+#else
+      i_hia_start = 1
+      i_hia_end   = atoms%n_hia
 #endif
-               CALL CHDIR(TRIM(ADJUSTL(cwd)))
-               CALL timestop("Hubbard 1: EDsolver")
-            ENDIF
-         ENDDO
 
+
+      mmpMat = cmplx_0
+      !------------------------------------------------------------
+      ! This loop runs the solver
+      !------------------------------------------------------------
+      DO i_hia = i_hia_start, i_hia_end
+
+         IF(i_hia > atoms%n_hia .OR. i_hia < 1) CYCLE
+
+         nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+         l = atoms%lda_u(atoms%n_u+i_hia)%l
+         i_gf = gfinp%hiaElem(i_hia)
+
+         CALL get_environment_variable('PWD',cwd)
+         CALL hubbard1_path(atoms,i_hia,folder)
+         WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
+
+         CALL timestart("Hubbard 1: EDsolver")
+         !We have to change into the Hubbard1 directory so that the solver routines can read the config
+         CALL CHDIR(TRIM(ADJUSTL(xPath)))
+#ifdef CPP_EDSOLVER
+         !Open the output file for the solver
+         hubbardioUnit = 4000+i_hia
+         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(out_file)),&
+              status="replace", action="write", iostat=io_error)
+         IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
+         e = gdft(i_hia)%contour%e*hartree_to_ev_const
+         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
+                                selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1,hubbardioUnit)
+         !---------------------------------------------------
+         ! Calculate selfenergy on lower contour explicitly
+         ! Mainly out of paranoia :D
+         ! No rediagonalization (last argument switches this)
+         !---------------------------------------------------
+         e = conjg(gdft(i_hia)%contour%e)*hartree_to_ev_const
+         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
+                                selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0,hubbardioUnit)
+         CLOSE(hubbardioUnit, iostat=io_error)
+         IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
+#endif
+         CALL CHDIR(TRIM(ADJUSTL(cwd)))
+         CALL timestop("Hubbard 1: EDsolver")
 
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         DO i_hia = 1, atoms%n_hia
-            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            l = atoms%lda_u(atoms%n_u+i_hia)%l
-            i_gf = gfinp%hiaElem(i_hia)
-            DO ipm = 1, 2
-               DO iz = 1, gdft(i_hia)%contour%nz
-                  !---------------------------------------------
-                  ! Convert the selfenergy to hartree
-                  !---------------------------------------------
-                  selfen(:,:,iz,ipm,i_hia) = selfen(:,:,iz,ipm,i_hia)/hartree_to_ev_const
-                  !---------------------------------------------
-                  ! The order of spins is reversed in the Solver
-                  !---------------------------------------------
-                  CALL swapSpin(selfen(:,:,iz,ipm,i_hia),2*l+1)
-                  !---------------------------------------------------------------------
-                  ! The DFT green's function also includes the previous DFT+U correction
-                  ! This is removed by substracting it from the selfenergy
-                  !---------------------------------------------------------------------
-                  CALL removeU(selfen(:,:,iz,ipm,i_hia),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
-               ENDDO
+         DO ipm = 1, 2
+            DO iz = 1, gdft(i_hia)%contour%nz
+               !---------------------------------------------
+               ! Convert the selfenergy to hartree
+               !---------------------------------------------
+               selfen(:,:,iz,ipm,i_hia) = selfen(:,:,iz,ipm,i_hia)/hartree_to_ev_const
+               !---------------------------------------------
+               ! The order of spins is reversed in the Solver
+               !---------------------------------------------
+               CALL swapSpin(selfen(:,:,iz,ipm,i_hia),2*l+1)
+               !---------------------------------------------------------------------
+               ! The DFT green's function also includes the previous DFT+U correction
+               ! This is removed by substracting it from the selfenergy
+               !---------------------------------------------------------------------
+               CALL removeU(selfen(:,:,iz,ipm,i_hia),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
             ENDDO
          ENDDO
          !----------------------------------------------------------------------
@@ -263,9 +294,19 @@ MODULE m_hubbard1_setup
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
          CALL timestart("Hubbard 1: Add Selfenenergy")
-         CALL add_selfen(gdft,selfen,atoms,gfinp,input,noco,hub1inp,results%ef,n_l,gu,mmpMat)
+         CALL add_selfen(gdft(i_hia),i_hia,selfen(:,:,:,:,i_hia),atoms,gfinp,input,noco,hub1inp,&
+                         results%ef,n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenenergy")
 
+      ENDDO
+
+      !Collect important stuff
+      DO i_hia = 1, atoms%n_hia
+         CALL gu(i_hia)%collect(gfinp,mpi%mpi_comm)
+      ENDDO
+
+
+      IF(mpi%irank.EQ.0) THEN
 #ifdef CPP_HDF
          !-------------------------------------
          !Write out correlated Green's Function
@@ -277,17 +318,25 @@ MODULE m_hubbard1_setup
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
 #endif
-         !----------------------------------------------------------------------
-         ! Calculate the distance and update the density matrix
-         !----------------------------------------------------------------------
+      ENDIF
+
+      !Collect the density matrix to rank 0
+      n = SIZE(mmpMat)
+      ALLOCATE(ctmp(n))
+      CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      DEALLOCATE(ctmp)
+
+      IF(mpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
+            !----------------------------------------------------------------------
+            ! Calculate the distance and update the density matrix
+            !----------------------------------------------------------------------
             CALL n_mmp_dist(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
             DO ispin = 1, MERGE(3,input%jspins,noco%l_mperp)
                den%mmpMat(:,:,atoms%n_u+i_hia,ispin) = mmpMat(:,:,i_hia,ispin)
             ENDDO
          ENDDO
-
-         DEALLOCATE(selfen)
       ENDIF
 
       !Broadcast the density matrix
@@ -382,7 +431,7 @@ MODULE m_hubbard1_setup
       CHARACTER(len=1)   :: l_name(0:3)
       INTEGER nType,l
 
-      l_name(0:3) = (/"s","p","d","f"/)
+      l_name(0:3) = ["s","p","d","f"]
 
       nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
       l = atoms%lda_u(atoms%n_u+i_hia)%l

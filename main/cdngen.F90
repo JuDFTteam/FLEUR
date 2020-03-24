@@ -48,6 +48,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IMPLICIT NONE
 
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
+
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
    TYPE(t_mpi),INTENT(IN)           :: mpi
