@@ -20,10 +20,9 @@ c********************************************************************
       REAL,    PARAMETER :: small = 1.0e-03 , zero = 0.0
 !     ..
 !     .. Locals ..
-      INTEGER i,l,min,n
+      INTEGER i,l,n
       REAL fac,quot,xinv,xx
-      REAL :: aux(0:int(lmax+10+x))
-      !REAL, ALLOCATABLE :: aux(:)
+      REAL aux0, aux1, aux2
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC abs,cos,sin
@@ -60,25 +59,42 @@ c********************************************************************
 
       ELSE IF (lmax.GE.2) THEN
          n = INT( lmax + 10 + x )
-       !  ALLOCATE( aux(0:n) )
 !
 ! downward recursion from arbitrary starting values
 !
-         aux(n) = 0.
-         aux(n-1) = 1.
-         DO i = n - 1,1,-1
-            aux(i-1) = (2*i+1)*xinv*aux(i) - aux(i+1)
+         ! aux(n) = 0.
+         ! aux(n-1) = 1.
+         ! aux(i) = (2*i+3)*xinv*aux(i+1) - aux(i+2)
+         aux1 = 0.
+         aux0 = 1.
+         DO i = n-2,lmax+1,-1
+            aux2 = aux1
+            aux1 = aux0
+            aux0 = (2*i+3)*xinv*aux1 - aux2
          ENDDO
+         DO i = lmax,2,-1
+            aux2 = aux1
+            aux1 = aux0
+            aux0 = (2*i+3)*xinv*aux1 - aux2
+            fj(i) = aux0
+         ENDDO
+         aux2 = aux1
+         aux1 = aux0
+         aux0 = (2*1+3)*xinv*aux1 - aux2
+         aux2 = aux1
+         aux1 = aux0
+         aux0 = (2*0+3)*xinv*aux1 - aux2
 !
 ! normalize with j0 or j1, whichever is larger
 !
-         min = 0
-         IF (abs(fj(0)).LT.abs(fj(1))) min = 1
-         quot = fj(min)/aux(min)
+         IF (abs(fj(0)).LT.abs(fj(1))) THEN
+            quot = fj(1)/aux1
+         ELSE
+            quot = fj(0)/aux0
+         ENDIF
          DO l = 2,lmax
-            fj(l) = aux(l)*quot
+            fj(l) = fj(l)*quot
          ENDDO
-        ! DEALLOCATE( aux )
       END IF
 
       RETURN
