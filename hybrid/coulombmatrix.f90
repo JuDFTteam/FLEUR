@@ -790,10 +790,7 @@ CONTAINS
                                  DO m1 = -l1, l1
                                     lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
                                     lm = l**2 + l -l1 - m2 + (m1+l1) + 1
-                                    cdum1 = cdum*gmat(lm1, lm2)
-                                    DO ic1 = 1, atoms%nat
-                                       carr2(ic1, lm1) = carr2(ic1, lm1) + cdum1*structconst1(ic1, lm)
-                                    END DO
+                                    carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
                                  END DO
                               END DO
                            END IF
