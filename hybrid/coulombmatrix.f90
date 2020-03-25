@@ -785,15 +785,12 @@ CONTAINS
                         call calc_l_m_from_lm(lm2, l2, m2)
 
                         cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                        IF (abs(cdum) > 1e-12) THEN
-
-                           DO lm1 = 1, hybinp%lexp**2
-                              call calc_l_m_from_lm(lm1, l1, m1)
-                              l = l1 + l2
-                              lm = l**2 + l -l1 - m2 + (m1+l1) + 1
-                              carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
-                           END DO
-                        END IF
+                        DO lm1 = 1, hybinp%lexp**2
+                           call calc_l_m_from_lm(lm1, l1, m1)
+                           l = l1 + l2
+                           lm = l**2 + l -l1 - m2 + (m1+l1) + 1
+                           carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
+                        END DO
                      enddo
                   END DO
                END DO
