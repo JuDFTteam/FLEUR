@@ -782,13 +782,16 @@ CONTAINS
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            IF (abs(cdum) > 1e-12) THEN
-                              DO l1 = 0, hybinp%lexp
+                              ! this is a nested loop over 
+                              ! l=1..hyb%lexp{ 
+                              !    m=-l..l{}
+                              ! }
+                              DO lm1 = 1, hybinp%lexp**2
+                                 call calc_l_m_from_lm(lm1, l1, m1)
                                  l = l1 + l2
-                                 DO m1 = -l1, l1
-                                    lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
-                                    lm = l**2 + l -l1 - m2 + (m1+l1) + 1
-                                    carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
-                                 END DO
+                                 lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
+                                 lm = l**2 + l -l1 - m2 + (m1+l1) + 1
+                                 carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
                               END DO
                            END IF
                         END DO
@@ -2167,4 +2170,12 @@ CONTAINS
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
+   subroutine calc_l_m_from_lm(lm, l, m) 
+      implicit none 
+      integer, intent(in)   :: lm
+      integer, intent(out)  :: l, m 
+      if(lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
+      l = floor(sqrt(lm-1.0))
+      m  lm - (l**2 + l +1)
+   end subroutine calc_l_m_from_lm
 END MODULE m_coulombmatrix
