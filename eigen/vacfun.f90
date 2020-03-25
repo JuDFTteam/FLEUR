@@ -96,8 +96,8 @@ CONTAINS
        DO  jk = 1,nv2(jspin2)
 
           !--->     determine the warping component of the potential
-          i1 = kvac(1,ik,jspin1) - kvac(1,jk,jspin2)
-          i2 = kvac(2,ik,jspin1) - kvac(2,jk,jspin2)
+          i1 = fac*(kvac(1,ik,jspin1) - kvac(1,jk,jspin2))
+          i2 = fac*(kvac(2,ik,jspin1) - kvac(2,jk,jspin2))
           i3 = 0
           ind3 = stars%ig(i1,i2,i3)
           IF (ind3.EQ.0) CYCLE
@@ -169,7 +169,8 @@ CONTAINS
                 tudv(ik,ik) = cmplx(0.5,0.0)
                 tduv(ik,ik) = cmplx(0.5,0.0)
              ELSE
-                !--->          tuuv
+
+               !--->          tuuv
                 DO i = 1,vacuum%nmz
                    x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*vz(i,ivac,3)
                 ENDDO
@@ -218,6 +219,7 @@ CONTAINS
        ENDDO
     ENDDO
     !$OMP END PARALLEL DO
+
 
   END SUBROUTINE vacfun
 END MODULE m_vacfun

@@ -71,7 +71,6 @@ CONTAINS
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: ok
       INTEGER                    :: m
-      INTEGER                    :: ikptmin, ikptmax, nkminmax
       INTEGER                    :: maxfac
 
       LOGICAL                    :: lsym
@@ -89,7 +88,6 @@ CONTAINS
       INTEGER, ALLOCATABLE   :: pqnrm(:, :)
       INTEGER                    :: rrot(3, 3, sym%nsym), invrrot(3, 3, sym%nsym)
       INTEGER, ALLOCATABLE   :: iarr(:), POINTER(:, :, :, :)!,pointer(:,:,:)
-      INTEGER                    :: igptmin(kpts%nkpt), igptmax(kpts%nkpt)
       INTEGER, ALLOCATABLE   :: nsym_gpt(:, :), sym_gpt(:, :, :)
       INTEGER                    :: nsym1(kpts%nkpt + 1), sym1(sym%nsym, kpts%nkpt + 1)
 
@@ -139,6 +137,7 @@ CONTAINS
       TYPE(t_mat)                :: olapm, coulhlp
 
       CALL timestart("Coulomb matrix setup")
+      call timestart("prep in coulomb")
       if(mpi%is_root()) write (*,*) "start of coulomb calculation"
 
       svol = SQRT(cell%vol)
@@ -170,9 +169,8 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
+      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok, source=(0.0,0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
-      coulomb = 0
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
@@ -265,12 +263,8 @@ CONTAINS
       deallocate(iarr)
 
       ! Distribute the work as equally as possible over the processes
-      ikptmin = 1
-      ikptmax = kpts%nkpt
-      igptmin = 1
-      igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
-      nkminmax = kpts%nkpt
+      call timestop("prep in coulomb")
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
@@ -451,7 +445,7 @@ CONTAINS
 
       END IF
 
-      DO ikpt = ikptmin, ikptmax
+      DO ikpt = 1, kpts%nkpt
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
@@ -533,11 +527,11 @@ CONTAINS
          coulmat = 0
 
          call timestart("loop over interst.")
-         DO ikpt = ikptmin, ikptmax !1,kpts%nkpt
+         DO ikpt = 1, kpts%nkpt !1,kpts%nkpt
 
             coulmat = 0
             ! start to loop over interstitial plane waves
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
                igpt = pgptm1(igpt0, ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
                ix = hybdat%nbasp + igpt
@@ -697,10 +691,10 @@ CONTAINS
          call timestop("calc smat")
 
          ! Coulomb matrix, contribution (3a)
-         call timestart("coulomb matrix")
-         DO ikpt = ikptmin, ikptmax
+         call timestart("coulomb matrix 3a")
+         DO ikpt = 1, kpts%nkpt
 
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                ix = hybdat%nbasp + igpt2
@@ -734,12 +728,12 @@ CONTAINS
             END DO
 
          END DO
-         call timestop("coulomb matrix")
+         call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
 
-         call timestart("loop 4:")
-         DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
-            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
+         call timestart("coulomb matrix 3b")
+         DO ikpt = 1, kpts%nkpt
+            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(kpts%nkpt) // ")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate(carr2a((hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
@@ -770,41 +764,37 @@ CONTAINS
                       structconst1(atoms%nat, (2*hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
-               ic2 = 0
+               iatom = 0
                carr2 = 0
                call timestart("itype loops")
                DO itype2 = 1, atoms%ntype
                   DO ineq2 = 1, atoms%neq(itype2)
-                     ic2 = ic2 + 1
-                     cexp = CONJG(carr2b(ic2, igpt2))
-                     lm2 = 0
-                     DO ic1 = 1, atoms%nat
-                        structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
-                     END DO
-                     DO l2 = 0, hybinp%lexp
-                        DO m2 = -l2, l2
-                           lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
+                     iatom = iatom + 1
+                     cexp = CONJG(carr2b(iatom, igpt2))
+                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
+                     ! this is a nested loop over 
+                     ! l=1..hyb%lexp{ 
+                     !    m=-l..l{}
+                     ! }
+                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
+                     !$OMP shared(hybinp, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) &
+                     !$OMP collapse(2)
+                     DO lm1 = 1, hybinp%lexp**2
+                        do lm2 = 1, hybinp%lexp**2
+                           call calc_l_m_from_lm(lm1, l1, m1)
+                           call calc_l_m_from_lm(lm2, l2, m2)
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                           IF (abs(cdum) > 1e-12) THEN
-                              DO l1 = 0, hybinp%lexp
-                                 l = l1 + l2
-                                 DO m1 = -l1, l1
-                                    lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
-                                    lm = l**2 + l -l1 - m2 + (m1+l1) + 1
-                                    cdum1 = cdum*gmat(lm1, lm2)
-                                    DO ic1 = 1, atoms%nat
-                                       carr2(ic1, lm1) = carr2(ic1, lm1) + cdum1*structconst1(ic1, lm)
-                                    END DO
-                                 END DO
-                              END DO
-                           END IF
+                           l = l1 + l2
+                           lm = l**2 + l -l1 - m2 + (m1+l1) + 1
+                           carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
                         END DO
-                     END DO
+                     enddo
+                     !$OMP end parallel do
                   END DO
                END DO
                call timestop("itype loops")
@@ -839,7 +829,7 @@ CONTAINS
             deallocate(carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
          END DO !ikpt
-         call timestop("loop 4:")
+         call timestop("coulomb matrix 3b")
          !     Add corrections from higher orders in (3b) to coulomb(:,1)
          ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
          call timestart("add corrections from higher orders")
@@ -949,7 +939,7 @@ CONTAINS
 
          l_warn = (mpi%irank == 0)
          call timestart("loop 2")
-         DO ikpt = ikptmin, ikptmax!1,nkpt
+         DO ikpt = 1, kpts%nkpt!1,nkpt
             call timestart("harmonics setup")
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -959,7 +949,7 @@ CONTAINS
             call timestop("harmonics setup")
 
             call timestart("q loop")
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -1021,12 +1011,11 @@ CONTAINS
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
-         DO ikpt = ikptmin, ikptmax
+         DO ikpt = 1, kpts%nkpt
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
-            DO igpt0 = 1, ngptm1(ikpt) !igptmin(ikpt),igptmax(ikpt)
-               lsym = ((igptmin(ikpt) <= igpt0) .AND. &
-                       (igptmax(ikpt) >= igpt0))
+            DO igpt0 = 1, ngptm1(ikpt)
+               lsym = (1 <= igpt0) .AND. (ngptm1(ikpt) >= igpt0)
                igpt2 = pgptm1(igpt0, ikpt)
                j = (hybdat%nbasp + igpt2 - 1)*(hybdat%nbasp + igpt2)/2
                i = hybdat%nbasp + igpt2
@@ -1081,17 +1070,15 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata,  &
-                                                   hybinp, hybdat, nbasm1, gridf, coulomb)
+         CALL subtract_sphaverage(sym, cell, atoms, mpdata,  &
+                                 hybinp, hybdat, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      call timestart("calc eigenvalues olap_pw")
       call apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
-      call timestop("calc eigenvalues olap_pw")
 
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
@@ -1115,7 +1102,7 @@ CONTAINS
          allocate(coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
-      DO ikpt = ikptmin, ikptmax
+      DO ikpt = 1, kpts%nkpt
          ikpt0 = 1
          ikpt1 = 1
          ! initialize arrays
@@ -2182,4 +2169,13 @@ CONTAINS
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
+   subroutine calc_l_m_from_lm(lm, l, m) 
+      use m_juDFT
+      implicit none 
+      integer, intent(in)   :: lm
+      integer, intent(out)  :: l, m 
+      if(lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
+      l = floor(sqrt(lm-1.0))
+      m = lm - (l**2 + l +1)
+   end subroutine calc_l_m_from_lm
 END MODULE m_coulombmatrix
