@@ -506,21 +506,23 @@ CONTAINS
  !      END IF
 
        IF(mpi%irank == 0) THEN
-         WRITE (6,FMT=8130) iter
-8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-         WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
          !Write out information if a hubbard 1 Iteration was performed
          IF(hub1data%l_runthisiter)  THEN
-            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter," Distances: "
+            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
+            WRITE(*,*) "Distances: "
             WRITE(*,*) "-----------------------------------------------------"
             WRITE(*,*) "Occupation Distance: " , results%last_occdistance
-            WRITE(*,*) "Element Distance:     " , results%last_mmpMatdistance
+            WRITE(*,*) "Element Distance:    " , results%last_mmpMatdistance
             WRITE(*,*) "-----------------------------------------------------"
             WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
-            WRITE(6,*) "nmmp element distance: ", results%last_mmpMatdistance
+            WRITE(6,*) "nmmp element distance:    ", results%last_mmpMatdistance
             WRITE(6,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
+
+         WRITE (6,FMT=8130) iter
+8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+         WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
        END IF ! mpi%irank.EQ.0
        CALL timestop("Iteration")
 
@@ -554,8 +556,8 @@ CONTAINS
              hub1data%l_runthisiter = .NOT.l_cont.AND.(fi%hub1inp%minoccDistance<=results%last_occdistance&
                                   .OR.fi%hub1inp%minmatDistance<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1data%l_runthisiter = hub1data%l_runthisiter.OR.(iter==1.AND.(hub1data%iter == 0&
-                                  .AND.ALL(ABS(vTot%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)).LT.1e-12)))
+             hub1data%l_runthisiter = hub1data%l_runthisiter.OR.(iter==1 .AND.(hub1data%iter == 0&
+                                      .AND.ALL(ABS(vTot%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)).LT.1e-12)))
              hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(iter < fi%input%itmax)
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1data%l_runthisiter

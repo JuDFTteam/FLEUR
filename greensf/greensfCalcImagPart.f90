@@ -97,7 +97,7 @@ MODULE m_greensfCalcImagPart
                         eGrid_start = j
                         eGrid_end   = j
                      CASE(3) !Tetrahedron method
-                        IF(ANY(dosWeights(indBound(iBand,1):indBound(iBand,2),iBand).NE.0.0)) l_zero = .FALSE.
+                        IF(ANY(ABS(dosWeights(indBound(iBand,1):indBound(iBand,2),iBand)).GT.1e-14)) l_zero = .FALSE.
                         eGrid_start = indBound(iBand,1)
                         eGrid_end   = indBound(iBand,2)
                      CASE DEFAULT
