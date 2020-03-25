@@ -71,7 +71,6 @@ CONTAINS
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: ok
       INTEGER                    :: m
-      INTEGER                    :: ikptmin, ikptmax, nkminmax
       INTEGER                    :: maxfac
 
       LOGICAL                    :: lsym
@@ -89,7 +88,6 @@ CONTAINS
       INTEGER, ALLOCATABLE   :: pqnrm(:, :)
       INTEGER                    :: rrot(3, 3, sym%nsym), invrrot(3, 3, sym%nsym)
       INTEGER, ALLOCATABLE   :: iarr(:), POINTER(:, :, :, :)!,pointer(:,:,:)
-      INTEGER                    :: igptmin(kpts%nkpt), igptmax(kpts%nkpt)
       INTEGER, ALLOCATABLE   :: nsym_gpt(:, :), sym_gpt(:, :, :)
       INTEGER                    :: nsym1(kpts%nkpt + 1), sym1(sym%nsym, kpts%nkpt + 1)
 
@@ -171,9 +169,8 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
+      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok, source=0)
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
-      coulomb = 0
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
@@ -266,12 +263,7 @@ CONTAINS
       deallocate(iarr)
 
       ! Distribute the work as equally as possible over the processes
-      ikptmin = 1
-      ikptmax = kpts%nkpt
-      igptmin = 1
-      igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
-      nkminmax = kpts%nkpt
       call timestop("prep in coulomb")
 
       call timestart("define gmat")
@@ -453,7 +445,7 @@ CONTAINS
 
       END IF
 
-      DO ikpt = ikptmin, ikptmax
+      DO ikpt = 1, kpts%nkpt
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
@@ -535,11 +527,11 @@ CONTAINS
          coulmat = 0
 
          call timestart("loop over interst.")
-         DO ikpt = ikptmin, ikptmax !1,kpts%nkpt
+         DO ikpt = 1, kpts%nkpt !1,kpts%nkpt
 
             coulmat = 0
             ! start to loop over interstitial plane waves
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
                igpt = pgptm1(igpt0, ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
                ix = hybdat%nbasp + igpt
@@ -700,9 +692,9 @@ CONTAINS
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
-         DO ikpt = ikptmin, ikptmax
+         DO ikpt = 1, kpts%nkpt
 
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                ix = hybdat%nbasp + igpt2
@@ -740,8 +732,8 @@ CONTAINS
          !     (3b) r,r' in different MT
 
          call timestart("coulomb matrix 3b")
-         DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
-            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
+         DO ikpt = 1, kpts%nkpt
+            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(kpts%nkpt) // ")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate(carr2a((hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
@@ -772,7 +764,7 @@ CONTAINS
                       structconst1(atoms%nat, (2*hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -951,7 +943,7 @@ CONTAINS
 
          l_warn = (mpi%irank == 0)
          call timestart("loop 2")
-         DO ikpt = ikptmin, ikptmax!1,nkpt
+         DO ikpt = 1, kpts%nkpt!1,nkpt
             call timestart("harmonics setup")
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -961,7 +953,7 @@ CONTAINS
             call timestop("harmonics setup")
 
             call timestart("q loop")
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -1023,12 +1015,12 @@ CONTAINS
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
-         DO ikpt = ikptmin, ikptmax
+         DO ikpt = 1, kpts%nkpt
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
-            DO igpt0 = 1, ngptm1(ikpt) !igptmin(ikpt),igptmax(ikpt)
-               lsym = ((igptmin(ikpt) <= igpt0) .AND. &
-                       (igptmax(ikpt) >= igpt0))
+            DO igpt0 = 1, ngptm1(ikpt)
+               lsym = (1 <= igpt0) .AND. &
+                       (ngptm1(ikpt) >= igpt0))
                igpt2 = pgptm1(igpt0, ikpt)
                j = (hybdat%nbasp + igpt2 - 1)*(hybdat%nbasp + igpt2)/2
                i = hybdat%nbasp + igpt2
@@ -1083,8 +1075,8 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata,  &
-                                                   hybinp, hybdat, nbasm1, gridf, coulomb)
+         CALL subtract_sphaverage(sym, cell, atoms, mpdata,  &
+                                 hybinp, hybdat, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -1115,7 +1107,7 @@ CONTAINS
          allocate(coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
-      DO ikpt = ikptmin, ikptmax
+      DO ikpt = ikptmin, kpts%nkpt
          ikpt0 = 1
          ikpt1 = 1
          ! initialize arrays
