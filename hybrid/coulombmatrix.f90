@@ -781,17 +781,20 @@ CONTAINS
                      ! l=1..hyb%lexp{ 
                      !    m=-l..l{}
                      ! }
-                     do lm2 = 1, hybinp%lexp**2
-                        call calc_l_m_from_lm(lm2, l2, m2)
-
-                        cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                        DO lm1 = 1, hybinp%lexp**2
+                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
+                     !$OMP shared(hybinp, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) &
+                     !$OMP collapse(2)
+                     DO lm1 = 1, hybinp%lexp**2
+                        do lm2 = 1, hybinp%lexp**2
                            call calc_l_m_from_lm(lm1, l1, m1)
+                           call calc_l_m_from_lm(lm2, l2, m2)
+                           cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            l = l1 + l2
                            lm = l**2 + l -l1 - m2 + (m1+l1) + 1
                            carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
                         END DO
                      enddo
+                     !$OMP end parallel do
                   END DO
                END DO
                call timestop("itype loops")
