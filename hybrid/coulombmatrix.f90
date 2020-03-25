@@ -139,6 +139,7 @@ CONTAINS
       TYPE(t_mat)                :: olapm, coulhlp
 
       CALL timestart("Coulomb matrix setup")
+      call timestart("prep in coulomb")
       if(mpi%is_root()) write (*,*) "start of coulomb calculation"
 
       svol = SQRT(cell%vol)
@@ -271,6 +272,7 @@ CONTAINS
       igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
       nkminmax = kpts%nkpt
+      call timestop("prep in coulomb")
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
@@ -697,7 +699,7 @@ CONTAINS
          call timestop("calc smat")
 
          ! Coulomb matrix, contribution (3a)
-         call timestart("coulomb matrix")
+         call timestart("coulomb matrix 3a")
          DO ikpt = ikptmin, ikptmax
 
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)
@@ -734,10 +736,10 @@ CONTAINS
             END DO
 
          END DO
-         call timestop("coulomb matrix")
+         call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
 
-         call timestart("loop 4:")
+         call timestart("coulomb matrix 3b")
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
             if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(ikptmax) // ")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
@@ -839,7 +841,7 @@ CONTAINS
             deallocate(carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
          END DO !ikpt
-         call timestop("loop 4:")
+         call timestop("coulomb matrix 3b")
          !     Add corrections from higher orders in (3b) to coulomb(:,1)
          ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
          call timestart("add corrections from higher orders")
@@ -1089,9 +1091,7 @@ CONTAINS
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      call timestart("calc eigenvalues olap_pw")
       call apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
-      call timestop("calc eigenvalues olap_pw")
 
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
