@@ -789,7 +789,6 @@ CONTAINS
                               DO lm1 = 1, hybinp%lexp**2
                                  call calc_l_m_from_lm(lm1, l1, m1)
                                  l = l1 + l2
-                                 lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
                                  lm = l**2 + l -l1 - m2 + (m1+l1) + 1
                                  carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
                               END DO
@@ -2171,11 +2170,12 @@ CONTAINS
    end subroutine apply_inverse_olaps
 
    subroutine calc_l_m_from_lm(lm, l, m) 
+      use m_juDFT
       implicit none 
       integer, intent(in)   :: lm
       integer, intent(out)  :: l, m 
       if(lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
       l = floor(sqrt(lm-1.0))
-      m  lm - (l**2 + l +1)
+      m = lm - (l**2 + l +1)
    end subroutine calc_l_m_from_lm
 END MODULE m_coulombmatrix
