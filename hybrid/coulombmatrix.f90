@@ -169,7 +169,7 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok, source=0)
+      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok, source=(0.0,0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       call timestop("coulomb allocation")
 
@@ -1019,8 +1019,7 @@ CONTAINS
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
             DO igpt0 = 1, ngptm1(ikpt)
-               lsym = (1 <= igpt0) .AND. &
-                       (ngptm1(ikpt) >= igpt0))
+               lsym = (1 <= igpt0) .AND. (ngptm1(ikpt) >= igpt0)
                igpt2 = pgptm1(igpt0, ikpt)
                j = (hybdat%nbasp + igpt2 - 1)*(hybdat%nbasp + igpt2)/2
                i = hybdat%nbasp + igpt2
@@ -1107,7 +1106,7 @@ CONTAINS
          allocate(coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
-      DO ikpt = ikptmin, kpts%nkpt
+      DO ikpt = 1, kpts%nkpt
          ikpt0 = 1
          ikpt1 = 1
          ! initialize arrays
