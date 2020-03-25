@@ -511,7 +511,11 @@ CONTAINS
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
          !Write out information if a hubbard 1 Iteration was performed
          IF(hub1data%l_runthisiter)  THEN
-            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter," Distance: ", results%last_mmpMatdistance
+            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter," Distances: "
+            WRITE(*,*) "-----------------------------------------------------"
+            WRITE(*,*) "Occupation Distance: " , results%last_occdistance
+            WRITE(*,*) "Element Distance:     " , results%last_mmpMatdistance
+            WRITE(*,*) "-----------------------------------------------------"
             WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
             WRITE(6,*) "nmmp element distance: ", results%last_mmpMatdistance
             WRITE(6,FMT=8140) hub1data%iter
