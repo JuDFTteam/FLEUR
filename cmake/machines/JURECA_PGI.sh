@@ -1,10 +1,12 @@
 #Configuration for JURECA@FZJ; use PGI toolchain
 #determine XML2 module
-xml2=`module --show_hidden spider libxml2 2>&1 |grep libxml2/|grep -v module |tail -1`
+xml2=$(module --terse --show_hidden spider libxml2 2>&1 | grep -v '^$' | tail -n 1)
 #determine ELPA module
 elpa=`module spider ELPA 2>&1 |grep hybrid`
 
-if module list 2>&1 |grep -q PGI
+module_list=$(module --terse list 2>&1)
+
+if echo "$module_list" |grep -q PGI
 then
     echo "PGI toolchain used"
     FC=mpif90
