@@ -769,17 +769,14 @@ CONTAINS
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
-               ic2 = 0
+               iatom = 0
                carr2 = 0
                call timestart("itype loops")
                DO itype2 = 1, atoms%ntype
                   DO ineq2 = 1, atoms%neq(itype2)
-                     ic2 = ic2 + 1
-                     cexp = CONJG(carr2b(ic2, igpt2))
-                     lm2 = 0
-                     DO ic1 = 1, atoms%nat
-                        structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
-                     END DO
+                     iatom = iatom + 1
+                     cexp = CONJG(carr2b(iatom, igpt2))
+                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
                      DO l2 = 0, hybinp%lexp
                         DO m2 = -l2, l2
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
