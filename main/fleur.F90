@@ -212,7 +212,7 @@ CONTAINS
     scfloop:DO WHILE (l_cont)
        iter = iter + 1
        DO i_gf = 1, fi%gfinp%n
-          CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
+          !CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
        ENDDO
        IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
           hub1data%iter = hub1data%iter + 1
