@@ -39,7 +39,7 @@ CONTAINS
       USE m_types
       USE m_types_hybdat
       USE m_juDFT
-      USE m_constants, ONLY: pi_const, tpi_const
+      USE m_constants, ONLY: pi_const, tpi_const, fpi_const
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -136,7 +136,7 @@ CONTAINS
       if (mpi%is_root()) write (*, *) "start of coulomb calculation"
 
       svol = SQRT(fi%cell%vol)
-      fcoulfac = 4*pi_const/fi%cell%vol
+      fcoulfac = fpi_const/fi%cell%vol
       maxfac = MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1)
 
       facA(0) = 1                    !
@@ -276,7 +276,7 @@ CONTAINS
                   IF (lm2 > lm1) EXIT lp1 ! Don't cross the diagonal!
                   gmat(lm1, lm2) = facB(l1 + l2 + m2 - m1)*facB(l1 + l2 + m1 - m2)/ &
                                    (facB(l1 + m1)*facB(l1 - m1)*facB(l2 + m2)*facB(l2 - m2))/ &
-                                   SQRT(1.0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(4*pi_const)**1.5
+                                   SQRT(1.0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(fpi_const)**1.5
                   gmat(lm2, lm1) = gmat(lm1, lm2)
                END DO
             END DO LP1
@@ -406,7 +406,7 @@ CONTAINS
                      DO n1 = 1, n2
                         integrand = mpdata%radbasfn_mt(:, n1, l, itype)*(primf1 + primf2)
                         !                 call intgr0( (4*pimach())/(2*l+1)*integrand,rmsh(1,itype),dx(itype),jri(itype),mat(n2*(n2-1)/2+n1) )
-                        mat(n2*(n2 - 1)/2 + n1) = (4*pi_const)/(2*l + 1) &
+                        mat(n2*(n2 - 1)/2 + n1) = (fpi_const)/(2*l + 1) &
                                                   *intgrf(integrand, fi%atoms, itype, gridf)
                      END DO
                   END DO
@@ -549,13 +549,13 @@ CONTAINS
                gnorm = gptnorm(g, fi%cell%bmat)
                IF (abs(gnorm) < 1e-12) THEN
                   DO itype = 1, fi%atoms%ntype
-                     smat(igpt1, igpt2) = smat(igpt1, igpt2) + fi%atoms%neq(itype)*4*pi_const*fi%atoms%rmt(itype)**3/3
+                     smat(igpt1, igpt2) = smat(igpt1, igpt2) + fi%atoms%neq(itype)*fpi_const*fi%atoms%rmt(itype)**3/3
                   END DO
                ELSE
                   ic = 0
                   DO itype = 1, fi%atoms%ntype
                      rdum = fi%atoms%rmt(itype)*gnorm
-                     rdum = 4*pi_const*(SIN(rdum) - rdum*COS(rdum))/gnorm**3
+                     rdum = fpi_const*(SIN(rdum) - rdum*COS(rdum))/gnorm**3
                      DO ineq = 1, fi%atoms%neq(itype)
                         ic = ic + 1
                         smat(igpt1, igpt2) = smat(igpt1, igpt2) &
@@ -579,7 +579,7 @@ CONTAINS
                iy = hybdat%nbasp
                q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
                rdum2 = SUM(q2**2)
-               IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
+               IF (abs(rdum2) > 1e-12) rdum2 = fpi_const/rdum2
 
                DO igpt1 = 1, igpt2
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -587,7 +587,7 @@ CONTAINS
                   q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
                   idum = ix*(ix - 1)/2 + iy
                   rdum1 = SUM(q1**2)
-                  IF (abs(rdum1) > 1e-12) rdum1 = 4*pi_const/rdum1
+                  IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
 
                   IF (ikpt == 1) THEN
                      IF (igpt1 /= 1) THEN
@@ -627,7 +627,7 @@ CONTAINS
                DO l = 0, fi%hybinp%lexp
                   DO M = -l, l
                      lm = lm + 1
-                     carr2a(lm, igpt) = 4*pi_const*CMPLX(0.0, 1.0)**(l)*y(lm)
+                     carr2a(lm, igpt) = fpi_const*CMPLX(0.0, 1.0)**(l)*y(lm)
                   END DO
                END DO
                DO ic = 1, fi%atoms%nat
@@ -710,7 +710,7 @@ CONTAINS
          !     Add corrections from higher orders in (3b) to coulomb(:,1)
          ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
          call timestart("add corrections from higher orders")
-         rdum = (4*pi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+         rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
          DO igpt0 = 1, ngptm1(1)
             igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
             ix = hybdat%nbasp + igpt2
@@ -814,7 +814,6 @@ CONTAINS
          END DO
          call timestop("sphbesintegral")
 
-         l_warn = (mpi%irank == 0)
          call timestart("loop 2")
          DO ikpt = 1, fi%kpts%nkpt!1,nkpt
             call timestart("harmonics setup")
@@ -824,54 +823,8 @@ CONTAINS
                call ylm4(fi%hybinp%lexp, q, carr2(:, igpt))
             END DO
             call timestop("harmonics setup")
-
-            call timestart("double g-loop")
-            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
-               igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybdat%nbasp + igpt2
-               igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-               iqnrm2 = pqnrm(igpt2, ikpt)
-               q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
-               y2 = CONJG(carr2(:, igpt2))
-               iy = hybdat%nbasp
-               DO igpt1 = 1, igpt2
-                  iy = iy + 1
-                  igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-                  iqnrm1 = pqnrm(igpt1, ikpt)
-                  q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
-                  y1 = carr2(:, igpt1)
-                  cexp1 = 0
-                  ic = 0
-                  DO itype = 1, fi%atoms%ntype
-                     DO ineq = 1, fi%atoms%neq(itype)
-                        ic = ic + 1
-                        cexp1(itype) = cexp1(itype) + &
-                                       EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
-                                           (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
-                     ENDDO
-                  ENDDO
-                  lm = 0
-                  cdum = 0
-                  DO l = 0, fi%hybinp%lexp
-                     cdum1 = 0
-                     DO itype = 1, fi%atoms%ntype
-                        cdum1 = cdum1 + cexp1(itype)*sphbessel_integral( &
-                                fi%atoms, itype, qnrm, nqnrm, &
-                                iqnrm1, iqnrm2, l, fi%hybinp, &
-                                sphbes0, l_warn, l_warned) &
-                                /(2*l + 1)
-                        l_warn = l_warn .AND. .NOT. l_warned ! only warn once
-                     END DO
-                     DO M = -l, l
-                        lm = lm + 1
-                        cdum = cdum + cdum1*y1(lm)*y2(lm)
-                     ENDDO
-                  ENDDO
-                  idum = ix*(ix - 1)/2 + iy
-                  coulomb(idum, ikpt) = coulomb(idum, ikpt) + (4*pi_const)**3*cdum/fi%cell%vol
-               END DO
-            END DO
-            call timestop("double g-loop")
+            call perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
+                                       pqnrm,qnrm, nqnrm, ikpt, coulomb(:,ikpt))
          END DO
          call timestop("loop 2")
          deallocate (carr2)
@@ -1308,18 +1261,18 @@ CONTAINS
                   DO i = 1, mpdata%num_radbasfn(l, itype)
                      j = j + 1
                      IF (l == 0) THEN
-                        coeff(j) = SQRT(4*pi_const) &
+                        coeff(j) = SQRT(fpi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, i, 0, itype), &
                                            atoms, itype, gridf) &
                                    /SQRT(cell%vol)
 
-                        claplace(j) = -SQRT(4*pi_const) &
+                        claplace(j) = -SQRT(fpi_const) &
                                       *intgrf(atoms%rmsh(:, itype)**3*mpdata%radbasfn_mt(:, i, 0, itype), &
                                               atoms, itype, gridf) &
                                       /SQRT(cell%vol)
 
                      ELSE IF (l == 1) THEN
-                        cderiv(j, M) = -SQRT(4*pi_const/3)*CMPLX(0.0, 1.0) &
+                        cderiv(j, M) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*mpdata%radbasfn_mt(:, i, 1, itype), &
                                                atoms, itype, gridf) &
                                        /SQRT(cell%vol)
@@ -1356,7 +1309,7 @@ CONTAINS
       DO j = 1, n
          DO i = 1, j
             l = l + 1
-            coulomb(l, 1) = coulomb(l, 1) - 4*pi_const/3 &
+            coulomb(l, 1) = coulomb(l, 1) - fpi_const/3 &
                             *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
                               + (CONJG(coeff(i))*claplace(j) &
                                  + CONJG(claplace(i))*coeff(j))/2)
@@ -1395,7 +1348,7 @@ CONTAINS
 
    SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
 
-      USE m_constants, ONLY: pi_const, tpi_const
+      USE m_constants, ONLY: pi_const, tpi_const, fpi_const
       USE m_rorder, ONLY: rorderp, rorderpf
       USE m_types
       USE m_juDFT
@@ -1455,7 +1408,7 @@ CONTAINS
 
       !       lambda = ewaldlambda / rdum
 
-      pref = 4*pi_const/(scale**3*cell%vol)
+      pref = fpi_const/(scale**3*cell%vol)
 
       DO l = 0, 2*hybinp%lexp
          convpar(l) = CONVPARAM/scale**(l + 1)
@@ -1700,7 +1653,7 @@ CONTAINS
       !
       !     Add contribution for l=0 to diagonal elements and rescale structure constants
       !
-      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5.0/16/SQRT(4*pi_const)
+      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5.0/16/SQRT(fpi_const)
       DO i = 2, atoms%nat
          structconst(:, i, i, :) = structconst(:, 1, 1, :)
       END DO
@@ -1725,7 +1678,7 @@ CONTAINS
          DO ic2 = 1, atoms%nat
             DO ic1 = 1, MAX(1, ic2 - 1)
                a = a + ABS(structconst(1, ic1, ic2, ikpt) - &
-                           (structconst(1, ic1, ic2, 1) + SQRT(4*pi_const)/cell%vol/rdum**2* &
+                           (structconst(1, ic1, ic2, 1) + SQRT(fpi_const)/cell%vol/rdum**2* &
                             EXP(-CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
                                 kpts%bk(:, ikpt), atoms%taual(:, ic2) - atoms%taual(:, ic1)))))**2
             END DO
@@ -2201,6 +2154,75 @@ CONTAINS
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
    endsubroutine loop_over_interst
+
+   subroutine perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
+      use m_juDFT
+      use m_types
+      use m_constants, only: tpi_const,fpi_const
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      TYPE(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:,:),pgptm1(:, :), nqnrm
+      real, intent(in)                  :: qnrm(:), sphbes0(:, :, :)
+      complex, intent(in)               :: carr2(:, :)
+      complex, intent(inout)            :: coulomb(:) ! only at ikpt
+
+      integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
+      integer :: ic, itype, ineq, lm, m, idum, l
+      real    :: q1(3), q2(3)
+      complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
+      COMPLEX :: cexp1(fi%atoms%ntype)
+      complex :: cdum, cdum1 
+      logical :: ldum
+
+      call timestart("double g-loop")
+      DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+         igpt2 = pgptm1(igpt0, ikpt)
+         ix = hybdat%nbasp + igpt2
+         igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
+         iqnrm2 = pqnrm(igpt2, ikpt)
+         q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
+         y2 = CONJG(carr2(:, igpt2))
+         iy = hybdat%nbasp
+         DO igpt1 = 1, igpt2
+            iy = iy + 1
+            igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
+            iqnrm1 = pqnrm(igpt1, ikpt)
+            q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
+            y1 = carr2(:, igpt1)
+            cexp1 = 0
+            ic = 0
+            DO itype = 1, fi%atoms%ntype
+               DO ineq = 1, fi%atoms%neq(itype)
+                  ic = ic + 1
+                  cexp1(itype) = cexp1(itype) + &
+                                 EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
+                                       (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
+               ENDDO
+            ENDDO
+            lm = 0
+            cdum = 0
+            DO l = 0, fi%hybinp%lexp
+               cdum1 = 0
+               DO itype = 1, fi%atoms%ntype
+                  cdum1 = cdum1 + cexp1(itype)*sphbessel_integral( &
+                           fi%atoms, itype, qnrm, nqnrm, &
+                           iqnrm1, iqnrm2, l, fi%hybinp, &
+                           sphbes0, .False., ldum) &
+                           /(2*l + 1)
+               END DO
+               DO M = -l, l
+                  lm = lm + 1
+                  cdum = cdum + cdum1*y1(lm)*y2(lm)
+               ENDDO
+            ENDDO
+            idum = ix*(ix - 1)/2 + iy
+            coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
+         END DO
+      END DO
+      call timestop("double g-loop")
+   end subroutine perform_double_g_loop
 
    subroutine collapse_ic_and_lm_loop(atoms, lcutm1, niter, ic_arr, lm_arr)
       use m_types
