@@ -2113,43 +2113,39 @@ CONTAINS
                      ! calculate sum over lm and centers for (2c) -> csum, csumf
                      csum = 0
                      csumf = 0
-                     ic1 = 0
-                     DO itype1 = 1, fi%atoms%ntype
-                        DO ineq1 = 1, fi%atoms%neq(itype1)
-                           ic1 = ic1 + 1
-                           cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
-                                                 *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
-                                                   - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
+                     do ic1 = 1,fi%atoms%nat 
+                        itype1 = fi%atoms%itype(ic1)
+                        cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
+                                                *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
+                                                - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-                           do lm1 = 1,fi%hybinp%lexp**2
-                              call calc_l_m_from_lm(lm1, l1,m1)
-                              l2 = l + l1 ! for structconst
-                              cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
-                              m2 = M - m1              ! for structconst
-                              lm2 = l2**2 + l2 + m2 + 1 !
-                              csum = csum - (-1)**(m1+l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
-                           END DO
-
-                           ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
-                           IF (ikpt == 1 .AND. l <= 2) THEN
-                              cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
-                                     *gmat(lm, 1)*fpi_const/fi%cell%vol
-                              csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
-                                          CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
-                              IF (l == 0) THEN
-                                 IF (igpt /= 1) THEN
-                                    csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
-                                                        sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
-                                 ELSE
-                                    csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
-                                 END IF
-                              ELSE IF (l == 1) THEN
-                                 csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
-                                        *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
-                              END IF
-                           END IF
-
+                        do lm1 = 1,fi%hybinp%lexp**2
+                           call calc_l_m_from_lm(lm1, l1,m1)
+                           l2 = l + l1 ! for structconst
+                           cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
+                           m2 = M - m1              ! for structconst
+                           lm2 = l2**2 + l2 + m2 + 1 !
+                           csum = csum - (-1)**(m1+l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
                         END DO
+
+                        ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
+                        IF (ikpt == 1 .AND. l <= 2) THEN
+                           cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
+                                    *gmat(lm, 1)*fpi_const/fi%cell%vol
+                           csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
+                                       CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
+                           IF (l == 0) THEN
+                              IF (igpt /= 1) THEN
+                                 csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
+                                                      sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
+                              ELSE
+                                 csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
+                              END IF
+                           ELSE IF (l == 1) THEN
+                              csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
+                                       *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
+                           END IF
+                        END IF
                      END DO
 
                      ! add contribution of (2a) to csumf
