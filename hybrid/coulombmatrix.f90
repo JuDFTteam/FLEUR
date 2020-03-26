@@ -56,7 +56,6 @@ CONTAINS
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
 
-
       ! - local scalars -
       INTEGER                    :: inviop
       INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2, iqnrmstart, iqnrmstep
@@ -88,7 +87,7 @@ CONTAINS
       INTEGER                    :: nsym1(fi%kpts%nkpt + 1), sym1(fi%sym%nsym, fi%kpts%nkpt + 1)
 
       INTEGER, ALLOCATABLE   ::  ngptm1(:)
-      INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
+      INTEGER, ALLOCATABLE   ::  pgptm1(:, :)
 
       LOGICAL                    :: calc_mt(fi%kpts%nkpt)
 
@@ -134,7 +133,7 @@ CONTAINS
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
-      if(mpi%is_root()) write (*,*) "start of coulomb calculation"
+      if (mpi%is_root()) write (*, *) "start of coulomb calculation"
 
       svol = SQRT(fi%cell%vol)
       fcoulfac = 4*pi_const/fi%cell%vol
@@ -163,9 +162,9 @@ CONTAINS
       !
 
       call timestart("coulomb allocation")
-      IF (ALLOCATED(coulomb)) deallocate(coulomb)
+      IF (ALLOCATED(coulomb)) deallocate (coulomb)
 
-      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0,0.0))
+      allocate (coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0, 0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       call timestop("coulomb allocation")
 
@@ -180,7 +179,7 @@ CONTAINS
             rrot(:, :, isym) = TRANSPOSE(fi%sym%mrot(:, :, inviop))
             DO l = 0, maxval(fi%hybinp%lcutm1)
                dwgn(:, :, l, isym) = TRANSPOSE(fi%hybinp%d_wgn2(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                                             -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), l, isym))
+                                                                -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), l, isym))
             END DO
          ELSE
             inviop = isym - fi%sym%nop
@@ -225,14 +224,14 @@ CONTAINS
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
       !if(allocated(pgptm1)) deallocate(fi%hybinp%pgptm1)
-      allocate(pgptm1(maxval(mpdata%n_g),fi%kpts%nkptf), source=0) !in mixedbasis
-      allocate(iarr(maxval(mpdata%n_g)), source=0)
-      allocate(POINTER(fi%kpts%nkpt,&
-                      MINVAL(mpdata%g(1, :)) - 1:MAXVAL(mpdata%g(1, :)) + 1, &
-                      MINVAL(mpdata%g(2, :)) - 1:MAXVAL(mpdata%g(2, :)) + 1, &
-                      MINVAL(mpdata%g(3, :)) - 1:MAXVAL(mpdata%g(3, :)) + 1), &
-                      source=0)
-      allocate(ngptm1, mold=mpdata%n_g)
+      allocate (pgptm1(maxval(mpdata%n_g), fi%kpts%nkptf), source=0) !in mixedbasis
+      allocate (iarr(maxval(mpdata%n_g)), source=0)
+      allocate (POINTER(fi%kpts%nkpt, &
+                        MINVAL(mpdata%g(1, :)) - 1:MAXVAL(mpdata%g(1, :)) + 1, &
+                        MINVAL(mpdata%g(2, :)) - 1:MAXVAL(mpdata%g(2, :)) + 1, &
+                        MINVAL(mpdata%g(3, :)) - 1:MAXVAL(mpdata%g(3, :)) + 1), &
+                source=0)
+      allocate (ngptm1, mold=mpdata%n_g)
       ngptm1 = 0
 
       DO ikpt = 1, fi%kpts%nkpt
@@ -256,7 +255,7 @@ CONTAINS
          END DO
          ngptm1(ikpt) = j
       END DO
-      deallocate(iarr)
+      deallocate (iarr)
 
       ! Distribute the work as equally as possible over the processes
       calc_mt = .TRUE.
@@ -264,7 +263,7 @@ CONTAINS
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
-      allocate(gmat((fi%hybinp%lexp + 1)**2, (fi%hybinp%lexp + 1)**2))
+      allocate (gmat((fi%hybinp%lexp + 1)**2, (fi%hybinp%lexp + 1)**2))
       gmat = 0
       lm1 = 0
       DO l1 = 0, fi%hybinp%lexp
@@ -305,7 +304,7 @@ CONTAINS
       call timestart("getnorm")
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
       CALL getnorm(fi%kpts, mpdata%g, mpdata%n_g, mpdata%gptm_ptr, qnrm, nqnrm, pqnrm, fi%cell)
-      allocate(sphbesmoment(0:fi%hybinp%lexp, fi%atoms%ntype, nqnrm), &
+      allocate (sphbesmoment(0:fi%hybinp%lexp, fi%atoms%ntype, nqnrm), &
                 olap(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype, nqnrm), &
                 integral(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype, nqnrm))
       sphbes_var = 0
@@ -327,7 +326,7 @@ CONTAINS
 
       call timestart("Bessel calculation")
       !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
-      do iqnrm = 1,nqnrm
+      do iqnrm = 1, nqnrm
          qnorm = qnrm(iqnrm)
          DO itype = 1, fi%atoms%ntype
             ng = fi%atoms%jri(itype)
@@ -434,7 +433,7 @@ CONTAINS
 
          !       (1b) r,r' in different MT
 
-         allocate(coulmat(hybdat%nbasp, hybdat%nbasp), stat=ok)
+         allocate (coulmat(hybdat%nbasp, hybdat%nbasp), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -505,7 +504,7 @@ CONTAINS
          call timestop("MT-MT part")
 
       END DO
-      IF (ANY(calc_mt)) deallocate(coulmat)
+      IF (ANY(calc_mt)) deallocate (coulmat)
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
@@ -517,13 +516,13 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         allocate(coulmat(hybdat%nbasp, maxval(mpdata%n_g)), stat=ok)
+         allocate (coulmat(hybdat%nbasp, maxval(mpdata%n_g)), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
 
          call timestart("loop over interst.")
          DO ikpt = 1, fi%kpts%nkpt !1,fi%kpts%nkpt
-            call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2,&
-                                   qnrm, facc, gmat, integral, olap, pqnrm,pgptm1, ngptm1, ikpt, coulmat)
+            call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
             M = hybdat%nbasp*(hybdat%nbasp + 1)/2
             DO i = 1, mpdata%n_g(ikpt)
                DO j = 1, hybdat%nbasp + i
@@ -534,7 +533,7 @@ CONTAINS
          END DO
          call timestop("loop over interst.")
 
-         deallocate(coulmat, olap, integral)
+         deallocate (coulmat, olap, integral)
 
          !
          !     (3) Case < PW | v | PW >
@@ -542,7 +541,7 @@ CONTAINS
          !     (3a) r,r' everywhere; r everywhere, r' in MT; r in MT, r' everywhere
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
          call timestart("calc smat")
-         allocate(smat(mpdata%num_gpts(), mpdata%num_gpts()))
+         allocate (smat(mpdata%num_gpts(), mpdata%num_gpts()))
          smat = 0
          DO igpt2 = 1, mpdata%num_gpts()
             DO igpt1 = 1, igpt2
@@ -612,9 +611,9 @@ CONTAINS
 
          call timestart("coulomb matrix 3b")
          DO ikpt = 1, fi%kpts%nkpt
-            if(mpi%is_root()) write (*,*) "coulomb pw-loop nk: (" // int2str(ikpt) // "/" // int2str(fi%kpts%nkpt) // ")"
+            if (mpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
-            allocate(carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
+            allocate (carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -639,7 +638,7 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate(carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
+            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
@@ -656,8 +655,8 @@ CONTAINS
                      iatom = iatom + 1
                      cexp = CONJG(carr2b(iatom, igpt2))
                      structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
-                     ! this is a nested loop over 
-                     ! l=1..hyb%lexp{ 
+                     ! this is a nested loop over
+                     ! l=1..hyb%lexp{
                      !    m=-l..l{}
                      ! }
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
@@ -667,10 +666,10 @@ CONTAINS
                         do lm2 = 1, fi%hybinp%lexp**2
                            call calc_l_m_from_lm(lm1, l1, m1)
                            call calc_l_m_from_lm(lm2, l2, m2)
-                           cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
+                           cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            l = l1 + l2
-                           lm = l**2 + l -l1 - m2 + (m1+l1) + 1
-                           carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2) * structconst1(:, lm)
+                           lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
+                           carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2)*structconst1(:, lm)
                         END DO
                      enddo
                      !$OMP end parallel do
@@ -690,8 +689,8 @@ CONTAINS
                   !$OMP shared(fi, carr2b, sphbesmoment, iqnrm1, igpt1, carr2, carr2a) &
                   !$OMP reduction(+: csum) &
                   !$OMP collapse(2)
-                  do ic = 1, fi%atoms%nat 
-                     do lm = 1,fi%hybinp%lexp**2 
+                  do ic = 1, fi%atoms%nat
+                     do lm = 1, fi%hybinp%lexp**2
                         itype = fi%atoms%itype(ic)
                         call calc_l_m_from_lm(lm, l, m)
                         cdum = carr2b(ic, igpt1)*sphbesmoment(l, itype, iqnrm1)
@@ -704,7 +703,7 @@ CONTAINS
                END DO
                call timestop("igpt1")
             END DO
-            deallocate(carr2, carr2a, carr2b, structconst1)
+            deallocate (carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -803,7 +802,7 @@ CONTAINS
 
          ! Calculate sphbesintegral
          call timestart("sphbesintegral")
-         allocate(sphbes0(-1:fi%hybinp%lexp + 2, fi%atoms%ntype, nqnrm),&
+         allocate (sphbes0(-1:fi%hybinp%lexp + 2, fi%atoms%ntype, nqnrm),&
               &           carr2((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)))
          sphbes0 = 0; carr2 = 0
          DO iqnrm = 1, nqnrm
@@ -875,8 +874,7 @@ CONTAINS
             call timestop("q loop")
          END DO
          call timestop("loop 2")
-         deallocate(carr2)
-
+         deallocate (carr2)
 
          !
          !     Symmetry-equivalent G vectors
@@ -884,8 +882,8 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         allocate(carr2(hybdat%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
-         allocate(nsym_gpt(mpdata%num_gpts(), fi%kpts%nkpt), &
+         allocate (carr2(hybdat%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
+         allocate (nsym_gpt(mpdata%num_gpts(), fi%kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), fi%kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
@@ -914,16 +912,16 @@ CONTAINS
                DO isym1 = 2, nsym1(ikpt)
                   isym = sym1(isym1, ikpt)
                   CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
-                     fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
-                     fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
-                     mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                     hybdat%nbasp, nbasm1,carr2(:, 1), igpt1)
+                                    fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
+                                    fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
+                                    mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
+                                    hybdat%nbasp, nbasm1, carr2(:, 1), igpt1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
-                        fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
-                        fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
-                        mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                        dwgn(:, :, :, isym), hybdat%nbasp, nbasm1,carr2(:, 1), igpt1)
+                                       fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
+                                       fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
+                                       mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
+                                       dwgn(:, :, :, isym), hybdat%nbasp, nbasm1, carr2(:, 1), igpt1)
                      l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
                      coulomb(l + 1:l + hybdat%nbasp + igpt1, ikpt) = carr2(:hybdat%nbasp + igpt1, 1)
                      iarr(igpt1) = 1
@@ -938,9 +936,9 @@ CONTAINS
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
-         deallocate(carr2, iarr, pgptm1)
+         deallocate (carr2, iarr, pgptm1)
       END IF
-      deallocate(qnrm, pqnrm)
+      deallocate (qnrm, pqnrm)
 
       IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          !
@@ -948,8 +946,8 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata,  &
-                                 fi%hybinp, hybdat, nbasm1, gridf, coulomb)
+         CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
+                                  fi%hybinp, hybdat, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -958,26 +956,25 @@ CONTAINS
       call timestop("gap 1:")
       call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, coulomb)
 
-
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
       !
       ! rearrange coulomb matrix
       !
 
-      allocate(coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype, 1))
+      allocate (coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype, 1))
       ic = (maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat
       idum = ic + maxval(mpdata%n_g)
       idum = (idum*(idum + 1))/2
       if (fi%sym%invs) THEN
-         allocate(coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         allocate(coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat, 1))
-         allocate(coulomb_mtir_r(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
-         allocate(coulombp_mtir_r(idum, 1))
+         allocate (coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
+         allocate (coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat, 1))
+         allocate (coulomb_mtir_r(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
+         allocate (coulombp_mtir_r(idum, 1))
       else
-         allocate(coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         allocate(coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat, 1))
-         allocate(coulomb_mtir_c(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
-         allocate(coulombp_mtir_c(idum, 1))
+         allocate (coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
+         allocate (coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat, 1))
+         allocate (coulomb_mtir_c(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
+         allocate (coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
@@ -994,7 +991,7 @@ CONTAINS
          ! unpack coulomb into coulhlp
 
          !call coulhlp%from_packed(fi%sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
-         if(fi%sym%invs) then
+         if (fi%sym%invs) then
             call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
          else
             call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
@@ -1252,9 +1249,9 @@ CONTAINS
       call timestop("loop bla")
 
       if (fi%sym%invs) THEN
-         deallocate(coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r, coulombp_mtir_r)
+         deallocate (coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r, coulombp_mtir_r)
       else
-         deallocate(coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
+         deallocate (coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
       end if
       CALL timestop("Coulomb matrix setup")
 
@@ -1282,8 +1279,8 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)    :: hybdat
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
-      REAL, INTENT(IN)    :: gridf(:,:)
-      COMPLEX, INTENT(INOUT) :: coulomb(:,:)
+      REAL, INTENT(IN)    :: gridf(:, :)
+      COMPLEX, INTENT(INOUT) :: coulomb(:, :)
 
       ! - local scalars -
       INTEGER               :: l, i, j, n, nn, itype, ieq, M
@@ -1416,7 +1413,7 @@ CONTAINS
       ! - scalars -
 
       ! - arrays -
-      COMPLEX, INTENT(INOUT)   ::  structconst(:,:,:,:)
+      COMPLEX, INTENT(INOUT)   ::  structconst(:, :, :, :)
 
       ! - local scalars -
       INTEGER                   ::  i, ic1, ic2, lm, ikpt, l, ishell, nshell
@@ -1529,7 +1526,7 @@ CONTAINS
       CALL getshells(ptsh, nptsh, radsh, nshell, rad, cell%amat, first)
       call timestop("determine atomic shell")
 
-      allocate(pnt(nptsh))
+      allocate (pnt(nptsh))
       structconst = 0
 
       !
@@ -1619,8 +1616,7 @@ CONTAINS
       END DO
       call timestop("realspace sum")
 
-      deallocate(ptsh, radsh)
-
+      deallocate (ptsh, radsh)
 
       IF (first) WRITE (6, '(/A)') 'Fourier-space sum'
 
@@ -1673,7 +1669,7 @@ CONTAINS
 
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
             call ylm4(maxl, ka, y)
-            IF(norm2(ka(:)).LT.1.0e-16) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
+            IF (norm2(ka(:)) .LT. 1.0e-16) y(2:(maxl + 1)**2) = CMPLX(0.0, 0.0)
             cdum = 1.0
             lm = 0
             DO l = 0, maxl
@@ -1738,7 +1734,7 @@ CONTAINS
          aa = SQRT(SUM(ABS(structconst(1, :, :, ikpt))**2)/atoms%nat**2)
          IF (first) WRITE (6, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
       ENDIF
-      deallocate(ptsh, radsh)
+      deallocate (ptsh, radsh)
 
       first = .FALSE.
 
@@ -1758,7 +1754,7 @@ CONTAINS
       INTEGER, INTENT(INOUT)   :: nptsh, nshell
       INTEGER, ALLOCATABLE   :: ptsh(:, :)
       REAL, ALLOCATABLE   :: radsh(:)
-      REAL, INTENT(IN)    :: rad, lat(:,:)
+      REAL, INTENT(IN)    :: rad, lat(:, :)
       REAL                    :: r(3), rdum
       INTEGER, ALLOCATABLE   :: pnt(:)
       INTEGER                 :: n, i, ix, iy, iz, ok
@@ -1766,7 +1762,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   :: ihelp(:, :)
       REAL, ALLOCATABLE   :: rhelp(:)
 
-      allocate(ptsh(3, 100000), radsh(100000), stat=ok)
+      allocate (ptsh(3, 100000), radsh(100000), stat=ok)
       IF (ok /= 0) call judft_error('getshells: failure allocation ptsh/radsh')
 
       ptsh = 0
@@ -1785,16 +1781,16 @@ CONTAINS
                   found = .TRUE.
                   i = i + 1
                   IF (i > SIZE(radsh)) THEN
-                     allocate(rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
+                     allocate (rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
                      IF (ok /= 0) call judft_error('getshells: failure allocation rhelp/ihelp')
                      rhelp = radsh
                      ihelp = ptsh
-                     deallocate(radsh, ptsh)
-                     allocate(radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
+                     deallocate (radsh, ptsh)
+                     allocate (radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
                      IF (ok /= 0) call judft_error('getshells: failure re-allocation ptsh/radsh')
                      radsh(1:SIZE(rhelp)) = rhelp
                      ptsh(:, 1:SIZE(ihelp, 2)) = ihelp
-                     deallocate(rhelp, ihelp)
+                     deallocate (rhelp, ihelp)
                   END IF
                   ptsh(:, i) = [ix, iy, iz]
                   radsh(i) = SQRT(rdum)
@@ -1810,17 +1806,17 @@ CONTAINS
       END DO
       nptsh = i
 
-      allocate(pnt(nptsh))
+      allocate (pnt(nptsh))
 
       !reallocate radsh ptsh
-      allocate(rhelp(nptsh), ihelp(3, nptsh))
+      allocate (rhelp(nptsh), ihelp(3, nptsh))
       rhelp = radsh(1:nptsh)
       ihelp = ptsh(:, 1:nptsh)
-      deallocate(radsh, ptsh)
-      allocate(radsh(nptsh), ptsh(3, nptsh))
+      deallocate (radsh, ptsh)
+      allocate (radsh(nptsh), ptsh(3, nptsh))
       radsh = rhelp
       ptsh = ihelp
-      deallocate(rhelp, ihelp)
+      deallocate (rhelp, ihelp)
 
       CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
       radsh = radsh(pnt)
@@ -1847,14 +1843,14 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
 
-      INTEGER, INTENT(IN)  :: ngpt(:), gpt(:,:), pgpt(:, :)!(dim,kpts%nkpt)
+      INTEGER, INTENT(IN)  :: ngpt(:), gpt(:, :), pgpt(:, :)!(dim,kpts%nkpt)
       REAL, ALLOCATABLE :: qnrm(:), help(:)
       INTEGER, INTENT(INOUT) :: nqnrm
       INTEGER, ALLOCATABLE :: pqnrm(:, :)
       INTEGER               :: i, j, ikpt, igpt, igptp
       REAL                  :: q(3), qnorm
 
-      allocate(qnrm(MAXVAL(ngpt)*kpts%nkpt), pqnrm(MAXVAL(ngpt), kpts%nkpt))
+      allocate (qnrm(MAXVAL(ngpt)*kpts%nkpt), pqnrm(MAXVAL(ngpt), kpts%nkpt))
       i = 0
       DO ikpt = 1, kpts%nkpt
          igptloop: DO igpt = 1, ngpt(ikpt)
@@ -1875,10 +1871,10 @@ CONTAINS
       END DO
       nqnrm = i
 
-      allocate(help(nqnrm))
+      allocate (help(nqnrm))
       help(1:nqnrm) = qnrm(1:nqnrm)
-      deallocate(qnrm)
-      allocate(qnrm(1:nqnrm))
+      deallocate (qnrm)
+      allocate (qnrm(1:nqnrm))
       qnrm = help
 
    END SUBROUTINE getnorm
@@ -1926,7 +1922,7 @@ CONTAINS
             sphbessel_integral = s**3/(3*q1**2)*(q1*s*sphbes0(1, itype, iqnrm1) &
                                                  + sphbes0(2, itype, iqnrm1))
          ENDIF
-      ELSE IF (abs(q1 -q2) < 1e-12) THEN
+      ELSE IF (abs(q1 - q2) < 1e-12) THEN
          sphbessel_integral = s**3/(2*q1**2)*((2*l + 3)*sphbes0(l + 1, itype, iqnrm1)**2 - &
                                               (2*l + 1)*sphbes0(l, itype, iqnrm1)*sphbes0(l + 2, itype, iqnrm1))
       ELSE ! We use either if two fromulas that are stable for high and small q1/q2 respectively
@@ -1981,8 +1977,8 @@ CONTAINS
       use m_judft
       implicit none
       type(t_mpdata), intent(in) :: mpdata
-      type(t_atoms), intent(in)  :: atoms 
-      type(t_cell), intent(in)   :: cell 
+      type(t_atoms), intent(in)  :: atoms
+      type(t_cell), intent(in)   :: cell
       type(t_hybdat), intent(in) :: hybdat
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1990,7 +1986,6 @@ CONTAINS
 
       type(t_mat)     :: olap, tmp, coulhlp, coul_submtx
       integer         :: ikpt, nbasm
-
 
       call timestart("solve olap linear eq. sys")
       DO ikpt = 1, kpts%nkpt
@@ -2000,28 +1995,28 @@ CONTAINS
          CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
 
          !unpack matrix coulomb
-         if(sym%invs) then
+         if (sym%invs) then
             call coulhlp%from_packed(nbasm, REAL(coulomb(:, ikpt)))
          else
             call coulhlp%from_packed(nbasm, coulomb(:, ikpt))
          endif
 
          ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
-         ! rewritten as O * x = C         
+         ! rewritten as O * x = C
 
          call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
-         if(coulhlp%l_real) then
+         if (coulhlp%l_real) then
             coul_submtx%data_r = coulhlp%data_r(hybdat%nbasp + 1:, :)
-         else 
+         else
             coul_submtx%data_c = coulhlp%data_c(hybdat%nbasp + 1:, :)
          endif
-         
+
          call olap%linear_problem(coul_submtx)
 
-         if(coulhlp%l_real) then
-            coulhlp%data_r(hybdat%nbasp + 1:, :) = coul_submtx%data_r 
-            coul_submtx%data_r = transpose(coulhlp%data_r(:, hybdat%nbasp + 1:)) 
-         else 
+         if (coulhlp%l_real) then
+            coulhlp%data_r(hybdat%nbasp + 1:, :) = coul_submtx%data_r
+            coul_submtx%data_r = transpose(coulhlp%data_r(:, hybdat%nbasp + 1:))
+         else
             coulhlp%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
             coul_submtx%data_c = conjg(transpose(coulhlp%data_c(:, hybdat%nbasp + 1:)))
          endif
@@ -2029,12 +2024,12 @@ CONTAINS
          ! perform  coulhlp%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
          ! rewritten as O^T * x^T = C^T
 
-         ! reload O, since the solver destroys it. 
+         ! reload O, since the solver destroys it.
          CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
          ! Notice O = O^T since it's symmetric
          call olap%linear_problem(coul_submtx)
 
-         if(coulhlp%l_real) then
+         if (coulhlp%l_real) then
             coulhlp%data_r(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
          else
             coulhlp%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
@@ -2047,35 +2042,35 @@ CONTAINS
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
-   subroutine calc_l_m_from_lm(lm, l, m) 
+   subroutine calc_l_m_from_lm(lm, l, m)
       use m_juDFT
-      implicit none 
+      implicit none
       integer, intent(in)   :: lm
-      integer, intent(out)  :: l, m 
-      if(lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
-      l = floor(sqrt(lm-1.0))
-      m = lm - (l**2 + l +1)
+      integer, intent(out)  :: l, m
+      if (lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
+      l = floor(sqrt(lm - 1.0))
+      m = lm - (l**2 + l + 1)
    end subroutine calc_l_m_from_lm
 
-   subroutine loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2,&
-                                qnrm, facc, gmat, integral, olap, pqnrm,pgptm1, ngptm1, ikpt, coulmat)
+   subroutine loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
+                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
       use m_types
       use m_juDFT
       use m_ylm, only: ylm4
       use m_constants, only: fpi_const, tpi_const
       USE m_trafo, ONLY: symmetrize
-      implicit none 
+      implicit none
 
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_mpdata), intent(in)        :: mpdata
-      REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), facC(-1:), gmat(:,:), moment(:,0:,:), moment2(:,:)  
-      real, intent(in)                  :: integral(:,0:,:,:), olap(:,0:,:,:)
-      integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:,:), pgptm1(:,:)
-      COMPLEX, intent(inout)            :: coulmat(:,:), structconst(:,:,:,:) 
+      REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), facC(-1:), gmat(:, :), moment(:, 0:, :), moment2(:, :)
+      real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
+      integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
+      COMPLEX, intent(inout)            :: coulmat(:, :), structconst(:, :, :, :)
 
       integer  :: igpt0, igpt, igptp, iqnrm
-      integer  :: ix,iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
+      integer  :: ix, iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
       integer  :: l2, m2, lm2, n, i, j, idum
       real     :: q(3), qnorm, svol
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
@@ -2101,7 +2096,7 @@ CONTAINS
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
          iy = 0
-         do ic = 1,fi%atoms%nat 
+         do ic = 1, fi%atoms%nat
             itype = fi%atoms%itype(ic)
             lm = 0
             DO l = 0, fi%hybinp%lcutm1(itype)
@@ -2111,37 +2106,37 @@ CONTAINS
                   ! calculate sum over lm and centers for (2c) -> csum, csumf
                   csum = 0
                   csumf = 0
-                  do ic1 = 1,fi%atoms%nat 
+                  do ic1 = 1, fi%atoms%nat
                      itype1 = fi%atoms%itype(ic1)
                      cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
-                                             *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
-                                             - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
+                                          *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
+                                            - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-                     do lm1 = 1,fi%hybinp%lexp**2
-                        call calc_l_m_from_lm(lm1, l1,m1)
+                     do lm1 = 1, fi%hybinp%lexp**2
+                        call calc_l_m_from_lm(lm1, l1, m1)
                         l2 = l + l1 ! for structconst
                         cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
                         m2 = M - m1              ! for structconst
                         lm2 = l2**2 + l2 + m2 + 1 !
-                        csum = csum - (-1)**(m1+l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
+                        csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
                      END DO
 
                      ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
                      IF (ikpt == 1 .AND. l <= 2) THEN
                         cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
-                                 *gmat(lm, 1)*fpi_const/fi%cell%vol
+                               *gmat(lm, 1)*fpi_const/fi%cell%vol
                         csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
                                     CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
                         IF (l == 0) THEN
                            IF (igpt /= 1) THEN
                               csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
-                                                   sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
+                                                  sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
                            ELSE
                               csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
                            END IF
                         ELSE IF (l == 1) THEN
                            csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
-                                    *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
+                                  *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
                         END IF
                      END IF
                   END DO
@@ -2154,7 +2149,7 @@ CONTAINS
                   ! finally define coulomb
                   idum = ix*(ix - 1)/2
                   cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
-                           *EXP(CMPLX(0.0, 1.0)*tpi_const &
+                         *EXP(CMPLX(0.0, 1.0)*tpi_const &
                               *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
                   DO n = 1, mpdata%num_radbasfn(l, itype)
                      iy = iy + 1
@@ -2168,8 +2163,8 @@ CONTAINS
                      ELSE
                         coulmat(iy, ix - hybdat%nbasp) = &
                            (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
-                              - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                              + csum*moment(n, l, itype))/svol          ! (2c)
+                            - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                            + csum*moment(n, l, itype))/svol          ! (2c)
 
                      END IF
                   END DO
