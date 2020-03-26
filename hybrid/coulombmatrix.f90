@@ -2081,7 +2081,6 @@ CONTAINS
       coulmat = 0
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
-      write (*,*) "ngptm1", ngptm1
       DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
