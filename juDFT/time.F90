@@ -617,12 +617,12 @@ CONTAINS
       REAL::cputime
 
       !TRY TO USE mpi OR openmp wall-clock functions
-#ifdef CPP_MPI
-      cputime = MPI_WTIME()
+#ifdef _OPENMP
+      cputime = omp_get_wtime()
 #elif __INTEL_COMPILER
       cputime = rtc()
-#elif _OPENMP
-      cputime = omp_get_wtime()
+#elif CPP_MPI
+      cputime = MPI_WTIME()
 #else
       !use f95 intrinsic function
       CALL CPU_TIME(cputime)
