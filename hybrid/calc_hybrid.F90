@@ -104,7 +104,7 @@ CONTAINS
 
       if(mpi%irank == 0) then
          CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
-         CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
+         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
          call close_hybinp_io2()
       endif
 
