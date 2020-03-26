@@ -662,8 +662,8 @@ CONTAINS
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
                      !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) &
                      !$OMP collapse(2)
-                     DO lm1 = 1, fi%hybinp%lexp**2
-                        do lm2 = 1, fi%hybinp%lexp**2
+                     DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                        do lm2 = 1, (fi%hybinp%lexp+1)**2
                            call calc_l_m_from_lm(lm1, l1, m1)
                            call calc_l_m_from_lm(lm2, l2, m2)
                            cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
@@ -690,7 +690,7 @@ CONTAINS
                   !$OMP reduction(+: csum) &
                   !$OMP collapse(2)
                   do ic = 1, fi%atoms%nat
-                     do lm = 1, fi%hybinp%lexp**2
+                     do lm = 1, (fi%hybinp%lexp+1)**2
                         itype = fi%atoms%itype(ic)
                         call calc_l_m_from_lm(lm, l, m)
                         cdum = carr2b(ic, igpt1)*sphbesmoment(l, itype, iqnrm1)
@@ -2110,7 +2110,7 @@ CONTAINS
                                        *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
                                           - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-                  do lm1 = 1, fi%hybinp%lexp**2
+                  do lm1 = 1, (fi%hybinp%lexp+1)**2
                      call calc_l_m_from_lm(lm1, l1, m1)
                      l2 = l + l1 ! for structconst
                      cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
