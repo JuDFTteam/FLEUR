@@ -825,7 +825,7 @@ CONTAINS
             END DO
             call timestop("harmonics setup")
 
-            call timestart("q loop")
+            call timestart("double g-loop")
             DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
@@ -871,7 +871,7 @@ CONTAINS
                   coulomb(idum, ikpt) = coulomb(idum, ikpt) + (4*pi_const)**3*cdum/fi%cell%vol
                END DO
             END DO
-            call timestop("q loop")
+            call timestop("double g-loop")
          END DO
          call timestop("loop 2")
          deallocate (carr2)
