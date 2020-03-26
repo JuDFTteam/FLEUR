@@ -2098,6 +2098,7 @@ CONTAINS
          call ylm4(fi%hybinp%lexp, q, y)
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
+         ! this unrolls the do ic=1,atoms%nat{do lm=1,..{}} 
          call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
 
          !$OMP PARALLEL DO default(none) &
