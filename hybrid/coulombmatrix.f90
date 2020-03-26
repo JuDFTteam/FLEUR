@@ -2071,7 +2071,7 @@ CONTAINS
 
       integer  :: igpt0, igpt, igptp, iqnrm
       integer  :: ix, iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
-      integer  :: l2, m2, lm2, n, i, j, idum
+      integer  :: l2, m2, lm2, n, i, j, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
       real     :: q(3), qnorm, svol
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
@@ -2079,6 +2079,7 @@ CONTAINS
       coulmat = 0
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
+      write (*,*) "ngptm1", ngptm1
       DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -2149,8 +2150,24 @@ CONTAINS
                cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
                         *EXP(CMPLX(0.0, 1.0)*tpi_const &
                            *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
+
+               iy_start = 0
+               do iatm = 1, ic-1
+                  j_type = fi%atoms%itype(iatm)
+                  do j_l = 0,fi%hybinp%lcutm1(j_type)
+                     iy_start = iy_start + mpdata%num_radbasfn(j_l, j_type) * (2*j_l+1)
+                  end do
+               end do
+               do j_lm = 1,lm-1
+                  call calc_l_m_from_lm(j_lm, j_l, j_m)
+                  iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
+               enddo
+ 
+               if(iy_start /= iy) call judft_error("iy_start is wrong")
+
+
                DO n = 1, mpdata%num_radbasfn(l, itype)
-                  iy = iy + 1
+                  iy = iy_start + n
 
                   IF (ikpt == 1 .AND. igpt == 1) THEN
                      IF (l == 0) coulmat(iy, ix - hybdat%nbasp) = &
