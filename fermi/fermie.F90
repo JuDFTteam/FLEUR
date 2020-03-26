@@ -209,14 +209,17 @@ CONTAINS
              IF ( mpi%irank == 0 ) THEN
                 WRITE (6,FMT=8010) n,ws,weight
              END IF
-             CALL juDFT_error("Not enough weavefunctions",calledby="fermie")
+             CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
 8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
           END IF
           ws = ws + we(INDEX(l))
           seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
           !         WRITE (6,FMT='(2f10.7)') e(index(l)),we(index(l))
        END DO
-       results%ef = e(INDEX(l))
+       results%ef = -100000.0
+       IF(l.GT.0) THEN
+          results%ef = e(INDEX(l))
+       END IF
        nstef = l
        zc = input%zelec
        IF(m_spins /= 1) THEN
@@ -239,7 +242,7 @@ CONTAINS
        results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
        results%bandgap = 0.0
        IF(input%bz_integration==0) THEN
-          CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp, n,&
+          CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
                nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
        ELSE IF (input%bz_integration==1) THEN
           CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
