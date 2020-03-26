@@ -2159,6 +2159,7 @@ CONTAINS
       use m_juDFT
       use m_types
       use m_constants, only: tpi_const,fpi_const
+      use omp_lib
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
@@ -2169,14 +2170,27 @@ CONTAINS
       complex, intent(inout)            :: coulomb(:) ! only at ikpt
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, ineq, lm, m, idum, l
+      integer :: ic, itype, ineq, lm, m, idum, l, i
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
       complex :: cdum, cdum1 
       logical :: ldum
+      integer, parameter :: lock_size = 100
+      integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("double g-loop")
+
+      ! create lock for race-condition in coulomb
+      do i =0,lock_size-1
+         call omp_init_lock(lock(i))
+      enddo
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(igpt0, igpt1, igpt2, ix, igptp2, iqnrm2, q2, y2, iy,igptp1, iqnrm1, q1) &
+      !$OMP private(y1, ic, itype, cexp1, lm, cdum, l, cdum1, m, idum, ldum) &
+      !$OMP shared(coulomb, ngptm1, ikpt, pgptm1, hybdat, mpdata, pqnrm, fi) &
+      !$OMP shared(lock, nqnrm, sphbes0, qnrm, carr2)
       DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
@@ -2184,22 +2198,18 @@ CONTAINS
          iqnrm2 = pqnrm(igpt2, ikpt)
          q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
          y2 = CONJG(carr2(:, igpt2))
-         iy = hybdat%nbasp
          DO igpt1 = 1, igpt2
-            iy = iy + 1
+            iy = hybdat%nbasp + igpt1
             igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
             iqnrm1 = pqnrm(igpt1, ikpt)
             q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
             y1 = carr2(:, igpt1)
             cexp1 = 0
-            ic = 0
-            DO itype = 1, fi%atoms%ntype
-               DO ineq = 1, fi%atoms%neq(itype)
-                  ic = ic + 1
-                  cexp1(itype) = cexp1(itype) + &
-                                 EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
-                                       (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
-               ENDDO
+            do ic = 1,fi%atoms%nat 
+               itype = fi%atoms%itype(ic)
+               cexp1(itype) = cexp1(itype) + &
+                              EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
+                                    (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
             ENDDO
             lm = 0
             cdum = 0
@@ -2218,9 +2228,15 @@ CONTAINS
                ENDDO
             ENDDO
             idum = ix*(ix - 1)/2 + iy
+            call omp_set_lock(lock(modulo(idum,lock_size)))
             coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
+            call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
       END DO
+      !$OMP END PARALLEL DO
+      do i =0,lock_size-1
+         call omp_destroy_lock(lock(i))
+      enddo
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 
