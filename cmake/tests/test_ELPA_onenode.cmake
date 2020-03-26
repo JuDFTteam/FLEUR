@@ -11,7 +11,7 @@ if (NOT FLEUR_USE_ELPA_ONENODE)
       set(TEST_LIBRARIES "-lelpa_onenode_openmp;${FLEUR_LIBRARIES}")
       endif()
     else()
-+     set(TEST_LIBRARIES "-lelpa_onenode;${FLEUR_LIBRARIES}")
+      set(TEST_LIBRARIES "-lelpa_onenode;${FLEUR_LIBRARIES}")
    endif()
    try_compile(FLEUR_USE_ELPA_ONENODE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
 LINK_LIBRARIES ${TEST_LIBRARIES})
