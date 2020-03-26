@@ -2234,7 +2234,5 @@ CONTAINS
             ic_arr(niter)    = ic
          enddo 
       enddo
-
-      write (*,*) "niter = ", niter
    end subroutine collapse_ic_and_lm_loop
 END MODULE m_coulombmatrix
