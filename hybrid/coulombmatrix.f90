@@ -2190,7 +2190,8 @@ CONTAINS
       !$OMP private(igpt0, igpt1, igpt2, ix, igptp2, iqnrm2, q2, y2, iy,igptp1, iqnrm1, q1) &
       !$OMP private(y1, ic, itype, cexp1, lm, cdum, l, cdum1, m, idum, ldum) &
       !$OMP shared(coulomb, ngptm1, ikpt, pgptm1, hybdat, mpdata, pqnrm, fi) &
-      !$OMP shared(lock, nqnrm, sphbes0, qnrm, carr2)
+      !$OMP shared(lock, nqnrm, sphbes0, qnrm, carr2) &
+      !$OMP schedule(dynamic)
       DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
