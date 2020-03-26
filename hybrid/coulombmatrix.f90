@@ -2067,7 +2067,8 @@ CONTAINS
       REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), facC(-1:), gmat(:, :), moment(:, 0:, :), moment2(:, :)
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
-      COMPLEX, intent(inout)            :: coulmat(:, :), structconst(:, :, :, :)
+      complex, intent(in)               :: structconst(:, :, :, :)
+      COMPLEX, intent(inout)            :: coulmat(:, :)
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
@@ -2098,8 +2099,13 @@ CONTAINS
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
          call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
-         i = 0
-         iy = 0
+
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
+         !$OMP private(j_m, j_type, iy_start, idum, l1, m1) &
+         !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, coulmat, svol) &
+         !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
+         !$OMP shared(igptp)
          do i = 1,niter 
             ic = ic_arr(i)
             lm = lm_arr(i)
@@ -2168,7 +2174,7 @@ CONTAINS
                call calc_l_m_from_lm(j_lm, j_l, j_m)
                iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
             enddo
-            
+
             DO n = 1, mpdata%num_radbasfn(l, itype)
                iy = iy_start + n
 
@@ -2187,6 +2193,7 @@ CONTAINS
                END IF
             END DO
          END DO ! collapsed atom & lm loop (ic)
+         !$OMP END PARALLEL DO
       END DO
 
       IF (fi%sym%invs) THEN
