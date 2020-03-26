@@ -72,7 +72,7 @@ CONTAINS
       CALL mpi_bc(this%exc,rank,mpi_comm)
       CALL mpi_bc(this%init_mom,rank,mpi_comm)
       CALL mpi_bc(this%n_addArgs,rank,mpi_comm)
-      !CALL mpi_bc(this%arg_keys,rank,mpi_comm)
+      CALL mpi_bc(this%arg_keys,rank,mpi_comm)
       CALL mpi_bc(this%arg_vals,rank,mpi_comm)
       CALL mpi_bc(this%l_soc_given,rank,mpi_comm)
       CALL mpi_bc(this%l_ccf_given,rank,mpi_comm)

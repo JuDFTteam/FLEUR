@@ -126,7 +126,7 @@ CONTAINS
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
-         !CALL mpi_bc(rank,mpi_comm,this%contour(n)%label) !Order reversed for fixed routine
+         CALL mpi_bc(rank,mpi_comm,this%contour(n)%label) !Order reversed for fixed routine
          CALL mpi_bc(this%contour(n)%eb,rank,mpi_comm)
          CALL mpi_bc(this%contour(n)%et,rank,mpi_comm)
          CALL mpi_bc(this%contour(n)%n1,rank,mpi_comm)
