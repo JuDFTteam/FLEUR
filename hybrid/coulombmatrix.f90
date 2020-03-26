@@ -802,16 +802,13 @@ CONTAINS
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
                   csum = 0
-                  ic = 0
-                  DO itype = 1, fi%atoms%ntype
-                     DO ineq = 1, fi%atoms%neq(itype)
-                        ic = ic + 1
-                        cexp = carr2b(ic, igpt1)
-                        do lm = 1,fi%hybinp%lexp**2 
-                           call calc_l_m_from_lm(lm, l, m)
-                           cdum = cexp*sphbesmoment(l, itype, iqnrm1)
-                           csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
-                        END DO
+                  do ic = 1, fi%atoms%nat 
+                     itype = fi%atoms%itype(ic)
+                     cexp = carr2b(ic, igpt1)
+                     do lm = 1,fi%hybinp%lexp**2 
+                        call calc_l_m_from_lm(lm, l, m)
+                        cdum = cexp*sphbesmoment(l, itype, iqnrm1)
+                        csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
                      END DO
                   END DO
                   idum = ix*(ix - 1)/2 + iy
