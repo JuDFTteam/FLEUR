@@ -43,6 +43,8 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE ::nz(:)
   !atoms per type
   INTEGER, ALLOCATABLE::neq(:)
+  ! type of each atom itype(atoms%nat) used for OMP unrolling
+  INTEGER, ALLOCATABLE::itype(:)
   !radial grid points
   INTEGER, ALLOCATABLE::jri(:)
   !core states
@@ -162,6 +164,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%flipSpinPhi,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinTheta,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinScale,rank,mpi_comm)
+ call mpi_bc(this%itype,rank,mpi_comm)
 
 #ifdef CPP_MPI
  CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -557,8 +560,19 @@ SUBROUTINE init_atoms(this,cell)
  USE m_types_cell
  CLASS(t_atoms),INTENT(inout):: this
  TYPE(t_cell),INTENT(IN)   :: cell
+ integer :: it, ineq, ic
 
  WHERE (ABS(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
  this%pos(:,:) = MATMUL(cell%amat,this%taual(:,:))
+ 
+ allocate(this%itype(this%nat))
+ ic=0
+ DO it = 1, this%ntype
+   DO ineq = 1, this%neq(it)
+      ic = ic + 1
+      this%itype(ic) = it
+   enddo 
+enddo
+
 END SUBROUTINE init_atoms
 END MODULE m_types_atoms
