@@ -2069,12 +2069,13 @@ CONTAINS
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       COMPLEX, intent(inout)            :: coulmat(:, :), structconst(:, :, :, :)
 
-      integer  :: igpt0, igpt, igptp, iqnrm
+      integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
       integer  :: l2, m2, lm2, n, i, j, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
       real     :: q(3), qnorm, svol
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
+      integer, allocatable :: itype_arr(:), lm_arr(:), ic_arr(:)
 
       coulmat = 0
       svol = SQRT(fi%cell%vol)
@@ -2096,95 +2097,96 @@ CONTAINS
          call ylm4(fi%hybinp%lexp, q, y)
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
+         call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
+         i = 0
          iy = 0
-         do ic = 1, fi%atoms%nat
+         do i = 1,niter 
+            ic = ic_arr(i)
+            lm = lm_arr(i)
+
             itype = fi%atoms%itype(ic)
-            do lm = 1,(fi%hybinp%lcutm1(itype)+1)**2
-               call calc_l_m_from_lm(lm, l, m)
+            call calc_l_m_from_lm(lm, l, m)
 
-               ! calculate sum over lm and centers for (2c) -> csum, csumf
-               csum = 0
-               csumf = 0
-               do ic1 = 1, fi%atoms%nat
-                  itype1 = fi%atoms%itype(ic1)
-                  cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
-                                       *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
-                                          - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
+            ! calculate sum over lm and centers for (2c) -> csum, csumf
+            csum = 0
+            csumf = 0
+            do ic1 = 1, fi%atoms%nat
+               itype1 = fi%atoms%itype(ic1)
+               cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
+                                    *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
+                                       - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-                  do lm1 = 1, (fi%hybinp%lexp+1)**2
-                     call calc_l_m_from_lm(lm1, l1, m1)
-                     l2 = l + l1 ! for structconst
-                     cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
-                     m2 = M - m1              ! for structconst
-                     lm2 = l2**2 + l2 + m2 + 1 !
-                     csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
-                  END DO
+               do lm1 = 1, (fi%hybinp%lexp+1)**2
+                  call calc_l_m_from_lm(lm1, l1, m1)
+                  l2 = l + l1 ! for structconst
+                  cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
+                  m2 = M - m1              ! for structconst
+                  lm2 = l2**2 + l2 + m2 + 1 !
+                  csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
+               END DO
 
-                  ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
-                  IF (ikpt == 1 .AND. l <= 2) THEN
-                     cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
-                              *gmat(lm, 1)*fpi_const/fi%cell%vol
-                     csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
-                                 CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
-                     IF (l == 0) THEN
-                        IF (igpt /= 1) THEN
-                           csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
-                                                sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
-                        ELSE
-                           csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
-                        END IF
-                     ELSE IF (l == 1) THEN
-                        csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
-                                 *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
+               ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
+               IF (ikpt == 1 .AND. l <= 2) THEN
+                  cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
+                           *gmat(lm, 1)*fpi_const/fi%cell%vol
+                  csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
+                              CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
+                  IF (l == 0) THEN
+                     IF (igpt /= 1) THEN
+                        csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
+                                             sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
+                     ELSE
+                        csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
                      END IF
+                  ELSE IF (l == 1) THEN
+                     csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
+                              *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
                   END IF
-               END DO
-
-               ! add contribution of (2a) to csumf
-               IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
-                  csumf(lm) = csumf(lm) + (fpi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
                END IF
+            END DO
 
-               ! finally define coulomb
-               idum = ix*(ix - 1)/2
-               cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
-                        *EXP(CMPLX(0.0, 1.0)*tpi_const &
-                           *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
+            ! add contribution of (2a) to csumf
+            IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
+               csumf(lm) = csumf(lm) + (fpi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
+            END IF
 
-               iy_start = 0
-               do iatm = 1, ic-1
-                  j_type = fi%atoms%itype(iatm)
-                  do j_l = 0,fi%hybinp%lcutm1(j_type)
-                     iy_start = iy_start + mpdata%num_radbasfn(j_l, j_type) * (2*j_l+1)
-                  end do
+            ! finally define coulomb
+            idum = ix*(ix - 1)/2
+            cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
+                     *EXP(CMPLX(0.0, 1.0)*tpi_const &
+                        *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
+
+            !calclate iy_start on the fly for OpenMP
+            iy_start = 0
+            do iatm = 1, ic-1
+               j_type = fi%atoms%itype(iatm)
+               do j_l = 0,fi%hybinp%lcutm1(j_type)
+                  iy_start = iy_start + mpdata%num_radbasfn(j_l, j_type) * (2*j_l+1)
                end do
-               do j_lm = 1,lm-1
-                  call calc_l_m_from_lm(j_lm, j_l, j_m)
-                  iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
-               enddo
- 
-               if(iy_start /= iy) call judft_error("iy_start is wrong")
+            end do
+            do j_lm = 1,lm-1
+               call calc_l_m_from_lm(j_lm, j_l, j_m)
+               iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
+            enddo
+            
+            DO n = 1, mpdata%num_radbasfn(l, itype)
+               iy = iy_start + n
 
+               IF (ikpt == 1 .AND. igpt == 1) THEN
+                  IF (l == 0) coulmat(iy, ix - hybdat%nbasp) = &
+                     -cdum*moment2(n, itype)/6/svol         ! (2a)
+                  coulmat(iy, ix - hybdat%nbasp) = coulmat(iy, ix - hybdat%nbasp) &
+                                                   + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                                                      + csum*moment(n, l, itype))/svol          ! (2c)
+               ELSE
+                  coulmat(iy, ix - hybdat%nbasp) = &
+                     (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
+                        - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                        + csum*moment(n, l, itype))/svol          ! (2c)
 
-               DO n = 1, mpdata%num_radbasfn(l, itype)
-                  iy = iy_start + n
-
-                  IF (ikpt == 1 .AND. igpt == 1) THEN
-                     IF (l == 0) coulmat(iy, ix - hybdat%nbasp) = &
-                        -cdum*moment2(n, itype)/6/svol         ! (2a)
-                     coulmat(iy, ix - hybdat%nbasp) = coulmat(iy, ix - hybdat%nbasp) &
-                                                      + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                                                         + csum*moment(n, l, itype))/svol          ! (2c)
-                  ELSE
-                     coulmat(iy, ix - hybdat%nbasp) = &
-                        (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
-                           - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                           + csum*moment(n, l, itype))/svol          ! (2c)
-
-                  END IF
-               END DO
-            END DO ! lm loop
-         END DO ! atom loop (ic)
+               END IF
+            END DO
+         END DO ! collapsed atom & lm loop (ic)
       END DO
 
       IF (fi%sym%invs) THEN
@@ -2192,4 +2194,39 @@ CONTAINS
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
    endsubroutine loop_over_interst
+
+   subroutine collapse_ic_and_lm_loop(atoms, lcutm1, niter, ic_arr, lm_arr)
+      use m_types
+      implicit none 
+      type(t_atoms), intent(in) :: atoms 
+      integer, intent(in)       :: lcutm1(:)
+      integer, intent(out)      :: niter 
+      integer, intent(inout), allocatable :: ic_arr(:),  lm_arr(:) 
+
+      integer :: ic, lm, itype 
+
+      if(allocated(ic_arr)) deallocate(ic_arr)
+      if(allocated(lm_arr)) deallocate(lm_arr)
+
+      niter = 0
+      do ic = 1, atoms%nat
+         itype = atoms%itype(ic)
+         do lm = 1,(lcutm1(itype)+1)**2
+            niter = niter + 1
+         enddo 
+      enddo
+
+      allocate( lm_arr(niter), ic_arr(niter))
+      niter = 0
+      do ic = 1, atoms%nat
+         itype = atoms%itype(ic)
+         do lm = 1,(lcutm1(itype)+1)**2
+            niter = niter + 1
+            lm_arr(niter)    = lm
+            ic_arr(niter)    = ic
+         enddo 
+      enddo
+
+      write (*,*) "niter = ", niter
+   end subroutine collapse_ic_and_lm_loop
 END MODULE m_coulombmatrix
