@@ -2121,18 +2121,13 @@ CONTAINS
                                                  *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
                                                    - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-                           lm1 = 0
-                           DO l1 = 0, fi%hybinp%lexp
+                           do lm1 = 1,fi%hybinp%lexp**2
+                              call calc_l_m_from_lm(lm1, l1,m1)
                               l2 = l + l1 ! for structconst
-                              idum = 1
                               cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
-                              DO m1 = -l1, l1
-                                 lm1 = lm1 + 1
-                                 m2 = M - m1              ! for structconst
-                                 lm2 = l2**2 + l2 + m2 + 1 !
-                                 csum = csum - idum*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
-                                 idum = -idum ! factor (-1)*(l1+m1)
-                              END DO
+                              m2 = M - m1              ! for structconst
+                              lm2 = l2**2 + l2 + m2 + 1 !
+                              csum = csum - (-1)**(m1+l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
                            END DO
 
                            ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
