@@ -291,7 +291,7 @@ CONTAINS
    end SUBROUTINE t_mat_from_packed_cmplx
 
    function t_mat_to_packed(mat) result(packed)
-      CLASS(t_mat), INTENT(IN)       :: mat
+      CLASS(t_mat), INTENT(IN)      :: mat
       COMPLEX                       :: packed(mat%matsize1*(mat%matsize1 + 1)/2)
       integer :: n, nn, i
       real, parameter :: tol = 1e-5
@@ -301,13 +301,13 @@ CONTAINS
          DO nn = 1, n
             if (mat%l_real) THEN
                packed(i) = (mat%data_r(n, nn) + mat%data_r(nn, n))/2.
-               if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) then
-                  call judft_warn("Large unsymmetry in matrix packing n = " // int2str(n) // " nn = " // int2str(nn) // new_line("A") //&
-                                  "mat%data_r(n, nn) = " // float2str(mat%data_r(n, nn)) // " mat%data_r(nn, n) = " // float2str(mat%data_r(nn, n)) )
-               endif
+               ! if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) then
+               !    call judft_warn("Large unsymmetry in matrix packing n = " // int2str(n) // " nn = " // int2str(nn) // new_line("A") //&
+               !                    "mat%data_r(n, nn) = " // float2str(mat%data_r(n, nn)) // " mat%data_r(nn, n) = " // float2str(mat%data_r(nn, n)) )
+               ! endif
             else
                packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
-               if (abs(conjg(mat%data_c(n, nn)) - mat%data_c(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
+               ! if (abs(conjg(mat%data_c(n, nn)) - mat%data_c(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
             endif
             i = i + 1
          end DO
