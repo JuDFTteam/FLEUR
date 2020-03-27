@@ -96,7 +96,7 @@ CONTAINS
       COMPLEX                 ::  carr1(1:MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX                 ::  carr(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
       TYPE(t_mat)             ::  z_kqpt
-      COMPLEX, ALLOCATABLE    ::  z0(:,:)
+      COMPLEX, ALLOCATABLE    ::  z0(:,:), ctmp(:,:,:)
 
 
       call timestart("wavefproducts_noinv5 IR")
@@ -149,32 +149,57 @@ CONTAINS
       call timestop("step function")
 
       call timestart("hybrid g")
-      ic = hybdat%nbasp
-      DO igptm = 1, mpdata%n_g(iq)
-         carr = 0
-         ic = ic + 1
-         iigptm = mpdata%gptm_ptr(igptm, iq)
+      allocate(ctmp(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik),mpdata%n_g(iq)), source=(0.0,0.0))
+      if(z_k_p%l_real) then
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k_p, g_t, jsp, iq, ik) &
+         !$OMP collapse(2)
+         DO igptm = 1, mpdata%n_g(iq)
+            DO ig1 = 1, lapw%nv(jsp)
+               iigptm = mpdata%gptm_ptr(igptm, iq)
+               g = lapw%gvec(:,ig1, jsp) + mpdata%g(:,iigptm) - g_t
+               ig2 = pointer(g(1), g(2), g(3))
+               IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-         DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1, jsp) + mpdata%g(:,iigptm) - g_t
-            ig2 = pointer(g(1), g(2), g(3))
+               DO n1 = 1, hybdat%nbands(ik)
+                  DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
+                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + z_k_p%data_r(ig1, n1)*z0(n2, ig2)
+                  END DO
+               END DO
 
-            IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
+            END DO
+         END DO
+         !$OMP END PARALLEL DO
+      else
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k_p, g_t, jsp, iq, ik) &
+         !$OMP collapse(2)
+         DO igptm = 1, mpdata%n_g(iq)
+            DO ig1 = 1, lapw%nv(jsp)
+               iigptm = mpdata%gptm_ptr(igptm, iq)
+               g = lapw%gvec(:,ig1, jsp) + mpdata%g(:,iigptm) - g_t
+               ig2 = pointer(g(1), g(2), g(3))
+               IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-            DO n1 = 1, hybdat%nbands(ik)
-               if(z_k_p%l_real) then
-                  cdum1 = z_k_p%data_r(ig1, n1)
-               ELSE
-                  cdum1 = conjg(z_k_p%data_c(ig1, n1))
-               endif
-               DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
-                  carr(n2, n1) = carr(n2, n1) + cdum1*z0(n2, ig2)
+               DO n1 = 1, hybdat%nbands(ik)
+                  DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
+                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + conjg(z_k_p%data_c(ig1, n1))*z0(n2, ig2)
+                  END DO
                END DO
             END DO
-
          END DO
-         cprod(ic, :,:) = carr(:,:)
-      END DO
+         !$OMP END PARALLEL DO
+      endif
+
+      call timestart("copy to cprod")
+      do igptm =1,mpdata%n_g(iq)
+       ic = hybdat%nbasp + igptm
+       cprod(ic,:,:) = ctmp(:,:,igptm)
+      enddo
+      call timestop("copy to cprod")
+
       call timestop("hybrid g")
       deallocate(z0, pointer, gpt0)
       call timestop("calc convolution")
