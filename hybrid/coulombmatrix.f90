@@ -2058,7 +2058,8 @@ CONTAINS
          !$OMP private(j_m, j_type, iy_start, idum, l1, m1) &
          !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, coulmat, svol) &
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-         !$OMP shared(igptp, niter)
+         !$OMP shared(igptp, niter) &
+         !$OMP schedule(dynamic)
          do i = 1,niter 
             ic = ic_arr(i)
             lm = lm_arr(i)
