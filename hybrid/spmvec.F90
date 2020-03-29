@@ -238,7 +238,7 @@ CONTAINS
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
       INTEGER             ::  ibasm
       INTEGER             ::  l, lm
-      INTEGER             ::  n, m
+      INTEGER             ::  n, m, test_idx, iatom2, l1, idx_start, idx_stop
 
       ! - local arrays -
 
@@ -263,26 +263,38 @@ CONTAINS
 
       call timestart("0->ibasm: matmul")
       iatom = 0
-      indx1 = 0; indx2 = 0; indx3 = ibasm
+      indx3 = ibasm
       do iatom = 1, atoms%nat 
          itype = atoms%itype(iatom)
          do lm =1,(hybinp%lcutm1(itype)+1)**2
             call calc_l_m_from_lm(lm, l, m)
-            indx1 = indx1 + 1
-            indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
+            idx_start = 0
+            ! go through previous atoms
+            do iatom2 =1,iatom-1
+               do l1=0, hybinp%lcutm1(itype)
+                  idx_start = idx_start + (2*l1+1)*(mpdata%num_radbasfn(l1, atoms%itype(iatom2)) - 1)
+               enddo
+            enddo
+            ! current atom
+            do l1=0, l-1
+               idx_start = idx_start + (2*l1+1)*(mpdata%num_radbasfn(l1, itype) - 1)
+            enddo
+            !current l
+            idx_start = 1 + idx_start + ((m + l) * (mpdata%num_radbasfn(l, itype)-1))
+
+
+            idx_stop = idx_start + mpdata%num_radbasfn(l, itype) - 2
             indx3 = indx3 + 1
 
-            vecout(indx1:indx2) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
-                  vecinhlp(indx1:indx2))
+            vecout(idx_start:idx_stop) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
+                  vecinhlp(idx_start:idx_stop))
 
-            vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
-
-            indx1 = indx2
+            vecout(idx_start:idx_stop) = vecout(idx_start:idx_stop) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
          END DO
       END DO
       call timestop("0->ibasm: matmul")
 
-      IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
+      IF (idx_stop /= ibasm) call judft_error('spmvec: error counting basis functions')
 
 
       IF (ikpt == 1) THEN
