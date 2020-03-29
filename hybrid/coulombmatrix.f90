@@ -48,6 +48,7 @@ CONTAINS
       USE m_io_hybinp
       use m_ylm
       use m_sphbes, only: sphbes
+      use m_calc_l_m_from_lm
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -1995,16 +1996,6 @@ CONTAINS
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
-   subroutine calc_l_m_from_lm(lm, l, m)
-      use m_juDFT
-      implicit none
-      integer, intent(in)   :: lm
-      integer, intent(out)  :: l, m
-      if (lm <= 0) call judft_error("We define lm such that goes from 1..lmax**2")
-      l = floor(sqrt(lm - 1.0))
-      m = lm - (l**2 + l + 1)
-   end subroutine calc_l_m_from_lm
-
    subroutine loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                 qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
       use m_types
@@ -2012,6 +2003,7 @@ CONTAINS
       use m_ylm, only: ylm4
       use m_constants, only: fpi_const, tpi_const
       USE m_trafo, ONLY: symmetrize
+      use m_calc_l_m_from_lm
       implicit none
 
       type(t_fleurinput), intent(in)    :: fi
