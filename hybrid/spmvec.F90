@@ -212,6 +212,7 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_juDFT
+      use m_calc_l_m_from_lm
       IMPLICIT NONE
       TYPE(t_mpdata), INTENT(IN)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -236,7 +237,7 @@ CONTAINS
       INTEGER             ::  itype1, ieq1, iatom1, ishift1
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
       INTEGER             ::  ibasm
-      INTEGER             ::  l
+      INTEGER             ::  l, lm
       INTEGER             ::  n, m
 
       ! - local arrays -
@@ -251,44 +252,41 @@ CONTAINS
 
       ibasm = 0
       iatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO m = -l, l
-                  ibasm = ibasm + mpdata%num_radbasfn(l, itype) - 1
-               END DO
-            END DO
+      do iatom = 1, atoms%nat
+         itype = atoms%itype(iatom)
+         DO l = 0, hybinp%lcutm1(itype)
+            ibasm = ibasm + (2*l+1) * (mpdata%num_radbasfn(l, itype) - 1)
          END DO
       END DO
 
       ! compute vecout for the indices from 0:ibasm
+
+      call timestart("0->ibasm: matmul")
       iatom = 0
       indx1 = 0; indx2 = 0; indx3 = ibasm
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO m = -l, l
-                  indx1 = indx1 + 1
-                  indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
-                  indx3 = indx3 + 1
+      do iatom = 1, atoms%nat 
+         itype = atoms%itype(iatom)
+         do lm =1,(hybinp%lcutm1(itype)+1)**2
+            call calc_l_m_from_lm(lm, l, m)
+            indx1 = indx1 + 1
+            indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
+            indx3 = indx3 + 1
 
-                  vecout(indx1:indx2) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
-                          vecinhlp(indx1:indx2))
+            vecout(indx1:indx2) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
+                  vecinhlp(indx1:indx2))
 
-                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
+            vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
 
-                  indx1 = indx2
-               END DO
-
-            END DO
+            indx1 = indx2
          END DO
       END DO
+      call timestop("0->ibasm: matmul")
 
       IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
 
+
       IF (ikpt == 1) THEN
+         call timestart("gamma point 1")
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
@@ -325,14 +323,17 @@ CONTAINS
             END DO
 
          END DO
+         call timestop("gamma point 1")
       END IF
-
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
                                             itype=1, atoms%ntype)/)) + mpdata%n_g(ikpt)
+      call timestart("ibasm+1->nbasm: zhpmv")
       call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
+      call timestop("ibasm+1->nbasm: zhpmv")
 
+      call timestart("dot prod")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, atoms%ntype
@@ -352,8 +353,11 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("dot prod")
+
 
       IF (ikpt == 1) THEN
+         call timestart("gamma point 2")
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
@@ -396,6 +400,7 @@ CONTAINS
             END DO
          END DO
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
+         call timestop("gamma point 2")
       END IF
 
       CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&
