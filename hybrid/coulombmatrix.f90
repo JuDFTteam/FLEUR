@@ -1166,11 +1166,7 @@ CONTAINS
       END DO ! ikpt
       call timestop("loop bla")
 
-      if (fi%sym%invs) THEN
-         deallocate(hybdat%coul%mt1, hybdat%coul%mt2_r, hybdat%coul%mt3_r, hybdat%coul%mtir_r, hybdat%coul%pmtir_r)
-      else
-         deallocate(hybdat%coul%mt1, hybdat%coul%mt2_c, hybdat%coul%mt3_c, hybdat%coul%mtir_c, hybdat%coul%pmtir_c)
-      end if
+      call hybdat%coul%free()
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix

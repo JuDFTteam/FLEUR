@@ -12,6 +12,7 @@ MODULE m_types_hybdat
    contains 
       procedure :: init  => t_coul_init
       procedure :: alloc => t_coul_alloc
+      procedure :: free  => t_coul_free
    end type t_coul
 
    TYPE t_hybdat
@@ -57,6 +58,19 @@ MODULE m_types_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine t_coul_free(coul)
+      implicit none 
+      class(t_coul), intent(inout) :: coul 
+
+      if(allocated(coul%mt2_r)) deallocate(coul%mt2_r)
+      if(allocated(coul%mt3_r)) deallocate(coul%mt3_r)
+      if(allocated(coul%mtir_r)) deallocate(coul%mtir_r)
+      if(allocated(coul%pmtir_r)) deallocate(coul%pmtir_r)
+      if(allocated(coul%mt2_c)) deallocate(coul%mt2_c)
+      if(allocated(coul%mt3_c)) deallocate(coul%mt3_c)
+      if(allocated(coul%mtir_c)) deallocate(coul%mtir_c)
+      if(allocated(coul%pmtir_c)) deallocate(coul%pmtir_c)
+   end subroutine t_coul_free
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g)
       use m_types_fleurinput
       implicit NONE 
