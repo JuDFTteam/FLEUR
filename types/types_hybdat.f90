@@ -4,11 +4,11 @@ MODULE m_types_hybdat
    IMPLICIT NONE
 
    type t_coul
-      REAL, ALLOCATABLE      :: mt1(:, :, :, :, :)
-      REAL, ALLOCATABLE      :: mt2_r(:, :, :, :, :),   mt3_r(:, :, :, :)
-      REAL, ALLOCATABLE      :: mtir_r(:, :, :),        pmtir_r(:, :)
-      COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :, :),   mt3_c(:, :, :, :)
-      COMPLEX, ALLOCATABLE   :: mtir_c(:, :, :),        pmtir_c(:, :)
+      REAL, ALLOCATABLE      :: mt1(:, :, :, :)
+      REAL, ALLOCATABLE      :: mt2_r(:, :, :, :),   mt3_r(:, :, :)
+      REAL, ALLOCATABLE      :: mtir_r(:, :),        pmtir_r(:)
+      COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
+      COMPLEX, ALLOCATABLE   :: mtir_c(:, :),        pmtir_c(:)
    contains 
       procedure :: init  => t_coul_init
       procedure :: alloc => t_coul_alloc
@@ -83,23 +83,26 @@ contains
       idum = ic + maxval(n_g)
       idum = (idum*(idum + 1))/2
 
+      if(.not. allocated(coul%mt1))then 
+          allocate(coul%mt1(maxval(num_radbasfn) - 1,&
+                            maxval(num_radbasfn) - 1,&
+                            0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype))
+      endif
+
       if (fi%sym%invs) THEN
          if(.not. allocated(coul%mt2_r)) allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
-                                                                               -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
-                                                                               0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,&
-                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
-         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g), &
-                                                                                   ic + maxval(n_g), 1))
-         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum, 1))
+                                             -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
+                                             0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat))
+         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat))
+         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g),ic + maxval(n_g)))
+         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum))
       else
          if(.not. allocated(coul%mt2_c)) allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
-                                                                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                                                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, &
-                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
-         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g), 1))
-         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum, 1))
+                                                -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
+                                                0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat))
+         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat))
+         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g)))
+         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum))
       endif
    end subroutine t_coul_alloc
 
