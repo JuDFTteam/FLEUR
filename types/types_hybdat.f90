@@ -34,6 +34,13 @@ MODULE m_types_hybdat
       INTEGER                :: eig_id = -1
       INTEGER, ALLOCATABLE   ::  nbasm(:)
 
+      ! coulomb matrix stuff
+      REAL, ALLOCATABLE   :: coulomb_mt1(:, :, :, :, :)
+      REAL, ALLOCATABLE   :: coulomb_mt2_r(:, :, :, :, :), coulomb_mt3_r(:, :, :, :)
+      REAL, ALLOCATABLE   :: coulomb_mtir_r(:, :, :), coulombp_mtir_r(:, :)
+      COMPLEX, ALLOCATABLE   :: coulomb_mt2_c(:, :, :, :, :), coulomb_mt3_c(:, :, :, :)
+      COMPLEX, ALLOCATABLE   :: coulomb_mtir_c(:, :, :), coulombp_mtir_c(:, :)
+
       type(t_usdus)            :: usdus
       type(t_mat), allocatable :: v_x(:,:) ! (jsp, nkpt)
    contains
