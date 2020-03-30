@@ -71,13 +71,15 @@ contains
       if(allocated(coul%mtir_c)) deallocate(coul%mtir_c)
       if(allocated(coul%pmtir_c)) deallocate(coul%pmtir_c)
    end subroutine t_coul_free
+
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g)
       use m_types_fleurinput
+      use m_judft
       implicit NONE 
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:)
-      integer :: ic, idum
+      integer :: ic, idum, info
 
       ic = (maxval(fi%hybinp%lcutm1) + 1)**2 * fi%atoms%nat
       idum = ic + maxval(n_g)
@@ -86,23 +88,38 @@ contains
       if(.not. allocated(coul%mt1))then 
           allocate(coul%mt1(maxval(num_radbasfn) - 1,&
                             maxval(num_radbasfn) - 1,&
-                            0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype))
+                            0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mt1")
       endif
 
       if (fi%sym%invs) THEN
          if(.not. allocated(coul%mt2_r)) allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
                                              -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
-                                             0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat))
-         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat))
-         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g),ic + maxval(n_g)))
-         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum))
+                                             0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mt2_r")
+
+         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
+
+         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g),ic + maxval(n_g)), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mtir_r")
+
+         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%pmtir_r")
       else
          if(.not. allocated(coul%mt2_c)) allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
                                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                                0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat))
-         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat))
-         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g)))
-         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum))
+                                                0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mt2_c")
+
+         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
+
+         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g)), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%mtir_c")
+
+         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum), stat=info)
+         if(info /= 0) call judft_error("Can't allocate coul%pmtir_c")
       endif
    end subroutine t_coul_alloc
 
