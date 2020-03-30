@@ -39,7 +39,7 @@ CONTAINS
       USE m_types
       USE m_types_hybdat
       USE m_juDFT
-      USE m_constants, ONLY: pi_const, tpi_const, fpi_const
+      USE m_constants, ONLY: tpi_const, fpi_const
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -74,9 +74,8 @@ CONTAINS
       REAL                       :: rdum, rdum1, rdum2
       REAL                       :: svol, qnorm, qnorm1, qnorm2, gnorm
       REAL                       :: fcoulfac
-      REAL                       :: time1, time2
 
-      COMPLEX                    :: cdum, cdum1, cexp, csum
+      COMPLEX                    :: cdum, cexp, csum
 
       ! - local arrays -
       INTEGER                    :: g(3)
@@ -109,9 +108,8 @@ CONTAINS
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
 
-      COMPLEX     :: cexp1(fi%atoms%ntype)
       COMPLEX     :: structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt)             ! nw = 1
-      COMPLEX     :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
+      COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: smat(:, :)
       COMPLEX, ALLOCATABLE   :: coulmat(:, :)
@@ -129,8 +127,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1
       INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
-      LOGICAL                    :: l_warn, l_warned!.true.!.false.
-      TYPE(t_mat)                :: olapm, coulhlp
+      TYPE(t_mat)                :: coulhlp
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -970,7 +967,7 @@ CONTAINS
                                  = coulhlp%data_r(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1)
                            else
                               coulomb_mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype, ikpt0) &
-                                 = coulhlp%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1)
+                                 = real(coulhlp%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
                            end if
                         END DO
                      END IF
@@ -1183,16 +1180,6 @@ CONTAINS
          if (fi%sym%invs) THEN
             CALL write_coulomb_spm_r(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_r(:, :, :, :, 1), &
                                      coulomb_mt3_r(:, :, :, 1), coulombp_mtir_r(:, 1))
-!!$       print *,"DEBUG"
-!!$       DO n1=1,SIZE(coulomb_mt1,1)
-!!$          DO n2=1,SIZE(coulomb_mt1,2)
-!!$             DO i=1,SIZE(coulomb_mt1,3)
-!!$                DO j=1,SIZE(coulomb_mt1,4)
-!!$                   WRITE(732,*) n1,n2,i-1,j,coulomb_mt2_r(n1,n2,i-1,j,1)
-!!$                ENDDO
-!!$             ENDDO
-!!$          ENDDO
-!!$       ENDDO
          else
             call write_coulomb_spm_c(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_c(:, :, :, :, 1), &
                                      coulomb_mt3_c(:, :, :, 1), coulombp_mtir_c(:, 1))
@@ -1377,7 +1364,6 @@ CONTAINS
       REAL                      ::  rad, rrad, rdum
       REAL                      ::  a, a1, aa
       REAL                      ::  pref, rexp
-      REAL                      ::  time1, time2
       REAL                      ::  scale
 
       COMPLEX                   ::  cdum, cexp
@@ -1938,7 +1924,7 @@ CONTAINS
       type(t_kpts), intent(in)   :: kpts
       COMPLEX, intent(inout)     :: coulomb(:, :)
 
-      type(t_mat)     :: olap, tmp, coulhlp, coul_submtx
+      type(t_mat)     :: olap, coulhlp, coul_submtx
       integer         :: ikpt, nbasm
 
       call timestart("solve olap linear eq. sys")
@@ -2016,12 +2002,12 @@ CONTAINS
       COMPLEX, intent(inout)            :: coulmat(:, :)
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
-      integer  :: ix, iy, ic, itype, ineq, lm, l, m, itype1, ineq1, ic1, l1, m1, lm1
-      integer  :: l2, m2, lm2, n, i, j, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
+      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1
+      integer  :: l2, m2, lm2, n, i, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
       real     :: q(3), qnorm, svol
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
-      integer, allocatable :: itype_arr(:), lm_arr(:), ic_arr(:)
+      integer, allocatable :: lm_arr(:), ic_arr(:)
 
       coulmat = 0
       svol = SQRT(fi%cell%vol)
@@ -2163,7 +2149,7 @@ CONTAINS
       complex, intent(inout)            :: coulomb(:) ! only at ikpt
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, ineq, lm, m, idum, l, i
+      integer :: ic, itype, lm, m, idum, l, i
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
