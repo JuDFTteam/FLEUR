@@ -3,6 +3,14 @@ MODULE m_types_hybdat
    use m_types_mat
    IMPLICIT NONE
 
+   type t_coul
+      REAL, ALLOCATABLE      :: mt1(:, :, :, :, :)
+      REAL, ALLOCATABLE      :: mt2_r(:, :, :, :, :),   mt3_r(:, :, :, :)
+      REAL, ALLOCATABLE      :: mtir_r(:, :, :),        pmtir_r(:, :)
+      COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :, :),   mt3_c(:, :, :, :)
+      COMPLEX, ALLOCATABLE   :: mtir_c(:, :, :),        pmtir_c(:, :)
+   end type t_coul
+
    TYPE t_hybdat
       LOGICAL                ::  l_subvxc = .false.
       LOGICAL                ::  l_calhf = .false.
@@ -35,11 +43,7 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   ::  nbasm(:)
 
       ! coulomb matrix stuff
-      REAL, ALLOCATABLE   :: coulomb_mt1(:, :, :, :, :)
-      REAL, ALLOCATABLE   :: coulomb_mt2_r(:, :, :, :, :), coulomb_mt3_r(:, :, :, :)
-      REAL, ALLOCATABLE   :: coulomb_mtir_r(:, :, :), coulombp_mtir_r(:, :)
-      COMPLEX, ALLOCATABLE   :: coulomb_mt2_c(:, :, :, :, :), coulomb_mt3_c(:, :, :, :)
-      COMPLEX, ALLOCATABLE   :: coulomb_mtir_c(:, :, :), coulombp_mtir_c(:, :)
+      type(t_coul) :: coul
 
       type(t_usdus)            :: usdus
       type(t_mat), allocatable :: v_x(:,:) ! (jsp, nkpt)
