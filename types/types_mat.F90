@@ -261,7 +261,7 @@ CONTAINS
       call mat1%alloc(.true., matsize, matsize)
 
       !$OMP PARALLEL DO default(none) &
-      !$OMP shared(mat1, packed_r) private(n, nn, i) &
+      !$OMP shared(matsize, mat1, packed_r) private(n, nn, i) &
       !$OMP schedule(dynamic, 10) 
       DO n = 1, matsize
          DO nn = 1, n
@@ -285,7 +285,7 @@ CONTAINS
       call mat1%alloc(.false., matsize, matsize)
 
       !$OMP PARALLEL DO default(none) &
-      !$OMP shared(mat1, packed_c) private(n, nn, i) &
+      !$OMP shared(matsize, mat1, packed_c) private(n, nn, i) &
       !$OMP schedule(dynamic, 10) 
       DO n = 1, matsize
          DO nn = 1, n
