@@ -910,39 +910,12 @@ CONTAINS
       if(.not. allocated(hybdat%coul%mt1)) allocate(hybdat%coul%mt1(maxval(mpdata%num_radbasfn) - 1,&
                                                                           maxval(mpdata%num_radbasfn) - 1,&
                                                                           0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype, 1))
-  
-
-      ic = (maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat
-      idum = ic + maxval(mpdata%n_g)
-      idum = (idum*(idum + 1))/2
-      if (fi%sym%invs) THEN
-         if(.not. allocated(hybdat%coul%mt2_r)) allocate(hybdat%coul%mt2_r(maxval(mpdata%num_radbasfn) - 1,&
-                                                                               -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
-                                                                               0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         if(.not. allocated(hybdat%coul%mt3_r)) allocate(hybdat%coul%mt3_r(maxval(mpdata%num_radbasfn) - 1,&
-                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
-         if(.not. allocated(hybdat%coul%mtir_r)) allocate(hybdat%coul%mtir_r(ic + maxval(mpdata%n_g), &
-                                                                                   ic + maxval(mpdata%n_g), 1))
-         if(.not. allocated(hybdat%coul%pmtir_r)) allocate(hybdat%coul%pmtir_r(idum, 1))
-      else
-         if(.not. allocated(hybdat%coul%mt2_c)) allocate(hybdat%coul%mt2_c(maxval(mpdata%num_radbasfn) - 1,&
-                                                                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                                                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
-         if(.not. allocated(hybdat%coul%mt3_c)) allocate(hybdat%coul%mt3_c(maxval(mpdata%num_radbasfn) - 1, &
-                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
-         if(.not. allocated(hybdat%coul%mtir_c)) allocate(hybdat%coul%mtir_c(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
-         if(.not. allocated(hybdat%coul%pmtir_c)) allocate(hybdat%coul%pmtir_c(idum, 1))
-      endif
+        
+      call hybdat%coul%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
-         ! initialize arrays
-         if (fi%sym%invs) THEN
-            hybdat%coul%mt1 = 0; hybdat%coul%mt2_r = 0
-            hybdat%coul%mt3_r = 0; hybdat%coul%pmtir_r = 0
-         else
-            hybdat%coul%mt1 = 0; hybdat%coul%mt2_c = 0
-            hybdat%coul%mt3_c = 0; hybdat%coul%pmtir_c = 0
-         endif
+         ! initialize arrays to 0
+         call hybdat%coul%init()
          ! unpack coulomb into coulhlp
 
          !call coulhlp%from_packed(fi%sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))

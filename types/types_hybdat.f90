@@ -9,6 +9,9 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: mtir_r(:, :, :),        pmtir_r(:, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :, :),   mt3_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mtir_c(:, :, :),        pmtir_c(:, :)
+   contains 
+      procedure :: init  => t_coul_init
+      procedure :: alloc => t_coul_alloc
    end type t_coul
 
    TYPE t_hybdat
@@ -54,6 +57,53 @@ MODULE m_types_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g)
+      use m_types_fleurinput
+      implicit NONE 
+      class(t_coul), intent(inout) :: coul
+      type(t_fleurinput), intent(in)    :: fi
+      integer, intent(in) :: num_radbasfn(:, :), n_g(:)
+      integer :: ic, idum
+
+      ic = (maxval(fi%hybinp%lcutm1) + 1)**2 * fi%atoms%nat
+      idum = ic + maxval(n_g)
+      idum = (idum*(idum + 1))/2
+
+      if (fi%sym%invs) THEN
+         if(.not. allocated(coul%mt2_r)) allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
+                                                                               -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
+                                                                               0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
+         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,&
+                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
+         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g), &
+                                                                                   ic + maxval(n_g), 1))
+         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum, 1))
+      else
+         if(.not. allocated(coul%mt2_c)) allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
+                                                                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
+                                                                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat, 1))
+         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, &
+                                                                                 fi%atoms%nat, fi%atoms%nat, 1))
+         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g), 1))
+         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum, 1))
+      endif
+   end subroutine t_coul_alloc
+
+   subroutine t_coul_init(coul)
+      implicit none 
+      class(t_coul), intent(inout) :: coul
+      
+      if(allocated(coul%mt1)) coul%mt1 = 0
+
+      if(allocated(coul%mt2_r))   coul%mt2_r = 0
+      if(allocated(coul%mt3_r))   coul%mt3_r = 0
+      if(allocated(coul%pmtir_r)) coul%pmtir_r = 0
+      
+      if(allocated(coul%mt2_c))   coul%mt2_c = 0
+      if(allocated(coul%mt3_c))   coul%mt3_c = 0
+      if(allocated(coul%pmtir_c)) coul%pmtir_c = 0
+   end subroutine t_coul_init
+
    subroutine allocate_hybdat(hybdat, fi, num_radfun_per_l)
       use m_types_fleurinput
       use m_judft
