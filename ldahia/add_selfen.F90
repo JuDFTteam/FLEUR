@@ -47,13 +47,6 @@ MODULE m_add_selfen
       TYPE(t_mat) :: gmat,vmat
       LOGICAL l_match_both_spins,err
 
-      !Interval where we expect the correct mu
-      mu_a = -2.0
-      mu_b = 1.5
-      mu_step = 0.01
-      mu_max = 0.0
-      n_max = 0.0
-
       spin_match = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
       !Not tested yet for two chemical potentials, so we just take one
       spin_match=1
@@ -75,6 +68,14 @@ MODULE m_add_selfen
          WRITE(filename,9000) i_hia,i_match
          OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
+
+         !Interval where we expect the correct mu
+         mu_a = -2.0
+         mu_b = 1.5
+         mu_step = 0.01
+         mu_max = 0.0
+         n_max = 0.0
+
          mu = mu_a
          start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
          end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
