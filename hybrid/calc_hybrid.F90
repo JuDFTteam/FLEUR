@@ -102,14 +102,16 @@ CONTAINS
       CALL timestop("generation of mixed basis")
 
 
-      if(mpi%irank == 0) then
-         CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
-         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
-         call close_hybinp_io2()
-      endif
+      if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+      do i =1,fi%kpts%nkpt
+         call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
+      enddo
 
-      call hybmpi%barrier()
-      CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
+      if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+
+      do i =1,fi%kpts%nkpt
+         call hybdat%coul(i)%mpi_ibc(fi, hybmpi)
+      enddo
 
       CALL hf_init(eig_id, mpdata, fi, hybdat)
       CALL timestop("Preparation for hybrid functionals")

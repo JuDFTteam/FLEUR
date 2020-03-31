@@ -102,7 +102,7 @@ CONTAINS
       ! local scalars
       INTEGER                 ::  iband, iband1, jq, iq
       INTEGER                 ::  i, ierr
-      INTEGER                 ::  j
+      INTEGER                 ::  j, iq_p
       INTEGER                 ::  n, n1, n2, nn, nn2
       INTEGER                 ::  nkqpt
       INTEGER                 ::  ok
@@ -126,17 +126,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
-
-      REAL                 :: coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype)
-      REAL                 :: coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat)
-      REAL                 :: coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat)
-      COMPLEX              :: coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat)
-      COMPLEX              :: coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat)
-
-      REAL                 :: coulomb_mtir_r(((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g))* &
-                                             ((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g) + 1)/2)
-      COMPLEX              :: coulomb_mtir_c(((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g))* &
-                                             ((maxval(fi%hybinp%lcutm1) + 1)**2*fi%atoms%nat + maxval(mpdata%n_g) + 1)/2)
 
       LOGICAL              :: occup(fi%input%neig)
       CALL timestart("valence exchange calculation")
@@ -183,19 +172,7 @@ CONTAINS
          IF (hybdat%nbasm(iq) /= n) call judft_error('error hybdat%nbasm')
          nn = n*(n + 1)/2
 
-         ! read in coulomb matrix from direct access file coulomb
-         IF (mat_ex%l_real) THEN
-            CALL read_coulomb_spm_r(fi%kpts%bkp(iq), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
-         ELSE
-            CALL read_coulomb_spm_c(fi%kpts%bkp(iq), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
-         END IF
-
-         IF (fi%kpts%bkp(iq) /= iq) THEN
-            IF ((fi%kpts%bksym(iq) > fi%sym%nop) .and. (.not. mat_ex%l_real)) THEN
-               coulomb_mt2_c = conjg(coulomb_mt2_c)
-               coulomb_mtir_c = conjg(coulomb_mtir_c)
-            END IF
-         END IF
+         iq_p = fi%kpts%bkp(iq)
 
          IF (mat_ex%l_real) THEN
             CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
@@ -239,20 +216,27 @@ CONTAINS
          END IF
 
          ! calculate exchange matrix at iq
-
          call timestart("exchange matrix")
+         ! finish coulomb bcast
+         call hybdat%coul(iq_p)%mpi_wait()
          DO n1 = 1, hybdat%nbands(ik)
             DO iband = 1, hybdat%nobd(nkqpt, jsp)
                cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0
-                  CALL spmvec_invs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
-                                   coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
+                  CALL spmvec_invs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, hybdat%coul(iq_p)%mt2_r, &
+                                   hybdat%coul(iq_p)%mt3_r, hybdat%coul(iq_p)%pmtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                ELSE
                   carr1_v_c(:n) = 0
-                  CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
-                                     coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
+                  if(fi%kpts%bksym(iq) > fi%sym%nop) then
+                     CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, conjg(hybdat%coul(iq_p)%mt2_c),&
+                                       hybdat%coul(iq_p)%mt3_c, conjg(hybdat%coul(iq_p)%pmtir_c), cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
+                  else 
+                     CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, hybdat%coul(iq_p)%mt2_c,&
+                                        hybdat%coul(iq_p)%mt3_c, hybdat%coul(iq_p)%pmtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
+                  endif
+
                END IF
                call timestop("sparse matrix products")
 
