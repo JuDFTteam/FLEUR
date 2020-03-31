@@ -265,6 +265,8 @@ CONTAINS
     enddo
     DEALLOCATE (eig)
 
+    IF (m_spins == 2) nspins = 2
+
     attributes = ''
     WRITE(attributes(1),'(f20.10)') results%ef
     WRITE(attributes(2),'(a)') 'Htr'
