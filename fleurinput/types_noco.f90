@@ -143,7 +143,7 @@ MODULE m_types_noco
 
     !Warning on strange choice of switches
     IF (this%l_mtNocoPot.AND..NOT.this%l_mperp) THEN
-    	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='types_noco')
+    	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='types_noco.f90')
     END IF
     END SUBROUTINE read_xml_noco
 
