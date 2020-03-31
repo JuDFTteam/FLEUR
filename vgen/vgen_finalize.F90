@@ -92,7 +92,7 @@ CONTAINS
                8025 FORMAT(2x,'Bfield before SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
             END DO
          END IF
-         
+
          CALL timestart("Purging source terms in B-field")
 
          CALL timestart("Building B")
@@ -127,10 +127,10 @@ CONTAINS
                8026 FORMAT(2x,'Bfield after SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
             END DO
          END IF
-         
+
       END IF
 
-      IF ((sliceplot%iplot.NE.0 )) THEN
+      IF (sliceplot%iplot.NE.0 ) THEN
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
          !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
