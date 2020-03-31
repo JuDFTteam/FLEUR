@@ -47,7 +47,7 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   ::  nbasm(:)
 
       ! coulomb matrix stuff
-      type(t_coul) :: coul
+      type(t_coul), allocatable :: coul(:)
 
       type(t_usdus)            :: usdus
       type(t_mat), allocatable :: v_x(:,:) ! (jsp, nkpt)
@@ -85,7 +85,7 @@ contains
       idum = ic + maxval(n_g)
       idum = (idum*(idum + 1))/2
 
-      if(.not. allocated(coul%mt1))then 
+      if(.not. allocated(coul%mt1)) then 
           allocate(coul%mt1(maxval(num_radbasfn) - 1,&
                             maxval(num_radbasfn) - 1,&
                             0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), stat=info)
