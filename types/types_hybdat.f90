@@ -17,6 +17,7 @@ MODULE m_types_hybdat
       procedure :: free     => t_coul_free
       procedure :: mpi_ibc  => t_coul_mpi_ibc
       procedure :: mpi_wait => t_coul_mpi_wait
+      procedure :: size_MB  => t_coul_size_MB
    end type t_coul
 
    TYPE t_hybdat
@@ -62,6 +63,27 @@ MODULE m_types_hybdat
    END TYPE t_hybdat
 
 contains
+   function t_coul_size_MB(coul) result(size_MB)
+      implicit none 
+      class(t_coul), intent(in) :: coul
+      real  :: size_MB 
+
+      size_MB = 0
+      
+      ! real parts
+      if(allocated(coul%mt1))     size_MB = size_MB + 8 * 1e-6 * size(coul%mt1) 
+      if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
+      if(allocated(coul%mtir_r))  size_MB = size_MB + 8 * 1e-6 * size(coul%mtir_r) 
+      if(allocated(coul%pmtir_r)) size_MB = size_MB + 8 * 1e-6 * size(coul%pmtir_r) 
+
+      ! complex parts
+      if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
+      if(allocated(coul%mtir_c))  size_MB = size_MB + 16 * 1e-6 * size(coul%mtir_r) 
+      if(allocated(coul%pmtir_c)) size_MB = size_MB + 16 * 1e-6 * size(coul%pmtir_r) 
+   end function
+
    subroutine t_coul_mpi_wait(coul)
       use m_judft
       use mpi
@@ -78,7 +100,7 @@ contains
       endif
    end subroutine t_coul_mpi_wait
 
-   subroutine t_coul_mpi_ibc(coul, fi, hybmpi)
+   subroutine t_coul_mpi_ibc(coul, fi, hybmpi, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
@@ -87,8 +109,9 @@ contains
       class(t_coul)                  :: coul
       type(t_fleurinput), intent(in) :: fi
       type(t_hybmpi), intent(in)     :: hybmpi
+      integer, intent(in)            :: root
       integer :: ierr
-      integer, parameter :: root = 0
+
       call MPI_IBcast(coul%mt1, size(coul%mt1), MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(1), ierr)
       if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1 failed")
 

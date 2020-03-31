@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
       USE m_types
       USE m_types_hybdat
       USE m_juDFT
@@ -55,7 +55,8 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)           :: mpi
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
-      TYPE(t_hybdat), INTENT(INOUT)        :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+      integer, intent(in)               :: my_k_list(:)
 
       ! - local scalars -
       INTEGER                    :: inviop
@@ -909,6 +910,8 @@ CONTAINS
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
+      ! DO i = 1,size(my_k_list)
+      !    ikpt = my_k_list(i)
          ! initialize arrays to 0
          call hybdat%coul(ikpt)%init()
          ! unpack coulomb into coulhlp

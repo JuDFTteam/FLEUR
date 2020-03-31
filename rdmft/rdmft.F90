@@ -381,10 +381,10 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    !CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
 
-   if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+   if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(i,i=1,fi%kpts%nkpt)])
    call hybmpi%copy_mpi(mpi)
    do i =1,fi%kpts%nkpt
-      call hybdat%coul(i)%mpi_ibc(fi, hybmpi)
+      call hybdat%coul(i)%mpi_ibc(fi, hybmpi, 0)
    enddo
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
