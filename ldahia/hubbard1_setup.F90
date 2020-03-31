@@ -216,6 +216,10 @@ MODULE m_hubbard1_setup
       i_hia_end   = atoms%n_hia
 #endif
 
+#ifdef CPP_MPI
+      !Make sure that the ranks are synchronized
+      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
 
       mmpMat = cmplx_0
       !------------------------------------------------------------
