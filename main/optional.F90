@@ -12,11 +12,7 @@ CONTAINS
     !----------------------------------------
     ! this routine is called by: fleur.F90
     !
-    ! optional --+-- plot -+- loddop
-    !            |         +- outcdn -+- starf2 -- spgrot
-    !            |                    +- starf3
-    !            |                    +- ylm3
-    !            +-- stden -+- atom2 -+- setcor
+    ! optional  stden -+- atom2 -+- setcor
     !            |          |         +- stpot1
     !            |          |         +- differ -+- inwint
     !            |          |         |          +- outint
@@ -87,13 +83,6 @@ CONTAINS
 #endif
     !     ..
     it = 1
-
- !   IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
- !      IF (noco%l_noco) THEN
- !         CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
- !              cell,input,noco,oneD,sliceplot)
- !      ENDIF
- !   ENDIF
 
 
     !

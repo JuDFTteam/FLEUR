@@ -126,6 +126,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
+   type(t_hybmpi)    :: hybmpi
 
    complex :: c_phase(fi%input%neig)
 
@@ -378,9 +379,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
+   !CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
 
-   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+   if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+   call hybmpi%copy_mpi(mpi)
+   do i =1,fi%kpts%nkpt
+      call hybdat%coul(i)%mpi_ibc(fi, hybmpi)
+   enddo
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
 

@@ -906,12 +906,11 @@ CONTAINS
       !
       ! rearrange coulomb matrix
       !
-       
-      call hybdat%coul%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
+      if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
          ! initialize arrays to 0
-         call hybdat%coul%init()
+         call hybdat%coul(ikpt)%init()
          ! unpack coulomb into coulhlp
 
          !call coulhlp%from_packed(fi%sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
@@ -936,10 +935,10 @@ CONTAINS
                      IF (ineq == 1) THEN
                         DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                            if (coulhlp%l_real) THEN
-                              hybdat%coul%mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                              hybdat%coul(ikpt)%mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
                                  = coulhlp%data_r(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1)
                            else
-                              hybdat%coul%mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                              hybdat%coul(ikpt)%mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
                                  = real(coulhlp%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
                            end if
                         END DO
@@ -964,10 +963,10 @@ CONTAINS
                   DO l = 0, fi%hybinp%lcutm1(itype)
                      DO M = -l, l
                         if (coulhlp%l_real) THEN
-                           hybdat%coul%mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                           hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
                               = coulhlp%data_r(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype))
                         else
-                           hybdat%coul%mt2_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                           hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
                               = coulhlp%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype))
                         endif
 
@@ -996,9 +995,9 @@ CONTAINS
                      iatom = iatom + 1
                      DO n = 1, mpdata%num_radbasfn(0, itype) - 1
                         if (coulhlp%l_real) THEN
-                           hybdat%coul%mt2_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulhlp%data_r(ic + n, hybdat%nbasp + 1)
+                           hybdat%coul(ikpt)%mt2_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulhlp%data_r(ic + n, hybdat%nbasp + 1)
                         else
-                           hybdat%coul%mt2_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulhlp%data_c(ic + n, hybdat%nbasp + 1)
+                           hybdat%coul(ikpt)%mt2_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulhlp%data_c(ic + n, hybdat%nbasp + 1)
                         endif
                      END DO
                      ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
@@ -1027,9 +1026,9 @@ CONTAINS
                            ic4 = ic3 + mpdata%num_radbasfn(0, itype1) - 2
 
                            IF (fi%sym%invs) THEN
-                              hybdat%coul%mt3_r(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) = coulhlp%data_r(ic1, ic3:ic4)
+                              hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) = coulhlp%data_r(ic1, ic3:ic4)
                            ELSE
-                              hybdat%coul%mt3_c(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) &
+                              hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) &
                                  = CONJG(coulhlp%data_c(ic1, ic3:ic4))
                            ENDIF
                            ic2 = ic2 + ishift1
@@ -1046,13 +1045,13 @@ CONTAINS
                   DO ineq = 1, fi%atoms%neq(itype)
                      iatom = iatom + 1
                      if (fi%sym%invs) THEN
-                        IF (MAXVAL(ABS(hybdat%coul%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
-                                       - hybdat%coul%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
+                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
+                                       - hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
 
                      else
-                        IF (MAXVAL(ABS(hybdat%coul%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0,iatom) &
-                                       - hybdat%coul%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom,iatom))) > 1E-08) &
+                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0,iatom) &
+                                       - hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom,iatom))) > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
                      endif
                   END DO
@@ -1097,11 +1096,11 @@ CONTAINS
                                  IF (indx4 < indx3) CYCLE
                                  IF (calc_mt(ikpt)) THEN
                                     IF (fi%sym%invs) THEN
-                                       hybdat%coul%mtir_r(indx1, indx2) = coulhlp%data_r(indx3, indx4)
-                                       hybdat%coul%mtir_r(indx2, indx1) = hybdat%coul%mtir_r(indx1, indx2)
+                                       hybdat%coul(ikpt)%mtir_r(indx1, indx2) = coulhlp%data_r(indx3, indx4)
+                                       hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
                                     ELSE
-                                       hybdat%coul%mtir_c(indx1, indx2) = coulhlp%data_c(indx3, indx4)
-                                       hybdat%coul%mtir_c(indx2, indx1) = CONJG(hybdat%coul%mtir_c(indx1, indx2))
+                                       hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulhlp%data_c(indx3, indx4)
+                                       hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
                                     ENDIF
                                  END IF
                               END DO
@@ -1112,11 +1111,11 @@ CONTAINS
                      DO igpt = 1, mpdata%n_g(ikpt)
                         indx2 = indx2 + 1
                         IF (fi%sym%invs) THEN
-                           hybdat%coul%mtir_r(indx1, indx2) = coulhlp%data_r(indx3, hybdat%nbasp + igpt)
-                           hybdat%coul%mtir_r(indx2, indx1) = hybdat%coul%mtir_r(indx1, indx2)
+                           hybdat%coul(ikpt)%mtir_r(indx1, indx2) = coulhlp%data_r(indx3, hybdat%nbasp + igpt)
+                           hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
                         ELSE
-                           hybdat%coul%mtir_c(indx1, indx2) = coulhlp%data_c(indx3, hybdat%nbasp + igpt)
-                           hybdat%coul%mtir_c(indx2, indx1) = CONJG(hybdat%coul%mtir_c(indx1, indx2))
+                           hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulhlp%data_c(indx3, hybdat%nbasp + igpt)
+                           hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
                         ENDIF
 
                      END DO
@@ -1133,30 +1132,18 @@ CONTAINS
          ! add ir part to the matrix coulomb_mtir
          !
          if (fi%sym%invs) THEN
-            hybdat%coul%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
+            hybdat%coul(ikpt)%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                = coulhlp%data_r(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
-            hybdat%coul%pmtir_r(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul%mtir_r(:ic2, :ic2))
+            hybdat%coul(ikpt)%pmtir_r(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_r(:ic2, :ic2))
          else
-            hybdat%coul%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
+            hybdat%coul(ikpt)%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                = coulhlp%data_c(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
-            hybdat%coul%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul%mtir_c(:ic2, :ic2))
+            hybdat%coul(ikpt)%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_c(:ic2, :ic2))
          end if
-         call timestart("write coulomb_spm")
-         if (fi%sym%invs) THEN
-            CALL write_coulomb_spm_r(ikpt, hybdat%coul%mt1(:, :, :, :), hybdat%coul%mt2_r(:, :, :, :), &
-                                     hybdat%coul%mt3_r(:, :, :), hybdat%coul%pmtir_r(:))
-         else
-            call write_coulomb_spm_c(ikpt, hybdat%coul%mt1(:, :, :, :), hybdat%coul%mt2_c(:, :, :, :), &
-                                     hybdat%coul%mt3_c(:, :, :), hybdat%coul%pmtir_c(:))
-         endif
-         call timestop("write coulomb_spm")
-
       END DO ! ikpt
       call timestop("loop bla")
-
-      call hybdat%coul%free()
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
