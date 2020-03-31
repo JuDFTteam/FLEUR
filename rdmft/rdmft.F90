@@ -380,7 +380,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
 
-   CALL coulombmatrix(mpi,fi%atoms,fi%kpts,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,xcpot)
+   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
 

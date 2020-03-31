@@ -20,6 +20,7 @@ MODULE m_constants
   INTEGER,          PARAMETER :: valenceState_const = 2
   INTEGER,          PARAMETER :: lmaxU_const = 3
   COMPLEX,          PARAMETER :: cmplx_0=(0.0,0.0)
+  COMPLEX,          PARAMETER :: cmplx_1=(1.0,0.0)
   REAL,             PARAMETER :: pi_const=3.1415926535897932
   REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
   REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932

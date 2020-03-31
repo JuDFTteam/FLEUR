@@ -91,10 +91,10 @@ CONTAINS
      ! - local arrays -
      INTEGER, ALLOCATABLE    ::    pointer(:, :, :), gpt0(:, :)
      INTEGER                 ::    g(3)
-
+   
      REAL                    ::    rarr1(1:MAXVAL(hybdat%nobd(:, jsp)))
      REAL                    ::    rarr2(1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk))
-     REAL, ALLOCATABLE       ::    z0(:, :)
+     REAL, ALLOCATABLE       ::    z0(:, :), rtmp(:,:,:)
 
 
 
@@ -144,28 +144,36 @@ CONTAINS
      call timestop("step function")
 
      call timestart("hybrid g")
-     ic = hybdat%nbasp
+     allocate(rtmp(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(nk),mpdata%n_g(iq)), source=0.0)
+     !$OMP PARALLEL DO default(none) &
+     !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
+     !$OMP shared(mpdata, lapw, pointer, hybdat, rtmp, z0, z_k, g_t, jsp, iq, nk) &
+     !$OMP collapse(2)
      DO igptm = 1, mpdata%n_g(iq)
-        rarr2 = 0
-        ic = ic + 1
-        iigptm = mpdata%gptm_ptr(igptm, iq)
-
         DO ig1 = 1, lapw%nv(jsp)
+           iigptm = mpdata%gptm_ptr(igptm, iq)
            g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
            ig2 = pointer(g(1), g(2), g(3))
 
            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
 
            DO n1 = 1, hybdat%nbands(nk)
-              rdum1 = z_k%data_r(ig1, n1)
               DO n2 = 1, MAXVAL(hybdat%nobd(:, jsp))
-                 rarr2(n2, n1) = rarr2(n2, n1) + rdum1*z0(n2, ig2)
+                 rtmp(n2, n1, igptm) = rtmp(n2, n1, igptm) + z_k%data_r(ig1, n1)*z0(n2, ig2)
               END DO
            END DO
-
         END DO
-        cprod(ic, :, :) = rarr2(:, :)
      END DO
+     !$OMP END PARALLEL DO
+
+     call timestart("copy to cprod")
+     do igptm =1,mpdata%n_g(iq)
+      ic = hybdat%nbasp + igptm
+      cprod(ic,:,:) = rtmp(:,:,igptm)
+     enddo
+     call timestop("copy to cprod")
+
+     deallocate(rtmp)
      call timestop("hybrid g")
      call timestop("calc convolution")
 

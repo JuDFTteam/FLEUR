@@ -259,14 +259,18 @@ CONTAINS
       INTEGER:: n, nn, i
       call timestart("t_mat_from_packed_real")
       call mat1%alloc(.true., matsize, matsize)
-      i = 1
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP shared(matsize, mat1, packed_r) private(n, nn, i) &
+      !$OMP schedule(dynamic, 10) 
       DO n = 1, matsize
          DO nn = 1, n
+            i = ((n-1)*n)/2 + nn 
             mat1%data_r(n, nn) = packed_r(i)
             mat1%data_r(nn, n) = packed_r(i)
-            i = i + 1
          end DO
       end DO
+      !$OMP END PARALLEL DO
       call timestop("t_mat_from_packed_real")
    end SUBROUTINE t_mat_from_packed_real
 
@@ -279,39 +283,52 @@ CONTAINS
       INTEGER:: n, nn, i
       call timestart("t_mat_from_packed_cmplx")
       call mat1%alloc(.false., matsize, matsize)
-      i = 1
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP shared(matsize, mat1, packed_c) private(n, nn, i) &
+      !$OMP schedule(dynamic, 10) 
       DO n = 1, matsize
          DO nn = 1, n
+            i = ((n-1)*n)/2 + nn 
             mat1%data_c(n, nn) = conjg(packed_c(i))
             mat1%data_c(nn, n) = packed_c(i)
             i = i + 1
          end DO
       end DO
+      !$OMP END PARALLEL DO
       call timestop("t_mat_from_packed_cmplx")
    end SUBROUTINE t_mat_from_packed_cmplx
 
    function t_mat_to_packed(mat) result(packed)
-      CLASS(t_mat), INTENT(IN)       :: mat
+      CLASS(t_mat), INTENT(IN)      :: mat
       COMPLEX                       :: packed(mat%matsize1*(mat%matsize1 + 1)/2)
       integer :: n, nn, i
       real, parameter :: tol = 1e-5
       if (mat%matsize1 .ne. mat%matsize2) call judft_error("Could not pack no-square matrix", hint='This is a BUG, please report')
-      i = 1
-      DO n = 1, mat%matsize1
-         DO nn = 1, n
-            if (mat%l_real) THEN
+
+      if (mat%l_real) THEN
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(mat, packed) private(n, nn, i) &
+         !$OMP schedule(dynamic, 10) 
+         DO n = 1, mat%matsize1
+            DO nn = 1, n
+               i = ((n-1)*n)/2 + nn 
                packed(i) = (mat%data_r(n, nn) + mat%data_r(nn, n))/2.
-               if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) then
-                  call judft_warn("Large unsymmetry in matrix packing n = " // int2str(n) // " nn = " // int2str(nn) // new_line("A") //&
-                                  "mat%data_r(n, nn) = " // float2str(mat%data_r(n, nn)) // " mat%data_r(nn, n) = " // float2str(mat%data_r(nn, n)) )
-               endif
-            else
-               packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
-               if (abs(conjg(mat%data_c(n, nn)) - mat%data_c(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
-            endif
-            i = i + 1
+            end DO
          end DO
-      end DO
+         !$OMP END PARALLEL DO
+      else
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(mat, packed) private(n, nn, i) &
+         !$OMP schedule(dynamic, 10) 
+         DO n = 1, mat%matsize1
+            DO nn = 1, n
+               i = ((n-1)*n)/2 + nn 
+               packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
+            end DO
+         end DO
+         !$OMP END PARALLEL DO
+      endif
    end function t_mat_to_packed
 
    subroutine t_mat_inverse(mat)
