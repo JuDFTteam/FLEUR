@@ -309,9 +309,8 @@ MODULE m_hubbard1_setup
       ENDDO
 
 
-      IF(mpi%irank.EQ.0) THEN
 #ifdef CPP_HDF
-
+      IF(mpi%irank.EQ.0) THEN
          !------------------------------
          !Write out DFT Green's Function
          !------------------------------
@@ -329,8 +328,9 @@ MODULE m_hubbard1_setup
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
-#endif
       ENDIF
+#endif
+
 
       !Collect the density matrix to rank 0
       n = SIZE(mmpMat)
