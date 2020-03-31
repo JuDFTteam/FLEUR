@@ -163,15 +163,6 @@ CONTAINS
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
-
-
-
-
-    IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
-       CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
-                      fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
-    END IF
-
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -204,7 +195,7 @@ CONTAINS
 
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.true.,l_real,fi%noco%l_soc,.false.,mpi%n_size)
-  IF(fi%noco%l_alignMT.AND.mpi%irank==0) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+  IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,fi%input,fi%atoms,fi%kpts,fi%noco,l_real)
@@ -242,7 +233,11 @@ CONTAINS
        CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
 
-
+!Plot inden if wanted
+IF (fi%sliceplot%iplot.NE.0) THEN
+   CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
+                  fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+END IF
        !HF
        IF (fi%hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
@@ -474,7 +469,14 @@ CONTAINS
 !!$             END IF
 
              ! total energy
-             IF (fi%noco%l_alignMT.AND.mpi%irank==0) CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
+             IF (fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
+                CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
+             END IF
+#ifdef CPP_MPI
+                CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+                CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+#endif
+
 
              CALL timestart('determination of total energy')
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
@@ -490,8 +492,14 @@ CONTAINS
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
             fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
-            IF(fi%noco%l_alignMT.AND.mpi%irank==0) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+            IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
+               CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
                   ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+            END IF
+#ifdef CPP_MPI
+               CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+#endif
+
 !Plots of mixed density
 !       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
 !               CDN including core charge
@@ -564,7 +572,7 @@ CONTAINS
        END IF
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-       IF(fi%sliceplot%iplot.NE.0) THEN
+       IF(fi%sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
