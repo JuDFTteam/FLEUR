@@ -17,9 +17,9 @@ try:
 
 
    if(te.parallel):
-      te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary])
+      te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary, "-trace"])
    else:
-      te.run([te.binary])
+      te.run([te.binary, "-trace"])
 
 
    te.check_value_outfile("HF total energy=", "htr", [-1063.8587731477, -1063.8383730939], 0.000001)
