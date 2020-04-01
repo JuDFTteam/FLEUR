@@ -94,7 +94,6 @@ CONTAINS
 
       REAL                       :: q(3), q1(3), q2(3)
       REAL                       :: integrand(fi%atoms%jmtd), primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
-      REAL                       :: mat(maxval(mpdata%num_radbasfn)*(maxval(mpdata%num_radbasfn) + 1)/2)
       REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), &
                                     moment2(maxval(mpdata%num_radbasfn), fi%atoms%ntype)
       REAL                       :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
@@ -113,7 +112,6 @@ CONTAINS
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: smat(:, :)
-      COMPLEX, ALLOCATABLE   :: coulmat(:, :)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
       COMPLEX, ALLOCATABLE   :: structconst1(:, :)
 
@@ -123,11 +121,13 @@ CONTAINS
       INTEGER                    :: ishift, ishift1
       INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: coulhlp
+      TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
       if (mpi%is_root()) write (*, *) "start of coulomb calculation"
+
+      call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
 
       svol = SQRT(fi%cell%vol)
       fcoulfac = fpi_const/fi%cell%vol
@@ -160,6 +160,7 @@ CONTAINS
 
       allocate (coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0, 0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
+      call coul_mtmt%alloc(.False., hybdat%maxbasm1, hybdat%maxbasm1)
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
@@ -384,6 +385,8 @@ CONTAINS
             DO ineq = 1, fi%atoms%neq(itype)
                ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
                DO l = 0, fi%hybinp%lcutm1(itype)
+                  mat%matsize1=mpdata%num_radbasfn(l, itype)
+                  mat%matsize2=mpdata%num_radbasfn(l, itype)
                   DO n2 = 1, mpdata%num_radbasfn(l, itype)
                      ! note that mpdata%radbasfn_mt already contains the factor rgrid
                      CALL primitivef(primf1, mpdata%radbasfn_mt(:, n2, l, itype) &
@@ -399,9 +402,7 @@ CONTAINS
 
                      DO n1 = 1, n2
                         integrand = mpdata%radbasfn_mt(:, n1, l, itype)*(primf1 + primf2)
-                        !                 call intgr0( (4*pimach())/(2*l+1)*integrand,rmsh(1,itype),dx(itype),jri(itype),mat(n2*(n2-1)/2+n1) )
-                        mat(n2*(n2 - 1)/2 + n1) = (fpi_const)/(2*l + 1) &
-                                                  *intgrf(integrand, fi%atoms, itype, gridf)
+                        mat%data_r(n1, n2) = fpi_const/(2*l + 1) * intgrf(integrand, fi%atoms, itype, gridf)
                      END DO
                   END DO
 
@@ -414,7 +415,7 @@ CONTAINS
                            iy = iy + 1
                            i = ix*(ix - 1)/2 + iy
                            j = n2*(n2 - 1)/2 + n1
-                           coulomb(i, fi%kpts%nkpt) = mat(j)
+                           coul_mtmt%data_c(ix, iy) = mat%data_r(n1, n2)
                         END DO
                      END DO
                      iy0 = ix
@@ -424,12 +425,10 @@ CONTAINS
             END DO
          END DO
          call timestop("loop 1")
+         
+         call coul_mtmt%l2u()
 
-         !       (1b) r,r' in different MT
-
-         allocate (coulmat(hybdat%nbasp, hybdat%nbasp), stat=ok)
-         IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
-         coulmat = 0
+         call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
       END IF
 
@@ -467,12 +466,11 @@ CONTAINS
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
                                           idum = ix*(ix - 1)/2 + iy
-                                          coulmat(iy, ix) = coulomb(idum, fi%kpts%nkpt) &
-                                                            + EXP(CMPLX(0.0, 1.0)*tpi_const* &
-                                                                  dot_PRODUCT(fi%kpts%bk(:, ikpt), &
-                                                                              fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
-                                                            *rdum*structconst(lm, ic1, ic2, ikpt)
-                                          coulmat(ix, iy) = CONJG(coulmat(iy, ix))
+                                          coulmat%data_c(iy, ix) = coul_mtmt%data_c(ix,iy) & !coulomb(idum, fi%kpts%nkpt) &
+                                                               + EXP(CMPLX(0.0, 1.0)*tpi_const* &
+                                                                     dot_PRODUCT(fi%kpts%bk(:, ikpt), &
+                                                                                 fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
+                                                               *rdum*structconst(lm, ic1, ic2, ikpt)
                                        END DO
                                     END DO
                                  END DO
@@ -484,21 +482,21 @@ CONTAINS
                   END DO
                END DO
             END DO
-
+            
+            call coulmat%u2l()
             IF (fi%sym%invs) THEN
-               !symmetrize makes the Coulomb matrix real symmetric
-               CALL symmetrize(coulmat, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
-                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
-                               mpdata%num_radbasfn, fi%sym)
+               !symmetrize makes the Coulomb matrix real symmetric               
+               CALL symmetrize(coulmat%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
+                  fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
+                  mpdata%num_radbasfn, fi%sym)
             ENDIF
 
-            coulomb(:hybdat%nbasp*(hybdat%nbasp + 1)/2, ikpt) = packmat(coulmat)
-
+            coulomb(:hybdat%nbasp*(hybdat%nbasp + 1)/2, ikpt) = coulmat%to_packed()
          END IF
          call timestop("MT-MT part")
 
       END DO
-      IF (ANY(calc_mt)) deallocate (coulmat)
+      IF (ANY(calc_mt)) call coulmat%free()
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
@@ -510,24 +508,24 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         allocate (coulmat(hybdat%nbasp, maxval(mpdata%n_g)), stat=ok)
-         IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
+         call coulmat%alloc(.False., hybdat%nbasp, maxval(mpdata%n_g))
 
          call timestart("loop over interst.")
          DO ikpt = 1, fi%kpts%nkpt !1,fi%kpts%nkpt
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat%data_c)
             M = hybdat%nbasp*(hybdat%nbasp + 1)/2
             DO i = 1, mpdata%n_g(ikpt)
                DO j = 1, hybdat%nbasp + i
                   M = M + 1
-                  IF (j <= hybdat%nbasp) coulomb(M, ikpt) = coulmat(j, i)
+                  IF (j <= hybdat%nbasp) coulomb(M, ikpt) = coulmat%data_c(j, i)
                END DO
             END DO
          END DO
          call timestop("loop over interst.")
 
-         deallocate (coulmat, olap, integral)
+         call coulmat%free()
+         deallocate (olap, integral)
 
          !
          !     (3) Case < PW | v | PW >
