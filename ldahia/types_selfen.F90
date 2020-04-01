@@ -1,0 +1,128 @@
+MODULE m_types_selfen
+
+   !------------------------------------------------------------------------
+   !This type contains the array for the selfenergy from the impurity solver
+   !We separate the individual elements because the number of energy points
+   !can differ massively and would lead to wasted storage
+   !------------------------------------------------------------------------
+
+   USE m_constants
+
+   IMPLICIT NONE
+
+   PRIVATE
+
+   TYPE t_selfen
+
+      INTEGER :: l = -1
+
+      COMPLEX, ALLOCATABLE :: data(:,:,:,:)
+
+      CONTAINS
+         PROCEDURE, PASS :: init    => init_selfen
+         PROCEDURE       :: collect => collect_selfen
+         PROCEDURE       :: postProcess => postProcess_selfen
+
+   END TYPE t_selfen
+
+   PUBLIC t_selfen
+
+   CONTAINS
+
+      SUBROUTINE init_selfen(this,l,nz)
+
+         CLASS(t_selfen), INTENT(INOUT) :: this
+         INTEGER,         INTENT(IN)    :: l
+         INTEGER,         INTENT(IN)    :: nz
+
+         this%l = l
+         ALLOCATE(this%data(2*(2*l+1),2*(2*l+1),nz,2),source = cmplx_0)
+
+      END SUBROUTINE init_selfen
+
+      SUBROUTINE collect_selfen(this,mpi_comm)
+
+         CLASS(t_selfen),     INTENT(INOUT) :: this
+         INTEGER,             INTENT(IN)    :: mpi_comm
+#ifdef CPP_MPI
+         include 'mpif.h'
+#include"cpp_double.h"
+         INTEGER:: ierr,irank,n
+         COMPLEX,ALLOCATABLE::ctmp(:)
+
+         CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+
+         n = SIZE(this%data)
+         ALLOCATE(ctmp(n))
+         CALL MPI_REDUCE(this%data,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%data,1)
+         DEALLOCATE(ctmp)
+#endif
+
+      END SUBROUTINE collect_selfen
+
+      SUBROUTINE postProcess_selfen(this,jspins,l_mperp,vmmp)
+
+         CLASS(t_selfen), INTENT(INOUT) :: this
+         INTEGER,         INTENT(IN)    :: jspins
+         LOGICAL,         INTENT(IN)    :: l_mperp
+         COMPLEX,         INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
+
+         INTEGER :: i,j,iz,ipm,m,mp,ispin,ns
+         COMPLEX,ALLOCATABLE :: tmp(:,:)
+         COMPLEX,ALLOCATABLE :: tmp_off(:,:)
+
+         ns = 2*this%l+1
+
+         ALLOCATE(tmp(2*ns,2*ns),source=cmplx_0)
+         ALLOCATE(tmp_off(ns,ns),source=cmplx_0)
+
+         !Transformation matrix
+         tmp = 0.0
+         tmp_off = 0.0
+         DO i = 1, ns
+            tmp(i,ns+i) = 1.0
+            tmp(ns+i,i) = 1.0
+            tmp_off(i,ns-i+1) = 1.0
+         ENDDO
+
+         DO iz = 1, SIZE(this%data,3)
+            DO ipm = 1, 2
+               !---------------------------------------------
+               ! Convert the selfenergy to hartree
+               !---------------------------------------------
+               this%data(:,:,iz,ipm) = this%data(:,:,iz,ipm)/hartree_to_ev_const
+               !---------------------------------------------
+               ! The order of spins is reversed in the Solver
+               !---------------------------------------------
+               this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),tmp)
+               this%data(:,:,iz,ipm) = matmul(tmp,this%data(:,:,iz,ipm))
+               !---------------------------------------------------------------------
+               ! The DFT green's function also includes the previous DFT+U correction
+               ! This is removed by substracting it from the selfenergy
+               !---------------------------------------------------------------------
+               DO i = 1, ns
+                  DO j = 1, ns
+                     m  = i-1-this%l
+                     mp = j-1-this%l
+                     DO ispin = 1, MERGE(3,jspins,l_mperp)
+                        IF(ispin < 3) THEN
+                           this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) = this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) &
+                                                                             - REAL(vmmp(m,mp,ispin))/(3.0-jspins)
+                           IF(jspins.EQ.1) this%data(i+ns,j+ns,iz,ipm) = this%data(i+ns,j+ns,iz,ipm) - REAL(vmmp(-m,-mp,ispin))/(3.0-jspins)
+                        ELSE
+                           !----------------------------------------------------------------------------
+                           ! The offdiagonal elements only have to be removed if they are actually added
+                           ! to the hamiltonian (so noco%l_mperp and noco%l_mtNocoPot)
+                           !----------------------------------------------------------------------------
+                           this%data(i+ns,j,iz,ipm) = this%data(i+ns,j,iz,ipm) - vmmp(m,mp,ispin)
+                           this%data(i,j+ns,iz,ipm) = this%data(i,j+ns,iz,ipm) - conjg(vmmp(mp,m,ispin))
+                        ENDIF
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+      END SUBROUTINE postProcess_selfen
+
+END MODULE m_types_selfen

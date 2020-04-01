@@ -8,6 +8,7 @@ MODULE m_hubbard1_setup
    USE m_denmat_dist
    USE m_greensfUtils
    USE m_hubbard1_io
+   USE m_types_selfen
    USE m_add_selfen
    USE m_mpi_bc_tool
    USE m_greensf_io
@@ -53,6 +54,7 @@ MODULE m_hubbard1_setup
       CHARACTER(len=2)   :: l_type
       CHARACTER(len=9)   :: l_form
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
+      TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
@@ -63,7 +65,7 @@ MODULE m_hubbard1_setup
       REAL    :: n_l(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX, ALLOCATABLE :: e(:)
-      COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:),ctmp(:)
+      COMPLEX, ALLOCATABLE :: ctmp(:)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -190,8 +192,8 @@ MODULE m_hubbard1_setup
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
-      ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),MAXVAL(gdft(:)%contour%nz),2,atoms%n_hia),source=cmplx_0)
       ALLOCATE(gu(atoms%n_hia))
+      ALLOCATE(selfen(atoms%n_hia))
 
       !Argument order different because n_l is not allocatable
       CALL mpi_bc(mpi%irank,mpi%mpi_comm,n_l)
@@ -199,6 +201,7 @@ MODULE m_hubbard1_setup
       DO i_hia = 1, atoms%n_hia
          i_gf = gfinp%hiaElem(i_hia)
          CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
+         CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz)
       ENDDO
 
 #ifdef CPP_MPI
@@ -249,16 +252,14 @@ MODULE m_hubbard1_setup
               status="replace", action="write", iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
          e = gdft(i_hia)%contour%e*hartree_to_ev_const
-         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
-                                selfen(:,:,:gdft(i_hia)%contour%nz,1,i_hia),1,hubbardioUnit)
+         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(i_hia)%data(:,:,:,1),1,hubbardioUnit)
          !---------------------------------------------------
          ! Calculate selfenergy on lower contour explicitly
          ! Mainly out of paranoia :D
          ! No rediagonalization (last argument switches this)
          !---------------------------------------------------
          e = conjg(gdft(i_hia)%contour%e)*hartree_to_ev_const
-         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,&
-                                selfen(:,:,:gdft(i_hia)%contour%nz,2,i_hia),0,hubbardioUnit)
+         CALL EDsolver_from_cfg(2*(2*l+1),gdft(i_hia)%contour%nz,e,selfen(i_hia)%data(:,:,:,2),0,hubbardioUnit)
          CLOSE(hubbardioUnit, iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
 #endif
@@ -270,23 +271,8 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         DO ipm = 1, 2
-            DO iz = 1, gdft(i_hia)%contour%nz
-               !---------------------------------------------
-               ! Convert the selfenergy to hartree
-               !---------------------------------------------
-               selfen(:,:,iz,ipm,i_hia) = selfen(:,:,iz,ipm,i_hia)/hartree_to_ev_const
-               !---------------------------------------------
-               ! The order of spins is reversed in the Solver
-               !---------------------------------------------
-               CALL swapSpin(selfen(:,:,iz,ipm,i_hia),2*l+1)
-               !---------------------------------------------------------------------
-               ! The DFT green's function also includes the previous DFT+U correction
-               ! This is removed by substracting it from the selfenergy
-               !---------------------------------------------------------------------
-               CALL removeU(selfen(:,:,iz,ipm,i_hia),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
-            ENDDO
-         ENDDO
+         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+
          !----------------------------------------------------------------------
          ! Solution of the Dyson Equation
          !----------------------------------------------------------------------
@@ -297,7 +283,7 @@ MODULE m_hubbard1_setup
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
          CALL timestart("Hubbard 1: Add Selfenenergy")
-         CALL add_selfen(gdft(i_hia),i_hia,selfen(:,:,:,:,i_hia),atoms,gfinp,input,noco,hub1inp,&
+         CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),atoms,gfinp,input,noco,hub1inp,&
                          results%ef,n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenenergy")
 
@@ -306,6 +292,7 @@ MODULE m_hubbard1_setup
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%collect(gfinp,mpi%mpi_comm)
+         CALL selfen(i_hia)%collect(mpi%mpi_comm)
       ENDDO
 
 
@@ -360,73 +347,6 @@ MODULE m_hubbard1_setup
       CALL mpi_bc(den%mmpMat,mpi%irank,mpi%mpi_comm)
 
    END SUBROUTINE hubbard1_setup
-
-   SUBROUTINE swapSpin(mat,ns)
-
-      COMPLEX,       INTENT(INOUT) :: mat(:,:)
-      INTEGER,       INTENT(IN)    :: ns
-
-      COMPLEX tmp(2*ns,2*ns),tmp_off(ns,ns)
-      INTEGER i,j
-
-      !Transformation matrix
-      tmp = 0.0
-      tmp_off = 0.0
-      DO i = 1, ns
-         tmp(i,ns+i) = 1.0
-         tmp(ns+i,i) = 1.0
-         tmp_off(i,ns-i+1) = 1.0
-      ENDDO
-      !WRITE(*,*) "BEFORE"
-      !WRITE(*,"(14f8.5)") REAL(mat)
-      mat = matmul(mat,tmp)
-      mat = matmul(tmp,mat)
-
-      !mat(1:ns,ns+1:2*ns) = matmul(mat(1:ns,ns+1:2*ns),tmp_off)
-      !mat(1:ns,ns+1:2*ns) = transpose(matmul(tmp_off,mat(1:ns,ns+1:2*ns)))
-
-      !mat(ns+1:2*ns,1:ns) = matmul(mat(ns+1:2*ns,1:ns),tmp_off)
-      !mat(ns+1:2*ns,1:ns) = transpose(matmul(tmp_off,mat(ns+1:2*ns,1:ns)))
-
-      !WRITE(*,*) "AFTER"
-      !WRITE(*,"(14f8.5)") REAL(mat)
-
-   END SUBROUTINE swapSpin
-
-
-   SUBROUTINE removeU(mat,l,jspins,l_vmperp,vmmp)
-
-      COMPLEX,       INTENT(INOUT) :: mat(:,:)
-      INTEGER,       INTENT(IN)    :: l
-      INTEGER,       INTENT(IN)    :: jspins
-      LOGICAL,       INTENT(IN)    :: l_vmperp
-      COMPLEX,       INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
-
-      INTEGER ns,i,j,m,mp,ispin
-
-      ns = 2*l+1
-
-      DO i = 1, ns
-         DO j = 1, ns
-            m  = i-1-l
-            mp = j-1-l
-            DO ispin = 1, MERGE(3,jspins,l_vmperp)
-               IF(ispin < 3) THEN
-                  mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - REAL(vmmp(m,mp,ispin))/(3.0-jspins)
-                  IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - REAL(vmmp(-m,-mp,ispin))/(3.0-jspins)
-               ELSE
-                  !----------------------------------------------------------------------------
-                  ! The offdiagonal elements only have to be removed if they are actually added
-                  ! to the hamiltonian (so noco%l_mperp and noco%l_mtNocoPot)
-                  !----------------------------------------------------------------------------
-                  mat(i+ns,j) = mat(i+ns,j) - vmmp(m,mp,ispin)
-                  mat(i,j+ns) = mat(i,j+ns) - conjg(vmmp(mp,m,ispin))
-               ENDIF
-            ENDDO
-         ENDDO
-      ENDDO
-   END SUBROUTINE removeU
-
 
    SUBROUTINE hubbard1_path(atoms,i_hia,xPath)
 

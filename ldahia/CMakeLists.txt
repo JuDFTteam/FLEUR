@@ -6,4 +6,5 @@ ldahia/hubbard1_setup.F90
 ldahia/mudc.f90
 ldahia/denmat_dist.f90
 ldahia/add_selfen.F90
+ldahia/types_selfen.F90
 )

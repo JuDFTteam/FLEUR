@@ -1,6 +1,7 @@
 MODULE m_add_selfen
 
    USE m_types
+   USE m_types_selfen
    USE m_constants
    USE m_juDFT
    USE m_greensfUtils
@@ -32,7 +33,7 @@ MODULE m_add_selfen
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:)
+      TYPE(t_selfen),   INTENT(IN)     :: selfen
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(:)
       TYPE(t_greensf),  INTENT(INOUT)  :: gp
@@ -85,7 +86,7 @@ MODULE m_add_selfen
             DO ipm = 1, 2
                DO iz = 1, g%contour%nz
                   !Read selfenergy
-                  vmat%data_c = selfen(start:end,start:end,iz,ipm)
+                  vmat%data_c = selfen%data(start:end,start:end,iz,ipm)
                   IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
                      !Dismiss spin-off-diagonal elements
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0
@@ -145,7 +146,7 @@ MODULE m_add_selfen
             DO ipm = 1, 2
                DO iz = 1, g%contour%nz
                   !Read selfenergy
-                  vmat%data_c = selfen(start:end,start:end,iz,ipm)
+                  vmat%data_c = selfen%data(start:end,start:end,iz,ipm)
                   IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
                      !Dismiss spin-off-diagonal elements
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0
