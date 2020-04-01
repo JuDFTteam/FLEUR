@@ -40,6 +40,18 @@ MODULE m_types_mat
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   function t_mat_norm2(mat) result(norm)
+      implicit none 
+      class(t_mat), intent(in) :: mat
+      real :: norm 
+
+      if (mat%l_real) then
+         norm = norm2(mat%data_r)
+      else
+         norm = norm2(abs(mat%data_c))
+      endif
+   end function t_mat_norm2
+   
    function t_mat_allocated(mat) result(var_alloc)
       implicit none
       class(t_mat), intent(in) :: mat
