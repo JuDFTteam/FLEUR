@@ -106,11 +106,11 @@ MODULE m_types_greensf
 
          CALL this%contour%mpi_bc(mpi_comm,irank)
 
-         CALL mpi_bc(this%gmmpMat,rank,mpi_comm)
-         CALL mpi_bc(this%uu,rank,mpi_comm)
-         CALL mpi_bc(this%ud,rank,mpi_comm)
-         CALL mpi_bc(this%du,rank,mpi_comm)
-         CALL mpi_bc(this%dd,rank,mpi_comm)
+         IF(ALLOCATED(this%gmmpMat)) CALL mpi_bc(this%gmmpMat,rank,mpi_comm)
+         IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)
+         IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
+         IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
+         IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
 
       END SUBROUTINE mpi_bc_greensf
 
