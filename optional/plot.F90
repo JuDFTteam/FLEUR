@@ -42,14 +42,15 @@ CONTAINS
       LOGICAL :: oldform,newform
 
       oldform=.FALSE.
-      INQUIRE(file="plotin",exist = oldform)
+      IF(mpi%irank.EQ.0) INQUIRE(file="plotin",exist = oldform)
 
       IF (oldform) THEN
-         IF(mpi%irank.EQ.0) CALL juDFT_error("Use of plotin file no longer supported", calledby="plot")
+          CALL juDFT_error("Use of plotin file no longer supported", calledby="plot")
       END IF
-      INQUIRE(file="plot_inp",exist = newform)
+      newform=.FALSE.
+      IF(mpi%irank.EQ.0) INQUIRE(file="plot_inp",exist = newform)
       IF (newform) THEN
-        IF(mpi%irank.EQ.0) CALL juDFT_error("Use of plot_inp file no longer supported", calledby="plot")
+         CALL juDFT_error("Use of plot_inp file no longer supported", calledby="plot")
       END IF
 
 
