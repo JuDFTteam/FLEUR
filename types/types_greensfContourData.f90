@@ -34,7 +34,8 @@ MODULE m_types_greensfContourData
          this%nz = contour_in%nz
          ALLOCATE(this%e(this%nz),source=cmplx_0)
          ALLOCATE(this%de(this%nz),source=cmplx_0)
-         this%e = contour_in%e
+
+         this%e  = contour_in%e
          this%de = contour_in%de
       ELSE
          SELECT CASE(contourInp%shape)

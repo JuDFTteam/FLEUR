@@ -52,7 +52,8 @@ contains
     type(t_potden),    intent(inout) :: outDen
     type(t_results),   intent(inout) :: results
     type(t_potden),    intent(inout) :: inDen
-    integer,           intent(in)    :: archiveType, iteration
+    integer,           intent(in)    :: archiveType
+    integer,           intent(inout) :: iteration
     LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
@@ -169,6 +170,7 @@ contains
        !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
        inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
        IF(l_runhia) THEN
+          iteration = 1
           CALL mixing_history_reset(mpi)
           CALL mixvector_reset()
        ENDIF
