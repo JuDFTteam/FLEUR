@@ -166,6 +166,18 @@ CONTAINS
     cell%amat(:,1) = aa*SCALE(:)*a1(:)
     cell%amat(:,2) = aa*SCALE(:)*a2(:)
     cell%amat(:,3) = aa*SCALE(:)*a3(:)
+
+    !convert to right-handed unit cell if it is left-handed so far
+    CALL inv3(cell%amat,cell%bmat,det)
+    IF(det.LT.0.0) THEN
+       cell%amat(:,3) = -cell%amat(:,3)
+       DO n = 1, SIZE(atom_pos,2)
+          atom_pos(3,n) = -atom_pos(3,n)
+       END DO
+       WRITE(*,*) 'Provided unit cell is left-handed. Converting it to right-handed system by inverting a(3)'
+       WRITE(6,*) 'Provided unit cell is left-handed. Converting it to right-handed system by inverting a(3)'
+    END IF
+
     CALL cell%init(0.0)
 
   END SUBROUTINE read_inpgen_input
