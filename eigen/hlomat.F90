@@ -196,8 +196,8 @@ CONTAINS
                             dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
                             utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
                             dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
-                            ulotu=CONJG(tlmplm%tuulo(lm,mp,lop+mlo,jsp,isp))
-                            ulotd=CONJG(tlmplm%tdulo(lm,mp,lop+mlo,jsp,isp))
+                            ulotu=CONJG(tlmplm%ulotu(lm,mp,lop+mlo,jsp,isp))
+                            ulotd=CONJG(tlmplm%ulotd(lm,mp,lop+mlo,jsp,isp))
                             !--->                         note that lo > lop
                             IF (lo>lop) THEN
                                lolop = ((lo-1)*lo)/2 + lop
@@ -250,8 +250,8 @@ CONTAINS
                          dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
                          utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
                          dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
-                         ulotu = tlmplm%ulotu(lmp,m,lo+mlo,jsp,isp)
-                         ulotd = tlmplm%ulotd(lmp,m,lo+mlo,jsp,isp)
+                         ulotu = conjg(tlmplm%ulotu(lm,mp,lo+mlo,jsp,isp))
+                         ulotd = conjg(tlmplm%ulotd(lm,mp,lo+mlo,jsp,isp))
                          lolo = ((lo-1)*lo)/2 + lo
                          ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,jsp,isp))
                          axx = CONJG(abclo(1,m,nkvec,lo,2))*utu +&

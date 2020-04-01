@@ -115,6 +115,7 @@ CONTAINS
     DO lo = 1,atoms%nlo(ntyp)
        l = atoms%llo(lo,ntyp)
        DO m = -l,l
+          lm=l*(l+1)+m
           !--->       loop over the lattice harmonics
           DO lh = lh0,sphhar%nlh(sym%ntypsy(na))
              lpp = sphhar%llh(lh,sym%ntypsy(na))
@@ -139,11 +140,11 @@ CONTAINS
                         tlmplm%tuulo(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*uvulo(lo,lp,lh)
                    tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) = &
                         tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*dvulo(lo,lp,lh)
-                  cil = ((ImagUnit** (l-lp))*conjg(sphhar%clnu(mem,lh,sym%ntypsy(na))))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                  !cil = conjg(((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,sym%ntypsy(na))))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                   tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) = &
-                        tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*uvulo(lo,lp,lh)
+                        tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) + conjg(one)*cil*uvulo(lo,lp,lh)
                    tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) = &
-                        tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*dvulo(lo,lp,lh)
+                        tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) + conjg(one)*cil*dvulo(lo,lp,lh)
                 END DO
              END DO
           END DO
@@ -188,14 +189,22 @@ CONTAINS
                   ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) )
              tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
                   ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) ) + 0.5 * usdus%uulon(lo,ntyp,jspin1)
-             IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
+            tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uulon(lo,ntyp,jspin1) *&
+                  ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) )
+            tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
+                 ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) ) + 0.5 * usdus%uulon(lo,ntyp,jspin1)
+            IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                 tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
                 tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
+                tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
+                tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
              ENDIF
              !+apw_lo
              IF (atoms%l_dulo(lo,ntyp)) THEN
                 tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5
                 tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = 0.0
+                tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5
+                tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = 0.0
              ENDIF
              !+apw_lo
           END DO
