@@ -29,6 +29,7 @@ set(fleur_F90 ${fleur_F90}
    hybrid/wavefproducts_inv.f90
    hybrid/wavefproducts_noinv.f90
    hybrid/calc_l_m_from_lm.f90
+   hybrid/calc_mpsmat.f90
    hybrid/util/util.f90
    hybrid/util/rorder.f90
    hybrid/util/intgrf.f90

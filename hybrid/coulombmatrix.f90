@@ -49,6 +49,7 @@ CONTAINS
       use m_ylm
       use m_sphbes, only: sphbes
       use m_calc_l_m_from_lm
+      use m_calc_mpsmat
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -111,7 +112,6 @@ CONTAINS
       COMPLEX     :: structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt)             ! nw = 1
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
-      COMPLEX, ALLOCATABLE   :: smat(:, :)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
       COMPLEX, ALLOCATABLE   :: structconst1(:, :)
 
@@ -121,7 +121,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1
       INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat
+      TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat, smat
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -532,33 +532,8 @@ CONTAINS
          !
          !     (3a) r,r' everywhere; r everywhere, r' in MT; r in MT, r' everywhere
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
-         call timestart("calc smat")
-         allocate (smat(mpdata%num_gpts(), mpdata%num_gpts()))
-         smat = 0
-         DO igpt2 = 1, mpdata%num_gpts()
-            DO igpt1 = 1, igpt2
-               g = mpdata%g(:, igpt2) - mpdata%g(:, igpt1)
-               gnorm = gptnorm(g, fi%cell%bmat)
-               IF (abs(gnorm) < 1e-12) THEN
-                  DO itype = 1, fi%atoms%ntype
-                     smat(igpt1, igpt2) = smat(igpt1, igpt2) + fi%atoms%neq(itype)*fpi_const*fi%atoms%rmt(itype)**3/3
-                  END DO
-               ELSE
-                  ic = 0
-                  DO itype = 1, fi%atoms%ntype
-                     rdum = fi%atoms%rmt(itype)*gnorm
-                     rdum = fpi_const*(SIN(rdum) - rdum*COS(rdum))/gnorm**3
-                     DO ineq = 1, fi%atoms%neq(itype)
-                        ic = ic + 1
-                        smat(igpt1, igpt2) = smat(igpt1, igpt2) &
-                                             + rdum*EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(fi%atoms%taual(:, ic), g))
-                     END DO
-                  END DO
-               END IF
-               smat(igpt2, igpt1) = CONJG(smat(igpt1, igpt2))
-            END DO
-         END DO
-         call timestop("calc smat")
+
+         call calc_mpsmat(fi, mpdata, smat)
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
@@ -583,13 +558,13 @@ CONTAINS
 
                   IF (ikpt == 1) THEN
                      IF (igpt1 /= 1) THEN
-                        coulomb(idum, 1) = -smat(igptp1, igptp2)*rdum1/fi%cell%vol
+                        coulomb(idum, 1) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol
                      END IF
                      IF (igpt2 /= 1) THEN
-                        coulomb(idum, 1) = coulomb(idum, 1) - smat(igptp1, igptp2)*rdum2/fi%cell%vol
+                        coulomb(idum, 1) = coulomb(idum, 1) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
                      END IF
                   ELSE
-                     coulomb(idum, ikpt) = -smat(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
+                     coulomb(idum, ikpt) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
                   END IF
                END DO
                IF (ikpt /= 1 .OR. igpt2 /= 1) THEN                  !
