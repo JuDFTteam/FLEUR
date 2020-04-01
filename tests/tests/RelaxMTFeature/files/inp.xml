@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      bcc Fe  
+      bcc Fe
    </comment>
    <calculationSetup>
       <cutoffs Kmax="2.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
-      <scfLoop itmax="5" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <scfLoop itmax="20" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="t" swsp="F" lflip="f"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
@@ -28,7 +28,7 @@
             <row-2>0 1 0 .0000000000</row-2>
             <row-3>0 0 1 .0000000000</row-3>
          </symOp>
-        
+
       </symmetryOperations>
    </calculationSetup>
    <cell>
@@ -73,7 +73,7 @@
       <atomGroup species="Fe-1">
          <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta="Pi*.2500000000"/>
+         <nocoParams l_relax="F" alpha=".00000000" beta="0.00000"/>
       </atomGroup>
       <atomGroup species="Fe-2">
          <relPos label="                   2">1.000/2.000 1.000/2.000 1.000/2.000</relPos>

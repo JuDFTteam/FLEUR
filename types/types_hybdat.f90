@@ -9,10 +9,15 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: mtir_r(:, :),        pmtir_r(:)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
       COMPLEX, ALLOCATABLE   :: mtir_c(:, :),        pmtir_c(:)
+      integer  :: bcast_req(5)
+      logical  :: bcast_finished = .False.
    contains 
-      procedure :: init  => t_coul_init
-      procedure :: alloc => t_coul_alloc
-      procedure :: free  => t_coul_free
+      procedure :: init     => t_coul_init
+      procedure :: alloc    => t_coul_alloc
+      procedure :: free     => t_coul_free
+      procedure :: mpi_ibc  => t_coul_mpi_ibc
+      procedure :: mpi_wait => t_coul_mpi_wait
+      procedure :: size_MB  => t_coul_size_MB
    end type t_coul
 
    TYPE t_hybdat
@@ -58,10 +63,92 @@ MODULE m_types_hybdat
    END TYPE t_hybdat
 
 contains
+   function t_coul_size_MB(coul) result(size_MB)
+      implicit none 
+      class(t_coul), intent(in) :: coul
+      real  :: size_MB 
+
+      size_MB = 0
+      
+      ! real parts
+      if(allocated(coul%mt1))     size_MB = size_MB + 8 * 1e-6 * size(coul%mt1) 
+      if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
+      if(allocated(coul%mtir_r))  size_MB = size_MB + 8 * 1e-6 * size(coul%mtir_r) 
+      if(allocated(coul%pmtir_r)) size_MB = size_MB + 8 * 1e-6 * size(coul%pmtir_r) 
+
+      ! complex parts
+      if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
+      if(allocated(coul%mtir_c))  size_MB = size_MB + 16 * 1e-6 * size(coul%mtir_r) 
+      if(allocated(coul%pmtir_c)) size_MB = size_MB + 16 * 1e-6 * size(coul%pmtir_r) 
+   end function
+
+   subroutine t_coul_mpi_wait(coul)
+      use m_judft
+      use mpi
+      implicit none 
+      class(t_coul)                 :: coul
+      integer :: ierr, i 
+      
+      if(.not. coul%bcast_finished) then      
+         do i = 1,size(coul%bcast_req)
+            call MPI_WAIT(coul%bcast_req(i), MPI_STATUS_IGNORE, ierr)
+            if(ierr /= 0) call judft_error("Error in MPI_wait for coul%bcast_req no. " // int2str(i))
+         enddo
+         coul%bcast_finished = .True.
+      endif
+   end subroutine t_coul_mpi_wait
+
+   subroutine t_coul_mpi_ibc(coul, fi, hybmpi, root)
+      use m_types_fleurinput
+      use m_types_hybmpi
+      use m_judft
+      use mpi
+      implicit none 
+      class(t_coul)                  :: coul
+      type(t_fleurinput), intent(in) :: fi
+      type(t_hybmpi), intent(in)     :: hybmpi
+      integer, intent(in)            :: root
+      integer :: ierr
+
+      call MPI_IBcast(coul%mt1, size(coul%mt1), MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(1), ierr)
+      if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1 failed")
+
+      if (fi%sym%invs) THEN
+         call MPI_IBcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(2), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
+
+         call MPI_IBcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(3), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
+
+         call MPI_IBcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(4), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
+
+         call MPI_IBcast(coul%pmtir_r, size(coul%pmtir_r), MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(5), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%pmtir_r failed")
+      else 
+         call MPI_IBcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(2), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
+
+         call MPI_IBcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(3), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
+
+         call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(4), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
+
+         call MPI_IBcast(coul%pmtir_c, size(coul%pmtir_c), MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(5), ierr)
+         if(ierr /= 0) call judft_error("MPI_IBcast of coul%pmtir_r failed")
+      endif
+
+      coul%bcast_finished = .False.
+   end subroutine t_coul_mpi_ibc
+
    subroutine t_coul_free(coul)
       implicit none 
       class(t_coul), intent(inout) :: coul 
 
+      if(allocated(coul%mt1)) deallocate(coul%mt1)
       if(allocated(coul%mt2_r)) deallocate(coul%mt2_r)
       if(allocated(coul%mt3_r)) deallocate(coul%mt3_r)
       if(allocated(coul%mtir_r)) deallocate(coul%mtir_r)
@@ -93,33 +180,49 @@ contains
       endif
 
       if (fi%sym%invs) THEN
-         if(.not. allocated(coul%mt2_r)) allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
-                                             -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
-                                             0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mt2_r")
+         if(.not. allocated(coul%mt2_r)) then
+            allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
+                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
+                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mt2_r")
+         endif
 
-         if(.not. allocated(coul%mt3_r)) allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
+         if(.not. allocated(coul%mt3_r)) then
+             allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
+         endif 
 
-         if(.not. allocated(coul%mtir_r)) allocate(coul%mtir_r(ic + maxval(n_g),ic + maxval(n_g)), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mtir_r")
+         if(.not. allocated(coul%mtir_r)) then
+            allocate(coul%mtir_r(ic + maxval(n_g),ic + maxval(n_g)), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mtir_r")
+         endif 
 
-         if(.not. allocated(coul%pmtir_r)) allocate(coul%pmtir_r(idum), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%pmtir_r")
+         if(.not. allocated(coul%pmtir_r)) then
+            allocate(coul%pmtir_r(idum), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%pmtir_r")
+         endif
       else
-         if(.not. allocated(coul%mt2_c)) allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
-                                                -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                                0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mt2_c")
+         if(.not. allocated(coul%mt2_c)) then
+            allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
+                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
+                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mt2_c")
+         endif 
 
-         if(.not. allocated(coul%mt3_c)) allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
+         if(.not. allocated(coul%mt3_c)) then
+            allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
+         endif 
 
-         if(.not. allocated(coul%mtir_c)) allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g)), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%mtir_c")
+         if(.not. allocated(coul%mtir_c)) then
+            allocate(coul%mtir_c(ic + maxval(n_g), ic + maxval(n_g)), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%mtir_c")
+         endif 
 
-         if(.not. allocated(coul%pmtir_c)) allocate(coul%pmtir_c(idum), stat=info)
-         if(info /= 0) call judft_error("Can't allocate coul%pmtir_c")
+         if(.not. allocated(coul%pmtir_c)) then 
+            allocate(coul%pmtir_c(idum), stat=info)
+            if(info /= 0) call judft_error("Can't allocate coul%pmtir_c")
+         endif
       endif
    end subroutine t_coul_alloc
 

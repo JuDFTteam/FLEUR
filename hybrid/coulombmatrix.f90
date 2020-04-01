@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot)
+   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
       USE m_types
       USE m_types_hybdat
       USE m_juDFT
@@ -55,7 +55,8 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)           :: mpi
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
-      TYPE(t_hybdat), INTENT(INOUT)        :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+      integer, intent(in)               :: my_k_list(:)
 
       ! - local scalars -
       INTEGER                    :: inviop
@@ -909,8 +910,9 @@ CONTAINS
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
+      ! DO i = 1,size(my_k_list)
+      !    ikpt = my_k_list(i)
          ! initialize arrays to 0
-         call hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
          call hybdat%coul(ikpt)%init()
          ! unpack coulomb into coulhlp
 
@@ -1143,21 +1145,8 @@ CONTAINS
             ic2 = indx1 + mpdata%n_g(ikpt)
             hybdat%coul(ikpt)%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_c(:ic2, :ic2))
          end if
-         call timestart("write coulomb_spm")
-         if (fi%sym%invs) THEN
-            CALL write_coulomb_spm_r(ikpt, hybdat%coul(ikpt)%mt1(:, :, :, :), hybdat%coul(ikpt)%mt2_r(:, :, :, :), &
-                                     hybdat%coul(ikpt)%mt3_r(:, :, :), hybdat%coul(ikpt)%pmtir_r(:))
-         else
-            call write_coulomb_spm_c(ikpt, hybdat%coul(ikpt)%mt1(:, :, :, :), hybdat%coul(ikpt)%mt2_c(:, :, :, :), &
-                                     hybdat%coul(ikpt)%mt3_c(:, :, :), hybdat%coul(ikpt)%pmtir_c(:))
-         endif
-         call timestop("write coulomb_spm")
       END DO ! ikpt
       call timestop("loop bla")
-
-      do ikpt = 1, fi%kpts%nkpt
-         call hybdat%coul(ikpt)%free()
-      enddo
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix

@@ -195,7 +195,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
-         IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
+#ifdef CPP_MPI
+               CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
+#endif
+      IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 

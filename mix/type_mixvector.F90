@@ -294,11 +294,12 @@ CONTAINS
 
   END FUNCTION mixvector_metric
 
-  SUBROUTINE init_metric(oneD, vacuum)
+  SUBROUTINE init_metric(vacuum, stars)
     USE m_metrz0
     IMPLICIT NONE
-    TYPE(t_oned), INTENT(in)::oneD
-    TYPE(t_vacuum), INTENT(in)::vacuum
+    !TYPE(t_oned),   INTENT(in) :: oneD
+    TYPE(t_vacuum), INTENT(in) :: vacuum
+    TYPE(t_stars),  INTENT(in) :: stars
 
     INTEGER:: i, n, l, j, ivac, iz, iv2c, k2, iv2
     REAL:: dxn, dxn2, dxn4, dvol, volnstr2
@@ -348,7 +349,7 @@ CONTAINS
        dvol = cell%area*vacuum%delz
        ! nvac=1 if (zrfs.or.invs)
        IF (vacuum%nvac .EQ. 1) dvol = dvol + dvol
-       IF (oneD%odi%d1) dvol = cell%area*vacuum%delz
+       !IF (oneD%odi%d1) dvol = cell%area*vacuum%delz
        DO ivac = 1, vacuum%nvac
           ! G||=0 components
           !
@@ -357,30 +358,30 @@ CONTAINS
           CALL metr_z0(vacuum%nmz, wght)
           DO iz = 1, vacuum%nmz
              i = i + 1
-             IF (oneD%odi%d1) THEN
-                g_vac(i) = wght(iz)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
-             ELSE
+             !IF (oneD%odi%d1) THEN
+             !   g_vac(i) = wght(iz)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
+             !ELSE
                 g_vac(i) = wght(iz)*dvol
-             END IF
+             !END IF
           END DO
           ! G||.ne.0 components
           !
           ! calculate weights for integration
           CALL metr_z0(vacuum%nmzxy, wght)
           DO iv2c = 1, iv2
-             DO k2 = 1, oneD%odi%nq2 - 1
-                IF (oneD%odi%d1) THEN
-                   DO iz = 1, vacuum%nmzxy
-                      i = i + 1
-                      g_vac(i) = wght(iz)*oneD%odi%nst2(k2)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
-                   END DO
-                ELSE
+             DO k2 = 1, stars%ng2 - 1
+                !IF (oneD%odi%d1) THEN
+                !   DO iz = 1, vacuum%nmzxy
+                !      i = i + 1
+                !      g_vac(i) = wght(iz)*oneD%odi%nst2(k2)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
+                !   END DO
+                !ELSE
                    volnstr2 = dvol*stars%nstr2(k2)
                    DO iz = 1, vacuum%nmzxy
                       i = i + 1
                       g_vac(i) = wght(iz)*volnstr2
                    END DO
-                END IF
+                !END IF
              END DO
           END DO
        END DO
@@ -520,7 +521,7 @@ CONTAINS
           END IF
        END IF
     END DO
-    CALL init_metric(oneD, vacuum)
+    CALL init_metric(vacuum, stars)
   END SUBROUTINE mixvector_init
   SUBROUTINE mixvector_alloc(vec)
     IMPLICIT NONE
