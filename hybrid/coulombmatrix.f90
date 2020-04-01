@@ -466,7 +466,7 @@ CONTAINS
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
                                           idum = ix*(ix - 1)/2 + iy
-                                          coulmat%data_c(iy, ix) = coul_mtmt%data_c(ix,iy) & !coulomb(idum, fi%kpts%nkpt) &
+                                          coulmat%data_c(iy, ix) = coul_mtmt%data_c(ix,iy) &
                                                                + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                      dot_PRODUCT(fi%kpts%bk(:, ikpt), &
                                                                                  fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
