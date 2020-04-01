@@ -332,12 +332,14 @@ MODULE m_hubbard1_setup
 #endif
 
 
+#ifdef CPP_MPI
       !Collect the density matrix to rank 0
       n = SIZE(mmpMat)
       ALLOCATE(ctmp(n))
       CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
       IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
+#endif
 
 
       results%last_mmpMatdistance = 0.0
