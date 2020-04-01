@@ -162,6 +162,7 @@ CONTAINS
             ENDDO
 
             DO i_addArg = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/addArg')
+
                WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/addArg[',i_addArg,']'
                IF(i_addArg>n_maxaddArgs) CALL juDFT_error("Too many additional arguments provided. Maximum is 5.",&
                                                           calledby="read_xml_hub1inp")
@@ -176,7 +177,7 @@ CONTAINS
                   ENDIF
                ENDDO
 
-               SELECT CASE(key)
+               SELECT CASE(TRIM(ADJUSTL(key)))
                CASE('xiSOC')
                   !Do not get soc from DFT and use provided value
                   IF(this%l_soc_given(i_hia)) CALL juDFT_error("Two SOC parameters provided",calledby="read_xml_hub1inp")
