@@ -65,13 +65,15 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
       fleg2(l) = REAL(l)/REAL(l+1)
       fl2p1(l) = REAL(l+l+1)/fpi_const
    END DO ! l
-!$OMP     PARALLEL DEFAULT(NONE)&
-!$OMP     SHARED(lapw,atoms,nococonv,mpi,input,usdus,smat,hmat)&
-!$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)&
-!$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
-!$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
-!$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
-!$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
+#ifndef _OPENACC
+  !$OMP     PARALLEL DEFAULT(NONE)&
+  !$OMP     SHARED(lapw,atoms,nococonv,mpi,input,usdus,smat,hmat)&
+  !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)&
+  !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
+  !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
+  !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
+  !$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
+#endif
    ALLOCATE(cph_re(NVEC),cph_im(NVEC))
    ALLOCATE(dot(NVEC),fct(NVEC),fct2(NVEC))
    ALLOCATE(plegend(NVEC,0:2))
@@ -79,7 +81,15 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
    qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
+!$acc enter data create(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)
+!$acc enter data create(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln,w1,apw_lo1,apw_lo2,ddnln,elall,fct)
+!$acc enter data create(VecHelpS,VecHelpH,NVEC_rem)
+!$acc enter data copyin(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)
+!$acc enter data copyin(lapw,atoms,nococonv,mpi,input,usdus)
+!$acc kernels present(hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
+#ifndef _OPENACC
 !$OMP      DO SCHEDULE(DYNAMIC,1)
+#endif
    DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
       kii=(ki-1)/mpi%n_size+1
       ski(1:3) = lapw%gvec(1:3,ki,jintsp) + qssbti(1:3)
@@ -175,10 +185,20 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 
       !--->    end loop over ki
    ENDDO
-!$OMP     END DO
+#ifndef _OPENACC
+   !$OMP     END DO
+#endif
+   !$acc end kernels
+   !$acc exit data delete(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)
+   !$acc exit data delete(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln,w1,apw_lo1,apw_lo2,ddnln,elall,fct)
+   !$acc exit data delete(VecHelpS,VecHelpH,NVEC_rem)
+   !$acc exit data delete(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)
+   !$acc exit data delete(lapw,atoms,nococonv,mpi,input,usdus)
    DEALLOCATE(plegend)
    DEALLOCATE(VecHelpS,VecHelpH)
-!$OMP     END PARALLEL
+#ifndef _OPENACC
+   !$OMP     END PARALLEL
+#endif
    CALL timestop("spherical setup")
 
    RETURN
