@@ -37,9 +37,87 @@ MODULE m_types_mat
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
       PROCEDURE        :: unsymmetry => t_mat_unsymmetry
       procedure        :: norm2 => t_mat_norm2
+      procedure        :: subtract => t_mat_subtract
+      procedure        :: u2l => t_mat_u2l
+      procedure        :: l2u => t_mat_l2u
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   ! copy lower triangle to upper triangle
+   subroutine t_mat_l2u(mat)
+      implicit none 
+      class(t_mat), intent(inout) :: mat 
+      integer :: i,j 
+
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+
+      if(mat%l_real) then  
+         do i = 1,mat%matsize1 
+            do j = 1,i-1
+               mat%data_r(j,i) = mat%data_r(i,j)
+            enddo 
+         enddo
+      else         
+         do i = 1,mat%matsize1 
+            do j = 1,i-1
+               mat%data_c(j,i) = conjg(mat%data_c(i,j))
+            enddo 
+         enddo
+      endif
+   end subroutine t_mat_l2u
+
+   ! copy upper triangle to lower triangle
+   subroutine t_mat_u2l(mat)
+      implicit none 
+      class(t_mat), intent(inout) :: mat 
+      integer :: i,j 
+
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%l_real) then  
+         do i = 1,mat%matsize1 
+            do j = 1,i-1
+               mat%data_r(i,j) = mat%data_r(j,i)
+            enddo 
+         enddo
+      else         
+         do i = 1,mat%matsize1 
+            do j = 1,i-1
+               mat%data_c(i,j) = conjg(mat%data_c(j,i))
+            enddo 
+         enddo
+      endif
+   
+   end subroutine t_mat_u2l
+
+   subroutine t_mat_subtract(res_mat, mat1, mat2)
+      use iso_c_binding, only: c_loc
+      implicit none 
+      class(t_mat), intent(inout) :: res_mat
+      type(t_mat), intent(in)     :: mat1, mat2
+      logical :: real_res
+
+      ! check dimensions
+      if(mat1%matsize1 /= mat2%matsize1) call judft_error("matsize 1 doesn't agree")
+      if(mat1%matsize2 /= mat2%matsize2) call judft_error("matsize 2 doesn't agree")
+
+      ! check real/cmplx
+      real_res = mat1%l_real .and. mat2%l_real
+      if(res_mat%l_real .neqv. real_res) then 
+         call res_mat%free()
+      endif
+      if(.not. res_mat%allocated())   call res_mat%alloc(real_res, mat1%matsize1, mat1%matsize2)
+
+      if(res_mat%l_real) then
+         res_mat%data_r = mat1%data_r - mat2%data_r
+      elseif(mat1%l_real .and. (.not. mat2%l_real)) then
+         res_mat%data_c = mat1%data_r - mat2%data_c 
+      elseif((.not. mat1%l_real) .and. mat2%l_real) then
+         res_mat%data_c = mat1%data_c - mat2%data_r
+      else 
+         res_mat%data_c = mat1%data_c - mat2%data_c
+      endif
+   end subroutine t_mat_subtract
+
    function t_mat_norm2(mat) result(norm)
       implicit none 
       class(t_mat), intent(in) :: mat
@@ -51,7 +129,7 @@ CONTAINS
          norm = norm2(abs(mat%data_c))
       endif
    end function t_mat_norm2
-   
+
    function t_mat_allocated(mat) result(var_alloc)
       implicit none
       class(t_mat), intent(in) :: mat
