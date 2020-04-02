@@ -80,10 +80,12 @@ CONTAINS
 
    ! copy upper triangle to lower triangle
    subroutine t_mat_u2l(mat)
+      use m_judft
       implicit none 
       class(t_mat), intent(inout) :: mat 
       integer :: i,j 
 
+      call timestart("copy upper to lower matrix")
       if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
       if(mat%l_real) then  
          do i = 1,mat%matsize1 
@@ -98,7 +100,7 @@ CONTAINS
             enddo 
          enddo
       endif
-   
+      call timestop("copy upper to lower matrix")   
    end subroutine t_mat_u2l
 
    subroutine t_mat_subtract(res_mat, mat1, mat2)
