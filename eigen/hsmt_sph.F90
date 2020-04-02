@@ -86,7 +86,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 !$acc enter data create(VecHelpS,VecHelpH,NVEC_rem)
 !$acc enter data copyin(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)
 !$acc enter data copyin(lapw,atoms,nococonv,mpi,input,usdus)
-!$acc kernels present(hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
+!$acc kernels deviceptr(hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 #ifndef _OPENACC
 !$OMP      DO SCHEDULE(DYNAMIC,1)
 #endif

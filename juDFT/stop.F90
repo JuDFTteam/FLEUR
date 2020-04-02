@@ -187,6 +187,7 @@ CONTAINS
     ! Otherwise only a single mpi process is allowed to call the routine.
     USE m_judft_xmlOutput
     USE m_judft_usage
+    USE cudafor
     IMPLICIT NONE
     CHARACTER*(*), INTENT(IN)      :: message
     INTEGER, OPTIONAL, INTENT(IN)  :: irank
@@ -199,7 +200,7 @@ CONTAINS
     INTEGER :: ierr
     CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
-
+    call cudaprofilerstop()
     l_endXML_local = .TRUE.
     IF(PRESENT(l_endXML)) THEN
        l_endXML_local = l_endXML

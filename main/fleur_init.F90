@@ -42,6 +42,7 @@ CONTAINS
     USE m_make_forcetheo
     USE m_lapwdim
     USE m_gaunt, ONLY: gaunt_init
+    USE cudafor
 #ifdef CPP_MPI
     !USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -106,7 +107,7 @@ CONTAINS
 #else
     mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
-
+    call cudaprofilerstart()
     CALL check_command_line()
 #ifdef CPP_HDF
     CALL hdf_init()
