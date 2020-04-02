@@ -670,11 +670,8 @@ CONTAINS
                call timestop("igpt1")
             END DO
             deallocate (carr2, carr2a, carr2b, structconst1)
+            call coulomb_repl(ikpt)%u2l() 
             call timestop("loop over plane waves")
-            
-            call coulomb_repl(ikpt)%u2l()
-            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed() 
          END DO !ikpt
 
 
@@ -728,10 +725,7 @@ CONTAINS
             END DO
          END DO
 
-         call coulomb_repl(1)%u2l()
-
-         entry_len = (hybdat%nbasm(1)*(hybdat%nbasm(1)+1))/2
-         coulomb(:entry_len,1) = coulomb_repl(1)%to_packed()
+         call coulomb_repl(1)%u2l()   
 
          ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
          iy = hybdat%nbasp + 1
@@ -749,7 +743,7 @@ CONTAINS
                      DO ineq2 = 1, fi%atoms%neq(itype2)
                         ic2 = ic2 + 1
                         cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
-                        coulomb(idum, 1) = coulomb(idum, 1) &
+                        coulomb_repl(1)%data_c(iy, ix) = coulomb_repl(1)%data_c(iy, ix) &
                                            + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
                                            +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
                                            - sphbesmoment(2, itype2, iqnrm2)/18 &
@@ -759,6 +753,9 @@ CONTAINS
                END DO
             END DO
          END DO
+         call coulomb_repl(1)%u2l()
+
+
          ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
          iy = hybdat%nbasp + 1
          ix = hybdat%nbasp + 1
@@ -767,13 +764,15 @@ CONTAINS
             DO ineq1 = 1, fi%atoms%neq(itype1)
                DO itype2 = 1, fi%atoms%ntype
                   DO ineq2 = 1, fi%atoms%neq(itype2)
-                     coulomb(idum, 1) = coulomb(idum, 1) &
+                     coulomb_repl(1)%data_c(iy, ix) = coulomb_repl(1)%data_c(iy, ix) &
                                         + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
                                         (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
                   END DO
                END DO
             END DO
          END DO
+         call coulomb_repl(1)%u2l()
+
          call timestop("add corrections from higher orders")
 
          !     (3c) r,r' in same MT
@@ -802,7 +801,10 @@ CONTAINS
             END DO
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
-                                       pqnrm,qnrm, nqnrm, ikpt, coulomb(:,ikpt))
+                                       pqnrm,qnrm, nqnrm, ikpt, coulomb_repl(ikpt))
+            call coulomb_repl(ikpt)%u2l()
+            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+            coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop 2")
          deallocate (carr2)
@@ -2082,7 +2084,8 @@ CONTAINS
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:,:),pgptm1(:, :), nqnrm
       real, intent(in)                  :: qnrm(:), sphbes0(:, :, :)
       complex, intent(in)               :: carr2(:, :)
-      complex, intent(inout)            :: coulomb(:) ! only at ikpt
+      !complex, intent(inout)            :: coulomb(:) ! only at ikpt
+      type(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
       integer :: ic, itype, lm, m, idum, l, i
@@ -2145,7 +2148,8 @@ CONTAINS
             ENDDO
             idum = ix*(ix - 1)/2 + iy
             call omp_set_lock(lock(modulo(idum,lock_size)))
-            coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
+            coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
+            ! coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
             call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
       END DO
