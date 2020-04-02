@@ -61,6 +61,7 @@ CONTAINS
       class(t_mat), intent(inout) :: mat 
       integer :: i,j 
 
+      call timestart("copy lower to upper matrix")
       if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
 
       if(mat%l_real) then  
@@ -76,6 +77,7 @@ CONTAINS
             enddo 
          enddo
       endif
+      call timestop("copy lower to upper matrix") 
    end subroutine t_mat_l2u
 
    ! copy upper triangle to lower triangle
