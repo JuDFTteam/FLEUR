@@ -160,18 +160,17 @@ CONTAINS
       IF (ALLOCATED(coulomb)) deallocate (coulomb)
 
       allocate (coulomb(maxval(hybdat%nbasm)*(maxval(hybdat%nbasm) + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0, 0.0))
-      allocate(test(maxval(hybdat%nbasm)*(maxval(hybdat%nbasm) + 1)/2), source=(0.0, 0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
       allocate(coulomb_repl(fi%kpts%nkpt))
       do i =1,fi%kpts%nkpt
-         call coulomb_repl(i)%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
+         call coulomb_repl(i)%alloc(.False., hybdat%nbasm(i), hybdat%nbasm(i))
       enddo
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
-      IF (mpi%irank == 0) write (6,*), "Sice of coulomb matrix: " //&
+      IF (mpi%irank == 0) write (6,*) "Size of coulomb matrix: " //&
                             float2str(sum([(coulomb_repl(i)%size_mb(), i=1,fi%kpts%nkpt)])) // " MB"
 
       !     Generate Symmetry:
@@ -500,7 +499,6 @@ CONTAINS
                   mpdata%num_radbasfn, fi%sym)
             ENDIF
 
-            coulomb(:hybdat%nbasp*(hybdat%nbasp + 1)/2, ikpt) = coulmat%to_packed()
             call coulomb_repl(ikpt)%copy(coulmat, 1,1)
          END IF
          call timestop("MT-MT part")
@@ -524,21 +522,10 @@ CONTAINS
          DO ikpt = 1, fi%kpts%nkpt 
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat%data_c)
-            M = hybdat%nbasp*(hybdat%nbasp + 1)/2
-            DO i = 1, mpdata%n_g(ikpt)
-               DO j = 1, hybdat%nbasp + i
-                  M = M + 1
-                  IF (j <= hybdat%nbasp) then
-                     coulomb(M, ikpt) = coulmat%data_c(j, i)
-                     test(M) = 7.0!coulmat%data_c(j, i)
-                  endif
-               END DO
-            END DO
-            
-            ! call tmp%from_packed(maxval(hybdat%nbasm), test)
-            ! call tmp%save_npy("test.npy")
-            ! call judft_error("end here")
-            !coulomb_repl%data_c(hybdat%nbasp:,hybdat%nbasp:)
+
+            coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
+            call coulomb_repl(ikpt)%u2l()
+            coulomb(:hybdat%nbasm(ikpt), ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop over interst.")
 
@@ -1977,7 +1964,7 @@ CONTAINS
 
          !$OMP PARALLEL DO default(none) &
          !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
-         !$OMP private(j_m, j_type, iy_start, idum, l1, m1) &
+         !$OMP private(j_m, j_type, iy_start, l1, m1) &
          !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, coulmat, svol) &
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
          !$OMP shared(igptp, niter) &
@@ -2033,7 +2020,6 @@ CONTAINS
             END IF
 
             ! finally define coulomb
-            idum = ix*(ix - 1)/2
             cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
                      *EXP(CMPLX(0.0, 1.0)*tpi_const &
                         *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
