@@ -423,7 +423,7 @@ CONTAINS
                            iy = iy + 1
                            i = ix*(ix - 1)/2 + iy
                            j = n2*(n2 - 1)/2 + n1
-                           coul_mtmt%data_c(ix, iy) = mat%data_r(n1, n2)
+                           coul_mtmt%data_c(iy, ix) = mat%data_r(n1, n2)
                         END DO
                      END DO
                      iy0 = ix
@@ -434,7 +434,7 @@ CONTAINS
          END DO
          call timestop("loop 1")
          
-         call coul_mtmt%l2u()
+         call coul_mtmt%u2l()
 
          call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
@@ -474,7 +474,7 @@ CONTAINS
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
                                           idum = ix*(ix - 1)/2 + iy
-                                          coulmat%data_c(iy, ix) = coul_mtmt%data_c(ix,iy) &
+                                          coulmat%data_c(iy, ix) = coul_mtmt%data_c(iy,ix) &
                                                                + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                      dot_PRODUCT(fi%kpts%bk(:, ikpt), &
                                                                                  fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
@@ -523,8 +523,6 @@ CONTAINS
 
             !coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
             call coulomb_repl(ikpt)%u2l()
-            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop over interst.")
          deallocate (olap, integral)
@@ -560,20 +558,22 @@ CONTAINS
 
                   IF (ikpt == 1) THEN
                      IF (igpt1 /= 1) THEN
-                        coulomb(idum, 1) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol
+                        coulomb_repl(1)%data_c(iy,ix) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol
                      END IF
                      IF (igpt2 /= 1) THEN
-                        coulomb(idum, 1) = coulomb(idum, 1) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
+                        coulomb_repl(1)%data_c(iy,ix) = coulomb_repl(1)%data_c(iy,ix) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
                      END IF
                   ELSE
-                     coulomb(idum, ikpt) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
+                     coulomb_repl(ikpt)%data_c(iy,ix) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
                   END IF
                END DO
                IF (ikpt /= 1 .OR. igpt2 /= 1) THEN                  !
-                  coulomb(idum, ikpt) = coulomb(idum, ikpt) + rdum2 ! diagonal term
+                  coulomb_repl(ikpt)%data_c(iy,ix) = coulomb_repl(ikpt)%data_c(iy,ix) + rdum2
                END IF                                            !
             END DO
-
+            call coulomb_repl(ikpt)%u2l()
+            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
