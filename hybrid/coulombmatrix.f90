@@ -119,7 +119,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: coulomb(:, :), test(:)
 
       INTEGER                    :: ishift, ishift1
-      INTEGER                    :: iatom, iatom1
+      INTEGER                    :: iatom, iatom1, entry_len
       INTEGER                    :: indx1, indx2, indx3, indx4
       TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat, smat, tmp
       type(t_mat), allocatable   :: coulomb_repl(:)
@@ -525,7 +525,8 @@ CONTAINS
 
             coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
             call coulomb_repl(ikpt)%u2l()
-            coulomb(:hybdat%nbasm(ikpt), ikpt) = coulomb_repl(ikpt)%to_packed()
+            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop over interst.")
 
