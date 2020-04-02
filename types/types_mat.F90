@@ -40,9 +40,21 @@ MODULE m_types_mat
       procedure        :: subtract => t_mat_subtract
       procedure        :: u2l => t_mat_u2l
       procedure        :: l2u => t_mat_l2u
+      procedure        :: size_mb => t_mat_size_mb
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   function t_mat_size_mb(mat) result(mb_size)
+      implicit none 
+      class(t_mat), intent(inout) :: mat 
+      real :: mb_size 
+
+      if(mat%l_real) then 
+         mb_size =  8e-6 * size(mat%data_r)
+      else
+         mb_size = 16e-6 * size(mat%data_c)
+      endif 
+   end function t_mat_size_mb
    ! copy lower triangle to upper triangle
    subroutine t_mat_l2u(mat)
       implicit none 

@@ -116,12 +116,13 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: structconst1(:, :)
 
       !REAL       , ALLOCATABLE   :: coulomb(:,:) !At the moment we always calculate a complex coulomb matrix
-      COMPLEX, ALLOCATABLE   :: coulomb(:, :)
+      COMPLEX, ALLOCATABLE   :: coulomb(:, :), test(:)
 
       INTEGER                    :: ishift, ishift1
       INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat, smat
+      TYPE(t_mat)                :: coulhlp, coul_mtmt, mat, coulmat, smat, tmp
+      type(t_mat), allocatable   :: coulomb_repl(:)
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -158,12 +159,20 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate (coulomb)
 
-      allocate (coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0, 0.0))
+      allocate (coulomb(maxval(hybdat%nbasm)*(maxval(hybdat%nbasm) + 1)/2, fi%kpts%nkpt), stat=ok, source=(0.0, 0.0))
+      allocate(test(maxval(hybdat%nbasm)*(maxval(hybdat%nbasm) + 1)/2), source=(0.0, 0.0))
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
-      call coul_mtmt%alloc(.False., hybdat%maxbasm1, hybdat%maxbasm1)
+      call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
+
+      allocate(coulomb_repl(fi%kpts%nkpt))
+      do i =1,fi%kpts%nkpt
+         call coulomb_repl(i)%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
+      enddo
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
+      IF (mpi%irank == 0) write (6,*), "Sice of coulomb matrix: " //&
+                            float2str(sum([(coulomb_repl(i)%size_mb(), i=1,fi%kpts%nkpt)])) // " MB"
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
@@ -492,6 +501,7 @@ CONTAINS
             ENDIF
 
             coulomb(:hybdat%nbasp*(hybdat%nbasp + 1)/2, ikpt) = coulmat%to_packed()
+            call coulomb_repl(ikpt)%copy(coulmat, 1,1)
          END IF
          call timestop("MT-MT part")
 
@@ -511,16 +521,24 @@ CONTAINS
          call coulmat%alloc(.False., hybdat%nbasp, maxval(mpdata%n_g))
 
          call timestart("loop over interst.")
-         DO ikpt = 1, fi%kpts%nkpt !1,fi%kpts%nkpt
+         DO ikpt = 1, fi%kpts%nkpt 
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat%data_c)
             M = hybdat%nbasp*(hybdat%nbasp + 1)/2
             DO i = 1, mpdata%n_g(ikpt)
                DO j = 1, hybdat%nbasp + i
                   M = M + 1
-                  IF (j <= hybdat%nbasp) coulomb(M, ikpt) = coulmat%data_c(j, i)
+                  IF (j <= hybdat%nbasp) then
+                     coulomb(M, ikpt) = coulmat%data_c(j, i)
+                     test(M) = 7.0!coulmat%data_c(j, i)
+                  endif
                END DO
             END DO
+            
+            ! call tmp%from_packed(maxval(hybdat%nbasm), test)
+            ! call tmp%save_npy("test.npy")
+            ! call judft_error("end here")
+            !coulomb_repl%data_c(hybdat%nbasp:,hybdat%nbasp:)
          END DO
          call timestop("loop over interst.")
 
@@ -802,7 +820,7 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         allocate (carr2(hybdat%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
+         allocate (carr2(maxval(hybdat%nbasm), 2), iarr(maxval(mpdata%n_g)))
          allocate (nsym_gpt(mpdata%num_gpts(), fi%kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), fi%kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0

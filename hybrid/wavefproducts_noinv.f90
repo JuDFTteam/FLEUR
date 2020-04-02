@@ -21,7 +21,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
+      COMPLEX, INTENT(INOUT)    ::  cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
 
       INTEGER              :: g_t(3)
       REAL                 :: kqpt(3), kqpthlp(3)
@@ -75,7 +75,7 @@ CONTAINS
 
 !     - arrays -
       complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
-      COMPLEX, INTENT(INOUT)    :: cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
+      COMPLEX, INTENT(INOUT)    :: cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2
@@ -230,7 +230,7 @@ CONTAINS
       !     - arrays -
       complex, intent(in)     :: c_phase_k(hybdat%nbands(ik))
       complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
-      COMPLEX, INTENT(INOUT)  ::  cprod(hybdat%maxbasm1, 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
+      COMPLEX, INTENT(INOUT)  ::  cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
