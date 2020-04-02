@@ -572,8 +572,6 @@ CONTAINS
                END IF                                            !
             END DO
             call coulomb_repl(ikpt)%u2l()
-            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
@@ -667,14 +665,19 @@ CONTAINS
                      END DO
                   END DO
                   !$OMP end parallel do
-                  idum = ix*(ix - 1)/2 + iy
-                  coulomb(idum, ikpt) = coulomb(idum, ikpt) + csum/fi%cell%vol
+                  coulomb_repl(ikpt)%data_c(iy,ix) = coulomb_repl(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
                call timestop("igpt1")
             END DO
             deallocate (carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
+            
+            call coulomb_repl(ikpt)%u2l()
+            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+            coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed() 
          END DO !ikpt
+
+
          call timestop("coulomb matrix 3b")
          !     Add corrections from higher orders in (3b) to coulomb(:,1)
          ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
@@ -707,7 +710,7 @@ CONTAINS
                            cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                       (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, ic1)) &
                                        + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2))))
-                           coulomb(idum, 1) = coulomb(idum, 1) + rdum*cdum*( &
+                           coulomb_repl(1)%data_c(iy, ix) = coulomb_repl(1)%data_c(iy, ix) + rdum*cdum*( &
                                               -sphbesmoment(1, itype1, iqnrm1) &
                                               *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
                                               - sphbesmoment(0, itype1, iqnrm1) &
@@ -724,6 +727,12 @@ CONTAINS
                END DO
             END DO
          END DO
+
+         call coulomb_repl(1)%u2l()
+
+         entry_len = (hybdat%nbasm(1)*(hybdat%nbasm(1)+1))/2
+         coulomb(:entry_len,1) = coulomb_repl(1)%to_packed()
+
          ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
          iy = hybdat%nbasp + 1
          DO igpt0 = 1, ngptm1(1)
