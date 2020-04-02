@@ -516,21 +516,17 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         call coulmat%alloc(.False., hybdat%nbasp, maxval(mpdata%n_g))
-
          call timestart("loop over interst.")
          DO ikpt = 1, fi%kpts%nkpt 
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat%data_c)
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb_repl(ikpt))
 
-            coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
+            !coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
             call coulomb_repl(ikpt)%u2l()
             entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
             coulomb(:entry_len, ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop over interst.")
-
-         call coulmat%free()
          deallocate (olap, integral)
 
          !
@@ -1931,7 +1927,7 @@ CONTAINS
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       complex, intent(in)               :: structconst(:, :, :, :)
-      COMPLEX, intent(inout)            :: coulmat(:, :)
+      type(t_mat), intent(inout)        :: coulmat
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1
@@ -1941,7 +1937,7 @@ CONTAINS
       complex  :: csum, csumf(9), cdum, cexp
       integer, allocatable :: lm_arr(:), ic_arr(:)
 
-      coulmat = 0
+      coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = 0
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
       DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
@@ -2042,13 +2038,13 @@ CONTAINS
                iy = iy_start + n
 
                IF (ikpt == 1 .AND. igpt == 1) THEN
-                  IF (l == 0) coulmat(iy, ix - hybdat%nbasp) = &
+                  IF (l == 0) coulmat%data_c(iy, ix) = &
                      -cdum*moment2(n, itype)/6/svol         ! (2a)
-                  coulmat(iy, ix - hybdat%nbasp) = coulmat(iy, ix - hybdat%nbasp) &
+                  coulmat%data_c(iy, ix) = coulmat%data_c(iy, ix) &
                                                    + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                                       + csum*moment(n, l, itype))/svol          ! (2c)
                ELSE
-                  coulmat(iy, ix - hybdat%nbasp) = &
+                  coulmat%data_c(iy, ix) = &
                      (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
                         - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                         + csum*moment(n, l, itype))/svol          ! (2c)
@@ -2060,7 +2056,7 @@ CONTAINS
       END DO
 
       IF (fi%sym%invs) THEN
-         CALL symmetrize(coulmat, hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
+         CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
    endsubroutine loop_over_interst
