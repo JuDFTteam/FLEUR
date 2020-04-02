@@ -107,26 +107,29 @@ CONTAINS
       class(t_mat), intent(inout) :: res_mat
       type(t_mat), intent(in)     :: mat1, mat2
       logical :: real_res
+      integer :: s1, s2
 
       ! check dimensions
       if(mat1%matsize1 /= mat2%matsize1) call judft_error("matsize 1 doesn't agree")
+      s1 = mat1%matsize1
       if(mat1%matsize2 /= mat2%matsize2) call judft_error("matsize 2 doesn't agree")
+      s2 = mat1%matsize2
 
       ! check real/cmplx
       real_res = mat1%l_real .and. mat2%l_real
       if(res_mat%l_real .neqv. real_res) then 
          call res_mat%free()
       endif
-      if(.not. res_mat%allocated())   call res_mat%alloc(real_res, mat1%matsize1, mat1%matsize2)
+      if(.not. res_mat%allocated())   call res_mat%alloc(real_res, s1, s2)
 
       if(res_mat%l_real) then
-         res_mat%data_r = mat1%data_r - mat2%data_r
+         res_mat%data_r = mat1%data_r(:s1,:s2) - mat2%data_r(:s1,:s2)
       elseif(mat1%l_real .and. (.not. mat2%l_real)) then
-         res_mat%data_c = mat1%data_r - mat2%data_c 
+         res_mat%data_c = mat1%data_r(:s1,:s2) - mat2%data_c(:s1,:s2) 
       elseif((.not. mat1%l_real) .and. mat2%l_real) then
-         res_mat%data_c = mat1%data_c - mat2%data_r
+         res_mat%data_c = mat1%data_c(:s1,:s2) - mat2%data_r(:s1,:s2)
       else 
-         res_mat%data_c = mat1%data_c - mat2%data_c
+         res_mat%data_c(:s1,:s2) = mat1%data_c(:s1,:s2) - mat2%data_c(:s1,:s2)
       endif
    end subroutine t_mat_subtract
 
