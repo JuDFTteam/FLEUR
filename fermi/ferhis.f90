@@ -6,7 +6,7 @@
 
 MODULE m_ferhis
 CONTAINS
-  SUBROUTINE ferhis(input,kpts,mpi, index,idxeig,idxkpt,idxjsp,n,&
+  SUBROUTINE ferhis(input,kpts,mpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
        nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results)
     !***********************************************************************
     !
@@ -63,7 +63,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN),OPTIONAL         :: cell
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN)  ::  n ,nstef
+    INTEGER,INTENT(IN)  ::  nspins,n ,nstef
     REAL,INTENT(IN)     ::  spindg,ws,weight
     REAL,INTENT(INOUT)  ::  ef,seigv
     REAL,INTENT(OUT)    ::  w_iks(:,:,:)
@@ -85,7 +85,7 @@ CONTAINS
     REAL,PARAMETER:: del=1.e-6
     REAL :: efermi,emax,emin,entropy,fermikn,gap,&
               wfermi,wvals,w_below_emin,w_near_ef,tkb
-    INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i,nspins
+    INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i
 
     !     .. Local Arrays ..      
     REAL :: qc(3)
@@ -118,8 +118,7 @@ CONTAINS
     !                  and n-th state
     !**********************************************************************
     !     ..
-    nspins=input%jspins
-    if (noco%l_noco) nspins=1
+
     tkb=input%tkb !might be modified if we have an insulator
     IF ( mpi%irank == 0 ) THEN
        WRITE (6,FMT='(/)')
@@ -149,7 +148,7 @@ CONTAINS
     !======> DETERMINE FERMI ENERGY for kT >= 10
     !
     !
-    IF (tkb.GE.del) THEN
+    IF ((tkb.GE.del).AND.(nstef.NE.0)) THEN
        !
        !---> TEMPERATURE BROADENING
        !
@@ -212,12 +211,15 @@ CONTAINS
           we(INDEX(nocst)) = we(INDEX(nocst)) - wfermi
        END IF
 
-    ELSE
+    ELSE IF (nstef.NE.0) THEN
        !
        !---> NO TEMPERATURE BROADENING IF tkb < del
        !
        nocst = nstef
        we(INDEX(nocst)) = we(INDEX(nocst)) - wfermi
+    ELSE
+       ! zero occupation
+       nocst = nstef
     END IF
     !
     !      write(6,*) nocst,'    nocst in ferhis'

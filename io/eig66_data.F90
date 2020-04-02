@@ -24,6 +24,7 @@ module m_eig66_data
     END TYPE
 
     TYPE,extends(t_data):: t_data_MPI
+       LOGICAL             :: read_epoch=.false.
        INTEGER             :: n_size=1
        INTEGER             :: size_k,size_eig
        INTEGER             :: eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
@@ -63,7 +64,7 @@ module m_eig66_data
     INTEGER, PARAMETER :: DA_mode=0,HDF_mode=1,MEM_mode=2,MPI_mode=3
 
     contains
-    
+
     subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
     CLASS(t_data)::d
     INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig

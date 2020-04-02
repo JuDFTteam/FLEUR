@@ -36,10 +36,10 @@ MODULE m_fertetra
       !First check the lower bound
       dlow = 0.0
       DO jspin = 1, jspins
-         CALL tetrahedronInit(kpts,eig(:,:,jspin),ne(:,jspin),&
+         CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
                               lowBound,input%film,w(:,:,jspin))
          DO ikpt = 1, kpts%nkpt
-            DO iBand = 1, ne(ikpt,jspin)
+            DO iBand = 1, MINVAL(ne(:,jspin))
                dlow = dlow + w(iBand,ikpt,jspin) * 2.0/input%jspins
             ENDDO
          ENDDO
@@ -57,10 +57,10 @@ MODULE m_fertetra
          !Now check the upper bound
          dup = 0.0
          DO jspin = 1, jspins
-            CALL tetrahedronInit(kpts,eig(:,:,jspin),ne(:,jspin),&
+            CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
                                  upperBound,input%film,w(:,:,jspin))
             DO ikpt = 1, kpts%nkpt
-               DO iBand = 1, ne(ikpt,jspin)
+               DO iBand = 1, MINVAL(ne(:,jspin))
                   dup = dup + w(iBand,ikpt,jspin) * 2.0/input%jspins
                ENDDO
             ENDDO
@@ -94,10 +94,10 @@ MODULE m_fertetra
             !-------------------------------------------------------
             ! Compute the weights for charge density integration
             !-------------------------------------------------------
-            CALL tetrahedronInit(kpts,eig(:,:,jspin),ne(:,jspin),&
+            CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
                                  ef,input%film,w(:,:,jspin))
             DO ikpt = 1, kpts%nkpt
-               DO iBand = 1, ne(ikpt,jspin)
+               DO iBand = 1, MINVAL(ne(:,jspin))
                   dfermi = dfermi + w(iBand,ikpt,jspin) * 2.0/input%jspins
                ENDDO
             ENDDO

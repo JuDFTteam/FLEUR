@@ -20,7 +20,6 @@ MODULE m_denmat_dist
       !Calculates the distance for two density matrices (maximum distance between two elements)
       n_out = 0.0
       n_in = 0.0
-      results%last_mmpMatdistance = 0.0
       DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO j = -3,3
             DO k = -3,3
@@ -34,7 +33,7 @@ MODULE m_denmat_dist
             END DO
          END DO
       ENDDO
-      results%last_occdistance = ABS(n_out-n_in)
+      results%last_occdistance = results%last_occdistance + ABS(n_out-n_in)
       WRITE(6,*) "Occupation distance: ", results%last_occdistance
       WRITE(6,*) "Density matrix distance: ", results%last_mmpMatdistance
 

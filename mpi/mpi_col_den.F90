@@ -12,7 +12,7 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,jspin,regCharges,dos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS,greensfCoeffs)
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
 
 #include"cpp_double.h"
     USE m_types
@@ -47,7 +47,6 @@ CONTAINS
     TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
     TYPE (t_jDOS),    OPTIONAL, INTENT(INOUT) :: jDOS
-    TYPE (t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -458,35 +457,6 @@ CONTAINS
        ENDIF
     ENDIF
     !-lda+U
-
-    !+green's functions
-    IF(gfinp%n.GT.0) THEN
-       IF(PRESENT(greensfCoeffs)) THEN
-         n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
-         ALLOCATE(c_b(n))
-         CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,:,:,:,:,jspin),1)
-         IF(.NOT.gfinp%l_sphavg) THEN
-           CALL MPI_REDUCE(greensfCoeffs%uu(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%uu(:,:,:,:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%du(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%du(:,:,:,:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%dd(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%dd(:,:,:,:,:,jspin),1)
-           CALL MPI_REDUCE(greensfCoeffs%ud(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%ud(:,:,:,:,:,jspin),1)
-         ENDIF
-         DEALLOCATE(c_b)
-         IF(gfinp%l_mperp.AND.jspin.EQ.1) THEN
-           n = gfinp%ne*gfinp%n*(2*lmaxU_const+1)**2*(MAXVAL(atoms%neq)+1)
-           ALLOCATE(c_b(n))
-           CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-           IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,c_b,1,greensfCoeffs%projdos(:,:,:,:,:,3),1)
-           DEALLOCATE(c_b)
-         ENDIF
-       ENDIF
-    ENDIF
-    !-green's functions
 
     CALL timestop("mpi_col_den")
 

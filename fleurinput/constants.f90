@@ -20,6 +20,7 @@ MODULE m_constants
   INTEGER,          PARAMETER :: valenceState_const = 2
   INTEGER,          PARAMETER :: lmaxU_const = 3
   COMPLEX,          PARAMETER :: cmplx_0=(0.0,0.0)
+  COMPLEX,          PARAMETER :: cmplx_1=(1.0,0.0)
   REAL,             PARAMETER :: pi_const=3.1415926535897932
   REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
   REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
@@ -28,7 +29,7 @@ MODULE m_constants
   REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
   REAL,             PARAMETER :: eVac0Default_const = -0.25
   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 30'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 4.0          (www.max-centre.eu)'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     Development Version          (based on MaX4.0)'
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
   INTEGER, PARAMETER :: POTDEN_TYPE_OTHER     = 0    ! POTDEN_TYPE <= 0 ==> undefined

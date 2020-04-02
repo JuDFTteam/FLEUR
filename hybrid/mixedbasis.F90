@@ -375,7 +375,6 @@ CONTAINS
             END DO
          END DO
       END DO
-      hybdat%maxbasm1 = hybdat%nbasp + maxval(mpdata%n_g)
       hybdat%nbasm = hybdat%nbasp + mpdata%n_g
 
       hybdat%maxlmindx = 0

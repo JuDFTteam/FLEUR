@@ -150,7 +150,8 @@ SUBROUTINE julia(sym,cell,input,noco,banddos,kpts,l_q,l_fillArrays)
       CALL bravais(cell%amat,idsyst,idtype) 
    END IF
    nsym = sym%nop
-   IF (input%film) nsym = sym%nop2        
+   IF (input%film) nsym = sym%nop2     
+   IF (input%l_kpts_fullbz) nsym = 1
 
    ! Want to make a Bandstructure?
    IF (banddos%ndir == -4) THEN
@@ -227,7 +228,7 @@ SUBROUTINE julia(sym,cell,input,noco,banddos,kpts,l_q,l_fillArrays)
       END DO
    END DO
 
-   IF ((.not.noco%l_ss).AND.(.not.noco%l_soc).AND.(2*nsym<nop48)) THEN
+   IF ((.not.input%l_kpts_fullbz).AND.(.not.noco%l_ss).AND.(.not.noco%l_soc).AND.(2*nsym<nop48)) THEN
       IF ((input%film.AND.(.not.sym%invs2)).OR.((.not.input%film).AND.(.not.sym%invs))) THEN
          addSym = 0
          ! Note: We have to add the negative of each symmetry operation

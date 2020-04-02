@@ -72,7 +72,7 @@ CONTAINS
       CALL mpi_bc(this%exc,rank,mpi_comm)
       CALL mpi_bc(this%init_mom,rank,mpi_comm)
       CALL mpi_bc(this%n_addArgs,rank,mpi_comm)
-      !CALL mpi_bc(this%arg_keys,rank,mpi_comm) no matching broadcast routine (atm only used on rank 0 but needs to be kept in mind)
+      CALL mpi_bc(this%arg_keys,rank,mpi_comm)
       CALL mpi_bc(this%arg_vals,rank,mpi_comm)
       CALL mpi_bc(this%l_soc_given,rank,mpi_comm)
       CALL mpi_bc(this%l_ccf_given,rank,mpi_comm)
@@ -85,7 +85,7 @@ CONTAINS
 
       INTEGER::numberNodes,ntype,n_maxaddArgs
       INTEGER::i_hia,itype,i_exc,i_addArg,i,j,hub1_l
-      CHARACTER(len=100)  :: xPathA,xPathB,xPathS,key
+      CHARACTER(len=100)  :: xPathA,xPathB,xPathS,key,tmp_str
       REAL::val
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
@@ -127,7 +127,12 @@ CONTAINS
             hub1_l = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l'))
 
             !Initial occupation
-            this%init_occ(i_hia) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@init_occ'))
+            tmp_str = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@init_occ')))
+            IF(TRIM(ADJUSTL(tmp_str))=="calc") THEN
+               this%init_occ(i_hia) = -9e99
+            ELSE
+               this%init_occ(i_hia) = evaluateFirstOnly(TRIM(ADJUSTL(tmp_str)))
+            ENDIF
 
             !Additional exchange splitting
             DO i_exc = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/exc')
@@ -137,7 +142,12 @@ CONTAINS
                this%n_exc(i_hia) = this%n_exc(i_hia) + 1
                this%exc_l(i_hia,i_exc) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l'))
                this%exc(i_hia,i_exc) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@J'))
-               this%init_mom(i_hia,i_exc) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@init_mom'))
+               tmp_str = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@init_mom')))
+               IF(TRIM(ADJUSTL(tmp_str))=="calc") THEN
+                  this%init_mom(i_hia,i_exc) = -9e99
+               ELSE
+                  this%init_mom(i_hia,i_exc) = evaluateFirstOnly(TRIM(ADJUSTL(tmp_str)))
+               ENDIF
 
                !Check if the given l is valid (l<3 and not the same as the hubbard orbital)
                IF(this%exc_l(i_hia,i_exc).EQ.hub1_l.OR.this%exc_l(i_hia,i_exc).GT.3) &
@@ -152,6 +162,7 @@ CONTAINS
             ENDDO
 
             DO i_addArg = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/addArg')
+
                WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/addArg[',i_addArg,']'
                IF(i_addArg>n_maxaddArgs) CALL juDFT_error("Too many additional arguments provided. Maximum is 5.",&
                                                           calledby="read_xml_hub1inp")
@@ -166,7 +177,7 @@ CONTAINS
                   ENDIF
                ENDDO
 
-               SELECT CASE(key)
+               SELECT CASE(TRIM(ADJUSTL(key)))
                CASE('xiSOC')
                   !Do not get soc from DFT and use provided value
                   IF(this%l_soc_given(i_hia)) CALL juDFT_error("Two SOC parameters provided",calledby="read_xml_hub1inp")

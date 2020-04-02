@@ -74,7 +74,7 @@ CONTAINS
     INTEGER, INTENT(IN)     :: ev_list(ne)
     REAL,    INTENT(IN)     :: evac(2,input%jspins)
     REAL,    INTENT(IN)     :: we(input%neig)
-    REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
+    REAL,    INTENT(IN)     :: vz(:,:,:) !(vacuum%nmzd,ivac,ispin)
     !     STM-Arguments
     REAL,    INTENT (IN)    :: eig(input%neig)
     !     local STM variables
@@ -96,7 +96,7 @@ CONTAINS
          &        ind1,ind1p,irec2,irec3,m
     !
     !     .. Local Arrays ..
-    REAL qssbti(3,2),qssbtii,vz0(2)
+    REAL qssbti(3,2),qssbtii
     REAL bess(-oneD%odi%mb:oneD%odi%mb),dbss(-oneD%odi%mb:oneD%odi%mb)
     COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:)
     REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
@@ -139,30 +139,14 @@ CONTAINS
     !     **************************************************************************************************
 
     CALL timestart("vacden")
-
+if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore. Look at status around cb97d0d10d0b8784693683515a1a87ab1b0275cc")
     ALLOCATE ( ac(lapw%dim_nv2d(),input%neig,input%jspins),bc(lapw%dim_nv2d(),input%neig,input%jspins),dt(lapw%dim_nv2d()),&
          &           dte(lapw%dim_nv2d()),du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,lapw%dim_nv2d()),t(lapw%dim_nv2d()),te(lapw%dim_nv2d()),&
          &           tei(lapw%dim_nv2d(),input%jspins),u(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),ue(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),&
          &           v(3),yy(vacuum%nmzd))
-    IF (oneD%odi%d1) THEN
-       ALLOCATE (      ac_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%neig,input%jspins),&
-            &                  bc_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%neig,input%jspins),&
-            &                  dt_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                 dte_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                  du_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &            ddu_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                 due_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &           ddue_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                   t_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                  te_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
-            &                 tei_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &              u_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &             ue_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins) )
-    END IF ! oneD%odi%d1
     !
 
-    vz0(:) = vz(vacuum%nmz,:)
     eps=0.01
     ic = CMPLX(0.,1.)
     !    ------------------
@@ -176,22 +160,6 @@ CONTAINS
        jsp_end   = jspin
     ENDIF
     DO ispin = jsp_start,jsp_end
-       IF (oneD%odi%d1) THEN
-          n2 = 0
-          k_loop:DO  k = 1,lapw%nv(ispin)
-             DO  j = 1,n2
-                IF (lapw%k3(k,ispin).EQ.kvac3(j,ispin)) THEN
-                   map1(k,ispin) = j
-                   CYCLE k_loop
-                END IF
-             ENDDO
-             n2 = n2 + 1
-             IF (n2>lapw%dim_nv2d())  CALL juDFT_error("vacden0",calledby ="vacden")
-             kvac3(n2,ispin) =  lapw%k3(k,ispin)
-             map1(k,ispin) = n2
-          ENDDO k_loop
-          nv2(ispin) = n2
-       ELSE
           n2 = 0
           k_loop2:DO  k = 1,lapw%nv(ispin)
              DO  j = 1,n2
@@ -208,7 +176,6 @@ CONTAINS
              map2(k,ispin) = n2
           ENDDO k_loop2
           nv2(ispin) = n2
-       END IF
     ENDDO
     IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
        lapw%nv(2)  = lapw%nv(1)
@@ -216,16 +183,10 @@ CONTAINS
        DO k = 1,nv2(1)
           kvac1(k,2) = kvac1(k,1)
           kvac2(k,2) = kvac2(k,1)
-          IF(oneD%odi%d1) kvac3(k,2) =  kvac3(k,1)
        ENDDO
        DO k = 1,lapw%nv(1)
           lapw%k3(k,2) = lapw%k3(k,1)
           map2(k,2) = map2(k,1)
-          IF(oneD%odi%d1)THEN
-             lapw%k1(k,2) = lapw%k1(k,1)
-             lapw%k2(k,2) = lapw%k2(k,1)
-             map1(k,2) = map1(k,1)
-          ENDIF
        ENDDO
     ENDIF
 
@@ -247,12 +208,6 @@ CONTAINS
 
     wronk = 2.0
     const = 1.0 / ( SQRT(cell%omtil)*wronk )
-    !-odim
-    IF (oneD%odi%d1) THEN
-       ac_1(:,:,:,:) = CMPLX(0.0,0.0)
-       bc_1(:,:,:,:) = CMPLX(0.0,0.0)
-    END IF
-    !+odim
     DO  ivac = 1,vacuum%nvac
        ac(:,:,:) = CMPLX(0.0,0.0)
        bc(:,:,:) = CMPLX(0.0,0.0)
@@ -271,59 +226,15 @@ CONTAINS
           qssbti(3,2) = + nococonv%qss(3)/2
           DO ispin = 1,input%jspins
              !     -----> set up vacuum wave functions
-             IF (oneD%odi%d1) THEN
-                CALL od_abvac(&
-                     cell,vacuum,stars,&
-                     oneD,qssbti(3,ispin),&
-                     oneD%odi%n2d,&
-                     wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
-                     vz(1,ispin),kvac3(:,ispin),nv2(ispin),&
-                     t_1(:,-oneD%odi%mb:),dt_1(:,-oneD%odi%mb:),u_1(:,:,-oneD%odi%mb:,ispin),&
-                     te_1(:,-oneD%odi%mb:),dte_1(:,-oneD%odi%mb:),&
-                     tei_1(:,-oneD%odi%mb:,ispin),&
-                     ue_1(:,:,-oneD%odi%mb:,ispin))
-                DO k = 1,lapw%nv(ispin)
-                   kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
-                   l = map1(k,ispin)
-                   irec3 = stars%ig(lapw%gvec(1,k,ispin),lapw%gvec(2,k,ispin),lapw%gvec(3,k,ispin))
-                   IF (irec3.NE.0) THEN
-                      irec2 = stars%ig2(irec3)
-                      zks = stars%sk2(irec2)*cell%z1
-                      arg = stars%phi2(irec2)
-                      CALL cylbes(oneD%odi%mb,zks,bess)
-                      CALL dcylbs(oneD%odi%mb,zks,bess,dbss)
-                      DO m = -oneD%odi%mb,oneD%odi%mb
-                         wronk_1 = t_1(l,m)*dte_1(l,m) -&
-                              te_1(l,m)*dt_1(l,m)
-                         av_1 = EXP(-CMPLX(0.0,m*arg))*(ic**m)*&
-                              CMPLX(dte_1(l,m)*bess(m) -&
-                              te_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
-                              ((wronk_1)*SQRT(cell%omtil))
-                         bv_1 = EXP(-CMPLX(0.0,m*arg))*(ic**m)*&
-                              CMPLX(-dt_1(l,m)*bess(m) +&
-                              t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
-                              ((wronk_1)*SQRT(cell%omtil))
-                         IF (zmat%l_real) THEN
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*bv_1
-                         ELSE
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*bv_1
-                         END IF
-                      END DO      ! -mb:mb
-                   END IF
-                END DO
-             ELSE ! 1-dimensional
-                vz0(ispin) = vz(vacuum%nmz,ispin)
                 evacp = evac(ivac,ispin)
                 DO ik = 1,nv2(ispin)
                    v(1) = lapw%bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
                    v(2) = lapw%bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
                    v(3) = 0.
                    ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
-                   CALL vacuz(ev,vz(1,ispin),vz0(ispin),vacuum%nmz,vacuum%delz,t(ik),&
+                   CALL vacuz(ev,vz(:,ivac,ispin),vz(vacuum%nmz,ivac,ispin),vacuum%nmz,vacuum%delz,t(ik),&
                         dt(ik),u(1,ik,ispin))
-                   CALL vacudz(ev,vz(1,ispin),vz0(ispin),vacuum%nmz,vacuum%delz,te(ik),&
+                   CALL vacudz(ev,vz(:,ivac,ispin),vz(vacuum%nmz,ivac,ispin),vacuum%nmz,vacuum%delz,te(ik),&
                         dte(ik),tei(ik,ispin),ue(1,ik,ispin),dt(ik),&
                         u(1,ik,ispin))
                    scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
@@ -355,8 +266,6 @@ CONTAINS
                    ENDIF
                 ENDDO
                 !--->       end of spin loop
-             ENDIF
-             !---Y       end of geometry 1d/film
           ENDDO
           !--->       output for testing
           !            DO k = 1,10
@@ -371,57 +280,14 @@ CONTAINS
           !     +             ' bc= (',e12.6,',',e12.6,')')
        ELSE
           !     -----> set up vacuum wave functions
-          IF (oneD%odi%d1) THEN
-             qssbtii = 0.
-             evacp = evac(ivac,jspin)
-             CALL od_abvac(&
-                  &           cell,vacuum,stars,&
-                  &           oneD,qssbtii,&
-                  &           oneD%odi%n2d,&
-                  &           wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
-                  &           vz(:,ivac),kvac3(:,jspin),nv2(jspin),&
-                  &           t_1(:,-oneD%odi%mb:),dt_1(:,-oneD%odi%mb:),u_1(:,:,-oneD%odi%mb:,jspin),&
-                  &           te_1(:,-oneD%odi%mb:),dte_1(:,-oneD%odi%mb:),&
-                  &           tei_1(:,-oneD%odi%mb:,jspin),&
-                  &           ue_1(:,:,-oneD%odi%mb:,jspin))
-             DO k = 1,lapw%nv(jspin)
-                l = map1(k,jspin)
-                irec3 = stars%ig(lapw%gvec(1,k,jspin),lapw%gvec(2,k,jspin),lapw%gvec(3,k,jspin))
-                IF (irec3.NE.0) THEN
-                   irec2 = stars%ig2(irec3)
-                   zks = stars%sk2(irec2)*cell%z1
-                   arg = stars%phi2(irec2)
-                   CALL cylbes(oneD%odi%mb,zks,bess)
-                   CALL dcylbs(oneD%odi%mb,zks,bess,dbss)
-                   DO m = -oneD%odi%mb,oneD%odi%mb
-                      wronk_1 = t_1(l,m)*dte_1(l,m) -te_1(l,m)*dt_1(l,m)
-                      av_1 = EXP(-CMPLX(0.0,m*arg))*(ic**m)*&
-                           CMPLX(dte_1(l,m)*bess(m) -&
-                           te_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
-                           ((wronk_1)*SQRT(cell%omtil))
-                      bv_1 = EXP(-CMPLX(0.0,m*arg))*(ic**m)*&
-                           CMPLX(-dt_1(l,m)*bess(m) +&
-                           t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
-                           ((wronk_1)*SQRT(cell%omtil))
-                      IF (zmat%l_real) THEN
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*bv_1
-                      ELSE
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*bv_1
-                      ENDIF
-                   END DO      ! -mb:mb
-                END IF
-             END DO         ! k = 1,lapw%nv
-          ELSE     !oneD%odi%d1
              evacp = evac(ivac,jspin)
              DO ik = 1,nv2(jspin)
                 v(1) = lapw%bkpt(1) + kvac1(ik,jspin)
                 v(2) = lapw%bkpt(2) + kvac2(ik,jspin)
                 v(3) = 0.
                 ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
-                CALL vacuz(ev,vz(1,ivac),vz0(ivac),vacuum%nmz,vacuum%delz,t(ik),dt(ik),u(1,ik,jspin))
-                CALL vacudz(ev,vz(1,ivac),vz0(ivac),vacuum%nmz,vacuum%delz,te(ik),&
+                CALL vacuz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,t(ik),dt(ik),u(1,ik,jspin))
+                CALL vacudz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,te(ik),&
                      &              dte(ik),tei(ik,jspin),ue(1,ik,jspin),dt(ik),&
                      &              u(1,ik,jspin))
                 scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
@@ -449,7 +315,6 @@ CONTAINS
                    bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_c(k,:ne)*bv
                 ENDIF
              ENDDO
-          END IF ! D1
        ENDIF
        !
        !   ----> calculate first and second derivative of u,ue

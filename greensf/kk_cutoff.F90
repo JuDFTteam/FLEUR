@@ -1,7 +1,8 @@
 MODULE m_kk_cutoff
 
-   USE m_kkintgr
+   USE m_trapz
    USE m_types
+   USE m_juDFT
    USE m_constants
 
    IMPLICIT NONE
@@ -11,10 +12,10 @@ MODULE m_kk_cutoff
    SUBROUTINE kk_cutoff(im,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
 
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
-      !This cutoff energy is defined so that the integral over the fDOS up to this cutoff
+      !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-      COMPLEX,             INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
@@ -27,29 +28,29 @@ MODULE m_kk_cutoff
       CHARACTER(len=5) :: filename
       INTEGER :: i,m,n_c,ispin,spins_cut
       REAL    :: lowerBound,upperBound,integral,n_states,scale,e_cut
-      REAL    :: fDOS(ne,jspins)
+      REAL    :: projDOS(ne,jspins)
 
-      fDOS = 0.0
+      projDOS = 0.0
 
-      !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS
+      !Calculate the trace over m,mp of the Imaginary Part matrix to obtain the projected DOS
       !n_f(e) = -1/pi * TR[Im(G_f(e))]
       DO ispin = 1, jspins
          DO m = -l , l
             DO i = 1, ne
-               fDOS(i,ispin) = fDOS(i,ispin) + REAL(im(i,m,m,ispin))
+               projDOS(i,ispin) = projDOS(i,ispin) + im(i,m,m,ispin)
             ENDDO
          ENDDO
       ENDDO
 
-      fDOS = -1/pi_const*fDOS
+      projDOS = -1/pi_const*projDOS
 
 !#ifdef CPP_DEBUG
       !DO ispin = 1, jspins
       !   WRITE(filename,9010) ispin
-!9010     FORMAT("fDOS",I1)
+!9010     FORMAT("projDOS",I1)
       !   OPEN(unit=1337,file=filename,status="replace")
       !   DO i = 1, ne
-      !      WRITE(1337,"(2f14.8)") (i-1)*del+e_bot,fDOS(i,ispin)
+      !      WRITE(1337,"(2f14.8)") (i-1)*del+e_bot,projDOS(i,ispin)
       !   ENDDO
       !   CLOSE(unit=1337)
       !ENDDO
@@ -66,8 +67,8 @@ MODULE m_kk_cutoff
          !----------------------------------------
          !Check the integral up to the hard cutoff
          !----------------------------------------
-         IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
-         integral =  trapz(fDOS(:,ispin),del,ne)
+         IF(spins_cut.EQ.1.AND.jspins.EQ.2) projDOS(:,1) = projDOS(:,1) + projDOS(:,2)
+         integral =  trapz(projDOS(:,ispin),del,ne)
 
 #ifdef CPP_DEBUG
          WRITE(*,*) "Integral over DOS: ", integral
@@ -99,7 +100,7 @@ MODULE m_kk_cutoff
 
                e_cut = (lowerBound+upperBound)/2.0
                cutoff(ispin,2) = INT((e_cut-e_bot)/del)+1
-               integral =  trapz(fDOS(:,ispin),del,cutoff(ispin,2))
+               integral =  trapz(projDOS(:,ispin),del,cutoff(ispin,2))
 
                IF(integral.LT.n_states) THEN
                   !integral to small -> choose the right interval
@@ -114,7 +115,7 @@ MODULE m_kk_cutoff
 #ifdef CPP_DEBUG
             WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(ispin,2)
             WRITE(*,*) "CORRESPONDING ENERGY", e_cut
-            WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
+            WRITE(*,*) "INTEGRAL OVER projDOS with cutoff: ", integral
 #endif
             IF(spins_cut.EQ.1.AND.jspins.EQ.2) cutoff(2,2) = cutoff(1,2)
          ENDIF
