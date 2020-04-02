@@ -42,7 +42,7 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,hij,phase,sij,utd,utu
     REAL con1,ff,gg,gs,th,ws
-    INTEGER l,l1,ll1,lm,lmp,lwn,invsfct
+    INTEGER l,l1,ll1,lm,lmp,lwn,invsfct,s
     INTEGER i,im,in,j,k,ke ,m1,n,na,nn,np,ii,ij,m
     !     ..
     !     .. Local Arrays ..
@@ -94,7 +94,7 @@ CONTAINS
                 vmult=MATMUL(vsmult,cell%bmat)
                 CALL ylm4(lwn,vmult, ylm)
                 !-->     synthesize the complex conjugates of a and b
-                if (l_real) THEN
+                IF (l_real) THEN
                    DO l = 0,lwn
                       ll1 = l* (l+1)
                       DO m = -l,l
@@ -106,7 +106,7 @@ CONTAINS
                       END DO
                    END DO
 
-                else
+                ELSE
                    DO l = 0,lwn
                       ll1 = l* (l+1)
                       DO m = -l,l
@@ -117,7 +117,7 @@ CONTAINS
                          b(:ne,lm) = b(:ne,lm) + sij*z_c(k,:ne)
                       END DO
                    END DO
-                endif
+                ENDIF
              ENDDO
              DO  l = 0,lwn
                 DO  m = -l,l
@@ -129,24 +129,17 @@ CONTAINS
                    DO  l1 = 0,lwn
                       DO  m1 = -l1,l1
                          lm = l1* (l1+1) + m1
-                         in = td%ind(lmp,lm,nn,jsp)
-                         IF (in.NE.-9999) THEN
-                            IF (in.GE.0) THEN
-                               utu = CONJG(td%tuu(in,nn,jsp))*invsfct
-                               dtu = CONJG(td%tdu(in,nn,jsp))*invsfct
-                               utd = CONJG(td%tud(in,nn,jsp))*invsfct
-                               dtd = CONJG(td%tdd(in,nn,jsp))*invsfct
-                            ELSE
-                               im = -in
-                               utu = td%tuu(im,nn,jsp)*invsfct
-                               dtd = td%tdd(im,nn,jsp)*invsfct
-                               utd = td%tdu(im,nn,jsp)*invsfct
-                               dtu = td%tud(im,nn,jsp)*invsfct
-                            END IF
-                            !--->    update ax, bx
-                            ax(:ne) = ax(:ne) + CONJG(utu*a(:ne,lm)+utd*b(:ne,lm))
-                            bx(:ne) = bx(:ne) + CONJG(dtu*a(:ne,lm)+dtd*b(:ne,lm))
-                         END IF
+                         s=td%h_loc2(n)
+                         utu=td%h_loc(lmp,lm,n,jsp,jsp)
+                         dtu=td%h_loc(lmp,lm+s,n,jsp,jsp)
+                         utd=td%h_loc(lmp+s,lm,n,jsp,jsp)
+                         dtd=td%h_loc(lmp+s,lm+s,n,jsp,jsp)
+                         !TODO we have to think about the spherical contributions here...
+                         CALL judft_error("Second variation not currently implemeted correctly")
+                         !--->    update ax, bx
+                         ax(:ne) = ax(:ne) + CONJG(utu*a(:ne,lm)+utd*b(:ne,lm))
+                         bx(:ne) = bx(:ne) + CONJG(dtu*a(:ne,lm)+dtd*b(:ne,lm))
+
                       ENDDO
                    ENDDO
 

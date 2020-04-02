@@ -52,6 +52,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
+   USE m_tlmplm_cholesky
 
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
@@ -108,7 +109,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-
+   
+   
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
    TYPE (t_denCoeffs)         :: denCoeffs
@@ -118,6 +120,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat
    TYPE (t_gVacMap)           :: gVacMap
+   TYPE (t_tlmplm)           :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
 
    CALL timestart("cdnval")
@@ -277,8 +280,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-         IF (input%l_f) CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
-                                                     usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
+         IF (input%l_f) THEN
+           CALL tlmplm%init(atoms,input%jspins,.FALSE.)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,mpi,vTot,input,hub1inp,tlmplm,usdus)
+           CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
+           usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
+         ENDIF
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin

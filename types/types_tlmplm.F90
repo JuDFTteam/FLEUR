@@ -14,22 +14,20 @@ MODULE m_types_tlmplm
      COMPLEX,ALLOCATABLE,DIMENSION(:,:,:,:,:,:)::soangl
   END TYPE t_rsoc
 
-    TYPE t_tlmplm
-     COMPLEX,ALLOCATABLE :: tdd(:,:,:)
-     COMPLEX,ALLOCATABLE :: tdu(:,:,:)
-     !(0:lmplmd,ntypd,tspin)
-     COMPLEX,ALLOCATABLE :: tud(:,:,:)
-     COMPLEX,ALLOCATABLE :: tuu(:,:,:)
-     !(0:lmplmd,ntypd,tspin)
-     INTEGER,ALLOCATABLE :: ind(:,:,:,:)
-     !(0:lmd,0:lmd,ntypd,tspin)
-     COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:)
+  TYPE t_tlmplm
+     COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: ulotu(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: ulotd(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:,:)
      !(-llod:llod,-llod:llod,mlolotot,tspin)
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
+     INTEGER,ALLOCATABLE :: h_loc2(:)
+     INTEGER,ALLOCATABLE :: h_loc2_nonsph(:)
+     COMPLEX,ALLOCATABLE :: h_loc_nonsph(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
+
      COMPLEX,ALLOCATABLE :: h_off(:,:,:,:,:)      !l,lp,ntype,ispin,jspin)
      REAL,ALLOCATABLE    :: e_shift(:,:)
      !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
@@ -40,38 +38,46 @@ MODULE m_types_tlmplm
   END TYPE t_tlmplm
   PUBLIC t_tlmplm,t_rsoc
 CONTAINS
-  SUBROUTINE tlmplm_init(td,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_noco,l_offdiag)
+  SUBROUTINE tlmplm_init(td,atoms,jspins,l_offdiag)
     USE m_judft
+    USE m_types_atoms
     CLASS(t_tlmplm),INTENT(INOUT):: td
-    INTEGER,INTENT(in)           :: lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins
-    LOGICAL,INTENT(IN)           :: l_offdiag,l_noco
-    INTEGER :: err ,lmplmd
+    TYPE(t_atoms)                :: atoms
+    INTEGER,INTENT(in)           :: jspins
+    LOGICAL,INTENT(IN)           :: l_offdiag
+    INTEGER :: err(7),lmd,mlolotot
+    mlolotot=DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2
+    lmd=atoms%lmaxd*(atoms%lmaxd+2)
+    !lmplmd=(lmd*(lmd+3))/2
 
-    lmplmd=(lmd*(lmd+3))/2
+    td%h_loc2=atoms%lmax*(atoms%lmax+2)+1
+    td%h_loc2_nonsph=atoms%lnonsph*(atoms%lnonsph+2)+1
+    IF (ALLOCATED(td%h_loc)) &
+         DEALLOCATE(td%tdulo,td%tuulo,&
+         td%tuloulo,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph)
+    !    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
+    !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
+    !    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
+    !    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
+    ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1));td%tdulo=0.0
+    ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2));td%tuulo=0.0
+    ALLOCATE(td%ulotd(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(8));td%ulotd=0.0
+    ALLOCATE(td%ulotu(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(9));td%ulotu=0.0
+    ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3));td%tuloulo=0.0
+    ALLOCATE(td%h_loc(0:2*lmd+1,0:2*lmd+1,atoms%ntype,jspins,jspins),stat=err(5));td%h_loc=0.0
+    ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0
 
-
-    IF (ALLOCATED(td%tuu)) &
-         DEALLOCATE(td%tuu,td%tud,td%tdd,td%tdu,td%tdulo,td%tuulo,&
-         td%tuloulo,td%ind,td%h_loc,td%e_shift,td%h_off)
-    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tdulo(0:lmd,-llod:llod,mlotot,jspins),stat=err)
-    ALLOCATE(td%tuulo(0:lmd,-llod:llod,mlotot,jspins),stat=err)
-    ALLOCATE(td%tuloulo(-llod:llod,-llod:llod,MAX(mlolotot,1),jspins), stat=err)
-    ALLOCATE(td%ind(0:lmd,0:lmd,ntype,jspins),stat=err )
-    ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins,jspins))
-    ALLOCATE(td%e_shift(ntype,jspins))
+    ALLOCATE(td%e_shift(atoms%ntype,jspins),stat=err(7))
     IF (l_offdiag) THEN
-       ALLOCATE(td%h_off(0:2*lmaxd+1,0:2*lmaxd+1,ntype,2,2))
+       ALLOCATE(td%h_off(0:2*atoms%lmaxd+1,0:2*atoms%lmaxd+1,atoms%ntype,2,2),stat=err(4))
     ELSE
-       ALLOCATE(td%h_off(1,1,1,1,1))
+       ALLOCATE(td%h_off(1,1,1,1,1),stat=err(4))
     END IF
-    IF (err.NE.0) THEN
+    td%h_off=0.0
+    IF (ANY(err.NE.0)) THEN
        WRITE (*,*) 'an error occured during allocation of'
-       WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
-       CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="types_tlmplm")
+       WRITE (*,*) 'the tlmplm local matrix elements'
+       CALL juDFT_error("eigen: Error during allocation of tlmplm",calledby ="types_tlmplm")
     ENDIF
   END SUBROUTINE tlmplm_init
 

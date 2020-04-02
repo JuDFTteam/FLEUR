@@ -11,7 +11,6 @@ CONTAINS
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
-    USE m_tlmplm_store
     USE m_spnorb
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
@@ -39,15 +38,11 @@ CONTAINS
 
 
     CALL timestart("tlmplm")
-    CALL td%init(atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
-         DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(4,input%jspins,noco%l_mtNocoPot),&
-         (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr,noco%l_noco)!l_offdiag
+    CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
 
-    td%h_loc=0.0
     DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
        CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,mpi,vTot,input,hub1inp,td,ud)
-       IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u+atoms%n_hia>0,jsp,jsp,input%jspins)
     END DO
     CALL timestop("tlmplm")
 
