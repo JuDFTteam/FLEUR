@@ -52,14 +52,14 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! Local Scalars
    COMPLEX                   :: rhodummy, imPart12, realPart12
-   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype)
+   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntpye)
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype)
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
-
+   zeros=0.0
 
 !Flipcdn by optional given angle if lflip is false but routine is called.
    DO k=1, atoms%ntype
@@ -109,7 +109,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
             DO j = 1,atoms%jri(itype)
                 IF (noco%l_mtNocoPot) THEN
                    rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
-                   CALL rot_den_mat(rotAnglePhi(itype),rotAngleTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
+                   CALL rot_den_mat(zeros,rotAngleTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
+                   CALL rot_den_mat(rotAnglePhi(itype),zeros,den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
                    den%mt(j,lh,itype,3)=REAL(rhodummy)
 		   den%mt(j,lh,itype,4)=AIMAG(rhodummy)
                 ELSE
