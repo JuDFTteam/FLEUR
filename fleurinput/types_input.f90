@@ -17,6 +17,7 @@ MODULE m_types_input
   REAL    :: rkmax=0.0
   REAL    :: gmax
   REAL    :: zelec
+  LOGICAL :: eig66(2)=.FALSE.
   LOGICAL :: strho =.FALSE.
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
