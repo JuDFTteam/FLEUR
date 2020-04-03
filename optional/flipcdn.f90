@@ -52,7 +52,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! Local Scalars
    COMPLEX                   :: rhodummy, imPart12, realPart12
-   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntpye)
+   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntype)
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype)
