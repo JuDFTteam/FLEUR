@@ -137,6 +137,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
    wann%l_hsomtx_to_hsoc_unf=.false.
    wann%l_hsomtx_to_hsoc=.false.
    wann%l_hsomtx_unf_to_hsoc=.false.
+   input%l_kpts_fullbz=.true.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
@@ -313,6 +314,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
             wann%l_bzsym=.true.
+            input%l_kpts_fullbz=.false.
          elseif(trim(task).eq.'mmn0')then
             wann%l_mmn0=.true.
          elseif(trim(task).eq.'mmn0at')then
@@ -613,6 +615,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
             wann%l_bzsym=.true.
+            input%l_kpts_fullbz=.false.
          elseif(trim(task).eq.'mmn0')then
             wann%l_mmn0=.true.
          elseif(trim(task).eq.'mmn0at')then

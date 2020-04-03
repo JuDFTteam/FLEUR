@@ -319,6 +319,7 @@ CONTAINS
     xPathA = '/fleurInput/output/wannier'
     numberNodes = xml%getNumberOfNodes(xPathA)
 
+
     IF (numberNodes.EQ.1) THEN
        this%l_ms = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ms'))
        this%l_sgwf = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sgwf'))
@@ -363,9 +364,140 @@ CONTAINS
        ALLOCATE(this%jobList(numTokens))
        DO i = 1, numTokens
           this%jobList(i) = xml%popFirstStringToken(valueString)
+          IF(this%jobList(i)(1:1).EQ.'!')cycle
+          IF(this%jobList(i).EQ.'socmat')THEN
+             this%l_socmat=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
+             this%l_socmatvec=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
+             this%l_socmatrs=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'soctomom')THEN
+             this%l_soctomom=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'surfcurr')THEN
+             this%l_surfcurr=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'lapw_kpts')THEN
+             this%l_lapw_kpts=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'updown')THEN
+             this%l_updown=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'stopopt')THEN
+             this%l_stopopt=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'projgen')THEN
+             this%l_projgen=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'kpointgen')THEN
+             this%l_kpointgen=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'potmat')THEN
+             this%l_potmat=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'w90kpointgen')THEN
+             this%l_w90kpointgen=.TRUE.
+        !Not done
+        !  ELSEIF(this%jobList(i).EQ.'lapw_gfleur')THEN
+        !     this%l_lapw_gfleur=.TRUE.
+        !     backspace(916)
+        !     read(916,*,iostat=ios)task,this%gfthick,this%gfcut
+        !     if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
+        !     if(l_p0)write(6,*)"gfcut=",this%gfthick,this%gfcut
+        !Not done
+        !  ELSEIF(this%jobList(i).EQ.'lapw')THEN
+        !     this%l_lapw=.TRUE.
+        !     backspace(916)
+        !     read(916,*,iostat=ios)task,this%unigrid(:)
+        !     if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
+        !     if(l_p0)write(6,*)"unigrid=",this%unigrid(:)
+          ELSEIF(this%jobList(i).EQ.'plot_lapw')THEN
+             this%l_plot_lapw=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'bzsym')THEN
+             this%l_bzsym=.TRUE.
+             !this%l_kpts_fullbz=.false.
+          ELSEIF(this%jobList(i).EQ.'mmn0')THEN
+             this%l_mmn0=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0at')THEN
+             this%l_mmn0at=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'manyfiles')THEN
+             this%l_manyfiles=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'collectmanyfiles')THEN
+             this%l_collectmanyfiles=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'bestproj')THEN
+             this%l_bestproj=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'pauli')THEN
+             this%l_pauli=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'pauliat')THEN
+             this%l_pauliat=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'proj_plot')THEN
+             this%l_proj_plot=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hopping')THEN
+             this%l_hopping=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'plot_symm')THEN
+             this%l_plot_symm=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'kptsreduc')THEN
+             this%l_kptsreduc=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'fermi')THEN
+             this%l_fermi=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'prepwan90')THEN
+             this%l_prepwan90=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'plot_umdat')THEN
+             this%l_plot_umdat=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'wann_plot')THEN
+             this%l_wann_plot=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'bynumber')THEN
+             this%l_bynumber=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'matrixmmn')THEN
+             this%l_matrixmmn=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'projmethod')THEN
+             this%l_projmethod=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
+             this%l_matrixamn=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'wannierize')THEN
+             this%l_wannierize=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'plotw90')THEN
+             this%l_plotw90=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'dipole')THEN
+             this%l_dipole=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'dipole3')THEN
+             this%l_dipole3=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'ldauwan')THEN
+             this%l_ldauwan=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'byenergy')THEN
+             this%l_byenergy=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'finishnocoplot') THEN
+             this%l_finishnocoplot=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'finishgwf') THEN
+             this%l_finishgwf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'skipkov') THEN
+             this%l_skipkov=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'matrixuhu') THEN
+             this%l_matrixuHu=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'matrixuhu-dmi') THEN
+             this%l_matrixuHu_dmi=.TRUE.
+         !Not done
+         ! ELSEIF(this%jobList(i).EQ.'wan90version')THEN
+         !    backspace(916)
+         !    read(916,*,iostat=ios)task,version_real
+         !    if (ios /= 0) CALL judft_error("error reading wan90version", calledby="wann_read_inp")
+         !    if(abs(version_real-1.1).lt.1.e-9)THEN
+         !       this%wan90version=1
+         !    ELSEIF(abs(version_real-1.2).lt.1.e-9)THEN
+         !       this%wan90version=2
+         !    ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
+         !       this%wan90version=3
+         !    ELSE
+         !      CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
+         !    endif
+         !Not done
+         ! ELSEIF(this%jobList(i).EQ.'ikptstart')THEN
+         !    this%l_ikptstart=.TRUE.
+         !    backspace(916)
+         !    read(916,*,iostat=ios)task,this%ikptstart
+         !    if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
+         !    if(l_p0)write(6,*)"ikptstart=",this%ikptstart
+         ELSEIF(this%jobList(i).EQ.'endjobs')THEN
+             Exit
+          ELSE
+             WRITE(6,*)"unrecognized key: ",this%jobList(i)
+             CALL juDFT_error ("unrecognized key in wann_inp", calledby="wann_read_inp")
+          END IF
        END DO
     END IF
-
+ 
     ALLOCATE(wannAtomList(xml%get_nat()))
     DO i=1,xml%get_nat()
        wannAtomList(i)= evaluateFirstBoolOnly(xml%getAttributeValue(xml%posPath(i)//'/@wannier'))

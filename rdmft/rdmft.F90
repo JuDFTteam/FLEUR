@@ -89,7 +89,6 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    CHARACTER(LEN=20)                    :: filename
 
    INTEGER                              :: nsest(fi%input%neig) ! probably too large
-   INTEGER                              :: indx_sest(fi%input%neig,fi%input%neig) ! probably too large
    INTEGER                              :: rrot(3,3,fi%sym%nsym)
    INTEGER                              :: psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
    INTEGER                              :: lowestState(fi%kpts%nkpt,fi%input%jspins)
@@ -121,11 +120,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    REAL, ALLOCATABLE                    :: occupationVec(:)
 
+   INTEGER, ALLOCATABLE                 :: indx_sest(:,:)
    INTEGER, ALLOCATABLE                 :: parent(:)
    INTEGER, ALLOCATABLE                 :: pointer_EIBZ(:)
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
+   type(t_hybmpi)    :: hybmpi
 
    complex :: c_phase(fi%input%neig)
 
@@ -378,9 +379,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
+   !CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
 
-   CALL coulombmatrix(mpi,fi%atoms,fi%kpts,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,xcpot)
+   if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(i,i=1,fi%kpts%nkpt)])
+   call hybmpi%copy_mpi(mpi)
+   do i =1,fi%kpts%nkpt
+      call hybdat%coul(i)%mpi_ibc(fi, hybmpi, 0)
+   enddo
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
 
@@ -497,9 +502,6 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE (hybdat%pntgptd)
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
-
-         call mpdata%free()
-
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE (hybdat%nindxp1)
 
          results%neig(:,:) = neigTemp(:,:)
@@ -514,11 +516,21 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
 
+            nbasfcn = 0
+            IF(fi%noco%l_noco) then
+               nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
+            ELSE
+               nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+            END IF
+
             parent = 0
-            CALL zMat%init(olap%l_real,nbasfcn,fi%input%neig)
+            CALL zMat%init(fi%sym%invs,nbasfcn,fi%input%neig)
 
             if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
             call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
+
+            ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
+            indx_sest = 0
 
             call symm_hf_init(fi%sym,fi%kpts,ikpt,nsymop,rrot,psym)
             call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
@@ -526,12 +538,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(ikpt,fi%kpts,nkpt_EIBZ, fi%sym,fi%atoms,mpdata,fi%hybinp,fi%cell,fi%input,jspin,hybdat,lapw,&
-                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,fi%noco,nococonv,fi%oned,nsest,indx_sest,&
+            CALL exchange_valence_hf(ikpt,fi,zMat, c_phase,nkpt_EIBZ,mpdata,jspin,hybdat,lapw,&
+                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,nococonv,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
                                 mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
                                 1.0,results,exMat)
+
+            DEALLOCATE(indx_sest)
 
             !Start of workaround for increased functionality of fi%symmetrizeh (call it))
 

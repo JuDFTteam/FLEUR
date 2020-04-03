@@ -470,7 +470,6 @@ CONTAINS
     USE m_types_atoms
     USE m_types_input
     USE m_types_vacuum
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
     INTEGER,INTENT(IN)             :: mpi_comm
@@ -602,14 +601,32 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)        :: vacuum
     TYPE(t_regionCharges),INTENT(IN) :: regCharges
 
-    INTEGER :: ispin, n
+    INTEGER :: ispin, n, ilo, iVac, l
+
+    enpara%el1(:,:,:) = enpara%el0(:,:,:)
+    enpara%ello1(:,:,:) = enpara%ello0(:,:,:)
+    enpara%evac1(:,:) = enpara%evac(:,:)
 
     DO ispin = 1,input%jspins
        DO n=1,atoms%ntype
-          enpara%el1(0:3,n,ispin)=regCharges%ener(0:3,n,ispin)/regCharges%sqal(0:3,n,ispin)
-          IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=regCharges%enerlo(:atoms%nlo(n),n,ispin)/regCharges%sqlo(:atoms%nlo(n),n,ispin)
+          DO l = 0, 3
+             IF (regCharges%sqal(l,n,ispin).NE.0.0) enpara%el1(l,n,ispin)=regCharges%ener(l,n,ispin)/regCharges%sqal(l,n,ispin)
+          END DO
+          IF (atoms%nlo(n)>0) THEN
+             DO ilo = 1, atoms%nlo(n)
+                IF (regCharges%sqlo(ilo,n,ispin).NE.0.0) THEN
+                   enpara%ello1(ilo,n,ispin)=regCharges%enerlo(ilo,n,ispin)/regCharges%sqlo(ilo,n,ispin)
+                END IF
+             END DO
+          END IF
        END DO
-       IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
+       IF (input%film) THEN
+          DO iVac = 1, vacuum%nvac
+             IF (regCharges%svac(iVac,ispin).NE.0.0) THEN
+                enpara%evac1(iVac,ispin)=regCharges%pvac(iVac,ispin)/regCharges%svac(iVac,ispin)
+             END IF
+          END DO
+       END IF
     END DO
   END SUBROUTINE calcOutParams
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)

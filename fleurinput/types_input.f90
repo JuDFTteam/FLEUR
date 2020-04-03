@@ -17,6 +17,7 @@ MODULE m_types_input
   REAL    :: rkmax=0.0
   REAL    :: gmax
   REAL    :: zelec
+  LOGICAL :: eig66(2)=.FALSE.
   LOGICAL :: strho =.FALSE.
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
@@ -53,6 +54,7 @@ MODULE m_types_input
   LOGICAL:: pallst=.FALSE.
   LOGICAL:: l_coreSpec=.FALSE.
   LOGICAL:: l_wann=.FALSE.
+  LOGICAL:: l_kpts_fullbz=.FALSE.
   LOGICAL:: secvar=.FALSE.
   LOGICAL:: evonly=.FALSE.
   !     LOGICAL:: l_inpXML=.TRUE.
@@ -91,6 +93,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
  ELSE
     rank=0
  END IF
+ CALL mpi_bc(this%eig66(1),rank,mpi_comm)
  CALL mpi_bc(this%film,rank,mpi_comm)
  CALL mpi_bc(this%jspins,rank,mpi_comm)
  CALL mpi_bc(this%neig,rank,mpi_comm)
@@ -328,6 +331,7 @@ SUBROUTINE read_xml_input(this,xml)
     ! Read in general output switches
     this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
     this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
+!    this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
     ! Read in optional switches for checks
     xPathA = '/fleurInput/output/checks'
     numberNodes = xml%GetNumberOfNodes(xPathA)

@@ -4,7 +4,7 @@
 jt::copyfile("files/inp2.xml","$workdir/inp.xml");
 jt::copyfile("files/JUDFT_WARN_ONLY", "$workdir");
 
-jt::testrun("rm mixing_history",$workdir);
+jt::testrun("rm mixing_histor*",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output

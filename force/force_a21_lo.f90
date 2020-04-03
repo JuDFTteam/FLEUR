@@ -7,7 +7,7 @@
 MODULE m_forcea21lo
 CONTAINS
   SUBROUTINE force_a21_lo(atoms,isp,itype,we,eig,ne,eigVecCoeffs,&
-                          aveccof,bveccof,cveccof,tlmplm,usdus,a21)
+       aveccof,bveccof,cveccof,tlmplm,usdus,a21)
     !
     !***********************************************************************
     ! This subroutine calculates the local orbital contribution to A21,
@@ -38,7 +38,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX utulo,dtulo,cutulo,cdtulo,ulotulo
-    INTEGER lo,lop,l,lp ,mp,lm,lmp,iatom,ie,i,lolop,loplo,in,m,lo1
+    INTEGER lo,lop,l,lp ,mp,lm,lmp,iatom,ie,i,lolop,loplo,m,lo1
     !     ..
     !     ..
     !*************** ABBREVIATIONS *****************************************
@@ -58,32 +58,29 @@ CONTAINS
           DO lp = 0,atoms%lmax(itype)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
+                DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
                    !
                    !--->             check whether the t-matrixelement is 0
                    !--->             (indmat.EQ.-9999)
                    !
-                   in = tlmplm%ind(lmp,lm,itype,1)
-                   IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
-                      utulo = tlmplm%tuulo(lmp,m,lo1,1)
-                      dtulo = tlmplm%tdulo(lmp,m,lo1,1)
-                      cutulo = conjg(tlmplm%tuulo(lmp,m,lo1,1))
-                      cdtulo = conjg(tlmplm%tdulo(lmp,m,lo1,1))
-                      DO ie = 1,ne
-                         DO i = 1,3
-                            a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
-                                 conjg(eigVecCoeffs%acof(ie,lmp,iatom,isp))*utulo&
-                                 *cveccof(i,m,ie,lo,iatom)&
-                                 + conjg(eigVecCoeffs%bcof(ie,lmp,iatom,isp))*dtulo&
-                                 *cveccof(i,m,ie,lo,iatom)&
-                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
-                                 *cutulo*aveccof(i,ie,lmp,iatom)&
-                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
-                                 *cdtulo*bveccof(i,ie,lmp,iatom)&
-                                 )*we(ie)/atoms%neq(itype)
-                         ENDDO
+                   utulo = tlmplm%tuulo(lmp,m,lo1,isp,isp)
+                   dtulo = tlmplm%tdulo(lmp,m,lo1,isp,isp)
+                   cutulo = CONJG(tlmplm%tuulo(lmp,m,lo1,isp,isp))
+                   cdtulo = CONJG(tlmplm%tdulo(lmp,m,lo1,isp,isp))
+                   DO ie = 1,ne
+                      DO i = 1,3
+                         a21(i,iatom)=a21(i,iatom)+2.0*AIMAG(&
+                              CONJG(eigVecCoeffs%acof(ie,lmp,iatom,isp))*utulo&
+                              *cveccof(i,m,ie,lo,iatom)&
+                              + CONJG(eigVecCoeffs%bcof(ie,lmp,iatom,isp))*dtulo&
+                              *cveccof(i,m,ie,lo,iatom)&
+                              + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
+                              *cutulo*aveccof(i,ie,lmp,iatom)&
+                              + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
+                              *cdtulo*bveccof(i,ie,lmp,iatom)&
+                              )*we(ie)/atoms%neq(itype)
                       ENDDO
-                   ENDIF
+                   ENDDO
                 ENDDO
 
              ENDDO
@@ -92,49 +89,46 @@ CONTAINS
              lp = atoms%llo(lop,itype)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
-                   in = tlmplm%ind(lmp,lm,itype,1)
-                   IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
-                      lolop=DOT_PRODUCT(atoms%nlo(:itype-1),atoms%nlo(:itype-1)+1)/2
-                      IF (lo.GE.lop) THEN
-                         lolop = (lo-1)*lo/2 + lop + lolop
-                         ulotulo = tlmplm%tuloulo(m,mp,lolop,1)
-                      ELSE
-                         loplo = (lop-1)*lop/2 + lo +lolop
-                         ulotulo = conjg(tlmplm%tuloulo(mp,m,loplo,1))
-                      ENDIF
-                      DO ie = 1,ne
-                         DO i = 1,3
-                            a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
-                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
-                                 *ulotulo*cveccof(i,mp,ie,lop,iatom)&
-                                 )*we(ie)/atoms%neq(itype)
-                         ENDDO
-                      ENDDO
+                DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
+                   lolop=DOT_PRODUCT(atoms%nlo(:itype-1),atoms%nlo(:itype-1)+1)/2
+                   IF (lo.GE.lop) THEN
+                      lolop = (lo-1)*lo/2 + lop + lolop
+                      ulotulo = tlmplm%tuloulo(m,mp,lolop,isp,isp)
+                   ELSE
+                      loplo = (lop-1)*lop/2 + lo +lolop
+                      ulotulo = CONJG(tlmplm%tuloulo(mp,m,loplo,isp,isp))
                    ENDIF
+                   DO ie = 1,ne
+                      DO i = 1,3
+                         a21(i,iatom)=a21(i,iatom)+2.0*AIMAG(&
+                              + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
+                              *ulotulo*cveccof(i,mp,ie,lop,iatom)&
+                              )*we(ie)/atoms%neq(itype)
+                      ENDDO
+                   ENDDO
                 ENDDO
              ENDDO
           ENDDO
-          DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
+          DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
              DO ie = 1,ne
                 DO i = 1,3
                    a21(i,iatom)=a21(i,iatom)&
-                        -2.0*aimag(&
-                        (conjg(eigVecCoeffs%acof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
-                        conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*aveccof(i,ie,lm,iatom))*usdus%uulon(lo,itype,isp)+&
-                        (conjg(eigVecCoeffs%bcof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
-                        conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*bveccof(i,ie,lm,iatom))*&
+                        -2.0*AIMAG(&
+                        (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*aveccof(i,ie,lm,iatom))*usdus%uulon(lo,itype,isp)+&
+                        (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*bveccof(i,ie,lm,iatom))*&
                         usdus%dulon(lo,itype,isp))*eig(ie)*we(ie)/atoms%neq(itype)
                 ENDDO
              ENDDO
           ENDDO
           !--->       consider only the lop with l_lop = l_lo
           DO lop = atoms%lo1l(l,itype),(atoms%lo1l(l,itype)+atoms%nlol(l,itype)-1)
-             DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
+             DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
                 DO ie = 1,ne
                    DO i = 1,3
-                      a21(i,iatom)=a21(i,iatom)-2.0*aimag(&
-                           conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*&
+                      a21(i,iatom)=a21(i,iatom)-2.0*AIMAG(&
+                           CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*&
                            cveccof(i,m,ie,lop,iatom)*&
                            usdus%uloulopn(lo,lop,itype,isp))*&
                            eig(ie)*we(ie)/atoms%neq(itype)

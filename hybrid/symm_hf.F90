@@ -193,6 +193,7 @@ CONTAINS
       END DO
       nkpt_EIBZ = ic
 
+      IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
       allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
       ic = 0
       DO ikpt = 1, kpts%nkptf
@@ -206,6 +207,7 @@ CONTAINS
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
+      IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
       allocate(n_q(nkpt_EIBZ), source=0)
 
       ic = 0

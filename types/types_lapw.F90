@@ -56,10 +56,11 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
 
       integer :: nbasfcn
-
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, &
-                      lapw%nv(1) + fi%atoms%nlotot, &
-                      fi%noco%l_noco)
+      if(fi%noco%l_noco) then
+         nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
+      else
+         nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+      endif
    end function hyb_num_bas_fun
 
   subroutine lapw_init_dim(nvd_in,nv2d_in,nbasfcn_in)

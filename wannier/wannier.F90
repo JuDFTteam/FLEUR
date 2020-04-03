@@ -269,7 +269,7 @@ CONTAINS
     INTEGER :: n1,n2,ii,jj,lmplmd
 
     COMPLEX :: interchi,vacchi,amnchi
-    COMPLEX :: phasfac,phasfac2,cmplx_1
+    COMPLEX :: phasfac,phasfac2
 
     COMPLEX,ALLOCATABLE :: chi(:)
     COMPLEX,ALLOCATABLE :: acof_qb(:,:,:)
@@ -308,8 +308,6 @@ CONTAINS
     zero_taual = 0.0
 
     hescale=sqrt(tpi_const*condquant/bohrtocm/cell%omtil)
-
-    cmplx_1 = CMPLX(1.0,0.0)
 
     CALL timestart("Wannier total")
 
