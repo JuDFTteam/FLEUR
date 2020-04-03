@@ -81,7 +81,6 @@ CONTAINS
 
       ! - local arrays -
       INTEGER                    :: g(3)
-      INTEGER                    :: nbasm1(fi%kpts%nkptf)
       INTEGER, ALLOCATABLE   :: pqnrm(:, :)
       INTEGER                    :: rrot(3, 3, fi%sym%nsym), invrrot(3, 3, fi%sym%nsym)
       INTEGER, ALLOCATABLE   :: iarr(:), POINTER(:, :, :, :)!,pointer(:,:,:)
@@ -144,8 +143,6 @@ CONTAINS
       END DO
 
       CALL intgrf_init(fi%atoms%ntype, fi%atoms%jmtd, fi%atoms%jri, fi%atoms%dx, fi%atoms%rmsh, gridf)
-
-      nbasm1 = hybdat%nbasp + mpdata%n_g(:)
 
       !     Calculate the structure constant
       CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, mpi)
@@ -521,7 +518,6 @@ CONTAINS
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb_repl(ikpt))
 
-            !coulomb_repl(ikpt)%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = coulmat%data_c(:,:mpdata%n_g(ikpt))
             call coulomb_repl(ikpt)%u2l()
          END DO
          call timestop("loop over interst.")
@@ -803,8 +799,6 @@ CONTAINS
             call perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coulomb_repl(ikpt))
             call coulomb_repl(ikpt)%u2l()
-            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-            coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO
          call timestop("loop 2")
          deallocate (carr2)
@@ -826,18 +820,8 @@ CONTAINS
             DO igpt0 = 1, ngptm1(ikpt)
                lsym = (1 <= igpt0) .AND. (ngptm1(ikpt) >= igpt0)
                igpt2 = pgptm1(igpt0, ikpt)
-               j = (hybdat%nbasp + igpt2 - 1)*(hybdat%nbasp + igpt2)/2
-               i = hybdat%nbasp + igpt2
-               carr2(1:i, 2) = coulomb(j + 1:j + i, ikpt)
-               j = j + i
-               DO i = hybdat%nbasp + igpt2 + 1, nbasm1(ikpt)
-                  j = j + i - 1
-                  IF (fi%sym%invs) THEN
-                     carr2(i, 2) = coulomb(j, ikpt)
-                  ELSE
-                     carr2(i, 2) = CONJG(coulomb(j, ikpt))
-                  ENDIF
-               END DO
+               carr2(:hybdat%nbasm(ikpt),2) = coulomb_repl(ikpt)%data_c(:hybdat%nbasm(ikpt),hybdat%nbasp + igpt2)
+
                IF (lsym) THEN
                   ic = 1
                   sym_gpt(ic, igpt0, ikpt) = igpt2
@@ -848,15 +832,17 @@ CONTAINS
                                     fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
                                     fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
                                     mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                                    hybdat%nbasp, nbasm1, carr2(:, 1), igpt1)
+                                    hybdat%nbasp, hybdat%nbasm, carr2(:, 1), igpt1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
                                        fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
                                        fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
                                        mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                                       dwgn(:, :, :, isym), hybdat%nbasp, nbasm1, carr2(:, 1), igpt1)
+                                       dwgn(:, :, :, isym), hybdat%nbasp, hybdat%nbasm, carr2(:, 1), igpt1)
                      l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
-                     coulomb(l + 1:l + hybdat%nbasp + igpt1, ikpt) = carr2(:hybdat%nbasp + igpt1, 1)
+                     coulomb_repl(ikpt)%data_c(:hybdat%nbasp + igpt1,hybdat%nbasp + igpt1) = carr2(:hybdat%nbasp + igpt1, 1)
+                     coulomb_repl(ikpt)%data_c(hybdat%nbasp + igpt1,:hybdat%nbasp + igpt1) = conjg(carr2(:hybdat%nbasp + igpt1, 1))
+
                      iarr(igpt1) = 1
                      IF (lsym) THEN
                         ic = ic + 1
@@ -866,6 +852,9 @@ CONTAINS
                END DO
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
+            call coulomb_repl(ikpt)%u2l()
+            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+            coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
@@ -880,7 +869,7 @@ CONTAINS
          !
       ELSE
          CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                  fi%hybinp, hybdat, nbasm1, gridf, coulomb)
+                                  fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -902,11 +891,11 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
          ! unpack coulomb into coulhlp
 
-         !call coulhlp%from_packed(fi%sym%invs, nbasm1(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
+         !call coulhlp%from_packed(fi%sym%invs, hybdat%nbasm(ikpt), real(coulomb(:, ikpt)), coulomb(:, ikpt))
          if (fi%sym%invs) then
-            call coulhlp%from_packed(nbasm1(ikpt), REAL(coulomb(:, ikpt)))
+            call coulhlp%from_packed(hybdat%nbasm(ikpt), REAL(coulomb(:, ikpt)))
          else
-            call coulhlp%from_packed(nbasm1(ikpt), coulomb(:, ikpt))
+            call coulhlp%from_packed(hybdat%nbasm(ikpt), coulomb(:, ikpt))
          endif
          ! only one processor per k-point calculates MT convolution
          IF (calc_mt(ikpt)) THEN
@@ -1122,12 +1111,12 @@ CONTAINS
          !
          if (fi%sym%invs) THEN
             hybdat%coul(ikpt)%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-               = coulhlp%data_r(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_r(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             hybdat%coul(ikpt)%pmtir_r(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_r(:ic2, :ic2))
          else
             hybdat%coul(ikpt)%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-               = coulhlp%data_c(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             hybdat%coul(ikpt)%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_c(:ic2, :ic2))
          end if
