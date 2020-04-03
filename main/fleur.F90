@@ -193,7 +193,7 @@ CONTAINS
     endif
 
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
-                    fi%noco%l_noco,.true.,l_real,fi%noco%l_soc,.false.,mpi%n_size)
+                    fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),mpi%n_size)
   IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 
 #ifdef CPP_CHASE
@@ -304,11 +304,11 @@ END IF
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vToT,fi%hub1inp)
           CALL timestop("Updating energy parameters")
-          !IF(.not.fi%input%eig66(1))THEN
+          IF(.not.fi%input%eig66(1))THEN
             CALL eigen(fi,mpi,stars,sphhar,xcpot,&
                        enpara,nococonv,mpdata,hybdat,&
                        iter,eig_id,results,inDen,vTemp,vx,hub1data)
-          !ENDIF
+          ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -331,7 +331,7 @@ END IF
 #endif
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
-          IF (fi%noco%l_soc.AND..NOT.fi%noco%l_noco) &
+          IF (fi%noco%l_soc.AND..NOT.fi%noco%l_noco.AND..NOT.fi%INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,stars,fi%vacuum,fi%atoms,sphhar,&
                           fi%sym,fi%cell,fi%noco,nococonv,fi%input,fi%kpts, fi%oneD,vTot,enpara,results,fi%hub1inp,hub1data)
           CALL timestop("gen. of hamil. and diag. (total)")
