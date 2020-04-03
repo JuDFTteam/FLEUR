@@ -52,15 +52,18 @@ CONTAINS
        jmin=jsp;jmax=jsp
        td%e_shift(:,jsp)=e_shift_min
     ELSE
-       !Calculate overlap integrals
-       !For the off-diagonal LDA+U contributions
        jmin=1;jmax=2
+       IF(atoms%n_u+atoms%n_hia>0) THEN
+          !Calculate overlap integrals
+          !For the off-diagonal LDA+U contributions
+          ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+          ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+          ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+          ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+          CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+       ENDIF
     ENDIF
 
-    !ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
-    !dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-    !CALL rad_ovlp(atoms,ud,input,hub1inp,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-    !ENDIF
 
     DO j1=jmin,jmax
        j2=MERGE(j1,3-j1,jsp<3)
