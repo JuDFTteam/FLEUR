@@ -93,6 +93,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
  ELSE
     rank=0
  END IF
+ CALL mpi_bc(this%eig66(1),rank,mpi_comm)
  CALL mpi_bc(this%film,rank,mpi_comm)
  CALL mpi_bc(this%jspins,rank,mpi_comm)
  CALL mpi_bc(this%neig,rank,mpi_comm)
