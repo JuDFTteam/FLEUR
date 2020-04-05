@@ -963,6 +963,7 @@
       <xsd:attribute default="F" name="slice" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="mcd" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
