@@ -853,8 +853,6 @@ CONTAINS
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
             call coulomb_repl(ikpt)%u2l()
-            entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-            coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
@@ -867,11 +865,17 @@ CONTAINS
          ! The HSE functional is realized subtracting erf/r from
          ! the normal Coulomb matrix
          !
+         call judft_error("HSE is not implemented")
       ELSE
          CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                  fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb)
+                                  fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb_repl(1))
       END IF
-
+      
+      do ikpt = 1, fi%kpts%nkpt
+         entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+         coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
+      enddo
+      
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
@@ -1129,7 +1133,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, nbasm1, gridf, coulomb_repl)
 
       USE m_types
       USE m_constants
@@ -1149,7 +1153,7 @@ CONTAINS
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:, :)
-      COMPLEX, INTENT(INOUT) :: coulomb(:, :)
+      type(t_mat), intent(inout) :: coulomb_repl
 
       ! - local scalars -
       INTEGER               :: l, i, j, n, nn, itype, ieq, M
@@ -1225,16 +1229,14 @@ CONTAINS
       DO j = 1, n
          DO i = 1, j
             l = l + 1
-            coulomb(l, 1) = coulomb(l, 1) - fpi_const/3 &
-                            *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
-                              + (CONJG(coeff(i))*claplace(j) &
-                                 + CONJG(claplace(i))*coeff(j))/2)
-            ! coulomb_repl%data_c(j,i) = coulomb_repl%data_c(j,i) - fpi_const/3 &
-            !                            *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
-            !                            + (CONJG(coeff(i))*claplace(j) &
-            !                               + CONJG(claplace(i))*coeff(j))/2)
+            coulomb_repl%data_c(i,j) = coulomb_repl%data_c(i,j) - fpi_const/3 &
+                                       *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
+                                       + (CONJG(coeff(i))*claplace(j) &
+                                          + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
+
+      call coulomb_repl%u2l()
    END SUBROUTINE subtract_sphaverage
 
    !     -----------------------------------------------------------------------------------------------
