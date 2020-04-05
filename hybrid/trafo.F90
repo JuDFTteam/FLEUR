@@ -518,9 +518,6 @@ CONTAINS
 
       DO i = 1, nbands
          if (z_in%l_real) THEN
-            if(i == 35 .and. nk == 3 .and. iop == 10) then
-               write (*,*) "nice bp eh?"
-            endif
             cdum = commonphase(zhlp(:, i), z_in%matsize1)
             if(present(c_phase)) c_phase(i) = cdum
             if(abs(cdum) < 1e-30) THEN
@@ -528,7 +525,6 @@ CONTAINS
             endif
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
-               WRITE (*, *) zhlp
                call judft_error('waveftrafo1: Residual imaginary part.')
             END IF
             z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
