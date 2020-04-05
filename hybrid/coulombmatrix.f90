@@ -1229,23 +1229,12 @@ CONTAINS
                             *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
                               + (CONJG(coeff(i))*claplace(j) &
                                  + CONJG(claplace(i))*coeff(j))/2)
+            ! coulomb_repl%data_c(j,i) = coulomb_repl%data_c(j,i) - fpi_const/3 &
+            !                            *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
+            !                            + (CONJG(coeff(i))*claplace(j) &
+            !                               + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
-      coeff(hybdat%nbasp + 1) = 1.0
-      coeff(hybdat%nbasp + 2:) = 0.0
-      IF (sym%invs) THEN
-
-         CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
-                           atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
-                           mpdata%num_radbasfn, sym)
-         CALL symmetrize(coeff, nbasm1(1), 1, 1, .FALSE., &
-                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
-                         mpdata%num_radbasfn, sym)
-      ENDIF
-      ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
-      ! due to inaccuracies in the overlap matrix (which can make it singular).
-      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybdat%nbasp))**2) + dot_product ( coeff(hybdat%nbasp+1:), MATMUL(olap,coeff(hybdat%nbasp+1:)) ) ) )
-
    END SUBROUTINE subtract_sphaverage
 
    !     -----------------------------------------------------------------------------------------------
