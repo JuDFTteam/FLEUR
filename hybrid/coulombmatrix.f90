@@ -871,16 +871,15 @@ CONTAINS
                                   fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb_repl(1))
       END IF
       
-      do ikpt = 1, fi%kpts%nkpt
-         entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
-         coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
-      enddo
-      
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, coulomb)
+      call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, coulomb_repl)
+      do ikpt = 1, fi%kpts%nkpt
+         entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
+         coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
+      enddo
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
       !
@@ -1841,7 +1840,7 @@ CONTAINS
       type(t_hybdat), intent(in) :: hybdat
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
-      COMPLEX, intent(inout)     :: coulomb(:, :)
+      type(t_mat), intent(inout) :: coulomb(:)
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
       integer         :: ikpt, nbasm
@@ -1853,34 +1852,27 @@ CONTAINS
          !calculate IR overlap-matrix
          CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
 
-         !unpack matrix coulomb
-         if (sym%invs) then
-            call coulhlp%from_packed(nbasm, REAL(coulomb(:, ikpt)))
-         else
-            call coulhlp%from_packed(nbasm, coulomb(:, ikpt))
-         endif
-
          ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
          ! rewritten as O * x = C
 
          call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
-         if (coulhlp%l_real) then
-            coul_submtx%data_r = coulhlp%data_r(hybdat%nbasp + 1:, :)
+         if (coul_submtx%l_real) then
+            coul_submtx%data_r = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :))
          else
-            coul_submtx%data_c = coulhlp%data_c(hybdat%nbasp + 1:, :)
+            coul_submtx%data_c = coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :)
          endif
 
          call olap%linear_problem(coul_submtx)
 
-         if (coulhlp%l_real) then
-            coulhlp%data_r(hybdat%nbasp + 1:, :) = coul_submtx%data_r
-            coul_submtx%data_r = transpose(coulhlp%data_r(:, hybdat%nbasp + 1:))
+         if (coul_submtx%l_real) then
+            coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
+            coul_submtx%data_r = real(transpose(coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:)))
          else
-            coulhlp%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
-            coul_submtx%data_c = conjg(transpose(coulhlp%data_c(:, hybdat%nbasp + 1:)))
+            coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
+            coul_submtx%data_c = conjg(transpose(coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:)))
          endif
 
-         ! perform  coulhlp%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
+         ! perform  coulomb(ikpt)%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
          ! rewritten as O^T * x^T = C^T
 
          ! reload O, since the solver destroys it.
@@ -1888,15 +1880,14 @@ CONTAINS
          ! Notice O = O^T since it's symmetric
          call olap%linear_problem(coul_submtx)
 
-         if (coulhlp%l_real) then
-            coulhlp%data_r(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
+         if (coul_submtx%l_real) then
+            coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
          else
-            coulhlp%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
+            coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
          endif
 
          call coul_submtx%free()
          call olap%free()
-         coulomb(:(nbasm*(nbasm + 1))/2, ikpt) = coulhlp%to_packed()
       enddo
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
