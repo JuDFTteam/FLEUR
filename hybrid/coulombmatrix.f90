@@ -875,8 +875,8 @@ CONTAINS
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, coulomb_repl)
       do ikpt = 1, fi%kpts%nkpt
+         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb_repl(ikpt))
          entry_len = (hybdat%nbasm(ikpt)*(hybdat%nbasm(ikpt)+1))/2
          coulomb(:entry_len,ikpt) = coulomb_repl(ikpt)%to_packed()
       enddo
@@ -1829,7 +1829,7 @@ CONTAINS
 
    END FUNCTION sphbessel_integral
 
-   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, coulomb)
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, ikpt, coulomb)
       USE m_olap, ONLY: olap_pw
       USE m_types
       use m_judft
@@ -1840,55 +1840,54 @@ CONTAINS
       type(t_hybdat), intent(in) :: hybdat
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
-      type(t_mat), intent(inout) :: coulomb(:)
+      type(t_mat), intent(inout) :: coulomb
+      integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
-      integer         :: ikpt, nbasm
+      integer         :: nbasm
 
       call timestart("solve olap linear eq. sys")
-      DO ikpt = 1, kpts%nkpt
-         nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
-         CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
-         !calculate IR overlap-matrix
-         CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
+      CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
+      !calculate IR overlap-matrix
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
 
-         ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
-         ! rewritten as O * x = C
+      ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
+      ! rewritten as O * x = C
 
-         call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
-         if (coul_submtx%l_real) then
-            coul_submtx%data_r = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :))
-         else
-            coul_submtx%data_c = coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :)
-         endif
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+      if (coul_submtx%l_real) then
+         coul_submtx%data_r = real(coulomb%data_c(hybdat%nbasp + 1:, :))
+      else
+         coul_submtx%data_c = coulomb%data_c(hybdat%nbasp + 1:, :)
+      endif
 
-         call olap%linear_problem(coul_submtx)
+      call olap%linear_problem(coul_submtx)
 
-         if (coul_submtx%l_real) then
-            coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
-            coul_submtx%data_r = real(transpose(coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:)))
-         else
-            coulomb(ikpt)%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
-            coul_submtx%data_c = conjg(transpose(coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:)))
-         endif
+      if (coul_submtx%l_real) then
+         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
+         coul_submtx%data_r = real(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+      else
+         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
+         coul_submtx%data_c = conjg(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+      endif
 
-         ! perform  coulomb(ikpt)%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
-         ! rewritten as O^T * x^T = C^T
+      ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
+      ! rewritten as O^T * x^T = C^T
 
-         ! reload O, since the solver destroys it.
-         CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
-         ! Notice O = O^T since it's symmetric
-         call olap%linear_problem(coul_submtx)
+      ! reload O, since the solver destroys it.
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      ! Notice O = O^T since it's symmetric
+      call olap%linear_problem(coul_submtx)
 
-         if (coul_submtx%l_real) then
-            coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
-         else
-            coulomb(ikpt)%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
-         endif
+      if (coul_submtx%l_real) then
+         coulomb%data_c(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
+      else
+         coulomb%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
+      endif
 
-         call coul_submtx%free()
-         call olap%free()
-      enddo
+      call coul_submtx%free()
+      call olap%free()
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
