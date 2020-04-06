@@ -1095,12 +1095,10 @@ CONTAINS
             hybdat%coul(ikpt)%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
             ic2 = indx1 + mpdata%n_g(ikpt)
-            hybdat%coul(ikpt)%pmtir_r(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_r(:ic2, :ic2))
          else
             hybdat%coul(ikpt)%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
-            hybdat%coul(ikpt)%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_c(:ic2, :ic2))
          end if
 
          call coulomb(ikpt)%free()

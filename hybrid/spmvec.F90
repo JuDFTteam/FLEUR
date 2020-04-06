@@ -29,7 +29,7 @@ CONTAINS
       REAL, INTENT(IN) ::  coulomb_mt2(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       REAL, INTENT(IN) ::  coulomb_mt3(:, :, :)
-      REAL, INTENT(IN) ::  coulomb_mtir(:)
+      REAL, INTENT(IN) ::  coulomb_mtir(:,:)
       REAL, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
       REAL, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
@@ -127,10 +127,11 @@ CONTAINS
 
       ! compute vecout for the index-range from ibasm+1:nbasm
 
-      indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
-                                            itype=1, atoms%ntype)/)) + mpdata%n_g(ikpt)
-      CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
-
+      indx1 = sum([(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
+                                            itype=1, atoms%ntype)]) + mpdata%n_g(ikpt)
+      call timestart("ibasm+1 -> dgemv")
+      call dgemv("N", indx1, indx1, 1.0, coulomb_mtir, indx1, vecinhlp(ibasm + 1), 1, 1.0, vecout(ibasm + 1), 1 )
+      call timestop("ibasm+1 -> dgemv")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, atoms%ntype
@@ -228,7 +229,7 @@ CONTAINS
       COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
-      COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
+      COMPLEX, INTENT(IN) ::  coulomb_mtir(:,:)
       COMPLEX, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
       COMPLEX, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
@@ -341,9 +342,9 @@ CONTAINS
 
       indx1 = sum([(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
                                             itype=1, atoms%ntype)]) + mpdata%n_g(ikpt)
-      call timestart("ibasm+1->nbasm: zhpmv")
-      call zhpmv('U', indx1, cmplx_1, coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
-      call timestop("ibasm+1->nbasm: zhpmv")
+      call timestart("ibasm+1->nbasm: zgemv")
+      call zgemv("N", indx1, indx1, cmplx_1, coulomb_mtir, indx1, vecinhlp(ibasm + 1), 1, cmplx_0, vecout(ibasm + 1), 1 )
+      call timestop("ibasm+1->nbasm: zgemv")
 
       call timestart("dot prod")
       iatom = 0

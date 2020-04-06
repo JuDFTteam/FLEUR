@@ -104,7 +104,7 @@ CONTAINS
 
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
       do i =1,fi%kpts%nkpt
-         call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
+         call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
       enddo
 
       CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
