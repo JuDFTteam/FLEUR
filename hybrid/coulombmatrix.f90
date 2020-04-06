@@ -152,8 +152,9 @@ CONTAINS
       call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
       allocate(coulomb(fi%kpts%nkpt))
-      do i =1,fi%kpts%nkpt
-         call coulomb(i)%alloc(.False., hybdat%nbasm(i), hybdat%nbasm(i))
+      DO im = 1, size(my_k_list)
+         ikpt = my_k_list(im)
+         call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
       enddo
       call timestop("coulomb allocation")
 
@@ -859,8 +860,10 @@ CONTAINS
          !
          call judft_error("HSE is not implemented")
       ELSE
-         CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                  fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb(1))
+         if(any(my_k_list == 1)) then
+            CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
+                                    fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb(1))
+         endif
       END IF
       
       ! transform Coulomb matrix to the biorthogonal set
@@ -1099,6 +1102,8 @@ CONTAINS
             ic2 = indx1 + mpdata%n_g(ikpt)
             hybdat%coul(ikpt)%pmtir_c(:ic2*(ic2 + 1)/2) = packmat(hybdat%coul(ikpt)%mtir_c(:ic2, :ic2))
          end if
+
+         call coulomb(ikpt)%free()
       END DO ! ikpt
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
