@@ -9,7 +9,7 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: mtir_r(:, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
       COMPLEX, ALLOCATABLE   :: mtir_c(:, :)
-      integer  :: bcast_req(5)
+      integer  :: bcast_req(4)
       logical  :: bcast_finished = .False.
    contains 
       procedure :: init     => t_coul_init
