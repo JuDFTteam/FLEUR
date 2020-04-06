@@ -68,7 +68,7 @@ CONTAINS
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: ok
-      INTEGER                    :: m
+      INTEGER                    :: m, im
       INTEGER                    :: maxfac
 
       LOGICAL                    :: lsym
@@ -157,8 +157,10 @@ CONTAINS
       enddo
       call timestop("coulomb allocation")
 
-      IF (mpi%irank == 0) write (6,*) "Size of coulomb matrix: " //&
+      IF (mpi%irank == 0) then
+         write (6,*) "Size of coulomb matrix: " //&
                             float2str(sum([(coulomb(i)%size_mb(), i=1,fi%kpts%nkpt)])) // " MB"
+      endif
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
@@ -423,7 +425,8 @@ CONTAINS
 
       call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
-      DO ikpt = 1, fi%kpts%nkpt
+      DO im = 1, size(my_k_list)
+         ikpt = my_k_list(im)
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
@@ -497,7 +500,8 @@ CONTAINS
          !     (2c) r,r' in different MT
 
          call timestart("loop over interst.")
-         DO ikpt = 1, fi%kpts%nkpt 
+         DO im = 1, size(my_k_list)
+            ikpt = my_k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt))
 
@@ -516,7 +520,8 @@ CONTAINS
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
-         DO ikpt = 1, fi%kpts%nkpt
+         DO im = 1, size(my_k_list)
+            ikpt = my_k_list(im)
 
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
@@ -556,7 +561,8 @@ CONTAINS
          !     (3b) r,r' in different MT
 
          call timestart("coulomb matrix 3b")
-         DO ikpt = 1, fi%kpts%nkpt
+         DO im = 1, size(my_k_list)
+            ikpt = my_k_list(im)
             if (mpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate (carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
@@ -652,107 +658,108 @@ CONTAINS
             call coulomb(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
-
-
          call timestop("coulomb matrix 3b")
-         !     Add corrections from higher orders in (3b) to coulomb(:,1)
-         ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
-         call timestart("add corrections from higher orders")
-         rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
-         DO igpt0 = 1, ngptm1(1)
-            igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybdat%nbasp + igpt2
-            iqnrm2 = pqnrm(igpt2, 1)
-            igptp2 = mpdata%gptm_ptr(igpt2, 1)
-            q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
-            qnorm2 = norm2(q2)
-            iy = hybdat%nbasp + 1
-            DO igpt1 = 2, igpt2
-               iy = iy + 1
-               idum = ix*(ix - 1)/2 + iy
-               iqnrm1 = pqnrm(igpt1, 1)
-               igptp1 = mpdata%gptm_ptr(igpt1, 1)
-               q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
-               qnorm1 = norm2(q1)
-               rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
-               ic1 = 0
-               DO itype1 = 1, fi%atoms%ntype
-                  DO ineq1 = 1, fi%atoms%neq(itype1)
-                     ic1 = ic1 + 1
-                     ic2 = 0
-                     DO itype2 = 1, fi%atoms%ntype
-                        DO ineq2 = 1, fi%atoms%neq(itype2)
-                           ic2 = ic2 + 1
-                           cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
-                                      (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, ic1)) &
-                                       + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2))))
-                           coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) + rdum*cdum*( &
-                                              -sphbesmoment(1, itype1, iqnrm1) &
-                                              *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
-                                              - sphbesmoment(0, itype1, iqnrm1) &
-                                              *sphbesmoment(2, itype2, iqnrm2)/6 &
-                                              - sphbesmoment(2, itype1, iqnrm1) &
-                                              *sphbesmoment(0, itype2, iqnrm2)/6 &
-                                              + sphbesmoment(0, itype1, iqnrm1) &
-                                              *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
-                                              + sphbesmoment(1, itype1, iqnrm1) &
-                                              *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
+
+         if(any(my_k_list == 1)) then
+            !     Add corrections from higher orders in (3b) to coulomb(:,1)
+            ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
+            call timestart("add corrections from higher orders")
+            rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+            DO igpt0 = 1, ngptm1(1)
+               igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
+               ix = hybdat%nbasp + igpt2
+               iqnrm2 = pqnrm(igpt2, 1)
+               igptp2 = mpdata%gptm_ptr(igpt2, 1)
+               q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
+               qnorm2 = norm2(q2)
+               iy = hybdat%nbasp + 1
+               DO igpt1 = 2, igpt2
+                  iy = iy + 1
+                  idum = ix*(ix - 1)/2 + iy
+                  iqnrm1 = pqnrm(igpt1, 1)
+                  igptp1 = mpdata%gptm_ptr(igpt1, 1)
+                  q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
+                  qnorm1 = norm2(q1)
+                  rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
+                  ic1 = 0
+                  DO itype1 = 1, fi%atoms%ntype
+                     DO ineq1 = 1, fi%atoms%neq(itype1)
+                        ic1 = ic1 + 1
+                        ic2 = 0
+                        DO itype2 = 1, fi%atoms%ntype
+                           DO ineq2 = 1, fi%atoms%neq(itype2)
+                              ic2 = ic2 + 1
+                              cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
+                                       (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, ic1)) &
+                                          + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2))))
+                              coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) + rdum*cdum*( &
+                                                -sphbesmoment(1, itype1, iqnrm1) &
+                                                *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
+                                                - sphbesmoment(0, itype1, iqnrm1) &
+                                                *sphbesmoment(2, itype2, iqnrm2)/6 &
+                                                - sphbesmoment(2, itype1, iqnrm1) &
+                                                *sphbesmoment(0, itype2, iqnrm2)/6 &
+                                                + sphbesmoment(0, itype1, iqnrm1) &
+                                                *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
+                                                + sphbesmoment(1, itype1, iqnrm1) &
+                                                *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
+                           END DO
                         END DO
                      END DO
                   END DO
                END DO
             END DO
-         END DO
 
-         call coulomb(1)%u2l()   
+            call coulomb(1)%u2l()   
 
-         ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
-         iy = hybdat%nbasp + 1
-         DO igpt0 = 1, ngptm1(1)
-            igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybdat%nbasp + igpt2
-            iqnrm2 = pqnrm(igpt2, 1)
-            igptp2 = mpdata%gptm_ptr(igpt2, 1)
-            qnorm2 = qnrm(iqnrm2)
-            idum = ix*(ix - 1)/2 + iy
-            DO itype1 = 1, fi%atoms%ntype
-               DO ineq1 = 1, fi%atoms%neq(itype1)
-                  ic2 = 0
-                  DO itype2 = 1, fi%atoms%ntype
-                     DO ineq2 = 1, fi%atoms%neq(itype2)
-                        ic2 = ic2 + 1
-                        cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
-                        coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
-                                           + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
-                                           +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
-                                           - sphbesmoment(2, itype2, iqnrm2)/18 &
-                                           + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
+            ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
+            iy = hybdat%nbasp + 1
+            DO igpt0 = 1, ngptm1(1)
+               igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
+               ix = hybdat%nbasp + igpt2
+               iqnrm2 = pqnrm(igpt2, 1)
+               igptp2 = mpdata%gptm_ptr(igpt2, 1)
+               qnorm2 = qnrm(iqnrm2)
+               idum = ix*(ix - 1)/2 + iy
+               DO itype1 = 1, fi%atoms%ntype
+                  DO ineq1 = 1, fi%atoms%neq(itype1)
+                     ic2 = 0
+                     DO itype2 = 1, fi%atoms%ntype
+                        DO ineq2 = 1, fi%atoms%neq(itype2)
+                           ic2 = ic2 + 1
+                           cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
+                           coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
+                                             + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
+                                             +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
+                                             - sphbesmoment(2, itype2, iqnrm2)/18 &
+                                             + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
+                        END DO
                      END DO
                   END DO
                END DO
             END DO
-         END DO
-         call coulomb(1)%u2l()
+            call coulomb(1)%u2l()
 
 
-         ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
-         iy = hybdat%nbasp + 1
-         ix = hybdat%nbasp + 1
-         idum = ix*(ix - 1)/2 + iy
-         DO itype1 = 1, fi%atoms%ntype
-            DO ineq1 = 1, fi%atoms%neq(itype1)
-               DO itype2 = 1, fi%atoms%ntype
-                  DO ineq2 = 1, fi%atoms%neq(itype2)
-                     coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
-                                        + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
-                                        (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
+            ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
+            iy = hybdat%nbasp + 1
+            ix = hybdat%nbasp + 1
+            idum = ix*(ix - 1)/2 + iy
+            DO itype1 = 1, fi%atoms%ntype
+               DO ineq1 = 1, fi%atoms%neq(itype1)
+                  DO itype2 = 1, fi%atoms%ntype
+                     DO ineq2 = 1, fi%atoms%neq(itype2)
+                        coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
+                                          + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
+                                          (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
+                     END DO
                   END DO
                END DO
             END DO
-         END DO
-         call coulomb(1)%u2l()
+            call coulomb(1)%u2l()
+            call timestop("add corrections from higher orders")
+         endif ! 1 in my_k_list
 
-         call timestop("add corrections from higher orders")
 
          !     (3c) r,r' in same MT
 
@@ -771,7 +778,8 @@ CONTAINS
          call timestop("sphbesintegral")
 
          call timestart("loop 2")
-         DO ikpt = 1, fi%kpts%nkpt!1,nkpt
+         DO im = 1, size(my_k_list)
+            ikpt = my_k_list(im)
             call timestart("harmonics setup")
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -797,7 +805,8 @@ CONTAINS
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), fi%kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
-         DO ikpt = 1, fi%kpts%nkpt
+         DO im = 1, size(my_k_list)
+            ikpt = my_k_list(im)
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
             DO igpt0 = 1, ngptm1(ikpt)
@@ -858,7 +867,8 @@ CONTAINS
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      do ikpt = 1, fi%kpts%nkpt
+      DO im = 1, size(my_k_list)
+         ikpt = my_k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
       enddo
@@ -870,10 +880,11 @@ CONTAINS
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
       call timestart("loop bla")
       DO ikpt = 1, fi%kpts%nkpt
-      ! DO i = 1,size(my_k_list)
-      !    ikpt = my_k_list(i)
-         ! initialize arrays to 0
          call hybdat%coul(ikpt)%init()
+      enddo
+
+      DO im = 1, size(my_k_list)
+         ikpt = my_k_list(im)
          ! unpack coulomb into coulomb(ikpt)
 
          ! only one processor per k-point calculates MT convolution

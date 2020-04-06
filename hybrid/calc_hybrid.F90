@@ -107,10 +107,10 @@ CONTAINS
          call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g)
       enddo
 
-      if(mpi%irank == 0) CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
+      CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
 
       do i =1,fi%kpts%nkpt
-         call hybdat%coul(i)%mpi_ibc(fi, hybmpi, 0)!k_owner(i))
+         call hybdat%coul(i)%mpi_ibc(fi, hybmpi, k_owner(i))
       enddo
 
       CALL hf_init(eig_id, mpdata, fi, hybdat)
