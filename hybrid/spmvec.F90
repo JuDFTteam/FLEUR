@@ -47,7 +47,7 @@ CONTAINS
       call timestart("spmvec_invs")
       vecinhlp = vecin
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vecinhlp)
+      call reorder_forw(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -198,8 +198,7 @@ CONTAINS
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
-                   mpdata%num_radbasfn,2, vecout)
+      call reorder_back(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecout)
      call timestop("spmvec_invs")
    END SUBROUTINE spmvec_invs
 
@@ -251,7 +250,7 @@ CONTAINS
       vecout = CMPLX_NOT_INITALIZED
       vecinhlp = vecin
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vec_c=vecinhlp)
+      call reorder_forw(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -418,9 +417,7 @@ CONTAINS
          call timestop("gamma point 2")
       END IF
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&
-                   2,&
-                   vec_c=vecout)
+      call reorder_back(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecout)
      call timestop("spmvec_noinvs")
    END SUBROUTINE spmvec_noinvs
 END MODULE

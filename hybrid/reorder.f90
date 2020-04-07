@@ -1,123 +1,205 @@
 MODULE m_reorder
+   interface reorder_forw 
+      module procedure reorder_forw_real, reorder_forw_cmplx
+   end interface reorder_forw
+
+   interface reorder_back
+      module procedure reorder_back_real, reorder_back_cmplx
+   end interface reorder_back
 
 CONTAINS
-   SUBROUTINE reorder(nbasm, atoms, lcutm, maxlcutm, nindxm, imode, vec_r, vec_c)
+   subroutine reorder_forw_real(nbasm, atoms, lcutm, nindxm, vec_r)
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
-      TYPE(t_atoms), INTENT(IN)   :: atoms
 
-      ! - scalars -
-      INTEGER, INTENT(IN)   ::  maxlcutm
-      INTEGER, INTENT(IN)   ::  nbasm
-      INTEGER, INTENT(IN)   ::  imode
-
-      ! - arrays -
-      INTEGER, INTENT(IN)   ::  lcutm(:)
-      INTEGER, INTENT(IN)   ::  nindxm(0:maxlcutm, atoms%ntype)
-      REAL, INTENT(INOUT), OPTIONAL::  vec_r(nbasm)
-      COMPLEX, INTENT(INOUT), OPTIONAL::  vec_c(nbasm)
-      ! - local scalars -
-      INTEGER               ::  itype, ieq
-      INTEGER               ::  indx1, indx2
-      INTEGER               ::  l
-      INTEGER               ::  n, m
-      LOGICAL               :: l_real
-      ! - local arrays -
-      REAL                  ::  vechlp_r(nbasm)
-      COMPLEX               ::  vechlp_c(nbasm)
+      INTEGER, INTENT(IN)       :: nbasm, lcutm(:), nindxm(0:, :)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      REAL, INTENT(INOUT)       :: vec_r(nbasm)
+      
+      INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
+      REAL, allocatable     ::  vechlp_r(:)
 
       call timestart("reorder")
-      l_real = PRESENT(vec_r)
+      allocate(vechlp_r(nbasm), source=0.0, stat=info)
+      if(info /= 0) call judft_error("can't allocate vechlp_r")
+      vechlp_r = vec_r
 
-      IF (imode /= 1 .and. imode /= 2) call judft_error('reorder: imode equals neither 1 nor 2')
-
-      if (l_real) THEN
-         vechlp_r = vec_r
-      else
-         vechlp_c = vec_c
-      end if
-
-      IF (imode == 1) THEN
-         indx1 = 0
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     DO n = 1, nindxm(l, itype) - 1
-                        indx1 = indx1 + 1
-                        indx2 = indx2 + 1
-                        if (l_real) THEN
-                           vec_r(indx1) = vechlp_r(indx2)
-                        else
-                           vec_c(indx1) = vechlp_c(indx2)
-                        endif
-                     END DO
-                     indx2 = indx2 + 1
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
+      indx1 = 0
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  DO n = 1, nindxm(l, itype) - 1
                      indx1 = indx1 + 1
-                     indx2 = indx2 + nindxm(l, itype)
-                     if (l_real) THEN
-                        vec_r(indx1) = vechlp_r(indx2)
-                     else
-                        vec_c(indx1) = vechlp_c(indx2)
-                     endif
-
-                  END DO
-               END DO
-            END DO
-         END DO
-      ELSE IF (imode == 2) THEN
-         indx1 = 0
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     DO n = 1, nindxm(l, itype) - 1
-                        indx1 = indx1 + 1
-                        indx2 = indx2 + 1
-                        if (l_real) THEN
-                           vec_r(indx2) = vechlp_r(indx1)
-                        else
-                           vec_c(indx2) = vechlp_c(indx1)
-                        endif
-                     END DO
                      indx2 = indx2 + 1
+                     vec_r(indx1) = vechlp_r(indx2)
                   END DO
+                  indx2 = indx2 + 1
                END DO
             END DO
          END DO
+      END DO
 
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     indx1 = indx1 + 1
-                     indx2 = indx2 + nindxm(l, itype)
-                     if (l_real) THEN
-                        vec_r(indx2) = vechlp_r(indx1)
-                     else
-                        vec_c(indx2) = vechlp_c(indx1)
-                     endif
-                  END DO
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  indx1 = indx1 + 1
+                  indx2 = indx2 + nindxm(l, itype)
+                  vec_r(indx1) = vechlp_r(indx2)
                END DO
             END DO
          END DO
-      END IF
-      !IR must not be rearranged
+      END DO
+
       call timestop("reorder")
-   END SUBROUTINE reorder
+   end subroutine reorder_forw_real
 
+   subroutine reorder_back_real(nbasm, atoms, lcutm, nindxm, vec_r)
+      use m_types 
+      use m_judft
+      implicit none 
+      INTEGER, INTENT(IN)       :: nbasm, lcutm(:), nindxm(0:, :)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      REAL, INTENT(INOUT)       :: vec_r(nbasm)
+      
+      INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
+      REAL, allocatable     ::  vechlp_r(:)      
+      
+      allocate(vechlp_r(nbasm), source=0.0, stat=info)
+      if(info /= 0) call judft_error("can't allocate vechlp_r")
+      vechlp_r = vec_r
+
+      indx1 = 0
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  DO n = 1, nindxm(l, itype) - 1
+                     indx1 = indx1 + 1
+                     indx2 = indx2 + 1
+                     vec_r(indx2) = vechlp_r(indx1)
+                  END DO
+                  indx2 = indx2 + 1
+               END DO
+            END DO
+         END DO
+      END DO
+
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  indx1 = indx1 + 1
+                  indx2 = indx2 + nindxm(l, itype)
+                  vec_r(indx2) = vechlp_r(indx1)
+               END DO
+            END DO
+         END DO
+      END DO
+   end subroutine reorder_back_real
+
+   subroutine reorder_forw_cmplx(nbasm, atoms, lcutm, nindxm, vec_c)
+      USE m_types
+      USE m_juDFT
+      use m_constants, only: cmplx_0
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN)       :: nbasm, lcutm(:), nindxm(0:, :)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      complex, INTENT(INOUT)    :: vec_c(nbasm)
+      
+      INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
+      complex, allocatable  ::  vechlp_c(:)
+
+      call timestart("reorder")
+      allocate(vechlp_c(nbasm), source=cmplx_0, stat=info)
+      if(info /= 0) call judft_error("can't allocate vechlp_c")
+      vechlp_c = vec_c
+
+      indx1 = 0
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  DO n = 1, nindxm(l, itype) - 1
+                     indx1 = indx1 + 1
+                     indx2 = indx2 + 1
+                     vec_c(indx1) = vechlp_c(indx2)
+                  END DO
+                  indx2 = indx2 + 1
+               END DO
+            END DO
+         END DO
+      END DO
+
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  indx1 = indx1 + 1
+                  indx2 = indx2 + nindxm(l, itype)
+                  vec_c(indx1) = vechlp_c(indx2)
+               END DO
+            END DO
+         END DO
+      END DO
+
+      call timestop("reorder")
+   end subroutine reorder_forw_cmplx
+
+   subroutine reorder_back_cmplx(nbasm, atoms, lcutm, nindxm, vec_c)
+      USE m_types
+      USE m_juDFT
+      use m_constants, only: cmplx_0
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN)       :: nbasm, lcutm(:), nindxm(0:, :)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      complex, INTENT(INOUT)    :: vec_c(nbasm)
+      
+      INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
+      complex, allocatable  :: vechlp_c(:)
+
+      allocate(vechlp_c(nbasm), source=cmplx_0, stat=info)
+      if(info /= 0) call judft_error("can't allocate vechlp_c")
+      vechlp_c = vec_c
+
+      indx1 = 0
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  DO n = 1, nindxm(l, itype) - 1
+                     indx1 = indx1 + 1
+                     indx2 = indx2 + 1
+                     vec_c(indx2) = vechlp_c(indx1)
+                  END DO
+                  indx2 = indx2 + 1
+               END DO
+            END DO
+         END DO
+      END DO
+
+      indx2 = 0
+      DO itype = 1, atoms%ntype
+         DO ieq = 1, atoms%neq(itype)
+            DO l = 0, lcutm(itype)
+               DO m = -l, l
+                  indx1 = indx1 + 1
+                  indx2 = indx2 + nindxm(l, itype)
+                  vec_c(indx2) = vechlp_c(indx1)
+               END DO
+            END DO
+         END DO
+      END DO
+   end subroutine reorder_back_cmplx
 END MODULE
