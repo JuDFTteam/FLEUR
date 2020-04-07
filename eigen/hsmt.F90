@@ -82,8 +82,10 @@ CONTAINS
             IF (.NOT.noco%l_noco) THEN
               !This is for collinear calculations: the (1,1) element of the matrices is all
               !that is needed and allocated
+              
               CALL hsmt_sph(n,atoms,mpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat(1,1),hmat(1,1))
               CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,jspin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1))
+             
               CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat(1,1),smat(1,1))
             ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
               !The NOCO but non-spinspiral setup follows:

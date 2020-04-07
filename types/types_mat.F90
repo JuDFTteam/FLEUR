@@ -192,11 +192,11 @@ CONTAINS
 
       IF (mat%l_real) THEN
          ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err)
-         ALLOCATE (mat%data_c(0, 0))
+         ALLOCATE (mat%data_c(1,1))
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
-         ALLOCATE (mat%data_r(0, 0))
+         ALLOCATE (mat%data_r(1,1))
          ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err)
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
