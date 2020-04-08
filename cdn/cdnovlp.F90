@@ -176,6 +176,7 @@
 #ifdef CPP_MPI
           CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 #endif
+          mshc(:) = 0 ! This initialization is important because there may be atoms without core states.
           nloop: DO  n = 1 , atoms%ntype
               IF ((atoms%econf(n)%num_core_states.GT.0).OR.l_st) THEN
                    DO  j = 1 , atoms%jri(n)

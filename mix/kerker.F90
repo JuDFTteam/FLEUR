@@ -60,10 +60,13 @@ CONTAINS
        CALL vgen_coulomb( 1, mpi,  oneD, input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
+       call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
        if( mpi%irank == 0 ) then
-          call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
           call resDenMod%copyPotDen( resDen )
        end if
+#ifdef CPP_MPI
+       CALL mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDenMod )
+#endif
        vYukawa%iter = resDen%iter
        CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, resDenMod, &
             vYukawa )
