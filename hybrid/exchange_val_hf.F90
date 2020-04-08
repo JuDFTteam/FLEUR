@@ -122,12 +122,12 @@ CONTAINS
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       REAL                 :: carr1_v_r(maxval(hybdat%nbasm))
-      COMPLEX              :: carr1_v_c(maxval(hybdat%nbasm))
+      COMPLEX              :: carr1_v_c(maxval(hybdat%nbasm)), test(maxval(hybdat%nbasm))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
 
-      LOGICAL              :: occup(fi%input%neig)
+      LOGICAL              :: occup(fi%input%neig), conjg_mtir
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
@@ -225,17 +225,12 @@ CONTAINS
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0
-                  call spmv_wrapper(fi, mpdata, hybdat, iq_p, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
+                  call spmv_wrapper_inv(fi, mpdata, hybdat, iq_p, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                ELSE
                   carr1_v_c(:n) = 0
-                  if(fi%kpts%bksym(iq) > fi%sym%nop) then
-                     CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, conjg(hybdat%coul(iq_p)%mt2_c),&
-                                       hybdat%coul(iq_p)%mt3_c, conjg(hybdat%coul(iq_p)%mtir_c), cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
-                  else 
-                     CALL spmvec_noinvs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, hybdat%coul(iq_p)%mt2_c,&
-                                        hybdat%coul(iq_p)%mt3_c, hybdat%coul(iq_p)%mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
-                  endif
-
+                  test(:n) = 0
+                  conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
+                  call spmv_wrapper_noinv(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                END IF
                call timestop("sparse matrix products")
 
