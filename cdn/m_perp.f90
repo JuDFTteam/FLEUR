@@ -67,10 +67,8 @@ CONTAINS
          &                   '  local alpha=',f9.5)
 
     IF(noco%l_alignMT) THEN
-    DO i=1, atoms%ntype
       WRITE  (6,8400) nococonv%beta(i),nococonv%alph(i)
       8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
-    END DO
     END IF
 
     IF (noco%l_relax(itype)) THEN
