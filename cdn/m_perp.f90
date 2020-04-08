@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
-    INTEGER iri,i
+    INTEGER iri
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
