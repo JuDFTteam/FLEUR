@@ -70,7 +70,7 @@ CONTAINS
       USE m_hsefunctional
       USE m_io_hybinp
       USE m_kp_perturbation
-
+      use m_spmm
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -225,8 +225,7 @@ CONTAINS
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0
-                  CALL spmvec_invs(fi%atoms, mpdata, fi%hybinp, hybdat, iq, hybdat%coul(iq_p)%mt1, hybdat%coul(iq_p)%mt2_r, &
-                                   hybdat%coul(iq_p)%mt3_r, hybdat%coul(iq_p)%mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
+                  call spmv_wrapper(fi, mpdata, hybdat, iq_p, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                ELSE
                   carr1_v_c(:n) = 0
                   if(fi%kpts%bksym(iq) > fi%sym%nop) then
