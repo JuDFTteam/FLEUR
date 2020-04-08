@@ -108,7 +108,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
-    IF (l_forceConverged.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,forcetot,results%tote)
+    IF (l_forceConverged.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 
   END SUBROUTINE force_w
 END MODULE m_forcew

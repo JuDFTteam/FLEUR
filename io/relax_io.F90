@@ -11,7 +11,7 @@ MODULE m_relaxio
   USE m_judft
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: read_relax,write_relax,apply_displacements,read_displacements
+  PUBLIC :: read_relax,write_relax,apply_displacements,read_displacements,rotate_to_all_sites
 CONTAINS
   SUBROUTINE write_relax(positions,forces,energies,displace)
     REAL,INTENT(in):: positions(:,:,:)
@@ -203,17 +203,18 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)   :: sym
     REAL,INTENT(out)         :: disp_all(:,:)
 
-    INTEGER:: n,na,jop
+    INTEGER:: iType,iAtom,jop, startAtom
     REAL   :: tau0(3),tau0_rot(3),tau_rot(3)
 
 
-    DO n=1,atoms%ntype
-       tau0=atoms%taual(:,n)
-       DO na=SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
-          jop = sym%invtab(sym%ngopr(na))
+    DO iType = 1, atoms%ntype
+       startAtom = SUM(atoms%neq(:iType-1))+1
+       tau0=atoms%taual(:,startAtom)
+       DO iAtom = startAtom, SUM(atoms%neq(:iType))
+          jop = sym%invtab(sym%ngopr(iAtom))
           tau0_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0)+sym%tau(:,jop) !translation will cancel, included for clarity
-          tau_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0+disp(:,n))+sym%tau(:,jop)
-          disp_all(:,na)=tau_rot-tau0_rot
+          tau_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0+disp(:,iType))+sym%tau(:,jop)
+          disp_all(:,iAtom)=tau_rot-tau0_rot
        END DO
     END DO
   END SUBROUTINE rotate_to_all_sites

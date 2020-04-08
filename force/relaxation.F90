@@ -11,14 +11,16 @@ MODULE m_relaxation
   PUBLIC relaxation !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
 
 CONTAINS
-  SUBROUTINE relaxation(mpi,input,atoms,cell,sym,force_new,energies_new)
+  SUBROUTINE relaxation(mpi,input,atoms,cell,sym,oneD,vacuum,force_new,energies_new)
     !This routine uses the current force,energies and atomic positions to
     !generate a displacement in a relaxation step.
     !The history is taken into account by read_relax from m_relaxio
     !After generating new positions the code stops
     USE m_types
+    USE m_constants
     USE m_relaxio
     USE m_mixing_history
+    USE m_chkmt
     USE m_types_xml
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -27,33 +29,41 @@ CONTAINS
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_atoms),INTENT(IN) :: atoms
     TYPE(t_sym),INTENT(IN)   :: sym
+    TYPE(t_oneD),INTENT(IN)  :: oneD
+    TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_cell),INTENT(IN)  :: cell
     REAL,INTENT(in)          :: force_new(:,:),energies_new !data for this iteration
 
     REAL,ALLOCATABLE :: pos(:,:,:),force(:,:,:),energies(:)
-    REAL,ALLOCATABLE :: displace(:,:),old_displace(:,:)
-    INTEGER          :: n,ierr
+    REAL,ALLOCATABLE :: displace(:,:),old_displace(:,:), tempDisplace(:,:)
+    REAL,ALLOCATABLE :: totalDisplace(:,:)
+    REAL             :: dispAll(3,atoms%nat), overlap(0:atoms%ntype,atoms%ntype)
+    REAL             :: dispLength, maxDisp, limitDisp
+    INTEGER          :: iType,ierr
     LOGICAL          :: l_conv
+
     !to calculate the current displacement
-    Type(t_xml)  :: xml
-    TYPE(t_atoms):: atoms_non_displaced
+    Type(t_xml)   :: xml
+    TYPE(t_atoms) :: atoms_non_displaced
+    TYPE(t_atoms) :: tempAtoms
 
     IF (mpi%irank==0) THEN
        call xml%init()
        ALLOCATE(pos(3,atoms%ntype,1));
-       DO n=1,atoms%ntype
-          pos(:,n,1)=atoms%pos(:,SUM(atoms%neq(:n-1))+1)
+       DO iType = 1, atoms%ntype
+          pos(:,iType,1)=atoms%pos(:,SUM(atoms%neq(:iType-1))+1)
        END DO
        ALLOCATE(force(3,atoms%ntype,1)); force(:,:,1)=force_new
        ALLOCATE(energies(1));energies(1)=energies_new
        ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
+       ALLOCATE(tempDisplace(3,atoms%ntype),totalDisplace(3,atoms%ntype))
 
        !Remove force components that are not selected for relaxation
-       DO n=1,atoms%ntype
-          IF (atoms%l_geo(n)) THEN
-             force(:,n,1)=force(:,n,1)*REAL(atoms%relax(:,n))
+       DO iType = 1, atoms%ntype
+          IF (atoms%l_geo(iType)) THEN
+             force(:,iType,1)=force(:,iType,1)*REAL(atoms%relax(:,iType))
           ELSE
-             force(:,n,1)=0.0
+             force(:,iType,1)=0.0
           ENDIF
        ENDDO
 
@@ -77,23 +87,50 @@ CONTAINS
        END IF
 
        !Check for convergence of forces/displacements
-       l_conv=.TRUE.
-       DO n=1,atoms%ntype
-          IF (DOT_PRODUCT(force(:,n,SIZE(force,3)),force(:,n,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
-          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsdisp**2) l_conv=.FALSE.
+       maxDisp = 0.0
+       l_conv = .TRUE.
+       DO iType = 1, atoms%ntype
+          IF (DOT_PRODUCT(force(:,iType,SIZE(force,3)),force(:,iType,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
+          dispLength = SQRT(DOT_PRODUCT(displace(:,iType),displace(:,iType)))
+          maxDisp = MAX(maxDisp,dispLength)
+          IF (dispLength>input%epsdisp) l_conv=.FALSE.
        ENDDO
+
+       ! Limit the maximal displacement in a single force relaxation step to limitDisp = 0.2 a_0.
+       limitDisp = 0.2
+       IF(maxDisp.GT.limitDisp) THEN
+          displace(:,:) = limitDisp*displace(:,:) / maxDisp
+       END IF
 
        !New displacements relative to positions in inp.xml
        !CALL read_displacements(atoms,old_displace)
        call atoms_non_displaced%read_xml(xml)
        call xml%freeResources()
        call atoms_non_displaced%init(cell)
-       old_displace=atoms%taual-atoms_non_displaced%taual
+       old_displace=atoms%pos-atoms_non_displaced%pos
 
-       displace=displace+old_displace
+       overlap=1.0
+       DO WHILE(ANY(overlap>1E-10))
+          overlap = 0.0
+          totalDisplace=displace+old_displace
+
+          tempAtoms = atoms_non_displaced
+          tempDisplace = MATMUL(cell%bmat,totalDisplace)/tpi_const
+
+          CALL rotate_to_all_sites(tempDisplace,atoms_non_displaced,cell,sym,dispAll)
+          tempAtoms%taual(:,:)=atoms_non_displaced%taual(:,:)+dispAll(:,:)
+          tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
+          CALL chkmt(tempAtoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
+
+          IF (ANY(overlap>1E-10)) THEN
+             displace(:,:) = 0.5 * displace(:,:)
+             WRITE(6,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+             WRITE(*,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+          END IF
+       END DO
 
        !Write file
-       CALL write_relax(pos,force,energies,displace)
+       CALL write_relax(pos,force,energies,totalDisplace)
 
 
     ENDIF
