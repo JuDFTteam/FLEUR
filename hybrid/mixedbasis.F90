@@ -135,10 +135,9 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      allocate(mpdata%num_radbasfn(0:maxval(hybinp%lcutm1), atoms%ntype))
+      allocate(mpdata%num_radbasfn(0:maxval(hybinp%lcutm1), atoms%ntype), source=0)
       allocate(seleco(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd))
       allocate(selecu(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd))
-      mpdata%num_radbasfn = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
