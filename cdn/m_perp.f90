@@ -67,7 +67,7 @@ CONTAINS
          &                   '  local alpha=',f9.5)
 
     IF(noco%l_alignMT) THEN
-      WRITE  (6,8400) nococonv%beta(i),nococonv%alph(i)
+      WRITE  (6,8400) nococonv%beta(itype),nococonv%alph(itpye)
       8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
     END IF
 
