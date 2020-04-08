@@ -107,7 +107,7 @@ CONTAINS
           ENDIF
           IF (iintsp==jintsp) THEN
              IF (isp==jsp) THEN
-               !$acc kernels present(ab_select)
+               !$acc kernels present(ab1)
                ab1=conjg(ab1)
                !$acc end kernels
                IF (mpi%n_size==1) THEN !use z-herk trick on single PE
@@ -152,7 +152,7 @@ CONTAINS
                 !$acc update device (ab)
                 !$acc host_data use_device(ab,h_loc,ab2)
                 CALL cublaszgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
-                     h_loc,size(td%h_loc,1),CMPLX(0.,0.),ab2,size_ab2,1))
+                     h_loc,size(td%h_loc,1),CMPLX(0.,0.),ab2,size_ab2)
                 !$acc end host_data
                 !$acc kernels present(ab2)
                 ab2=conjg(ab2)

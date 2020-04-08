@@ -78,8 +78,8 @@ CONTAINS
     CALL timestop("Interstitial part")
     CALL timestart("MT part")
     !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
-    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_r,smat(1,1)%data_r)if (smat(1,1)%l_real)
-    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_c,smat(1,1)%data_c)if (.not.smat(1,1)%l_real)
+    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_r,smat(1,1)%data_r)!if (smat(1,1)%l_real)
+    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_c,smat(1,1)%data_c)!if (.not.smat(1,1)%l_real)
     CALL hsmt(atoms,sym,enpara,isp,input,mpi,noco,nococonv,cell,lapw,ud,td,smat,hmat)
     !$acc update self (smat(1,1)%data_r,hmat(1,1)%data_r) if (smat(1,1)%l_real)
     !$acc update self (hmat(1,1)%data_c,hmat(1,1)%data_c) if (.not.hmat(1,1)%l_real)
