@@ -11,6 +11,7 @@
     then
        export FC=$MPIFC
        export CC=$MPICC
+       export CXX=$MPICXX
     fi
   elif  module list 2>&1 | grep -q pgi
   then
