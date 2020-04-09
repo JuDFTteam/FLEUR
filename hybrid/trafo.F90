@@ -783,20 +783,7 @@ CONTAINS
       COMPLEX, INTENT(INOUT)   ::  vecout_c(:,:,:)
       COMPLEX, INTENT(INOUT)   ::  phase(:,:)
 
-!          - local -
-
-!     - scalars -
-      INTEGER                 ::  nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, ok
-      INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
-      COMPLEX                 ::  cexp, cdum
-!     - arrays -
-
-      INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%nat)
-      INTEGER                 ::  g(3), g1(3)
-      REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
-                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
+      integer :: i, j, ok
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
       phase = cmplx_0
@@ -823,6 +810,66 @@ CONTAINS
          vecin1 = vecin_c
       endif
 
+      call bra_trafo_core(nobd, nbands, ikpt, sym, mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
+      deallocate(vecin1)
+
+      if (l_real) THEN
+         DO i = 1, nbands
+            DO j = 1, nobd
+
+               CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
+                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
+
+               phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
+               vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
+               IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
+                  WRITE (*, *) vecout1(:, j, i)
+                  call judft_error('bra_trafo: Residual imaginary part.')
+               END IF
+
+            END DO
+         END DO
+      else
+         phase = (1.0, 0.0)
+      endif
+
+      if (l_real) THEN
+         vecout_r = real(vecout1)
+         vecout_c = CMPLX_NOT_INITALIZED
+      else
+         vecout_c = vecout1
+         vecout_r = REAL_NOT_INITALIZED
+      endif
+      deallocate(vecout1)
+      call timestop("bra trafo")
+   END SUBROUTINE bra_trafo
+
+   subroutine bra_trafo_core(nobd, nbands, ikpt, sym, &
+                     mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1) 
+      use m_types
+      use m_constants
+      implicit none 
+      type(t_mpdata), intent(in)  :: mpdata
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_sym), INTENT(IN)   :: sym
+      TYPE(t_kpts), INTENT(IN)   :: kpts
+      TYPE(t_atoms), INTENT(IN)   :: atoms
+
+      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands
+
+      COMPLEX, intent(inout)    ::  vecin1(:, :, :), vecout1(:, :, :)
+
+      INTEGER                 ::  nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2
+      INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
+      COMPLEX                 ::  cexp, cdum
+
+      INTEGER                 ::  rrot(3, 3), invrot(3, 3)
+      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%nat)
+      INTEGER                 ::  g(3), g1(3)
+      REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
+      COMPLEX                 ::  dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
+                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -942,39 +989,7 @@ CONTAINS
 
          vecout1(hybdat%nbasp + igptm, :, :) = cdum*vecin1(hybdat%nbasp + igptm2, :, :)
       END DO
-
-      deallocate(vecin1)
-
-      if (l_real) THEN
-         DO i = 1, nbands
-            DO j = 1, nobd
-
-               CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
-                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
-
-               phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
-               vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
-               IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
-                  WRITE (*, *) vecout1(:, j, i)
-                  call judft_error('bra_trafo: Residual imaginary part.')
-               END IF
-
-            END DO
-         END DO
-      else
-         phase = (1.0, 0.0)
-      endif
-
-      if (l_real) THEN
-         vecout_r = real(vecout1)
-         vecout_c = CMPLX_NOT_INITALIZED
-      else
-         vecout_c = vecout1
-         vecout_r = REAL_NOT_INITALIZED
-      endif
-      deallocate(vecout1)
-      call timestop("bra trafo")
-   END SUBROUTINE bra_trafo
+   end subroutine bra_trafo_core
 
    ! Determines common phase factor (with unit norm)
    function commonphase(carr, n) result(cfac)
