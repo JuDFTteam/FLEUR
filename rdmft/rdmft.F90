@@ -37,6 +37,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    USE m_exchange_core
    USE m_symmetrizeh
    USE m_bfgs_b2
+   USE m_xmlOutput
 
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -87,6 +88,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    REAL, PARAMETER                      :: minOcc = 1.0e-13
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
+   CHARACTER(LEN=20)                    :: attributes(3)
 
    INTEGER                              :: nsest(fi%input%neig) ! probably too large
    INTEGER                              :: rrot(3,3,fi%sym%nsym)
@@ -829,8 +831,24 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    END DO
 
-
+   ! Output
    WRITE(6,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+   CALL openXMLElementPoly('rdmft',(/'energy'/),(/rdmftEnergy/))
+   DO ispin = 1, fi%input%jspins
+      isp = MERGE(1,ispin,fi%noco%l_noco)
+      DO ikpt = 1, fi%kpts%nkpt
+         CALL openXMLElementPoly('occupations',(/'spin  ','kpoint'/),(/ispin,ikpt/))
+         DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
+            occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)
+            WRITE(attributes(1),'(i0)') iBand
+            WRITE(attributes(2),'(f18.10)') results%eig(iBand,ikpt,isp)
+            WRITE(attributes(3),'(f18.10)') occStateI
+            CALL writeXMLElement('state',(/'index     ','energy    ','occupation'/),attributes)
+         END DO
+         CALL closeXMLElement('occupations')
+      END DO
+   END DO
+   CALL closeXMLElement('rdmft')
 
    WRITE(2505,*) '======================================='
    WRITE(2505,*) 'convIter: ', convIter
