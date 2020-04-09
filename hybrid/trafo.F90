@@ -550,6 +550,7 @@ CONTAINS
    SUBROUTINE symmetrize(mat, dim1, dim2, imode, lreal, &
                          atoms, lcutm, maxlcutm, nindxm, sym)
       USE m_types
+      use m_constants
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_sym), INTENT(IN)     :: sym
@@ -567,13 +568,12 @@ CONTAINS
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
       REAL                  ::  rfac
-      COMPLEX               ::  img = (0.0, 1.0)
 
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1, dim2)), cfac
 
       rfac = sqrt(0.5)
-      cfac = sqrt(0.5)*img
+      cfac = sqrt(0.5)*ImagUnit
       ic = 0
       i = 0
 
@@ -616,10 +616,10 @@ CONTAINS
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           mat(i, :) = -img*mat(i, :)
+                           mat(i, :) = -ImagUnit*mat(i, :)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           mat(:, i) = img*mat(:, i)
+                           mat(:, i) = ImagUnit*mat(:, i)
                         END IF
                      END IF
                   END DO
@@ -684,7 +684,7 @@ CONTAINS
 !     - local scalars -
       INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
       REAL                    ::  rfac1, rfac2
-      COMPLEX                 ::  img = (0.0, 1.0)
+      COMPLEX                 ::  ImagUnit = (0.0, 1.0)
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
 
@@ -721,20 +721,20 @@ CONTAINS
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
                            carr(:dim2) = mat(i, :)
-                           mat(i, :) = (carr(:dim2) + img*mat(j, :))*rfac1
-                           mat(j, :) = (carr(:dim2) - img*mat(j, :))*rfac2
+                           mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
+                           mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            carr(:dim1) = mat(:, i)
-                           mat(:, i) = (carr(:dim1) - img*mat(:, j))*rfac1
-                           mat(:, j) = (carr(:dim1) + img*mat(:, j))*rfac2
+                           mat(:, i) = (carr(:dim1) - ImagUnit*mat(:, j))*rfac1
+                           mat(:, j) = (carr(:dim1) + ImagUnit*mat(:, j))*rfac2
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           mat(i, :) = img*mat(i, :)
+                           mat(i, :) = ImagUnit*mat(i, :)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           mat(:, i) = -img*mat(:, i)
+                           mat(:, i) = -ImagUnit*mat(:, i)
                         END IF
                      END IF
                   END DO
@@ -789,7 +789,6 @@ CONTAINS
       INTEGER                 ::  nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, ok
       INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
       COMPLEX                 ::  cexp, cdum
-      COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
@@ -885,14 +884,14 @@ CONTAINS
 
 !     Multiplication
       ! MT
-      cexp = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
+      cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
       ic = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
 
-            cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
+            cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
 
             DO l = 0, hybinp%lcutm1(itype)
                nn = mpdata%num_radbasfn(l, itype)
@@ -939,7 +938,7 @@ CONTAINS
             ENDDO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
-         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
+         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
 
          vecout1(hybdat%nbasp + igptm, :, :) = cdum*vecin1(hybdat%nbasp + igptm2, :, :)
       END DO
@@ -1046,7 +1045,6 @@ CONTAINS
       INTEGER                 ::  igptm, igptm2, igptp, isym
       INTEGER                 ::  ikpt1
       LOGICAL                 ::  trs, touch
-      COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
@@ -1088,7 +1086,7 @@ CONTAINS
             igptm_out = igptm
             touch = .true.
             IF (writevec) THEN
-               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
+               cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
                EXIT
             ELSE
                RETURN
@@ -1126,12 +1124,12 @@ CONTAINS
 
 !     Left-multiplication
       ! MT
-      cexp = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, trans))
+      cexp = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, trans))
       ic = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            cdum = cexp*exp(img*tpi_const*dot_product(g, atoms%taual(:, ic)))
+            cdum = cexp*exp(ImagUnit*tpi_const*dot_product(g, atoms%taual(:, ic)))
             cdum = conjg(cdum)
             DO l = 0, lcutm(itype)
                nn = nindxm(l, itype)
@@ -1154,7 +1152,7 @@ CONTAINS
          igptp = mpdata%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
-         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
+         carr(igptm) = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
       END DO
       DO i1 = 1, mpdata%n_g(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
