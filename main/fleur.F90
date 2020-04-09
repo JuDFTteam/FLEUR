@@ -223,7 +223,7 @@ CONTAINS
        !CALL resetIterationDependentTimers()
        CALL timestart("Iteration")
        IF (mpi%irank.EQ.0) THEN
-          WRITE (6,FMT=8100) iter
+          WRITE (oUnit,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
 
@@ -522,13 +522,13 @@ END IF
             WRITE(*,*) "Occupation Distance: " , results%last_occdistance
             WRITE(*,*) "Element Distance:    " , results%last_mmpMatdistance
             WRITE(*,*) "-----------------------------------------------------"
-            WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
-            WRITE(6,*) "nmmp element distance:    ", results%last_mmpMatdistance
-            WRITE(6,FMT=8140) hub1data%iter
+            WRITE(oUnit,*) "nmmp occupation distance: ", results%last_occdistance
+            WRITE(oUnit,*) "nmmp element distance:    ", results%last_mmpMatdistance
+            WRITE(oUnit,FMT=8140) hub1data%iter
 8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
          ENDIF
 
-         WRITE (6,FMT=8130) iter
+         WRITE (oUnit,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
        END IF ! mpi%irank.EQ.0

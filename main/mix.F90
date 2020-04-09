@@ -110,30 +110,30 @@ contains
     CALL timestart("Mixing")
     SELECT CASE(input%imix)
     CASE(0)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,f10.5)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,f10.5)' ) &
             'STRAIGHT MIXING: alpha=',input%alpha," spin-mixing=",MERGE(input%alpha*input%spinf,0.,input%jspins>1)
        CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
     CASE(3,5)
        CALL judft_error("Broyden 1/2 method not implemented")
     CASE(7)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0)' ) &
             'GENERALIZED ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1
        Call broyden(input%alpha,fsm,sm)
     CASE(9)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,0)
     CASE(11)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PERIODIC PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,input%maxiter)
     CASE(13)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'RESTARTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,0)
        IF (it==input%maxiter) CALL mixing_history_limit(0) !Restarting Pulay
     CASE(15)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'ADAPTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL a_pulay(input%alpha,fsm,sm)
     CASE DEFAULT

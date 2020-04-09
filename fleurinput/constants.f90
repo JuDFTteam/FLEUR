@@ -15,6 +15,7 @@ MODULE m_constants
   END TYPE t_constants
 
   REAL                        :: warp_factor=1.0  !should be set from input later
+  INTEGER,          PARAMETER :: oUnit = 6 !This is the unit number for the out file
   INTEGER,          PARAMETER :: noState_const = 0
   INTEGER,          PARAMETER :: coreState_const = 1
   INTEGER,          PARAMETER :: valenceState_const = 2
