@@ -83,9 +83,12 @@ contains
 
    subroutine t_coul_mpi_wait(coul)
       use m_judft
+#ifdef CPP_MPI
       use mpi
+#endif
       implicit none 
       class(t_coul)                 :: coul
+#ifdef CPP_MPI
       integer :: ierr, i 
       
       if(.not. coul%bcast_finished) then      
@@ -94,19 +97,25 @@ contains
             if(ierr /= 0) call judft_error("Error in MPI_wait for coul%bcast_req no. " // int2str(i))
          enddo
          coul%bcast_finished = .True.
-      endif
+      endif 
+#else
+      coul%bcast_finished = .True.
+#endif
    end subroutine t_coul_mpi_wait
 
    subroutine t_coul_mpi_ibc(coul, fi, hybmpi, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
+#ifdef CPP_MPI
       use mpi
+#endif
       implicit none 
       class(t_coul)                  :: coul
       type(t_fleurinput), intent(in) :: fi
       type(t_hybmpi), intent(in)     :: hybmpi
       integer, intent(in)            :: root
+#ifdef CPP_MPI
       integer :: ierr
 
       call MPI_IBcast(coul%mt1, size(coul%mt1), MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(1), ierr)
@@ -131,7 +140,7 @@ contains
          call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(4), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
       endif
-
+#endif
       coul%bcast_finished = .False.
    end subroutine t_coul_mpi_ibc
 
