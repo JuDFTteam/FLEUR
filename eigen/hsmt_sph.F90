@@ -23,7 +23,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    USE m_types
    USE m_hsmt_fjgj
 #ifdef CPP_GPU
-   USE nvtx 
+   USE nvtx
 #endif
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
@@ -71,29 +71,29 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
    print *,"hssph:",mpi%irank
    !$acc  data &
-   !$acc&   copyin(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,qssbti,qssbtj)&
+   !$acc&   copyin(jintsp,iintsp,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssbti,qssbtj)&
    !$acc&   copyin(lapw,atoms,mpi,input,usdus)&
    !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk)&
    !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
    !$acc&   copyin(mpi%n_size,mpi%n_rank)&
    !$acc&   copyin(input%l_useapw)&
    !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
-   !$acc&   copyin(fjgj%fj,fjgj%gj)&
+   !$acc&   present(fjgj,fjgj%fj,fjgj%gj)&
    !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
-   !$acc parallel 
-   !$acc loop gang 
+   !$acc parallel
+   !$acc loop gang
    DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
       !$acc loop  vector independent&
       !$acc &    PRIVATE(ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
       DO  kj = 1, min(ki,lapw%nv(iintsp))
          kii=(ki-1)/mpi%n_size+1
-         ski = lapw%gvec(:,ki,jintsp) + qssbti(:)    
-       
+         ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
+
          !--->          update overlap and l-diagonal hamiltonian matrix
          VecHelpS = 0.0
          VecHelpH = 0.0
-         
+
          !--->       x for legendre polynomials
          xlegend =dot_product(lapw%gk(1:3,kj,iintsp),lapw%gk(1:3,ki,jintsp))
          !$acc loop seq
@@ -108,7 +108,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
             ddnln = usdus%ddn(l,n,isp)
             elall = el(l,n,isp)
             IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
- 
+
             !--->       legendre polynomials
             l3 = modulo(l, 3)
             IF (l == 0) THEN
@@ -137,9 +137,9 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
          cph_im = 0.0
          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
             tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
-            
+
             dot = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,kj,iintsp) - qssbtj(1:3), tnn(1:3))
-            
+
             cph_re = cph_re + COS(dot)
             cph_im = cph_im - SIN(dot)
             ! IF (iintsp.NE.jintsp) cph_im=-cph_im
@@ -156,7 +156,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
             hmat%data_c(kj,kii) = &
             hmat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH
          ENDIF ! real
-       
+
 
       END DO ! kj_off
       !$acc end loop
@@ -177,7 +177,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    USE m_types
    USE m_hsmt_fjgj
 #ifdef CPP_GPU
-   USE nvtx 
+   USE nvtx
 #endif
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
@@ -243,7 +243,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
       kj_end=min(ki,lapw%nv(iintsp))
       kii=(ki-1)/mpi%n_size+1
       ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
-      DO  kj_off = 1, lapw%nv(iintsp), NVEC 
+      DO  kj_off = 1, lapw%nv(iintsp), NVEC
          NVEC_rem = NVEC
          kj_vec = kj_off - 1 + NVEC
          IF (kj_vec > kj_end) THEN
@@ -274,7 +274,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
             ddnln = usdus%ddn(l,n,isp)
             elall = el(l,n,isp)
             IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
- 
+
             !--->       legendre polynomials
             l3 = modulo(l, 3)
             IF (l == 0) THEN
@@ -322,7 +322,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
             hmat%data_c(kj_off:kj_vec,kii) = &
             hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
          ENDIF ! real
-       
+
 
       END DO ! kj_off
       !--->    end loop over ki

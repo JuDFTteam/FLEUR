@@ -77,8 +77,8 @@ CONTAINS
     endif
     allocate(h_loc(SIZE(td%h_loc,1),SIZE(td%h_loc,1)))
     h_loc=td%h_loc(0:,0:,n,isp,jsp)
-#endif
     !$acc data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
+#endif
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN

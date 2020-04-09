@@ -56,11 +56,7 @@ CONTAINS
     !In noco case we need 4-matrices for each spin channel
     nspins=MERGE(2,1,noco%l_noco)
     IF (mpi%n_size==1) THEN
-       IF (judft_was_argument("-gpu")) THEN
-          ALLOCATE(t_gpumat::smat(nspins,nspins),hmat(nspins,nspins))
-       ELSE
-          ALLOCATE(t_mat::smat(nspins,nspins),hmat(nspins,nspins))
-       ENDIF
+      ALLOCATE(t_mat::smat(nspins,nspins),hmat(nspins,nspins))
     ELSE
        ALLOCATE(t_mpimat::smat(nspins,nspins),hmat(nspins,nspins))
     ENDIF
@@ -78,13 +74,13 @@ CONTAINS
     CALL timestop("Interstitial part")
     CALL timestart("MT part")
     !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
-    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_r,smat(1,1)%data_r)!if (smat(1,1)%l_real)
-    !$acc data copyin(hmat(1,1),smat(1,1),hmat(1,1)%data_c,smat(1,1)%data_c)!if (.not.smat(1,1)%l_real)
+    DO i=1,nspins;DO j=1,nspins
+      !$acc data copy(hmat(i,j),smat(i,j),hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+    ENDDO;ENDDO
     CALL hsmt(atoms,sym,enpara,isp,input,mpi,noco,nococonv,cell,lapw,ud,td,smat,hmat)
-    !$acc update self (smat(1,1)%data_r,hmat(1,1)%data_r) if (smat(1,1)%l_real)
-    !$acc update self (hmat(1,1)%data_c,hmat(1,1)%data_c) if (.not.hmat(1,1)%l_real)
-    !$acc end data 
-    !$acc end data
+    DO i=1,nspins;DO j=1,nspins
+      !$acc end data
+    ENDDO;ENDDO
     CALL timestop("MT part")
 
     !Vacuum contributions

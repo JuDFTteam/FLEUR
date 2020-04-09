@@ -32,7 +32,7 @@ CONTAINS
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)::ev
     REAL,INTENT(out)              :: eig(:)
     INTEGER,INTENT(INOUT)         :: ne
-    
+
     !...  Local variables
     !
     INTEGER           :: num, np,myid
@@ -48,18 +48,18 @@ CONTAINS
     TYPE IS (t_mpimat)
     SELECT TYPE(smat)
     TYPE IS (t_mpimat)
-       CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)    
+       CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)
        CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,err)
        CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,err)
        err = elpa_init(20180525)
        elpa_obj => elpa_allocate()
-       
+
        ALLOCATE ( eig2(hmat%global_size1), stat=err ) ! The eigenvalue array
        IF (err.NE.0) CALL juDFT_error('Failed to allocated "eig2"', calledby ='elpa')
 
        CALL ev_dist%init(hmat)! Eigenvectors
        IF (err.NE.0) CALL juDFT_error('Failed to allocated "ev_dist"',calledby ='elpa')
-       
+
        ! Blocking factor
        IF (hmat%blacsdata%blacs_desc(5).NE.hmat%blacsdata%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
        CALL elpa_obj%set("na", hmat%global_size1, err)
@@ -71,28 +71,29 @@ CONTAINS
        CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
        CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
        CALL elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
-       !CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
-#ifdef CPP_GPU
+#if defined(CPP_GPU)||defined(_OPENACC)
        CALL elpa_obj%set("gpu",1,err)
        print *,"ELPA for GPU"
+#else
+       CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
        err = elpa_obj%setup()
 
        CALL hmat%generate_full_matrix()
        CALL smat%generate_full_matrix()
-       
+
        IF (hmat%l_real) THEN
           CALL elpa_obj%generalized_eigenvectors(hmat%data_r,smat%data_r,eig2, ev_dist%data_r, .FALSE.,err)
        ELSE
           CALL elpa_obj%generalized_eigenvectors(hmat%data_c,smat%data_c,eig2, ev_dist%data_c, .FALSE., err)
        ENDIF
-       
+
        CALL elpa_deallocate(elpa_obj)
        CALL elpa_uninit()
        ! END of ELPA stuff
        !
        !     Each process has all eigenvalues in output
-       eig(:ne) = eig2(:ne)    
+       eig(:ne) = eig2(:ne)
        DEALLOCATE(eig2)
        !
        !
@@ -116,6 +117,6 @@ CONTAINS
  CLASS DEFAULT
     CALL judft_error("Wrong type (2) in scalapack")
  END SELECT
- 
+
 END SUBROUTINE elpa_diag
 END MODULE m_elpa

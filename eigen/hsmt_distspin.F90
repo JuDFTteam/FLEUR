@@ -14,11 +14,12 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT):: mat(:,:)
 
     INTEGER:: iintsp,jintsp
-
+    !$acc kernels copyin(chi) present(mat,mat_tmp)
     DO iintsp=1,2
        DO jintsp=1,2
           mat(jintsp,iintsp)%data_c(:,:)=chi(jintsp,iintsp)*mat_tmp%data_c(:,:)+mat(jintsp,iintsp)%data_c(:,:)
        ENDDO
     ENDDO
+    !$acc end kernels
   END SUBROUTINE hsmt_distspins
 END MODULE m_hsmt_distspins
