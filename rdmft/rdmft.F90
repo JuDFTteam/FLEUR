@@ -71,7 +71,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_moments)                      :: moments
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
-   INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
+   INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF
    INTEGER                              :: iState, iStep, numStates, numRelevantStates, convIter
@@ -333,13 +333,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
             mt(:,:) = 0.0
             DO iType = 1, fi%atoms%ntype
-               DO i = 1, fi%atoms%jri(iType)
-                  mt(i,iType) = singleStateDen%mt(i,0,iType,jsp)
+               DO iGrid = 1, fi%atoms%jri(iType)
+                  mt(iGrid,iType) = singleStateDen%mt(iGrid,0,iType,jsp)
                END DO
 
-               DO j = 1,fi%atoms%jri(iType)
-                  dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
+               DO iGrid = 1, fi%atoms%jri(iType)
+                  dpj(iGrid) = mt(iGrid,iType)/fi%atoms%rmsh(iGrid,iType)
                END DO
+
                CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
                zintn_r(iType) = fi%atoms%neq(iType)*fi%atoms%zatom(iType)*sfp_const*rhs/2.0
@@ -378,17 +379,17 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
    !allocate coulomb matrix
-   if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
-   do i =1,fi%kpts%nkpt
-      call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
-   enddo
+   IF (.NOT.ALLOCATED(hybdat%coul)) ALLOCATE(hybdat%coul(fi%kpts%nkpt))
+   DO ikpt = 1, fi%kpts%nkpt
+      CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
+   END DO
 
-   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(i,i=1,fi%kpts%nkpt)])
+   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(ikpt,ikpt=1,fi%kpts%nkpt)])
    
-   call hybmpi%copy_mpi(mpi)
-   do i =1,fi%kpts%nkpt
-      call hybdat%coul(i)%mpi_ibc(fi, hybmpi, 0)
-   enddo
+   CALL hybmpi%copy_mpi(mpi)
+   DO ikpt = 1, fi%kpts%nkpt
+      CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
+   END DO
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
 
@@ -491,7 +492,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          jsp = MERGE(1,jspin,fi%noco%l_noco)
          ! remove weights(wtkpt) in w_iks
          wl_iks = 0.0
-         DO ikptf=1,fi%kpts%nkptf
+         DO ikptf = 1, fi%kpts%nkptf
             ikpt = fi%kpts%bkp(ikptf)
             DO iBand=1, results%neig(ikpt,jsp)
                wl_iks(iBand,ikptf) = results%w_iks(iBand,ikpt,jspin) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf) Last term to be included after applying functional
@@ -515,7 +516,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         DO ikpt = 1,fi%kpts%nkpt
+         DO ikpt = 1, fi%kpts%nkpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
 
@@ -564,12 +565,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
 
-            DO i = 1, hybdat%nbands(ikpt)
-               DO j = 1, i-1
+            DO iBand = 1, hybdat%nbands(ikpt)
+               DO jBand = 1, iBand-1
                   IF (exMat%l_real) THEN
-                     exMat%data_r(i,j)=exMat%data_r(j,i)
+                     exMat%data_r(iBand,jBand)=exMat%data_r(jBand,iBand)
                   ELSE
-                     exMat%data_c(i,j)=conjg(exMat%data_c(j,i))
+                     exMat%data_c(iBand,jBand)=conjg(exMat%data_c(jBand,iBand))
                   END IF
                END DO
             END DO
@@ -798,15 +799,15 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    mt=0.0
    DO iType = 1, fi%atoms%ntype
-      DO i = 1, fi%atoms%jri(iType)
-         mt(i,iType) = outDen%mt(i,0,iType,1) + outDen%mt(i,0,iType,fi%input%jspins)
+      DO iGrid = 1, fi%atoms%jri(iType)
+         mt(iGrid,iType) = outDen%mt(iGrid,0,iType,1) + outDen%mt(iGrid,0,iType,fi%input%jspins)
       END DO
    END DO
    IF (fi%input%jspins.EQ.1) mt=mt/2.0 !we just added the same value twice
 
    DO iType = 1, fi%atoms%ntype
-      DO j = 1,fi%atoms%jri(iType)
-         dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
+      DO iGrid = 1,fi%atoms%jri(iType)
+         dpj(iGrid) = mt(iGrid,iType)/fi%atoms%rmsh(iGrid,iType)
       END DO
       CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
