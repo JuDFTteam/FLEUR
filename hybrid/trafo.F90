@@ -5,7 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_trafo
-  use m_judft
+   use m_judft
+   INTERFACE bra_trafo
+      module procedure bra_trafo_real, bra_trafo_cmplx
+   end interface bra_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -31,10 +34,10 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  bandi, iop
 
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
+      COMPLEX, INTENT(IN)      ::  cmt(:, :, :)
       LOGICAL, INTENT(IN)      ::  l_real
-      REAL, INTENT(IN)         ::  z_r(:,:)
-      COMPLEX, INTENT(IN)      ::  z_c(:,:)
+      REAL, INTENT(IN)         ::  z_r(:, :)
+      COMPLEX, INTENT(IN)      ::  z_c(:, :)
       COMPLEX, INTENT(INOUT)   ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
       COMPLEX, INTENT(INOUT)   ::  z_out(lapw%nv(jsp), ndb)
 
@@ -52,23 +55,22 @@ CONTAINS
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
       LOGICAL                 ::  trs
 
-
       if (l_real) THEN
-         rrot    = transpose(1.0 *  sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(1.0 * sym%mrot(:, :, iop))
-         trans   = sym%tau(:, iop)
+         rrot = transpose(1.0*sym%mrot(:, :, sym%invtab(iop)))
+         invrrot = transpose(1.0*sym%mrot(:, :, iop))
+         trans = sym%tau(:, iop)
       else
          IF (iop <= sym%nop) THEN
-            trs     = .false.
-            rrot    = transpose(1.0 * sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(1.0 * sym%mrot(:, :, iop))
-            trans   = sym%tau(:, iop)
+            trs = .false.
+            rrot = transpose(1.0*sym%mrot(:, :, sym%invtab(iop)))
+            invrrot = transpose(1.0*sym%mrot(:, :, iop))
+            trans = sym%tau(:, iop)
          ELSE
-            trs     = .true.
-            iiop    = iop - sym%nop
-            rrot    = -transpose(1.0 * sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(1.0 * sym%mrot(:, :, iiop))
-            trans   = sym%tau(:, iiop)
+            trs = .true.
+            iiop = iop - sym%nop
+            rrot = -transpose(1.0*sym%mrot(:, :, sym%invtab(iiop)))
+            invrrot = -transpose(1.0*sym%mrot(:, :, iiop))
+            trans = sym%tau(:, iiop)
          END IF
       endif
 
@@ -100,8 +102,8 @@ CONTAINS
                   DO i = 1, ndb
                      if (l_real) THEN
                         cmt_out(lm1:lm2:nn, iatom1, i) = cdum* &
-                             matmul(cmt(bandi + i - 1, lm1:lm2:nn, iatom),&
-                             sym%d_wgn(-l:l, -l:l, l, iop))
+                                                         matmul(cmt(bandi + i - 1, lm1:lm2:nn, iatom), &
+                                                                sym%d_wgn(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = CONJG(cmt(bandi + i - 1, lm1:lm2:nn, iatom))
@@ -167,9 +169,9 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL, INTENT(in)      :: l_real
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(:,:,:), c_phase(nbands)
+      COMPLEX, INTENT(IN)      ::  cmt(:, :, :), c_phase(nbands)
 
-      COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(:, :, :)
 !        - local -
 
 !     - scalars -
@@ -235,8 +237,8 @@ CONTAINS
 
                   DO i = 1, nbands
                      if (l_real) THEN
-                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
-                                           hybinp%d_wgn2(-l:l, -l:l, l, iop))
+                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom), &
+                                                                     hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = conjg(cmt(i, lm1:lm2:nn, iatom))
@@ -256,7 +258,7 @@ CONTAINS
 
       ! If phase and inversion-sym. is true,
       ! define the phase such that z_out is real.
-      if(l_real) then
+      if (l_real) then
          DO i = 1, nbands
             cmt_out(i, :, :) = cmt_out(i, :, :)/c_phase(i)
          END DO
@@ -265,16 +267,15 @@ CONTAINS
    END SUBROUTINE waveftrafo_gen_cmt
 
    SUBROUTINE waveftrafo_genwavf( &
-       cmt, z_in, nk, iop, atoms, &
-       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
-       lapw_nk, lapw_rkpt, cmt_out, z_out)
+      cmt, z_in, nk, iop, atoms, &
+      mpdata, hybinp, kpts, sym, jsp, input, nbands, &
+      lapw_nk, lapw_rkpt, cmt_out, z_out)
 
       use m_juDFT
       USE m_constants
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
-
 
       type(t_mat), intent(in)     :: z_in
       TYPE(t_input), INTENT(IN)   :: input
@@ -289,9 +290,9 @@ CONTAINS
       INTEGER, INTENT(IN)      :: nk, jsp, nbands
       INTEGER, INTENT(IN)      ::  iop
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
+      COMPLEX, INTENT(IN)      ::  cmt(:, :, :)
 
-      COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(:, :, :)
 !        - local -
 
 !     - scalars -
@@ -358,8 +359,8 @@ CONTAINS
 
                   DO i = 1, nbands
                      if (z_in%l_real) THEN
-                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
-                                           hybinp%d_wgn2(-l:l, -l:l, l, iop))
+                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom), &
+                                                                     hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = conjg(cmt(i, lm1:lm2:nn, iatom))
@@ -381,17 +382,17 @@ CONTAINS
 
       zhlp = 0
       DO igpt = 1, lapw_rkpt%nv(jsp)
-         g = matmul(invrrot, lapw_rkpt%gvec(:,igpt,jsp) + g1)
+         g = matmul(invrrot, lapw_rkpt%gvec(:, igpt, jsp) + g1)
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)
-            IF (all(abs(g - lapw_nk%gvec(:,i, jsp) ) <= 1E-06)) THEN
+            IF (all(abs(g - lapw_nk%gvec(:, i, jsp)) <= 1E-06)) THEN
                igpt1 = i
                EXIT
             END IF
          END DO
          IF (igpt1 == 0) CYCLE
-         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
+         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:, igpt, jsp), trans))
          if (z_in%l_real) THEN
             zhlp(igpt, :nbands) = cdum*z_in%data_r(igpt1, :nbands)
          else
@@ -434,7 +435,6 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-
       type(t_mat), intent(in)     :: z_in
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)     :: sym
@@ -458,7 +458,7 @@ CONTAINS
       COMPLEX                 ::  zhlp(z_in%matsize1, nbands)
 
       call timestart("gen_zmat")
-      if(present(c_phase)) c_phase = 0
+      if (present(c_phase)) c_phase = 0
 
       if (z_in%l_real) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
@@ -491,17 +491,17 @@ CONTAINS
 
       zhlp = 0
       DO igpt = 1, lapw_rkpt%nv(jsp)
-         g = matmul(invrrot, lapw_rkpt%gvec(:,igpt,jsp) + g1)
+         g = matmul(invrrot, lapw_rkpt%gvec(:, igpt, jsp) + g1)
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)
-            IF (all(abs(g - lapw_nk%gvec(:,i, jsp) ) <= 1E-06)) THEN
+            IF (all(abs(g - lapw_nk%gvec(:, i, jsp)) <= 1E-06)) THEN
                igpt1 = i
                EXIT
             END IF
          END DO
          IF (igpt1 == 0) CYCLE
-         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
+         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:, igpt, jsp), trans))
          if (z_in%l_real) THEN
             zhlp(igpt, :nbands) = cdum*z_in%data_r(igpt1, :nbands)
          else
@@ -519,8 +519,8 @@ CONTAINS
       DO i = 1, nbands
          if (z_in%l_real) THEN
             cdum = commonphase(zhlp(:, i), z_in%matsize1)
-            if(present(c_phase)) c_phase(i) = cdum
-            if(abs(cdum) < 1e-30) THEN
+            if (present(c_phase)) c_phase(i) = cdum
+            if (abs(cdum) < 1e-30) THEN
                call juDFT_error("commonphase can't be 0.")
             endif
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
@@ -563,7 +563,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT) ::  mat(dim1,dim2)
+      COMPLEX, INTENT(INOUT) ::  mat(dim1, dim2)
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
@@ -629,34 +629,10 @@ CONTAINS
       END DO
 
       IF (lreal) THEN
-
-
-!     ! Determine common phase factor and devide by it to make the output matrix real.
-!     rmax = 0
-!     DO i = 1,dim1
-!     DO j = 1,dim2
-!     rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
-!     IF(rdum.gt.1e-6) THEN
-!     cfac = mat(i,j)/abs(mat(i,j))
-!     GO TO 1
-!     ELSE IF(rdum.gt.rmax) THEN
-!     cfac = mat(i,j)/abs(mat(i,j))
-!     rmax = rdum
-!     END IF
-!     END DO
-!     END DO
-!     IF(1-abs(cfac)   .gt.1e-8) THEN ; mat = 0 ; RETURN ; END IF
-!     1      IF(abs(1-cfac**2).gt.1e-8) mat = mat/cfac
-!
-!     IF(any(abs(aimag(mat)).gt.1e-8)) THEN
-!     WRITE(*,*) maxval(aimag(mat))
-!     call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
-
 ! Determine common phase factor and divide by it to make the output matrix real.
          cfac = commonphase(mat, dim1*dim2)
          mat = mat/cfac
-         IF (any(abs(aimag(mat)) > 1e-8)) &
-      STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
+         IF (any(abs(aimag(mat)) > 1e-8)) call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
       END IF
 
    END SUBROUTINE symmetrize
@@ -679,7 +655,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)      :: lcutm(:)
       INTEGER, INTENT(IN)      ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT)   ::  mat(dim1,dim2)
+      COMPLEX, INTENT(INOUT)   ::  mat(dim1, dim2)
 
 !     - local scalars -
       INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
@@ -749,7 +725,103 @@ CONTAINS
    ! symmetrie equivalent one
    ! isym maps kpts%bkp(ikpt) on ikpt
 
-   SUBROUTINE bra_trafo( &
+   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, phase, vecin_r, vecout_r)
+      use m_types
+      use m_constants
+      use m_judft
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp
+      REAL, INTENT(IN)                  ::  vecin_r(:, :, :)
+      REAL, INTENT(INOUT)               ::  vecout_r(:, :, :)
+      COMPLEX, INTENT(INOUT)            ::  phase(:, :)
+
+      COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
+      integer :: ok, i, j
+
+      phase = cmplx_0
+      call timestart("bra trafo real")
+      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
+      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
+
+      IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
+
+!     transform back to unsymmetrized product basis in case of inversion symmetry
+      vecin1 = vecin_r
+      DO i = 1, nbands
+         DO j = 1, MAXVAL(hybdat%nobd(:, jsp))
+            CALL desymmetrize(vecin1(:hybdat%nbasp, j, i), hybdat%nbasp, 1, 1, &
+                              fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
+         END DO
+      END DO
+
+      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, fi%sym, mpdata, &
+                          fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
+      deallocate (vecin1)
+
+      DO i = 1, nbands
+         DO j = 1, MAXVAL(hybdat%nobd(:, jsp))
+
+            CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
+                            fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
+
+            phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
+            vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
+            IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
+               WRITE (*, *) vecout1(:, j, i)
+               call judft_error('bra_trafo: Residual imaginary part.')
+            END IF
+
+         END DO
+      END DO
+
+      vecout_r = real(vecout1)
+      deallocate (vecout1)
+      call timestop("bra trafo real")
+   end subroutine bra_trafo_real
+
+   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp, phase, vecin_c, vecout_c)
+      use m_types
+      use m_constants
+      use m_judft
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp
+      COMPLEX, INTENT(IN)               ::  vecin_c(:, :, :)
+      COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :, :)
+      COMPLEX, INTENT(INOUT)            ::  phase(:, :)
+
+      COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
+      integer :: ok
+
+      phase = cmplx_0
+      call timestart("bra trafo cmplx")
+
+      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
+      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
+
+      IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
+
+!     transform back to unsymmetrized product basis in case of inversion symmetry
+      vecin1 = vecin_c
+
+      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
+
+      phase = cmplx_1
+      vecout_c = vecout1
+
+      call timestop("bra trafo cmplx")
+   end subroutine bra_trafo_cmplx
+
+   SUBROUTINE bra_trafo_old( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       nobd, nbands, ikpt, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
@@ -761,7 +833,7 @@ CONTAINS
       USE m_constants
       USE m_util
       USE m_types
-      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED,CMPLX_NOT_INITALIZED
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
       IMPLICIT NONE
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -777,11 +849,11 @@ CONTAINS
 
       LOGICAL, INTENT(IN)      :: l_real
 
-      REAL, INTENT(IN)         ::  vecin_r(:,:,:)
-      REAL, INTENT(INOUT)      ::  vecout_r(:,:,:)
-      COMPLEX, INTENT(IN)      ::  vecin_c(:,:,:)
-      COMPLEX, INTENT(INOUT)   ::  vecout_c(:,:,:)
-      COMPLEX, INTENT(INOUT)   ::  phase(:,:)
+      REAL, INTENT(IN)         ::  vecin_r(:, :, :)
+      REAL, INTENT(INOUT)      ::  vecout_r(:, :, :)
+      COMPLEX, INTENT(IN)      ::  vecin_c(:, :, :)
+      COMPLEX, INTENT(INOUT)   ::  vecout_c(:, :, :)
+      COMPLEX, INTENT(INOUT)   ::  phase(:, :)
 
       integer :: i, j, ok
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
@@ -789,10 +861,10 @@ CONTAINS
       phase = cmplx_0
       call timestart("bra trafo")
 
-      allocate(vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
-                 vecout1(hybdat%nbasm(ikpt), nobd, nbands), stat=ok)
+      allocate (vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
+                vecout1(hybdat%nbasm(ikpt), nobd, nbands), stat=ok)
       IF (ok /= 0) &
-                   call judft_error('bra_trafo: error allocating vecin1 or vecout1')
+         call judft_error('bra_trafo: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
       IF (maxval(hybinp%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
@@ -811,7 +883,7 @@ CONTAINS
       endif
 
       call bra_trafo_core(nobd, nbands, ikpt, sym, mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
-      deallocate(vecin1)
+      deallocate (vecin1)
 
       if (l_real) THEN
          DO i = 1, nbands
@@ -840,15 +912,15 @@ CONTAINS
          vecout_c = vecout1
          vecout_r = REAL_NOT_INITALIZED
       endif
-      deallocate(vecout1)
+      deallocate (vecout1)
       call timestop("bra trafo")
-   END SUBROUTINE bra_trafo
+   END SUBROUTINE bra_trafo_old
 
    subroutine bra_trafo_core(nobd, nbands, ikpt, sym, &
-                     mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1) 
+                             mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
       use m_types
       use m_constants
-      implicit none 
+      implicit none
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -858,18 +930,19 @@ CONTAINS
 
       INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands
 
-      COMPLEX, intent(inout)    ::  vecin1(:, :, :), vecout1(:, :, :)
+      COMPLEX, intent(in)     :: vecin1(:, :, :)
+      complex, intent(inout)  :: vecout1(:, :, :)
 
-      INTEGER                 ::  nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2
-      INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
-      COMPLEX                 ::  cexp, cdum
+      INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2
+      INTEGER                 :: igptm, igptm2, igptp, iiatom, iiop, inviop
+      COMPLEX                 :: cexp, cdum
 
-      INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%nat)
-      INTEGER                 ::  g(3), g1(3)
-      REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
-                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
+      INTEGER                 :: rrot(3, 3), invrot(3, 3)
+      INTEGER                 :: pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%nat)
+      INTEGER                 :: g(3), g1(3)
+      REAL                    :: rkpt(3), rkpthlp(3), trans(3)
+      COMPLEX                 :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
+                                      -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1020,8 +1093,8 @@ CONTAINS
    END function commonphase
 
    SUBROUTINE bramat_trafo(vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
-      rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm,&
-       dwgn, nbasp, nbasm , vecout, igptm_out)
+                           rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, &
+                           dwgn, nbasp, nbasm, vecout, igptm_out)
 
       USE m_constants
       USE m_util
@@ -1040,19 +1113,19 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  writevec
       INTEGER, INTENT(INOUT)   ::  igptm_out
 !     - arrays -
-      INTEGER, INTENT(IN)      ::  rrot(:,:), invrrot(:,:)
-      INTEGER, INTENT(IN)      :: lcutm(atoms%ntype),&
+      INTEGER, INTENT(IN)      ::  rrot(:, :), invrrot(:, :)
+      INTEGER, INTENT(IN)      :: lcutm(atoms%ntype), &
                                   nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)      :: nbasm(:)
-      INTEGER, INTENT(IN)      ::  pointer(&
-                                minval(mpdata%g(1, :)) - 1:maxval(mpdata%g(1, :)) + 1,&
-                                minval(mpdata%g(2, :)) - 1:maxval(mpdata%g(2, :)) + 1,&
-                                minval(mpdata%g(3, :)) - 1:maxval(mpdata%g(3, :)) + 1)
+      INTEGER, INTENT(IN)      ::  pointer( &
+                                  minval(mpdata%g(1, :)) - 1:maxval(mpdata%g(1, :)) + 1, &
+                                  minval(mpdata%g(2, :)) - 1:maxval(mpdata%g(2, :)) + 1, &
+                                  minval(mpdata%g(3, :)) - 1:maxval(mpdata%g(3, :)) + 1)
 
       COMPLEX, INTENT(IN)      ::  vecin(:)
-      COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
-                                       -maxlcutm:maxlcutm,&
-                                               0:maxlcutm)
+      COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm, &
+                                        -maxlcutm:maxlcutm, &
+                                        0:maxlcutm)
       COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm))
 
 !     - private scalars -
@@ -1062,13 +1135,13 @@ CONTAINS
       LOGICAL                 ::  trs, touch
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
-      INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-                                  g1(3), iarr(maxval(mpdata%n_g))
+      INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3), &
+                                 g1(3), iarr(maxval(mpdata%n_g))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(maxval(mpdata%n_g))
 
-      igptm_out=-1;vecout=CMPLX_NOT_INITALIZED; touch=.false.
+      igptm_out = -1; vecout = CMPLX_NOT_INITALIZED; touch = .false.
 
       IF (iop <= sym%nop) THEN
          isym = iop
@@ -1109,7 +1182,7 @@ CONTAINS
          END IF
       END DO
 
-      if(.not. touch) call judft_error("g-point could not be found.")
+      if (.not. touch) call judft_error("g-point could not be found.")
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecout(:nbasm(ikpt0)) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &

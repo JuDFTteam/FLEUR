@@ -124,8 +124,8 @@ CONTAINS
       REAL                 :: carr1_v_r(maxval(hybdat%nbasm))
       COMPLEX              :: carr1_v_c(maxval(hybdat%nbasm)), test(maxval(hybdat%nbasm))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
-      COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
+      REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :), test_r(:, :, :)
+      COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :), test_c(:, :, :)
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       CALL timestart("valence exchange calculation")
@@ -147,19 +147,21 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
-         allocate (cprod_vv_c(maxval(hybdat%nbasm), 0, 0), carr3_vv_c(maxval(hybdat%nbasm), 0, 0))
+         allocate (cprod_vv_c(maxval(hybdat%nbasm), 0, 0), carr3_vv_c(maxval(hybdat%nbasm), 0, 0), test_c(maxval(hybdat%nbasm), 0, 0))
          allocate (cprod_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
          allocate (carr3_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
+         allocate (test_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_r = 0; carr3_vv_r = 0
+         cprod_vv_r = 0; carr3_vv_r = 0; test_r=0
       ELSE
-         allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0))
+         allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0), test_r(maxval(hybdat%nbasm), 0, 0))
          allocate (cprod_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
          allocate (carr3_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
+         allocate (test_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_c = 0; carr3_vv_c = 0
+         cprod_vv_c = 0; carr3_vv_c = 0; test_c=0
       END IF
 
       exch_vv = 0
@@ -202,15 +204,13 @@ CONTAINS
          ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
          ! from IBZ to current k-point
          IF (fi%kpts%bkp(iq) /= iq) THEN
-            CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(iq), :, :), cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-                           carr3_vv_c(:hybdat%nbasm(iq), :, :), cprod_vv_c(:hybdat%nbasm(iq), :, :), &
-                           MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik), iq, fi%sym, &
-                           mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, phase_vv)
-            IF (mat_ex%l_real) THEN
+            if(mat_ex%l_real) then 
+               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, phase_vv, cprod_vv_r(:hybdat%nbasm(iq), :, :), carr3_vv_r(:hybdat%nbasm(iq), :, :))
                cprod_vv_r(:hybdat%nbasm(iq), :, :) = carr3_vv_r(:hybdat%nbasm(iq), :, :)
-            ELSE
+            else
+               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, phase_vv, cprod_vv_c(:hybdat%nbasm(iq), :, :), carr3_vv_c(:hybdat%nbasm(iq), :, :))
                cprod_vv_c(:hybdat%nbasm(iq), :, :) = carr3_vv_c(:hybdat%nbasm(iq), :, :)
-            ENDIF
+            endif
          ELSE
             phase_vv(:, :) = (1.0, 0.0)
          END IF
@@ -221,7 +221,6 @@ CONTAINS
          call hybdat%coul(iq_p)%mpi_wait()
          DO n1 = 1, hybdat%nbands(ik)
             DO iband = 1, hybdat%nobd(nkqpt, jsp)
-               cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                call timestart("sparse matrix products")
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0
@@ -234,6 +233,7 @@ CONTAINS
                END IF
                call timestop("sparse matrix products")
 
+               cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
                call timestart("exch_vv dot prod")
                IF (mat_ex%l_real) THEN
                   DO n2 = 1, nsest(n1)!n1
