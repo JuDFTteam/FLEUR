@@ -47,8 +47,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    zeros(:)=0.0
    nonZeroAngles=.FALSE.
    DO i=1, atoms%ntype
-     IF(noco%alph(i).NE.0) nonZeroAngles=.TRUE.
-     IF(noco%beta(i).NE.0) nonZeroAngles=.TRUE. 
+     IF(noco%alph_inp(i).NE.0.0) nonZeroAngles=.TRUE.
+     IF(noco%beta_inp(i).NE.0.0) nonZeroAngles=.TRUE.
    END DO
 
    IF(l_firstIt.AND.nonZeroAngles) THEN
