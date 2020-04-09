@@ -4,13 +4,9 @@ MODULE m_ccdnup
   !     *****   in accordanse to d.d.koelling's cored     *****
   !     *******************************************************
 CONTAINS
-  SUBROUTINE ccdnup(&
-       &                  atoms,sphhar,input,jatom,&
-       &                  rho,&
-       &                  sume,vrs,rhochr,rhospn,&
-       &                  tecs,qints)
+  SUBROUTINE ccdnup(atoms,sphhar,input,jatom,rho,sume,vrs,rhochr,rhospn,tecs,qints)
 
-    USE m_constants,ONLY:sfp_const
+    USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_types
     IMPLICIT NONE
@@ -65,7 +61,7 @@ CONTAINS
        ENDDO
        CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
        tecs(jatom,jspin) = sume/input%jspins - rhs
-       WRITE (6,FMT=8010) jatom,jspin,tecs(jatom,jspin),sume/input%jspins
+       WRITE (oUnit,FMT=8010) jatom,jspin,tecs(jatom,jspin),sume/input%jspins
   
        !     ---> simpson integration
        dxx = atoms%dx(jatom)
@@ -79,7 +75,7 @@ CONTAINS
           q = q + rad*rhoss(nm1+1)
        ENDDO
        q = 2*q*dxx/3
-       WRITE (6,FMT=8000) q/input%jspins
+       WRITE (oUnit,FMT=8000) q/input%jspins
        qints(jatom,jspin) = q*atoms%neq(jatom)
 
     END DO ! end-do-loop input%jspins
