@@ -11,6 +11,7 @@ CONTAINS
 SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
 
    USE m_types
+   USE m_constants
    USE m_xmlOutput
 
    IMPLICIT NONE
@@ -30,7 +31,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
 
    thetai = nococonv%theta
    phii   = nococonv%phi
-   WRITE (6,FMT=9020)
+   WRITE (oUnit,FMT=9020)
    CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    DO iType = 1, atoms%ntype
       ! magn. moment(-)
@@ -57,7 +58,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
                          sin(thetai)*(cos(phii)*clmom(1,iType,2) + &
                          sin(phii)*clmom(2,iType,2))
 
-      WRITE (6,FMT=8030) iType,slmom,(clmom(3,iType,j),j=1,2)
+      WRITE (oUnit,FMT=8030) iType,slmom,(clmom(3,iType,j),j=1,2)
       attributes = ''
       WRITE(attributes(1),'(i0)') iType
       WRITE(attributes(2),'(f15.10)') slmom

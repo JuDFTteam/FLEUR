@@ -226,7 +226,7 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,
    DO iType = 1, atoms%ntype
       DO i = 1, atoms%jri(iType)
          IF (ANY(AIMAG(rhoSphHarms(i,1,iType,:)).GT.1.0e-11)) THEN
-            WRITE(6,*) 'imaginary part too large!'
+            WRITE(oUnit,*) 'imaginary part too large!'
          END IF
       END DO
    END DO

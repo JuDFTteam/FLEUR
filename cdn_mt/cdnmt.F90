@@ -10,15 +10,19 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
+
   SUBROUTINE cdnmt(mpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1inp,jDOS,hub1data)
-    use m_constants,only: sfp_const
+
+    USE m_types
+    USE m_constants
     USE m_rhosphnlo
     USE m_radfun
     USE m_orbmom2
-    USE m_types
     USE m_xmlOutput
+
     IMPLICIT NONE
+
     TYPE(t_input),   INTENT(IN)    :: input
     TYPE(t_mpi),     INTENT(IN)    :: mpi
     TYPE(t_usdus),   INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
@@ -277,13 +281,13 @@ CONTAINS
     DEALLOCATE ( f,g)
 !    !$OMP END PARALLEL
 
-    WRITE (6,FMT=8000)
+    WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
          &     t33,'d',t42,'f',t51,'total')
 
     DO itype = 1,atoms%ntype
        DO ispin = jsp_start,jsp_end
-          WRITE ( 6,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
+          WRITE (oUnit,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
 8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
           attributes = ''
           WRITE(attributes(1),'(i0)') itype
@@ -300,15 +304,15 @@ CONTAINS
 
     IF(banddos%l_jDOS) THEN
       IF(PRESENT(jDOS)) THEN
-         WRITE(6,8200)
+         WRITE(oUnit,8200)
 8200     FORMAT(/,5x,'j-decomposed charge',/,t6,'atom',t15,'s',t24,'p1/2',t33,'p3/2',&
                    t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
          DO itype = 1, atoms%ntype
             natom = SUM(atoms%neq(:itype-1)) + 1
 
-            WRITE(6,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
+            WRITE(oUnit,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
 8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
-            WRITE(6,*)
+            WRITE(oUnit,*)
 
             CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 

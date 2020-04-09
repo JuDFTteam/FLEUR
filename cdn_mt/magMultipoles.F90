@@ -47,11 +47,11 @@ CONTAINS
     CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
     CALL mt_moments( input, atoms, sym,sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
-    WRITE(6,*) "Magnetic Multipoles:"
+    WRITE(oUnit,*) "Magnetic Multipoles:"
     DO n=1,atoms%ntype
-       WRITE(6,*) "Atom type:",n
+       WRITE(oUnit,*) "Atom type:",n
        DO l=0,4
-          WRITE(6,"(10(2f12.7,3x))") (qlmo(m,l,n),m=-l,l)
+          WRITE(oUnit,"(10(2f12.7,3x))") (qlmo(m,l,n),m=-l,l)
        ENDDO
     ENDDO
   END SUBROUTINE magMultipoles
