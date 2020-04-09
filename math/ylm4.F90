@@ -150,7 +150,8 @@
 
       INTEGER l,lm0,m
       REAL    fac,x,y,z,xy,r,rxy,cth,sth,cph,sph,cph2
-      REAL    p(0:lmax,0:lmax),c(0:max(1,lmax)),s(0:max(1,lmax))
+      REAL    p(0:lmax,0:lmax)
+      REAL    cm,cm1,cm2,sm,sm1,sm2
       COMPLEX ylms
 
 
@@ -197,15 +198,19 @@
       p(lmax,lmax) = -(lmax+lmax-1)*fac
 
 !--->    determine sin and cos of phi
-      s(0) = 0.0
-      s(1) = sph
-      c(0) = 1.0
-      c(1) = cph
+      ! recursion:
+      ! s(0) = 0.0
+      ! s(1) = sph
+      ! s(m) = cph2*s(m-1)-s(m-2)
+      ! c(0) = 1.0
+      ! c(1) = cph
+      ! c(m) = cph2*c(m-1)-c(m-2)
+      sm1 = 0.0
+      sm = sph
+      cm1 = 1.0
+      cm = cph
       cph2 = cph+cph
-      DO m = 2, lmax
-         s(m) = cph2*s(m-1)-s(m-2)
-         c(m) = cph2*c(m-1)-c(m-2)
-      ENDDO
+      ! actual recursion is merged into the next but one loop
 
 !--->    multiply in the normalization factors
       DO l=0,lmax
@@ -214,10 +219,16 @@
       DO m = 1, lmax
          DO l = m, lmax
             lm0 = l*(l+1)+1
-            ylms = p(l,m)*cmplx(c(m),s(m))
+            ylms = p(l,m)*cmplx(cm,sm)
             ylm(lm0+m) = ynorm(lm0+m)*ylms
             ylm(lm0-m) = conjg(ylms)*ynorm(lm0-m)
          ENDDO
+         sm2 = sm1
+         cm2 = cm1
+         sm1 = sm
+         cm1 = cm
+         sm = cph2*sm1-sm2
+         cm = cph2*cm1-cm2
       ENDDO
 
       RETURN
