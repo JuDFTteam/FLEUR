@@ -37,7 +37,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_potden), INTENT(INOUT) :: den
 
-   LOGICAL                       :: l_firstIt !Switch which is handed in by function calls which determines if we have to rotate cdn initially.
+   LOGICAL                       :: l_firstIt,nonZeroAngles !Switch which is handed in by function calls which determines if we have to rotate cdn initially.
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype),eps, zeros(atoms%ntype)
@@ -45,9 +45,13 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    INTEGER                       :: i
    eps=0.0001
    zeros(:)=0.0
+   nonZeroAngles=.FALSE.
+   DO i=1, atoms%ntype
+     IF(noco%alph_inp(i).NE.0.0) nonZeroAngles=.TRUE.
+     IF(noco%beta_inp(i).NE.0.0) nonZeroAngles=.TRUE.
+   END DO
 
-
-   IF(l_firstIt) THEN
+   IF(l_firstIt.AND.nonZeroAngles) THEN
 ! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
@@ -61,6 +65,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    !Calculate angular rotation which has to be done.
    diffT=thetaTemp-nococonv%beta
    diffP=phiTemp-nococonv%alph
+
    DO i=1, atoms%ntype
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
      IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
