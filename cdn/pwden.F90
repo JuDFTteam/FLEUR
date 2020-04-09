@@ -72,12 +72,13 @@ CONTAINS
     !
 !DEC$ NOOPTIMIZE
 #include"cpp_double.h"
+    USE m_types
+    USE m_constants
     USE m_forceb8
     USE m_pwint
     USE m_juDFT
     USE m_rfft
     USE m_cfft
-    USE m_types
     USE m_fft_interface
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -677,7 +678,7 @@ CONTAINS
                       WRITE(99,*) "X:",istr,zMat%data_c(:,istr)
                    ENDDO
                 ENDIF
-                WRITE ( 6,'(''bad quality of charge density'',2f13.8)')q0, REAL( cwk(1) )
+                WRITE (oUnit,'(''bad quality of charge density'',2f13.8)')q0, REAL( cwk(1) )
                 CALL juDFT_warn('pwden: bad quality of charge')
              ENDIF
           ENDIF

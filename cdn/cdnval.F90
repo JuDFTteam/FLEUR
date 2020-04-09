@@ -25,6 +25,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    !************************************************************************************
 
    USE m_types
+   USE m_constants
    USE m_eig66_io
    USE m_genMTBasis
    USE m_calcDenCoeffs
@@ -172,7 +173,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    ! calculation of core spectra (EELS) initializations -end-
 
    IF (mpi%irank==0) THEN
-      WRITE (6,FMT=8000) jspin
+      WRITE (oUnit,FMT=8000) jspin
       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
@@ -319,7 +320,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN
-            WRITE (6,FMT=8210) ispin
+            WRITE (oUnit,FMT=8210) ispin
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
             CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
          END IF

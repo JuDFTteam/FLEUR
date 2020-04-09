@@ -4,10 +4,7 @@
 !     region              c.l.fu                                       *
 !     ******************************************************************
       CONTAINS
-      SUBROUTINE pwint(&
-     &                 stars,atoms,sym,oneD,&
-     &                 cell,ng,&
-     &                 x)
+      SUBROUTINE pwint(stars,atoms,sym,oneD,cell,ng,x)
 
       USE m_spgrot
       USE m_od_cylbes
@@ -120,10 +117,7 @@
       ENDIF
 
       END SUBROUTINE pwint
-      SUBROUTINE pwint_all(&
-     &                 stars,atoms,sym,oneD,&
-     &                 cell,x_start,x_end,&
-     &                 x)
+      SUBROUTINE pwint_all(stars,atoms,sym,oneD,cell,x_start,x_end,x)
 
       USE m_spgrot
       USE m_od_cylbes

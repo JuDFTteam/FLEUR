@@ -211,19 +211,19 @@
                    j1 = atoms%jri(n) - 1
                    IF ( method1 .EQ. 1) THEN
                       dif = diflgr(rat(j1,n),rh(j1,n))
-                      WRITE (6,FMT=8000) n,rh(atoms%jri(n),n),dif
+                      WRITE (oUnit,FMT=8000) n,rh(atoms%jri(n),n),dif
                       alpha(n) = -0.5 * dif / ( rh(atoms%jri(n),n)*atoms%rmt(n) )
                    ELSEIF ( method1 .EQ. 2) THEN
                       alpha(n) = LOG( rh(j1,n) / rh(atoms%jri(n),n) )
                       alpha(n) = alpha(n)&
                            &                   / ( atoms%rmt(n)*atoms%rmt(n)*( 1.0-EXP( -2.0*atoms%dx(n) ) ) )
                    ELSE
-                      WRITE (6,'('' error in choice of method1 in cdnovlp '')')
+                      WRITE (oUnit,'('' error in choice of method1 in cdnovlp '')')
                       CALL juDFT_error("error in choice of method1 in cdnovlp"&
                            &              ,calledby ="cdnovlp")
                    ENDIF
                    acoff(n) = rh(atoms%jri(n),n) * EXP( alpha(n)*atoms%rmt(n)*atoms%rmt(n) )
-                   !WRITE (6,FMT=8010) alpha(n),acoff(n)
+                   !WRITE (oUnit,FMT=8010) alpha(n),acoff(n)
                    DO j = 1,atoms%jri(n) - 1
                       rh(j,n) = acoff(n) * EXP( -alpha(n)*rat(j,n)**2 )
                    ENDDO

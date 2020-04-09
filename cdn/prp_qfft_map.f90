@@ -22,6 +22,7 @@ CONTAINS
     !*********************************************************************
     !
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)     :: sym
@@ -100,11 +101,9 @@ CONTAINS
     ENDDO
     !
     IF (kidx .NE. stars%kmxq_fft) THEN
-       WRITE (6,'('' something wrong with stars%kmxq_fft or nq3_fft'')')
-       WRITE (6,'('' stars%kmxq_fft, acutal kidx '',2i5)') &
-            &                stars%kmxq_fft, kidx
-       CALL juDFT_error("something wrong with stars or nq3_fft"&
-            &        ,calledby ="prp_qfft_map")
+       WRITE (oUnit,'('' something wrong with stars%kmxq_fft or nq3_fft'')')
+       WRITE (oUnit,'('' stars%kmxq_fft, acutal kidx '',2i5)') stars%kmxq_fft, kidx
+       CALL juDFT_error("something wrong with stars or nq3_fft", calledby ="prp_qfft_map")
     ENDIF
 
   END SUBROUTINE prp_qfft_map
