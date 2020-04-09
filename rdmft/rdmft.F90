@@ -375,13 +375,16 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-!   CALL open_fi%hybinp_io1(fi%sym%invs)
-
    CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   !CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
+   !allocate coulomb matrix
+   if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+   do i =1,fi%kpts%nkpt
+      call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
+   enddo
 
    CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(i,i=1,fi%kpts%nkpt)])
+   
    call hybmpi%copy_mpi(mpi)
    do i =1,fi%kpts%nkpt
       call hybdat%coul(i)%mpi_ibc(fi, hybmpi, 0)
