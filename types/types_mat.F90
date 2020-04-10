@@ -288,6 +288,7 @@ CONTAINS
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
+      character(len=300)           :: errmsg
 
       INTEGER:: err
       IF (present(l_real)) mat%l_real = l_real
@@ -301,18 +302,20 @@ CONTAINS
       IF (allocated(mat%data_c)) deallocate (mat%data_c)
 
       IF (mat%l_real) THEN
-         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err)
+         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
          ALLOCATE (mat%data_c(0, 0))
+         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                        hint="Errormessage: " // trim(errmsg))
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
          ALLOCATE (mat%data_r(0, 0))
-         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err)
+         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
+         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                        hint="Errormessage: " // trim(errmsg))
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
       ENDIF
-
-      IF (err > 0) CALL judft_error("Allocation of memmory failed for mat datatype", hint="You probably run out of memory")
    END SUBROUTINE t_mat_alloc
 
    SUBROUTINE t_mat_multiply(mat1, mat2, res)

@@ -799,14 +799,15 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
       integer :: ok
+      character(len=300)     :: errmsg
 
       phase = cmplx_0
       call timestart("bra trafo cmplx")
 
-      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
-      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
+      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), errmsg=errmsg, stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1. Error: ' // trim(errmsg))
+      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), errmsg=errmsg, stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1. Error: ' // trim(errmsg))
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
 
