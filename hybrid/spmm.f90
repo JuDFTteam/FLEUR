@@ -209,7 +209,6 @@ contains
 
       call timestart("spmvec_noinvs")
       call mat_hlp%init(mat_in)
-      write (*,*) "mat_hlp", mat_hlp%l_real, mat_hlp%matsize1, mat_hlp%matsize2
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2
 
