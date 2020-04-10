@@ -171,7 +171,6 @@ CONTAINS
                CALL judft_warn("More occupied bands than total no of bands!?")
                hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
             END IF
-            PRINT *, "bands:", nk, hybdat%nobd(nk,jsp), hybdat%nbands(nk), hybdat%ne_eig(nk)
          END DO
 
          ! spread hybdat%nobd from IBZ to whole BZ
