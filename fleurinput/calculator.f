@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_calculator
-      use m_juDFT
+      USE m_juDFT
       !
       !  This module implements a parser able to evaluate expressions in
       !  input files
@@ -66,7 +66,6 @@
       !>
 
       WRITE(*,*) m
-      WRITE(6,*) m
       WRITE(*,*) "Defined variables:"
 
       DO n = 1,n_vars
