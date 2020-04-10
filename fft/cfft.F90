@@ -56,7 +56,8 @@ CONTAINS
 !     the following two constants should agree with the array dimensions
 #ifdef CPP_Singleton
    SUBROUTINE cfft(a, b, ntot, n, nspan, isn)
-      use m_juDFT
+      USE m_juDFT
+      USE m_constants
       IMPLICIT NONE
 !     .. Scalar Arguments ..
       INTEGER :: isn, n, nspan, ntot
@@ -74,9 +75,6 @@ CONTAINS
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: at(:), bt(:), ck(:), sk(:)
       INTEGER, ALLOCATABLE :: nfac(:), np(:)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC cos, real, mod, sin, sqrt
 !     ..
 !     .. Equivalences ..
       EQUIVALENCE(i, ii)
@@ -591,7 +589,7 @@ CONTAINS
 !     error finish, insufficient array storage
 590   CONTINUE
 !     isn = 0
-      WRITE (6, FMT=8000)
+      WRITE (oUnit, FMT=8000)
       CALL juDFT_error('array bounds exceeded', calledby='cfft')
 8000  FORMAT('array bounds exceeded within subroutine cft')
 667   CONTINUE

@@ -459,12 +459,12 @@ SUBROUTINE read_xml_atoms(this,xml)
  DO n = 1, this%ntype
     IF (this%nlo(n).GE.1) THEN
        IF (this%nlo(n).GT.this%nlod) THEN
-          WRITE (6,*) 'nlo(n) =',this%nlo(n),' > nlod =',this%nlod
+          WRITE (oUnit,*) 'nlo(n) =',this%nlo(n),' > nlod =',this%nlod
           CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
        END IF
        DO j=1,this%nlo(n)
           IF ( (this%llo(j,n).GT.this%llod).OR.(MOD(-this%llod,10)-1).GT.this%llod ) THEN
-             WRITE (6,*) 'llo(j,n) =',this%llo(j,n),' > llod =',this%llod
+             WRITE (oUnit,*) 'llo(j,n) =',this%llo(j,n),' > llod =',this%llod
              CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
           END IF
        END DO
@@ -481,7 +481,7 @@ SUBROUTINE read_xml_atoms(this,xml)
        END DO
 
        DO ilo = 1,this%nlo(n)
-          WRITE(6,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
+          WRITE(oUnit,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
           IF (this%llo(ilo,n)>this%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
           l = this%llo(ilo,n)
           IF (ilo.EQ.1) THEN
@@ -493,7 +493,7 @@ SUBROUTINE read_xml_atoms(this,xml)
           END IF
           this%nlol(l,n) = this%nlol(l,n) + 1
        END DO
-       WRITE (6,*) 'atoms%lapw_l(n) = ',this%lapw_l(n)
+       WRITE (oUnit,*) 'atoms%lapw_l(n) = ',this%lapw_l(n)
     END IF
 
  END DO

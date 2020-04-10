@@ -6,6 +6,7 @@ c
       SUBROUTINE dosef(
      >     ei,nemax,jspins,sfac,ntria,itria,atr,eig)
 c     
+      USE m_constants
       USE m_trisrt
       IMPLICIT NONE
 C     ..
@@ -52,7 +53,7 @@ c---  >    e1<ei<e2
          ENDDO
 !     gb         s = (2./jspins)*s
          s = sfac * s
-         WRITE (6,FMT=8000) ei,jsp,s
+         WRITE (oUnit,FMT=8000) ei,jsp,s
       ENDDO
 
  8000 FORMAT (/,10x,'density of states at',f12.6,' har for spin',i2,'=',

@@ -306,6 +306,7 @@ CONTAINS
 
   SUBROUTINE read_xml_wannier(this,xml)
     USE m_types_xml
+    USE m_constants
     CLASS(t_wann),INTENT(inout):: this
     TYPE(t_xml),INTENT(INOUT) ::xml
     ! Read in optional Wannier functions parameters
@@ -395,14 +396,14 @@ CONTAINS
         !     backspace(916)
         !     read(916,*,iostat=ios)task,this%gfthick,this%gfcut
         !     if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
-        !     if(l_p0)write(6,*)"gfcut=",this%gfthick,this%gfcut
+        !     if(l_p0)write(oUnit,*)"gfcut=",this%gfthick,this%gfcut
         !Not done
         !  ELSEIF(this%jobList(i).EQ.'lapw')THEN
         !     this%l_lapw=.TRUE.
         !     backspace(916)
         !     read(916,*,iostat=ios)task,this%unigrid(:)
         !     if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
-        !     if(l_p0)write(6,*)"unigrid=",this%unigrid(:)
+        !     if(l_p0)write(oUnit,*)"unigrid=",this%unigrid(:)
           ELSEIF(this%jobList(i).EQ.'plot_lapw')THEN
              this%l_plot_lapw=.TRUE.
           ELSEIF(this%jobList(i).EQ.'bzsym')THEN
@@ -488,11 +489,11 @@ CONTAINS
          !    backspace(916)
          !    read(916,*,iostat=ios)task,this%ikptstart
          !    if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
-         !    if(l_p0)write(6,*)"ikptstart=",this%ikptstart
+         !    if(l_p0)write(oUnit,*)"ikptstart=",this%ikptstart
          ELSEIF(this%jobList(i).EQ.'endjobs')THEN
              Exit
           ELSE
-             WRITE(6,*)"unrecognized key: ",this%jobList(i)
+             WRITE(oUnit,*)"unrecognized key: ",this%jobList(i)
              CALL juDFT_error ("unrecognized key in wann_inp", calledby="wann_read_inp")
           END IF
        END DO

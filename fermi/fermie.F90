@@ -26,7 +26,8 @@ CONTAINS
     !
     !-----------------------------------------------------------------------
 
-
+    USE m_types
+    USE m_constants
     USE m_eig66_io, ONLY : read_eig,write_eig
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     USE m_mpi_col_eigJ
@@ -36,9 +37,10 @@ CONTAINS
     USE m_ferhis
     USE m_fergwt
     USE m_fertetra
-    USE m_types
     USE m_xmlOutput
+
     IMPLICIT NONE
+
     TYPE(t_results), INTENT(INOUT) :: results
     TYPE(t_mpi),     INTENT(IN)    :: mpi
     TYPE(t_input),   INTENT(IN)    :: input
@@ -101,7 +103,7 @@ CONTAINS
     ! initiliaze e
     e = 0
 
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8000)
+    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,/,1x,'fermi energy and band-weighting factors:')
     !
     !---> READ IN EIGENVALUES
@@ -125,9 +127,9 @@ CONTAINS
        DO  k = 1,kpts%nkpt
           IF (mpi%irank == 0) THEN
              CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
-             WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
-             WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :'
-             WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
+             WRITE (oUnit,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
+             WRITE (oUnit,'(i5,a14)') ne(k,jsp),' eigenvalues :'
+             WRITE (oUnit,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
              IF(.NOT.judft_was_argument("-minimalOutput")) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') jsp
@@ -187,13 +189,12 @@ CONTAINS
 
        !     Check if no deep eigenvalue is found
        IF (e_min-MINVAL(e(1:n))>1.0) THEN
-          WRITE(6,*) 'WARNING: Too low eigenvalue detected:'
-          WRITE(6,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',&
-               &             e_min
-          CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi" &
-               &     ,hint ="If the lowest eigenvalue is more than 1Htr below "//&
-               &     "the lowest energy parameter, you probably have picked up"//&
-               &     " a ghoststate")
+          WRITE(oUnit,*) 'WARNING: Too low eigenvalue detected:'
+          WRITE(oUnit,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',e_min
+          CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi", &
+                          hint ="If the lowest eigenvalue is more than 1Htr below "//&
+                                "the lowest energy parameter, you probably have picked up"//&
+                                " a ghoststate")
        END IF
        !
        !---> DETERMINE EF BY SUMMING WEIGHTS
@@ -207,14 +208,14 @@ CONTAINS
           l = l + 1
           IF (l.GT.n) THEN
              IF ( mpi%irank == 0 ) THEN
-                WRITE (6,FMT=8010) n,ws,weight
+                WRITE (oUnit,FMT=8010) n,ws,weight
              END IF
              CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
 8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
           END IF
           ws = ws + we(INDEX(l))
           seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-          !         WRITE (6,FMT='(2f10.7)') e(index(l)),we(index(l))
+          !         WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
        END DO
        results%ef = -100000.0
        IF(l.GT.0) THEN
@@ -226,15 +227,15 @@ CONTAINS
           zc = zc/2.0-(mspin-1.5)*input%fixed_moment
           idxjsp = 1 !assume single spin in following calculations
           IF (mspin == 1) THEN
-             WRITE(6,*) "Fixed total moment calculation"
-             WRITE(6,*) "Moment:",input%fixed_moment
-             write(6,*) "First Spin:"
+             WRITE(oUnit,*) "Fixed total moment calculation"
+             WRITE(oUnit,*) "Moment:",input%fixed_moment
+             write(oUnit,*) "First Spin:"
           ELSE
-             WRITE(6,*) "Second Spin:"
+             WRITE(oUnit,*) "Second Spin:"
           ENDIF
        ENDIF
 
-       IF ( mpi%irank == 0 ) WRITE (6,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
+       IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
 
        !+po
        results%ts = 0.0
@@ -256,8 +257,8 @@ CONTAINS
        results%seigscv = results%seigsc + results%seigv
 
        IF (mspin == 2) THEN
-          WRITE(6,*) "Different Fermi-energies for both spins:"
-          WRITE(6,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
+          WRITE(oUnit,*) "Different Fermi-energies for both spins:"
+          WRITE(oUnit,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
                ,input%fixed_moment,"   Difference(EF):",efermi," - ",results%ef,"="&
                ,efermi-results%ef
        ENDIF

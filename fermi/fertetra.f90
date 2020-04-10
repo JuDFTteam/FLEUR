@@ -1,6 +1,7 @@
 MODULE m_fertetra
 
    USE m_types
+   USE m_constants
    USE m_juDFT
    USE m_tetrahedronInit
 
@@ -46,7 +47,7 @@ MODULE m_fertetra
       ENDDO
 
       IF (dlow.GT.input%zelec) THEN
-         WRITE(6,9000) lowBound,dlow,input%zelec
+         WRITE(oUnit,9000) lowBound,dlow,input%zelec
          CALL juDFT_error("valence band too high ",calledby="fertetra")
       ENDIF
 9000  FORMAT (' valence band too high ',/,&
@@ -73,7 +74,7 @@ MODULE m_fertetra
             upperBound = upperBound + 0.2
             it = it + 1
             IF(it.GT.10) THEN
-               WRITE (6,9100) upperBound,dup,input%zelec
+               WRITE (oUnit,9100) upperBound,dup,input%zelec
 9100           FORMAT (' valence band too low ',/,&
                        '  eup  ',f10.5,' dup  ',f10.5,' nelec ',f10.5)
                CALL juDFT_error("valence band too low ",calledby ="fertetra")
@@ -110,7 +111,7 @@ MODULE m_fertetra
             lowBound = ef
          ENDIF
       ENDDO
-      WRITE (6,9200) ef,dfermi,input%zelec
+      WRITE (oUnit,9200) ef,dfermi,input%zelec
 9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy ',f10.5,&
                  ' dtot ',f10.5,' nelec ',f10.5)
 
@@ -132,7 +133,7 @@ MODULE m_fertetra
       seigv = 2.0/input%jspins*seigv
       chmom = s1 - jspins*s
       IF ( mpi%irank == 0 ) THEN
-        WRITE (6,FMT=9300) seigv,s1,chmom
+        WRITE (oUnit,FMT=9300) seigv,s1,chmom
       END IF
 9300  FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
              'sum of weights=',f10.6,/,10x,'moment=',f12.6)

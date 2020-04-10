@@ -199,6 +199,7 @@ SUBROUTINE init(sym, cell, film)
   !tau,mrot and nop have to be specified alread
  USE m_types_cell
  USE m_types_input
+ USE m_constants
  CLASS(t_sym), INTENT(INOUT):: sym
  TYPE(t_cell), INTENT(IN)   :: cell
  LOGICAL, INTENT(IN)        :: film
@@ -321,8 +322,8 @@ SUBROUTINE init(sym, cell, film)
     n = 1
     DO WHILE(n <= sym%nop)
        IF(ABS(sym%tau(3, n)) > 0.000001) THEN
-          WRITE(6, '(/," Full space group has",i3," operations.",/)') sym%nop
-          WRITE(6, '(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
+          WRITE(oUnit, '(/," Full space group has",i3," operations.",/)') sym%nop
+          WRITE(oUnit, '(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
           DO nn = n + 1, sym%nop
              sym%mrot(:, :, nn - 1) = sym%mrot(:, :, nn)
              sym%tau(:, nn - 1) = sym%tau(:, nn)
@@ -340,6 +341,7 @@ SUBROUTINE init(sym, cell, film)
 END SUBROUTINE init
 
 FUNCTION closure(sym) RESULT(lclose)
+ USE m_constants
  CLASS(t_sym), INTENT(IN):: sym
  LOGICAL                :: lclose
 
@@ -371,8 +373,8 @@ FUNCTION closure(sym) RESULT(lclose)
              IF(map(i) .EQ. 0) THEN
                 map(i) = k
              ELSE
-                WRITE(6, *) 'ERROR Closure: Multiplying ', j, ' with ', k, ' and with ', map(i)
-                WRITE(6, *) 'yields the same matrix'
+                WRITE(oUnit, *) 'ERROR Closure: Multiplying ', j, ' with ', k, ' and with ', map(i)
+                WRITE(oUnit, *) 'yields the same matrix'
                 lclose = .FALSE.
                 RETURN
              END IF
@@ -380,7 +382,7 @@ FUNCTION closure(sym) RESULT(lclose)
        END DO
 
        IF(map(i) .EQ. 0) THEN
-          WRITE(6, *) 'ERROR Closure:', i, ' times', j, ' leaves group'
+          WRITE(oUnit, *) 'ERROR Closure:', i, ' times', j, ' leaves group'
           lclose = .FALSE.
           RETURN
        END IF
@@ -392,6 +394,7 @@ FUNCTION closure(sym) RESULT(lclose)
 END FUNCTION closure
 
 SUBROUTINE check_close(sym, optype)
+ USE m_constants
  CLASS(t_sym), INTENT(inout)::sym
  INTEGER, INTENT(OUT) :: optype(sym%nop)
 
@@ -421,15 +424,15 @@ SUBROUTINE check_close(sym, optype)
                 sym%multab(j, i) = k
                 IF(k .EQ. 1) sym%invtab(j) = i
              ELSE
-                WRITE(6, '(" Symmetry error: multiple ops")')
+                WRITE(oUnit, '(" Symmetry error: multiple ops")')
                 CALL juDFT_error("check_close: Multiple ops", calledby="closure")
              END IF
           END IF
        END DO
 
        IF(sym%multab(j, i) .EQ. 0) THEN
-          WRITE(6, '(" Group not closed")')
-          WRITE(6, '("  j , i =",2i4)') j, i
+          WRITE(oUnit, '(" Group not closed")')
+          WRITE(oUnit, '("  j , i =",2i4)') j, i
           CALL juDFT_error("check_close: Not closed", calledby="closure")
        END IF
     END DO
