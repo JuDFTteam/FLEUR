@@ -29,10 +29,11 @@ CONTAINS
     !************************************************************************
 
 #include"cpp_double.h"
+    USE m_types
+    USE m_constants
     USE m_abcof
     USE m_hssrwu
     USE m_eig66_io
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
@@ -162,13 +163,13 @@ CONTAINS
        DEALLOCATE ( rwork )
     ENDIF
     IF (info /= 0) THEN
-       WRITE (6,FMT=8000) info
+       WRITE (oUnit,FMT=8000) info
        IF (i < 0) THEN
-          WRITE(6,'(a7,i3,a22)') 'element',info,' has an illegal value'
+          WRITE(oUnit,'(a7,i3,a22)') 'element',info,' has an illegal value'
        ELSEIF (i > ne) THEN
-          WRITE(6,'(a2,i3,a22)') 's:',info-ne,' not positive definite'
+          WRITE(oUnit,'(a2,i3,a22)') 's:',info-ne,' not positive definite'
        ELSE
-          WRITE(6,'(a8,i3,a15)') 'argument',info,' not  converged'
+          WRITE(oUnit,'(a8,i3,a15)') 'argument',info,' not  converged'
        ENDIF
        CALL juDFT_error("Diagonalisation failed",calledby ='aline')
     ENDIF

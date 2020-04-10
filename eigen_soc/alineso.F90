@@ -11,6 +11,7 @@ CONTAINS
 
 #include"cpp_double.h"
     USE m_types
+    USE m_constants
     USE m_hsohelp
     USE m_hsoham
     USE m_eig66_io, ONLY : read_eig
@@ -94,8 +95,8 @@ CONTAINS
     DO jsp = 1,input%jspins
        CALL read_eig(eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
        IF (judft_was_argument("-debugtime")) THEN
-          WRITE(6,*) "Non-SOC ev for nk,jsp:",nk,jsp
-          WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
+          WRITE(oUnit,*) "Non-SOC ev for nk,jsp:",nk,jsp
+          WRITE(oUnit,"(6(f10.6,1x))") eig(:ne,jsp)
        ENDIF
        CALL read_eig(eig_id,nk,jsp,list=[(i,i=1,ne)],zmat=zmat(jsp))
 
@@ -108,7 +109,7 @@ CONTAINS
 !!$       ENDDO
 
        IF (ne.GT.input%neig) THEN
-          WRITE (6,'(a13,i4,a8,i4)') 'alineso: ne=',ne,' > input%neig=',input%neig
+          WRITE (oUnit,'(a13,i4,a8,i4)') 'alineso: ne=',ne,' > input%neig=',input%neig
           CALL juDFT_error("alineso: ne > neigd",calledby="alineso")
        ENDIF
        nsz(jsp) = ne
@@ -271,7 +272,7 @@ else
     ENDIF
     CALL CPP_LAPACK_cheev(vectors,'U',nsize,hso,2*input%neig,eig_so,&
                           cwork, idim_c, rwork, info)
-    IF (info.NE.0) WRITE (6,FMT=8000) info
+    IF (info.NE.0) WRITE (oUnit,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_cheev: info=',i4)
     CALL timestop("alineso SOC: -diag") 
 
