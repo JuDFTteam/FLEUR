@@ -17,6 +17,8 @@
      >                    lb,ub,eig,zc,xfac,
      >                    ntetra,itetra,voltet,
      <                    efermi,w)
+
+      USE m_constants
 c
       IMPLICIT NONE
 c
@@ -128,7 +130,7 @@ c
         ENDDO
       ENDDO
       IF (dlow.GT.nelec) THEN    
-        WRITE (6,180) elow,dlow,nelec
+        WRITE (oUnit,180) elow,dlow,nelec
         CALL juDFT_error("dos: valence band too high ",calledby
      +       ="tetra_ef")
       ENDIF
@@ -153,7 +155,7 @@ c
         eup = eup + 0.2
         it  = it + 1
         IF( it .gt. 10 ) THEN
-          WRITE (6,200) eup,dup,nelec
+          WRITE (oUnit,200) eup,dup,nelec
           CALL juDFT_error("dos: valence band too low ",
      +               calledby ="tetra_ef")
         END IF
@@ -182,7 +184,7 @@ c
           elow = efermi
         ENDIF
       ENDDO
-      WRITE (6,220) efermi,dfermi,nelec
+      WRITE (oUnit,220) efermi,dfermi,nelec
   220 FORMAT (//,'>>> D O S <<<',//,'   fermi energy ',f10.5,
      +       ' dtot ',f10.5,' nelec ',i5)
 c

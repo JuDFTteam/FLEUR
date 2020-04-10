@@ -22,6 +22,8 @@ c     and ef+8kt to obtain neutrality.
 c     
 c***********************************************************************
 
+      USE m_constants
+
       IMPLICIT NONE
 
 C     .. Scalar Arguments ..
@@ -74,7 +76,7 @@ c***********************************************************************
      + calledby="ef_newton")
       ELSE
          rec_level=0
-         IF ( irank == 0 ) WRITE (6,FMT='(/,5x,''EF_NEWTON:  '',
+         IF ( irank == 0 ) WRITE (oUnit,FMT='(/,5x,''EF_NEWTON:  '',
      +''Adjust Fermi-Energy by Newton-Method.'',/)')
       ENDIF
 c     
@@ -113,13 +115,13 @@ c
          IF (abs(sff).LT.eps) THEN
             !Converged, so do some output and return
             w_near_ef = sff + w_near_ef
-            IF ( irank == 0 ) WRITE (6,FMT=8010) icnt,sff,-sff/sdff
+            IF (irank == 0) WRITE (oUnit,FMT=8010) icnt,sff,-sff/sdff
 
             DO idim = inkem + 1,nocst
                we(index(idim)) = ff(idim)
             END DO
 
- 8000     FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
+ 8000  FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
      +           15x,'The error in the weight is  : ',e12.5,/,
      +           15x,'The error in ef is          : ',e12.5,' htr',/)
  8010       FORMAT (15x,'Number of iterations needed  : ',i3,/,
@@ -130,10 +132,10 @@ c
 
          IF (abs(sdff).LT.1e-29) THEN
             if (irank==0) THEN
-               write(6,*) "Instability in determination of fermi-level,"
-               write(6,*) "doubled temperature broading to continue"
-               write(*,*) "Instability in determination of fermi-level,"
-               write(*,*) "doubled temperature broading to continue"
+         write(oUnit,*) "Instability in determination of fermi-level,"
+         write(oUnit,*) "doubled temperature broading to continue"
+         write(*,*) "Instability in determination of fermi-level,"
+         write(*,*) "doubled temperature broading to continue"
             ENDIF
             CALL  ef_newton(
      >             n,irank,
@@ -159,7 +161,7 @@ c
 c     
 c---  > NOT CONVERGED AFTER 50 ITERATIONS
 c     
-      IF ( irank == 0 ) WRITE (6,FMT=8000) icnt,sff,-sff/sdff
+      IF ( irank == 0 ) WRITE (oUnit,FMT=8000) icnt,sff,-sff/sdff
       ef=ef+0.001
       CALL  ef_newton(
      >     n,irank,

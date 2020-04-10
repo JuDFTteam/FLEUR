@@ -7,7 +7,7 @@
 MODULE m_ferhis
 CONTAINS
   SUBROUTINE ferhis(input,kpts,mpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
-       nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results)
+                    nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results)
     !***********************************************************************
     !
     !     This subroutine determines the fermi energy and the sum of the
@@ -50,11 +50,13 @@ CONTAINS
     !                                      r.pentcheva, kfa, may  1996
     !
     !***********************************************************************
-    USE m_efnewton
     USE m_types
-    USE m_xmlOutput
     USE m_constants
+    USE m_efnewton
+    USE m_xmlOutput
+
     IMPLICIT NONE
+
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_input),INTENT(IN)        :: input
@@ -121,8 +123,8 @@ CONTAINS
 
     tkb=input%tkb !might be modified if we have an insulator
     IF ( mpi%irank == 0 ) THEN
-       WRITE (6,FMT='(/)')
-       WRITE (6,FMT='(''FERHIS:  Fermi-Energy by histogram:'')')
+       WRITE (oUnit,FMT='(/)')
+       WRITE (oUnit,FMT='(''FERHIS:  Fermi-Energy by histogram:'')')
     END IF
 
     efermi = ef
@@ -134,11 +136,11 @@ CONTAINS
           WRITE(attributes(1),'(f20.10)') gap*hartree_to_ev_const
           WRITE(attributes(2),'(a)') 'eV'
           CALL writeXMLElement('bandgap',(/'value','units'/),attributes)
-          WRITE (6,FMT=8050) gap
+          WRITE (oUnit,FMT=8050) gap
        END IF
     END IF
     IF ( mpi%irank == 0 ) THEN
-       WRITE ( 6,FMT=8010) spindg* (ws-weight)
+       WRITE (oUnit,FMT=8010) spindg* (ws-weight)
     END IF
     !
     !---> DETERMINE OCCUPATION AT THE FERMI LEVEL
@@ -174,7 +176,7 @@ CONTAINS
           ENDDO ink_loop
           IF (ink>n) THEN
              IF ( mpi%irank == 0 ) THEN
-                WRITE (6,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
+                WRITE (oUnit,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
              END IF
           ENDIF
 
@@ -189,14 +191,14 @@ CONTAINS
              CALL ef_newton(n,mpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
              !
              IF ( mpi%irank == 0 ) THEN
-                WRITE (6,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
+                WRITE (oUnit,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
              END IF
 
           ELSE
              !
              !--->       NO STATES BETWEEN EF-8kt AND EF+8kt AVAILABLE
              !
-             IF ( mpi%irank == 0 ) WRITE (6,FMT=8020)
+             IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8020)
              nocst = nstef
              we(INDEX(nocst)) = we(INDEX(nocst)) - wfermi
              ef = efermi
@@ -222,9 +224,9 @@ CONTAINS
        nocst = nstef
     END IF
     !
-    !      write(6,*) nocst,'    nocst in ferhis'
+    !      write(oUnit,*) nocst,'    nocst in ferhis'
     !      do  ink = 1,nocst
-    !         write(6,*) ink,index(ink),we(index(ink)),
+    !         write(oUnit,*) ink,index(ink),we(index(ink)),
     !     +      '    ink,index(ink),we(index(ink)): weights for eigenvalues'
     !      end do
     !
@@ -234,7 +236,7 @@ CONTAINS
     !
     w_iks(:,:,:) = 0.0
 
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8080) nocst
+    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8080) nocst
     DO i=1,nocst
        w_iks(idxeig(INDEX(i)),idxkpt(INDEX(i)),idxjsp(INDEX(i))) = we(INDEX(i))
     ENDDO
@@ -249,7 +251,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8070) wvals
+    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8070) wvals
     !
     !
     !=======>   DETERMINE ENTROPY
@@ -277,7 +279,7 @@ CONTAINS
     ENDDO
     entropy = -spindg*entropy
     results%ts = tkb*entropy
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8060) entropy,entropy*3.0553e-6 !: boltzmann constant in htr/k
+    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8060) entropy,entropy*3.0553e-6 !: boltzmann constant in htr/k
 
 
 
@@ -292,7 +294,7 @@ CONTAINS
        WRITE(attributes(1),'(f20.10)') seigv
        WRITE(attributes(2),'(a)') 'Htr'
        CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
-       WRITE (6,FMT=8040) seigv
+       WRITE (oUnit,FMT=8040) seigv
     END IF
 
 

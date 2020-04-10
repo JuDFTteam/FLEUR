@@ -10,13 +10,15 @@
      X                  ef,
      <                  seigv,w)
 
+      USE m_types
+      USE m_constants
       USE m_triang
       USE m_maketetra
       USE m_tetraef
       USE m_dosef
       USE m_dosint
       USE m_doswt
-      USE m_types
+
 !     USE m_bzints
 
       IMPLICIT NONE
@@ -55,7 +57,7 @@
       DATA de/5.0e-3/
 
       IF ( irank == 0 ) THEN
-        WRITE (6,FMT=8000)
+        WRITE (oUnit,FMT=8000)
       END IF
  8000 FORMAT (/,/,10x,'linear triangular method')
 c
@@ -104,9 +106,9 @@ c--->   write results of triang
            atr(i) = atr(i)/as
         ENDDO
         IF ( irank == 0 ) THEN
-          WRITE (6,FMT=8010) ntria,as
+          WRITE (oUnit,FMT=8010) ntria,as
           DO i = 1,ntria
-            WRITE (6,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
+            WRITE (oUnit,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
           ENDDO
         END IF
  8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,
@@ -115,7 +117,7 @@ c--->   write results of triang
      +          'no.,corners and (normalized) area of each triangle:',/)
  8020   FORMAT (10x,i3,3x,3i3,f14.6)
         IF ( irank == 0 ) THEN
-          WRITE (6,FMT=*) 'ef_hist=',ef
+          WRITE (oUnit,FMT=*) 'ef_hist=',ef
         END IF
         ei = ef
 cjr     emin = -9999.9
@@ -131,7 +133,7 @@ c
      >              ei,nemax,jspins,sfac,ntria,itria,atr,eig,
      <              ct)
 c
-        IF ( irank == 0 ) WRITE (6,FMT=*) 'ct=',ct
+        IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'ct=',ct
 
         IF (ct.LT.zc) THEN            ! ei < ef
           emin = ei
@@ -143,7 +145,7 @@ c
           IF (emin.GT.emax) GO TO 90
         ENDIF
         IF (ct.NE.zc) THEN
-          IF ( irank == 0 ) WRITE (6,FMT=*) '2nd dosint'
+          IF ( irank == 0 ) WRITE (oUnit,FMT=*) '2nd dosint'
 c--->     refine ef to a value of 5 mry * (2**-20)
           iterate : DO i = 1, 40
             ei = 0.5* (emin+emax)
@@ -152,7 +154,7 @@ c
      >               ei,nemax,jspins,sfac,ntria,itria,atr,eig,
      <               ct)
 c
-            IF ( irank == 0 ) WRITE (6,FMT=*) 'i=',i,', ct=',ct
+            IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'i=',i,', ct=',ct
             IF ( ct == zc ) THEN
               EXIT iterate
             ELSEIF ( ct > zc ) THEN
@@ -167,7 +169,7 @@ c
         dez = zc - ct
         workf = -13.6058*2*ef
         IF ( irank == 0 ) THEN
-          WRITE (6,FMT=8030) ef,workf,del,dez
+          WRITE (oUnit,FMT=8030) ef,workf,del,dez
         END IF
  8030   FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='
      +         ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',
@@ -192,7 +194,7 @@ c      DO 190 jsp = 1,jspins
 c         neig = nemax(jsp)
 c         DO 180 i = 1,neig
 c            DO 170 k = 1,nkpt
-c               WRITE (6,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
+c             WRITE (oUnit,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
 c  170       CONTINUE
 c  180    CONTINUE
 c  190 CONTINUE
@@ -215,14 +217,14 @@ c
       seigv = sfac*seigv
       chmom = s1 - jspins*s
       IF ( irank == 0 ) THEN
-        WRITE (6,FMT=8040) seigv,s1,chmom
+        WRITE (oUnit,FMT=8040) seigv,s1,chmom
       END IF
  8040 FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,
      +       'sum of weights=',f10.6,/,10x,'moment=',f12.6)
       RETURN
 c
   230 IF ( irank == 0 ) THEN
-        WRITE (6,FMT=8050) ei,ef,emin,emax,ct,zc
+        WRITE (oUnit,FMT=8050) ei,ef,emin,emax,ct,zc
       END IF
  8050 FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',
      +       ' ei,ef,emin,emax,ct,zc',/,10x,6e16.7,/,10x,
