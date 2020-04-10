@@ -56,12 +56,9 @@ CONTAINS
 
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
-      LOGICAL              :: skip_kpt(kpts%nkpt)
 
       REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
       COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
-
-      skip_kpt = .FALSE.
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
