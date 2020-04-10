@@ -59,7 +59,7 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, nkpt_EIBZ,  mpdata,  jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
@@ -83,6 +83,10 @@ CONTAINS
       TYPE(t_lapw), INTENT(IN)          :: lapw
       TYPE(t_mat), INTENT(INOUT)        :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      ! blas 
+      real, external      :: ddot
+      complex, external   :: zdotc
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
@@ -121,13 +125,13 @@ CONTAINS
       COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
-      REAL                 :: carr1_v_r(maxval(hybdat%nbasm))
-      COMPLEX              :: carr1_v_c(maxval(hybdat%nbasm)), test(maxval(hybdat%nbasm))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :), test_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :), test_c(:, :, :)
+      REAL                 ::    kqpt(3), kqpthlp(3)
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
+      type(t_mat)          :: carr1_v, test
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
@@ -153,7 +157,7 @@ CONTAINS
          allocate (carr3_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          allocate (test_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_r = 0; carr3_vv_r = 0; test_r=0
+         cprod_vv_r = 0; carr3_vv_r = 0; test_r = 0
       ELSE
          allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0), test_r(maxval(hybdat%nbasm), 0, 0))
          allocate (cprod_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
@@ -161,7 +165,7 @@ CONTAINS
          allocate (carr3_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          allocate (test_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_c = 0; carr3_vv_c = 0; test_c=0
+         cprod_vv_c = 0; carr3_vv_c = 0; test_c = 0
       END IF
 
       exch_vv = 0
@@ -181,6 +185,9 @@ CONTAINS
          ELSE
             CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv_c)
          END IF
+
+         call carr1_v%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
+         call test%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
 
          ! The sparse matrix technique is not feasible for the HSE
          ! functional. Thus, a dynamic adjustment is implemented
@@ -204,7 +211,7 @@ CONTAINS
          ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
          ! from IBZ to current k-point
          IF (fi%kpts%bkp(iq) /= iq) THEN
-            if(mat_ex%l_real) then 
+            if (mat_ex%l_real) then
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, phase_vv, cprod_vv_r(:hybdat%nbasm(iq), :, :), carr3_vv_r(:hybdat%nbasm(iq), :, :))
                cprod_vv_r(:hybdat%nbasm(iq), :, :) = carr3_vv_r(:hybdat%nbasm(iq), :, :)
             else
@@ -220,38 +227,61 @@ CONTAINS
          ! finish coulomb bcast
          call hybdat%coul(iq_p)%mpi_wait()
          DO n1 = 1, hybdat%nbands(ik)
-            DO iband = 1, hybdat%nobd(nkqpt, jsp)
-               call timestart("sparse matrix products")
-               IF (mat_ex%l_real) THEN
-                  carr1_v_r(:n) = 0
-                  call spmv_wrapper_inv(fi, mpdata, hybdat, iq_p, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
-               ELSE
-                  carr1_v_c(:n) = 0
-                  test(:n) = 0
-                  conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-                  call spmv_wrapper_noinv(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
-               END IF
-               call timestop("sparse matrix products")
+            call timestart("sparse matrix products")
+            IF (mat_ex%l_real) THEN
+               carr1_v%data_r = 0.0
+               test%data_r = cprod_vv_r(:n, :, n1)
+               call spmm_invs(fi, mpdata, hybdat, iq_p, test, carr1_v)
+            ELSE
+               carr1_v%data_c = 0.0
+               test%data_c = cprod_vv_c(:n, :, n1)
+               conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, test, carr1_v)
+            END IF
+            call timestop("sparse matrix products")
 
-               cdum = wl_iks(1 + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(jq)
-               call timestart("exch_vv dot prod")
-               IF (mat_ex%l_real) THEN
-                  DO n2 = 1, nsest(n1)!n1
-                     nn2 = indx_sest(n2, n1)
-                     exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                        dot_product(carr1_v_r(:n), cprod_vv_r(:n, iband, nn2))
-                  END DO !n2
-               ELSE
-                  DO n2 = 1, nsest(n1)!n1
-                     nn2 = indx_sest(n2, n1)
-                     exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                        dot_product(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
-                  END DO !n2
-               END IF
-               call timestop("exch_vv dot prod")
-            END DO
+            call timestart("apply prefactors")
+            if(mat_ex%l_real) then
+               DO iband = 1, hybdat%nobd(nkqpt, jsp)
+                  do i=1,n
+                     carr1_v%data_r(i,iband) = carr1_v%data_r(i,iband) * wl_iks(iband, nkqpt) * conjg(phase_vv(iband, n1))/n_q(jq)
+                  enddo
+               enddo
+            else
+               DO iband = 1, hybdat%nobd(nkqpt, jsp)
+                  do i=1,n
+                     carr1_v%data_c(i,iband) = carr1_v%data_c(i,iband) * wl_iks(iband, nkqpt) * conjg(phase_vv(iband, n1))/n_q(jq)
+                  enddo
+               enddo
+            endif
+            call timestop("apply prefactors")
+
+            call timestart("exch_vv dot prod")
+            IF (mat_ex%l_real) THEN
+               DO n2 = 1, nsest(n1)!n1
+                  nn2 = indx_sest(n2, n1)
+                  DO iband = 1, hybdat%nobd(nkqpt, jsp)
+                     exch_vv(nn2, n1) = exch_vv(nn2, n1) + phase_vv(iband, nn2)* &
+                                        ddot(n, carr1_v%data_r(1, iband), 1, cprod_vv_r(1, iband, nn2), 1)
+                  enddo
+               END DO !n2
+            ELSE
+               DO n2 = 1, nsest(n1)!n1
+                  nn2 = indx_sest(n2, n1)
+                  DO iband = 1, hybdat%nobd(nkqpt, jsp)
+                     exch_vv(nn2, n1) = exch_vv(nn2, n1) + phase_vv(iband, nn2)* &
+                                        zdotc(n, carr1_v%data_c(1, iband), 1, cprod_vv_c(1, iband, nn2), 1)
+                                       !  dot_product(carr1_v%data_c(:, iband), cprod_vv_c(:n, iband, nn2))
+                  enddo
+               END DO !n2
+            END IF
+            call timestop("exch_vv dot prod")
+
          END DO  !n1
          call timestop("exchange matrix")
+
+         call carr1_v%free()
+         call test%free()
       END DO  !jq
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
