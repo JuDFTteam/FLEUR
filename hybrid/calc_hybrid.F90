@@ -96,7 +96,7 @@ CONTAINS
       CALL timestart("Preparation for hybrid functionals")
       !construct the mixed-basis
       CALL timestart("generation of mixed basis")
-      write (*,*) "iterHF = ", iterHF
+      if(hybmpi%rank == 0) write (*,*) "iterHF = ", iterHF
       CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
                       enpara, mpi, v, iterHF)
       CALL timestop("generation of mixed basis")
