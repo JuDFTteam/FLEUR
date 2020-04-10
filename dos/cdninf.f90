@@ -6,12 +6,8 @@
 
 MODULE m_cdninf
 CONTAINS
-  SUBROUTINE cdninf(&
-       &                  input,sym,noco,jspin,atoms,vacuum,&
-       &                  sliceplot,banddos,ikpt,bkpt,wk,&
-       &                  cell,kpts,&
-       &                  nbands,eig,qal,qis,qvac,qvlay,&
-       &                  qstars,jsym,ksym)
+  SUBROUTINE cdninf(input,sym,noco,jspin,atoms,vacuum,sliceplot,banddos,ikpt,bkpt,wk,&
+                    cell,kpts,nbands,eig,qal,qis,qvac,qvlay,qstars,jsym,ksym)
     !***********************************************************************
     !     this subroutine calculates the charge distribution of each state
     !     and writes this information to the out file. If dos or vacdos
@@ -31,6 +27,7 @@ CONTAINS
     !
     !***********************************************************************
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_banddos),INTENT(IN)     :: banddos
     TYPE(t_sliceplot),INTENT(IN)   :: sliceplot
@@ -75,7 +72,7 @@ CONTAINS
 
 
     IF (input%film) THEN
-       WRITE (6,FMT=8000) (bkpt(i),i=1,3)
+       WRITE (oUnit,FMT=8000) (bkpt(i),i=1,3)
 8000   FORMAT (/,3x,'q(atom,l): k=',3f10.5,/,/,t8,'e',t13,'max',t18,&
             &          'int',t22,'vac',t28,'spheres(s,p,d,f)')
        IF (banddos%dos) THEN
@@ -87,7 +84,7 @@ CONTAINS
           END IF
        END IF
     ELSE
-       WRITE (6,FMT=8010) (bkpt(i),i=1,3)
+       WRITE (oUnit,FMT=8010) (bkpt(i),i=1,3)
 8010   FORMAT (/,3x,'q(atom,l): k=',3f10.5,/,/,t8,'e',t13,'max',t18,&
             &          'int',t24,'spheres(s,p,d,f)')
        IF (banddos%dos) THEN
@@ -99,7 +96,7 @@ CONTAINS
 
     DO iband = 1,nbands
        IF (sliceplot%slice) THEN
-          WRITE (6,FMT=8030) iband,eig(iband)
+          WRITE (oUnit,FMT=8030) iband,eig(iband)
 8030      FORMAT (' cdnval: slice for i=',i4,'  and energy',1e12.4)
        END IF
 
@@ -131,7 +128,7 @@ CONTAINS
        IF (noco%l_noco) qishlp = qis(iband,ikpt,jspin)
        iqispc = NINT(qishlp*100.0)
        IF (input%film) THEN
-          WRITE (6,FMT=8040) eig(iband),chstat(lqmax),itypqmax,&
+          WRITE (oUnit,FMT=8040) eig(iband),chstat(lqmax),itypqmax,&
                &        iqispc,iqvacpc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
 8040      FORMAT (f10.4,2x,a1,i2,2x,2i3, (t26,6 (4i3,1x)))
           IF (banddos%dos) THEN
@@ -163,7 +160,7 @@ CONTAINS
           END IF
           !     **************************************
        ELSE
-          WRITE (6,FMT=8080) eig(iband),chstat(lqmax),itypqmax,&
+          WRITE (oUnit,FMT=8080) eig(iband),chstat(lqmax),itypqmax,&
                &        iqispc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
 8080      FORMAT (f10.4,2x,a1,i2,2x,i3, (t26,6 (4i3,1x)))
           IF (banddos%dos) THEN

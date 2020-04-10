@@ -15,7 +15,7 @@ MODULE m_grp_k
 CONTAINS 
 
   SUBROUTINE grp_k(sym,mrot_k,cell,bk,nclass,nirr,char_table,&
-       &    grpname,irrname,su,sp_alph,sp_beta)
+                   grpname,irrname,su,sp_alph,sp_beta)
 
     !************************************************************
     !
@@ -37,7 +37,7 @@ CONTAINS
 
     !      USE m_mrot2su
     USE m_inv3
-    USE m_constants, ONLY : pi_const
+    USE m_constants
     USE m_socsym,    ONLY : soc_sym, cross
     USE m_types
     IMPLICIT NONE
@@ -81,20 +81,15 @@ CONTAINS
     error=.FALSE.
     ! Reduce the symmetry due to spin-orbit
     IF (soc.AND.PRESENT(sp_alph)) THEN
-       CALL soc_sym(&
-            &        sym%nop,sym%mrot,sp_beta,sp_alph,cell%amat,&
-            &        error)!keep
+       CALL soc_sym(sym%nop,sym%mrot,sp_beta,sp_alph,cell%amat,error)!keep
     ENDIF
 
     ! determine the group of k
     nopk=0
     ksymloop: DO n=1,sym%nop
-       ktest(1)=bk(1)-sym%mrot(1,1,n)*bk(1)-sym%mrot(2,1,n)*bk(2)&
-            &        -sym%mrot(3,1,n)*bk(3)
-       ktest(2)=bk(2)-sym%mrot(1,2,n)*bk(1)-sym%mrot(2,2,n)*bk(2)&
-            &        -sym%mrot(3,2,n)*bk(3)
-       ktest(3)=bk(3)-sym%mrot(1,3,n)*bk(1)-sym%mrot(2,3,n)*bk(2)&
-            &        -sym%mrot(3,3,n)*bk(3)
+       ktest(1)=bk(1)-sym%mrot(1,1,n)*bk(1)-sym%mrot(2,1,n)*bk(2)-sym%mrot(3,1,n)*bk(3)
+       ktest(2)=bk(2)-sym%mrot(1,2,n)*bk(1)-sym%mrot(2,2,n)*bk(2)-sym%mrot(3,2,n)*bk(3)
+       ktest(3)=bk(3)-sym%mrot(1,3,n)*bk(1)-sym%mrot(2,3,n)*bk(2)-sym%mrot(3,3,n)*bk(3)
        IF (( ABS( ktest(1) - NINT(ktest(1)) ) < eps ) .AND.&
             &         ( ABS( ktest(2) - NINT(ktest(2)) ) < eps ) .AND.&
             &         ( ABS( ktest(3) - NINT(ktest(3)) ) < eps ) .AND.&
@@ -207,10 +202,10 @@ CONTAINS
           mtest=MATMUL(det(c)*mrot_k(:,:,c),mtest)
        ENDDO rotloop
        IF (ANY((mtest-munit).NE.0)) THEN
-          WRITE(6,*) 'grp_k: Cannot find the order of rotation'
+          WRITE(oUnit,*) 'grp_k: Cannot find the order of rotation'
        ENDIF
        IF ((rot(5).GT.0).OR.(rot(11).GT.0)) THEN
-          WRITE(6,*) 'grp_k: 5 fold rotation found!'
+          WRITE(oUnit,*) 'grp_k: 5 fold rotation found!'
        ENDIF
        CALL euler(c,sym,cell,alpha,beta,gamma)
        CALL rotaxis(alpha,beta,gamma,rax(1:4,c),theta(c))

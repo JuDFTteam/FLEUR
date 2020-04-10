@@ -14,6 +14,7 @@ CONTAINS
   SUBROUTINE doswrite(eig_id,kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,jDOS,oneD)
     USE m_types
+    USE m_constants
     USE m_evaldos
     USE m_cdninf
     IMPLICIT NONE
@@ -51,11 +52,11 @@ CONTAINS
     IF (.NOT.(banddos%dos.OR.input%cdinf.OR.banddos%vacdos.OR.(vacuum%nstm.EQ.3))) RETURN
     !     check if settings in inp-file make any sense
     IF (banddos%vacdos.AND..NOT.banddos%dos) THEN
-       WRITE(6,*) "STOP DOS: only set banddos%vacdos = .true. if banddos%dos=.true."
+       WRITE(oUnit,*) "STOP DOS: only set banddos%vacdos = .true. if banddos%dos=.true."
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
     IF (banddos%vacdos.AND.(.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1)))THEN
-       WRITE(6,*) "STOP DOS: if stars = f set vacuum%nstars=1"
+       WRITE(oUnit,*) "STOP DOS: if stars = f set vacuum%nstars=1"
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
 
