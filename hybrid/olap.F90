@@ -1,5 +1,7 @@
 MODULE m_olap
-      USE m_types_hybdat
+   USE m_types_hybdat
+   private olap_pw_real, olap_pw_cmplx
+   public olap_pw, olap_pwp, wfolap_init, wfolap_inv, wfolap_noinv
 
 CONTAINS
 
@@ -18,7 +20,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
 !     - arrays -
-      INTEGER, INTENT(IN)       :: gpt(:,:)
+      INTEGER, INTENT(IN)       :: gpt(:, :)
       TYPE(t_mat)              :: olap
 !     - local -
       INTEGER                  :: i, j, itype, icent, ineq
@@ -26,52 +28,111 @@ CONTAINS
       COMPLEX, PARAMETER       :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
 
-      if(olap%l_real) then
-         olap%data_r = 0
-      else 
-         olap%data_c = 0
+      if (olap%l_real) then
+         call olap_pw_real(olap, gpt, ngpt, atoms, cell)
+      else
+         call olap_pw_cmplx(olap, gpt, ngpt, atoms, cell)
       endif
-      
-      call timestart("olap_pw")
+   END SUBROUTINE olap_pw
+
+   subroutine olap_pw_real(olap, gpt, ngpt, atoms, cell)
+      use m_juDFT
+      USE m_constants
+      USE m_types
+      IMPLICIT NONE
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_atoms), INTENT(IN)   :: atoms
+
+      !     - scalars -
+      INTEGER, INTENT(IN)       :: ngpt
+      !     - arrays -
+      INTEGER, INTENT(IN)       :: gpt(:, :)
+      TYPE(t_mat)              :: olap
+      !     - local -
+      INTEGER                  :: i, j, itype, icent, ineq
+      REAL                     :: g, r, fgr
+      COMPLEX, PARAMETER       :: img = (0.0, 1.0)
+      INTEGER                  :: dg(3)
+
+      call timestart("olap_pw_real")
+      !$OMP PARALLEL DO default(none) schedule(guided) &
+      !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
+      !$OMP shared(olap, gpt, cell, atoms)
       DO i = 1, ngpt
          DO j = 1, i
+            olap%data_r(i,j) = 0.0
             dg = gpt(:, j) - gpt(:, i)
             g = gptnorm(dg, cell%bmat)
             IF (abs(g) < 1e-10) THEN
                DO itype = 1, atoms%ntype
                   r = atoms%rmt(itype)
-                  if (olap%l_real) THEN
-                     olap%data_r(i, j) = olap%data_r(i, j) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil
-                  else
-                     olap%data_c(i, j) = olap%data_c(i, j) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil
-                  endif
+                  olap%data_r(i, j) = olap%data_r(i, j) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil
+               END DO
+            ELSE
+               do icent = 1, atoms%nat
+                  itype = atoms%itype(icent)
+                  r = g*atoms%rmt(itype)
+                  fgr = fpi_const*(sin(r) - r*cos(r))/g**3/cell%omtil
+                  olap%data_r(i, j) = real(olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
+               END DO
+            END IF
+            IF (i == j) olap%data_r(i, j) = olap%data_r(i, j) + 1
+            olap%data_r(j, i) = olap%data_r(i, j)
+         END DO
+      END DO
+      !$OMP END PARALLEL DO
+      call timestop("olap_pw_real")
+   END SUBROUTINE olap_pw_real
+
+   SUBROUTINE olap_pw_cmplx(olap, gpt, ngpt, atoms, cell)
+      use m_juDFT
+      USE m_constants
+      USE m_types
+      IMPLICIT NONE
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_atoms), INTENT(IN)   :: atoms
+
+!     - scalars -
+      INTEGER, INTENT(IN)       :: ngpt
+!     - arrays -
+      INTEGER, INTENT(IN)       :: gpt(:, :)
+      TYPE(t_mat)              :: olap
+!     - local -
+      INTEGER                  :: i, j, itype, icent, ineq
+      REAL                     :: g, r, fgr
+      COMPLEX, PARAMETER       :: img = (0.0, 1.0)
+      INTEGER                  :: dg(3)
+
+      call timestart("olap_pw_cmplx")
+      !$OMP PARALLEL DO default(none) schedule(guided) &
+      !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
+      !$OMP shared(olap, gpt, cell, atoms)
+      DO i = 1, ngpt
+         DO j = 1, i
+            olap%data_c(i,j) = cmplx_0
+            dg = gpt(:, j) - gpt(:, i)
+            g = gptnorm(dg, cell%bmat)
+            IF (abs(g) < 1e-10) THEN
+               DO itype = 1, atoms%ntype
+                  r = atoms%rmt(itype)
+                  olap%data_c(i, j) = olap%data_c(i, j) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil
                END DO
             ELSE
                icent = 0
-               DO itype = 1, atoms%ntype
+               do icent = 1, atoms%nat
+                  itype = atoms%itype(icent)
                   r = g*atoms%rmt(itype)
                   fgr = fpi_const*(sin(r) - r*cos(r))/g**3/cell%omtil
-                  DO ineq = 1, atoms%neq(itype)
-                     icent = icent + 1
-                     if (olap%l_real) THEN
-                        olap%data_r(i, j) = real(olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
-                     else
-                        olap%data_c(i, j) = olap%data_c(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
-                     endif
-                  END DO
+                  olap%data_c(i, j) = olap%data_c(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
                END DO
             END IF
-            if (olap%l_real) THEN
-               IF (i == j) olap%data_r(i, j) = olap%data_r(i, j) + 1
-               olap%data_r(j, i) = olap%data_r(i, j)
-            else
-               IF (i == j) olap%data_c(i, j) = olap%data_c(i, j) + 1
-               olap%data_c(j, i) = conjg(olap%data_c(i, j))
-            endif
+            IF (i == j) olap%data_c(i, j) = olap%data_c(i, j) + 1
+            olap%data_c(j, i) = conjg(olap%data_c(i, j))
          END DO
       END DO
-      call timestop("olap_pw")
-   END SUBROUTINE olap_pw
+      !$OMP END PARALLEL DO
+      call timestop("olap_pw_cmplx")
+   END SUBROUTINE olap_pw_cmplx
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -79,7 +140,7 @@ CONTAINS
 
    SUBROUTINE olap_pwp(l_real, olap_r, olap_c, gpt, ngpt, atoms, cell)
 
-      USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED,&
+      USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED, &
                              fpi_const, tpi_const
       USE m_types
       IMPLICIT NONE
@@ -89,7 +150,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
 !     - arrays -
-      INTEGER, INTENT(IN)       :: gpt(:,:)
+      INTEGER, INTENT(IN)       :: gpt(:, :)
 
       LOGICAL, INTENT(IN)       :: l_real
       REAL, INTENT(INOUT)       ::  olap_r(ngpt*(ngpt + 1)/2)
@@ -100,7 +161,7 @@ CONTAINS
       COMPLEX, PARAMETER        :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
 
-      olap_r=REAL_NOT_INITALIZED; olap_c=CMPLX_NOT_INITALIZED
+      olap_r = REAL_NOT_INITALIZED; olap_c = CMPLX_NOT_INITALIZED
 
       if (l_real) THEN
          k = 0
@@ -123,7 +184,7 @@ CONTAINS
                      DO ineq = 1, atoms%neq(itype)
                         icent = icent + 1
                         olap_r(k) = olap_r(k) - real(fgr* &
-                             exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
+                                                     exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                      END DO
                   END DO
                END IF
@@ -151,7 +212,7 @@ CONTAINS
                      DO ineq = 1, atoms%neq(itype)
                         icent = icent + 1
                         olap_c(k) = olap_c(k) - fgr* &
-                             exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
+                                    exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
                      END DO
                   END DO
                END IF
@@ -164,8 +225,8 @@ CONTAINS
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   SUBROUTINE wfolap_init(olappw, olapmt, gpt,&
-                          atoms, mpdata, cell,&
+   SUBROUTINE wfolap_init(olappw, olapmt, gpt, &
+                          atoms, mpdata, cell, &
                           bas1, bas2)
 
       USE m_intgrf, ONLY: intgrf, intgrf_init
@@ -177,12 +238,12 @@ CONTAINS
 
 !     - arrays -
       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
-      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
                                   bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
       REAL, INTENT(INOUT)      :: olapmt(maxval(mpdata%num_radfun_per_l), &
-                                          maxval(mpdata%num_radfun_per_l), &
-                                          0:atoms%lmaxd, &
-                                          atoms%ntype)
+                                         maxval(mpdata%num_radfun_per_l), &
+                                         0:atoms%lmaxd, &
+                                         atoms%ntype)
       TYPE(t_mat), INTENT(INOUT):: olappw
 
 !     - local -
@@ -199,9 +260,9 @@ CONTAINS
                DO n1 = 1, nn!n2
                   !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
                   olapmt(n1, n2, l, itype) = intgrf( &
-                                      bas1(:, n1, l, itype)*bas1(:, n2, l, itype)&
-                                     + bas2(:, n1, l, itype)*bas2(:, n2, l, itype),&
-                                      atoms, itype, gridf)
+                                             bas1(:, n1, l, itype)*bas1(:, n2, l, itype) &
+                                             + bas2(:, n1, l, itype)*bas2(:, n2, l, itype), &
+                                             atoms, itype, gridf)
 !               olapmt(n2,n1,l,itype) = olapmt(n1,n2,l,itype)
                END DO
             END DO
@@ -223,10 +284,10 @@ CONTAINS
 !     - scalars -
       COMPLEX                :: wfolap_inv
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(:,:), cmt2(:,:)
+      COMPLEX, INTENT(IN)     :: cmt1(:, :), cmt2(:, :)
       REAL, INTENT(IN)        :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
-      REAL, INTENT(IN)        :: olappw(:,:)
+      REAL, INTENT(IN)        :: olappw(:, :)
       REAL, INTENT(IN)        :: olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -241,9 +302,9 @@ CONTAINS
                DO M = -l, l
                   nn = mpdata%num_radfun_per_l(l, itype)
                   wfolap_inv = wfolap_inv + &
-                           dot_product(cmt1(lm + 1:lm + nn, iatom),&
-                                         matmul(olapmt(:nn, :nn, l, itype),&
-                                                 cmt2(lm + 1:lm + nn, iatom)))
+                               dot_product(cmt1(lm + 1:lm + nn, iatom), &
+                                           matmul(olapmt(:nn, :nn, l, itype), &
+                                                  cmt2(lm + 1:lm + nn, iatom)))
                   lm = lm + nn
                END DO
             END DO
@@ -265,7 +326,6 @@ CONTAINS
 
    FUNCTION wfolap_noinv(cmt1, cpw1, cmt2, cpw2, olappw, olapmt, atoms, mpdata)
 
-
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
@@ -275,10 +335,10 @@ CONTAINS
 !     - scalars -
       COMPLEX                :: wfolap_noinv
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(:,:),cmt2(:,:)
+      COMPLEX, INTENT(IN)     :: cmt1(:, :), cmt2(:, :)
       COMPLEX, INTENT(IN)     :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
-      COMPLEX, INTENT(IN)     :: olappw(:,:)
+      COMPLEX, INTENT(IN)     :: olappw(:, :)
       REAL, INTENT(IN)        :: olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -293,9 +353,9 @@ CONTAINS
                DO M = -l, l
                   nn = mpdata%num_radfun_per_l(l, itype)
                   wfolap_noinv = wfolap_noinv + &
-                           dot_product(cmt1(lm + 1:lm + nn, iatom),&
-                                         matmul(olapmt(:nn, :nn, l, itype),&
-                                                 cmt2(lm + 1:lm + nn, iatom)))
+                                 dot_product(cmt1(lm + 1:lm + nn, iatom), &
+                                             matmul(olapmt(:nn, :nn, l, itype), &
+                                                    cmt2(lm + 1:lm + nn, iatom)))
                   lm = lm + nn
                END DO
             END DO
