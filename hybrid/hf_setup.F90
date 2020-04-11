@@ -45,7 +45,6 @@ CONTAINS
 
       ! local type variables
       TYPE(t_lapw)             :: lapw
-      TYPE(t_mat), ALLOCATABLE :: zmat(:)
 
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
@@ -63,8 +62,6 @@ CONTAINS
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
-
-         allocate(zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
 
          if(.not. allocated(eig_irr)) allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
@@ -76,42 +73,18 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          hybdat%kveclo_eig = 0
 
-         INQUIRE(file ="z",exist= l_exist)
-         IF(l_exist) THEN
-            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*8)
-            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*16)
-         END IF
 
          ! Reading the eig file
+         call timestart("eig stuff")
          DO nk = 1, kpts%nkpt
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
-            CALL read_eig(hybdat%eig_id, nk, jsp, zmat=zMat(nk))
-
-            IF(l_exist.AND.zmat(1)%l_real) THEN
-               READ(993,rec=nk) zDebug_r(:,:)
-               zMat(nk)%data_r = 0.0
-               zMat(nk)%data_r(:nbasfcn,:input%neig) = zDebug_r(:nbasfcn,:input%neig)
-            END IF
-            IF(l_exist.AND..NOT.zmat(1)%l_real) THEN
-               READ(993,rec=nk) zDebug_c(:,:)
-               zMat(nk)%data_c = 0.0
-               zMat(nk)%data_c(:nbasfcn,:input%neig) = zDebug_c(:nbasfcn,:input%neig)
-            END IF
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
          END DO
-
-         IF(l_exist) CLOSE(993)
-
-         !Allocate further space
-         DO nk = kpts%nkpt + 1, kpts%nkptf
-            nbasfcn = zMat(kpts%bkp(nk))%matsize1
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
-         END DO
+         call timestop("eig stuff")
 
          !determine degenerate states at each k-point
          !
@@ -179,7 +152,7 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp, zmat)
+                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
