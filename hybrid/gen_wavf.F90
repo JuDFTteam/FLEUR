@@ -16,7 +16,7 @@ MODULE m_gen_wavf
 CONTAINS
 
    SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
-                       hybdat, noco,nococonv, oneD, mpi, input, jsp, zmat)
+                       hybdat, noco,nococonv, oneD, mpi, input, jsp)
 
       ! nkpt       ::     number of all k-points
       USE m_radfun
@@ -42,7 +42,6 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_mat), INTENT(IN)    :: zmat(:) !for all kpoints
 
       INTEGER, INTENT(IN)    :: jsp, nkpti
 
@@ -53,7 +52,6 @@ CONTAINS
       ! local scalars
       INTEGER                 :: ilo, idum, m
       COMPLEX                 :: cdum
-      TYPE(t_mat)             :: zhlp
       INTEGER                 :: ikpt0, ikpt, itype, iop, ieq, indx, iatom
       INTEGER                 :: i, j, l, ll, lm, ng, ok
       COMPLEX, PARAMETER      :: img = (0.0, 1.0)
@@ -81,8 +79,8 @@ CONTAINS
 
       TYPE(t_lapw)  :: lapw(kpts%nkptf)
 
+      call timestart("gen_wavf")
       CALL hybdat%usdus%init(atoms, input%jspins)
-      CALL zhlp%alloc(zmat(1)%l_real, zmat(1)%matsize1, zmat(1)%matsize2)
 
       ! setup rotations in reciprocal space
       DO iop = 1, sym%nsym
@@ -157,5 +155,6 @@ CONTAINS
              'nodes', t68, 'value', t81, 'derivative', t95, 'nodes', t107, 'norm', t119, 'wronskian')
 8010  FORMAT(i3, f10.5, 2(5x, 1p, 2e16.7, i5), 1p, 2e16.7)
 
+      call timestop("gen_wavf")
    END SUBROUTINE gen_wavf
 END MODULE m_gen_wavf
