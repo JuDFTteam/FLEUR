@@ -165,7 +165,11 @@ CONTAINS
       ELSE
          allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0))
          allocate (cprod_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, errmsg=errmsg)
-         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod_c. Errmsg= ' // errmsg)
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod_c. Dims = ['&
+                                       // int2str(maxval(hybdat%nbasm)) // ','  &
+                                       // int2str(MAXVAL(hybdat%nobd(:, jsp))) // "," &
+                                       // int2str(hybdat%nbands(ik))  // ","  // new_line('A') &
+                                       //'Errmsg= ' // errmsg)
          allocate (carr3_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_c = 0; carr3_vv_c = 0
