@@ -132,6 +132,7 @@ CONTAINS
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, test
+      character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
@@ -151,21 +152,23 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
-         allocate (cprod_vv_c(maxval(hybdat%nbasm), 0, 0), carr3_vv_c(maxval(hybdat%nbasm), 0, 0), test_c(maxval(hybdat%nbasm), 0, 0))
-         allocate (cprod_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
-         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
+         allocate (cprod_vv_c(maxval(hybdat%nbasm), 0, 0), carr3_vv_c(maxval(hybdat%nbasm), 0, 0))
+         allocate (cprod_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, errmsg=errmsg)
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod_r. Dims = ['&
+                                       // int2str(maxval(hybdat%nbasm)) // ','  &
+                                       // int2str(MAXVAL(hybdat%nobd(:, jsp))) // "," &
+                                       // int2str(hybdat%nbands(ik))  // ","  // new_line('A') &
+                                       //'Errmsg= ' // errmsg)
          allocate (carr3_vv_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
-         allocate (test_r(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_r = 0; carr3_vv_r = 0; test_r = 0
+         cprod_vv_r = 0; carr3_vv_r = 0;
       ELSE
-         allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0), test_r(maxval(hybdat%nbasm), 0, 0))
-         allocate (cprod_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
-         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
+         allocate (cprod_vv_r(maxval(hybdat%nbasm), 0, 0), carr3_vv_r(maxval(hybdat%nbasm), 0, 0))
+         allocate (cprod_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, errmsg=errmsg)
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod_c. Errmsg= ' // errmsg)
          allocate (carr3_vv_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
-         allocate (test_c(maxval(hybdat%nbasm), MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
-         cprod_vv_c = 0; carr3_vv_c = 0; test_c = 0
+         cprod_vv_c = 0; carr3_vv_c = 0
       END IF
 
       exch_vv = 0
