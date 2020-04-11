@@ -14,6 +14,9 @@ contains
 
       call timestart("calc smat")
       call smat%alloc(.False., mpdata%num_gpts(),mpdata%num_gpts())
+      !$OMP PARALLEL DO default(none) schedule(guided)&
+      !$OMP private(igpt2,igpt1, g, gnorm, itype, rdum)&
+      !$OMP shared(mpdata, fi, smat)
       DO igpt2 = 1, mpdata%num_gpts()
          DO igpt1 = 1, igpt2
             g = mpdata%g(:, igpt2) - mpdata%g(:, igpt1)
@@ -24,18 +27,17 @@ contains
                END DO
             ELSE
                ic = 0
-               DO itype = 1, fi%atoms%ntype
+               do ic =1,fi%atoms%nat
+                  itype = fi%atoms%itype(ic)
                   rdum = fi%atoms%rmt(itype)*gnorm
                   rdum = fpi_const*(SIN(rdum) - rdum*COS(rdum))/gnorm**3
-                  DO ineq = 1, fi%atoms%neq(itype)
-                     ic = ic + 1
-                     smat%data_c(igpt1, igpt2) = smat%data_c(igpt1, igpt2) &
-                                          + rdum*EXP(ImagUnit*tpi_const*dot_PRODUCT(fi%atoms%taual(:, ic), g))
-                  END DO
+                  smat%data_c(igpt1, igpt2) = smat%data_c(igpt1, igpt2) &
+                                       + rdum*EXP(ImagUnit*tpi_const*dot_PRODUCT(fi%atoms%taual(:, ic), g))
                END DO
             END IF
          END DO
       END DO
+      !$OMP END PARALLEL DO
 
       call smat%u2l()
       call timestop("calc smat")
