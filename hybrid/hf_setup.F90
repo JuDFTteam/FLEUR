@@ -62,11 +62,12 @@ CONTAINS
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
 
-         if(.not. allocated(eig_irr)) allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
-         eig_irr = 0
+         if(.not. allocated(eig_irr)) then 
+            allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
+            IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
+         endif
+         eig_irr = 0.0
 
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
@@ -187,22 +188,25 @@ CONTAINS
             END DO
          END DO
 
-         allocate(basprod(atoms%jmtd), stat=ok)
+         allocate(basprod(atoms%jmtd), stat=ok, source=0.0)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
          allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         basprod = 0; hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
+         hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
          mpdata%n1 = 0; mpdata%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
          ALLOCATE (hybdat%nindxp1(0:maxval(hybinp%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
+
+         !$OMP PARALLEL DO default(none) schedule(dynamic)&
+         !$OMP private(itype, ng, l2, l1, n1, l, nn, n, basprod) &
+         !$OMP shared(atoms, hybinp, mpdata, hybdat)
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
             DO l2 = 0, MIN(atoms%lmax(itype), hybinp%lcutwf(itype))
-               ll = l2
-               DO l1 = 0, ll
+               DO l1 = 0, l2
                   IF (ABS(l1 - l2) <= hybinp%lcutm1(itype)) THEN
                      DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
                         nn = mpdata%num_radfun_per_l(l1, itype)
@@ -232,6 +236,7 @@ CONTAINS
                END DO
             END DO
          END DO
+         !$OMP END PARALLEL DO
          deallocate(basprod)
          CALL timestop("gen_bz and gen_wavf")
 
