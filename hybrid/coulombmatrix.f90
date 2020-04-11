@@ -1139,6 +1139,7 @@ CONTAINS
       !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
       COMPLEX      :: coeff(nbasm1(1)), cderiv(nbasm1(1), -1:1), claplace(nbasm1(1))
 
+      call timestart("subtract_sphaverage")
       CALL olap%alloc(sym%invs, mpdata%n_g(1), mpdata%n_g(1), 0.)
 
       n = nbasm1(1)
@@ -1213,6 +1214,7 @@ CONTAINS
       END DO
 
       call coulomb%u2l()
+      call timestop("subtract_sphaverage")
    END SUBROUTINE subtract_sphaverage
 
    !     -----------------------------------------------------------------------------------------------
