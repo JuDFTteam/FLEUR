@@ -57,7 +57,7 @@ CONTAINS
       call timestart("olap_pw_real")
       !$OMP PARALLEL DO default(none) schedule(guided) &
       !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
-      !$OMP shared(olap, gpt, cell, atoms)
+      !$OMP shared(olap, gpt, cell, atoms, ngpt)
       DO i = 1, ngpt
          DO j = 1, i
             olap%data_r(i,j) = 0.0
@@ -106,7 +106,7 @@ CONTAINS
       call timestart("olap_pw_cmplx")
       !$OMP PARALLEL DO default(none) schedule(guided) &
       !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
-      !$OMP shared(olap, gpt, cell, atoms)
+      !$OMP shared(olap, gpt, cell, atoms, ngpt)
       DO i = 1, ngpt
          DO j = 1, i
             olap%data_c(i,j) = cmplx_0
