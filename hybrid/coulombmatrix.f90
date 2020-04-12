@@ -901,8 +901,13 @@ CONTAINS
 
                   IF (ineq == 1) THEN
                      DO n = 1, mpdata%num_radbasfn(l, itype) - 1
-                        hybdat%coul(ikpt)%mt1(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
-                           = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                        if (fi%sym%invs) THEN
+                           hybdat%coul(ikpt)%mt1_r(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                              = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                        else
+                           hybdat%coul(ikpt)%mt1_c(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                              = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                        endif
                      END DO
                   END IF
 

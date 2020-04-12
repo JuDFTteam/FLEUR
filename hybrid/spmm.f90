@@ -43,7 +43,8 @@ contains
                   indx3 = indx3 + 1
 
                   n_size = mpdata%num_radbasfn(l, itype) - 1
-                  mat_out%data_r(indx1:indx2, :) = matmul(hybdat%coul(ikpt)%mt1(:n_size, :n_size, l, itype), mat_hlp%data_r(indx1:indx2, :))
+                  call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
+                              mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out%data_r(indx1,1), mat_out%matsize1)
 
                   do i_vec = 1, n_vec
                      mat_out%data_r(indx1:indx2, i_vec) = mat_out%data_r(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_r(:n_size, m, l, iatom)*mat_hlp%data_r(indx3, i_vec)
@@ -244,8 +245,10 @@ contains
 
             idx_stop = idx_start + mpdata%num_radbasfn(l, itype) - 2
             indx3 = indx3 + 1
-            n_size = mpdata%num_radbasfn(l, itype) - 1
-            mat_out%data_c(idx_start:idx_stop, :) = matmul(hybdat%coul(ikpt)%mt1(:n_size, :n_size, l, itype), mat_hlp%data_c(idx_start:idx_stop, :))
+            n_size = mpdata%num_radbasfn(l, itype) - 1 
+
+            call zgemm("N","N", n_size, mat_hlp%matsize2, n_size, cmplx_1, hybdat%coul(ikpt)%mt1_c(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_c,dim=2),&
+                        mat_hlp%data_c(idx_start,1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(idx_start,1), mat_out%matsize1)
 
             do i_vec = 1, n_vec
                mat_out%data_c(idx_start:idx_stop, i_vec) = mat_out%data_c(idx_start:idx_stop, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp%data_c(indx3, i_vec)

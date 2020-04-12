@@ -109,7 +109,7 @@ CONTAINS
       INTEGER                 ::  j, iq_p
       INTEGER                 ::  n, n1, n2, nn, nn2
       INTEGER                 ::  nkqpt
-      INTEGER                 ::  ok
+      INTEGER                 ::  ok, psize
 
       REAL, SAVE             ::  divergence
 
@@ -146,10 +146,14 @@ CONTAINS
       ! the sum over the inner occupied valence states is restricted to the EIBZ(k)
       ! the contribution of the Gamma-point is treated separately (see below)
 
-      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok)
+      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
-      phase_vv = 0
-      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
+
+      psize = ceiling(5e9/( maxval(hybdat%nbasm) * hybdat%nbands(ik)) ) ! set psize to be less than 5gb
+      psize = Min(MAXVAL(hybdat%nobd(:, jsp)), psize)
+      write (*,*) "psize = ", psize 
+      write (*,*) "MAXVAL(hybdat%nobd(:, jsp))", MAXVAL(hybdat%nobd(:, jsp))
+
 
       if (mat_ex%l_real) THEN
          allocate (cprod_vv_c(maxval(hybdat%nbasm), 0, 0), carr3_vv_c(maxval(hybdat%nbasm), 0, 0))
