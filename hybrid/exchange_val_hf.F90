@@ -131,7 +131,7 @@ CONTAINS
       REAL                 ::    kqpt(3), kqpthlp(3)
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, test
+      type(t_mat)          :: carr1_v, mtx_tmp
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
 
@@ -200,7 +200,7 @@ CONTAINS
          END IF
 
          call carr1_v%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
-         call test%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
+         call mtx_tmp%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
 
          ! The sparse matrix technique is not feasible for the HSE
          ! functional. Thus, a dynamic adjustment is implemented
@@ -243,13 +243,13 @@ CONTAINS
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
                carr1_v%data_r = 0.0
-               test%data_r = cprod_vv_r(:n, :, n1)
-               call spmm_invs(fi, mpdata, hybdat, iq_p, test, carr1_v)
+               mtx_tmp%data_r = cprod_vv_r(:n, :, n1)
+               call spmm_invs(fi, mpdata, hybdat, iq_p, mtx_tmp, carr1_v)
             ELSE
                carr1_v%data_c = 0.0
-               test%data_c = cprod_vv_c(:n, :, n1)
+               mtx_tmp%data_c = cprod_vv_c(:n, :, n1)
                conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, test, carr1_v)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, mtx_tmp, carr1_v)
             END IF
             call timestop("sparse matrix products")
 
@@ -294,7 +294,7 @@ CONTAINS
          call timestop("exchange matrix")
 
          call carr1_v%free()
-         call test%free()
+         call mtx_tmp%free()
       END DO  !jq
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
