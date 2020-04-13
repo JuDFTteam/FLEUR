@@ -14,23 +14,21 @@ CONTAINS
       TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_k ! z_k is also z_k_p since ik < nkpt
+      type(t_mat), intent(inout)      :: cprod
 
 !     - scalars -
       INTEGER, INTENT(IN)        ::  ik, iq, jsp
       INTEGER, INTENT(INOUT)     ::  nkqpt
 
-!     - arrays -
-
-      COMPLEX, INTENT(INOUT)    ::  cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
-
-      INTEGER              :: g_t(3)
+      INTEGER              :: g_t(3), psize
       REAL                 :: kqpt(3), kqpthlp(3)
       complex              :: c_phase_k(hybdat%nbands(ik))
       complex, allocatable :: c_phase_kqpt(:)
       type(t_mat)          :: z_kqpt_p
 
       call timestart("wavefproducts_noinv")
-      cprod = cmplx_0; nkqpt = 0
+      cprod%data_c = cmplx_0
+      nkqpt = 0
 
       ! calculate nkpqt
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
@@ -39,21 +37,24 @@ CONTAINS
       ! determine number of kqpt
       nkqpt = fi%kpts%get_nk(kqpt)
       allocate (c_phase_kqpt(hybdat%nbands(nkqpt)))
+
+      psize = maxval(hybdat%nobd(:,jsp))
+
       IF (.not. fi%kpts%is_kpt(kqpt)) then
          call juDFT_error('wavefproducts: k-point not found')
       endif
 
-      call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, mpdata, hybdat, lapw, nococonv, &
+      call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, psize, mpdata, hybdat, lapw, nococonv, &
                                   nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call wavefproducts_noinv_MT(fi, ik, iq, nococonv, mpdata, hybdat, &
+      call wavefproducts_noinv_MT(fi, ik, iq, psize, nococonv, mpdata, hybdat, &
                                   jsp, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call timestop("wavefproducts_noinv")
 
    END SUBROUTINE wavefproducts_noinv
 
-   subroutine wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, mpdata, hybdat, lapw, nococonv, &
+   subroutine wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, psize, mpdata, hybdat, lapw, nococonv, &
                                      nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
@@ -67,18 +68,17 @@ CONTAINS
       TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_k_p
-      type(t_mat), intent(inout)      :: z_kqpt_p
+      type(t_mat), intent(inout)      :: z_kqpt_p, cprod
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3)
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), psize
       INTEGER, INTENT(IN)      ::  nkqpt
 
 !     - arrays -
       complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
-      COMPLEX, INTENT(INOUT)    :: cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
 
 !     - local scalars -
-      INTEGER                 :: ic, n1, n2
+      INTEGER                 :: ic, n1, n2, iob, iband
       INTEGER                 :: ig1, ig2, ig
       INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
@@ -97,8 +97,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::  z0(:, :), ctmp(:, :, :)
 
       call timestart("wavefproducts_noinv5 IR")
-      cprod = cmplx_0
-
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
@@ -193,7 +191,11 @@ CONTAINS
       call timestart("copy to cprod")
       do igptm = 1, mpdata%n_g(iq)
          ic = hybdat%nbasp + igptm
-         cprod(ic, :, :) = ctmp(:, :, igptm)
+         do iob = 1,psize 
+            do iband = 1, hybdat%nbands(ik)
+               cprod%data_c(ic, iob + (iband-1)*psize) = ctmp(iob, iband, igptm)
+            enddo 
+         enddo
       enddo
       call timestop("copy to cprod")
 
@@ -204,7 +206,7 @@ CONTAINS
       call timestop("wavefproducts_noinv5 IR")
    end subroutine wavefproducts_noinv_IS
 
-   subroutine wavefproducts_noinv_MT(fi, ik, iq, nococonv, mpdata, hybdat, jsp, ikqpt, &
+   subroutine wavefproducts_noinv_MT(fi, ik, iq, psize, nococonv, mpdata, hybdat, jsp, ikqpt, &
                                      z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       USE m_constants
@@ -215,23 +217,23 @@ CONTAINS
       IMPLICIT NONE
       type(t_fleurinput), intent(in)  :: fi
       type(t_nococonv), intent(in)    :: nococonv
-      TYPE(t_mpdata), INTENT(IN)     :: mpdata
+      TYPE(t_mpdata), INTENT(IN)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_k_p, z_kqpt_p
+      type(t_mat), intent(inout)      :: cprod
 
       !     - scalars -
-      INTEGER, INTENT(IN)      ::  ik, iq, jsp
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, psize
       INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
       complex, intent(in)     :: c_phase_k(hybdat%nbands(ik))
       complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
-      COMPLEX, INTENT(INOUT)  ::  cprod(maxval(hybdat%nbasm), 1:MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k
-      INTEGER                 ::  itype, ieq, ic1, m
+      INTEGER                 ::  itype, ieq, ic1, m, iob, iband
 
       COMPLEX                 ::  atom_phase
 
@@ -320,8 +322,9 @@ CONTAINS
                         do k = 1, hybdat%nbands(ik)
                            do j = 1, MAXVAL(hybdat%nobd(:, jsp))
                               DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 cprod(i + lm, j, k) = cprod(i + lm, j, k) &
-                                                       + hybdat%prodm(i, n, l, itype)*carr(j, k)*atom_phase
+                                 cprod%data_c(i + lm, j + (k-1)*psize) &
+                                      = cprod%data_c(i + lm, j + (k-1)*psize) &
+                                          + hybdat%prodm(i, n, l, itype)*carr(j, k)*atom_phase
                               ENDDO
                            end do
                         end do

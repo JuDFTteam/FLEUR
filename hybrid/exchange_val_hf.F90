@@ -107,7 +107,7 @@ CONTAINS
       INTEGER                 ::  iband, iband1, jq, iq
       INTEGER                 ::  i, ierr
       INTEGER                 ::  j, iq_p
-      INTEGER                 ::  n, n1, n2, nn, nn2
+      INTEGER                 ::  n, n1, n2, nn2
       INTEGER                 ::  nkqpt
       INTEGER                 ::  ok, psize
 
@@ -131,7 +131,7 @@ CONTAINS
       REAL                 ::    kqpt(3), kqpthlp(3)
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, mtx_tmp
+      type(t_mat)          :: carr1_v, mtx_tmp, cprod_vv, carr3_vv
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
 
@@ -151,8 +151,7 @@ CONTAINS
 
       psize = ceiling(5e9/( maxval(hybdat%nbasm) * hybdat%nbands(ik)) ) ! set psize to be less than 5gb
       psize = Min(MAXVAL(hybdat%nobd(:, jsp)), psize)
-      write (*,*) "psize = ", psize 
-      write (*,*) "MAXVAL(hybdat%nobd(:, jsp))", MAXVAL(hybdat%nobd(:, jsp))
+      psize = MAXVAL(hybdat%nobd(:, jsp))
 
 
       if (mat_ex%l_real) THEN
@@ -188,19 +187,19 @@ CONTAINS
       exch_vv = 0
 
       DO jq = nkpt_EIBZ, 1, -1
-
          iq = pointer_EIBZ(jq)
+         iq_p = fi%kpts%bkp(iq)
 
          n = hybdat%nbasp + mpdata%n_g(iq)
          IF (hybdat%nbasm(iq) /= n) call judft_error('error hybdat%nbasm')
-         nn = n*(n + 1)/2
-
-         iq_p = fi%kpts%bkp(iq)
+         call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
          IF (mat_ex%l_real) THEN
-            CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv_r)
+            CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+            call new_cprod_to_old_r(cprod_vv, hybdat, ik, iq, psize, cprod_vv_r)
          ELSE
-            CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv_c)
+            CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+            call new_cprod_to_old_c(cprod_vv, hybdat, ik,iq, psize, cprod_vv_c)
          END IF
 
          call carr1_v%alloc(mat_ex%l_real, n, hybdat%nobd(nkqpt, jsp))
@@ -212,16 +211,17 @@ CONTAINS
          ! are Fourier transformed, so that the exchange can be calculated
          ! in Fourier space
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            iband1 = hybdat%nobd(nkqpt, jsp)
+            call judft_error("HSE not implemented")
+            ! iband1 = hybdat%nobd(nkqpt, jsp)
 
-            exch_vv = exch_vv + &
-                      dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
-                                             fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
-                                             fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
-                                             mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                             hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-                                             fi%sym%invsat, fi%sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-                                             cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
+            ! exch_vv = exch_vv + &
+            !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
+            !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
+            !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+            !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+            !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
+            !                                  fi%sym%invsat, fi%sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+            !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
          END IF
 
          ! the Coulomb matrix is only evaluated at the irrecuible k-points
@@ -235,6 +235,9 @@ CONTAINS
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, phase_vv, cprod_vv_c(:hybdat%nbasm(iq), :, :), carr3_vv_c(:hybdat%nbasm(iq), :, :))
                cprod_vv_c(:hybdat%nbasm(iq), :, :) = carr3_vv_c(:hybdat%nbasm(iq), :, :)
             endif
+
+            ! call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, phase_vv, cprod_vv, carr3_vv)
+            ! call cprod_vv%copy(carr3_vv, 1,1)
          ELSE
             phase_vv(:, :) = (1.0, 0.0)
          END IF
@@ -515,4 +518,44 @@ CONTAINS
          END IF
       enddo
    end function calc_divergence2
+
+   subroutine new_cprod_to_old_r(new_cprod, hybdat, ik, iq, psize, old_cprod)
+      use m_types
+      implicit none 
+      type(t_mat), intent(in)    :: new_cprod
+      type(t_hybdat), intent(in) :: hybdat
+      real, intent(inout)        :: old_cprod(:,:,:)
+      integer, intent(in)        :: ik, psize, iq
+
+      integer :: ibasm, iob, iband 
+
+      old_cprod = 0.0
+      do iband=1,hybdat%nbands(ik)
+         do iob=1,psize
+            do ibasm=1,hybdat%nbasm(iq)
+               old_cprod(ibasm,iob,iband) = new_cprod%data_r(ibasm, (iband-1)*psize + iob)
+            enddo
+         enddo
+      enddo
+   end subroutine new_cprod_to_old_r
+
+   subroutine new_cprod_to_old_c(new_cprod, hybdat, ik,iq, psize, old_cprod)
+      use m_types
+      implicit none 
+      type(t_mat), intent(in)    :: new_cprod 
+      type(t_hybdat), intent(in) :: hybdat
+      complex, intent(inout)     :: old_cprod(:,:,:)
+      integer, intent(in)        :: ik, psize, iq
+
+      integer :: ibasm, iob, iband 
+
+      old_cprod = 0.0
+      do iband=1,hybdat%nbands(ik)
+         do iob=1,psize
+            do ibasm=1,hybdat%nbasm(iq)
+               old_cprod(ibasm,iob,iband) = new_cprod%data_c(ibasm, (iband-1)*psize + iob)
+            enddo
+         enddo
+      enddo
+   end subroutine new_cprod_to_old_c
 END MODULE m_exchange_valence_hf
