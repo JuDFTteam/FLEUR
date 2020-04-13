@@ -39,7 +39,7 @@ CONTAINS
     REAL,ALLOCATABLE :: totalDisplace(:,:)
     REAL             :: dispAll(3,atoms%nat), overlap(0:atoms%ntype,atoms%ntype)
     REAL             :: dispLength, maxDisp, limitDisp
-    INTEGER          :: iType,ierr
+    INTEGER          :: iType,ierr, numDispReduce
     LOGICAL          :: l_conv
 
     !to calculate the current displacement
@@ -109,6 +109,7 @@ CONTAINS
        call atoms_non_displaced%init(cell)
        old_displace=atoms%pos-atoms_non_displaced%pos
 
+       numDispReduce = 0
        overlap=1.0
        DO WHILE(ANY(overlap>1E-10))
           overlap = 0.0
@@ -123,9 +124,13 @@ CONTAINS
           CALL chkmt(tempAtoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
 
           IF (ANY(overlap>1E-10)) THEN
+             numDispReduce = numDispReduce + 1
              displace(:,:) = 0.5 * displace(:,:)
              WRITE(6,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
              WRITE(*,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+             IF (numDispReduce.GE.4) THEN
+                CALL juDFT_warn("Strong MT spheres crash in structural relaxation")
+             END IF
           END IF
        END DO
 
