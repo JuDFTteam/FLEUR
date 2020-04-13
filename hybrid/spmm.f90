@@ -6,6 +6,7 @@ contains
       use m_juDFT
       use m_types
       use m_reorder
+      use m_calc_l_m_from_lm
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -16,7 +17,7 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4
+      integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start
       type(t_mat) :: mat_hlp, test_hlp, test_out
 
       call timestart("spmm_invs")
@@ -32,28 +33,48 @@ contains
 
       ! compute vecout for the indices from 0:ibasm
       iatom = 0
-      indx1 = 0; indx2 = 0; indx3 = ibasm
+      indx1 = 0; indx2 = 0; indx3 = ibasm; 
+      ! !$OMP PARALLEL DO default(none) schedule(dynamic)&
+      ! !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
+      ! !$OMP private(lm, l, m, indx2, n_size)&
+      ! !$OMP shared(ibasm, mat_hlp, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
-         DO l = 0, fi%hybinp%lcutm1(itype)
-            DO m = -l, l
-               indx1 = indx1 + 1
-               indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
-               indx3 = indx3 + 1
 
-               n_size = mpdata%num_radbasfn(l, itype) - 1
-               call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
-                           mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out%data_r(indx1,1), mat_out%matsize1)
+         idx1_start = 0
+         do iat2 =1,iatom-1
+            it2 = fi%atoms%itype(iat2)
+            do l2 = 0, fi%hybinp%lcutm1(it2)
+               idx1_start = idx1_start + (mpdata%num_radbasfn(l2, it2)-1) * (2*l2+1)
+            enddo
+         enddo
+         indx1 = idx1_start
 
-               do i_vec = 1, n_vec
-                  mat_out%data_r(indx1:indx2, i_vec) = mat_out%data_r(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_r(:n_size, m, l, iatom)*mat_hlp%data_r(indx3, i_vec)
-               enddo
+         idx3_start = ibasm
+         do iat2 = 1,iatom-1
+            it2 = fi%atoms%itype(iat2)
+            idx3_start = idx3_start + (fi%hybinp%lcutm1(it2)+1)**2
+         enddo
+         indx3 = idx3_start 
 
-               indx1 = indx2
-            END DO
+         do lm = 1,(fi%hybinp%lcutm1(itype)+1)**2
+            call calc_l_m_from_lm(lm, l, m)
+            indx1 = indx1 + 1
+            indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
+            indx3 = indx3 + 1
 
+            n_size = mpdata%num_radbasfn(l, itype) - 1
+            call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
+                        mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out%data_r(indx1,1), mat_out%matsize1)
+
+            do i_vec = 1, n_vec
+               call daxpy(n_size, mat_hlp%data_r(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out%data_r(indx1,i_vec), 1)
+            enddo
+
+            indx1 = indx2
          END DO
       END DO
+      ! !$OMP END PARALLEL DO
 
       IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
 
