@@ -9,6 +9,8 @@ CONTAINS
    SUBROUTINE read_core(atoms, hybdat)
 
       USE m_types
+      USE m_constants
+
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
@@ -384,7 +386,7 @@ CONTAINS
          ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
          IF (mpi%irank == 0) THEN
-            WRITE (6, FMT=8000) z, rnot, dxx, atoms%jri(itype)
+            WRITE (oUnit, FMT=8000) z, rnot, dxx, atoms%jri(itype)
          END IF
          DO j = 1, atoms%jri(itype)
             vrd(j) = vr0(j, itype, jspin)
@@ -433,7 +435,7 @@ CONTAINS
             eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
 
             IF (mpi%irank == 0) THEN
-               WRITE (6, FMT=8010) fn, fl, fj, e, weight
+               WRITE (oUnit, FMT=8010) fn, fl, fj, e, weight
             END IF
             IF (ierr .NE. 0) call judft_error('error in core-level routine')
 

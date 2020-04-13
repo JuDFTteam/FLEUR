@@ -20,8 +20,11 @@ CONTAINS
    ! intgrf_init.
 
    FUNCTION intgrf(f, atoms, itype, gridf)
+
       use m_juDFT
       use m_types_setup
+      USE m_constants
+
       IMPLICIT NONE
 
       REAL                 :: intgrf
@@ -35,10 +38,10 @@ CONTAINS
       fct_res = pure_intgrf(f, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, &
                             atoms%ntype, itype, gridf)
       IF (fct_res%ierror == NEGATIVE_EXPONENT_WARNING) THEN
-         write (6, *) 'intgrf: Warning!'// &
+         write (oUnit, *) 'intgrf: Warning!'// &
             'Negative exponent x in extrapolation a+c*r**x'
       ELSEIF (fct_res%ierror == NEGATIVE_EXPONENT_ERROR) THEN
-         write (6, *) &
+         write (oUnit, *) &
             'intgrf: Negative exponent x in extrapolation a+c*r**x'
          CALL juDFT_error( &
             'intgrf: Negative exponent x in extrapolation a+c*r**x')
@@ -93,10 +96,10 @@ CONTAINS
             !           x      = f(2) / f(1)
             !           x      = log(x)/h
             !           IF(x.lt.0) THEN
-            !             IF(x.gt.-1) write(6,'(A,ES9.1)') 'intgrf: Warning!&
+            !             IF(x.gt.-1) write(oUnit,'(A,ES9.1)') 'intgrf: Warning!&
             !      &                                        Negative exponent x in&
             !      &                                        extrapolation c*r**x:',x
-            !             IF(x.le.-1) write(6,'(A,ES9.1)') 'intgrf: Negative exponent&
+            !             IF(x.le.-1) write(oUnit,'(A,ES9.1)') 'intgrf: Negative exponent&
             !      &                                        x in extrapolation&
             !      &                                        c*r**x:',x
             !             IF(x.le.-1) call juDFT_error('intgrf: Negative exponent&

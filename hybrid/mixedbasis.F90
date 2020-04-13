@@ -42,13 +42,14 @@ CONTAINS
                          enpara, mpi, v, iterHF)
 
       USE m_judft
+      USE m_types
+      USE m_constants
       USE m_loddop, ONLY: loddop
       USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       USE m_hybrid_core
       USE m_wrapper
       USE m_eig66_io
-      USE m_types
 
       IMPLICIT NONE
 
@@ -91,7 +92,7 @@ CONTAINS
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
 
 
-      IF (mpi%irank == 0) WRITE (6, '(//A,I2,A)') '### subroutine: mixedbasis ###'
+      IF (mpi%irank == 0) WRITE (oUnit, '(//A,I2,A)') '### subroutine: mixedbasis ###'
 
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
@@ -131,8 +132,8 @@ CONTAINS
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 
       IF (mpi%irank == 0) THEN
-         WRITE (6, '(A)') 'MT product basis for non-local exchange potential:'
-         WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
+         WRITE (oUnit, '(A)') 'MT product basis for non-local exchange potential:'
+         WRITE (oUnit, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
       allocate(mpdata%num_radbasfn(0:maxval(hybinp%lcutm1), atoms%ntype), source=0)
@@ -184,7 +185,7 @@ CONTAINS
                END DO
             END DO
             IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
-               WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
+               WRITE (oUnit, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
             mpdata%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
@@ -216,7 +217,7 @@ CONTAINS
             ! allow for zero product-basis functions for
             ! current l-quantum number
             IF (n_radbasfn == 0) THEN
-               IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->   0'')') lchar(l)
+               IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->   0'')') lchar(l)
                CYCLE
             END IF
 
@@ -260,7 +261,7 @@ CONTAINS
 
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
+         IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
       END DO ! itype
 
       !normalize radbasfn_mt
@@ -281,18 +282,18 @@ CONTAINS
       ! such that they possess no moment except one radial function in each l-channel
       !
       IF (mpi%irank == 0) THEN
-         WRITE (6, '(/,A,/,A)') 'Build linear combinations of radial '// &
+         WRITE (oUnit, '(/,A,/,A)') 'Build linear combinations of radial '// &
             'functions in each l-channel,', &
             'such that they possess no multipolmoment'// &
             ' except the last function:'
 
-         WRITE (6, '(/,17x,A)') 'moment  (quality of orthonormality)'
+         WRITE (oUnit, '(/,17x,A)') 'moment  (quality of orthonormality)'
       END IF
 
       DO itype = 1, atoms%ntype
          n_grid_pt = atoms%jri(itype)
 
-         IF (atoms%ntype > 1 .AND. mpi%irank == 0) WRITE (6, '(6X,A,I3)') 'Atom type', itype
+         IF (atoms%ntype > 1 .AND. mpi%irank == 0) WRITE (oUnit, '(6X,A,I3)') 'Atom type', itype
 
          DO l = 0, hybinp%lcutm1(itype)
             ! determine radial function with the largest moment
@@ -319,10 +320,10 @@ CONTAINS
 
 
          DO l = 0, hybinp%lcutm1(itype)
-            IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
+            IF (mpi%irank == 0) WRITE (oUnit, '(6X,A)') lchar(l)//':'
 
             IF (mpdata%num_radbasfn(l, itype) == 0) THEN
-               IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->    '')') lchar(l)
+               IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->    '')') lchar(l)
                CYCLE
             END IF
 
@@ -338,7 +339,7 @@ CONTAINS
                bashlp(:n_grid_pt) = mpdata%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
                IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. mpi%irank == 0) &
-                  WRITE (6, *) 'Warning: Norm is smaller than 1E-06!'
+                  WRITE (oUnit, *) 'Warning: Norm is smaller than 1E-06!'
 
                ! change function n_radbasfn such that n_radbasfn is orthogonal to i
                ! since the functions radbasfn_mt have been orthogonal on input
@@ -355,7 +356,7 @@ CONTAINS
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
 
-               IF (mpi%irank == 0) WRITE (6, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
+               IF (mpi%irank == 0) WRITE (oUnit, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
             END DO
             call mpdata%check_orthonormality(atoms, mpi, l, itype, gridf)
          ENDDO

@@ -19,12 +19,13 @@ CONTAINS
                        hybdat, noco,nococonv, oneD, mpi, input, jsp)
 
       ! nkpt       ::     number of all k-points
+      USE m_types
+      USE m_constants
       USE m_radfun
       USE m_radflo
       USE m_abcof
       USE m_trafo!, ONLY: waveftrafo_genwavf
       USE m_olap
-      USE m_types
       USE m_hyb_abcrot
       USE m_io_hybinp
 
@@ -111,12 +112,12 @@ CONTAINS
 
       iarr = 2
       DO itype = 1, atoms%ntype
-         IF (mpi%irank == 0) WRITE (6, FMT=8000) itype
+         IF (mpi%irank == 0) WRITE (oUnit, FMT=8000) itype
          ng = atoms%jri(itype)
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), &
                       atoms, u(:, :, l), du(:, :, l), hybdat%usdus, nodem, noded, wronk)
-            IF (mpi%irank == 0) WRITE (6, FMT=8010) l, el_eig(l, itype), &
+            IF (mpi%irank == 0) WRITE (oUnit, FMT=8010) l, el_eig(l, itype), &
                                hybdat%usdus%us(l, itype, jsp), hybdat%usdus%dus(l, itype, jsp),&
                                nodem, hybdat%usdus%uds(l, itype, jsp), hybdat%usdus%duds(l, itype, jsp),&
                                noded, hybdat%usdus%ddn(l, itype, jsp), wronk

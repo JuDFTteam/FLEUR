@@ -11,10 +11,10 @@ CONTAINS
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, hybdat,&
                      el, ello, sym, cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
-      USE m_types
       USE m_judft
-      USE m_intgr, ONLY: intgr3
+      USE m_types
       USE m_constants
+      USE m_intgr, ONLY: intgr3
       USE m_gaunt, ONLY: gaunt1
       USE m_wrapper
       USE m_loddop
@@ -103,13 +103,13 @@ CONTAINS
       DO itype = 1, atoms%ntype
 
          ! Generate the radial basis-functions for each l
-         WRITE (6, '(a,i3,a)') new_LINE('n')//new_LINE('n')//' wavefunction parameters for atom type', itype, ':'
-         WRITE (6, '(31x,a,32x,a)') 'radial function', 'energy derivative'
-         WRITE (6, '(a)') '  l    energy            value        '// &
+         WRITE (oUnit, '(a,i3,a)') new_LINE('n')//new_LINE('n')//' wavefunction parameters for atom type', itype, ':'
+         WRITE (oUnit, '(31x,a,32x,a)') 'radial function', 'energy derivative'
+         WRITE (oUnit, '(a)') '  l    energy            value        '// &
             'derivative    nodes          value        derivative    nodes       norm        wronskian'
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(:, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
-            WRITE (6, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
+            WRITE (oUnit, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
                usdus%dus(l, itype, jsp), nodeu, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, &
                usdus%ddn(l, itype, jsp), wronk
          END DO
@@ -283,7 +283,7 @@ CONTAINS
                vxc(ic) = vxc(ic) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
             ELSE
                IF (mpi%irank == 0) THEN
-                  WRITE (6, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
+                  WRITE (oUnit, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
                      lapw%gvec(:,ig1, jsp), lapw%gvec(:,ig2, jsp)
                END IF
             END IF

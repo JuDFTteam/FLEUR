@@ -67,7 +67,7 @@ CONTAINS
    !         dFx_ds   - derivative of this factor with respect to s
    !         d2Fx_ds2 - second derivative with respect to s
    SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
-      use m_constants, only: REAL_NOT_INITALIZED
+      use m_constants
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: kF, s_inp
@@ -1167,9 +1167,9 @@ CONTAINS
 
       ! Check if any of the integrations failed and abort if one did
       IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
-         IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
+         IF (irank == 0) WRITE (oUnit, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
       ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
-         IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+         IF (irank == 0) WRITE (oUnit, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
          call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
       END IF
 
@@ -1508,9 +1508,9 @@ CONTAINS
 
          ! Check if any of the integrations failed and abort if one did
          IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
-            IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
+            IF (irank == 0) WRITE (oUnit, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
          ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
-            IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+            IF (irank == 0) WRITE (oUnit, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
             call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
          END IF
 
@@ -2339,7 +2339,7 @@ CONTAINS
 
 #ifdef CPP_INVERSION
       IF (ANY(ABS(aimag(exchange)) > 10.0**-10)) THEN
-         IF (irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
+         IF (irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
          WRITE (*, *) MAXVAL(ABS(aimag(exchange)))
          call juDFT_error( 'exchangeCore: Unusually large imaginary component.')
       END IF
@@ -2560,7 +2560,7 @@ CONTAINS
 # endif
 !   DO icst = 1,ncstd
 !     IF ( irank == 0 ) &
-!       WRITE(6,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
+!       WRITE(oUnit,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
 !   END DO
 
       ! add core exchange contributions to the te_hfex

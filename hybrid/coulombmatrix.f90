@@ -39,7 +39,7 @@ CONTAINS
       USE m_types
       USE m_types_hybdat
       USE m_juDFT
-      USE m_constants, ONLY: tpi_const, fpi_const
+      USE m_constants
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -142,7 +142,7 @@ CONTAINS
       !     Calculate the structure constant
       CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, mpi)
 
-      IF (mpi%irank == 0) WRITE (6, '(//A)') '### subroutine: coulombmatrix ###'
+      IF (mpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
 
       !
       !     Matrix allocation
@@ -159,7 +159,7 @@ CONTAINS
       call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) then
-         write (6,*) "Size of coulomb matrix: " //&
+         write (oUnit,*) "Size of coulomb matrix: " //&
                             float2str(sum([(coulomb(i)%size_mb(), i=1,fi%kpts%nkpt)])) // " MB"
       endif
 
@@ -1238,10 +1238,10 @@ CONTAINS
 
    SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
 
-      USE m_constants, ONLY: pi_const, tpi_const, fpi_const
-      USE m_rorder, ONLY: rorderp, rorderpf
-      USE m_types
       USE m_juDFT
+      USE m_types
+      USE m_constants
+      USE m_rorder, ONLY: rorderp, rorderpf
       use m_ylm
       IMPLICIT NONE
 
@@ -1304,8 +1304,8 @@ CONTAINS
       END DO
 
       IF (first) THEN
-         WRITE (6, '(//A)') '### subroutine: structureconstant ###'
-         WRITE (6, '(/A)') 'Real-space sum:'
+         WRITE (oUnit, '(//A)') '### subroutine: structureconstant ###'
+         WRITE (oUnit, '(/A)') 'Real-space sum:'
       END IF
 
       !
@@ -1358,8 +1358,8 @@ CONTAINS
       call timestop("fourier space")
 
       IF (first) THEN
-         WRITE (6, '(/A,2F10.5)') 'Cutoff radii: ', rad, rrad
-         WRITE (6, '(/A)') 'Real-space sum'
+         WRITE (oUnit, '(/A,2F10.5)') 'Cutoff radii: ', rad, rrad
+         WRITE (oUnit, '(/A)') 'Real-space sum'
       END IF
 
       !
@@ -1460,7 +1460,7 @@ CONTAINS
 
       deallocate (ptsh, radsh)
 
-      IF (first) WRITE (6, '(/A)') 'Fourier-space sum'
+      IF (first) WRITE (oUnit, '(/A)') 'Fourier-space sum'
 
       !
       !     Determine reciprocal shells
@@ -1574,7 +1574,7 @@ CONTAINS
          END DO
          a = SQRT(a/atoms%nat**2)
          aa = SQRT(SUM(ABS(structconst(1, :, :, ikpt))**2)/atoms%nat**2)
-         IF (first) WRITE (6, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
+         IF (first) WRITE (oUnit, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
       ENDIF
       deallocate (ptsh, radsh)
 
@@ -1589,9 +1589,13 @@ CONTAINS
    !     The lattice points (number = nptsh) are stored in ptsh, their corresponding lengths (shell radii) in radsh.
 
    SUBROUTINE getshells(ptsh, nptsh, radsh, nshell, rad, lat, lwrite)
-      USE m_rorder, ONLY: rorderpf
+
       USE m_juDFT
+      USE m_constants
+      USE m_rorder, ONLY: rorderpf
+
       IMPLICIT NONE
+
       LOGICAL, INTENT(IN)    :: lwrite
       INTEGER, INTENT(INOUT)   :: nptsh, nshell
       INTEGER, ALLOCATABLE   :: ptsh(:, :)
@@ -1669,7 +1673,7 @@ CONTAINS
       END DO
 
       IF (lwrite) &
-         WRITE (6, '(A,F10.5,A,I7,A,I5,A)') &
+         WRITE (oUnit, '(A,F10.5,A,I7,A,I5,A)') &
          '  Sphere of radius', rad, ' contains', &
          nptsh, ' lattice points and', nshell, ' shells.'
 
@@ -1725,7 +1729,10 @@ CONTAINS
                                sphbes0, l_warnin, l_warnout)
 
       USE m_types
+      USE m_constants
+
       IMPLICIT NONE
+
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -1791,17 +1798,17 @@ CONTAINS
          ! Ensure numerical stability. If both formulas are not sufficiently stable, the program stops.
          IF (r1 > r2) THEN
             IF (r1 < 1e-6 .AND. l_warn) THEN
-               WRITE (6, '(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:', &
+               WRITE (oUnit, '(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:', &
                   r1, '(', r2, ')'
-               WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1, q2, itype
+               WRITE (oUnit, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1, q2, itype
                l_warned = .TRUE.
             END IF
             sphbessel_integral = s**3/dq*da
          ELSE
             IF (r2 < 1e-6 .AND. l_warn) THEN
-               WRITE (6, '(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:', &
+               WRITE (oUnit, '(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:', &
                   r2, '(', r1, ')'
-               WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', &
+               WRITE (oUnit, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', &
                   q1, q2, itype
                l_warned = .TRUE.
             END IF

@@ -22,14 +22,16 @@ CONTAINS
    SUBROUTINE exchange_vccv1(nk, input,atoms, cell, kpts, sym, noco, nococonv, oneD,&
                              mpdata, hybinp, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
-      use m_wavefproducts_aux
+
+      USE m_types
       USE m_constants
+      use m_wavefproducts_aux
       USE m_util
       use m_intgrf
       USE m_wrapper
-      USE m_types
       USE m_io_hybinp
       use m_calc_cmt
+
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -184,7 +186,7 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
-            IF (mpi%irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
+            IF (mpi%irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
             call judft_error('exchangeCore: Unusually large imaginary component.')
          END IF
@@ -209,15 +211,17 @@ CONTAINS
 
    SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
 
+      USE m_types
       USE m_constants
       USE m_util
       use m_intgrf
       USE m_wrapper
       USE m_gaunt
       USE m_trafo
-      USE m_types
       USE m_io_hybinp
+
       IMPLICIT NONE
+
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -244,8 +248,8 @@ CONTAINS
       COMPLEX               ::  exch(ncstd, ncstd)
 
       !       IF ( irank == 0 ) THEN
-      !         WRITE(6,'(//A)') '### core-core-core-core exchange ###'
-      !         WRITE(6,'(/A)') '        k-point       band    exchange'
+      !         WRITE(oUnit,'(//A)') '### core-core-core-core exchange ###'
+      !         WRITE(oUnit,'(/A)') '        k-point       band    exchange'
       !       END IF
 
       ! set up point
@@ -336,7 +340,7 @@ CONTAINS
       ENDIF
       !       DO icst = 1,ncstd
       !         IF ( irank == 0 )
-      !           WRITE(6,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
+      !           WRITE(oUnit,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-hartree_to_ev_const)
       !       END DO
 
       ! add core exchange contributions to the te_hfex

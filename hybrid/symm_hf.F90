@@ -10,11 +10,11 @@
 !                                             M.Betzinger (09/07)     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_symm_hf
-   use m_judft
-   USE m_types_hybdat
 
-   USE m_constants
+   use m_judft
    USE m_types
+   USE m_types_hybdat
+   USE m_constants
    USE m_util
    USE m_intgrf
    USE m_io_hybinp
@@ -65,9 +65,9 @@ CONTAINS
          END IF
       END DO
 
-      WRITE(6, '(A,i3)') 'current nk: ', nk
-      WRITE(6, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
-      WRITE(6, '(A,i3)') ' Number of elements in the little group:', nsymop
+      WRITE(oUnit, '(A,i3)') 'current nk: ', nk
+      WRITE(oUnit, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
+      WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
 
    END SUBROUTINE symm_hf_init
 
@@ -151,7 +151,7 @@ CONTAINS
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
       parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
-      WRITE(6, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
+      WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
@@ -203,7 +203,7 @@ CONTAINS
          END IF
       END DO
 
-      WRITE(6, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
+      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
@@ -240,7 +240,7 @@ CONTAINS
 
       degenerat = 1
 
-      WRITE(6, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
+      WRITE(oUnit, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
       DO i = 1, hybdat%nbands(nk)
          DO j = i + 1, hybdat%nbands(nk)
@@ -262,9 +262,9 @@ CONTAINS
       ! number of different degenerate bands/states
       nddb = count(degenerat >= 1)
 #ifdef CPP_EXPLICIT_HYB
-      WRITE(6, *) ' Degenerate states:'
+      WRITE(oUnit, *) ' Degenerate states:'
       DO iband = 1, hybdat%nbands(nk)/5 + 1
-         WRITE(6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
+         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
       END DO
 #endif
       ! read in cmt and z at current k-point (nk)

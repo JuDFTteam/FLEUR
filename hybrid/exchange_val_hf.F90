@@ -271,9 +271,9 @@ CONTAINS
 
       IF ((.not. xcpot%is_name("hse")) .AND. (.not. xcpot%is_name("vhse"))) THEN ! no gamma point correction needed for HSE functional
          IF (zero_order .and. .not. ibs_corr) THEN
-            WRITE (6, '(A)') ' Take zero order terms into account.'
+            WRITE (oUnit, '(A)') ' Take zero order terms into account.'
          ELSE IF (zero_order .and. ibs_corr) THEN
-            WRITE (6, '(A)') ' Take zero order terms and ibs-correction into account.'
+            WRITE (oUnit, '(A)') ' Take zero order terms and ibs-correction into account.'
          END IF
 
          IF (zero_order) THEN

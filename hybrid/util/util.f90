@@ -118,6 +118,8 @@ CONTAINS
 
    SUBROUTINE primitivef(primf, fin, rmsh, dx, jri, jmtd, itypein, ntype)
 
+      USE m_constants
+
       IMPLICIT NONE
 
 !     - scalars -
@@ -172,10 +174,10 @@ CONTAINS
             a = (f(2) - x*f(1))/(1 - x)
             x = log(x)/h
             IF (x < 0) THEN
-               IF (x > -1) WRITE (6, '(A,ES9.1)') &
+               IF (x > -1) WRITE (oUnit, '(A,ES9.1)') &
                   '+intgr: Warning! Negative &exponent x in'// &
                   'extrapolation a+c*r**x:', x
-               IF (x <= -1) WRITE (6, '(A,ES9.1)') 'intgr: Negative exponent,'// &
+               IF (x <= -1) WRITE (oUnit, '(A,ES9.1)') 'intgr: Negative exponent,'// &
                   'x in extrapolation a+c*r**x:', x
                IF (x <= -1) call judft_error("intgr:Negative exponent x in extrapolation")
             END IF
@@ -222,6 +224,8 @@ CONTAINS
 ! unction modulo1 maps kpoint into first BZ
    FUNCTION modulo1(kpoint, nkpt3)
 
+      USE m_constants
+
       IMPLICIT NONE
 
       INTEGER, INTENT(IN)  :: nkpt3(3)
@@ -232,7 +236,7 @@ CONTAINS
       modulo1 = kpoint*nkpt3
       help = nint(modulo1)
       IF (any(abs(help - modulo1) > 1e-10)) THEN
-         WRITE (6, '(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (', kpoint, &
+         WRITE (oUnit, '(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (', kpoint, &
             ') is not an element of the k-point set.'
          CALL juDFT_error( &
             'modulo1: argument not an element of k-point set.', &

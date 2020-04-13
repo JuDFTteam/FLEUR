@@ -12,6 +12,7 @@ CONTAINS
                        cell, oneD, results, jsp, enpara, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
+      USE m_constants
       USE m_eig66_io
       USE m_util
       USE m_intgrf
@@ -94,8 +95,8 @@ CONTAINS
          ! degenerat(i) =0  band i  is  degenerat, but is not the lowest band
          !                  of the group of degenerate states
          IF (mpi%irank == 0) THEN
-            WRITE (6, *)
-            WRITE (6, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
+            WRITE (oUnit, *)
+            WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
          hybdat%nobd(:,jsp) = 0
