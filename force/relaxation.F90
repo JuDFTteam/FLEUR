@@ -172,6 +172,7 @@ CONTAINS
     !-----------------------------------------------
     !  Simple BFGS method to calculate shift out of old positions and forces
     !-----------------------------------------------
+    USE m_constants
     IMPLICIT NONE
     REAL,INTENT(in)  :: pos(:,:,:),force(:,:,:)
     REAL,INTENT(OUT) :: shift(:,:)
