@@ -33,27 +33,25 @@ contains
       ! compute vecout for the indices from 0:ibasm
       iatom = 0
       indx1 = 0; indx2 = 0; indx3 = ibasm
-      DO itype = 1, fi%atoms%ntype
-         DO ieq = 1, fi%atoms%neq(itype)
-            iatom = iatom + 1
-            DO l = 0, fi%hybinp%lcutm1(itype)
-               DO m = -l, l
-                  indx1 = indx1 + 1
-                  indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
-                  indx3 = indx3 + 1
+      do iatom = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO m = -l, l
+               indx1 = indx1 + 1
+               indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
+               indx3 = indx3 + 1
 
-                  n_size = mpdata%num_radbasfn(l, itype) - 1
-                  call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
-                              mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out%data_r(indx1,1), mat_out%matsize1)
+               n_size = mpdata%num_radbasfn(l, itype) - 1
+               call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
+                           mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out%data_r(indx1,1), mat_out%matsize1)
 
-                  do i_vec = 1, n_vec
-                     mat_out%data_r(indx1:indx2, i_vec) = mat_out%data_r(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_r(:n_size, m, l, iatom)*mat_hlp%data_r(indx3, i_vec)
-                  enddo
+               do i_vec = 1, n_vec
+                  mat_out%data_r(indx1:indx2, i_vec) = mat_out%data_r(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_r(:n_size, m, l, iatom)*mat_hlp%data_r(indx3, i_vec)
+               enddo
 
-                  indx1 = indx2
-               END DO
-
+               indx1 = indx2
             END DO
+
          END DO
       END DO
 
