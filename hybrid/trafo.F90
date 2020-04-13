@@ -6,9 +6,6 @@
 
 MODULE m_trafo
    use m_judft
-   INTERFACE bra_trafo
-      module procedure bra_trafo_real, bra_trafo_cmplx
-   end interface bra_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -725,7 +722,7 @@ CONTAINS
    ! symmetrie equivalent one
    ! isym maps kpts%bkp(ikpt) on ikpt
 
-   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, phase, vecin_r, vecout_r)
+   subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, jsp, psize,  phase, vecin, vecout)
       use m_types
       use m_constants
       use m_judft
@@ -733,46 +730,67 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
-      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp
-      REAL, INTENT(IN)                  ::  vecin_r(:, :, :)
-      REAL, INTENT(INOUT)               ::  vecout_r(:, :, :)
+      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      type(t_mat), INTENT(IN)           :: vecin
+      type(t_mat), INTENT(INOUT)        :: vecout
+      COMPLEX, INTENT(INOUT)            :: phase(:, :)
+
+      if(vecin%l_real) then 
+         call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin%data_r, vecout%data_r)
+      else
+         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin%data_c, vecout%data_c)
+      endif
+
+   end subroutine bra_trafo
+
+   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin_r, vecout_r)
+      use m_types
+      use m_constants
+      use m_judft
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      REAL, INTENT(IN)                  ::  vecin_r(:,:)
+      REAL, INTENT(INOUT)               ::  vecout_r(:,:)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
-      integer :: ok, i, j
+      COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
+      integer :: ok, i, j, cnt
 
       phase = cmplx_0
       call timestart("bra trafo real")
-      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+      allocate(vecin1(size(vecin_r,dim=1), size(vecin_r,dim=2)), stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
-      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), stat=ok, source=cmplx_0)
+
+      allocate (vecout1(size(vecin_r,dim=1), size(vecin_r,dim=2)), stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       vecin1 = vecin_r
-      DO i = 1, nbands
-         DO j = 1, MAXVAL(hybdat%nobd(:, jsp))
-            CALL desymmetrize(vecin1(:hybdat%nbasp, j, i), hybdat%nbasp, 1, 1, &
-                              fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
-         END DO
+      DO i = 1, nbands * psize
+         CALL desymmetrize(vecin1(:hybdat%nbasp, i), hybdat%nbasp, 1, 1, &
+                           fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       END DO
 
-      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, fi%sym, mpdata, &
+      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, psize, fi%sym, mpdata, &
                           fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
       deallocate (vecin1)
 
+      cnt = 0
       DO i = 1, nbands
-         DO j = 1, MAXVAL(hybdat%nobd(:, jsp))
-
-            CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
+         DO j = 1, psize
+            cnt = cnt + 1
+            CALL symmetrize(vecout1(:,cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
-            phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
-            vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
-            IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
-               WRITE (*, *) vecout1(:, j, i)
+            phase(j, i) = commonphase(vecout1(:,cnt), hybdat%nbasm(ikpt))
+            vecout1(:,cnt) = vecout1(:,cnt)/phase(j, i)
+            IF (any(abs(aimag(vecout1(:,cnt))) > 1e-8)) THEN
+               WRITE (*, *) vecout1(:,cnt)
                call judft_error('bra_trafo: Residual imaginary part.')
             END IF
 
@@ -784,7 +802,7 @@ CONTAINS
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
-   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp, phase, vecin_c, vecout_c)
+   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp,psize, phase, vecin_c, vecout_c)
       use m_types
       use m_constants
       use m_judft
@@ -792,21 +810,21 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
-      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp
-      COMPLEX, INTENT(IN)               ::  vecin_c(:, :, :)
-      COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :, :)
+      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
+      COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
+      COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
       integer :: ok
       character(len=300)     :: errmsg
 
       phase = cmplx_0
       call timestart("bra trafo cmplx")
 
-      allocate (vecin1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), errmsg=errmsg, stat=ok, source=cmplx_0)
+      allocate (vecin1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1. Error: ' // trim(errmsg))
-      allocate (vecout1(hybdat%nbasm(ikpt), MAXVAL(hybdat%nobd(:, jsp)), nbands), errmsg=errmsg, stat=ok, source=cmplx_0)
+      allocate (vecout1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1. Error: ' // trim(errmsg))
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
@@ -814,7 +832,8 @@ CONTAINS
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       vecin1 = vecin_c
 
-      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
+      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, psize,&
+                          fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
 
       phase = cmplx_1
       vecout_c = vecout1
@@ -822,102 +841,7 @@ CONTAINS
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
-   SUBROUTINE bra_trafo_old( &
-      l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
-      nobd, nbands, ikpt, sym, &
-      mpdata, hybinp, hybdat, kpts, atoms, &
-      phase)
-
-      !  kpts%bkp(ikpt)  ::  parent of ikpt
-      !  kpts%bksym(ikpt) maps kpts%bkp(ikpt) on ikpt
-
-      USE m_constants
-      USE m_util
-      USE m_types
-      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
-      IMPLICIT NONE
-      type(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybinp), INTENT(IN)   :: hybinp
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_kpts), INTENT(IN)   :: kpts
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-
-!     - scalars -
-      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands
-
-!     - arrays -
-
-      LOGICAL, INTENT(IN)      :: l_real
-
-      REAL, INTENT(IN)         ::  vecin_r(:, :, :)
-      REAL, INTENT(INOUT)      ::  vecout_r(:, :, :)
-      COMPLEX, INTENT(IN)      ::  vecin_c(:, :, :)
-      COMPLEX, INTENT(INOUT)   ::  vecout_c(:, :, :)
-      COMPLEX, INTENT(INOUT)   ::  phase(:, :)
-
-      integer :: i, j, ok
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
-
-      phase = cmplx_0
-      call timestart("bra trafo")
-
-      allocate (vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
-                vecout1(hybdat%nbasm(ikpt), nobd, nbands), stat=ok)
-      IF (ok /= 0) &
-         call judft_error('bra_trafo: error allocating vecin1 or vecout1')
-      vecin1 = 0; vecout1 = 0
-
-      IF (maxval(hybinp%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
-
-!     transform back to unsymmetrized product basis in case of inversion symmetry
-      if (l_real) THEN
-         vecin1 = vecin_r
-         DO i = 1, nbands
-            DO j = 1, nobd
-               CALL desymmetrize(vecin1(:hybdat%nbasp, j, i), hybdat%nbasp, 1, 1, &
-                                 atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
-            END DO
-         END DO
-      else
-         vecin1 = vecin_c
-      endif
-
-      call bra_trafo_core(nobd, nbands, ikpt, sym, mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
-      deallocate (vecin1)
-
-      if (l_real) THEN
-         DO i = 1, nbands
-            DO j = 1, nobd
-
-               CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
-                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
-
-               phase(j, i) = commonphase(vecout1(:, j, i), hybdat%nbasm(ikpt))
-               vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
-               IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
-                  WRITE (*, *) vecout1(:, j, i)
-                  call judft_error('bra_trafo: Residual imaginary part.')
-               END IF
-
-            END DO
-         END DO
-      else
-         phase = (1.0, 0.0)
-      endif
-
-      if (l_real) THEN
-         vecout_r = real(vecout1)
-         vecout_c = CMPLX_NOT_INITALIZED
-      else
-         vecout_c = vecout1
-         vecout_r = REAL_NOT_INITALIZED
-      endif
-      deallocate (vecout1)
-      call timestop("bra trafo")
-   END SUBROUTINE bra_trafo_old
-
-   subroutine bra_trafo_core(nobd, nbands, ikpt, sym, &
+   subroutine bra_trafo_core(nobd, nbands, ikpt, psize, sym, &
                              mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
       use m_types
       use m_constants
@@ -929,10 +853,10 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
-      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands
+      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands, psize
 
-      COMPLEX, intent(in)     :: vecin1(:, :, :)
-      complex, intent(inout)  :: vecout1(:, :, :)
+      COMPLEX, intent(in)     :: vecin1(:, :)
+      complex, intent(inout)  :: vecout1(:, :)
 
       INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2
       INTEGER                 :: igptm, igptm2, igptp, iiatom, iiop, inviop
@@ -1023,10 +947,8 @@ CONTAINS
                   j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
                   j2 = j1 + nn*2*l
 
-                  DO i = 1, nbands
-                     DO j = 1, nobd
-                        vecout1(i1:i2:nn, j, i) = cdum*matmul(vecin1(j1:j2:nn, j, i), dwgn(-l:l, -l:l, l))
-                     END DO
+                  DO i = 1, nbands*psize
+                     vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
                   END DO
 
                END DO
@@ -1061,7 +983,7 @@ CONTAINS
          END IF
          cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
 
-         vecout1(hybdat%nbasp + igptm, :, :) = cdum*vecin1(hybdat%nbasp + igptm2, :, :)
+         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
       END DO
    end subroutine bra_trafo_core
 
