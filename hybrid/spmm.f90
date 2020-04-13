@@ -31,9 +31,8 @@ contains
 
       ibasm = calc_ibasm(fi, mpdata)
 
+      call timestart("0 > ibasm: small matricies")
       ! compute vecout for the indices from 0:ibasm
-      iatom = 0
-      indx1 = 0; indx2 = 0; indx3 = ibasm; 
       !$OMP PARALLEL DO default(none) schedule(dynamic)&
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
       !$OMP private(lm, l, m, n_size, i_vec)&
@@ -76,6 +75,7 @@ contains
          END DO
       END DO
       !$OMP END PARALLEL DO
+      call timestop("0 > ibasm: small matricies")
 
       IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
 
@@ -225,7 +225,8 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4, iatom2, idx_start, idx_stop, l1, lm
+      integer :: ishift1, indx4, iatom2, l1, lm, idx1_start, idx3_start
+      integer :: iat2, it2, l2
       type(t_mat) :: mat_hlp, test_hlp, test_out
 
       call timestart("spmvec_noinvs")
@@ -241,43 +242,54 @@ contains
 
       ! compute vecout for the indices from 0:ibasm
 
-      call timestart("0->ibasm: matmul")
-
-      iatom = 0
-      indx3 = ibasm
+      call timestart("0 > ibasm: small matricies")
+      !$OMP PARALLEL DO default(none) schedule(dynamic)&
+      !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
+      !$OMP private(lm, l, m, n_size, i_vec)&
+      !$OMP lastprivate(indx2)&
+      !$OMP shared(ibasm, mat_hlp, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
       do iatom = 1, fi%atoms%nat
          itype = fi%atoms%itype(iatom)
+
+         idx1_start = 0
+         do iat2 =1,iatom-1
+            it2 = fi%atoms%itype(iat2)
+            do l2 = 0, fi%hybinp%lcutm1(it2)
+               idx1_start = idx1_start + (mpdata%num_radbasfn(l2, it2)-1) * (2*l2+1)
+            enddo
+         enddo
+         indx1 = idx1_start
+
+         idx3_start = ibasm
+         do iat2 = 1,iatom-1
+            it2 = fi%atoms%itype(iat2)
+            idx3_start = idx3_start + (fi%hybinp%lcutm1(it2)+1)**2
+         enddo
+         indx3 = idx3_start 
          do lm = 1, (fi%hybinp%lcutm1(itype) + 1)**2
             call calc_l_m_from_lm(lm, l, m)
-            idx_start = 0
-            ! go through previous fi%atoms
-            do iatom2 = 1, iatom - 1
-               do l1 = 0, fi%hybinp%lcutm1(itype)
-                  idx_start = idx_start + (2*l1 + 1)*(mpdata%num_radbasfn(l1, fi%atoms%itype(iatom2)) - 1)
-               enddo
-            enddo
-            ! current atom
-            do l1 = 0, l - 1
-               idx_start = idx_start + (2*l1 + 1)*(mpdata%num_radbasfn(l1, itype) - 1)
-            enddo
-            !current l
-            idx_start = 1 + idx_start + ((m + l)*(mpdata%num_radbasfn(l, itype) - 1))
-
-            idx_stop = idx_start + mpdata%num_radbasfn(l, itype) - 2
+            indx1 = indx1 + 1
+            indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
             indx3 = indx3 + 1
-            n_size = mpdata%num_radbasfn(l, itype) - 1 
+
+            n_size = mpdata%num_radbasfn(l, itype) - 1
 
             call zgemm("N","N", n_size, mat_hlp%matsize2, n_size, cmplx_1, hybdat%coul(ikpt)%mt1_c(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_c,dim=2),&
-                        mat_hlp%data_c(idx_start,1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(idx_start,1), mat_out%matsize1)
+                        mat_hlp%data_c(indx1,1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(indx1,1), mat_out%matsize1)
 
             do i_vec = 1, n_vec
-               mat_out%data_c(idx_start:idx_stop, i_vec) = mat_out%data_c(idx_start:idx_stop, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp%data_c(indx3, i_vec)
+               !call zaxpy(n_size, mat_hlp%data_c(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out%data_c(indx1,i_vec), 1)
+               call zaxpy(n_size, mat_hlp%data_c(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out%data_c(indx1,i_vec), 1)
+               !mat_out%data_c(indx1:indx2, i_vec) = mat_out%data_c(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp%data_c(indx3, i_vec)
             enddo
+
+            indx1 = indx2
          END DO
       END DO
-      call timestop("0->ibasm: matmul")
+      !$OMP END PARALLEL DO
+      call timestop("0 > ibasm: small matricies")
 
-      IF (idx_stop /= ibasm) call judft_error('spmvec: error counting basis functions')
+      IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
 
       IF (ikpt == 1) THEN
          call timestart("gamma point 1")
