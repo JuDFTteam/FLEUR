@@ -9,6 +9,7 @@ CONTAINS
 
   SUBROUTINE genMTBasis(atoms,enpara,vTot,mpi,iType,jspin,usdus,f,g,flo,l_dftspinpol)
     USE m_types
+    USE m_constants
     USE m_radfun
     USE m_radflo
     !$  use omp_lib
@@ -42,7 +43,7 @@ CONTAINS
     !$ l_write = l_write .and. omp_get_num_threads()==1
 
 
-    IF (l_write) WRITE (6,FMT=8000) iType
+    IF (l_write) WRITE (oUnit,FMT=8000) iType
 
     DO l = 0,atoms%lmax(iType)
        !Check if the orbital is to be treated with Hubbard 1
@@ -63,7 +64,7 @@ CONTAINS
        CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrTmp,atoms,&
             f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)      
        IF (l_write) THEN
-          WRITE (6,FMT=8010) l,enpara%el0(l,iType,jspin),usdus%us(l,iType,jspin),usdus%dus(l,iType,jspin),&
+          WRITE (oUnit,FMT=8010) l,enpara%el0(l,iType,jspin),usdus%us(l,iType,jspin),usdus%dus(l,iType,jspin),&
                nodeu,usdus%uds(l,iType,jspin),usdus%duds(l,iType,jspin),noded,usdus%ddn(l,iType,jspin),wronk
        END IF
     END DO

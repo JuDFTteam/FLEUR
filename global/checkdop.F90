@@ -1,9 +1,7 @@
       MODULE m_checkdop
       CONTAINS
-        SUBROUTINE checkdop(&
-             &                    p,np,n,na,ivac,iflag,jsp,&
-             &                    atoms,sphhar,stars,sym,&
-             &                    vacuum,cell,oneD,potden)
+        SUBROUTINE checkdop(p,np,n,na,ivac,iflag,jsp,atoms,sphhar,stars,sym,&
+                            vacuum,cell,oneD,potden)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
           !     potential or valence charge density                    *
@@ -13,14 +11,16 @@
           ! YM:  this routine doesn't really work in the vacuum in 1D case yet
           ! ************************************************************
 
+          USE m_types
+          USE m_constants
           USE m_juDFT
           USE m_starf, ONLY : starf2,starf3
           USE m_angle
           USE m_ylm
-          USE m_types
-          USE m_constants
           USE m_fitchk
+
           IMPLICIT NONE
+
           !     ..
           !     .. Scalar Arguments ..
           
@@ -65,16 +65,12 @@
              DO j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
-                   CALL starf3(&
-                        &               sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,p(:,j),sym%invtab,&
-                        &               sf3)!keep
+                   CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,p(:,j),sym%invtab,sf3)!keep
                 ENDIF
                 !
                 IF (oneD%odi%d1) THEN
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
-                   CALL starf3(&
-                        &               sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,&
-                        &               sf3)!keep
+                   CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,sf3)!keep
                 ENDIF
                 v1(j) = 0.0
                 DO k = 1,stars%ng3
@@ -83,15 +79,13 @@
              ENDDO
              !     ---> vacuum part
              IF (l_cdn) THEN
-                WRITE (6,FMT=9000) ivac
+                WRITE (oUnit,FMT=9000) ivac
              ELSE
-                WRITE (6,FMT=8000) ivac
+                WRITE (oUnit,FMT=8000) ivac
              ENDIF
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
-                   CALL starf2(&
-                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,&
-                        &           sf2)!keep
+                   CALL starf2(sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,sf2)!keep
                    v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
                       v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
@@ -111,23 +105,21 @@
                 IF (oneD%odi%d1) THEN
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
-                   WRITE (6,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
+                   WRITE (oUnit,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
                 ELSE
                    rcc=MATMUL(cell%amat,p(:,j))
-                   WRITE (6,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
+                   WRITE (oUnit,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
                 ENDIF
              ENDDO
              CALL fitchk(v1(:np),v2(:np),av,rms,dms)
-             WRITE (6,FMT=8030) av,rms,dms
+             WRITE (oUnit,FMT=8030) av,rms,dms
              RETURN
           ENDIF
           !      ----> interstitial part
           DO j = 1,np
              rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
-             CALL starf3(&
-                  &               sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,&
-                  &               sf3)!keep
+             CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,sf3)!keep
              !
              v1(j) = 0.0
              DO k = 1,stars%ng3
@@ -136,9 +128,9 @@
           ENDDO
           !     ----> m.t. part
           IF (l_cdn) THEN
-             WRITE (6,FMT=9010) n
+             WRITE (oUnit,FMT=9010) n
           ELSE
-             WRITE (6,FMT=8010) n
+             WRITE (oUnit,FMT=8010) n
           ENDIF
           ir2 = 1.0
           IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
@@ -170,9 +162,7 @@
 
              END IF
              ! new
-             CALL ylm4(&
-                  &             atoms%lmax(n),x,&
-                  &             ylm)
+             CALL ylm4(atoms%lmax(n),x,ylm)
              help = 0.0
              DO lh = 0,sphhar%nlh(nd)
                 s = 0.0
@@ -187,11 +177,11 @@
              IF (j.LE.8) THEN
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
-                WRITE (6,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
+                WRITE (oUnit,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
              END IF
           ENDDO
           CALL fitchk(v1(:np),v2(:np),av,rms,dms)
-          WRITE (6,FMT=8030) av,rms,dms
+          WRITE (oUnit,FMT=8030) av,rms,dms
 8000      FORMAT (/,'    int.-vac. boundary (potential): ivac=',i2,/,t10,&
                &       'int-coord',t36,'cart-coord',t57,' inter. ',t69,' vacuum ')
 8010      FORMAT (/,'    int.-m.t. boundary (potential): atom type=',i2,/,&
