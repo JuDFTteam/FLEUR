@@ -35,7 +35,8 @@ c
 c                         S. Bl"ugel, IFF, 13. Nov. 97    
 c               tested by S. Heinze , IFF, 
 c*********************************************************************
-      use m_juDFT
+      USE m_juDFT
+      USE m_constants
 c
 C     .. Parameters ..
       IMPLICIT NONE
@@ -82,7 +83,7 @@ c---> check on the zeros of some determinants
 c
       DO j = 1 , 3
          IF ( det(j,j) .lt. eps ) THEN
-            WRITE (6,
+            WRITE (oUnit,
      +                '('' problem with det('',i1,'','',i1,'')'')') j,j
             CALL juDFT_error(" boxdim: determinant",calledby ="boxdim")
          END IF

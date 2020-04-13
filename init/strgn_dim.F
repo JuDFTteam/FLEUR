@@ -10,11 +10,15 @@ c     generate two- and three-dimensional stars
 c     for slab geometry
 c     e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
+
+      USE m_constants
+      USE m_types_oneD
       USE m_boxdim
       USE m_spgrot
-      USE m_types_oneD
       USE m_ifft, ONLY : i2357
+
       IMPLICIT NONE
+
       LOGICAL,INTENT(IN)    :: l_write
       INTEGER, INTENT (IN)  :: nop,nop2
       REAL,    INTENT (IN)  :: gmax
@@ -163,7 +167,7 @@ c-odim    modifications due to one-dimensionality, YM
       END IF
 c+odim
 c     listing
-      if (l_write) WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
+      if (l_write) WRITE (oUnit,8000) gmax,n3d,n2d,k1d,k2d,k3d
  8000 FORMAT (' gmax=',f10.6/' n3d=  ',i10/' n2d=  ',i5/' k1d=  ',
      +       i5/' k2d=  ',i5/' k3d=  ',i5/)
 
@@ -178,6 +182,7 @@ c     *********************************************************
 c     generate three-dimensional stars for bulk
 c     based on  e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
+      USE m_constants
       USE m_boxdim
       USE m_spgrot
       USE m_ifft, ONLY : i2357
@@ -274,7 +279,7 @@ c
 #endif
 c
 c     listing
-      if (l_write) WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
+      if (l_write) WRITE (oUnit,8000) gmax,n3d,n2d,k1d,k2d,k3d
  8000 FORMAT (' gmax=',f10.6/' n3d=  ',i7/' n2d=  ',i7/' k1d=  ',
      +       i7/' k2d=  ',i7/' k3d=  ',i7/)
 

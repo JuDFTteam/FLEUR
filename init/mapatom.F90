@@ -25,10 +25,13 @@
 !   has a bigger atom index than the related atom
 ! p.kurz aug. 1996
 !***********************************************************************
-!
-      USE m_socsym
+
       USE m_types
+      USE m_constants
+      USE m_socsym
+
       IMPLICIT NONE
+
       TYPE(t_sym),INTENT(INOUT):: sym
       TYPE(t_atoms),INTENT(IN) :: atoms
       TYPE(t_cell),INTENT(IN)  :: cell
@@ -41,16 +44,12 @@
       INTEGER i,icount,j,j1,j2,j3,jop,n,na,nat1,nat2,nb,na_r
       INTEGER k,ij,n1,n2,ix,iy,iz,na2
       REAL, PARAMETER :: del = 1.0e-4
-!     ..
+
 !     .. Local Arrays ..
       INTEGER mt(3,3),mp(3,3)
       REAL aamat(3,3),sum_tau_lat(3),sum_taual(3)
       REAL gam(3),gaminv(3),gamr(3),sr(3),ttau(3)
       LOGICAL error(sym%nop)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC real,sqrt
-!     ..
 
     !  CALL dotset(&
     ! &            cell,&
@@ -78,7 +77,7 @@
         error(:) = .false.
       ENDIF
 
-      WRITE (6,FMT=8000)
+      WRITE (oUnit,FMT=8000)
  8000 FORMAT (/,/,5x,'group operations on equivalent atoms:')
       nat1 = 1
       DO n = 1,atoms%ntype
@@ -145,11 +144,11 @@
 ! end of operations
           ENDDO
             IF (icount.LE.0) THEN
-             write(6,*) "Mapping failed for atom:",nat1
-             write(6,*) "No of symmetries tested:",sym%nop
+             write(oUnit,*) "Mapping failed for atom:",nat1
+             write(oUnit,*) "No of symmetries tested:",sym%nop
              CALL juDFT_error("mapatom",calledby="mapatom")
            ENDIF
-            WRITE (6,FMT=8010) nat1,na,sym%ngopr(na)
+            WRITE (oUnit,FMT=8010) nat1,na,sym%ngopr(na)
  8010       FORMAT (5x,'atom',i5,' can be mapped into atom',i5,&
      &             ' through group  operation',i4)
 !
@@ -166,10 +165,10 @@
 !
       IF (input%l_f.OR.(atoms%n_u+gfinp%n.GT.0)) THEN
 
-      WRITE (6,FMT=&
+      WRITE (oUnit,FMT=&
      &  '(//,"list of operations which leave taual invariant",/)')
       DO na = 1,nat2
-         WRITE (6,FMT='("atom nr.",i3,3x,(t14,"ops are:",24i3))') na,&
+         WRITE (oUnit,FMT='("atom nr.",i3,3x,(t14,"ops are:",24i3))') na,&
      &     (sym%invarop(na,nb),nb=1,sym%invarind(na))
       END DO
 
@@ -180,7 +179,7 @@
 !
 !--->    loop over all operations
 !
-      WRITE (6,FMT=8040)
+      WRITE (oUnit,FMT=8040)
  8040 FORMAT (/,/,' multiplication table',/,/)
       sym%multab = 0
       DO j=1,sym%nop
@@ -199,15 +198,15 @@
                     sym%multab(j,i) = k
                     IF (k .EQ. 1) sym%invtab(j)=i
                  ELSE
-                    WRITE(6,'(" Symmetry error: multiple ops")')
+                    WRITE(oUnit,'(" Symmetry error: multiple ops")')
                      CALL juDFT_error("Multiple ops",calledby="mapatom")
                  ENDIF
               ENDIF
             ENDDO
 
             IF (sym%multab(j,i).EQ.0) THEN
-               WRITE (6,'(" Group not closed")')
-               WRITE (6,'("  j , i =",2i4)') j,i
+               WRITE (oUnit,'(" Group not closed")')
+               WRITE (oUnit,'("  j , i =",2i4)') j,i
                CALL juDFT_error("mapatom: group not closed",calledby&
      &              ="mapatom")
             ENDIF
@@ -215,12 +214,12 @@
       ENDDO
 
       DO n1 = 1,sym%nop
-         WRITE (6,FMT=8060) (sym%multab(n1,n2),n2=1,sym%nop)
+         WRITE (oUnit,FMT=8060) (sym%multab(n1,n2),n2=1,sym%nop)
       END DO
  8060 FORMAT (1x,48i3)
-      WRITE (6,FMT='(//," inverse operations",//)')
+      WRITE (oUnit,FMT='(//," inverse operations",//)')
       DO n1 = 1,sym%nop
-         WRITE (6,FMT=8060) n1,sym%invtab(n1)
+         WRITE (oUnit,FMT=8060) n1,sym%invtab(n1)
       END DO
 
       DO na = 1,atoms%nat
@@ -230,7 +229,7 @@
 
       IF (.not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)) THEN
       IF (sym%invs) THEN
-         WRITE (6,FMT=*)
+         WRITE (oUnit,FMT=*)
          nat1 = 1
          DO n = 1,atoms%ntype
             nat2 = nat1 + atoms%neq(n) - 1
@@ -252,7 +251,7 @@
                               sym%invsat(na2) = 2
                               sym%invsatnr(na)  = na2
                               sym%invsatnr(na2) = na
-                              WRITE (6,FMT=9000) n,na,na2
+                              WRITE (oUnit,FMT=9000) n,na,na2
                               cycle naloop
                            END IF
                         END DO
@@ -263,7 +262,7 @@
             END DO
             nat1 = nat1 + atoms%neq(n)
          END DO
-      WRITE (6,FMT=*) sym%invsat
+      WRITE (oUnit,FMT=*) sym%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3,&
      &       ' via 3d inversion')
       END IF

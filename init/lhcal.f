@@ -28,6 +28,7 @@
      >                 memd,nlhd,lmax,nrot,orth,
      <                 nlh,lnu,mem,lmnu,c)
 !DEC$ NOOPTIMIZE
+      USE m_constants
       USE m_gaussp
       USE m_gtest
       USE m_ylm
@@ -195,9 +196,9 @@
                ylmr(lh) = ylmr(lh) + c(m,lh)*ylm(lmnu(m,lh))
             ENDDO
             IF ( abs(ylms(lh)-ylmr(lh)).GT.del ) THEN
-               WRITE (6,'(/," error for operation",i3)') n
-               WRITE (6,'(  " lattice harmonic   ",i3)') lh
-               WRITE (6,'(4f12.6)') ylms(lh),ylmr(lh)
+               WRITE (oUnit,'(/," error for operation",i3)') n
+               WRITE (oUnit,'(  " lattice harmonic   ",i3)') lh
+               WRITE (oUnit,'(4f12.6)') ylms(lh),ylmr(lh)
                 CALL juDFT_error("k_lv(Rr)",calledby="lhcal")
             ENDIF
          ENDDO

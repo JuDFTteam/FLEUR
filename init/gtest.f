@@ -6,9 +6,9 @@
 !     3) (ylm(lmax,m=lmax | ylm) for all lm
 !*********************************************************************
       CONTAINS
-      SUBROUTINE gtest(
-     >                 lmax,ngpts,vgauss,wt)
+      SUBROUTINE gtest(lmax,ngpts,vgauss,wt)
 
+      USE m_constants
       USE m_ylm
       IMPLICIT NONE
 !
@@ -47,24 +47,24 @@
       lerr = .false.
       DO lm=1,lmmax
          IF ((abs(s1(lm)).GT.del).AND.(lm.GT.1)) THEN
-            WRITE (6,1000) lm,s1(lm)
+            WRITE (oUnit,1000) lm,s1(lm)
             lerr = .true.
          ENDIF
  1000    FORMAT (20x,' integration of s.h. lm=',i3,1p,2e14.6)
 
          temp = s2(lm) - cmplx(1.0,0.0)
          IF (abs(temp).GT.del) THEN
-            WRITE (6,1001) lm,temp
+            WRITE (oUnit,1001) lm,temp
             lerr = .true.
          ENDIF
  1001    FORMAT (20x,' normalization error lm=',i3,1p,2e14.6)
 
          IF (abs(s3(lm)).GT.del) THEN
             IF(lm.ne.lmmax) THEN
-              WRITE (6,1002) lm,s3(lm)
+              WRITE (oUnit,1002) lm,s3(lm)
               lerr = .true.
             ELSEIF( abs(abs(s3(lm))-1.0).GT.del ) THEN
-              WRITE (6,1002) lm,s3(lm)
+              WRITE (oUnit,1002) lm,s3(lm)
               lerr = .true.
             ENDIF
          ENDIF
@@ -72,7 +72,7 @@
       ENDDO
 
       IF (lerr) THEN
-        WRITE (6,'(/,'' error in gaussian points'')')
+        WRITE (oUnit,'(/,'' error in gaussian points'')')
          CALL juDFT_error("Error in gaussian points",calledby="gtest")
       ENDIF
 

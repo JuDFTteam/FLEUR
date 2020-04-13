@@ -41,7 +41,8 @@
 
       USE m_ptsym
       USE m_lhcal
-      USE m_constants, ONLY : pimach
+      USE m_constants
+
       IMPLICIT NONE
 
 !---> Arguments
@@ -74,7 +75,9 @@
       nlhd_max = (lmaxd+1)**2
       ALLOCATE ( typsym(natd) )
 
-      if (l_write) WRITE (6,'(//," Local symmetries:",/,1x,17("-"))')
+      if (l_write) THEN
+         WRITE (oUnit,'(//," Local symmetries:",/,1x,17("-"))')
+      END IF
 !
 !===> determine the point group symmetries for each atom given
 !===> the space group operations and atomic positions
@@ -85,15 +88,15 @@
      <           nsymt,typsym,nrot,locops)
 
       if (l_write) THEN
-        WRITE (6,'("   symmetry kinds =",i4)') nsymt
+        WRITE (oUnit,'("   symmetry kinds =",i4)') nsymt
         DO nsym = 1, nsymt
-          WRITE (6,'(/,"   symmetry",i3,":",i4," operations in",
+          WRITE (oUnit,'(/,"   symmetry",i3,":",i4," operations in",
      +      " local point group",/,8x,"atoms:")') nsym,nrot(nsym)
           na = 0
           DO n=1,ntype
             DO nn = 1, neq(n)
               na = na + 1
-              IF ( typsym(na) == nsym ) WRITE (6,'(i14)') na
+              IF ( typsym(na) == nsym ) WRITE (oUnit,'(i14)') na
             ENDDO
           ENDDO
         ENDDO
@@ -185,20 +188,20 @@
 !---> output results
       if (.not.l_write) return
       DO n = 1, nsymt
-        WRITE (6,'(/," --- Local symmetry",i3,":",i4,
+        WRITE (oUnit,'(/," --- Local symmetry",i3,":",i4,
      &       " lattice harmonics ",30("-"))') n,nlh(n)+1
         DO lh = 0,nlh(n)
-          WRITE (6,'(/,5x,"lattice harmonic",i4,":  l=",i2,
+          WRITE (oUnit,'(/,5x,"lattice harmonic",i4,":  l=",i2,
      &         ",",i3," members:")') lh+1,llh(lh,n),nmem(lh,n)
           IF ( mod(nmem(lh,n),2)==1 ) THEN
-            WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+            WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &                     mlh(1,lh,n),clnu(1,lh,n)
             IF ( nmem(lh,n) > 1 ) THEN
-              WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+              WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &             (mlh(m,lh,n),clnu(m,lh,n),m=2,nmem(lh,n))
             ENDIF
           ELSE
-            WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+            WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &            (mlh(m,lh,n),clnu(m,lh,n),m=1,nmem(lh,n))
           ENDIF
         ENDDO

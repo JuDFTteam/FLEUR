@@ -13,16 +13,16 @@ MODULE m_strgn
   !     U.Alekseeva          Jan.2019
   !     *********************************************************
 CONTAINS
-  SUBROUTINE strgn1(&
-       &                  l_write,stars,sym,atoms,&
-       &                  vacuum,sphhar,input,cell,xcpot)
-    !
+  SUBROUTINE strgn1(l_write,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+
+    USE m_types
+    USE m_constants
     USE m_spgrot
     USE m_angle
-    USE m_types
     USE m_boxdim
     USE m_sort
     USE m_cdn_io
+
     IMPLICIT NONE
     LOGICAL,INTENT(IN)           :: l_write
     TYPE(t_stars),INTENT(INOUT)  :: stars
@@ -123,7 +123,7 @@ CONTAINS
                !--->    new representative found
                stars%ng2 = stars%ng2 + 1
                IF (stars%ng2.GT.stars%ng2) THEN
-                  if (l_write) write (6,8070) stars%ng2,stars%ng2
+                  if (l_write) write (oUnit,8070) stars%ng2,stars%ng2
                   CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
                ENDIF
                DO j = 1,2
@@ -139,12 +139,12 @@ CONTAINS
 8070 FORMAT ('nq2 = ',i5,' > n2d =',i5)
 
     IF( mxx1.GT.stars%mx1) THEN
-       WRITE (6,'(/'' mxx1.gt.k1d. mxx1,k1d='',2i4)')  mxx1,stars%mx1
+       WRITE (oUnit,'(/'' mxx1.gt.k1d. mxx1,k1d='',2i4)')  mxx1,stars%mx1
        CALL juDFT_error("mxx1.gt.k1d",calledby="strgn")
     ENDIF
 
     IF (mxx2.GT.stars%mx2) THEN
-       WRITE (6,'(/'' mxx2.gt.k2d. mxx2,k2d='',2i4)')  mxx2,stars%mx2
+       WRITE (oUnit,'(/'' mxx2.gt.k2d. mxx2,k2d='',2i4)')  mxx2,stars%mx2
        CALL juDFT_error("mxx2.gt.k2d",calledby="strgn")
     ENDIF
 
@@ -167,7 +167,7 @@ CONTAINS
     ENDDO
 
 
-    if (l_write) WRITE (6,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
+    if (l_write) WRITE (oUnit,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
          &     /(3i4,f10.5,f10.5))')&
          &  stars%ng2,(k,stars%kv2(1,k),stars%kv2(2,k),stars%sk2(k),stars%phi2(k),k=1,stars%ng2)
     !
@@ -189,10 +189,10 @@ CONTAINS
     stars%pgfft=0.0
     stars%pgfft2=0.0
     !-gu
-    if (l_write) WRITE (6,'(/'' bmat(3,3),mx3='',f10.5,i5)') cell%bmat(3,3),stars%mx3
+    if (l_write) WRITE (oUnit,'(/'' bmat(3,3),mx3='',f10.5,i5)') cell%bmat(3,3),stars%mx3
 
     IF (stars%mx3.GT.stars%mx3) THEN
-       WRITE ( 6,FMT=8000) stars%mx3,stars%mx3
+       WRITE (oUnit,FMT=8000) stars%mx3,stars%mx3
        CALL juDFT_error("mx3.gt.k3d",calledby="strgn")
     ENDIF
 8000 FORMAT('   mx3.gt.k3d:',2i6)
@@ -213,7 +213,7 @@ CONTAINS
              !
              stars%ng3 = stars%ng3 + 1
              IF (stars%ng3.GT.stars%ng3) THEN
-                WRITE (6,*) stars%ng3,stars%ng3
+                WRITE (oUnit,*) stars%ng3,stars%ng3
                 CALL juDFT_error("nq3.GT.n3d",calledby="strgn")
              ENDIF
              DO j = 1,2
@@ -255,7 +255,7 @@ CONTAINS
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
-    if (l_write) write (6,8060) stars%gmax, stars%sk3(stars%ng3)
+    if (l_write) write (oUnit,8060) stars%gmax, stars%sk3(stars%ng3)
     stars%gmax = stars%sk3(stars%ng3)
 8060 FORMAT (/,1x,'old stars%gmax    =',f10.5, '(a.u.)**(-1) ==>  new stars%gmax  '&
          &       ,'  =',f10.5,'(a.u.)**(-1) ',/,t38,'==>  new E_cut   =',&
@@ -467,36 +467,36 @@ CONTAINS
     !
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i5,/,' nq2=  ',i5,/)
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,/)
-    if (l_write) write (6,FMT=8030)
+    if (l_write) write (oUnit,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
 
-    if (l_write) write (6,FMT=8010) stars%gmax,stars%ng3,stars%ng2
-    if (l_write) write (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    if (l_write) write (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
+    if (l_write) write (oUnit,FMT=8010) stars%gmax,stars%ng3,stars%ng2
+    if (l_write) write (oUnit,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
+    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
          &  stars%kimax
 
-    if (l_write) write (6,FMT=8040)
+    if (l_write) write (oUnit,FMT=8040)
 8040 FORMAT(/4x,'no.',5x,'kv3',9x,'sk3',9x,'sk2',5x,&
          &  'ig2',1x,'nstr',2x,'nstr2'/)
 
     ned1=9
     nint=30
     DO k = 1,ned1
-       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
+       if (l_write) write (oUnit,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
             &                     stars%sk2(stars%ig2(k)),&
             &                     stars%ig2(k),stars%nstr(k),stars%nstr2(stars%ig2(k))
     ENDDO
 8050 FORMAT (1x,i5,3i4,2f12.6,i4,2i6)
 
     DO k = ned1+1,stars%ng3,nint
-       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
+       if (l_write) write (oUnit,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),&
             &                     stars%sk2(stars%ig2(k)),&
             &                     stars%ig2(k),stars%nstr(k),stars%nstr2(stars%ig2(k))
        kdone = k
     ENDDO
 
     IF (kdone.LT.stars%ng3) THEN
-       if (l_write) write (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),stars%sk3(stars%ng3),&
+       if (l_write) write (oUnit,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),stars%sk3(stars%ng3),&
             &                     stars%sk2(stars%ig2(stars%ng3)),&
             &                     stars%ig2(stars%ng3),stars%nstr(stars%ng3),stars%nstr2(stars%ig2(stars%ng3))
     ENDIF
@@ -590,7 +590,7 @@ CONTAINS
                      &                     kr)
                 stars%ng3 = stars%ng3 + 1
                 IF (stars%ng3.GT.stars%ng3) THEN
-                   WRITE (6,'("nq3 = ",i5," > n3d =",i5)') stars%ng3,stars%ng3
+                   WRITE (oUnit,'("nq3 = ",i5," > n3d =",i5)') stars%ng3,stars%ng3
                    CALL juDFT_error("nq3>n3d",calledby ="strgn")
                 ENDIF
                 DO j = 1,3
@@ -609,17 +609,17 @@ CONTAINS
     ENDDO x_dim
 
     IF( mxx1.GT.stars%mx1) THEN
-       WRITE (6,'(/'' mxx1.gt.k1d. mxx1,k1d='',2i4)')  mxx1,stars%mx1
+       WRITE (oUnit,'(/'' mxx1.gt.k1d. mxx1,k1d='',2i4)')  mxx1,stars%mx1
        CALL juDFT_error("mxx1>k1d",calledby ="strgn")
     ENDIF
 
     IF (mxx2.GT.stars%mx2) THEN
-       WRITE (6,'(/'' mxx2.gt.k2d. mxx2,k2d='',2i4)')  mxx2,stars%mx2
+       WRITE (oUnit,'(/'' mxx2.gt.k2d. mxx2,k2d='',2i4)')  mxx2,stars%mx2
        CALL juDFT_error("mxx2>k2d",calledby ="strgn")
     ENDIF
 
     IF (mxx3.GT.stars%mx3) THEN
-       WRITE (6,'(/'' mxx3.gt.k3d. mxx3,k3d='',2i4)')  mxx3,stars%mx3
+       WRITE (oUnit,'(/'' mxx3.gt.k3d. mxx3,k3d='',2i4)')  mxx3,stars%mx3
        CALL juDFT_error("mxx3>k3d",calledby ="strgn")
     ENDIF
 
@@ -646,7 +646,7 @@ CONTAINS
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
-    if (l_write) write (6,8060) stars%gmax, stars%sk3(stars%ng3)
+    if (l_write) write (oUnit,8060) stars%gmax, stars%sk3(stars%ng3)
     stars%gmax = stars%sk3(stars%ng3)
 8060 FORMAT (/,1x,'gmax    =',f10.5, '(a.u.)**(-1) ==>  new gmax  '&
          &       ,'  =',f10.5,'(a.u.)**(-1) ',/,t38,'==>  new E_cut   =',&
@@ -793,32 +793,32 @@ CONTAINS
     !-->  listing
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i7,/)
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,' mx3= ',i5,/)
-    if (l_write) write (6,FMT=8030)
+    if (l_write) write (oUnit,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
 
 
-    if (l_write) write (6,FMT=8010) stars%gmax,stars%ng3
-    if (l_write) write (6,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    if (l_write) write (6,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
+    if (l_write) write (oUnit,FMT=8010) stars%gmax,stars%ng3
+    if (l_write) write (oUnit,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
+    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
          &  stars%kimax
 
-    if (l_write) write (6,FMT=8040)
+    if (l_write) write (oUnit,FMT=8040)
 8040 FORMAT(/6x,'no.',5x,'kv3',9x,'sk3',7x,'nstr'/)
 
     ned1=9
     nint=30
     DO k = 1,ned1
-       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
+       if (l_write) write (oUnit,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
     ENDDO
 8050 FORMAT (1x,i7,3i4,f12.6,i6)
 
     DO k = ned1+1,stars%ng3,nint
-       if (l_write) write (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
+       if (l_write) write (oUnit,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
        kdone = k
     ENDDO
 
     IF (kdone.LT.stars%ng3) THEN
-       if (l_write) write (6,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),&
+       if (l_write) write (oUnit,FMT=8050) stars%ng3,(stars%kv3(j,stars%ng3),j=1,3),&
             &                     stars%sk3(stars%ng3),stars%nstr(stars%ng3)
     ENDIF
 
