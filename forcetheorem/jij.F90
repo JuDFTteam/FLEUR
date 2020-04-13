@@ -220,7 +220,7 @@ CONTAINS
 !                                   M. Lezaic 04
 !-------------------------------------------------------------------
 
-    USE m_constants, ONLY : pimach
+    USE m_constants
     PRINT *,"jcoef2 has still to be reimplemented"
 #ifdef CPP_NEVER
       USE m_nshell
@@ -296,7 +296,7 @@ c-------------------------------------------------------------------
 
             IF(nsh.LT.0)THEN
 c...   Setup for a calculation using least squares method
-            WRITE(6,*) 'Jij calculated with the least squares method'
+            WRITE(oUnit,*) 'Jij calculated with the least squares method'
              nsh=-nsh
              nshort=nsh
             ENDIF
@@ -426,8 +426,8 @@ c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
 
          ENDIF !if(n.eq.1)
       ENDDO !n
-      WRITE(6,5006)enmax,qssmax
-      WRITE(6,5007)enmin,qssmin
+      WRITE(oUnit,5006)enmax,qssmax
+      WRITE(oUnit,5007)enmin,qssmin
  5006 FORMAT('Maximal calculated energy = ',f20.10,'htr',
      & ' for the spin-spiral vector qss = ',3(f14.10,1x))
  5007 FORMAT('Minimal calculated energy = ',f20.10,'htr',
