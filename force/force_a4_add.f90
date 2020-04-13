@@ -55,12 +55,11 @@ CONTAINS
 
 
 
-  SUBROUTINE force_a4_add(&
-       &                        atoms,input,&
-       &                        force)
+  SUBROUTINE force_a4_add(atoms,input,force)
     !     This subroutine adds the coretail contribution of the forces to
     !     the atomic forces
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -168,10 +167,10 @@ CONTAINS
              !      +                                  + real(force_a4_1d(:,n,jsp)) ! is calculated only if odi%d1, otherwise 0
 
              !       write to out-file
-             WRITE (6,FMT=8010) n
-             WRITE (6,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
-             WRITE (6,FMT=8015) n
-             WRITE (6,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
+             WRITE (oUnit,FMT=8010) n
+             WRITE (oUnit,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
+             WRITE (oUnit,FMT=8015) n
+             WRITE (oUnit,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
 8010         FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015         FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
              !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)

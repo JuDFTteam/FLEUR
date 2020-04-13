@@ -25,6 +25,7 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
+
     TYPE(t_mpi),INTENT(IN)   :: mpi
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_atoms),INTENT(IN) :: atoms
@@ -125,12 +126,12 @@ CONTAINS
 
           IF (ANY(overlap>1E-10)) THEN
              numDispReduce = numDispReduce + 1
-             displace(:,:) = 0.5 * displace(:,:)
-             WRITE(6,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
-             WRITE(*,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
-             IF (numDispReduce.GE.4) THEN
+             IF (numDispReduce.GE.3) THEN
                 CALL juDFT_warn("Strong MT spheres crash in structural relaxation")
              END IF
+             displace(:,:) = 0.5 * displace(:,:)
+             WRITE(oUnit,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+             WRITE(*,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
           END IF
        END DO
 
@@ -202,8 +203,8 @@ CONTAINS
        yy = DOT_PRODUCT(y,v)
        !check that update will leave h positive definite;
        IF (py <= 0.0) THEN
-          WRITE (6,*) '  bfgs: <p|y> < 0'
-          WRITE (6,*) '  check convergence of forces'
+          WRITE (oUnit,*) '  bfgs: <p|y> < 0'
+          WRITE (oUnit,*) '  check convergence of forces'
           !Starting over with initial hessian
           h = 0.0
           DO j = 1,n_force
