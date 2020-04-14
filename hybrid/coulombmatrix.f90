@@ -160,7 +160,7 @@ CONTAINS
 
       IF (mpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
-                            float2str(sum([(coulomb(i)%size_mb(), i=1,fi%kpts%nkpt)])) // " MB"
+                            float2str(sum([(coulomb(my_k_list(i))%size_mb(), i=1,size(my_k_list))])) // " MB"
       endif
 
       !     Generate Symmetry:
