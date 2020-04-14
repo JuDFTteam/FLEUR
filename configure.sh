@@ -131,7 +131,7 @@ then
             rm -r $file
           fi
         done
-        cd ..
+        cd -
     fi  
 else
    mkdir $buildname
@@ -169,7 +169,9 @@ done
 
 ${cmake} $CMAKE_OPTIONS -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
-if [ -r $buildname/Makefile ]
+cd -
+
+if [ ! -r $buildname/Makefile ]
 then
     echo "Your configuration failed"
     echo "Perhaps you have to specify compiler options or give a machine dependent configuration."
