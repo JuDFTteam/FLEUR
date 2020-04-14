@@ -330,7 +330,7 @@ END IF
           END IF
 #endif
 
-          ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
+          ! WRITE(oUnit,fmt='(A)') 'Starting 2nd variation ...'
           IF (fi%noco%l_soc.AND..NOT.fi%noco%l_noco.AND..NOT.fi%INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,stars,fi%vacuum,fi%atoms,sphhar,&
                           fi%sym,fi%cell,fi%noco,nococonv,fi%input,fi%kpts, fi%oneD,vTot,enpara,results,fi%hub1inp,hub1data)
