@@ -189,7 +189,7 @@ CONTAINS
              rj = atoms%rmt(n)*EXP(atoms%dx(n)* (j-atoms%jri(n)))
              vbar = v%mt(j,0,n,jsp)/rj
              IF (irank.EQ.0) THEN
-                WRITE ( 6,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
+                WRITE (oUnit,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
              ENDIF
              DO l = 0,atoms%lmax(n)
                 IF ( .NOT.l_done(l,n,jsp) ) THEN
@@ -223,7 +223,7 @@ CONTAINS
              IF (enpara%floating) THEN
                 vz0 = v%vacz(1,ivac,jsp)
                 IF (irank.EQ.0) THEN
-                   WRITE ( 6,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
+                   WRITE (oUnit,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0

@@ -282,7 +282,7 @@
                 CALL trans(namat_const(n),str_up,str_do)
                 IF ( (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_up))) .OR.&
                      &        (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_do))) ) THEN
-                   WRITE( 6,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
+                   WRITE(oUnit,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
                    CALL juDFT_warn ("Element name and nuclear number do not match!" ,calledby ="inped")
                 ENDIF
              ENDIF

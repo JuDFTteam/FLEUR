@@ -56,7 +56,7 @@ contains
        WRITE(attributes(1),'(i0)') js
        WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
        CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
-       WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
+       WRITE (oUnit,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
     END DO
     
     IF (SIZE(outden%pw,2)>2) WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
@@ -69,8 +69,8 @@ contains
             (/1000*SQRT(ABS(dist(4)/vol))/),reshape((/10,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
             (/1000*SQRT(ABS(dist(5)/vol))/),reshape((/19,20/),(/1,2/)))
-       WRITE ( 6,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
-       WRITE ( 6,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
+       WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
+       WRITE (oUnit,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
        
        !dist/vol should always be >= 0 ,
        !but for dist=0 numerically you might obtain dist/vol < 0

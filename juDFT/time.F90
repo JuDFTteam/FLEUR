@@ -368,12 +368,12 @@ CONTAINS
          globaltimer%starttime = cputime()
          WRITE (juDFT_outUnit, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
          CALL add_usage_data("Runtime", globaltimer%time)
-         CALL priv_writetimes_longest(globaltimer, fid=6)
+         CALL priv_writetimes_longest(globaltimer, fid=juDFT_outUnit)
 
          WRITE (juDFT_outUnit, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
             INT(globaltimer%time), INT(min_time*globaltimer%time)
 
-         CALL priv_writetimes(globaltimer, 1, 6)
+         CALL priv_writetimes(globaltimer, 1, juDFT_outUnit)
 #ifdef CPP_MPI
          IF (l_mpi) THEN
             CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
