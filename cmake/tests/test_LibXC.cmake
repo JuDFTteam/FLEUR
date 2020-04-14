@@ -12,7 +12,7 @@ if (DEFINED CLI_FLEUR_USE_LIBXC)
     	     execute_process(COMMAND ${GIT_EXECUTABLE} submodule init external/libxc-git WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
     	     execute_process(COMMAND ${GIT_EXECUTABLE} submodule update  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
     	     if( ${_res_init} GREATER 0 OR ${_res_update} GREATER 0 )
-               message(FATAL_ERROR "HDF5 source could not be downloaded.\n"
+               message(FATAL_ERROR "LibXC source could not be downloaded.\n"
                             "We tried: 'git submodule init external/libxc-git && git submodule update' and resulted in error" )
              endif()
 	   endif()
