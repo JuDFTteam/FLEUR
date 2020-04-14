@@ -80,6 +80,8 @@ PROGRAM inpgen
        END FUNCTION dropDefaultEConfig
       END INTERFACE
 
+      CALL judft_init(oUnit,.FALSE.)
+
       kpts_str=""
 
       !Start program and greet user

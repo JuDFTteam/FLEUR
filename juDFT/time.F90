@@ -345,6 +345,7 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
+     USE m_juDFT_internalParams
      USE m_judft_usage
      USE m_judft_args
       IMPLICIT NONE
@@ -365,18 +366,18 @@ CONTAINS
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime
          globaltimer%starttime = cputime()
-         WRITE (6, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
+         WRITE (juDFT_outUnit, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
          CALL add_usage_data("Runtime", globaltimer%time)
          CALL priv_writetimes_longest(globaltimer, fid=6)
 
-         WRITE (6, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
+         WRITE (juDFT_outUnit, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
             INT(globaltimer%time), INT(min_time*globaltimer%time)
 
          CALL priv_writetimes(globaltimer, 1, 6)
 #ifdef CPP_MPI
          IF (l_mpi) THEN
             CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-            WRITE (6, *) "Program used ", isize, " PE"
+            WRITE (juDFT_outUnit, *) "Program used ", isize, " PE"
          ENDIF
 #endif
       END IF
