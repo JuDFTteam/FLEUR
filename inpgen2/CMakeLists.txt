@@ -143,10 +143,9 @@ ${FLEUR_SRC}/init/boxdim.f
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/inpgen")
 set_target_properties(inpgen2 PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen)
 target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS})
+target_link_libraries(inpgen2 fleurinput juDFT)
 target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})
-target_link_libraries(inpgen2 juDFT)
-target_link_libraries(inpgen2 fleurinput)
 
 if (INPGEN_USE_kplib)
   target_link_libraries(inpgen2 kplib_static)
