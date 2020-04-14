@@ -24,8 +24,10 @@
 !    dphi(r,l) ... radial derivative of valence wavefunction
 !     
 !----------------------------------------------------------------
+       USE m_constants
        USE m_clebsch
        USE m_intgr, ONLY : intgr3
+
        IMPLICIT NONE  
 
        INTEGER, INTENT(IN) :: ispecies, number_of_j1, grid_size
@@ -49,7 +51,7 @@
        NULLIFY(f)
 
        IF ( ASSOCIATED(f) ) THEN
-        WRITE(6,*)'nabla: f association status:',ASSOCIATED(f)
+        WRITE(oUnit,*)'nabla: f association status:',ASSOCIATED(f)
         STOP
        ENDIF
 

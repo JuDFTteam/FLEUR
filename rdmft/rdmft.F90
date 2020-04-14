@@ -176,10 +176,10 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          END DO
          highestState(ikpt,jspin) = highestState(ikpt,jspin) + fi%input%rdmftStatesAbove
          IF((results%neig(ikpt,jsp)-1).LT.highestState(ikpt,jspin)) THEN
-            WRITE(6,*) 'Error: Not enough states calculated:'
-            WRITE(6,*) 'ikpt, jsp: ', ikpt, jsp
-            WRITE(6,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
-            WRITE(6,*) 'results%neig(ikpt,jsp): ', results%neig(ikpt,jsp)
+            WRITE(oUnit,*) 'Error: Not enough states calculated:'
+            WRITE(oUnit,*) 'ikpt, jsp: ', ikpt, jsp
+            WRITE(oUnit,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
+            WRITE(oUnit,*) 'results%neig(ikpt,jsp): ', results%neig(ikpt,jsp)
             CALL juDFT_error('Not enough states calculated', calledby = 'rdmft')
          END IF
          DO iBand = highestState(ikpt,jspin)+1, results%neig(ikpt,jsp)
@@ -189,11 +189,11 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             highestState(ikpt,jspin) = iBand
          END DO
          IF(highestState(ikpt,jspin).EQ.results%neig(ikpt,jsp)) THEN
-            WRITE(6,*) 'Error: Highest state is degenerate:'
-            WRITE(6,*) 'ikpt, jsp: ', ikpt, jsp
-            WRITE(6,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
-            WRITE(6,*) 'results%eig(highestState(ikpt,jspin),ikpt,jsp): ', results%eig(highestState(ikpt,jspin),ikpt,jsp)
-            WRITE(6,*) 'results%eig(highestState(ikpt,jspin)-1,ikpt,jsp): ', results%eig(highestState(ikpt,jspin)-1,ikpt,jsp)
+            WRITE(oUnit,*) 'Error: Highest state is degenerate:'
+            WRITE(oUnit,*) 'ikpt, jsp: ', ikpt, jsp
+            WRITE(oUnit,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
+            WRITE(oUnit,*) 'results%eig(highestState(ikpt,jspin),ikpt,jsp): ', results%eig(highestState(ikpt,jspin),ikpt,jsp)
+            WRITE(oUnit,*) 'results%eig(highestState(ikpt,jspin)-1,ikpt,jsp): ', results%eig(highestState(ikpt,jspin)-1,ikpt,jsp)
             CALL juDFT_error('Highest state is degenerate', calledby = 'rdmft')
          END IF
       END DO
@@ -832,7 +832,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    END DO
 
    ! Output
-   WRITE(6,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+   WRITE(oUnit,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
    CALL openXMLElementPoly('rdmft',(/'energy'/),(/rdmftEnergy/))
    DO ispin = 1, fi%input%jspins
       isp = MERGE(1,ispin,fi%noco%l_noco)
