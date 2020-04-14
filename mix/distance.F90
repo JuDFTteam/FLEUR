@@ -8,6 +8,7 @@ contains
   SUBROUTINE distance(irank,vol,jspins,fsm,inden,outden,results,fsm_mag)
     use m_types
     use m_types_mixvector
+    USE m_constants
     use m_xmlOutput
  
     implicit none
@@ -58,7 +59,7 @@ contains
        WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
     END DO
     
-    IF (SIZE(outden%pw,2)>2) WRITE (6,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
+    IF (SIZE(outden%pw,2)>2) WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
     
     !calculate the distance of total charge and spin density
     !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
