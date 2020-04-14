@@ -171,7 +171,7 @@ CONTAINS
 
             results%te_veff = 0.0
             DO ispin = 1, input%jspins
-               WRITE (6, FMT=8050) ispin
+               WRITE (oUnit, FMT=8050) ispin
 8050           FORMAT(/, 10x, 'density-effective potential integrals for spin ', i2,/)
                CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, veff, workden, results%te_veff)
             END DO
@@ -196,7 +196,7 @@ CONTAINS
 
             END IF
 
-            WRITE (6, FMT=8060) results%te_veff
+            WRITE (oUnit, FMT=8060) results%te_veff
 8060        FORMAT(/, 10x, 'total density-effective potential integral :', t40, ES20.10)
 
             ! CALCULATE THE INTEGRAL OF n*exc
@@ -204,12 +204,12 @@ CONTAINS
             ! perform spin summation of charge densities for the calculation of Exc
             CALL workden%sum_both_spin()
 
-            WRITE (6, FMT=8070)
+            WRITE (oUnit, FMT=8070)
 8070        FORMAT(/, 10x, 'charge density-energy density integrals',/)
 
             results%te_exc = 0.0
             CALL int_nv(1, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, exc, workDen, results%te_exc)
-            WRITE (6, FMT=8080) results%te_exc
+            WRITE (oUnit, FMT=8080) results%te_exc
 
 8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)
          END IF

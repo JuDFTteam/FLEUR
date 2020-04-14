@@ -13,12 +13,15 @@ CONTAINS
        qpw,rho,vpw_total,vr_total)
     !Interface to Juelich vdW-code
     USE m_types
+    USE m_constants
     USE m_psqpw
     USE m_fft3d
     USE m_qpwtonmt
     USE m_convol
     USE m_cdn_io
+
     IMPLICIT NONE
+
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
@@ -53,7 +56,7 @@ CONTAINS
     IF (l_core) l_core = isCoreDensityPresent()
 
     IF (l_core) THEN
-       WRITE(6,*) "VdW contribution without core charge"       
+       WRITE(oUnit,*) "VdW contribution without core charge"       
        ! read the core charge
        CALL readCoreDensity(input,atoms,rhc,tec,qintc)
        DO j=1,input%jspins
@@ -83,8 +86,8 @@ CONTAINS
     CALL priv_fleur_vdW(cell,stars, &
          n_grid,e_vdW,v_grid,.TRUE.)
 
-    WRITE(6,*) "------  vdW-Potential code by M. Callsen included-------"
-    WRITE(6,*) "vdW-Energy contribution:",e_vdW
+    WRITE(oUnit,*) "------  vdW-Potential code by M. Callsen included-------"
+    WRITE(oUnit,*) "vdW-Energy contribution:",e_vdW
 
 
     INQUIRE(file="vdW_sc",exist=l_pot)
@@ -104,7 +107,7 @@ CONTAINS
          sphhar,atoms,stars,sym,cell,oneD,mpi,  &
          1,4,vpw,vr_total)
 
-    WRITE(6,*) "vdW average Potential  :",vpw(1)
+    WRITE(oUnit,*) "vdW average Potential  :",vpw(1)
 
 
     CALL convol(                    &
@@ -119,10 +122,10 @@ CONTAINS
 
 
 
-  SUBROUTINE priv_fleur_vdW(cell,stars, &
-       n_pseudo,e_vdw,v_vdw,l_vdW_v1)
+  SUBROUTINE priv_fleur_vdW(cell,stars,n_pseudo,e_vdw,v_vdw,l_vdW_v1)
+
     USE m_types
-    USE m_constants,ONLY: pi_const
+    USE m_constants
     USE m_juDFT
     USE param, ONLY:  Zab_v1,Zab_v2
 
@@ -169,25 +172,23 @@ CONTAINS
     omega=cell%vol
     tpibya = 2.0*pi_const/omega
 
-    WRITE(6,*)
-    WRITE(6,'(A)')      'lattice vectors in Bohr:'
-    WRITE(6,'(3F16.8)') a1(:)
-    WRITE(6,'(3F16.8)') a2(:)
-    WRITE(6,'(3F16.8)') a3(:)
-    WRITE(6,*)
+    WRITE(oUnit,*)
+    WRITE(oUnit,'(A)')      'lattice vectors in Bohr:'
+    WRITE(oUnit,'(3F16.8)') a1(:)
+    WRITE(oUnit,'(3F16.8)') a2(:)
+    WRITE(oUnit,'(3F16.8)') a3(:)
+    WRITE(oUnit,*)
 
+    WRITE(oUnit,'(A)')     'reciprocal lattice vectors in Bohr:'
+    WRITE(oUnit,'(3F16.8)') b1(:)
+    WRITE(oUnit,'(3F16.8)') b2(:)
+    WRITE(oUnit,'(3F16.8)') b3(:)
+    WRITE(oUnit,'(3F16.8)')
 
-    WRITE(6,'(A)')     'reciprocal lattice vectors in Bohr:'
-    WRITE(6,'(3F16.8)') b1(:)
-    WRITE(6,'(3F16.8)') b2(:)
-    WRITE(6,'(3F16.8)') b3(:)
-    WRITE(6,'(3F16.8)')
-    !
-    WRITE(6,'(A,F18.12)') '(2 pi/a) in 1/Bohr^3:',tpibya
-    WRITE(6,'(A,F18.12)') 'omega in 1/Bohr^3:   ',omega
-    WRITE(6,*)
-    WRITE(6,'(A,F18.12)') 'G_cut: ',G_cut
-
+    WRITE(oUnit,'(A,F18.12)') '(2 pi/a) in 1/Bohr^3:',tpibya
+    WRITE(oUnit,'(A,F18.12)') 'omega in 1/Bohr^3:   ',omega
+    WRITE(oUnit,*)
+    WRITE(oUnit,'(A,F18.12)') 'G_cut: ',G_cut
 
     CALL soler(n_pseudo,e_vdW,v_vdW)
 

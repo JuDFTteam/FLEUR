@@ -24,12 +24,11 @@ CONTAINS
       !
       ! Sourcefree: The xc-B-field is scaled up an source terms are purged out.
       !--------------------------------------------------------------------------
+      USE m_types
       USE m_constants
       USE m_rotate_int_den_tofrom_local
-      USE m_types
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
-
 
       IMPLICIT NONE
 
@@ -88,7 +87,7 @@ CONTAINS
          IF (mpi%irank == 0) THEN
             CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
             DO i=1,atoms%ntype
-               WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+               WRITE (oUnit,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
                8025 FORMAT(2x,'Bfield before SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
             END DO
          END IF
@@ -123,7 +122,7 @@ CONTAINS
          IF (mpi%irank == 0) THEN
             CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
             DO i=1,atoms%ntype
-               WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+               WRITE (oUnit,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
                8026 FORMAT(2x,'Bfield after SF [local frame, atom ',i2,']: ','Bx=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
             END DO
          END IF
