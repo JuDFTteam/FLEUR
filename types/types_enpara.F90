@@ -94,6 +94,7 @@ CONTAINS
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
+    USE m_constants
     USE m_xmlOutput
     USE m_types_potden
     USE m_types_hub1inp
@@ -162,8 +163,8 @@ CONTAINS
        !$OMP END PARALLEL DO
 
        IF (irank==0) THEN
-         WRITE(6,*)
-         WRITE(6,*) "Updated energy parameters for spin:",jsp
+         WRITE(oUnit,*)
+         WRITE(oUnit,*) "Updated energy parameters for spin:",jsp
          !Same loop for IO
          DO n = 1, atoms%ntype
            DO l = 0,3
@@ -251,8 +252,8 @@ CONTAINS
        !We want the shell where Hubbard 1 is applied to
        !be non spin-polarized
        IF(irank.EQ.0) THEN
-          WRITE(6,FMT=*)
-          WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
+          WRITE(oUnit,FMT=*)
+          WRITE(oUnit,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
        ENDIF
        DO j = atoms%n_u+1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
@@ -266,15 +267,15 @@ CONTAINS
             enpara%el0(4:,n,1) = enpara%el0(3,n,1)
             enpara%el0(4:,n,2) = enpara%el0(3,n,1)
           ENDIF
-          IF(irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
+          IF(irank.EQ.0) WRITE(oUnit,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
        ENDDO
     ENDIF
 
     IF(input%ldauAdjEnpara.AND.atoms%n_u+atoms%n_hia>0) THEN
        !If requested we can adjust the energy parameters to the LDA+U potential correction
        IF(irank.EQ.0) THEN
-          WRITE(6,FMT=*)
-          WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
+          WRITE(oUnit,FMT=*)
+          WRITE(oUnit,"(A)") "LDA+U corrections for the energy parameters"
        ENDIF
        DO j = 1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
@@ -286,7 +287,7 @@ CONTAINS
                 tr = tr + REAL(v%mmpMat(i,i,j,jsp))
              ENDDO
              enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/REAL(2*l+1)
-             IF(irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
+             IF(irank.EQ.0) WRITE(oUnit,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
                                "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
           ENDDO
        ENDDO
@@ -300,6 +301,7 @@ CONTAINS
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
     USE m_types_setup
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
     INTEGER, INTENT (IN)        :: jspins
@@ -322,13 +324,13 @@ CONTAINS
        READ (40,FMT ='(48x,f10.6)',END=200) enpara%enmix(jsp)
        READ (40,*)                       ! skip next line
        IF (enpara%enmix(jsp).EQ.0.0) enpara%enmix(jsp) = 1.0
-       WRITE (6,FMT=8001) jsp
-       WRITE (6,FMT=8000)
+       WRITE (oUnit,FMT=8001) jsp
+       WRITE (oUnit,FMT=8000)
        skip_t = 0
        DO n = 1,atoms%ntype
           READ (40,FMT=8040,END=200) (enpara%el0(l,n,jsp),l=0,3),&
                (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)
-          WRITE (6,FMT=8140) n,(enpara%el0(l,n,jsp),l=0,3),&
+          WRITE (oUnit,FMT=8140) n,(enpara%el0(l,n,jsp),l=0,3),&
                (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)
           !
           !--->    energy parameters for the local orbitals
@@ -337,11 +339,11 @@ CONTAINS
              skip_t = skip_t + enpara%skiplo(n,jsp) * atoms%neq(n)
              READ (40,FMT=8039,END=200)  (enpara%ello0(lo,n,jsp),lo=1,atoms%nlo(n))
              READ (40,FMT=8038,END=200) (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
-             WRITE (6,FMT=8139)          (enpara%ello0(lo,n,jsp),lo=1,atoms%nlo(n))
-             WRITE (6,FMT=8138)         (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
+             WRITE (oUnit,FMT=8139)          (enpara%ello0(lo,n,jsp),lo=1,atoms%nlo(n))
+             WRITE (oUnit,FMT=8138)         (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
           ELSEIF (enpara%skiplo(n,jsp).GT.0) THEN
-             WRITE (6,*) "for atom",n," no LO's were specified"
-             WRITE (6,*) 'but skiplo was set to',enpara%skiplo
+             WRITE (oUnit,*) "for atom",n," no LO's were specified"
+             WRITE (oUnit,*) 'but skiplo was set to',enpara%skiplo
              CALL juDFT_error("No LO's but skiplo",calledby ="enpara",&
                   hint="If no LO's are set skiplo must be 0 in enpara")
           END IF
@@ -363,11 +365,11 @@ CONTAINS
        IF (film) THEN
           enpara%lchg_v = .TRUE.
           READ (40,FMT=8050,END=200) enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
-          WRITE (6,FMT=8150)         enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
+          WRITE (oUnit,FMT=8150)         enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
        ENDIF
       ! IF (atoms%nlod.GE.1) THEN
-      !    WRITE (6,FMT=8090) jsp,skip_t
-      !    WRITE (6,FMT=8091)
+      !    WRITE (oUnit,FMT=8090) jsp,skip_t
+      !    WRITE (oUnit,FMT=8091)
       ! END IF
     END DO
 
@@ -394,11 +396,11 @@ CONTAINS
 
     RETURN
 
-200 WRITE (6,*) 'the end of the file enpara has been reached while'
-    WRITE (6,*) 'reading the energy-parameters.'
-    WRITE (6,*) 'possible reason: energy parameters have not been'
-    WRITE (6,*) 'specified for all atom types.'
-    WRITE (6,FMT='(a,i4)') 'the actual number of atom-types is: ntype=',atoms%ntype
+200 WRITE (oUnit,*) 'the end of the file enpara has been reached while'
+    WRITE (oUnit,*) 'reading the energy-parameters.'
+    WRITE (oUnit,*) 'possible reason: energy parameters have not been'
+    WRITE (oUnit,*) 'specified for all atom types.'
+    WRITE (oUnit,FMT='(a,i4)') 'the actual number of atom-types is: ntype=',atoms%ntype
     CALL juDFT_error ("unexpected end of file enpara reached while reading")
   END SUBROUTINE read
 
@@ -408,6 +410,7 @@ CONTAINS
     ! write enpara-file
     !
     USE m_types_setup
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(IN) :: enpara
     INTEGER, INTENT (IN) :: jspins
@@ -429,7 +432,7 @@ CONTAINS
           DO l = 0, 3
              IF (enpara%qn_el(l,n,jspin).NE.0) el0Temp(l) =  REAL(enpara%qn_el(l,n,jspin))
           END DO
-          WRITE (6,FMT=8040)  n, (el0Temp(l),l=0,3),&
+          WRITE (oUnit,FMT=8040)  n, (el0Temp(l),l=0,3),&
                &                          (enpara%lchange(l,n,jspin),l=0,3),enpara%skiplo(n,jspin)
           WRITE (40,FMT=8040) n, (el0Temp(l),l=0,3),&
                &                          (enpara%lchange(l,n,jspin),l=0,3),enpara%skiplo(n,jspin)
@@ -439,8 +442,8 @@ CONTAINS
              DO lo = 1, atoms%nlo(n)
                 IF (enpara%qn_ello(lo,n,jspin).NE.0) ello0Temp(lo) = enpara%qn_ello(lo,n,jspin)
              END DO
-             WRITE (6,FMT=8039) (ello0Temp(lo),lo=1,atoms%nlo(n))
-             WRITE (6,FMT=8038) (enpara%llochg(lo,n,jspin),lo=1,atoms%nlo(n))
+             WRITE (oUnit,FMT=8039) (ello0Temp(lo),lo=1,atoms%nlo(n))
+             WRITE (oUnit,FMT=8038) (enpara%llochg(lo,n,jspin),lo=1,atoms%nlo(n))
              WRITE (40,FMT=8039) (ello0Temp(lo),lo=1,atoms%nlo(n))
              WRITE (40,FMT=8038) (enpara%llochg(lo,n,jspin),lo=1,atoms%nlo(n))
           END IF
@@ -452,7 +455,7 @@ CONTAINS
 
        IF (film) THEN
           WRITE (40,FMT=8050) enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
-          WRITE (6,FMT=8050)  enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
+          WRITE (oUnit,FMT=8050)  enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
 8050      FORMAT ('  vacuum parameter=',f9.5,' change: ',l1,&
                &           ' second vacuum=',f9.5)
        ENDIF
@@ -470,6 +473,7 @@ CONTAINS
     USE m_types_atoms
     USE m_types_input
     USE m_types_vacuum
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
     INTEGER,INTENT(IN)             :: mpi_comm
@@ -510,8 +514,8 @@ CONTAINS
              !--->   change energy parameters
              !
              DO l = 0,3
-                WRITE(6,*) 'Type:',ityp,' l:',l
-                WRITE(6,FMT=777) enpara%el0(l,ityp,jsp),enpara%el1(l,ityp,jsp),&
+                WRITE(oUnit,*) 'Type:',ityp,' l:',l
+                WRITE(oUnit,FMT=777) enpara%el0(l,ityp,jsp),enpara%el1(l,ityp,jsp),&
                      ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp))
                 maxdist=MAX(maxdist,ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp)))
                 IF ( enpara%lchange(l,ityp,jsp) ) THEN
@@ -537,8 +541,8 @@ CONTAINS
                          CYCLE
                       ENDIF
                    ENDIF
-                   WRITE(6,*) 'Type:',ityp,' lo:',lo
-                   WRITE(6,FMT=777) enpara%ello0(lo,ityp,jsp),enpara%ello1(lo,ityp,jsp),&
+                   WRITE(oUnit,*) 'Type:',ityp,' lo:',lo
+                   WRITE(oUnit,FMT=777) enpara%ello0(lo,ityp,jsp),enpara%ello1(lo,ityp,jsp),&
                         ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp))
                    maxdist=MAX(maxdist,ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp)))
                    IF (enpara%llochg(lo,ityp,jsp) ) THEN
@@ -558,9 +562,9 @@ CONTAINS
 
 
           IF (input%film) THEN
-             WRITE(6,*) 'Vacuum:'
+             WRITE(oUnit,*) 'Vacuum:'
              DO n=1,vacuum%nvac
-                WRITE(6,FMT=777) enpara%evac(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp))
+                WRITE(oUnit,FMT=777) enpara%evac(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp))
                 maxdist=MAX(maxdist,ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp)))
                 IF (enpara%lchg_v(n,jsp) ) THEN
                    maxdist2=MAX(maxdist2,ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp)))
@@ -571,7 +575,7 @@ CONTAINS
              IF (vacuum%nvac==1) enpara%evac(2,jsp) = enpara%evac(1,jsp)
              IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-vz(:,jsp)
           ENDIF
-          WRITE(6,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
+          WRITE(oUnit,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
        END DO
        IF (maxdist2>1.0) CALL juDFT_warn&
             ("Energy parameter mismatch too large",hint&
@@ -631,6 +635,7 @@ CONTAINS
   END SUBROUTINE calcOutParams
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
+    USE m_constants
     USE m_xmlOutput
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
@@ -666,10 +671,10 @@ SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
          'branchLowest ','branchHighest','value        '/),&
          attributes,RESHAPE((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
     IF (lo) THEN
-       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+       WRITE(oUnit,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
          e_lo, ' to',e_up,' htr. ; e_l(lo) =',e
     ELSE
-       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+       WRITE(oUnit,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
          e_lo, ' to',e_up,' htr. ; e_l =',e
     END IF
   END SUBROUTINE priv_write

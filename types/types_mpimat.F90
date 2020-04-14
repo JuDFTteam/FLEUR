@@ -7,6 +7,7 @@
 MODULE m_types_mpimat
   USE m_judft
   USE m_types_mat
+  USE m_constants
   IMPLICIT NONE
   PRIVATE
   INTEGER,PARAMETER    :: DEFAULT_BLOCKSIZE=64
@@ -562,13 +563,13 @@ CONTAINS
     !     Now control, whether the BLACS grid is the one we wanted
     CALL BLACS_GRIDINFO(ictextblacs, nprow2,npcol2,blacsdata%myrow,blacsdata%mycol)
     IF (nprow2 /= blacsdata%nprow) THEN
-       WRITE(6,*) 'Wrong number of rows in BLACS grid'
-       WRITE(6,*) 'nprow=',blacsdata%nprow,' nprow2=',nprow2
+       WRITE(oUnit,*) 'Wrong number of rows in BLACS grid'
+       WRITE(oUnit,*) 'nprow=',blacsdata%nprow,' nprow2=',nprow2
        call judft_error('Wrong number of rows in BLACS grid')
     ENDIF
     IF (npcol2 /= blacsdata%npcol) THEN
-       WRITE(6,*) 'Wrong number of columns in BLACS grid'
-       WRITE(6,*) 'npcol=',blacsdata%npcol,' npcol2=',npcol2
+       WRITE(oUnit,*) 'Wrong number of columns in BLACS grid'
+       WRITE(oUnit,*) 'npcol=',blacsdata%npcol,' npcol2=',npcol2
        call judft_error('Wrong number of columns in BLACS grid')
 
     ENDIF
