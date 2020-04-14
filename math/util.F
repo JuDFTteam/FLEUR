@@ -363,7 +363,8 @@ c     - local arrays -
              IF(x>-1) WRITE(oUnit,'(A,ES9.1)')
      +            '+intgr: Warning! Negative &exponent x in'//
      +        'extrapolation a+c*r**x:',x
-             IF(x<=-1) WRITE(oUnit,'(A,ES9.1)')'intgr: Negative exponent,'//
+             IF(x<=-1) WRITE(oUnit,'(A,ES9.1)')
+     +              'intgr: Negative exponent,'//
      +             'x in extrapolation a+c*r**x:',x
              IF(x<=-1) STOP 'intgr:Negative exponent x in extrapolation'
           END IF
@@ -422,8 +423,9 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
       IF(any(abs(help-modulo1).gt.1e-10)) THEN
-        WRITE(oUnit,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
-     +                         ') is not an element of the k-point set.'
+        WRITE(oUnit,'(A,F5.3,2('','',F5.3),A)')
+     +     'modulo1: argument (',kpoint,
+     +     ') is not an element of the k-point set.'
         CALL juDFT_error(
      +     'modulo1: argument not an element of k-point set.', 
      +     calledby = 'util:modulo1')

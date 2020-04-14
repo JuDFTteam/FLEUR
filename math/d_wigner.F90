@@ -85,9 +85,6 @@ CONTAINS
     REAL                 :: alpha(nop),beta(nop),GAMMA(nop)
     REAL                 :: dmat(3,3),dmati(3,3),det(nop),bmati(3,3)
 
-    INTRINSIC sqrt,max,min
-
-
     pi = pi_const
     !c
     !c determine the eulerian angles of all the rotations
