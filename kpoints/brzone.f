@@ -10,7 +10,8 @@
      =                   cpoint,
      <                   xvec,ncorn,nedge,nface,fnorm,fdist)
 
-      USE m_constants, ONLY : pimach
+      USE m_constants
+
       IMPLICIT NONE
 
       INTEGER, PARAMETER :: ibfile = 42
@@ -550,7 +551,7 @@ c
 !         WRITE(*,'(3f20.13)') cpoint(:,ip)
 !      END DO
 
-      WRITE (6,7100) ncorn,nedge,nface
+      WRITE (oUnit,7100) ncorn,nedge,nface
       WRITE (ibfile,7100) ncorn,nedge,nface
  7100 FORMAT (///,'  the irreducible wedge of the first brillouin'
      $,' zone has :  ',/,
@@ -559,7 +560,7 @@ c
      $     i10,'     faces           ')
       IF ( (ncorn + nface - nedge)/=2 )  CALL juDFT_error("bzone6"
      +     ,calledby ="brzone")
-      WRITE (6,7200) ((cpoint(i,ip),i=1,3),ip=1,ncorn)
+      WRITE (oUnit,7200) ((cpoint(i,ip),i=1,3),ip=1,ncorn)
       WRITE (ibfile,7200) ((cpoint(i,ip),i=1,3),ip=1,ncorn)
  7200 FORMAT(//,'    corner points in cartesian units ',
      $     99(/,3f10.5))

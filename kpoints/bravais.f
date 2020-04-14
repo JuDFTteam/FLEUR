@@ -15,6 +15,8 @@
      >                   amat,
      <                   idsyst,idtype)
 
+      USE m_constants
+
       IMPLICIT NONE
 
       REAL,    INTENT (IN)  :: amat(3,3)
@@ -42,7 +44,7 @@
       al = DOT_PRODUCT( b, c) / ( sb * sc )
       be = DOT_PRODUCT( a, c) / ( sa * sc )
       ga = DOT_PRODUCT( b, a) / ( sb * sa )
-      write (6,*) sa,sb,sc,al,be,ga
+      write (oUnit,*) sa,sb,sc,al,be,ga
 
       l_ab = .false. ; l_bc = .false. ; l_ac = .false.
       al_be = .false. ; be_ga = .false. ; al_ga = .false.
@@ -144,7 +146,7 @@
      
       IF ((idsyst == 99).OR.(idtype == 99) ) CALL juDFT_error("bravais!"
      +     ,calledby ="bravais")
- 10   WRITE(6,*) c_ty(idtype),' ',c_sy(idsyst)
+ 10   WRITE(oUnit,*) c_ty(idtype),' ',c_sy(idsyst)
 
       END SUBROUTINE bravais
       END MODULE m_bravais

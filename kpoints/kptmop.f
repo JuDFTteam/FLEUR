@@ -67,7 +67,7 @@ c     vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
 c     nkstar   : number of stars for k-points generated in full stars
 c
 c-----------------------------------------------------------------------
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_ordstar
       USE m_fulstar
       IMPLICIT NONE
@@ -152,16 +152,16 @@ c
                IF (nmop(1).NE.nmop(2) .OR. nmop(3).NE.0) THEN
                   nmop(2) = nmop(1)
                   nmop(3) = 0
-                  WRITE (6,'(1x,''WARNING!!!!!!!'',/,
+                  WRITE (oUnit,'(1x,''WARNING!!!!!!!'',/,
      +''nmop-Parameters not in accordance with symmetry'',/,
      +2(1x,i4),/,
      +'' we have set nmop(2) = nmop(1)'',/,
      +'' and/or nmop(3) = 0'')') idsyst, idtype
-                  WRITE (6,'(3(1x,i4),'' new val for nmop: '')')
+                  WRITE (oUnit,'(3(1x,i4),'' new val for nmop: '')')
      +                 (nmop(i),i=1,3)
                ELSE
-                  WRITE (6,'('' values accepted unchanged'')')
-                  WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+                  WRITE (oUnit,'('' values accepted unchanged'')')
+                  WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +                 (nmop(i),i=1,3)
                ENDIF
             ENDIF
@@ -170,15 +170,15 @@ c
               If (Nmop(3)==1) Nmop(3)=0
               IF (nmop(3).NE.0) THEN
                   nmop(3) = 0
-                  WRITE (6,'(1x,''WARNING!!!!!!!'',/,
+                  WRITE (oUnit,'(1x,''WARNING!!!!!!!'',/,
      +''nmop-Parameters not in accordance with symmetry'',/,
      +2(1x,i4),/,
      +'' we have set nmop(3) = 0'')') idsyst, idtype
-                  WRITE (6,'(3(1x,i4),'' new val for nmop: '')')
+                  WRITE (oUnit,'(3(1x,i4),'' new val for nmop: '')')
      +                 (nmop(i),i=1,3)
                ELSE
-                  WRITE (6,'('' values accepted unchanged'')')
-                  WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+                  WRITE (oUnit,'('' values accepted unchanged'')')
+                  WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +                 (nmop(i),i=1,3)
                ENDIF
             ENDIF
@@ -187,15 +187,15 @@ c
                If (Nmop(3)==1) Nmop(3)=0
                IF (nmop(3).NE.0) THEN
                   nmop(3) = 0
-                  WRITE (6,'(1x,''WARNING!!!!!!!'',/,
+                  WRITE (oUnit,'(1x,''WARNING!!!!!!!'',/,
      +''nmop-Parameters not in accordance with symmetry'',/,
      +2(1x,i4),/,
      +'' we have set nmop(3) = 0'')') idsyst, idtype
-                  WRITE (6,'(3(1x,i4),'' new val for nmop: '')')
+                  WRITE (oUnit,'(3(1x,i4),'' new val for nmop: '')')
      +                 (nmop(i),i=1,3)
                ELSE
-                  WRITE (6,'('' values accepted unchanged'')')
-                  WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+                  WRITE (oUnit,'('' values accepted unchanged'')')
+                  WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +                 (nmop(i),i=1,3)
                ENDIF
             ENDIF
@@ -203,7 +203,7 @@ c
 !
 !     --->   in all other cases:
 !
-            WRITE (6,'(3(1x,i4),20x,'' idimens,idsyst,idtype: '',
+            WRITE (oUnit,'(3(1x,i4),20x,'' idimens,idsyst,idtype: '',
      >''wrong choice for 2-dimensional crystal structure'')')
      >           idimens,idsyst,idtype
             CALL juDFT_error("2-dim crystal",calledby="kptmop")
@@ -217,46 +217,46 @@ c
      +           .OR. nmop(2).NE.nmop(3)) THEN
                nmop(3) = nmop(1)
                nmop(2) = nmop(1)
-               WRITE (6,'(1x,''WARNING!!!!!!!'',/,
+               WRITE (oUnit,'(1x,''WARNING!!!!!!!'',/,
      +''nmop-Parameters not in accordance with symmetry'',/,
      +2(1x,i4),/,
      +'' we have set all nmop(i) = nmop(1)'')') idsyst, idtype
-               WRITE (6,'(3(1x,i4),'' new val for nmop(i): '')')
+               WRITE (oUnit,'(3(1x,i4),'' new val for nmop(i): '')')
      +              (nmop(i),i=1,3)
             ELSE
-               WRITE (6,'('' values accepted unchanged'')')
-               WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+               WRITE (oUnit,'('' values accepted unchanged'')')
+               WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +              (nmop(i),i=1,3)
             ENDIF
          ELSEIF (idsyst.EQ.2 .OR. idsyst.eq.4) THEN
             if((nmop(3).eq.nmop(2)).and.idsyst.eq.2)then
-               WRITE (6,'('' values accepted unchanged'')')
-               WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+               WRITE (oUnit,'('' values accepted unchanged'')')
+               WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +              (nmop(i),i=1,3)
             elseif(nmop(1).NE.nmop(2)) THEN
                nmop(2) = nmop(1)
-               WRITE (6,'(1x,''WARNING!!!!!!!'',/,
+               WRITE (oUnit,'(1x,''WARNING!!!!!!!'',/,
      +''nmop-Parameters not in accordance with symmetry'',/,
      +2(1x,i4),/,
      +'' we have set nmop(2) = nmop(1)'')') idsyst, idtype
-               WRITE (6,'(3(1x,i4),'' new val for nmop: '')')
+               WRITE (oUnit,'(3(1x,i4),'' new val for nmop: '')')
      +              (nmop(i),i=1,3)
                CALL juDFT_warn(
      +             "k point mesh not compatible with symmetry (1)",
      +             calledby='kptmop')
             ELSE
-               WRITE (6,'('' values accepted unchanged'')')
-               WRITE (6,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
+               WRITE (oUnit,'('' values accepted unchanged'')')
+               WRITE (oUnit,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
      +              (nmop(i),i=1,3)
             ENDIF
          ELSEIF (idsyst.LT.1 .OR. idsyst.GT.7) THEN
-            WRITE (6,'(1x,''wrong choice of symmetry'',/,
+            WRITE (oUnit,'(1x,''wrong choice of symmetry'',/,
      +2(1x,i4))') idsyst, idtype
-            WRITE (6,'(''only values 1.le.idsyst.le.7 allowed'')')
+            WRITE (oUnit,'(''only values 1.le.idsyst.le.7 allowed'')')
             CALL juDFT_error("wrong idsyst",calledby="kptmop")
          ELSE
-            WRITE (6,'('' values accepted unchanged'')')
-            WRITE (6,'(3(1x,i4),11x,''nmop(i),i=1,3'')')
+            WRITE (oUnit,'('' values accepted unchanged'')')
+            WRITE (oUnit,'(3(1x,i4),11x,''nmop(i),i=1,3'')')
      +           (nmop(i),i=1,3)
          ENDIF
       ELSE
@@ -275,7 +275,7 @@ c
 !     characterized by
 !     iside(i)= sign( (xvec,fnorm(i))-fdist(i) ) ;(i=1,nface )
 !
-      WRITE (6,'(1x,''orientation of boundary faces'')')
+      WRITE (oUnit,'(1x,''orientation of boundary faces'')')
       DO ifac = 1, nface
          orient = zero
          iside(ifac) = iplus
@@ -284,19 +284,19 @@ c
          ENDDO
          orient = orient - fdist(ifac)
          IF (orient .LT. 0) iside(ifac) = iminus
-         WRITE (6,'(1x,2(i4,2x),f10.7,10x,''ifac,iside,orient'',
+         WRITE (oUnit,'(1x,2(i4,2x),f10.7,10x,''ifac,iside,orient'',
      +'' for xvec'')') ifac,iside(ifac),orient
       ENDDO
 
       invtpi = one / ( 2.0 * pimach() )
 
-      WRITE (6,'(''Bravais lattice vectors'')' )
+      WRITE (oUnit,'(''Bravais lattice vectors'')' )
       DO ii = 1, 3
-         WRITE (6,'(43x,3(1x,f11.6))') (bltv(ii,ikc), ikc=1,3)
+         WRITE (oUnit,'(43x,3(1x,f11.6))') (bltv(ii,ikc), ikc=1,3)
       ENDDO
-      WRITE (6,'(''reciprocal lattice vectors'')' )
+      WRITE (oUnit,'(''reciprocal lattice vectors'')' )
       DO ii = 1, 3
-         WRITE (6,'(43x,3(1x,f11.6))' ) (rltv(ii,ikc), ikc=1,3)
+         WRITE (oUnit,'(43x,3(1x,f11.6))' ) (rltv(ii,ikc), ikc=1,3)
       ENDDO
 !
 !     ---> nmop(i) are Monkhorst-Pack parameters; they determine the
@@ -304,27 +304,27 @@ c
 !     if basis vector lengths are not related by symmetry,
 !     we can use independent fractions for each direction
 !
-      WRITE (6,'(3(1x,i4),10x,'' Monkhorst-Pack-parameters'')')
+      WRITE (oUnit,'(3(1x,i4),10x,'' Monkhorst-Pack-parameters'')')
      +     (nmop(i1),i1=1,3)
 
       DO idim = 1, idimens
          IF (nmop(idim).GT.0) THEN
             ainvnmop(idim) = one/ real(nmop(idim))
          ELSE
-            WRITE (6,'('' nmop('',i4,'') ='',i4,
+            WRITE (oUnit,'('' nmop('',i4,'') ='',i4,
      +'' not allowed'')') idim, nmop(idim)
             CALL juDFT_error("nmop wrong",calledby="kptmop")
          ENDIF
       ENDDO
 
-      WRITE (6,'(1x,''Monkhorst-Pack-fractions'')' )
+      WRITE (oUnit,'(1x,''Monkhorst-Pack-fractions'')' )
 !
 !     ---> nbound=1: k-points are generated on boundary of BZ
 !     include  fract(1) =       -1/2
 !     and  fract(2*nmop+1) = 1/2     for surface points of BZ
 !
       IF ( nbound .EQ. 1) THEN
-         WRITE (6,'(1x,i4,10x,''nbound; k-points on boundary'',
+         WRITE (oUnit,'(1x,i4,10x,''nbound; k-points on boundary'',
      +'' of BZ included'')' ) nbound
 !
 !     ---> irregular Monkhorst--Pack--fractions
@@ -336,7 +336,7 @@ c
 
             DO kpn = -nmop(idim),nmop(idim)
                fract(kpn+nmop(idim)+1,idim) = denom * real (kpn)
-               WRITE (6,'(10x,f10.7)' ) fract(kpn+nmop(idim)+1,idim)
+             WRITE (oUnit,'(10x,f10.7)' ) fract(kpn+nmop(idim)+1,idim)
             ENDDO
             nfract(idim) = 2*nmop(idim) + 1
          ENDDO
@@ -350,7 +350,7 @@ c
 !     This is the regular Monkhorst-Pack-method
 !
       ELSEIF ( nbound .eq. 0) then
-         WRITE (6,'(1x,i4,10x,''nbound; no k-points '',
+         WRITE (oUnit,'(1x,i4,10x,''nbound; no k-points '',
      +'' on boundary of BZ'')' ) nbound
 !
 !     --->   regular Monkhorst--Pack--fractions
@@ -359,10 +359,10 @@ c
          DO idim = 1,idimens
             denom = half*ainvnmop(idim)
             divis(idim) = one / denom
-            WRITE(6,'(5x,i4,5x,''idim'')' ) idim
+            WRITE(oUnit,'(5x,i4,5x,''idim'')' ) idim
             DO  kpn = 1,nmop(idim)
                fract(kpn,idim) = denom * real (2*kpn -nmop(idim)-1)
-               write(6,'(10x,f10.7)' ) fract(kpn,idim)
+               write(oUnit,'(10x,f10.7)' ) fract(kpn,idim)
             ENDDO
             nfract(idim) = nmop(idim)
          ENDDO
@@ -374,8 +374,8 @@ c
          ENDIF
 
       ELSE
-         WRITE (6,'(3x,'' wrong choice of nbound:'', i4)') nbound
-         WRITE (6,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
+         WRITE (oUnit,'(3x,'' wrong choice of nbound:'', i4)') nbound
+         WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
          CALL juDFT_error("nbound",calledby="kptmop")
       ENDIF
 
@@ -474,9 +474,9 @@ c
          nc2d = nc2d + 1
          cp2d(:,nc2d) = cpoint(:,n)
       ENDDO corn
-      WRITE (6,'(''2D corner points in internal units'')')
+      WRITE (oUnit,'(''2D corner points in internal units'')')
       corn2d: DO n = 1, nc2d
-      WRITE (6,'(i3,3x,2(f10.7,1x))') n,cp2d(1,n),cp2d(2,n)
+      WRITE (oUnit,'(i3,3x,2(f10.7,1x))') n,cp2d(1,n),cp2d(2,n)
       DO i = 1, nkpt
          IF ((abs(cp2d(1,n)-vkxyz(1,i)).LT.0.0001).AND.
      +        (abs(cp2d(2,n)-vkxyz(2,i)).LT.0.0001)) CYCLE corn2d
