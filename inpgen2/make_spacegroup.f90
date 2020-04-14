@@ -19,6 +19,7 @@ CONTAINS
     USE m_types_noco
     USE m_types_cell
     USE m_types_sym
+    USE m_constants
     USE m_sssym
     USE m_socsym
     USE m_film_sym
@@ -100,7 +101,7 @@ CONTAINS
     DO n = 1, SIZE(atomid)
        DO i = n+1, SIZE(atomid)
           IF ( ALL( ABS( pos(:,n) - pos(:,i) ) < eps7 ) ) THEN
-             WRITE(6,'(/," Error in atomic positions: atoms",i5," and",i5," (at least) are the same")') n,i
+             WRITE(oUnit,'(/," Error in atomic positions: atoms",i5," and",i5," (at least) are the same")') n,i
              CALL juDFT_error("atom positions",calledby="spg_gen")
           ENDIF
        ENDDO
@@ -401,7 +402,7 @@ CONTAINS
     lclose=sym%closure()
 
     IF ( ( ns==1 ) .AND. ( .NOT. lclose ) ) THEN
-       WRITE (6,'(/," Congratulations, you have found a system (not"," a supercell) that breaks the algorithms. Sorry...")')
+       WRITE (oUnit,'(/," Congratulations, you have found a system (not"," a supercell) that breaks the algorithms. Sorry...")')
        CALL juDFT_error("Program failed :(",calledby="spg_gen")
     ENDIF
 
@@ -418,14 +419,14 @@ CONTAINS
 
        IF ( ( .NOT. lclose ) .OR. ( npaint > 0 ) ) THEN
           IF ( npaint == 0 ) THEN
-             WRITE (6,'(/," Generating subgroups of supercell...")')
+             WRITE (oUnit,'(/," Generating subgroups of supercell...")')
           ELSE
              IF (lclose) THEN
                 ipaint(npaint) = nops
-                WRITE (6,'(5x,"painting atom",i5,":",i3," operations")') npaint,nops
+                WRITE (oUnit,'(5x,"painting atom",i5,":",i3," operations")') npaint,nops
              ELSE
                 ipaint(npaint) = -1
-                WRITE (6,'(5x,"painting atom",i5,": not a group")') npaint
+                WRITE (oUnit,'(5x,"painting atom",i5,": not a group")') npaint
              ENDIF
           ENDIF
           ity(1:nat) = ABS( ity(1:nat) )
@@ -442,7 +443,7 @@ CONTAINS
        IF ( npaint == -1 ) THEN  ! (re)calculate group best one
           ind = MAXLOC( ipaint(1:3) )  ! ind MUST be an array
           IF ( ipaint(ind(1)) < 1 ) THEN
-             WRITE (6,'(/," Algorithm didnot work. Sorry...")')
+             WRITE (oUnit,'(/," Algorithm didnot work. Sorry...")')
              CALL juDFT_error("Supercell failure ;(", calledby ="spg_gen")
           ENDIF
           ity(ind(1)) = -ABS(ity(ind(1)))
@@ -484,9 +485,9 @@ CONTAINS
        ENDDO
        sym%tau = 0.00
        IF ( sym%nop > j-1 ) THEN
-          WRITE (6,*) 'System has non-symmorphic symmetry with', nops, 'operations.'
+          WRITE (oUnit,*) 'System has non-symmorphic symmetry with', nops, 'operations.'
           sym%nop = j - 1
-          WRITE(6,*) 'Symmetry reduced to symmorphic subgroup with', nops, 'operations.'
+          WRITE (oUnit,*) 'Symmetry reduced to symmorphic subgroup with', nops, 'operations.'
        ENDIF
 
     ENDIF ! sym%symor
@@ -555,29 +556,29 @@ CONTAINS
                   IF ( map(i) .EQ. 0 ) THEN
                      map(i) = k
                   ELSE
-                     WRITE (6,'(" Symmetry error : multiple ops")')
+                     WRITE (oUnit,'(" Symmetry error : multiple ops")')
                      CALL juDFT_error("close_pt: Multiple ops (Bravais)",calledby ="closure")
                   END IF
                END IF
             END DO
 
             IF (map(i).EQ.0) THEN
-               WRITE(6,*) 'Symmetry operations:'
+               WRITE(oUnit,*) 'Symmetry operations:'
                DO k = 1, nops
-                  WRITE(6,*) 'Matrix ', k, ':'
-                  WRITE(6,'(3i7)') mrot(:,1,k)
-                  WRITE(6,'(3i7)') mrot(:,2,k)
-                  WRITE(6,'(3i7)') mrot(:,3,k)
-                  WRITE(6,*) ''
+                  WRITE (oUnit,*) 'Matrix ', k, ':'
+                  WRITE (oUnit,'(3i7)') mrot(:,1,k)
+                  WRITE (oUnit,'(3i7)') mrot(:,2,k)
+                  WRITE (oUnit,'(3i7)') mrot(:,3,k)
+                  WRITE (oUnit,*) ''
                END DO
-               WRITE (6,'(" Group not closed (Bravais lattice)")')
-               WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
-               WRITE(6,*) ''
-               WRITE(6,*) 'Expected product of operations ', j, ' and ', i, ':'
-               WRITE(6,'(3i7)') mp(:,1)
-               WRITE(6,'(3i7)') mp(:,2)
-               WRITE(6,'(3i7)') mp(:,3)
-               WRITE(6,*) ''
+               WRITE (oUnit,'(" Group not closed (Bravais lattice)")')
+               WRITE (oUnit,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
+               WRITE (oUnit,*) ''
+               WRITE (oUnit,*) 'Expected product of operations ', j, ' and ', i, ':'
+               WRITE (oUnit,'(3i7)') mp(:,1)
+               WRITE (oUnit,'(3i7)') mp(:,2)
+               WRITE (oUnit,'(3i7)') mp(:,3)
+               WRITE (oUnit,*) ''
                CALL juDFT_error("close_pt:Not closed",calledby="closure")
             END IF
          END DO

@@ -18,7 +18,7 @@
       CONTAINS
       SUBROUTINE inpnoco(atoms,input,sym,vacuum,noco)
 
-      USE m_constants, ONLY : tpi_const
+      USE m_constants
       USE m_rwnoco
       USE m_types_atoms
       USE m_types_input
@@ -39,12 +39,12 @@
 
       OPEN (24,file='nocoinp',form='formatted',status='old')
 
-      WRITE (6,*)'This is a non-collinear calculation. The magnetic'
-      WRITE (6,*)'moments of the atoms have a fixed direction.'
-      WRITE (6,*)'The Euler-angles alpha and beta of this direction'
-      WRITE (6,*)'are equal to the polar angles of the magnetic'
-      WRITE (6,*)'moment vector phi and theta respectively.'
-      WRITE (6,*)
+      WRITE (oUnit,*)'This is a non-collinear calculation. The magnetic'
+      WRITE (oUnit,*)'moments of the atoms have a fixed direction.'
+      WRITE (oUnit,*)'The Euler-angles alpha and beta of this direction'
+      WRITE (oUnit,*)'are equal to the polar angles of the magnetic'
+      WRITE (oUnit,*)'moment vector phi and theta respectively.'
+      WRITE (oUnit,*)
 
       CALL rw_noco_read(atoms,noco,input)
 
@@ -65,7 +65,7 @@
          ENDDO
       ENDIF
 
-      WRITE (6,*)
+      WRITE (oUnit,*)
       CLOSE (24)
 
       END SUBROUTINE inpnoco

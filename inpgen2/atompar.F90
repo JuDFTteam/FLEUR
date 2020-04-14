@@ -300,6 +300,9 @@ contains
   END SUBROUTINE read_atom_params_old
 
   SUBROUTINE dump_list()
+
+    USE m_constants
+
     INTEGER::n
 
     INTEGER :: id,z,jri,lmax,lnonsph
@@ -308,7 +311,7 @@ contains
     type(t_atompar)::ap
     NAMELIST /atom/desc,id,z,jri,lmax,lnonsph,rmt,rmt_min,dx,lo,econfig
 
-    WRITE(6,*) "List of defined atomic parameters"
+    WRITE(oUnit,*) "List of defined atomic parameters"
     DO n=1,no_of_atompars
        ap=atompar_list(n)
        id=ap%id
@@ -322,7 +325,7 @@ contains
        lo=ap%lo
        econfig=ap%econfig
        desc=ap%desc
-       WRITE(6,atom)
+       WRITE(oUnit,atom)
     ENDDO
 
   END SUBROUTINE dump_list

@@ -9,6 +9,8 @@ CONTAINS
        optype,oldfleur,nops,multtab,amat,&
        symor,mrot,tau,invsym,invs,zrfs,invs2,nop,nop2)
 
+    USE m_constants
+
     IMPLICIT NONE
 
     !===> Arguments
@@ -85,11 +87,11 @@ CONTAINS
        invs2   = .FALSE.
     ENDIF
 
-    WRITE(6,*)
-    WRITE(6,*) 'DBG: symor,zorth,oldfleur :', symor,zorth,oldfleur
-    WRITE(6,'(1x,a13,48i5)') 'DBG: optype :', optype(1:nops)
-    WRITE(6,*) 'DBG: invsym,invs,zrfs,invs2 :', invsym,invs,zrfs,invs2
-    WRITE(6,'(1x,a45,3i5)') 'DBG: (before reorder) invsop,zrfsop,invs2op :', invsop,zrfsop,invs2op
+    WRITE(oUnit,*)
+    WRITE(oUnit,*) 'DBG: symor,zorth,oldfleur :', symor,zorth,oldfleur
+    WRITE(oUnit,'(1x,a13,48i5)') 'DBG: optype :', optype(1:nops)
+    WRITE(oUnit,*) 'DBG: invsym,invs,zrfs,invs2 :', invsym,invs,zrfs,invs2
+    WRITE(oUnit,'(1x,a45,3i5)') 'DBG: (before reorder) invsop,zrfsop,invs2op :', invsop,zrfsop,invs2op
 
     IF ( (.NOT.oldfleur) .OR. (.NOT.zorth) ) THEN
        nop = nops
@@ -189,13 +191,13 @@ CONTAINS
     ENDIF
 
     IF ( oldfleur .AND. nop.NE.nops ) THEN
-       WRITE(6,'(/," Full space group has",i3," operations.",/)') nops
-       WRITE(6,'(i3," operations violate the 2d symmetry in fleur21"," and have been removed.",/)') nops-nop
+       WRITE(oUnit,'(/," Full space group has",i3," operations.",/)') nops
+       WRITE(oUnit,'(i3," operations violate the 2d symmetry in fleur21"," and have been removed.",/)') nops-nop
        DO n = nop+1, nops
-          WRITE(6,'(" operation",i3,":  ")') n
-          WRITE(6,'(15x,"  (",3i3," )  (",f6.3," )")') ((mrot(j,i,n),i=1,3),tau(j,n),j=1,3)
+          WRITE(oUnit,'(" operation",i3,":  ")') n
+          WRITE(oUnit,'(15x,"  (",3i3," )  (",f6.3," )")') ((mrot(j,i,n),i=1,3),tau(j,n),j=1,3)
        ENDDO
-       WRITE(6,'(/,"Reduced space group has",i3," operations.",/)') nop
+       WRITE(oUnit,'(/,"Reduced space group has",i3," operations.",/)') nop
        !        nops = nop
     ELSE
        nop = nops

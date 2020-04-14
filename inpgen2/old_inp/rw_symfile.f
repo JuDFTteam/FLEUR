@@ -10,6 +10,8 @@
      >                      rw,symfh,symfn,nopd,bmat,
      X                      mrot,tau,nop,nop2,symor)
 
+      USE m_constants
+
       IMPLICIT NONE
 
 !===> Arguments
@@ -133,10 +135,10 @@
      +            ="rw_symfile")
           ENDIF
  
-          WRITE (6,FMT=8020) n, type
+          WRITE (oUnit,FMT=8020) n, type
  8020     FORMAT (/,1x,i3,' : ',a3)
           DO i = 1,3
-             WRITE (6,FMT=8030) (mrot(i,j,n),j=1,3),tau(i,n)
+             WRITE (oUnit,FMT=8030) (mrot(i,j,n),j=1,3),tau(i,n)
           ENDDO
  8030     FORMAT (5x,3i3,3x,f4.1)
         ENDDO

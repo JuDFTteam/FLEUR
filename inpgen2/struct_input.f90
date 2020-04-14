@@ -14,6 +14,7 @@
      <                       atomLabel,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
+      USE m_constants
       use m_calculator
       USE m_readrecord
       USE m_rwsymfile
@@ -128,11 +129,11 @@
         IF ( op > 0 ) THEN
           IF ( btest(op,0) ) checkinp = .true.
           IF ( BTEST(op,1) ) inistop  = .TRUE.
-          IF ( btest(op,2) ) WRITE (6,*) 'action N/A'
+          IF ( btest(op,2) ) WRITE (oUnit,*) 'action N/A'
 !dbg+
-          IF ( btest(op,0) ) WRITE (6,*) 'bit 0 set'
-          IF ( btest(op,1) ) WRITE (6,*) 'bit 1 set'
-          IF ( btest(op,2) ) WRITE (6,*) 'bit 2 set'
+          IF ( btest(op,0) ) WRITE (oUnit,*) 'bit 0 set'
+          IF ( btest(op,1) ) WRITE (oUnit,*) 'bit 1 set'
+          IF ( btest(op,2) ) WRITE (oUnit,*) 'bit 2 set'
 !dbg-
         ENDIF
 
@@ -350,7 +351,7 @@
 
       IF ( l_symfile ) THEN
 
-        WRITE (6,*) 'DBG: l_symfile=',l_symfile
+        WRITE (oUnit,*) 'DBG: l_symfile=',l_symfile
         CALL rw_symfile(
      >                  'r',symfh,symfn,nop48,rdummy,
      X                   mmrot,ttr,ngen,nop2,symor)
@@ -364,7 +365,7 @@
         IF ( buffer(1:4)=='&gen' .or.
      &       buffer(1:4)=='&sym'     ) THEN
 
-          WRITE (6,*) 'DBG: &sym=',buffer(1:4)
+          WRITE (oUnit,*) 'DBG: &sym=',buffer(1:4)
 
           buffer  = ADJUSTL(buffer(5:nbuffer))
           nbuffer = LEN_TRIM(buffer)
@@ -423,7 +424,7 @@
         IF ( l_gen ) mmrot(1,1,1) = 0 ! is used later to distinguish
                                       ! between generators and full group
 
-        WRITE (6,*) 'DBG: mmrot(1,1,1)=',mmrot(1,1,1)
+        WRITE (oUnit,*) 'DBG: mmrot(1,1,1)=',mmrot(1,1,1)
 
       ENDIF ! .not.cal_symm
 

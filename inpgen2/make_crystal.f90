@@ -6,10 +6,12 @@ MODULE m_make_crystal
 CONTAINS
   SUBROUTINE make_crystal(film, atomid,atompos,atomlabel,dvac,noco,&
        cell,sym,atoms)
+
     USE m_types_cell
     USE m_types_sym
     USE m_types_atoms
     USE m_types_noco
+    USE m_constants
     USE m_make_spacegroup
     USE m_make_atom_groups
     !USE m_generator
@@ -90,14 +92,14 @@ CONTAINS
 
     !---> output: the atomic positions, etc.
 
-    WRITE (6,'(//," Atomic positions:",/,1x,17("-"))')
-    WRITE (6,'(" atom types =",i5/,"      total =",i5)') atoms%ntype,atoms%nat
-    WRITE (6,'(/,7x,"lattice coordinates",15x,"(scaled) Cartesian coordinates   atom")')
+    WRITE (oUnit,'(//," Atomic positions:",/,1x,17("-"))')
+    WRITE (oUnit,'(" atom types =",i5/,"      total =",i5)') atoms%ntype,atoms%nat
+    WRITE (oUnit,'(/,7x,"lattice coordinates",15x,"(scaled) Cartesian coordinates   atom")')
 
     na = 0
     DO nt=1,atoms%ntype
        DO n=1,atoms%neq(nt)
-          WRITE (6,'(3f10.6,10x,3f10.6,i7)') atoms%taual(:,na+n),atoms%pos(:,na+n),na+n
+          WRITE (oUnit,'(3f10.6,10x,3f10.6,i7)') atoms%taual(:,na+n),atoms%pos(:,na+n),na+n
        ENDDO
        na = na + atoms%neq(nt)
     ENDDO
