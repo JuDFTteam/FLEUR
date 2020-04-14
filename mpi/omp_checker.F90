@@ -4,6 +4,7 @@ contains
    subroutine omp_checker()
       use omp_lib
       use m_judft
+      USE m_constants
       use, intrinsic :: iso_c_binding
       implicit none
 #ifndef __PGI
@@ -35,9 +36,9 @@ contains
             WRITE(*,*) "The OMP parallelism seems to be weird"
             WRITE(*,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                        " on cpu " // int2str(cpu(i))
-            WRITE(6,*) "The OMP parallelism seems to be weird"
-            WRITE(6,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
-                       " on cpu " // int2str(cpu(i))
+            WRITE(oUnit,*) "The OMP parallelism seems to be weird"
+            WRITE(oUnit,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
+                           " on cpu " // int2str(cpu(i))
             exit
          endif
       enddo
