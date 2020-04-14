@@ -34,6 +34,7 @@ then
 
     export FC=${FC:=mpif90}
     export CC=${CC:=mpicc}
+    export CXX=${CXX:=mpicxx}
     #ELPA
     CLI_ELPA_OPENMP=1
     FLEUR_LIBDIR="$FLEUR_LIBDIR $ELPA_LIB"

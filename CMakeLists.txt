@@ -7,7 +7,7 @@ endif()
 # sometimes cmake clears CMAKE_Fortran_FLAGS during project()
 set(CMAKE_Fortran_FLAGS_backup ${CMAKE_Fortran_FLAGS})
 set(CMAKE_Fortran_FLAGS "")
-project(FLEUR LANGUAGES C Fortran)
+project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
 include("cmake/CompilerConfig.txt")

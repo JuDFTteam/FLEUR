@@ -6,7 +6,7 @@ while [ $# -gt 0 ]
 do
     case "$1" in
         -h) help=1;;
-	-help) help=1;;
+	-help|--help) help=1;;
         -b) backup=1;;
         -backup) backup=1;;
         -g) gitupdate=1;;
@@ -120,8 +120,9 @@ cmake/machines in this case :-)
   
   In addition you can modify some environment variables:
         FC                  -- name of Fortran compiler
-        CC                  -- name of C compiler"
-echo "
+        CC                  -- name of C compiler
+        CXX                 -- name of C++ compiler
+
    By specifying a label you can have different build directories.
    The label will be added to the 'build' directory name."
   exit 1

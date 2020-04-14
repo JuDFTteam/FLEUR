@@ -15,6 +15,7 @@
     then
       export FC=mpif90
       export CC=mpicc
+      export CXX=mpicxx
     fi
   fi
 

@@ -11,6 +11,7 @@ then
     echo "PGI toolchain used"
     FC=mpif90
     CC=mpicc
+    CXX=mpicxx
     FLEUR_INCLUDEDIR="$XML2_ROOT/include"
     FLEUR_LIBRARIES="-lstdc++;-L$MKLROOT/lib/intel64;-lmkl_scalapack_lp64;-lmkl_intel_lp64;-lmkl_pgi_thread;-lmkl_core;-lmkl_blacs_intelmpi_lp64"
 else
