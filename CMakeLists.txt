@@ -20,8 +20,6 @@ include("cmake/filespecific.cmake")
 
 include("cmake/ReportConfig.txt")
 
-add_subdirectory("inpgen2")
-
 
 #install(TARGETS fleur inpgen DESTINATION bin)
 install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur

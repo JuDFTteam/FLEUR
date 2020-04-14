@@ -98,3 +98,5 @@ include(cmake/docker.txt)
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
+
+add_subdirectory("inpgen2")
