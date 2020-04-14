@@ -13,7 +13,7 @@ endif()
 
 message("ChASE Library found:${FLEUR_USE_CHASE}")
 if (DEFINED CLI_FLEUR_USE_CHASE)
-   if (${CLI_FLEUR_USE_CHASE})
+   if (CLI_FLEUR_USE_CHASE)
       if (NOT FLEUR_USE_CHASE)
          set(FLEUR_USE_CHASE TRUE)
 	 message("Test for Chase failed, but you specified to use it anyway...")

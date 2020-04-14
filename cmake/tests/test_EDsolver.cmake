@@ -58,7 +58,7 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
                                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init)
                execute_process(COMMAND ${GIT_EXECUTABLE} submodule update
                                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update)
-               if( ${_res_init} GREATER 0 OR ${_res_update} GREATER 0 )
+               if (_res_init GREATER 0 OR _res_update GREATER 0)
                   message(FATAL_ERROR "EDsolver source could not be downloaded. \
                                        We tried: 'git submodule init external/edsolver-library \
                                        && git submodule update' and this resulted in error" )
