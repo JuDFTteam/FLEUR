@@ -20,7 +20,7 @@ c
 c     Frank Freimuth, February 2011
 c*************************************************
 
-      use m_constants, only:pimach
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
@@ -95,7 +95,7 @@ c      real                :: kpoints(3,nkpts)
       jspins=jspins_in
       if(l_soc)jspins=1
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 c*****************************************************
 c     get num_bands and num_wann from the proj file
 c*****************************************************
@@ -114,8 +114,8 @@ c*****************************************************
       endif
       read (203,*) num_wann,num_bands
       close (203)
-      write(6,*)'According to proj there are ',num_bands,' bands'
-      write(6,*)"and ",num_wann," wannier functions."
+      write(oUnit,*)'According to proj there are ',num_bands,' bands'
+      write(oUnit,*)"and ",num_wann," wannier functions."
 
 c****************************************************************
 c        read in chk
@@ -181,7 +181,7 @@ c        Calculate matrix elements of SOC in the basis of
 c        rotated Bloch functions.
 c****************************************************************
       allocate( hsomtx2(num_wann,num_wann,3,nkpts) )
-      write(6,*)"calculate matrix elements of SOC commutator
+      write(oUnit,*)"calculate matrix elements of SOC commutator
      &between wannier orbitals"
 
       if(have_disentangled) then       
@@ -232,7 +232,7 @@ c****************************************************************
 c************************************************************
 c        Calculate matrix elements in real space.
 c***********************************************************      
-      write(6,*)"calculate SOC-mat in rs"
+      write(oUnit,*)"calculate SOC-mat in rs"
       allocate(hreal(num_wann,num_wann,3,rvecnum))
       hreal=cmplx(0.0,0.0)
       do rvecind=1,rvecnum

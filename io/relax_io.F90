@@ -9,6 +9,7 @@ MODULE m_relaxio
   !The writing is done directly to relax.xml
   !The reading uses the libxml interface to inp.xml. Hence the relax.xml has to be included here.
   USE m_judft
+  USE m_constants
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: read_relax,write_relax,apply_displacements,read_displacements,rotate_to_all_sites
@@ -173,7 +174,7 @@ CONTAINS
           disp(:,indx(2))=disp(:,indx(2))*0.9
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
-          WRITE(6,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
+          WRITE(oUnit,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
           ! WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%label(sum(atoms%neq(:indx(1)-1))+1),&
           ! &atoms%label(sum(atoms%neq(:indx(2)-1))+1), overlap(indx(1),indx(2)),&
           ! &NEW_LINE('A')//"Treat as an error: writing rescaled displacements to relax.xml is not implemented"
@@ -188,9 +189,9 @@ CONTAINS
 
     CALL mapatom(sym,atoms,cell,input,noco,gfinp)
 
-    WRITE(6,*) "Atomic positions including displacements:"
+    WRITE(oUnit,*) "Atomic positions including displacements:"
     DO n=1,atoms%nat
-       WRITE(6,"(i4,6(1x,f12.5))") n,atoms%taual(:,n),atoms%pos(:,n)
+       WRITE(oUnit,"(i4,6(1x,f12.5))") n,atoms%taual(:,n),atoms%pos(:,n)
     ENDDO
 
   END SUBROUTINE apply_displacements

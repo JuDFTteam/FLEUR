@@ -14,7 +14,7 @@
      >                  nop,mrot,qss,
      <                  error)
       
-      USE m_constants, ONLY : pimach
+      USE m_constants
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: nop, mrot(3,3,nop)
@@ -56,13 +56,14 @@
         test = (qss(1)-q1(1))**2+(qss(2)-q1(2))**2+(qss(3)-q1(3))**2
         IF (abs(test).GT.0.0000001) THEN
           error(iop) = .true.
-          WRITE (6,100) iop
+          WRITE (oUnit,100) iop
         ENDIF
       ENDDO
  100  FORMAT ('Symmetry element no.',i3,' incompatible with axis qss')
       
       IF ( ANY(error(:)) ) THEN
-        WRITE (6,*) 'symmetry incompatible with Spin Spiral Axis [qss]'
+        WRITE (oUnit,*) 
+     +     'symmetry incompatible with Spin Spiral Axis [qss]'
       ENDIF
       END SUBROUTINE ss_sym
       END MODULE m_sssym

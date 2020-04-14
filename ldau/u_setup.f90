@@ -18,6 +18,7 @@ MODULE m_usetup
   !-------------------------------------------------------------------+
 CONTAINS
   SUBROUTINE u_setup(sym,atoms,sphhar,input,noco,hub1inp,el,inDen,pot,mpi,results)
+
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
@@ -26,7 +27,9 @@ CONTAINS
     USE m_types
     USE m_constants
     USE m_cdn_io
+
     IMPLICIT NONE
+
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)          :: mpi
@@ -86,35 +89,35 @@ CONTAINS
           results%e_ldau = results%e_ldau + e_off
        ELSE IF(noco%l_mperp.AND.mpi%irank.EQ.0) THEN
           WRITE(*,*) "Offdiagonal LDA+U ignored"
-          WRITE(6,*) "The offdiagonal contributions to LDA+U only enters into the Hamiltonian if l_mtNocoPot is also true"
+          WRITE(oUnit,*) "The offdiagonal contributions to LDA+U only enters into the Hamiltonian if l_mtNocoPot is also true"
        ENDIF
 
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,MERGE(3,input%jspins,noco%l_mtNocoPot)
-             WRITE (6,'(a7,i3)') 'spin #',jspin
+             WRITE (oUnit,'(a7,i3)') 'spin #',jspin
              DO i_u = 1, n_u
                 itype = atoms%lda_u(i_u)%atomType
                 l = atoms%lda_u(i_u)%l
                 WRITE (l_type,'(i2)') 2*(2*l+1)
                 l_form = '('//l_type//'f12.7)'
-                WRITE (6,'(a20,i3)') 'n-matrix for atom # ',itype
-                IF(i_u > atoms%n_u) WRITE(6,"(A)") 'n-matrix calculated with DFT+Hubbard-1'
+                WRITE (oUnit,'(a20,i3)') 'n-matrix for atom # ',itype
+                IF(i_u > atoms%n_u) WRITE(oUnit,"(A)") 'n-matrix calculated with DFT+Hubbard-1'
                 IF(jspin < 3) THEN
-                  WRITE (6,l_form) ((n_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                  WRITE (oUnit,l_form) ((n_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
                 ELSE
-                  WRITE (6,l_form) ((inDen%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                  WRITE (oUnit,l_form) ((inDen%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
                 ENDIF
-                WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype
+                WRITE (oUnit,'(a20,i3)') 'V-matrix for atom # ',itype
                 IF (atoms%lda_u(i_u)%l_amf) THEN
-                   WRITE (6,*) 'using the around-mean-field limit '
+                   WRITE (oUnit,*) 'using the around-mean-field limit '
                 ELSE
-                   WRITE (6,*) 'using the atomic limit of LDA+U '
+                   WRITE (oUnit,*) 'using the atomic limit of LDA+U '
                 ENDIF
-                WRITE (6,l_form) ((pot%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                WRITE (oUnit,l_form) ((pot%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
              END DO
           END DO
-          WRITE (6,*) results%e_ldau
-          IF(noco%l_mtNocoPot) WRITE(6,*) e_off
+          WRITE (oUnit,*) results%e_ldau
+          IF(noco%l_mtNocoPot) WRITE(oUnit,*) e_off
        ENDIF
        DEALLOCATE (u,n_mmp)
     ELSE

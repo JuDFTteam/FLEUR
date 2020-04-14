@@ -14,6 +14,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
 !********************************************
    use m_judft
    use m_types
+   USE m_constants
 
    implicit none
 
@@ -155,14 +156,14 @@ subroutine wann_read_inp(input,noco,mpi,wann)
          i=i+1
          read(916,'(a)',iostat=ios)task
          if(ios.ne.0)exit
-         if(l_p0) write(6,*)"line ",i,":",task
+         if(l_p0) write(oUnit,*)"line ",i,":",task
          if(task(1:1).eq.'!')cycle
          if(index(task,'=F').ne.0.or.index(task,'=f').ne.0)cycle
          read(task,*,iostat=ios)task
          if(index(task,'=').ne.0)then
             task=task(1:(index(task,'=')-1))
          endif
-         if(l_p0) write(6,*)"==>key: ",task
+         if(l_p0) write(oUnit,*)"==>key: ",task
          if(trim(task).eq.'endjobs')then
             exit
          elseif(trim(task).eq.'nabla')then
@@ -172,7 +173,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%mhp(1),wann%mhp(2),wann%mhp(3)
             if (ios /= 0) CALL juDFT_error ("error reading mhp", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
+            if(l_p0)write(oUnit,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
          elseif(trim(task).eq.'nablars')then
             wann%l_nablars=.true.
          elseif(trim(task).eq.'nablapaulirs')then
@@ -303,13 +304,13 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%gfthick,wann%gfcut
             if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"gfcut=",wann%gfthick,wann%gfcut
+            if(l_p0)write(oUnit,*)"gfcut=",wann%gfthick,wann%gfcut
          elseif(trim(task).eq.'lapw')then
             wann%l_lapw=.true.
             backspace(916)
             read(916,*,iostat=ios)task,wann%unigrid(:)
             if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"unigrid=",wann%unigrid(:)
+            if(l_p0)write(oUnit,*)"unigrid=",wann%unigrid(:)
          elseif(trim(task).eq.'plot_lapw')then
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
@@ -398,15 +399,15 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%atomlist_num,wann%atomlist
             if (ios /= 0) CALL judft_error ("error reading atomlist", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"atomlist_num=",wann%atomlist_num
-            if(l_p0)write(6,*)"atomlist=",wann%atomlist
+            if(l_p0)write(oUnit,*)"atomlist_num=",wann%atomlist_num
+            if(l_p0)write(oUnit,*)"atomlist=",wann%atomlist
          elseif(trim(task).eq.'byindex')then
             wann%l_byindex=.true.
             backspace(916)
             read(916,*,iostat=ios)task,wann%band_min(1),wann%band_max(1)
             if (ios /= 0) CALL juDFT_error("error reading byindex,band_min,band_max", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"band_min=",wann%band_min(1)
-            if(l_p0)write(6,*)"band_max=",wann%band_max(1)
+            if(l_p0)write(oUnit,*)"band_min=",wann%band_min(1)
+            if(l_p0)write(oUnit,*)"band_max=",wann%band_max(1)
             if(wann%band_min(2).eq.-1)then
                wann%band_min(2)=wann%band_min(1)
                wann%band_max(2)=wann%band_max(1)
@@ -416,8 +417,8 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%band_min(2),wann%band_max(2)
             if (ios /= 0) CALL juDFT_error ("error reading byindex2,band_min2,band_max", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"band_min2=",wann%band_min(2)
-            if(l_p0)write(6,*)"band_max2=",wann%band_max(2)
+            if(l_p0)write(oUnit,*)"band_min2=",wann%band_min(2)
+            if(l_p0)write(oUnit,*)"band_max2=",wann%band_max(2)
             if(wann%band_min(1).eq.-1)then
                wann%band_min(1)=wann%band_min(2)
                wann%band_max(1)=wann%band_max(2)
@@ -427,15 +428,15 @@ subroutine wann_read_inp(input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%ikptstart
             if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"ikptstart=",wann%ikptstart
+            if(l_p0)write(oUnit,*)"ikptstart=",wann%ikptstart
          else
-            write(6,*)"unrecognized key: ",task
+            write(oUnit,*)"unrecognized key: ",task
             CALL juDFT_error ("unrecognized key in wann_inp", calledby="wann_read_inp")
          endif
       enddo
 
       if (ios /= 0) CALL juDFT_error ("error reading wann_inp", calledby="wann_read_inp")
-      if(l_p0.and.ios.lt.0)write(6,*)"end of wann_inp reached"
+      if(l_p0.and.ios.lt.0)write(oUnit,*)"end of wann_inp reached"
       close(916)
 
    ELSE
@@ -455,14 +456,14 @@ subroutine wann_read_inp(input,noco,mpi,wann)
          CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
 #endif
          task = TRIM(ADJUSTL(wann%jobList(i)))
-         if(l_p0) write(6,*)"task ",i,":",task
+         if(l_p0) write(oUnit,*)"task ",i,":",task
          if(task(1:1).eq.'!')cycle
          if(index(task,'=F').ne.0.or.index(task,'=f').ne.0)cycle
          read(task,*,iostat=ios)task
          if(index(task,'=').ne.0)then
             task=task(1:(index(task,'=')-1))
          endif
-         if(l_p0) write(6,*)"==>key: ",task
+         if(l_p0) write(oUnit,*)"==>key: ",task
          if(trim(task).eq.'endjobs') THEN
             EXIT
          elseif(trim(task).eq.'nabla')then
@@ -472,7 +473,7 @@ subroutine wann_read_inp(input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%mhp(1),wann%mhp(2),wann%mhp(3)
 !            if (ios /= 0) CALL juDFT_error ("error reading mhp", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
+!            if(l_p0)write(oUnit,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
          elseif(trim(task).eq.'nablars')then
             wann%l_nablars=.true.
          elseif(trim(task).eq.'nablapaulirs')then
@@ -604,13 +605,13 @@ subroutine wann_read_inp(input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%gfthick,wann%gfcut
 !            if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"gfcut=",wann%gfthick,wann%gfcut
+!            if(l_p0)write(oUnit,*)"gfcut=",wann%gfthick,wann%gfcut
 !         elseif(trim(task).eq.'lapw')then
 !            wann%l_lapw=.true.
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%unigrid(:)
 !            if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"unigrid=",wann%unigrid(:)
+!            if(l_p0)write(oUnit,*)"unigrid=",wann%unigrid(:)
          elseif(trim(task).eq.'plot_lapw')then
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
@@ -699,25 +700,25 @@ subroutine wann_read_inp(input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%atomlist_num,wann%atomlist
 !            if (ios /= 0) CALL judft_error ("error reading atomlist", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"atomlist_num=",wann%atomlist_num
-!            if(l_p0)write(6,*)"atomlist=",wann%atomlist
+!            if(l_p0)write(oUnit,*)"atomlist_num=",wann%atomlist_num
+!            if(l_p0)write(oUnit,*)"atomlist=",wann%atomlist
 !         elseif(trim(task).eq.'ikptstart')then
 !            wann%l_ikptstart=.true.
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%ikptstart
 !            if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"ikptstart=",wann%ikptstart
+!            if(l_p0)write(oUnit,*)"ikptstart=",wann%ikptstart
          else
-            write(6,*)"unrecognized key: ",task
+            write(oUnit,*)"unrecognized key: ",task
             CALL juDFT_error ("unrecognized key in wannier jobList", calledby="wann_read_inp")
          endif
       enddo
 
       IF (wann%l_byindex) THEN
-         if(l_p0)write(6,*)"band_min1=",wann%band_min(1)
-         if(l_p0)write(6,*)"band_max1=",wann%band_max(1)
-         if(l_p0)write(6,*)"band_min2=",wann%band_min(2)
-         if(l_p0)write(6,*)"band_max2=",wann%band_max(2)
+         if(l_p0)write(oUnit,*)"band_min1=",wann%band_min(1)
+         if(l_p0)write(oUnit,*)"band_max1=",wann%band_max(1)
+         if(l_p0)write(oUnit,*)"band_min2=",wann%band_min(2)
+         if(l_p0)write(oUnit,*)"band_max2=",wann%band_max(2)
       END IF
 
    END IF ! l_file

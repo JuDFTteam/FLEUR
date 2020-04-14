@@ -47,6 +47,7 @@ contains
       use m_types_kpts
       use m_types_mpi
       use m_types_mpinp
+      USE m_constants
       use m_intgrf, only: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
@@ -172,20 +173,24 @@ contains
       enddo
 
       if(mpi%irank == 0) THEN
-         WRITE(6, '(/A)') 'Mixed basis'
-         WRITE(6, '(A,I5)') 'Number of unique G-vectors: ', mpdata%num_gpts()
-         WRITE(6, *)
-         WRITE(6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpinp%g_cutoff/2*input%rkmax):'
-         WRITE(6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpdata%n_g)
+         WRITE(oUnit, '(/A)') 'Mixed basis'
+         WRITE(oUnit, '(A,I5)') 'Number of unique G-vectors: ', mpdata%num_gpts()
+         WRITE(oUnit, *)
+         WRITE(oUnit, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpinp%g_cutoff/2*input%rkmax):'
+         WRITE(oUnit, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpdata%n_g)
       END if
    end subroutine mpdata_gen_gvec
 
    subroutine mpdata_check_orthonormality(mpdata, atoms, mpi, l, itype, gridf)
-      use m_intgrf, only: intgrf
+
+      use m_judft
       use m_types_setup
       use m_types_mpi
-      use m_judft
+      USE m_constants
+      use m_intgrf, only: intgrf
+
       implicit none
+
       class(t_mpdata)          :: mpdata
       type(t_atoms), intent(in) :: atoms
       type(t_mpi), intent(in)   :: mpi
@@ -227,7 +232,7 @@ contains
 
       if(mpi%irank == 0) THEN
          n_radbasfn = mpdata%num_radbasfn(l, itype)
-         WRITE(6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
+         WRITE(oUnit, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
             lchar(l)//':', n_radbasfn, norm2(olap)/n_radbasfn
       END if
       call timestop("check mpdata orthonormality")

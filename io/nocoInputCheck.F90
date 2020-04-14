@@ -16,6 +16,7 @@ MODULE m_nocoInputCheck
       USE m_types_sym
       USE m_types_vacuum
       USE m_types_noco
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -30,46 +31,46 @@ MODULE m_nocoInputCheck
 
 !---> make sure second variation is switched off
       IF (input%secvar) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the second variation!!'
+         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+         WRITE (oUnit,*) 'cannot be used with the second variation!!'
          CALL juDFT_error("Second variation cannot be used!!!" ,calledby="nocoInputCheck")
       END IF
 
 !---> make sure histogram method is used
       IF (input%bz_integration==1) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the Gaussian smearing for '
-         WRITE (6,*) 'the Brillouin zone integration!!'
-         WRITE (6,*) 'Please use the histogram method.'
+         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+         WRITE (oUnit,*) 'cannot be used with the Gaussian smearing for '
+         WRITE (oUnit,*) 'the Brillouin zone integration!!'
+         WRITE (oUnit,*) 'Please use the histogram method.'
          CALL juDFT_error("Only histogram Brillouin zone integration can be used!!!",calledby ="nocoInputCheck")
       END IF
 
 !---> make sure force is switched off
       IF (input%l_f) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'does not support force calculations.'
+         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+         WRITE (oUnit,*) 'does not support force calculations.'
          CALL juDFT_error("force calculations not supported!!!",calledby="nocoInputCheck")
       END IF
 
 !---> make sure nstm equals zero
       IF (vacuum%nstm.NE.0) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'does not support STM calculations(nstm .NE. 0).'
+         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+         WRITE (oUnit,*) 'does not support STM calculations(nstm .NE. 0).'
          CALL juDFT_error("nstm /= 0 not supported!",calledby ="nocoInputCheck")
       END IF
 
 !---> make sure starcoeff is switched off
 !      IF (starcoeff) THEN
-!         WRITE (6,*) 'This non-collinear version of the flapw program'
-!         WRITE (6,*) 'does not support starcoefficients output.'
+!         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+!         WRITE (oUnit,*) 'does not support starcoefficients output.'
 !     CALL juDFT_error("starcoefficients output (for STM) cannot be !!!"
 !     generated
 !      ENDIF
 
 !---> make sure coretails are switched off
       IF (input%ctail) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the coretail option!! '
+         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
+         WRITE (oUnit,*) 'cannot be used with the coretail option!! '
          CALL juDFT_error("Coretail option cannot be used!!!",calledby="nocoInputCheck")
       END IF
 
@@ -79,24 +80,24 @@ MODULE m_nocoInputCheck
          l_relax_any = l_relax_any.OR.noco%l_relax(itype)
       END DO
       IF (l_relax_any.AND.noco%l_constr) THEN
-         WRITE (6,*)'The relaxation of the moment is switched on for at'
-         WRITE (6,*)'least one atom. At the same time the constrained'
-         WRITE (6,*)'moment option has been switched on!!!'
+         WRITE (oUnit,*)'The relaxation of the moment is switched on for at'
+         WRITE (oUnit,*)'least one atom. At the same time the constrained'
+         WRITE (oUnit,*)'moment option has been switched on!!!'
 !          CALL juDFT_error("relaxation of moments and constraint are sw
       ENDIF
       if (l_relax_any.or.noco%l_constr) CALL judft_warn("Constraint moments and relaxations are untested in this version!")
 !---> make sure that perp. component of mag. is calculated if needed
       IF ( (l_relax_any .or. noco%l_constr) .and. (.not. noco%l_mperp) ) THEN
-         WRITE (6,*)'The relaxation of the moment is switched on for at'
-         WRITE (6,*)'least one atom or the constrained moment option is'
-         WRITE (6,*)'switched on. In either case, you need to set'
-         WRITE (6,*)'l_mperp=T !!'
+         WRITE (oUnit,*)'The relaxation of the moment is switched on for at'
+         WRITE (oUnit,*)'least one atom or the constrained moment option is'
+         WRITE (oUnit,*)'switched on. In either case, you need to set'
+         WRITE (oUnit,*)'l_mperp=T !!'
          CALL juDFT_error("Stop: Set l_mperp = T to relax or constrain the moments!!",calledby ="nocoInputCheck")
       ENDIF
 !---> make sure l_constr is switched off in the case of spin spirals
       IF (noco%l_constr .and. noco%l_ss) THEN
-         WRITE (6,*)'The constraint moment option is not implemeted'
-         WRITE (6,*)'for spin spirals.'
+         WRITE (oUnit,*)'The constraint moment option is not implemeted'
+         WRITE (oUnit,*)'for spin spirals.'
          CALL juDFT_error("Stop: constraint not implemented for spin spirals!!",calledby ="nocoInputCheck")
       ENDIF
 

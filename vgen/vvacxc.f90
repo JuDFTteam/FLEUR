@@ -16,9 +16,12 @@ CONTAINS
     !     ** r.pentcheva 08.05.96
     !     ********************************************************************
 
-    USE m_fft2d
     USE m_types
+    USE m_constants
+    USE m_fft2d
+
     IMPLICIT NONE
+
     CLASS(t_xcpot),INTENT(IN)     :: xcpot
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -153,7 +156,7 @@ CONTAINS
           ENDDO
        ENDDO
        !
-       WRITE (6,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE (oUnit,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT (/,5x,'vacuum zero for vacuum',i3,' = ',2f10.5)
        !
        !        calculate the ex.-corr. energy density now beyond warping region

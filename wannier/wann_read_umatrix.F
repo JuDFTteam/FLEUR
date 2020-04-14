@@ -19,7 +19,11 @@ c************************************************************
      <               have_disentangled,
      <               lwindow,ndimwin,
      <               u_matrix_opt,u_matrix_tmp,m_matrix)
+
+      USE m_constants
+
       implicit none
+
       integer,intent(in)  :: fullnkpts,jspin
       integer,intent(in)  :: num_wann,num_bands
       logical,intent(in)  :: um_format
@@ -50,7 +54,7 @@ c**************************************************************
 c     read in chk
 c**************************************************************
 
-      write(6,*)"read in chk"
+      write(oUnit,*)"read in chk"
       l_chk=.false.
       inquire (file=spin12(jspin)//'.chk',exist=l_chk)
       IF(.NOT.l_chk)  then
@@ -67,15 +71,15 @@ c**************************************************************
       if(wan90version.eq.1)then !wannier90 version 1.1
         ! Read comment line
         read(chk_unit) header
-        write(6,*)header
+        write(oUnit,*)header
         ! Real and reciprocal lattice (units: Angstroem)
         read(chk_unit) ((tmp_latt(i,j),i=1,3),j=1,3)  ! Real lattice
-        write(6,*)tmp_latt
+        write(oUnit,*)tmp_latt
         read(chk_unit) ((tmp_latt(i,j),i=1,3),j=1,3)  ! Reciprocal lattice
-        write(6,*)tmp_latt
+        write(oUnit,*)tmp_latt
  
         read(chk_unit) num_kpts  ! K-points
-        write(6,*)"num_kpts=",num_kpts
+        write(oUnit,*)"num_kpts=",num_kpts
         if (num_kpts.ne.fullnkpts) CALL 
      &     juDFT_error("num_kpts.ne.fullnkpts",calledby
      +     ="wann_read_umatrix")
@@ -84,7 +88,7 @@ c**************************************************************
 
         ! Read comment line
         read(chk_unit) header
-        write(6,*)header
+        write(oUnit,*)header
 
         read(chk_unit) ntmp 
 
@@ -94,12 +98,12 @@ c**************************************************************
 
         ! Real and reciprocal lattice (units: Angstroem)
         read(chk_unit) ((tmp_latt(i,j),i=1,3),j=1,3)  ! Real lattice
-        write(6,*)tmp_latt
+        write(oUnit,*)tmp_latt
         read(chk_unit) ((tmp_latt(i,j),i=1,3),j=1,3)  ! Reciprocal lattice
-        write(6,*)tmp_latt
+        write(oUnit,*)tmp_latt
  
         read(chk_unit) num_kpts                ! K-points
-        write(6,*)"num_kpts=",num_kpts
+        write(oUnit,*)"num_kpts=",num_kpts
         if (num_kpts.ne.fullnkpts) stop "num_kpts.ne.fullnkpts"
         read(chk_unit) (mp_grid(i),i=1,3)         ! M-P grid
       else
@@ -118,7 +122,7 @@ c**************************************************************
 
       read(chk_unit) checkpoint             ! checkpoint
       checkpoint=adjustl(trim(checkpoint))
-      write(6,*)checkpoint
+      write(oUnit,*)checkpoint
 
 
 
@@ -128,10 +132,10 @@ c**************************************************************
 ! whether a disentanglement has been performed
 
       if (have_disentangled) then
-         write(6,*)"You used disentangling"
-         write(6,*)"Reading in disentangling information"
+         write(oUnit,*)"You used disentangling"
+         write(oUnit,*)"Reading in disentangling information"
          read(chk_unit) omega_invariant     ! omega invariant
-         write(6,*)omega_invariant
+         write(oUnit,*)omega_invariant
 
 
        ! U matrix opt
@@ -171,7 +175,7 @@ c****************************************************************
      +     calledby ="wann_read_umatrix")
 
         open(111,file=spin12(jspin)//'_um.dat',form='unformatted')
-        write(6,*)"read in um_data"
+        write(oUnit,*)"read in um_data"
         read(111)header
         read(111)tmp_omi
         read(111) ntmp,num_kpts,num_nnmax
@@ -184,7 +188,7 @@ c****************************************************************
       endif !wannier90 version
 
 c$$$      if (um_format) then
-c$$$          write(6,*)"write um_data to formatted file WF1.umn/WF2.umn"
+c$$$          write(oUnit,*)"write um_data to formatted file WF1.umn/WF2.umn"
 c$$$          open(222,
 c$$$     &       file=spin12(jspin)//'.umn',form='formatted')
 c$$$c          write(222,*)header
@@ -209,7 +213,11 @@ c$$$      endif !um_format
      >               um_format,jspin,wan90version,
      <               have_disentangled,
      <               lwindow,ndimwin,u_matrix)
+
+      USE m_constants
+
       implicit none
+
       integer,intent(in)  :: fullnkpts,jspin
       integer,intent(in)  :: num_wann,num_bands
       logical,intent(in)  :: um_format
@@ -252,7 +260,8 @@ c*************************************************************
       endif   
 
       if (um_format) then
-          write(6,*)"write um_data to formatted file WF1.umn/WF2.umn"
+          write(oUnit,*)
+     +       "write um_data to formatted file WF1.umn/WF2.umn"
           open(222,
      &       file=spin12(jspin)//'.umn',form='formatted')
 c          write(222,*)header

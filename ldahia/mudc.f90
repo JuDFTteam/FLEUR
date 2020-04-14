@@ -5,6 +5,7 @@ MODULE m_mudc
    SUBROUTINE mudc(lda_u,n,jspins,mu)
 
       USE m_types
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -35,20 +36,20 @@ MODULE m_mudc
       vdcfll2= u*(nup+ndn -0.5) - j*(ndn-0.5)
       vdcamf1= u*ndn+2.0*l/(2.0*l+1)*(u-j)*nup
       vdcamf2= u*nup+2.0*l/(2.0*l+1)*(u-j)*ndn
-      WRITE(6,"(A)") 'Double counting chemical potential:'
-      WRITE(6,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-      WRITE(6,9050) vdcfll1,vdcfll2,(vdcfll1+vdcfll2)/2,vdcfll1-vdcfll2
-      WRITE(6,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-      WRITE(6,9050)  vdcamf1,vdcamf2,(vdcamf1+vdcamf2)/2,vdcamf1-vdcamf2
+      WRITE(oUnit,"(A)") 'Double counting chemical potential:'
+      WRITE(oUnit,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+      WRITE(oUnit,9050) vdcfll1,vdcfll2,(vdcfll1+vdcfll2)/2,vdcfll1-vdcfll2
+      WRITE(oUnit,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+      WRITE(oUnit,9050)  vdcamf1,vdcamf2,(vdcamf1+vdcamf2)/2,vdcamf1-vdcamf2
 
       IF(lda_u%l_amf) THEN
-         WRITE(6,"(A)") "Using the around-mean-field limit"
+         WRITE(oUnit,"(A)") "Using the around-mean-field limit"
          mu = (vdcamf1+vdcamf2)/2
       ELSE
-         WRITE(6,"(A)") "Using the fully-localized limit"
+         WRITE(oUnit,"(A)") "Using the fully-localized limit"
          mu = (vdcfll1+vdcfll2)/2
       ENDIF
-      WRITE(6,9060) mu
+      WRITE(oUnit,9060) mu
 
 9040  FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
 9050  FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)

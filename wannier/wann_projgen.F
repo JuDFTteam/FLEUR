@@ -12,8 +12,12 @@ c*****************************************
 c     Generate the proj-file.
 c     Frank Freimuth
 c*****************************************
+
       use m_types, only: t_wann
+      USE m_constants
+
       implicit none
+
       integer, intent(in) :: ntype
       integer, intent(in) :: neq(ntype)
       integer, intent(in) :: natd
@@ -74,7 +78,7 @@ c*****************************************
       enddo   
  299  continue
       print*,"found ",num_proj,"projections"
-      write(6,*)"found ",num_proj,"projections"
+      write(oUnit,*)"found ",num_proj,"projections"
       close(200)
 
       open(300,file='proj')
@@ -87,7 +91,7 @@ c*****************************************
       do j=1,nat
          do k=1,num_proj
             print*,"symbols:",symbol(k)," ",symb(j)
-            write(6,*)"symbols:",symbol(k)," ",symb(j)
+            write(oUnit,*)"symbols:",symbol(k)," ",symb(j)
             if(trim(adjustl(symbol(k))).eq.
      &             trim(adjustl(symb(j))))then
                if(mrwf(k).ne.0)then

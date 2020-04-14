@@ -25,6 +25,7 @@ contains
   subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
 
     use m_types
+    USE m_constants
     implicit none
 
     type(t_input),   intent(in)   :: input
@@ -60,11 +61,11 @@ contains
       ! output section
       nat = 1
       do n = 1, atoms%ntype
-        write( 6, fmt=8000 ) n
+        write(oUnit, fmt=8000 ) n
         do l = 0, atoms%lmax(n)
            do m = -l, l
               if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
-                 write( 6, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
+                 write(oUnit, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
               end if
            end do
         end do

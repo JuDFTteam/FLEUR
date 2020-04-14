@@ -110,7 +110,7 @@ contains
 
       ! INTERSTITIAL POTENTIAL
       call timestart( "interstitial" )
-      write( 6, fmt=8010 )
+      write(oUnit, fmt=8010 )
 8010  format (/,5x,'coulomb potential in the interstitial region:')
       ! in case of a film:
       if ( input%film .and. .not.oneD%odi%d1 ) then
@@ -199,7 +199,7 @@ contains
       CALCULATE_DENSITY_POTENTIAL_INTEGRAL: if ( present( results ) ) then
           call timestart( "den-pot integrals" )
           !     CALCULATE THE INTEGRAL OF n*Vcoulomb
-          write( 6, fmt=8020 )
+          write(oUnit, fmt=8020 )
 8020      format (/,10x,'density-coulomb potential integrals',/)
           !       interstitial first
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
@@ -208,7 +208,7 @@ contains
           call int_nv( ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, &
                        vCoul, den, results%te_vcoul )
 
-          write( 6, fmt=8030 ) results%te_vcoul
+          write(oUnit, fmt=8030 ) results%te_vcoul
 8030      format (/,10x,'total density-coulomb potential integral :', t40,f20.10)
 
           call timestop( "den-pot integrals" )

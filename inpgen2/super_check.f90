@@ -5,7 +5,9 @@ MODULE m_supercheck
 !*********************************************************************
 CONTAINS
   SUBROUTINE super_check(nat,pos,ity,ntypm, ns,trs)
-    
+
+    USE m_constants
+
     IMPLICIT NONE
     
     !==> Arguments
@@ -74,9 +76,9 @@ CONTAINS
     ENDDO
     
     IF ( ns > 1 ) THEN
-       WRITE(6,'(/," The system appears to be a supercell"," containing",i4," primitive cells:")') ns
+       WRITE(oUnit,'(/," The system appears to be a supercell"," containing",i4," primitive cells:")') ns
        DO n = 1, ns
-          WRITE (6,'(i8,3f12.6)') n,trs(1:3,n)
+          WRITE (oUnit,'(i8,3f12.6)') n,trs(1:3,n)
        ENDDO
     ENDIF
     

@@ -34,8 +34,8 @@ MODULE m_denmat_dist
          END DO
       ENDDO
       results%last_occdistance = results%last_occdistance + ABS(n_out-n_in)
-      WRITE(6,*) "Occupation distance: ", results%last_occdistance
-      WRITE(6,*) "Density matrix distance: ", results%last_mmpMatdistance
+      WRITE(oUnit,*) "Occupation distance: ", results%last_occdistance
+      WRITE(oUnit,*) "Density matrix distance: ", results%last_mmpMatdistance
 
    END SUBROUTINE n_mmp_dist
 END MODULE m_denmat_dist

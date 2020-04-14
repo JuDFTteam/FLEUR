@@ -100,12 +100,12 @@ CONTAINS
          avu = avu/(2*l+1)/(2*l+1)
          avj = avj/(2*l+1)/(2*l)
          avj = avu-avJ
-         !        WRITE (6,*) 'U-matr:'
-         !        IF (l.eq.2) WRITE (6,111) ((u(i,j,i,j,i_u),i=-l,l),j=-l,l)
-         !        IF (l.eq.3) WRITE (6,211) ((u(i,j,i,j,i_u),i=-l,l),j=-l,l)
-         !        WRITE (6,*) 'J-matr:'
-         !        IF (l.eq.2) WRITE (6,111) ((u(i,j,j,i,i_u),i=-l,l),j=-l,l)
-         !        IF (l.eq.3) WRITE (6,211) ((u(i,j,j,i,i_u),i=-l,l),j=-l,l)
+         !        WRITE (oUnit,*) 'U-matr:'
+         !        IF (l.eq.2) WRITE (oUnit,111) ((u(i,j,i,j,i_u),i=-l,l),j=-l,l)
+         !        IF (l.eq.3) WRITE (oUnit,211) ((u(i,j,i,j,i_u),i=-l,l),j=-l,l)
+         !        WRITE (oUnit,*) 'J-matr:'
+         !        IF (l.eq.2) WRITE (oUnit,111) ((u(i,j,j,i,i_u),i=-l,l),j=-l,l)
+         !        IF (l.eq.3) WRITE (oUnit,211) ((u(i,j,j,i,i_u),i=-l,l),j=-l,l)
          !         PRINT*,'U-av:',avu*hartree_to_ev_const
          !         PRINT*,'J-av:',avj*hartree_to_ev_const
 111      FORMAT (5f8.4)

@@ -42,6 +42,8 @@ PROGRAM inpgen
   use m_read_old_inp
   use m_fleurinput_read_xml
   USE m_types_mpinp
+  USE m_constants
+
       IMPLICIT NONE
 
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:)
@@ -78,6 +80,8 @@ PROGRAM inpgen
        END FUNCTION dropDefaultEConfig
       END INTERFACE
 
+      CALL judft_init(oUnit,.FALSE.)
+
       kpts_str=""
 
       !Start program and greet user
@@ -87,7 +91,7 @@ PROGRAM inpgen
       INQUIRE(file='default.econfig',exist=l_exist)
       IF (.NOT.l_exist) idum=dropDefaultEconfig()
 
-      OPEN(6,file='out')
+      OPEN(oUnit,file='out')
 
       INQUIRE(file='inp.xml',exist=l_inpxml)
       IF (l_inpxml.AND..NOT.(judft_was_argument("-inp.xml").or.judft_was_argument("-overwrite")))&

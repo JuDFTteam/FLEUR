@@ -20,6 +20,7 @@ CONTAINS
       USE m_types_cell
       USE m_types_sym
       USE m_types_kpts
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -134,7 +135,7 @@ CONTAINS
             rarr = matmul(rrot(:, :, k), bk(:, i))*grid
             iarr2 = nint(rarr)
             IF(any(abs(iarr2 - rarr) > 1e-10)) THEN
-               WRITE(6, '(A,I3,A)') 'kptgen: Symmetry operation', k, &
+               WRITE(oUnit, '(A,I3,A)') 'kptgen: Symmetry operation', k, &
                   ' incompatible with k-point set.'
                ldum = .TRUE.
             END IF
@@ -278,7 +279,7 @@ CONTAINS
             WRITE(*, *) modulo1
             help = nint(modulo1)
             WRITE(*, *) help
-            WRITE(6, '(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (', &
+            WRITE(oUnit, '(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (', &
                kpoint, ') is not an element of the k-point set.'
             CALL juDFT_error( &
                'modulo1: argument not an element of k-point set.', &

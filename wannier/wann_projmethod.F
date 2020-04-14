@@ -23,8 +23,12 @@ c     square root are available (projmethod/bestproj).
 c
 c     YM && FF
 c**********************************************************************
+
       use m_types
+      USE m_constants
+
       implicit none
+
       integer, intent(in)    :: fullnkpts
       logical, intent(in)    :: l_projmethod
       logical, intent(in)    :: l_bestproj
@@ -81,7 +85,7 @@ c        liwork = 2 + 6*nwfs
          call zheevd(jobz,uplo,n,vec,lda,ei,work,lwork,
      &             rwork,lrwork,iwork,liwork,info)
 
-         if (info.lt.0) write (6,*)
+         if (info.lt.0) write (oUnit,*)
      &               'ith argument had an illegal value ',info
          IF (info>0)  CALL juDFT_error("not converged diagonalization"
      +        ,calledby ="wann_projmethod")
@@ -232,13 +236,13 @@ c..   purpose of testing
       call zheevd(jobz,uplo,n,vec,lda,ei,work,lwork,
      &             rwork,lrwork,iwork,liwork,info)
 
-      if (info.lt.0) write (6,*)
+      if (info.lt.0) write (oUnit,*)
      &               'ith argument had an illegal value ',info
       IF (info>0)  CALL juDFT_error("not converged diagonalization"
      +     ,calledby ="wann_projmethod")
 
       do i = 1,nwfs
-         write(6,*) ei(i)
+         write(oUnit,*) ei(i)
       enddo
 
       deallocate (work,rwork,iwork)

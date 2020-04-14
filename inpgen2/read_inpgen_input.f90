@@ -24,9 +24,10 @@ CONTAINS
     USE m_types_xcpot_inbuild_nofunction
     USE m_types_cell
     USE m_types_hybinp
+    USE m_constants
     USE m_process_lattice_namelist
-
     USE m_inv3
+
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
     CHARACTER(len=40),INTENT(OUT):: kpts_str
@@ -178,7 +179,7 @@ CONTAINS
           atom_pos(2,n) = temp
        END DO
        WRITE(*,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
-       WRITE(6,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
+       WRITE(oUnit,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
     END IF
 
     CALL cell%init(0.0)

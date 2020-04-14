@@ -921,6 +921,7 @@ CONTAINS
 
   SUBROUTINE transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
     USE m_types
+    USE m_constants
     USE m_qfix
     USE m_fix_by_gaussian
     IMPLICIT NONE
@@ -987,7 +988,7 @@ CONTAINS
        IF (l_same.OR..NOT.l_structure_by_shift) RETURN ! nothing to do
 
        IF (mpi%irank==0) THEN
-          WRITE(6,*) "Atomic movement detected, trying to adjust charge density"
+          WRITE(oUnit,*) "Atomic movement detected, trying to adjust charge density"
 
           !Calculate shifts
           shifts=atomsTemp%taual-atoms%taual
@@ -1002,7 +1003,7 @@ CONTAINS
        !Now fix the density
        SELECT CASE(input%qfix)
        CASE (0,1) !just qfix the density
-          IF (mpi%irank==0) WRITE(6,*) "Using qfix to adjust density"
+          IF (mpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
           IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
                den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
        CASE(2,3)

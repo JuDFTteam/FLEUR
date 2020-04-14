@@ -11,6 +11,8 @@ CONTAINS
 
    SUBROUTINE grdchlh(iexpm,ist,ied,dx,rv,ro,ndvgrd, drr,ddrr)
 
+      USE m_constants
+
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: iexpm,ist,ied,ndvgrd
@@ -103,7 +105,7 @@ CONTAINS
       nred = REAL(ndvgrd)/2 + 0.1
 
       IF (ied-nred.LE.ist) THEN
-         WRITE(6,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
+         WRITE(oUnit,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
          CALL juDFT_error("ied-nred.le.ist",calledby="grdchlh")
       ENDIF
 

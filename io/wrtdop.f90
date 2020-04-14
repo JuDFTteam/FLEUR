@@ -4,16 +4,14 @@
 !     e. wimmer   march 1985
 !     ****************************************************
       CONTAINS
-        SUBROUTINE wrtdop(&
-             &                  stars,vacuum,atoms,sphhar,&
-             &                  input,sym,&
-             &                  nu,&
-             &                  it,fr,fpw,fz,fzxy)
-          !
-          USE m_constants,ONLY: namat_const
+        SUBROUTINE wrtdop(stars,vacuum,atoms,sphhar,input,sym,nu,&
+                          it,fr,fpw,fz,fzxy)
+
+          USE m_constants
           USE m_types
+
           IMPLICIT NONE
-          !
+
           !     .. Scalar Arguments ..
           TYPE(t_stars),INTENT(IN)  :: stars
           TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -42,7 +40,7 @@
           dop     ='in/out  '
           iop     ='char/pot'
           WRITE (nu) name
-          !          WRITE (6,FMT=8000) name
+          !          WRITE (oUnit,FMT=8000) name
 8000      FORMAT (' wrtdop title:',10a8)
           WRITE (nu) iop,dop,it
           DO  jsp = 1,SIZE(fr,4)

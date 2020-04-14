@@ -41,7 +41,7 @@ c****************************************************************************
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0, cdn_read
-      use m_constants, only : pimach
+      use m_constants
 !      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
@@ -1081,7 +1081,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       ulos,dulos,
      >       rmt,pos,
      &       surfcurr(:,:,:,ikpt))
-        write(6,*)"dirfacs=",dirfacs
+        write(oUnit,*)"dirfacs=",dirfacs
       endif
 
       if(wann%l_nabla)then
@@ -1335,14 +1335,14 @@ c******************************************************
 
       call cpu_time(delta)
       time_total=delta-time_total
-      write(6,*)"time_total=",time_total
-      write(6,*)"time_mmn=",time_mmn
-      write(6,*)"time_interstitial=",time_interstitial
-      write(6,*)"time_ujugaunt=",time_ujugaunt
-      write(6,*)"time_abcof=",time_abcof
-      write(6,*)"time_symm=",time_symm
-      write(6,*)"time_rw=",time_rw
-      write(6,*)"time_film=",time_film
+      write(oUnit,*)"time_total=",time_total
+      write(oUnit,*)"time_mmn=",time_mmn
+      write(oUnit,*)"time_interstitial=",time_interstitial
+      write(oUnit,*)"time_ujugaunt=",time_ujugaunt
+      write(oUnit,*)"time_abcof=",time_abcof
+      write(oUnit,*)"time_symm=",time_symm
+      write(oUnit,*)"time_rw=",time_rw
+      write(oUnit,*)"time_film=",time_film
 
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,ierr)

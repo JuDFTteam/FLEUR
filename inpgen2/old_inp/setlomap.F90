@@ -6,8 +6,7 @@
 
       MODULE m_setlomap
       CONTAINS
-        SUBROUTINE setlomap(ntyp,&
-             &                    l_useapw,atoms)
+        SUBROUTINE setlomap(ntyp,l_useapw,atoms)
           !***********************************************************************
           ! sets up nlol and lo1l
           ! 
@@ -19,8 +18,11 @@
           !
           ! p.kurz jul. 1996
           !***********************************************************************
+
           USE m_juDFT
           USE m_types_atoms
+          USE m_constants
+
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
@@ -30,7 +32,7 @@
           !     ...
           INTEGER ilo,l
           !     ..
-          WRITE (6,FMT=8000) atoms%nlo(ntyp), (atoms%llo(ilo,ntyp),ilo=1,atoms%nlo(ntyp))
+          WRITE (oUnit,FMT=8000) atoms%nlo(ntyp), (atoms%llo(ilo,ntyp),ilo=1,atoms%nlo(ntyp))
 8000      FORMAT ('the number of local orbitals for this atom type is: ',i3,&
                &       /,'the corresponding values of l are: ',30i4)
           IF (atoms%nlo(ntyp)>atoms%nlod)  CALL juDFT_error("nlo > nlod!!!",calledby&
@@ -57,7 +59,7 @@
                    atoms%llo(ilo,ntyp) = atoms%llo(ilo,ntyp)+10*(atoms%ulo_der(ilo,ntyp)-1)
                 ENDIF
                 atoms%llo(ilo,ntyp) = ABS( atoms%llo(ilo,ntyp) ) - 1
-                WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,ntyp),&
+                WRITE(oUnit,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,ntyp),&
                      &       '. derivative of l =',atoms%llo(ilo,ntyp)
              ELSE
                 atoms%l_dulo(ilo,ntyp) = .FALSE.
@@ -66,7 +68,7 @@
              IF (atoms%llo(ilo,ntyp)>atoms%llod)  CALL juDFT_error(" l > llod!!!",&
                   &        calledby="setlomap")
              IF (atoms%llo(ilo,ntyp).LT.l) THEN
-                WRITE (6,FMT=*)&
+                WRITE (oUnit,FMT=*)&
                      &        'setlomap: please specify the l quantum numbers ',&
                      &        'of the local orbitals is ascending order.'
                 CALL juDFT_error("LO-setup",calledby="setlomap")

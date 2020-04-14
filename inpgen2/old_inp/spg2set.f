@@ -20,6 +20,7 @@
      >                   nop,zrfs,invs,namgrp,latnam,
      <                   mrot,tau,nop2,symor)
 
+      USE m_constants
       USE m_symdata, ONLY : gen2,tau2,spg2,gnt2,namgr2,nammap,ord2
       USE m_matmul,ONLY   : matmul4
       IMPLICIT NONE
@@ -106,7 +107,7 @@
 ! -->       new element found
             ngen = ngen + 1
             IF (ngen.gt.nop) THEN
-               WRITE(6,'(a7,i4,a7,i4)') 'ngen = ',ngen,' nop = ',nop
+             WRITE(oUnit,'(a7,i4,a7,i4)') 'ngen = ',ngen,' nop = ',nop
                 CALL juDFT_error("ngen > nop",calledby="spg2set")
             ENDIF
 
@@ -139,13 +140,13 @@
 ! Output the symmetry elements
 !
       IF (nop.NE.ngen) THEN
-          WRITE (6,*) 'nop =',nop,' =/= ngen = ',ngen
+          WRITE (oUnit,*) 'nop =',nop,' =/= ngen = ',ngen
            CALL juDFT_error("nop =/= ngen",calledby="spg2set")
       ENDIF
-      WRITE (6,FMT=8010) namgr2(n2spg),invs,zrfs,nop,symor
+      WRITE (oUnit,FMT=8010) namgr2(n2spg),invs,zrfs,nop,symor
  8010 FORMAT (/,/,' space group: ',a4,' invs=',l1,' zrfs=',l1,/,
      +  ' number of operations=',i3,/,' symmorphic=',l1,/,/)
-      WRITE (6,'("Number of 2D operations=",i3)') nop2
+      WRITE (oUnit,'("Number of 2D operations=",i3)') nop2
       DO n = 1,nop
 !
 ! Determine the kind of symmetry operation we have here
@@ -171,17 +172,17 @@
             CALL juDFT_error("determinant=/=+/- 1",calledby ="spg2set")
          ENDIF
 
-         WRITE (6,FMT=8020) n, type
+         WRITE (oUnit,FMT=8020) n, type
  8020    FORMAT (/,1x,i3,' : ',a3)
          DO i = 1,3
-            WRITE (6,FMT=8030) (mrot(i,j,n),j=1,3),tau(i,n)
+            WRITE (oUnit,FMT=8030) (mrot(i,j,n),j=1,3),tau(i,n)
          ENDDO
  8030    FORMAT (5x,3i3,3x,f4.1)
       ENDDO
 c
 c     check closure
 c
-      WRITE (6,FMT=8040)
+      WRITE (oUnit,FMT=8040)
  8040 FORMAT (/,/,' multiplication table',/,/)
 
       op1 : DO n1 = 1,nop
@@ -199,11 +200,11 @@ c
                CYCLE op2
             ENDDO op3
 
-            WRITE (6,FMT=8050) n1,n2
+            WRITE (oUnit,FMT=8050) n1,n2
  8050       FORMAT (' error - n1,n2=',2i3)
              CALL juDFT_error("mult",calledby="spg2set")
          ENDDO op2
-         WRITE (6,FMT=8060) (multab(n),n=1,nop)
+         WRITE (oUnit,FMT=8060) (multab(n),n=1,nop)
  8060    FORMAT (1x,48i2)
       ENDDO op1
 

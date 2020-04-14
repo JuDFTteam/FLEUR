@@ -49,6 +49,7 @@ CONTAINS
   END SUBROUTINE judfT_file_readable
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
+    USE m_juDFT_internalParams
     USE m_judft_usage
     use m_juDFT_string
     USE m_judft_xmloutput
@@ -147,12 +148,12 @@ CONTAINS
           CALL print_memory_info(0,.TRUE.)
           IF (irank==0) THEN
              !Error on PE0 write info to out and out.xml
-             WRITE(6,*) "***************ERROR***************"
-             WRITE(6,*) message
-             WRITE(6,*) "***************ERROR***************"
+             WRITE(juDFT_outUnit,*) "***************ERROR***************"
+             WRITE(juDFT_outUnit,*) message
+             WRITE(juDFT_outUnit,*) "***************ERROR***************"
              CALL writeXMLElement('ERROR',(/"Message"/),(/message/))
              !try closing the out file
-             CLOSE(6,iostat=e)
+             CLOSE(juDFT_outUnit,iostat=e)
              !Try closing the xml-out
              CALL endXMLOutput()
           ENDIF

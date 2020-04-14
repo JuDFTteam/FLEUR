@@ -11,11 +11,14 @@ MODULE m_check_mt_radii
   !---------------------------------------------------------------------
 CONTAINS
   SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,l_test,rmt1,overlap)
+
     USE m_types_input
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_cell
     USE m_types_oneD
+    USE m_constants
+
     USE m_sort
     USE m_inv3
     USE m_juDFT
@@ -360,7 +363,7 @@ CONTAINS
              IF (atoms%rmt(i)+atoms%rmt(k).GE.nearestNeighborDists(j,i)) THEN
                 error = .TRUE.
                 IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
-                WRITE(6,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
+                WRITE(oUnit,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
              END IF
           END DO
           IF (input%film) THEN
@@ -370,17 +373,17 @@ CONTAINS
                    IF ((sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+&
                         atoms%rmt(i)).GT.vacuum%dvac/2.) THEN
                       error=.TRUE.
-                      WRITE(6,241) i ,na
-                      WRITE(6,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
+                      WRITE(oUnit,241) i ,na
+                      WRITE(oUnit,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
                            atoms%rmt(i),vacuum%dvac/2.
                    END IF
                 ELSE
                    IF (((atoms%pos(3,iAtom)+atoms%rmt(i)).GT. vacuum%dvac/2.).OR.&
                         ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                       error=.TRUE.
-                      WRITE(6,241) i ,na
+                      WRITE(oUnit,241) i ,na
                       IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
-                      WRITE(6,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
+                      WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
                    ENDIF
                 ENDIF
              END DO

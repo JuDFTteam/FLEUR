@@ -4,11 +4,12 @@ MODULE m_intnv
   !     and potential in the unit cell
   !     ************************************************
 CONTAINS
-  SUBROUTINE int_nv(ispin,stars,vacuum,atoms,sphhar,&
-       cell,sym,input,oneD,vpot,den,RESULT)
+  SUBROUTINE int_nv(ispin,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vpot,den,RESULT)
 
-    USE m_intgr, ONLY : intgr3,intgz0
     USE m_types
+    USE m_constants
+    USE m_intgr, ONLY : intgr3,intgz0
+
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
@@ -43,7 +44,7 @@ CONTAINS
     !
     tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:stars%ng3,ispin),den%pw(:stars%ng3,ispin)))
 
-    WRITE (6,FMT=8020) tis
+    WRITE (oUnit,FMT=8020) tis
 8020 FORMAT (/,10x,'interstitial :',t40,ES20.10)
 
     RESULT = RESULT + tis
@@ -62,7 +63,7 @@ CONTAINS
        ENDDO
        nat = nat + atoms%neq(n)
     ENDDO
-    WRITE (6,FMT=8030) tmt
+    WRITE (oUnit,FMT=8030) tmt
 8030 FORMAT (/,10x,'muffin tin spheres :',t40,ES20.10)
     RESULT = RESULT + tmt
     !
@@ -95,7 +96,7 @@ CONTAINS
           CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
           tvact = tvact + cell%area*tvac*facv
        ENDDO
-       WRITE (6,FMT=8040) tvact
+       WRITE (oUnit,FMT=8040) tvact
 8040   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
     ELSEIF (oneD%odi%d1) THEN
@@ -122,7 +123,7 @@ CONTAINS
 
        CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
        tvact = tvact + cell%area*tvac
-       WRITE (6,FMT=8041) tvact
+       WRITE (oUnit,FMT=8041) tvact
 8041   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
        !+odim

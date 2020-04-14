@@ -9,6 +9,7 @@ CONTAINS
 
     !      USE m_types, ONLY : t_orb,t_orbl,t_orblo
     USE m_types
+    USE m_constants
     IMPLICIT NONE
 
     TYPE(t_atoms),INTENT(IN)   :: atoms
@@ -108,9 +109,9 @@ CONTAINS
 ! The following output was commented out, because the subroutine is now  used in parallel.
 ! Jan. 2019   U.Alekseeva
 !
-!    WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3), qmtt
-!    WRITE (6,FMT=8100) itype, (qmtlx(l),l=0,3),qmttx
-!    WRITE (6,FMT=8100) itype, (qmtly(l),l=0,3),qmtty
+!    WRITE (oUnit,FMT=8100) itype, (qmtl(l),l=0,3), qmtt
+!    WRITE (oUnit,FMT=8100) itype, (qmtlx(l),l=0,3),qmttx
+!    WRITE (oUnit,FMT=8100) itype, (qmtly(l),l=0,3),qmtty
 !8100 FORMAT (' -->',i2,2x,4f9.5,2x,f9.5)
 
   END SUBROUTINE orbmom2

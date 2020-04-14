@@ -22,7 +22,11 @@ c     from the various processors.
 c
 c     Frank Freimuth
 c*************************************************************
+
+      USE m_constants
+
       implicit none
+
       integer, intent(in)    :: mpi_comm
       logical, intent(in)    :: l_p0
       character, intent(in)  :: filename*(*)
@@ -84,7 +88,7 @@ c**********************************************************
       endif !isize
 #endif
 
-      write(6,*)"wann_write_matrix4"
+      write(oUnit,*)"wann_write_matrix4"
 
       if(l_p0)then
        open (305,file=filename)

@@ -21,7 +21,7 @@ c     by wannier90.
 c
 c     Frank Freimuth
 c*************************************************
-      use m_constants, only:pimach, ImagUnit
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
@@ -106,7 +106,7 @@ c*************************************************
       jspins=jspins_in
       if(l_soc)jspins=1
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 
 
 c*****************************************************
@@ -128,8 +128,8 @@ c*****************************************************
       endif
       read (203,*) num_wann,num_bands
       close (203)
-      write(6,*)'According to proj there are ',num_bands,' bands'
-      write(6,*)"and ",num_wann," wannier functions."
+      write(oUnit,*)'According to proj there are ',num_bands,' bands'
+      write(oUnit,*)"and ",num_wann," wannier functions."
 
       allocate( u_matrix_opt(num_bands,num_wann,nkpts,jspins) )
       allocate( u_matrix(num_wann,num_wann,nkpts,jspins) )
@@ -242,7 +242,7 @@ c        Calculate matrix elements of B_{eff} in the basis of
 c        rotated Bloch functions.
 c****************************************************************
       allocate( paulimat2(3,num_wann2,num_wann2,nkpts) )
-      write(6,*)"calculate matrix elements of exchange field
+      write(oUnit,*)"calculate matrix elements of exchange field
      & between wannier orbitals"
 
       if(have_disentangled) then       
@@ -385,7 +385,7 @@ c****************************************************************
 c************************************************************
 c        Calculate matrix elements in real space.
 c***********************************************************      
-       write(6,*)"calculate pauli-mat in rs"
+       write(oUnit,*)"calculate pauli-mat in rs"
 
 
        allocate( hreal(3,num_wann2,num_wann2,rvecnum) )

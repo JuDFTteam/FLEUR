@@ -117,7 +117,7 @@
              CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qtot1)
              CALL intgr3(den%mt(1,0,n,jsp_new),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qtot2)
              spmtot=sfp*(qtot1-qtot2)
-             WRITE (6,'('' moment in sphere '',2x,'':'',f8.4)') spmtot
+             WRITE (oUnit,'('' moment in sphere '',2x,'':'',f8.4)') spmtot
           ENDDO
 
           !--->   read enpara and then double it

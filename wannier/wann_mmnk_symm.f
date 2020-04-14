@@ -22,6 +22,8 @@ c******************************************************************
      >               invtab,mrot,l_onedimens,tau,
      <               pair_to_do,maptopair,kdiff,l_q,param_file)
 
+      USE m_constants
+
       implicit none
 
       TYPE(t_input),INTENT(IN)     :: input
@@ -207,14 +209,15 @@ c        endif !gb=0
 10    continue ! end of cycle by the k-points
 
       if(l_p0)then
-      write(6,*)"pairs to calculate: ",num_pair
-      write(6,*)"maps by conjugation: ",num_conj
-      write(6,*)"maps by rotation:", num_rot
-      write(6,*)"num_pair+num_rot+num_conj:",num_pair+num_conj+num_rot
+      write(oUnit,*)"pairs to calculate: ",num_pair
+      write(oUnit,*)"maps by conjugation: ",num_conj
+      write(oUnit,*)"maps by rotation:", num_rot
+      write(oUnit,*)"num_pair+num_rot+num_conj:",
+     +              num_pair+num_conj+num_rot
       if(.not.l_q) then
-         write(6,*)"fullnkpts*nntot:", fullnkpts*nntot
+         write(oUnit,*)"fullnkpts*nntot:", fullnkpts*nntot
       else
-          write(6,*)"fullnqpts*nntot:", fullnkpts*nntot
+          write(oUnit,*)"fullnqpts*nntot:", fullnkpts*nntot
       endif
       endif !l_p0
 
@@ -288,9 +291,12 @@ c*****************************************************************
          enddo
       enddo
       end subroutine
+
       SUBROUTINE close_pt(
      >                    nops,mrot,
      <                    mtable)
+
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -314,7 +320,7 @@ c*****************************************************************
                  IF ( map(i) .eq. 0 ) THEN
                     map(i) = k
                  ELSE
-                    WRITE (6,'(" Symmetry error : multiple ops")')
+                    WRITE (oUnit,'(" Symmetry error : multiple ops")')
                     CALL juDFT_error("close_pt: Multiple ops (Bravais)"
      +                   ,calledby ="wann_mmnk_symm")
                  ENDIF
@@ -322,8 +328,8 @@ c*****************************************************************
             ENDDO
 
             IF (map(i).eq.0) THEN
-               WRITE (6,'(" Group not closed (Bravais lattice)")')
-               WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,
+               WRITE (oUnit,'(" Group not closed (Bravais lattice)")')
+               WRITE (oUnit,'(" operation j=",i2,"  map=",12i4,:/,
      &                  (21x,12i4))')  j, map(1:nops)
                CALL juDFT_error("close_pt: Not closed",calledby
      +              ="wann_mmnk_symm")

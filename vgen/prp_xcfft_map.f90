@@ -21,13 +21,13 @@ MODULE m_prpxcfftmap
   !        s. bluegel, IFF, Aug. 97   
   !*********************************************************************
 CONTAINS
-  SUBROUTINE prp_xcfft_map(&
-       &                         stars,sym,&
-       &                         cell,&
-       &                         igxc_fft,gxc_fft)
-    !
+  SUBROUTINE prp_xcfft_map(stars,sym,cell,igxc_fft,gxc_fft)
+
     USE m_types
+    USE m_constants
+
     IMPLICIT NONE
+
     TYPE(t_sym),INTENT(IN)   :: sym
     TYPE(t_stars),INTENT(IN) :: stars
     TYPE(t_cell),INTENT(IN)  :: cell
@@ -116,8 +116,8 @@ CONTAINS
     ENDDO
     !
     IF (kidx .NE. stars%kmxxc_fft) THEN
-       WRITE (6,'('' something wrong with stars%kmxxc_fft or nxc3_fft'')')
-       WRITE (6,'('' stars%kmxxc_fft, acutal kidx '',2i5)')&
+       WRITE (oUnit,'('' something wrong with stars%kmxxc_fft or nxc3_fft'')')
+       WRITE (oUnit,'('' stars%kmxxc_fft, acutal kidx '',2i5)')&
             &                stars%kmxxc_fft, kidx
        CALL juDFT_error("kidx /= stars",calledby ="prp_xcfft_map"&
             &        ,hint ="something wrong with kmxxc_fft or nxc3_fft")

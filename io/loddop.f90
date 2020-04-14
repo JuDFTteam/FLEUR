@@ -1,17 +1,17 @@
       MODULE m_loddop
       USE m_juDFT
       CONTAINS
-        SUBROUTINE loddop(&
-             &                  stars,vacuum,atoms,sphhar,&
-             &                  input,sym,&
-             &                  nu,&
-             &                  it,fr,fpw,fz,fzxy)
+        SUBROUTINE loddop(stars,vacuum,atoms,sphhar,input,sym,nu,&
+                          it,fr,fpw,fz,fzxy)
           !     ***********************************************************
           !     reload formatted density or potential   c.l.fu
           !     ***********************************************************
+
           USE m_types
+          USE m_constants
+
           IMPLICIT NONE
-          !
+
           !     .. Scalar Arguments ..
           TYPE(t_stars),INTENT(IN)  :: stars
           TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -176,9 +176,8 @@
           IF (sym%invs2) DEALLOCATE ( fzxyr )
           RETURN
 
-200       WRITE (6,*) 'error reading dop nr.',nu
-          IF (nu /= 98)  CALL juDFT_error("error reading d/p-file!",calledby&
-          &     ="loddop")
+200       WRITE (oUnit,*) 'error reading dop nr.',nu
+          IF (nu /= 98)  CALL juDFT_error("error reading d/p-file!",calledby="loddop")
 
         END SUBROUTINE loddop
       END MODULE m_loddop
