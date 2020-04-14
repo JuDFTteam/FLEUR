@@ -28,8 +28,12 @@ c         host atoms.
 c
 c     Frank Freimuth
 c*********************************************
+
+      USE m_constants
       use m_wann_readcenters
+
       implicit none
+
       integer, intent(in)  :: natd
       real,    intent(in)  :: pos(3,natd)
       real,    intent(in)  :: omtil
@@ -90,7 +94,7 @@ c--------reading the proj.1 / proj.2 / proj file
          close(203)
         endif 
         print*,"number of wannier functions= ",num_wann(jspin)
-        write(6,*)"number of wannier functions",num_wann(jspin)
+        write(oUnit,*)"number of wannier functions",num_wann(jspin)
         allocate( wann_centers(3,num_wann(jspin)) )
         call wann_readcenters(
      >         num_wann(jspin),jspin,

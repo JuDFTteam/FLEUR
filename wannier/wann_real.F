@@ -25,6 +25,7 @@ c     ********************************************************
       USE m_types
       USE m_ylm
       USE m_constants
+
       IMPLICIT NONE
 
       TYPE(t_mat),INTENT(IN)        :: zMat
@@ -91,7 +92,7 @@ c..define the factor e^{-ikr}
       arg1 = tpi*( bkpt(1)*rcc2(1) + bkpt(2)*rcc2(2) + bkpt(3)*rcc2(3) )
       const2 = cmplx(cos(arg),sin(arg))
       const3 = cmplx(cos(arg1),sin(arg1))
-c     write (6,*) 'bkpt,const2,const3=',bkpt(:),const2,const3
+c     write (oUnit,*) 'bkpt,const2,const3=',bkpt(:),const2,const3
 
       ivac=iv
 
@@ -100,39 +101,39 @@ c     write (6,*) 'bkpt,const2,const3=',bkpt(:),const2,const3
 c     ---> interstitial part
       rcc=matmul(bmat,p)/tpi_const
       xdnout = cmplx(0.,0.)
-c     write (6,*) 'nv,nvd=',nv,nvd
+c     write (oUnit,*) 'nv,nvd=',nv,nvd
       IF (zMat%l_real) THEN
          DO k = 1,nv
-c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
-c           write (6,*) 'z(k,iband)=', z(k,iband)
+c           write (oUnit,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
+c           write (oUnit,*) 'z(k,iband)=', z(k,iband)
             arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
             xdnout = xdnout + zMat%data_r(k+addnoco,iband)*
      +                        cmplx(cos(arg),sin(arg))*const
             IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
      &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
-c              write (6,*) 'p(i)=',p(1:2)
-c              write (6,*) 'G=',k1(k),k2(k),k3(k)
-c              write (6,*) 'z(k,iband)=',z(k,iband)
-c              write (6,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
+c              write (oUnit,*) 'p(i)=',p(1:2)
+c              write (oUnit,*) 'G=',k1(k),k2(k),k3(k)
+c              write (oUnit,*) 'z(k,iband)=',z(k,iband)
+c              write (oUnit,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
             ENDIF
          END DO
       ELSE
          DO k = 1,nv
-c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
-c           write (6,*) 'z(k,iband)=', z(k,iband)
+c           write (oUnit,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
+c           write (oUnit,*) 'z(k,iband)=', z(k,iband)
             arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
             xdnout = xdnout + zMat%data_c(k+addnoco,iband)*
      +                        cmplx(cos(arg),sin(arg))*const
             IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
      &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
-c              write (6,*) 'p(i)=',p(1:2)
-c              write (6,*) 'G=',k1(k),k2(k),k3(k)
-c              write (6,*) 'z(k,iband)=',z(k,iband)
-c              write (6,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
+c              write (oUnit,*) 'p(i)=',p(1:2)
+c              write (oUnit,*) 'G=',k1(k),k2(k),k3(k)
+c              write (oUnit,*) 'z(k,iband)=',z(k,iband)
+c              write (oUnit,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
             ENDIF
          END DO
       END IF
-c     write (6,*) 'ir:p(i)',p(:)
+c     write (oUnit,*) 'ir:p(i)',p(:)
       RETURN
 c     ---> vacuum part
    20 CONTINUE
@@ -181,17 +182,17 @@ c... switch back to cartesian units
       xd2 = cmplx(0.,0.)
       DO l = 0,lmax(n)
 c        if (p(1).eq.0. .and. p(2).eq.0. .and. p(3).eq.0)then
-c               write (6,*) 'ff(l,300)=',ff(1,300,1,l)
-c               write (6,*) 'ff(l,300)=',ff(1,300,2,l)
-c               write (6,*) 'gg(l,300)=',gg(1,300,1,l)
-c               write (6,*) 'gg(l,300)=',gg(1,300,2,l)
+c               write (oUnit,*) 'ff(l,300)=',ff(1,300,1,l)
+c               write (oUnit,*) 'ff(l,300)=',ff(1,300,2,l)
+c               write (oUnit,*) 'gg(l,300)=',gg(1,300,1,l)
+c               write (oUnit,*) 'gg(l,300)=',gg(1,300,2,l)
 c        endif
        DO 110 m = -l,l
         lm = l*(l+1)+m
         s = ylm(lm+1)*(ImagUnit)**l
 c       if (p(1).eq.0. .and. p(2).eq.0. .and. p(3).eq.0)then
-c              write (6,*) 'acof=',acof(lm,1)
-c              write (6,*) 'bcof=',bcof(lm,1)
+c              write (oUnit,*) 'acof=',acof(lm,1)
+c              write (oUnit,*) 'bcof=',bcof(lm,1)
 c       endif
         xd1 = xd1 + (acof(lm,na)*cmplx(ff(n,jr,1,l),0.)+
      +               bcof(lm,na)*cmplx(gg(n,jr,1,l),0.))*s/
@@ -226,7 +227,7 @@ c..contributions from the local orbitals
          
       END IF
       xdnout = xdnout*const2
-c     write (6,*) 'mt:p(i)',p(:)
+c     write (oUnit,*) 'mt:p(i)',p(:)
  8000 FORMAT (2f10.6)
 c
       RETURN

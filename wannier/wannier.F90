@@ -57,13 +57,13 @@ CONTAINS
     !     Jan-Philipp Hanke
     !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
     USE m_types
+    USE m_constants
     USE m_wann_mmnk_symm
     USE m_wann_rw_eig
     USE m_abcof
     USE m_radfun
     USE m_radflo
     USE m_cdnread
-    USE m_constants
     USE m_wann_mmk0_od_vac
     USE m_wann_mmkb_od_vac
     USE m_wann_mmk0_vac
@@ -1319,7 +1319,7 @@ CONTAINS
                         ulos(:,:,jspin),dulos(:,:,jspin),&
                         atoms%rmt,atoms%pos, &
                         surfcurr(:,:,:,ikpt))
-                   WRITE(6,*)"dirfacs=",dirfacs
+                   WRITE(oUnit,*)"dirfacs=",dirfacs
                 ENDIF
 
                 IF(wann%l_soctomom)THEN
@@ -2083,9 +2083,9 @@ CONTAINS
                       IF (sliceplot%slice) THEN
                          IF (ikpt.EQ.sliceplot%kk) THEN
 
-                            WRITE (6,*) 'nnne=',sliceplot%nnne
-                            WRITE (6,*) 'eig(nnne)=',eig(sliceplot%nnne)
-                            WRITE (6,*) 'we(nnne)=',we(sliceplot%nnne)
+                            WRITE (oUnit,*) 'nnne=',sliceplot%nnne
+                            WRITE (oUnit,*) 'eig(nnne)=',eig(sliceplot%nnne)
+                            WRITE (oUnit,*) 'we(nnne)=',we(sliceplot%nnne)
 
                             CALL wann_plot(&
                                  oneD,vacuum,stars,cell,atoms,&
@@ -2302,11 +2302,11 @@ CONTAINS
                 !        projmethod: hamiltonian matrix in real space
                 !********************************************************
                 IF(l_p0)THEN
-                   WRITE (6,*) 'the hamiltonian matrix in real space:'
+                   WRITE (oUnit,*) 'the hamiltonian matrix in real space:'
                    DO i = 1,nwfs
                       DO j = 1,nwfs
-                         WRITE (6,*) '   WFs:',i,'and',j
-                         WRITE (6,*) '     matrix element:',hwfr(i,j)
+                         WRITE (oUnit,*) '   WFs:',i,'and',j
+                         WRITE (oUnit,*) '     matrix element:',hwfr(i,j)
                       ENDDO
                    ENDDO
                 ENDIF !l_p0

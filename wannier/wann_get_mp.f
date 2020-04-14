@@ -16,7 +16,11 @@ c     Monkhorst-Pack mesh.
 c     
 c     Frank Freimuth
 c**************************************
+
+      USE m_constants
+
       implicit none
+
       integer,intent(in)  :: nkpts
       real,intent(in)     :: kpoints(:,:)
       integer,intent(out) :: num(:)
@@ -48,8 +52,9 @@ c**************************************
             num(dim)=(maxi-mini)/increm+1.01
          endif   
       enddo
-      write(6,*)"wann_get_mp: determination of mp-grid parameters:"
-      write(6,*)"mp_1=",num(1),"mp_2=",num(2),"mp_3=",num(3)
+      write(oUnit,*)
+     +   "wann_get_mp: determination of mp-grid parameters:"
+      write(oUnit,*)"mp_1=",num(1),"mp_2=",num(2),"mp_3=",num(3)
       IF(num(1)*num(2)*num(3)/=nkpts)  CALL juDFT_error
      +     ("mysterious kpoints",calledby ="wann_get_mp")
 

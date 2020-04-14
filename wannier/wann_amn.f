@@ -58,7 +58,7 @@ c     Inclusion of Noco&&soc; tidied up version
 c     Frank Freimuth
 c*********************************************************************
       use m_intgr, only : intgr3
-      use m_constants, only: pimach, ImagUnit
+      use m_constants
       use m_dwigner
       use m_wann_tlmw
       use m_wann_rad_twf
@@ -181,15 +181,15 @@ c..reading the proj.1 / proj.2 / proj file
       close (203)
 
       if (ikpt.eq.1) then
-      write (6,*) 'Number of trial WFs:',nwfs
-      write (6,*)
+      write (oUnit,*) 'Number of trial WFs:',nwfs
+      write (oUnit,*)
       do nwf = 1,nwfs
-        write (6,*) 'Twfs N:',nwf,' Atom N:',ind(nwf)
-        write (6,*) 'l=',lwf(nwf),' mr=',mrwf(nwf),' r=',rwf(nwf)
-        write (6,*) 'zona=',zona(nwf),' region=',regio(nwf),'*Rmt'
-        write (6,*) 'alpha=',alpha(nwf),
+        write (oUnit,*) 'Twfs N:',nwf,' Atom N:',ind(nwf)
+        write (oUnit,*) 'l=',lwf(nwf),' mr=',mrwf(nwf),' r=',rwf(nwf)
+        write (oUnit,*) 'zona=',zona(nwf),' region=',regio(nwf),'*Rmt'
+        write (oUnit,*) 'alpha=',alpha(nwf),
      &          ' beta=',beta(nwf),' gamma=',gamma(nwf)
-        write (6,*)
+        write (oUnit,*)
       enddo 
       endif
 
