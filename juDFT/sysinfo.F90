@@ -44,7 +44,7 @@ CONTAINS
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
     CHARACTER(len=100):: memory_usage_string
     INTEGER:: fid=543
-    INTEGER*8:: idum
+    INTEGER*8:: idum,rss
     LOGICAL:: firstcall=.TRUE.
     LOGICAL:: available=.FALSE.
     CHARACTER(len=40)::line
@@ -56,8 +56,8 @@ CONTAINS
     ENDIF
     IF (available) THEN
        REWIND(fid)
-       READ(fid,*) idum
-       WRITE(memory_usage_string,"(f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,"GB"
+       READ(fid,*) idum,rss
+       WRITE(memory_usage_string,"(2f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,(CPP_PAGESIZE/(1024.*1024.*1024.))*rss,"GB"
     ELSE
        memory_usage_string=""
     ENDIF
