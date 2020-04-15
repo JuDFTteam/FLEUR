@@ -60,9 +60,6 @@ set(fleur_SRC ${fleur_F90} ${fleur_F77})
 set_source_files_properties(${fleur_F90} PROPERTIES Fortran_FORMAT FREE)
 set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 
-string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
-message("Flags: ${CMAKE_Fortran_FLAGS}")
-
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/fleurinput/modules/fleurinput")
 if (FLEUR_USE_SERIAL)
    #Serial executables
