@@ -34,7 +34,7 @@ MODULE m_tetrados
       REAL,          INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,          INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,iBand,ikpt,ie,idim,itet
+      INTEGER :: i,j,iBand,ikpt,ie,idim,itet,icorn,jcorn
       REAL    :: ener,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(qdim,neigd,kpts%nkpt)
@@ -57,10 +57,12 @@ MODULE m_tetrados
       DO itet = 1,kpts%ntet
          DO iBand = 1,neigd
             DO i = 1,3
+               icorn = kpts%ntetra(i,itet)
                DO j = i+1,4
-                  IF (abs(ev(iBand,kpts%ntetra(i,itet))-ev(iBand,kpts%ntetra(j,itet))).LT.1.0e-7) THEN
-                     ev(iBand,kpts%ntetra(i,itet)) = ev(iBand,kpts%ntetra(i,itet)) + i*(1.0e-7)*itet
-                     ev(iBand,kpts%ntetra(j,itet)) = ev(iBand,kpts%ntetra(j,itet)) - i*(1.0e-7)*itet
+                  jcorn = kpts%ntetra(j,itet)
+                  IF (abs(ev(iBand,icorn)-ev(iBand,jcorn)).LT.1.0e-7) THEN
+                     ev(iBand,icorn) = ev(iBand,icorn) + i*1.0e-7*itet
+                     ev(iBand,jcorn) = ev(iBand,jcorn) - i*1.0e-7*itet
                   ENDIF
                ENDDO
             ENDDO
@@ -82,14 +84,17 @@ MODULE m_tetrados
                IF(ANY(eval.GE.9999.9)) CYCLE
 
                DO i=1,4
+                  icorn = kpts%ntetra(i,itet)
+
                   weight(i)=1.0
                   DO j=1,4
                      IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
                   ENDDO
                   weight(i)=6.0*kpts%voltet(itet)/(weight(i)*kpts%ntet)
+
                   DO idim=1,qdim
-                     wpar(idim,iBand,kpts%ntetra(i,itet)) =  wpar(idim,iBand,kpts%ntetra(i,itet)) &
-                                                       + 0.25*weight(i)*qal(idim,iBand,ikpt)
+                     wpar(idim,iBand,icorn) =  wpar(idim,iBand,icorn) &
+                                             + 0.25*weight(i)*qal(idim,iBand,ikpt)
                   ENDDO
                ENDDO
 
