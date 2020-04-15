@@ -687,8 +687,8 @@ CONTAINS
         filename=sliceplot%plot(nplo)%filename
 
          IF (xsf.AND.sliceplot%plot(nplo)%vecField.AND.(mpi%irank.EQ.0)) THEN
-            OPEN(nfile+10,file=TRIM(denName)//'_A_vec'//'.xsf',form='formatted')
-            CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+            OPEN(nfile+10,file=TRIM(denName)//'_A_vec'//filename//'.xsf',form='formatted')
+            CALL xsf_WRITE_atoms(nfile+10,atoms,input%film,oneD%odi%d1,cell%amat)
          END IF
 
          IF (twodim.AND.ANY(grid(1:2)<1).AND.(mpi%irank .EQ. 0)) &
