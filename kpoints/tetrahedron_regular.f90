@@ -95,6 +95,9 @@ MODULE m_tetrahedron_regular
       ENDIF
       voltet = voltet/volbz
 
+      !Rescale volumes for IO to inp.xml
+      voltet = voltet * kpts%ntet
+
    END SUBROUTINE tetrahedron_regular
 
 
