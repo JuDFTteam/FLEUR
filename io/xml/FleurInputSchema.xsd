@@ -651,7 +651,8 @@
       <xsd:attribute default="0.0 0.0 0.0" name="zero" type="xsd:string" use="optional"/>
       <xsd:attribute default="plot" name="file" type="xsd:string" use="optional"/>
       <xsd:attribute default="F" name="onlyMT" type="FleurBool" use="optional"/>
-      <xsd:attribute default="-1" name="typeMT" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="0" name="typeMT" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="F" name="vecField" type="FleurBool" use="optional"/>
     </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">

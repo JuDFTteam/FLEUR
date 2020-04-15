@@ -24,6 +24,7 @@ MODULE m_types_sliceplot
     real    :: vec3(3)=[0.,0.,1.]
     LOGICAL :: onlyMT=.false.
     integer :: typeMT=0
+    LOGICAL :: vecField=.false.
   CONTAINS
      PROCEDURE :: read_xml=>read_xml_plot
      PROCEDURE :: mpi_bc=>mpi_bc_plot
@@ -105,6 +106,9 @@ CONTAINS
     CALL mpi_bc(this%vec1(3),rank,mpi_comm)
     CALL mpi_bc(this%vec2(3),rank,mpi_comm)
     CALL mpi_bc(this%vec3(3),rank,mpi_comm)
+    CALL mpi_bc(this%grid(1),rank,mpi_comm)
+    CALL mpi_bc(this%grid(2),rank,mpi_comm)
+    CALL mpi_bc(this%grid(3),rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_plot
 
@@ -197,6 +201,7 @@ CONTAINS
     this%filename=xml%GetAttributeValue('/@file')
     this%onlyMT     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
     this%typeMT     = evaluateFirstIntOnly(xml%GetAttributeValue('/@typeMT'))
+    this%vecField     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@vecField'))
 
   END SUBROUTINE read_xml_plot
 
