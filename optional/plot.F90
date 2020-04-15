@@ -860,7 +860,7 @@ CONTAINS
                         tempVecs(ix,iy,iz,1:3)=point(:)
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
                      END IF
-                  ELSE
+                  ELSE IF (.TRUE.) THEN
                     tempResults(ix,iy,iz,:)=xdnout(:)
                     points(ix,iy,iz,:)=point(:)
                   END IF
