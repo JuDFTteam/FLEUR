@@ -322,7 +322,7 @@
                            qal(:,1:ntb,1:kpts%nkpt),e, g)
                ELSE
                  write(*,*) efermi
-                 CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
+                 CALL tetra_dos(qdim,input%neig,ned,ntetra,kpts%nkpt,&
                                itetra,efermi,voltet,e,results%neig(:,jsp), ev,qal, g)
                  IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
                ENDIF

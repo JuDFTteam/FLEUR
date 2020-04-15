@@ -24,11 +24,11 @@ MODULE m_tetrados
 
    CONTAINS
 
-   SUBROUTINE tetra_dos(lmax,ntype,neigd,ned,ntetra,nkpt,&
+   SUBROUTINE tetra_dos(qdim,neigd,ned,ntetra,nkpt,&
                         itetra,efermi,voltet,energy,nevk,&
                         ev,qal,g)
 
-      INTEGER, INTENT(IN)    :: ntype,neigd,ned,lmax
+      INTEGER, INTENT(IN)    :: neigd,ned,qdim
       INTEGER, INTENT(IN)    :: ntetra,nkpt
       REAL,    INTENT(IN)    :: efermi
       INTEGER, INTENT(IN)    :: itetra(:,:) !(4,6*nkpt)
@@ -39,17 +39,16 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,iBand,ikpt,iType,ne,ns,nc,itet
-      REAL    :: ener,efer,w
+      INTEGER :: i,j,iBand,ikpt,ne,idim,itet
+      REAL    :: ener,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
-      REAL    :: wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
+      REAL    :: wpar(qdim,neigd,nkpt)
 
       DO ikpt = 1,nkpt
          ev(nevk(ikpt)+1:neigd,ikpt) = 1.0e10
       ENDDO
 
       wpar = 0.0
-      wparint = 0.0
 
       DO iBand = 1,neigd
          ecmax(iBand) = -1.0e25
@@ -79,10 +78,7 @@ MODULE m_tetrados
       ! calculate partial weights
       !
       DO ikpt=1,nkpt
-        DO iBand = 1,nevk(ikpt)
-          DO iType = 1,ntype
-            nc = lmax*(iType-1)
-
+         DO iBand = 1,nevk(ikpt)
             DO itet = 1,ntetra
                IF (ALL(itetra(:,itet).ne.ikpt)) CYCLE
 
@@ -96,17 +92,14 @@ MODULE m_tetrados
                      IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
                   ENDDO
                   weight(i)=6.0*voltet(itet)/weight(i)
-                  DO ns=1,4
-                     wpar(ns,iType,iBand,itetra(i,itet)) =  wpar(ns,iType,iBand,itetra(i,itet)) &
-                                                       + 0.25*weight(i)*qal(nc+ns,iBand,ikpt)
+                  DO idim=1,qdim
+                     wpar(idim,iBand,itetra(i,itet)) =  wpar(idim,iBand,itetra(i,itet)) &
+                                                       + 0.25*weight(i)*qal(idim,iBand,ikpt)
                   ENDDO
-                  IF (iType.EQ.1) wparint(iBand,itetra(i,itet)) =  wparint(iBand,itetra(i,itet)) &
-                                                              + 0.25*weight(i)*qal(lmax*ntype+1,iBand,ikpt)
                ENDDO
 
             ENDDO
-          ENDDO
-        ENDDO
+         ENDDO
       ENDDO
       !
       !---------------------------------------------------
@@ -119,26 +112,14 @@ MODULE m_tetrados
          DO iBand = 1,neigd
 
             ener = ev(iBand,ikpt)
-            DO iType = 1,ntype
-               DO ns = 1,lmax
-                  nc = ns + lmax*(iType-1)
-                  w  = 0.5*wpar(ns,iType,iBand,ikpt)
-                  DO ne = 1,ned
-                     term(ne) = energy(ne) - ener
-                     IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand) - ener
-                     IF(term(ne).LT.0.0e0)         term(ne) = 0.0e0
-                     g(ne,nc) = g(ne,nc) + w * term(ne)**2
-                  ENDDO
+            DO idim = 1, qdim
+               w  = 0.5*wpar(idim,iBand,ikpt)
+               DO ne = 1,ned
+                  term(ne) = energy(ne) - ener
+                  IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand) - ener
+                  IF(term(ne).LT.0.0e0)         term(ne) = 0.0e0
+                  g(ne,idim) = g(ne,idim) + w * term(ne)**2
                ENDDO
-            ENDDO
-
-            nc = lmax*ntype+1
-            w = 0.5*wparint(iBand,ikpt)
-            DO ne = 1,ned
-               term(ne) = energy(ne) - ener
-               IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand)-ener
-               IF(term(ne).lt.0.0e0 )        term(ne) = 0.0e0
-               g(ne,nc) = g(ne,nc) + w * term(ne)**2
             ENDDO
 
          ENDDO
