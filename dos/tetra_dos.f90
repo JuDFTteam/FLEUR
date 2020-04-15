@@ -39,7 +39,7 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,iBand,ikpt,ntp,ne,ns,nc,itet
+      INTEGER :: i,j,iBand,ikpt,iType,ne,ns,nc,itet
       REAL    :: ener,efer,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
@@ -80,8 +80,8 @@ MODULE m_tetrados
       !
       DO ikpt=1,nkpt
         DO iBand = 1,nevk(ikpt)
-          DO ntp = 1,ntype
-            nc = lmax*(ntp-1)
+          DO iType = 1,ntype
+            nc = lmax*(iType-1)
 
             DO itet = 1,ntetra
                IF (ALL(itetra(:,itet).ne.ikpt)) CYCLE
@@ -97,10 +97,10 @@ MODULE m_tetrados
                   ENDDO
                   weight(i)=6.0*voltet(itet)/weight(i)
                   DO ns=1,4
-                     wpar(ns,ntp,iBand,itetra(i,itet)) =  wpar(ns,ntp,iBand,itetra(i,itet)) &
+                     wpar(ns,iType,iBand,itetra(i,itet)) =  wpar(ns,iType,iBand,itetra(i,itet)) &
                                                        + 0.25*weight(i)*qal(nc+ns,iBand,ikpt)
                   ENDDO
-                  IF (ntp.EQ.1) wparint(iBand,itetra(i,itet)) =  wparint(iBand,itetra(i,itet)) &
+                  IF (iType.EQ.1) wparint(iBand,itetra(i,itet)) =  wparint(iBand,itetra(i,itet)) &
                                                               + 0.25*weight(i)*qal(lmax*ntype+1,iBand,ikpt)
                ENDDO
 
@@ -119,10 +119,10 @@ MODULE m_tetrados
          DO iBand = 1,neigd
 
             ener = ev(iBand,ikpt)
-            DO ntp = 1,ntype
+            DO iType = 1,ntype
                DO ns = 1,lmax
-                  nc = ns + lmax*(ntp-1)
-                  w  = 0.5*wpar(ns,ntp,iBand,ikpt)
+                  nc = ns + lmax*(iType-1)
+                  w  = 0.5*wpar(ns,iType,iBand,ikpt)
                   DO ne = 1,ned
                      term(ne) = energy(ne) - ener
                      IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand) - ener
