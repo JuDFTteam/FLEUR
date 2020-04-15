@@ -901,7 +901,7 @@ DO k=0, (mpi%isize-1)
                  CLOSE(nfile+i)
                END DO
                IF (sliceplot%plot(nplo)%vecField) THEN
-                  OPEN(nfile+10,file=TRIM(denName)//'_A_vec'//'.xsf',form='formatted',position="append", action="write")
+                  OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
                   WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
                   CLOSE(nfile+10)                  
                END IF
