@@ -2,7 +2,6 @@ set(fleur_F77 ${fleur_F77}
 dos/dos_bin.f
 dos/ptdos.f
 dos/smooth.f
-dos/tetra_dos.f
 )
 set(fleur_F90 ${fleur_F90}
 dos/Ek_write_sl.f90
@@ -13,4 +12,5 @@ dos/grp_k.f90
 dos/nstm3.f90
 dos/sympsi.F90
 dos/dostetra.f90
+dos/tetra_dos.f90
 )
