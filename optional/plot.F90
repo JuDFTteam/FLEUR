@@ -856,7 +856,7 @@ CONTAINS
                      DO i = 1, numOutFiles
                         tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
-                     IF len(xdnout.GE.4) THEN
+                     IF (len(xdnout).GE.4) THEN
                         tempVecs(ix,iy,iz,1:3)=point(:)
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
                      END IF
