@@ -28,7 +28,7 @@ MODULE m_tetraef
       REAL,    INTENT (OUT)   :: w(:,:,:)    !(neigd,nkptd,jspd)
       REAL,    INTENT (OUT)   :: efermi
 
-      INTEGER :: i,j,jspin,neig,nk,nelec,ncr,ntet,it
+      INTEGER :: i,j,jspin,neig,nk,nelec,ncr,ntet,it,icorn,jcorn
       REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
       REAL    :: weight(4),ecmax(2,size(w,1))
       REAL    :: wght(2,size(w,2),size(w,1)),eval(4)
@@ -69,22 +69,23 @@ MODULE m_tetraef
       DO ntet=1,ntetra
          DO neig=1,size(w,1)
             DO jspin=1,jspins
+
+               eval(:) = eig(neig,itetra(:,ntet),jspin)
+
+               IF (ANY(eval.GE.9999.9)) CYCLE
+
                DO i=1,4
-                 eval(i) = eig(neig,itetra(i,ntet),jspin)
+                  weight(i) = 1.0
+                  DO j=1,4
+                     IF (i.NE.j) weight(i) = weight(i)*(eval(j)-eval(i))
+                  ENDDO
                ENDDO
-               IF (max(eval(1),eval(2),eval(3),eval(4)).LT.9999.9) THEN
-                  DO i=1,4
-                     weight(i) = 1.0
-                     DO j=1,4
-                        IF (i.NE.j) weight(i) = weight(i)*(eval(j)-eval(i))
-                     ENDDO
-                  ENDDO
-                  DO i=1,4
-                     icorn = itetra(i,ntet)
-                     weight(i) = 6.0*voltet(ntet)/weight(i)
-                     wght(jspin,icorn,neig) = wght(jspin,icorn,neig) + weight(i)
-                  ENDDO
-               ENDIF
+               DO i=1,4
+                  icorn = itetra(i,ntet)
+                  weight(i) = 6.0*voltet(ntet)/weight(i)
+                  wght(jspin,icorn,neig) = wght(jspin,icorn,neig) + weight(i)
+               ENDDO
+
             ENDDO
          ENDDO
       ENDDO
@@ -182,35 +183,31 @@ MODULE m_tetraef
       DO ntet = 1,ntetra
          DO neig = 1,size(w,1)
             DO jspin = 1,jspins
-               DO i=1,4
-                  eval(i)=eig(neig,itetra(i,ntet),jspin)
+               eval(:) = eig(neig,itetra(:,ntet),jspin)
+
+               IF (ANY(eval.GE.9999.9)) CYCLE
+
+               DO i = 1,4
+                  weight(i) = 1.0
+                  DO j = 1,4
+                     IF (i.NE.j) THEN
+                        weight(i) = weight(i) * (eval(j) - eval(i))
+                     ENDIF
+                  ENDDO
+                  weight(i) = 6.0 * voltet(ntet) / weight(i)
                ENDDO
-               IF (max(eval(1),eval(2),eval(3),eval(4)).LT.9999.9) THEN
 
-                  DO i = 1,4
-                     weight(i) = 1.0
-                     DO j = 1,4
-                        IF (i.NE.j) THEN
-                           weight(i) = weight(i) * (eval(j) - eval(i))
-                        ENDIF
-                     ENDDO
-                     weight(i) = 6.0 * voltet(ntet) / weight(i)
-                  ENDDO
+               wgs = 0.0e0
+               DO i = 1,4
+                  ttt = efermi - eval(i)
+                  IF (efermi.GT.ecmax(jspin,neig)) ttt = ecmax(jspin,neig) - eval(i)
+                  IF ( ttt.LT.0.0e0 )              ttt = 0.0e0
+                  wgs = wgs + ttt**3*weight(i)
+               ENDDO
+               wgs = wgs / 24.0
 
-                  wgs = 0.0e0
-                  DO i = 1,4
-                     ttt = efermi - eval(i)
-                     IF (efermi.GT.ecmax(jspin,neig)) ttt = ecmax(jspin,neig) - eval(i)
-                     IF ( ttt.LT.0.0e0 )              ttt = 0.0e0
-                     wgs = wgs + ttt**3*weight(i)
-                  ENDDO
-                  wgs = wgs / 24.0
+               w(neig,itetra(:,ntet),jspin) = w(neig,itetra(:,ntet),jspin) + wgs
 
-                  DO i = 1,4
-                     w(neig,itetra(i,ntet),jspin) = w(neig,itetra(i,ntet),jspin) + wgs
-                  ENDDO
-
-               ENDIF
             ENDDO
          ENDDO
       ENDDO
