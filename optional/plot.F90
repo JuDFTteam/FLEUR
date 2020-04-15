@@ -699,10 +699,10 @@ CONTAINS
 
          !calculate cartesian coordinates if needed
          IF (.NOT.cartesian) THEN
-            vec1=matmul(cell%amat,vec1)
-            vec2=matmul(cell%amat,vec2)
-            vec3=matmul(cell%amat,vec3)
-            zero=matmul(cell%amat,zero)
+            vec1=matmul(cell%amat,vec1)/1.8897269
+            vec2=matmul(cell%amat,vec2)/1.8897269
+            vec3=matmul(cell%amat,vec3)/1.8897269
+            zero=matmul(cell%amat,zero)/1.8897269
          END IF
 
          !Open the file
