@@ -185,8 +185,8 @@ c
         ENDIF
       ENDDO
       WRITE (oUnit,220) efermi,dfermi,nelec
-  220 FORMAT (//,'>>> D O S <<<',//,'   fermi energy ',f10.5,
-     +       ' dtot ',f10.5,' nelec ',i5)
+  220 FORMAT (//,'>>> D O S <<<',//,'   fermi energy =',f10.5,
+     +       ' dtot =',f10.5,' nelec =',i5)
 c
 c---------------------------------------------------
 c calculate weight factors for charge density integration
