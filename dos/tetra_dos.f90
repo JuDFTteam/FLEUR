@@ -39,7 +39,7 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,neig,ikpt,ntp,ne,ns,nc,itet
+      INTEGER :: i,j,iBand,ikpt,ntp,ne,ns,nc,itet
       REAL    :: ener,efer,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
@@ -51,22 +51,22 @@ MODULE m_tetrados
       wpar = 0.0
       wparint = 0.0
 
-      DO neig = 1,neigd
-         ecmax(neig) = -1.0e25
+      DO iBand = 1,neigd
+         ecmax(iBand) = -1.0e25
          DO ikpt = 1,nkpt
-            IF(ev(neig,ikpt).GT.ecmax(neig)) ecmax(neig) = ev(neig,ikpt)
+            IF(ev(iBand,ikpt).GT.ecmax(iBand)) ecmax(iBand) = ev(iBand,ikpt)
          ENDDO
       ENDDO
       !
       !  check for energy degeneracies in tetrahedrons
       !
       DO itet = 1,ntetra
-         DO neig = 1,neigd
+         DO iBand = 1,neigd
             DO i = 1,3
                DO j = i+1,4
-                  IF (abs(ev(neig,itetra(i,itet))-ev(neig,itetra(j,itet))).LT.1.0e-7) THEN
-                     ev(neig,itetra(i,itet)) = ev(neig,itetra(i,itet)) + i*(1.0e-7)*itet
-                     ev(neig,itetra(j,itet)) = ev(neig,itetra(j,itet)) - i*(1.0e-7)*itet
+                  IF (abs(ev(iBand,itetra(i,itet))-ev(iBand,itetra(j,itet))).LT.1.0e-7) THEN
+                     ev(iBand,itetra(i,itet)) = ev(iBand,itetra(i,itet)) + i*(1.0e-7)*itet
+                     ev(iBand,itetra(j,itet)) = ev(iBand,itetra(j,itet)) - i*(1.0e-7)*itet
                   ENDIF
                ENDDO
             ENDDO
@@ -79,14 +79,14 @@ MODULE m_tetrados
       ! calculate partial weights
       !
       DO ikpt=1,nkpt
-        DO neig = 1,nevk(ikpt)
+        DO iBand = 1,nevk(ikpt)
           DO ntp = 1,ntype
             nc = lmax*(ntp-1)
 
             DO itet = 1,ntetra
                IF (ALL(itetra(:,itet).ne.ikpt)) CYCLE
 
-               eval(1:4) = ev(neig,itetra(1:4,itet))
+               eval(1:4) = ev(iBand,itetra(1:4,itet))
 
                IF(max(eval(1),eval(2),eval(3),eval(4)).GE.9999.9) CYCLE
 
@@ -97,11 +97,11 @@ MODULE m_tetrados
                   ENDDO
                   weight(i)=6.0*voltet(itet)/weight(i)
                   DO ns=1,4
-                     wpar(ns,ntp,neig,itetra(i,itet)) =  wpar(ns,ntp,neig,itetra(i,itet)) &
-                                                       + 0.25*weight(i)*qal(nc+ns,neig,ikpt)
+                     wpar(ns,ntp,iBand,itetra(i,itet)) =  wpar(ns,ntp,iBand,itetra(i,itet)) &
+                                                       + 0.25*weight(i)*qal(nc+ns,iBand,ikpt)
                   ENDDO
-                  IF (ntp.EQ.1) wparint(neig,itetra(i,itet)) =  wparint(neig,itetra(i,itet)) &
-                                                              + 0.25*weight(i)*qal(lmax*ntype+1,neig,ikpt)
+                  IF (ntp.EQ.1) wparint(iBand,itetra(i,itet)) =  wparint(iBand,itetra(i,itet)) &
+                                                              + 0.25*weight(i)*qal(lmax*ntype+1,iBand,ikpt)
                ENDDO
 
             ENDDO
@@ -116,16 +116,16 @@ MODULE m_tetrados
       g = 0.0
 
       DO ikpt = 1,nkpt
-         DO neig = 1,neigd
+         DO iBand = 1,neigd
 
-            ener = ev(neig,ikpt)
+            ener = ev(iBand,ikpt)
             DO ntp = 1,ntype
                DO ns = 1,lmax
                   nc = ns + lmax*(ntp-1)
-                  w  = 0.5*wpar(ns,ntp,neig,ikpt)
+                  w  = 0.5*wpar(ns,ntp,iBand,ikpt)
                   DO ne = 1,ned
                      term(ne) = energy(ne) - ener
-                     IF(energy(ne).GT.ecmax(neig)) term(ne) = ecmax(neig) - ener
+                     IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand) - ener
                      IF(term(ne).LT.0.0e0)         term(ne) = 0.0e0
                      g(ne,nc) = g(ne,nc) + w * term(ne)**2
                   ENDDO
@@ -133,10 +133,10 @@ MODULE m_tetrados
             ENDDO
 
             nc = lmax*ntype+1
-            w = 0.5*wparint(neig,ikpt)
+            w = 0.5*wparint(iBand,ikpt)
             DO ne = 1,ned
                term(ne) = energy(ne) - ener
-               IF(energy(ne).GT.ecmax(neig)) term(ne) = ecmax(neig)-ener
+               IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand)-ener
                IF(term(ne).lt.0.0e0 )        term(ne) = 0.0e0
                g(ne,nc) = g(ne,nc) + w * term(ne)**2
             ENDDO
