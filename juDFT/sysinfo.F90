@@ -57,7 +57,7 @@ CONTAINS
     IF (available) THEN
        REWIND(fid)
        READ(fid,*) idum,rss
-       WRITE(memory_usage_string,"(2f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,(CPP_PAGESIZE/(1024.*1024.*1024.))*rss,"GB"
+       WRITE(memory_usage_string,"(2f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,(CPP_PAGESIZE/(1024.*1024.*1024.))*rss," GB"
     ELSE
        memory_usage_string=""
     ENDIF
