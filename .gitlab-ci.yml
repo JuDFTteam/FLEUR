@@ -52,6 +52,26 @@ build-gfortran-serial:
 #    - triggers
 #    - web
 
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-serial
+  script:
+    - cd /builds/fleur/fleur
+    - ulimit -s unlimited
+    - export OMP_NUM_THREADS=4
+    - cd build.serial
+    - ctest
+  artifacts:
+    when: on_failure
+    paths:
+      - build.serial/Testing
+  only:
+    - schedules
+    - triggers
+    - web
+
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: deploy
