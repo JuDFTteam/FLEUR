@@ -39,7 +39,7 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,iBand,ikpt,ne,idim,itet
+      INTEGER :: i,j,iBand,ikpt,ie,idim,itet
       REAL    :: ener,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(qdim,neigd,nkpt)
@@ -114,11 +114,11 @@ MODULE m_tetrados
             ener = ev(iBand,ikpt)
             DO idim = 1, qdim
                w  = 0.5*wpar(idim,iBand,ikpt)
-               DO ne = 1,ned
-                  term(ne) = energy(ne) - ener
-                  IF(energy(ne).GT.ecmax(iBand)) term(ne) = ecmax(iBand) - ener
-                  IF(term(ne).LT.0.0e0)         term(ne) = 0.0e0
-                  g(ne,idim) = g(ne,idim) + w * term(ne)**2
+               DO ie = 1,ned
+                  term(ie) = energy(ie) - ener
+                  IF(energy(ie).GT.ecmax(iBand)) term(ie) = ecmax(iBand) - ener
+                  IF(term(ie).LT.0.0e0)         term(ie) = 0.0e0
+                  g(ie,idim) = g(ie,idim) + w * term(ie)**2
                ENDDO
             ENDDO
 
