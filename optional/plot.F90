@@ -560,6 +560,7 @@ CONTAINS
       REAL,               ALLOCATABLE :: xdnout(:)
       REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
       REAL,               ALLOCATABLE :: points(:,:,:,:)
+      REAL,               ALLOCATABLE :: tempVecs(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
       INTEGER                         :: grid(3),k
@@ -678,6 +679,7 @@ CONTAINS
         IF(.NOT.(MODULO(grid(3),mpi%isize)).EQ.0) CALL juDFT_error('Your grid z component doesnt fit the # of MPI processed. ',calledby='plot.F90')
         ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
         ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
+        ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
         vec1=sliceplot%plot(nplo)%vec1
         vec2=sliceplot%plot(nplo)%vec2
         vec3=sliceplot%plot(nplo)%vec3
@@ -734,7 +736,7 @@ CONTAINS
          !loop over all points
          DO iz = mpi%irank*(grid(3)-1)/mpi%isize, ((mpi%irank+1)*(grid(3)-1))/mpi%isize
             DO iy = 0, grid(2)-1
-        !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,mpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
+        !$OMP parallel shared(iz,iy,points,tempResults,tempVecs,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,mpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
          !$OMP do
                DO ix = 0, grid(1)-1
 
@@ -775,6 +777,10 @@ CONTAINS
 
                   IF (sliceplot%plot(nplo)%onlyMT.AND.(iflag.NE.1)) THEN
                      xdnout=0.0
+                  ELSE IF (sliceplot%plot(nplo)%typeMT.NE.0) THEN
+                     IF (sliceplot%plot(nplo)%typeMT.NE.nt) THEN
+                        xdnout=0.0
+                     END IF
                   END IF
 
                   IF (na.NE.0) THEN
@@ -850,6 +856,10 @@ CONTAINS
                      DO i = 1, numOutFiles
                         tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
+                     IF len(xdnout.GE.4) THEN
+                        tempVecs(ix,iy,iz,1:3)=point(:)
+                        tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
+                     END IF
                   ELSE
                     tempResults(ix,iy,iz,:)=xdnout(:)
                     points(ix,iy,iz,:)=point(:)

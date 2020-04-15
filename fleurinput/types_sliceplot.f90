@@ -23,6 +23,7 @@ MODULE m_types_sliceplot
     real    :: vec2(3)=[0.,1.,0.]
     real    :: vec3(3)=[0.,0.,1.]
     LOGICAL :: onlyMT=.false.
+    integer :: typeMT=0
   CONTAINS
      PROCEDURE :: read_xml=>read_xml_plot
      PROCEDURE :: mpi_bc=>mpi_bc_plot
@@ -194,6 +195,8 @@ CONTAINS
     this%zero=x
 
     this%filename=xml%GetAttributeValue('/@file')
+    this%onlyMT     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
+    this%typeMT     = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@typeMT'))
 
   END SUBROUTINE read_xml_plot
 
