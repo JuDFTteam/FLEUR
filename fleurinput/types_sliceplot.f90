@@ -196,7 +196,7 @@ CONTAINS
 
     this%filename=xml%GetAttributeValue('/@file')
     this%onlyMT     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
-    this%typeMT     = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@typeMT'))
+    this%typeMT     = evaluateFirstIntOnly(xml%GetAttributeValue('/@typeMT'))
 
   END SUBROUTINE read_xml_plot
 
