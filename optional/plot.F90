@@ -8,9 +8,6 @@ MODULE m_plot
    USE m_juDFT
    USE m_constants
 
-
-
-
    IMPLICIT NONE
 
    !-----------------------------------------------------------------------------
@@ -769,12 +766,16 @@ CONTAINS
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-
+                  
                   DO i = 1, numInDen
                      CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i),xdnout(i))
                   END DO
+
+                  IF (sliceplot%plot(nplo)%onlyMT.AND.(iflag.NE.1)) THEN
+                     xdnout=0.0
+                  END IF
 
                   IF (na.NE.0) THEN
                      IF (noco%l_ss) THEN

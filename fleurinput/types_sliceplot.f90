@@ -22,6 +22,7 @@ MODULE m_types_sliceplot
     real    :: vec1(3)=[1.,0.,0.]
     real    :: vec2(3)=[0.,1.,0.]
     real    :: vec3(3)=[0.,0.,1.]
+    LOGICAL :: onlyMT=.false.
   CONTAINS
      PROCEDURE :: read_xml=>read_xml_plot
      PROCEDURE :: mpi_bc=>mpi_bc_plot
