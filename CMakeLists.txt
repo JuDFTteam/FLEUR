@@ -4,9 +4,11 @@ if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
 endif()
 
-set(tmp ${CMAKE_Fortran_FLAGS})
+# sometimes cmake clears CMAKE_Fortran_FLAGS during project()
+set(CMAKE_Fortran_FLAGS_backup ${CMAKE_Fortran_FLAGS})
+set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C Fortran)
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${tmp}")
+string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
 include("cmake/CompilerConfig.txt")
 
