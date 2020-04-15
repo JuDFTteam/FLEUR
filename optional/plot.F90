@@ -685,6 +685,12 @@ CONTAINS
         vec3=sliceplot%plot(nplo)%vec3
         zero=sliceplot%plot(nplo)%zero
         filename=sliceplot%plot(nplo)%filename
+
+         IF (xsf.AND.sliceplot%plot(nplo)%vecField.AND.(mpi%irank.EQ.0)) THEN
+            OPEN(nfile+10,file=TRIM(denName)//'_A_vec'//'.xsf',form='formatted')
+            CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+         END IF
+
          IF (twodim.AND.ANY(grid(1:2)<1).AND.(mpi%irank .EQ. 0)) &
                   CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (.NOT.twodim.AND.ANY(grid<1).AND.(mpi%irank .EQ. 0)) &
@@ -860,7 +866,7 @@ CONTAINS
                         tempVecs(ix,iy,iz,1:3)=point(:)
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
                      END IF
-                  ELSE IF (.TRUE.) THEN
+                  ELSE
                     tempResults(ix,iy,iz,:)=xdnout(:)
                     points(ix,iy,iz,:)=point(:)
                   END IF
@@ -875,6 +881,7 @@ IF(mpi%irank.EQ.0) THEN
      DO i = 1, numOutFiles
        CLOSE(nfile+i)
      END DO
+     CLOSE(nfile+10)
   ELSE
     CLOSE(nfile)
   END IF
@@ -893,6 +900,11 @@ DO k=0, (mpi%isize-1)
                  WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
                  CLOSE(nfile+i)
                END DO
+               IF (sliceplot%plot(nplo)%vecField) THEN
+                  OPEN(nfile+10,file=TRIM(denName)//'_A_vec'//'.xsf',form='formatted',position="append", action="write")
+                  WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
+                  CLOSE(nfile+10)                  
+               END IF
              ELSE
                OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
                WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
