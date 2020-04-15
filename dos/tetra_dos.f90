@@ -39,13 +39,13 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,neig,nk,ntp,ne,ns,nc,ntet
+      INTEGER :: i,j,neig,ikpt,ntp,ne,ns,nc,ntet
       REAL    :: ener,efer,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
 
-      DO nk = 1,nkpt
-         ev(nevk(nk)+1:neigd,nk) = 1.0e10
+      DO ikpt = 1,nkpt
+         ev(nevk(ikpt)+1:neigd,ikpt) = 1.0e10
       ENDDO
 
       wpar = 0.0
@@ -53,8 +53,8 @@ MODULE m_tetrados
 
       DO neig = 1,neigd
          ecmax(neig) = -1.0e25
-         DO nk = 1,nkpt
-            IF ( ev(neig,nk).GT.ecmax(neig) ) ecmax(neig) = ev(neig,nk)
+         DO ikpt = 1,nkpt
+            IF(ev(neig,ikpt).GT.ecmax(neig)) ecmax(neig) = ev(neig,ikpt)
          ENDDO
       ENDDO
       !
@@ -78,13 +78,13 @@ MODULE m_tetrados
       !
       ! calculate partial weights
       !
-      DO nk=1,nkpt
-        DO neig = 1,nevk(nk)
+      DO ikpt=1,nkpt
+        DO neig = 1,nevk(ikpt)
           DO ntp = 1,ntype
             nc = lmax*(ntp-1)
 
             DO ntet = 1,ntetra
-               IF (ALL(itetra(:,ntet).ne.nk)) CYCLE
+               IF (ALL(itetra(:,ntet).ne.ikpt)) CYCLE
 
                eval(1:4) = ev(neig,itetra(1:4,ntet))
 
@@ -98,10 +98,10 @@ MODULE m_tetrados
                   weight(i)=6.0*voltet(ntet)/weight(i)
                   DO ns=1,4
                      wpar(ns,ntp,neig,itetra(i,ntet)) =  wpar(ns,ntp,neig,itetra(i,ntet)) &
-                                                       + 0.25*weight(i)*qal(nc+ns,neig,nk)
+                                                       + 0.25*weight(i)*qal(nc+ns,neig,ikpt)
                   ENDDO
                   IF (ntp.EQ.1) wparint(neig,itetra(i,ntet)) =  wparint(neig,itetra(i,ntet)) &
-                                                              + 0.25*weight(i)*qal(lmax*ntype+1,neig,nk)
+                                                              + 0.25*weight(i)*qal(lmax*ntype+1,neig,ikpt)
                ENDDO
 
             ENDDO
@@ -115,14 +115,14 @@ MODULE m_tetrados
       !
       g = 0.0
 
-      DO nk = 1,nkpt
+      DO ikpt = 1,nkpt
          DO neig = 1,neigd
 
-            ener = ev(neig,nk)
+            ener = ev(neig,ikpt)
             DO ntp = 1,ntype
                DO ns = 1,lmax
                   nc = ns + lmax*(ntp-1)
-                  w  = 0.5*wpar(ns,ntp,neig,nk)
+                  w  = 0.5*wpar(ns,ntp,neig,ikpt)
                   DO ne = 1,ned
                      term(ne) = energy(ne) - ener
                      IF(energy(ne).GT.ecmax(neig)) term(ne) = ecmax(neig) - ener
@@ -133,7 +133,7 @@ MODULE m_tetrados
             ENDDO
 
             nc = lmax*ntype+1
-            w = 0.5*wparint(neig,nk)
+            w = 0.5*wparint(neig,ikpt)
             DO ne = 1,ned
                term(ne) = energy(ne) - ener
                IF(energy(ne).GT.ecmax(neig)) term(ne) = ecmax(neig)-ener
