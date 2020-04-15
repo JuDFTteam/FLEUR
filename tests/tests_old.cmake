@@ -90,7 +90,7 @@ if (${FLEUR_USE_MPI})
 endif()
 
 #Hybrid tests
-add_test("KClHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/KClHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
-add_test("GaAsHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/GaAsHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
-add_test("FeHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/FeHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
-add_test("MnHybridNoinv" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/MnHybridNoinv/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+#add_test("KClHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/KClHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+#add_test("GaAsHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/GaAsHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+#add_test("FeHybridPBE0" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/FeHybridPBE0/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+#add_test("MnHybridNoinv" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/MnHybridNoinv/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
