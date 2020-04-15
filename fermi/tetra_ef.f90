@@ -4,39 +4,34 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_tetraef
-      use m_juDFT
-! -----------------------------------------------------------------------
-! This subroutine evaluates the density of states with the tetrahedron method
-! and sets the weight factors needed for the charge density for bulk systems.
-! Adapted for the FLEUR code                                          GB 2000
-! -----------------------------------------------------------------------
-      CONTAINS
-      SUBROUTINE tetra_ef(jspins,nkpt,lb,ub,eig,zc,xfac,ntetra,itetra,voltet,efermi,w)
+MODULE m_tetraef
+   ! -----------------------------------------------------------------------
+   ! This subroutine evaluates the density of states with the tetrahedron method
+   ! and sets the weight factors needed for the charge density for bulk systems.
+   ! Adapted for the FLEUR code                                          GB 2000
+   ! -----------------------------------------------------------------------
+   USE m_types
+   USE m_constants
+   USE m_juDFT
 
-      USE m_constants
-!
-      IMPLICIT NONE
-!
-!     ..Scalar Arguments ..
-      INTEGER, INTENT (IN)  :: jspins,nkpt,ntetra
-      REAL,    INTENT (IN)  :: lb,ub,zc,xfac
-      REAL,    INTENT (OUT) :: efermi
-!     ..
-!     .. Array Arguments ..
+   IMPLICIT NONE
+
+   CONTAINS
+
+   SUBROUTINE tetra_ef(jspins,nkpt,lb,ub,eig,zc,xfac,ntetra,itetra,voltet,efermi,w)
+
+      INTEGER, INTENT (IN)    :: jspins,nkpt,ntetra
+      REAL,    INTENT (IN)    :: lb,ub,zc,xfac
       INTEGER, INTENT (IN)    :: itetra(:,:) !(4,6*nkptd)
-      REAL,    INTENT (IN)    :: voltet(:) !(6*nkpt)
-      REAL,    INTENT (OUT)   ::   w(:,:,:) !(neigd,nkptd,jspd)
-      REAL,    INTENT (INOUT) :: eig(:,:,:) !(neigd,nkptd,jspd)
-!     ..
-!     .. Local Variables ..
-      INTEGER i,j,jspin,neig,nk,nelec,ncr,ntet,it
-      REAL    elow,dlow,eup,dup,ttt,dfermi,wgs
-!     ..
-!     .. Local Arrays ..
-      REAL weight(4),ecmax(2,size(w,1))
-      REAL wght(2,size(w,2),size(w,1)),eval(4)
-!     ..
+      REAL,    INTENT (IN)    :: voltet(:)   !(6*nkpt)
+      REAL,    INTENT (INOUT) :: eig(:,:,:)  !(neigd,nkptd,jspd)
+      REAL,    INTENT (OUT)   :: w(:,:,:)    !(neigd,nkptd,jspd)
+      REAL,    INTENT (OUT)   :: efermi
+
+      INTEGER :: i,j,jspin,neig,nk,nelec,ncr,ntet,it
+      REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
+      REAL    :: weight(4),ecmax(2,size(w,1))
+      REAL    :: wght(2,size(w,2),size(w,1)),eval(4)
 
 
       DO neig = 1,size(w,1)
@@ -126,11 +121,10 @@
       ENDDO
       IF (dlow.GT.nelec) THEN    
         WRITE (oUnit,180) elow,dlow,nelec
-        CALL juDFT_error("dos: valence band too high ",calledby
-     +       ="tetra_ef")
+        CALL juDFT_error("dos: valence band too high ",calledby="tetra_ef")
       ENDIF
-  180 FORMAT (' valence band too high ',/,
-     + '  elow ',f10.5,' dlow ',f10.5,' nelec ',i5)
+  180 FORMAT (' valence band too high ',/,&
+       '  elow ',f10.5,' dlow ',f10.5,' nelec ',i5)
 
       it  = 0
       eup = ub                                      ! determine upper bound
