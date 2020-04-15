@@ -734,7 +734,7 @@ CONTAINS
          !loop over all points
          DO iz = mpi%irank*(grid(3)-1)/mpi%isize, ((mpi%irank+1)*(grid(3)-1))/mpi%isize
             DO iy = 0, grid(2)-1
-        !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,mpi,sliceplot) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
+        !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,mpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
          !$OMP do
                DO ix = 0, grid(1)-1
 
