@@ -679,7 +679,7 @@ CONTAINS
         IF(.NOT.(MODULO(grid(3),mpi%isize)).EQ.0) CALL juDFT_error('Your grid z component doesnt fit the # of MPI processed. ',calledby='plot.F90')
         ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
         ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
-        ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
+        ALLOCATE(tempVecs(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
         vec1=sliceplot%plot(nplo)%vec1
         vec2=sliceplot%plot(nplo)%vec2
         vec3=sliceplot%plot(nplo)%vec3
