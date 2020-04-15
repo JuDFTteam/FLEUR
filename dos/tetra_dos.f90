@@ -11,10 +11,9 @@ MODULE m_tetrados
    !
    ! ev()          ... eigenvalues
    ! qal()         ... partial charges
-   ! ntetra)       ... number of tetrahedrons
-   ! itetra(1-4,nt)... index of k-points forming tetrahedron nt
-   ! voltet(nt)    ... volume of tetrahedron nt
-   ! omega_bz      ... volume of irreducible part of BZ
+   ! ntet          ... number of tetrahedrons
+   ! ntetra(1-4,ntet)... index of k-points forming tetrahedron nt
+   ! voltet(ntet)    ... volume of tetrahedron nt
    !
    !                                                      gb 2000
    !----------------------------------------------------------------------
@@ -24,27 +23,23 @@ MODULE m_tetrados
 
    CONTAINS
 
-   SUBROUTINE tetra_dos(qdim,neigd,ned,ntetra,nkpt,&
-                        itetra,efermi,voltet,energy,nevk,&
-                        ev,qal,g)
+   SUBROUTINE tetra_dos(qdim,neigd,ned,kpts,efermi,energy,nevk,ev,qal,g)
 
-      INTEGER, INTENT(IN)    :: neigd,ned,qdim
-      INTEGER, INTENT(IN)    :: ntetra,nkpt
-      REAL,    INTENT(IN)    :: efermi
-      INTEGER, INTENT(IN)    :: itetra(:,:) !(4,6*nkpt)
-      INTEGER, INTENT(IN)    :: nevk(:)     !(nkpt)
-      REAL,    INTENT(IN)    :: voltet(:)   !(6*nkpt)
-      REAL,    INTENT(IN)    :: energy(:)   !(ned)
-      REAL,    INTENT(IN)    :: qal(:,:,:)  !(lmax*ntype+3,neigd,nkpt)
-      REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
-      REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
+      INTEGER,       INTENT(IN)    :: neigd,ned,qdim
+      REAL,          INTENT(IN)    :: efermi
+      TYPE(t_kpts),  INTENT(IN)    :: kpts
+      INTEGER,       INTENT(IN)    :: nevk(:)     !(nkpt)
+      REAL,          INTENT(IN)    :: energy(:)   !(ned)
+      REAL,          INTENT(IN)    :: qal(:,:,:)  !(lmax*ntype+3,neigd,nkpt)
+      REAL,          INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
+      REAL,          INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
       INTEGER :: i,j,iBand,ikpt,ie,idim,itet
       REAL    :: ener,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
-      REAL    :: wpar(qdim,neigd,nkpt)
+      REAL    :: wpar(qdim,neigd,kpts%nkpt)
 
-      DO ikpt = 1,nkpt
+      DO ikpt = 1,kpts%nkpt
          ev(nevk(ikpt)+1:neigd,ikpt) = 1.0e10
       ENDDO
 
@@ -52,20 +47,20 @@ MODULE m_tetrados
 
       DO iBand = 1,neigd
          ecmax(iBand) = -1.0e25
-         DO ikpt = 1,nkpt
+         DO ikpt = 1,kpts%nkpt
             IF(ev(iBand,ikpt).GT.ecmax(iBand)) ecmax(iBand) = ev(iBand,ikpt)
          ENDDO
       ENDDO
       !
       !  check for energy degeneracies in tetrahedrons
       !
-      DO itet = 1,ntetra
+      DO itet = 1,kpts%ntet
          DO iBand = 1,neigd
             DO i = 1,3
                DO j = i+1,4
-                  IF (abs(ev(iBand,itetra(i,itet))-ev(iBand,itetra(j,itet))).LT.1.0e-7) THEN
-                     ev(iBand,itetra(i,itet)) = ev(iBand,itetra(i,itet)) + i*(1.0e-7)*itet
-                     ev(iBand,itetra(j,itet)) = ev(iBand,itetra(j,itet)) - i*(1.0e-7)*itet
+                  IF (abs(ev(iBand,kpts%ntetra(i,itet))-ev(iBand,kpts%ntetra(j,itet))).LT.1.0e-7) THEN
+                     ev(iBand,kpts%ntetra(i,itet)) = ev(iBand,kpts%ntetra(i,itet)) + i*(1.0e-7)*itet
+                     ev(iBand,kpts%ntetra(j,itet)) = ev(iBand,kpts%ntetra(j,itet)) - i*(1.0e-7)*itet
                   ENDIF
                ENDDO
             ENDDO
@@ -77,23 +72,23 @@ MODULE m_tetrados
       !
       ! calculate partial weights
       !
-      DO ikpt=1,nkpt
+      DO ikpt=1,kpts%nkpt
          DO iBand = 1,nevk(ikpt)
-            DO itet = 1,ntetra
-               IF (ALL(itetra(:,itet).ne.ikpt)) CYCLE
+            DO itet = 1,kpts%ntet
+               IF (ALL(kpts%ntetra(:,itet).ne.ikpt)) CYCLE
 
-               eval(1:4) = ev(iBand,itetra(1:4,itet))
+               eval = ev(iBand,kpts%ntetra(:,itet))
 
-               IF(max(eval(1),eval(2),eval(3),eval(4)).GE.9999.9) CYCLE
+               IF(ANY(eval.GE.9999.9)) CYCLE
 
                DO i=1,4
                   weight(i)=1.0
                   DO j=1,4
                      IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
                   ENDDO
-                  weight(i)=6.0*voltet(itet)/weight(i)
+                  weight(i)=6.0*kpts%voltet(itet)/(weight(i)*kpts%ntet)
                   DO idim=1,qdim
-                     wpar(idim,iBand,itetra(i,itet)) =  wpar(idim,iBand,itetra(i,itet)) &
+                     wpar(idim,iBand,kpts%ntetra(i,itet)) =  wpar(idim,iBand,kpts%ntetra(i,itet)) &
                                                        + 0.25*weight(i)*qal(idim,iBand,ikpt)
                   ENDDO
                ENDDO
@@ -108,7 +103,7 @@ MODULE m_tetrados
       !
       g = 0.0
 
-      DO ikpt = 1,nkpt
+      DO ikpt = 1,kpts%nkpt
          DO iBand = 1,neigd
 
             ener = ev(iBand,ikpt)

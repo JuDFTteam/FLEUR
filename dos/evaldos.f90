@@ -322,9 +322,8 @@
                            qal(:,1:ntb,1:kpts%nkpt),e, g)
                ELSE
                  write(*,*) efermi
-                 CALL tetra_dos(qdim,input%neig,ned,ntetra,kpts%nkpt,&
-                               itetra,efermi,voltet,e,results%neig(:,jsp), ev,qal, g)
-                 IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
+                 CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
+                 IF (input%jspins.EQ.1) g = 2.0 * g
                ENDIF
             ELSE
                !Alternative tetrahedron method
