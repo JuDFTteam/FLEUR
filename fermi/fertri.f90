@@ -1,27 +1,26 @@
-      MODULE m_fertri
-      use m_juDFT
-!
-!     calculates fermi energy and weights using triangular method
-!
-      CONTAINS
-      SUBROUTINE fertri(
-     >                  input,kpts,irank,
-     >                  ne,nkpt,jspins,zc,eig,bk,sfac,
-     X                  ef,
-     <                  seigv,w)
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+MODULE m_fertri
+   !
+   !     calculates fermi energy and weights using triangular method
+   !
+   USE m_juDFT
+   USE m_types
+   USE m_constants
+   USE m_triang
+   USE m_maketetra
+   USE m_tetraef
+   USE m_dosef
+   USE m_dosint
+   USE m_doswt
 
-      USE m_types
-      USE m_constants
-      USE m_triang
-      USE m_maketetra
-      USE m_tetraef
-      USE m_dosef
-      USE m_dosint
-      USE m_doswt
-
-!     USE m_bzints
-
-      IMPLICIT NONE
+   IMPLICIT NONE
+   CONTAINS
+   SUBROUTINE fertri(input,kpts,irank,ne,nkpt,jspins,zc,eig,bk,sfac,&
+                     ef,seigv,w)
 
       TYPE(t_input),INTENT(IN):: input
       TYPE(t_kpts), INTENT(IN):: kpts
@@ -60,13 +59,11 @@
         WRITE (oUnit,FMT=8000)
       END IF
  8000 FORMAT (/,/,10x,'linear triangular method')
-c
+
       film = .true.
-      CALL triang(
-     >            bk,nkpt,
-     <            itria,ntria,atr,as,film)!keep
-c
-c--->   clear w and set eig=-9999.9
+      CALL triang(bk,nkpt,itria,ntria,atr,as,film)!keep
+!
+!--->   clear w and set eig=-9999.9
       e_set = -9999.9
       IF (.NOT.film) e_set = 1.0e10
       DO jsp = 1,jspins
@@ -82,10 +79,10 @@ c--->   clear w and set eig=-9999.9
             ENDDO
          ENDDO
       ENDDO
-c
+!
 !      sfac = 2.0/real(jspins)
-c
-c--->   write results of triang
+!
+!--->   write results of triang
 
       IF (.not.film) THEN
         ntetra = kpts%ntet
@@ -95,11 +92,7 @@ c--->   write results of triang
         END DO
         lb = MINVAL(eig(:,:,:)) - 0.01
         ub = ef + 0.2
-        CALL tetra_ef(
-     >                 jspins,nkpt,
-     >                 lb,ub,eig,zc,sfac,
-     >                 ntetra,itetra,voltet,
-     <                 ef,w)!keep
+        CALL tetra_ef(jspins,nkpt,lb,ub,eig,zc,sfac,ntetra,itetra,voltet,ef,w)
       ELSE
 
         DO i = 1,ntria
@@ -111,28 +104,26 @@ c--->   write results of triang
             WRITE (oUnit,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
           ENDDO
         END IF
- 8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,
-     +          10x,'number of triangles=',i3,/,10x,
-     +          'total area of triangles=',f12.6,/,10x,
-     +          'no.,corners and (normalized) area of each triangle:',/)
+ 8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,&
+                10x,'number of triangles=',i3,/,10x,&
+                'total area of triangles=',f12.6,/,10x,&
+                'no.,corners and (normalized) area of each triangle:',/)
  8020   FORMAT (10x,i3,3x,3i3,f14.6)
         IF ( irank == 0 ) THEN
           WRITE (oUnit,FMT=*) 'ef_hist=',ef
         END IF
         ei = ef
-cjr     emin = -9999.9
+!jr     emin = -9999.9
         emin = +9999.9
         emax = -emin
         ic = 1
    90   IF (ic.GT.100) GO TO 230
         ic = ic + 1
-c
-c     results from triang are included here
-c
-        CALL dosint(
-     >              ei,nemax,jspins,sfac,ntria,itria,atr,eig,
-     <              ct)
-c
+!
+!     results from triang are included here
+!
+        CALL dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+!
         IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'ct=',ct
 
         IF (ct.LT.zc) THEN            ! ei < ef
@@ -146,14 +137,12 @@ c
         ENDIF
         IF (ct.NE.zc) THEN
           IF ( irank == 0 ) WRITE (oUnit,FMT=*) '2nd dosint'
-c--->     refine ef to a value of 5 mry * (2**-20)
+!--->     refine ef to a value of 5 mry * (2**-20)
           iterate : DO i = 1, 40
             ei = 0.5* (emin+emax)
-c
-            CALL dosint(
-     >               ei,nemax,jspins,sfac,ntria,itria,atr,eig,
-     <               ct)
-c
+!
+            CALL dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+!
             IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'i=',i,', ct=',ct
             IF ( ct == zc ) THEN
               EXIT iterate
@@ -171,36 +160,33 @@ c
         IF ( irank == 0 ) THEN
           WRITE (oUnit,FMT=8030) ef,workf,del,dez
         END IF
- 8030   FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='
-     +         ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',
-     +         2e16.6)
-c
-c--->   obtain dos at ef
-c
-        CALL dosef(
-     >             ei,nemax,jspins,sfac,ntria,itria,atr,eig)
-c
-c--->   obtain weights needed for integration
-c
-        CALL doswt(
-     >             ei,nemax,jspins,ntria,itria,atr,eig,
-     <             w)
+ 8030   FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='&
+               ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',&
+               2e16.6)
+!
+!--->   obtain dos at ef
+!
+        CALL dosef(ei,nemax,jspins,sfac,ntria,itria,atr,eig)
+!
+!--->   obtain weights needed for integration
+!
+        CALL doswt(ei,nemax,jspins,ntria,itria,atr,eig,w)
 
       ENDIF ! .NOT.film
-c
-c--->   write weights
-c
-c      DO 190 jsp = 1,jspins
-c         neig = nemax(jsp)
-c         DO 180 i = 1,neig
-c            DO 170 k = 1,nkpt
-c             WRITE (oUnit,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
-c  170       CONTINUE
-c  180    CONTINUE
-c  190 CONTINUE
-c
-c--->   obtain sum of weights and valence eigenvalues
-c
+!
+!--->   write weights
+!
+!      DO 190 jsp = 1,jspins
+!         neig = nemax(jsp)
+!         DO 180 i = 1,neig
+!            DO 170 k = 1,nkpt
+!             WRITE (oUnit,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
+!  170       CONTINUE
+!  180    CONTINUE
+!  190 CONTINUE
+!
+!--->   obtain sum of weights and valence eigenvalues
+!
       s1 = 0.
       seigv = 0.
       DO 220 jsp = 1,jspins
@@ -219,17 +205,16 @@ c
       IF ( irank == 0 ) THEN
         WRITE (oUnit,FMT=8040) seigv,s1,chmom
       END IF
- 8040 FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,
-     +       'sum of weights=',f10.6,/,10x,'moment=',f12.6)
+ 8040 FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
+             'sum of weights=',f10.6,/,10x,'moment=',f12.6)
       RETURN
-c
+!
   230 IF ( irank == 0 ) THEN
         WRITE (oUnit,FMT=8050) ei,ef,emin,emax,ct,zc
       END IF
- 8050 FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',
-     +       ' ei,ef,emin,emax,ct,zc',/,10x,6e16.7,/,10x,
-     +       'check number of bands')
-      CALL juDFT_error("initial guess of ef off by 25 mry",calledby
-     +     ="fertri")
-      END SUBROUTINE fertri
-      END MODULE m_fertri
+ 8050 FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',&
+             ' ei,ef,emin,emax,ct,zc',/,10x,6e16.7,/,10x,&
+             'check number of bands')
+      CALL juDFT_error("initial guess of ef off by 25 mry",calledby="fertri")
+   END SUBROUTINE fertri
+END MODULE m_fertri

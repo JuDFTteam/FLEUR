@@ -3,7 +3,6 @@ fermi/dosef.f
 fermi/dosint.f
 fermi/doswt.f
 fermi/ef_newton.f
-fermi/fertri.f
 fermi/make_tetra.f
 fermi/tetra_ef.f
 fermi/trisrt.f
@@ -13,4 +12,5 @@ fermi/fergwt.f90
 fermi/ferhis.f90
 fermi/fermie.F90
 fermi/fertetra.f90
+fermi/fertri.f90
 )
