@@ -4,7 +4,6 @@ fermi/dosint.f
 fermi/doswt.f
 fermi/ef_newton.f
 fermi/make_tetra.f
-fermi/tetra_ef.f
 fermi/trisrt.f
 )
 set(fleur_F90 ${fleur_F90}
@@ -13,4 +12,5 @@ fermi/ferhis.f90
 fermi/fermie.F90
 fermi/fertetra.f90
 fermi/fertri.f90
+fermi/tetra_ef.f90
 )
