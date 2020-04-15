@@ -867,72 +867,77 @@ CONTAINS
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
                      END IF
                   ELSE
-                    tempResults(ix,iy,iz,:)=xdnout(:)
-                    points(ix,iy,iz,:)=point(:)
+                     tempResults(ix,iy,iz,:)=xdnout(:)
+                     points(ix,iy,iz,:)=point(:)
                   END IF
                END DO !x-loop
      !$OMP end do
      !$OMP end parallel
             END DO !y-loop
          END DO !z-loop
-!Print out results of the different MPI processes in correct order.
-IF(mpi%irank.EQ.0) THEN
-  IF (xsf)  THEN
-     DO i = 1, numOutFiles
-       CLOSE(nfile+i)
-     END DO
-     CLOSE(nfile+10)
-  ELSE
-    CLOSE(nfile)
-  END IF
-END IF
-DO k=0, (mpi%isize-1)
+         
+         !Print out results of the different MPI processes in correct order.
+         IF(mpi%irank.EQ.0) THEN
+            IF (xsf)  THEN
+               DO i = 1, numOutFiles
+                  CLOSE(nfile+i)
+               END DO
+               IF (sliceplot%plot(nplo)%vecField) THEN
+                  CLOSE(nfile+10)
+               END IF
+            ELSE
+               CLOSE(nfile)
+            END IF
+         END IF
+         DO k=0, (mpi%isize-1)
 #ifdef CPP_MPI
      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-   IF(mpi%irank.EQ.k) THEN
-     DO iz = mpi%irank*(grid(3)-1)/ mpi%isize, ((mpi%irank+1)*(grid(3)-1))/ mpi%isize
-        DO iy = 0, grid(2)-1
-           DO ix = 0, grid(1)-1
-             IF (xsf) THEN
-               DO i = 1, numOutFiles
-                 OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
-                 WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
-                 CLOSE(nfile+i)
+            IF(mpi%irank.EQ.k) THEN
+               DO iz = mpi%irank*(grid(3)-1)/ mpi%isize, ((mpi%irank+1)*(grid(3)-1))/ mpi%isize
+                  DO iy = 0, grid(2)-1
+                     DO ix = 0, grid(1)-1
+                        IF (xsf) THEN
+                           DO i = 1, numOutFiles
+                              OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+                              WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
+                              CLOSE(nfile+i)
+                           END DO
+
+                           IF (sliceplot%plot(nplo)%vecField) THEN
+                              OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
+                              WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
+                              CLOSE(nfile+10)                  
+                           END IF
+
+                        ELSE
+                           OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
+                           WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
+                           CLOSE(nfile)
+                        END IF
+                     END DO
+                  END DO
                END DO
-               IF (sliceplot%plot(nplo)%vecField) THEN
-                  OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
-                  WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
-                  CLOSE(nfile+10)                  
-               END IF
-             ELSE
-               OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
-               WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
-               CLOSE(nfile)
-             END IF
-           END DO
-        END DO
-     END DO
-   END IF
+            END IF
 #ifdef CPP_MPI
    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
- END DO
+         END DO
 
 
-    IF (xsf.AND.(mpi%irank.EQ.0)) THEN
-        DO i = 1, numOutFiles
-           OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
-           CALL xsf_WRITE_endblock(nfile+i,twodim)
-           CLOSE(nfile+i)
-        END DO
-    END IF
+         IF (xsf.AND.(mpi%irank.EQ.0)) THEN
+            DO i = 1, numOutFiles
+               OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+               CALL xsf_WRITE_endblock(nfile+i,twodim)
+               CLOSE(nfile+i)
+            END DO
+         END IF
 
-    DEALLOCATE(tempResults)
-    DEALLOCATE(points)
-  END DO !nplo
+         DEALLOCATE(tempResults)
+         DEALLOCATE(points)
+      END DO !nplo
 
-   DEALLOCATE(xdnout, outFilenames)
+      DEALLOCATE(xdnout, outFilenames)
 
    END SUBROUTINE savxsf
 
