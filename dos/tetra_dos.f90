@@ -39,7 +39,7 @@ MODULE m_tetrados
       REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
       REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 
-      INTEGER :: i,j,neig,ikpt,ntp,ne,ns,nc,ntet
+      INTEGER :: i,j,neig,ikpt,ntp,ne,ns,nc,itet
       REAL    :: ener,efer,w
       REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
       REAL    :: wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
@@ -60,13 +60,13 @@ MODULE m_tetrados
       !
       !  check for energy degeneracies in tetrahedrons
       !
-      DO ntet = 1,ntetra
+      DO itet = 1,ntetra
          DO neig = 1,neigd
             DO i = 1,3
                DO j = i+1,4
-                  IF (abs(ev(neig,itetra(i,ntet))-ev(neig,itetra(j,ntet))).LT.1.0e-7) THEN
-                     ev(neig,itetra(i,ntet)) = ev(neig,itetra(i,ntet)) + i*(1.0e-7)*ntet
-                     ev(neig,itetra(j,ntet)) = ev(neig,itetra(j,ntet)) - i*(1.0e-7)*ntet
+                  IF (abs(ev(neig,itetra(i,itet))-ev(neig,itetra(j,itet))).LT.1.0e-7) THEN
+                     ev(neig,itetra(i,itet)) = ev(neig,itetra(i,itet)) + i*(1.0e-7)*itet
+                     ev(neig,itetra(j,itet)) = ev(neig,itetra(j,itet)) - i*(1.0e-7)*itet
                   ENDIF
                ENDDO
             ENDDO
@@ -83,10 +83,10 @@ MODULE m_tetrados
           DO ntp = 1,ntype
             nc = lmax*(ntp-1)
 
-            DO ntet = 1,ntetra
-               IF (ALL(itetra(:,ntet).ne.ikpt)) CYCLE
+            DO itet = 1,ntetra
+               IF (ALL(itetra(:,itet).ne.ikpt)) CYCLE
 
-               eval(1:4) = ev(neig,itetra(1:4,ntet))
+               eval(1:4) = ev(neig,itetra(1:4,itet))
 
                IF(max(eval(1),eval(2),eval(3),eval(4)).GE.9999.9) CYCLE
 
@@ -95,12 +95,12 @@ MODULE m_tetrados
                   DO j=1,4
                      IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
                   ENDDO
-                  weight(i)=6.0*voltet(ntet)/weight(i)
+                  weight(i)=6.0*voltet(itet)/weight(i)
                   DO ns=1,4
-                     wpar(ns,ntp,neig,itetra(i,ntet)) =  wpar(ns,ntp,neig,itetra(i,ntet)) &
+                     wpar(ns,ntp,neig,itetra(i,itet)) =  wpar(ns,ntp,neig,itetra(i,itet)) &
                                                        + 0.25*weight(i)*qal(nc+ns,neig,ikpt)
                   ENDDO
-                  IF (ntp.EQ.1) wparint(neig,itetra(i,ntet)) =  wparint(neig,itetra(i,ntet)) &
+                  IF (ntp.EQ.1) wparint(neig,itetra(i,itet)) =  wparint(neig,itetra(i,itet)) &
                                                               + 0.25*weight(i)*qal(lmax*ntype+1,neig,ikpt)
                ENDDO
 
