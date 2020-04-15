@@ -50,10 +50,9 @@ MODULE m_tetrados
 !     .. Local Arrays ..
       REAL weight(4),eval(4),ecmax(neigd),term(ned)
       REAL wpar(4,ntype,neigd,nkpt),wparint(neigd,nkpt)
-      REAL wght(neigd,nkpt)
 
       DO nk = 1,nkpt
-         ev(nevk(nk)+1:neigd,nk) = 1.0e10 
+         ev(nevk(nk)+1:neigd,nk) = 1.0e10
       ENDDO
       wpar(:,:,:,:) = 0.0
       wparint=0.0
@@ -61,7 +60,6 @@ MODULE m_tetrados
       DO neig = 1,neigd
          ecmax(neig) = -1.0e25
          DO nk = 1,nkpt
-            wght(neig,nk) = 0.0e0
             IF ( ev(neig,nk).GT.ecmax(neig) ) ecmax(neig) = ev(neig,nk)
          ENDDO
       ENDDO
@@ -85,28 +83,6 @@ MODULE m_tetrados
       ENDDO
       WRITE (*,*) 'in tetra_dos'  ! do not remove  this statement !
 !
-! calculate weight factors
-!
-      DO ntet = 1,ntetra
-        w = 6.0*voltet(ntet)
-        DO neig = 1,neigd
-          DO i = 1,4
-            eval(i) = ev(neig,itetra(i,ntet))
-          ENDDO
-
-          IF (max(eval(1),eval(2),eval(3),eval(4)).LT.9999.9) THEN
-            DO i=1,4
-              weight(i) = 1.0
-              DO j=1,4
-                IF (i.NE.j) weight(i) = weight(i)*(eval(j)-eval(i))
-              ENDDO
-              wght(neig,itetra(i,ntet)) =&
-              wght(neig,itetra(i,ntet)) + w/weight(i)
-            ENDDO
-          ENDIF
-        ENDDO
-      ENDDO
-!
 ! calculate partial weights
 !
       DO nk=1,nkpt
@@ -116,7 +92,7 @@ MODULE m_tetrados
 
             DO ntet = 1,ntetra
               IF (ALL(itetra(:,ntet).ne.nk)) CYCLE
-           
+
               eval(1:4) = ev(neig,itetra(1:4,ntet))
 
               IF (max(eval(1),eval(2),eval(3),eval(4)).LT.9999.9) THEN
@@ -150,7 +126,7 @@ MODULE m_tetrados
 
       DO nk = 1,nkpt
         DO neig = 1,neigd
-          
+
           ener = ev(neig,nk)
           DO ntp = 1,ntype
             DO ns = 1,lmax
