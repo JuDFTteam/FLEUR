@@ -47,6 +47,7 @@ MODULE m_tetrados
       DO nk = 1,nkpt
          ev(nevk(nk)+1:neigd,nk) = 1.0e10
       ENDDO
+
       wpar = 0.0
       wparint = 0.0
 
@@ -87,21 +88,21 @@ MODULE m_tetrados
 
                eval(1:4) = ev(neig,itetra(1:4,ntet))
 
-               IF (max(eval(1),eval(2),eval(3),eval(4)).LT.9999.9) THEN
-                  DO i=1,4
-                     weight(i)=1.0
-                     DO j=1,4
-                        IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
-                     ENDDO
-                     weight(i)=6.0*voltet(ntet)/weight(i)
-                     DO ns=1,4
-                        wpar(ns,ntp,neig,itetra(i,ntet)) =  wpar(ns,ntp,neig,itetra(i,ntet)) &
-                                                          + 0.25*weight(i)*qal(nc+ns,neig,nk)
-                     ENDDO
-                     IF (ntp.EQ.1) wparint(neig,itetra(i,ntet)) =  wparint(neig,itetra(i,ntet)) &
-                                                                 + 0.25*weight(i)*qal(lmax*ntype+1,neig,nk)
+               IF(max(eval(1),eval(2),eval(3),eval(4)).GE.9999.9) CYCLE
+
+               DO i=1,4
+                  weight(i)=1.0
+                  DO j=1,4
+                     IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
                   ENDDO
-               ENDIF
+                  weight(i)=6.0*voltet(ntet)/weight(i)
+                  DO ns=1,4
+                     wpar(ns,ntp,neig,itetra(i,ntet)) =  wpar(ns,ntp,neig,itetra(i,ntet)) &
+                                                       + 0.25*weight(i)*qal(nc+ns,neig,nk)
+                  ENDDO
+                  IF (ntp.EQ.1) wparint(neig,itetra(i,ntet)) =  wparint(neig,itetra(i,ntet)) &
+                                                              + 0.25*weight(i)*qal(lmax*ntype+1,neig,nk)
+               ENDDO
 
             ENDDO
           ENDDO
