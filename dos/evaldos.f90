@@ -53,14 +53,14 @@
 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra,col,jj,iBand
+      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,col,jj,iBand
       INTEGER  icore,qdim,n_orb,ncored,jsp,n_jDOS
       REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
       LOGICAL  l_tria,l_orbcomp,l_error,l_jDOS
 
-      INTEGER  itria(3,2*kpts%nkpt),itetra(4,6*kpts%nkpt)
-      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
+      INTEGER  itria(3,2*kpts%nkpt)
+      REAL     kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
       REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
@@ -263,39 +263,7 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
-             IF (input%bz_integration==2.OR.input%bz_integration==3) THEN
-               ntetra = kpts%ntet
-               DO i = 1, ntetra
-                 itetra(1:4,i) = kpts%ntetra(1:4,i)
-                 IF(input%bz_integration==2) voltet(i) = kpts%voltet(i) / ntetra
-               END DO
-               l_tria = .true.
-               GOTO 67
-             ELSE
-               GOTO 66
-             END IF
-             voltet(1:ntetra) = voltet(1:ntetra) / ntetra
-             l_tria=.true.
-             GOTO 67
- 66          CONTINUE                       ! no tetrahedron-information of file
-             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
-             l_tria=.true.
-! YM: tetrahedrons is not the way in 1D
-             IF (oneD%odi%d1) as = 0.0
-             IF (sym%invs) THEN
-               IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-             ELSE
-               IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-             ENDIF
-
-             IF (l_tria) THEN
-               CALL make_tetra(kpts%nkpt,kpts%bk,ntria,itria,atr,&
-                    ntetra,itetra,voltet)
-             ELSE
-               WRITE (oUnit,*) 'no tetrahedron method with these k-points!'
-               WRITE (oUnit,*) sym%nop2,as
-             ENDIF
- 67          CONTINUE                       ! tetrahedron-information read or created
+             l_tria = input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3
            ENDIF
          ENDIF
 
@@ -307,25 +275,21 @@
         ENDIF
 !
          IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3).and..not.l_jDOS) THEN
-!
-!     DOS calculation: use triangular method!!
-!
-            IF(input%bz_integration.NE.3) THEN
+            !
+            !     DOS calculation: use triangular method!!
+            !
+            IF(input%bz_integration.EQ.2) THEN
                !Either keyword tria in input or tetrahedrons created via make_tetra
                IF ( input%film ) THEN
-   !             CALL ptdos(
-   !    >                  emin,emax,jspins,ned,qdim,neigd,
-   !    >                  ntria,as,atr,2*nkpt,itria,nkpt,ev,qal,e,
-   !    <                  g)
-                 CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
-                           atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
-                           qal(:,1:ntb,1:kpts%nkpt),e, g)
+                  CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
+                             atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
+                             qal(:,1:ntb,1:kpts%nkpt),e, g)
                ELSE
                  write(*,*) efermi
                  CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
                  IF (input%jspins.EQ.1) g = 2.0 * g
                ENDIF
-            ELSE
+            ELSEIF(input%bz_integration.EQ.3) THEN
                !Alternative tetrahedron method
                CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jsp),ev,qal,g)
             ENDIF
