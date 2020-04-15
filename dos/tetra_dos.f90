@@ -3,40 +3,45 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+MODULE m_tetrados
+   !----------------------------------------------------------------------
+   !
+   ! This subroutine evaluates the density of states (g) by the linear
+   ! tetrahedron method on a energy grid (e) of 'ned' points.
+   !
+   ! ev()          ... eigenvalues
+   ! qal()         ... partial charges
+   ! ntetra)       ... number of tetrahedrons
+   ! itetra(1-4,nt)... index of k-points forming tetrahedron nt
+   ! voltet(nt)    ... volume of tetrahedron nt
+   ! omega_bz      ... volume of irreducible part of BZ
+   !
+   !                                                      gb 2000
+   !----------------------------------------------------------------------
+   USE m_types
 
-      MODULE m_tetrados
-!----------------------------------------------------------------------
-!
-! This subroutine evaluates the density of states (g) by the linear
-! tetrahedron method on a energy grid (e) of 'ned' points.
-!
-! ev()          ... eigenvalues 
-! qal()         ... partial charges
-! ntetra)       ... number of tetrahedrons
-! itetra(1-4,nt)... index of k-points forming tetrahedron nt
-! voltet(nt)    ... volume of tetrahedron nt
-! omega_bz      ... volume of irreducible part of BZ
-!
-!                                                      gb 2000
-!----------------------------------------------------------------------
-      CONTAINS
-      SUBROUTINE tetra_dos(lmax,ntype,neigd,ned,ntetra,nkpt,&
-                           itetra,efermi,voltet,energy,nevk,&
-                           ev,qal,g)
+   IMPLICIT NONE
 
-      IMPLICIT NONE
+   CONTAINS
+
+   SUBROUTINE tetra_dos(lmax,ntype,neigd,ned,ntetra,nkpt,&
+                        itetra,efermi,voltet,energy,nevk,&
+                        ev,qal,g)
+
 !
 !     ..Scalar Arguments ..
-      INTEGER, INTENT (IN)  :: ntype,neigd,ned,lmax
-      INTEGER, INTENT (IN)  :: ntetra,nkpt
-      REAL,    INTENT (IN)  :: efermi
+      INTEGER, INTENT(IN)  :: ntype,neigd,ned,lmax
+      INTEGER, INTENT(IN)  :: ntetra,nkpt
+      REAL,    INTENT(IN)  :: efermi
 !     ..
 !     .. Array Arguments ..
-      INTEGER, INTENT (IN)    :: itetra(4,6*nkpt),nevk(nkpt)
-      REAL,    INTENT (IN)    :: voltet(6*nkpt),energy(ned)
-      REAL,    INTENT (IN)    :: qal(lmax*ntype+3,neigd,nkpt)
-      REAL,    INTENT (INOUT) :: ev(neigd,nkpt)
-      REAL,    INTENT (OUT)   :: g(ned,lmax*ntype+3)
+      INTEGER, INTENT(IN)    :: itetra(:,:) !(4,6*nkpt)
+      INTEGER, INTENT(IN)    :: nevk(:)     !(nkpt)
+      REAL,    INTENT(IN)    :: voltet(:)   !(6*nkpt)
+      REAL,    INTENT(IN)    :: energy(:)   !(ned)
+      REAL,    INTENT(IN)    :: qal(:,:,:)  !(lmax*ntype+3,neigd,nkpt)
+      REAL,    INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
+      REAL,    INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
 !     ..
 !     .. Local Variables ..
       INTEGER i,j,neig,nk,ntp,ne,ns,nc,ntet
