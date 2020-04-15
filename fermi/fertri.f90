@@ -19,21 +19,20 @@ MODULE m_fertri
 
    IMPLICIT NONE
    CONTAINS
-   SUBROUTINE fertri(input,kpts,irank,ne,nkpt,jspins,zc,eig,bk,sfac,&
+   SUBROUTINE fertri(input,kpts,irank,ne,jspins,zc,eig,sfac,&
                      ef,seigv,w)
 
       TYPE(t_input),INTENT(IN):: input
       TYPE(t_kpts), INTENT(IN):: kpts
 !     ..
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN)    :: nkpt,jspins,irank
+      INTEGER, INTENT (IN)    :: jspins,irank
       REAL,    INTENT (IN)    :: zc,sfac
       REAL,    INTENT (OUT)   :: seigv
       REAL,    INTENT (INOUT) :: ef
 !     ..
 !     .. Array Arguments ..
       INTEGER, INTENT (IN)    :: ne(:,:)!(nkptd,jspd)
-      REAL,    INTENT (IN)    :: bk(:,:) !(3,nkptd)
       REAL,    INTENT (OUT)   :: w(:,:,:) !(neigd,nkptd,jspd)
       REAL,    INTENT (INOUT) :: eig(:,:,:)!(neigd,nkptd,jspd)
 !     ..
@@ -49,7 +48,7 @@ MODULE m_fertri
       INTEGER itria(3,2*size(w,2))  ! index of k-points that are corner points of a triangle
       REAL    atr(2*size(w,2))      ! area of a triangle
       INTEGER itetra(4,6*size(w,2)) ! ditto for tetrahedrons
-      REAL    voltet(6*nkpt)
+      REAL    voltet(6*kpts%nkpt)
       INTEGER nemax(2)
 !     ..
 !     .. Data statements ..
@@ -61,14 +60,14 @@ MODULE m_fertri
  8000 FORMAT (/,/,10x,'linear triangular method')
 
       film = .true.
-      CALL triang(bk,nkpt,itria,ntria,atr,as,film)!keep
+      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,film)!keep
 !
 !--->   clear w and set eig=-9999.9
       e_set = -9999.9
       IF (.NOT.film) e_set = 1.0e10
       DO jsp = 1,jspins
          nemax(jsp) = 0.0
-         DO k = 1,nkpt
+         DO k = 1,kpts%nkpt
             nemax(jsp) = max0(nemax(jsp),ne(k,jsp))
             DO i = 1,ne(k,jsp)
                w(i,k,jsp) = 0.
@@ -92,7 +91,7 @@ MODULE m_fertri
         END DO
         lb = MINVAL(eig(:,:,:)) - 0.01
         ub = ef + 0.2
-        CALL tetra_ef(jspins,nkpt,lb,ub,eig,zc,sfac,ntetra,itetra,voltet,ef,w)
+        CALL tetra_ef(jspins,kpts%nkpt,lb,ub,eig,zc,sfac,ntetra,itetra,voltet,ef,w)
       ELSE
 
         DO i = 1,ntria
@@ -179,7 +178,7 @@ MODULE m_fertri
 !      DO 190 jsp = 1,jspins
 !         neig = nemax(jsp)
 !         DO 180 i = 1,neig
-!            DO 170 k = 1,nkpt
+!            DO 170 k = 1,kpts%nkpt
 !             WRITE (oUnit,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
 !  170       CONTINUE
 !  180    CONTINUE
@@ -193,7 +192,7 @@ MODULE m_fertri
          s = 0.
          neig = nemax(jsp)
          DO 210 i = 1,neig
-            DO 200 k = 1,nkpt
+            DO 200 k = 1,kpts%nkpt
                s = s + w(i,k,jsp)
                seigv = seigv + w(i,k,jsp)*eig(i,k,jsp)
   200       CONTINUE
