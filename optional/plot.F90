@@ -22,7 +22,10 @@ MODULE m_plot
    ! A. Neukirchen & R. Hilgers, September 2019
    !
    ! Added OMP+MPI Parallelization, R. Hilgers March 2020
-   !------------------------------------------------
+   ! Added 3D vectorplot option and single MT only plots,
+   !                                      A. Neukirchen and R. Hilgers April 2020
+   !
+   !-----------------------------------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
              matrixplot, makeplots, procplot, getMTSphere
@@ -774,7 +777,7 @@ CONTAINS
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-                  
+
                   DO i = 1, numInDen
                      CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
@@ -875,7 +878,7 @@ CONTAINS
      !$OMP end parallel
             END DO !y-loop
          END DO !z-loop
-         
+
          !Print out results of the different MPI processes in correct order.
          IF(mpi%irank.EQ.0) THEN
             IF (xsf)  THEN
@@ -907,7 +910,7 @@ CONTAINS
                            IF (sliceplot%plot(nplo)%vecField) THEN
                               OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
                               WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
-                              CLOSE(nfile+10)                  
+                              CLOSE(nfile+10)
                            END IF
 
                         ELSE
