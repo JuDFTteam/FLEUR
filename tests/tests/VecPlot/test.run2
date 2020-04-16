@@ -29,6 +29,6 @@ $result+=jt::test_grepexists("$workdir/vTot_f.xsf","0.5280119");
 $result+=jt::test_fileexists("$workdir/vTot_A1.xsf");
 $result+=jt::test_fileexists("$workdir/vTot_A2.xsf");
 $result+=jt::test_fileexists("$workdir/vTot_A3.xsf");
-$result+=jt::test_fileexists("$workdir/vTot_A4.xsf");
+
 
 jt::stageresult($workdir,$result,"2");
