@@ -77,7 +77,7 @@ CONTAINS
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2, iob, iband
-      INTEGER                 :: ig1, ig2, ig, psize, b_indx
+      INTEGER                 :: ig1, ig2, ig, psize, b_idx
       INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
       COMPLEX                 ::  cdum, cdum1
@@ -192,9 +192,9 @@ CONTAINS
       do igptm = 1, mpdata%n_g(iq)
          ic = hybdat%nbasp + igptm
          do iob = 1,psize 
-            b_indx = iob - 1 + bandoi
+            b_idx = iob - 1 + bandoi
             do iband = 1, hybdat%nbands(ik)
-               cprod%data_c(ic, iob + (iband-1)*psize) = ctmp(b_indx, iband, igptm)
+               cprod%data_c(ic, iob + (iband-1)*psize) = ctmp(b_idx, iband, igptm)
             enddo 
          enddo
       enddo

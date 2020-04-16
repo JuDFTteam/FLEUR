@@ -175,8 +175,8 @@ CONTAINS
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               call judft_error("don't do this now")
-               !CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+               call recombine_parts(cprod_vv, ipart, psizes, cprod_combined)
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
                call recombine_parts(cprod_vv, ipart, psizes, cprod_combined)
