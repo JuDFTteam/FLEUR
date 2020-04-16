@@ -35,16 +35,20 @@ $result+=jt::test_fileexists("$workdir/vTot_A_vec_plot.xsf");
 $result+=jt::test_fileexists("$workdir/denIn_A_vec_plot.xsf");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.86600");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","1.43300");
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.5475");
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","0.31844");
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.87382");
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","9.23327");
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","1.91066");
+
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","0.22222");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","8.923762");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","0.444444");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","5.471464");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.204819");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","1.0000000");
+
 $result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","2.86600");
 $result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","1.43300");
-$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","0.31844");
-$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","1.44136");
-$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","6.92931");
+
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","0.444444");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","4.654497");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot.xsf","8.02738799");
 
 
 
