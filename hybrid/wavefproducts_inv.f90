@@ -89,10 +89,11 @@ CONTAINS
       INTEGER                 ::    g(3)
 
       REAL                    ::    rarr1(bandoi:bandof)
-      REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(ik))
-      REAL, ALLOCATABLE       ::    z0(:, :), rtmp(:, :, :)
+      REAL, ALLOCATABLE       ::    z0(:, :), rtmp(:, :, :), rarr2(:,:)
 
       CALL timestart("wavefproducts_inv5 IR")
+      allocate(rarr2(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=0.0)
+      if(ok /= 0) call juDFT_error("Can't allocaten rarr2 in wavefproducts_inv_IS")
       psize = bandof-bandoi+1
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
@@ -219,13 +220,17 @@ CONTAINS
 
       REAL                    ::    cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat)
       REAL                    ::    cmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, fi%atoms%nat)
-      REAL                    ::    rarr2(bandoi:bandof, hybdat%nbands(ik))
-      REAL                    ::    rarr3(2,bandoi:bandof, hybdat%nbands(ik))
+      REAL, allocatable       ::    rarr2(:,:),rarr3(:,:,:)
 
       COMPLEX                 ::    cmplx_exp(fi%atoms%nat), cexp_nk(fi%atoms%nat)
       COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :), ccmt_nk2(:, :, :)
       COMPLEX, ALLOCATABLE    ::    ccmt_nkqpt(:, :, :)
 
+
+      allocate(rarr2(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=0.0)
+      if(ok /= 0) call juDFT_error("Can't alloc rarr2 in wavefproducts_inv_MT")
+      allocate(rarr3(2,bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=0.0)
+      if(ok /= 0) call juDFT_error("Can't alloc rarr3 in wavefproducts_inv_MT")
 
       psize = bandof-bandoi+1
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
