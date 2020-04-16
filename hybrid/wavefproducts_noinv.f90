@@ -76,7 +76,7 @@ CONTAINS
       complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
 
 !     - local scalars -
-      INTEGER                 :: ic, n1, n2, iob, iband
+      INTEGER                 :: ic, n1, n2, iob, iband, ok
       INTEGER                 :: ig1, ig2, ig, psize, b_idx
       INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
@@ -90,11 +90,12 @@ CONTAINS
       INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
       COMPLEX                 ::  carr1(bandoi:bandof)
-      COMPLEX                 ::  carr(bandoi:bandof, hybdat%nbands(ik))
       TYPE(t_mat)             ::  z_kqpt
-      COMPLEX, ALLOCATABLE    ::  z0(:, :), ctmp(:, :, :)
+      COMPLEX, ALLOCATABLE    ::  z0(:, :), ctmp(:, :, :), carr(:,:)
 
       call timestart("wavefproducts_noinv5 IR")
+      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
@@ -233,7 +234,7 @@ CONTAINS
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
-      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k
+      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
       INTEGER                 ::  itype, ieq, ic1, m, iob, iband, psize
 
       COMPLEX                 ::  atom_phase
@@ -243,11 +244,14 @@ CONTAINS
       !      - local arrays -
       INTEGER                 ::  lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
-      COMPLEX                 ::  carr(bandoi:bandof, hybdat%nbands(ik))
+      COMPLEX, allocatable    ::  carr(:,:)
       COMPLEX                 ::  cmt_ikqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX                 ::  cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
+      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
+      
       psize = bandof-bandoi+1
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       call timestart("set lmstart")
