@@ -15,8 +15,8 @@ $result+=jt::test_grepexists("$workdir/slice.xsf","3.35012");
 $result+=jt::test_grepexists("$workdir/slice.xsf",".39481");
 $result+=jt::test_grepexists("$workdir/slice.xsf","2.23341");
 # density values
-$result+=jt::test_grepexists("$workdir/slice.xsf","7.5438214");
-$result+=jt::test_grepexists("$workdir/slice.xsf","7.5930988");
-$result+=jt::test_grepexists("$workdir/slice.xsf","8.0897652");
-$result+=jt::test_grepexists("$workdir/slice.xsf","1.2110776"); 
+$result+=jt::test_grepexists("$workdir/slice.xsf","1.59614"); 
+$result+=jt::test_grepexists("$workdir/slice.xsf","9.6406"); 
+$result+=jt::test_grepexists("$workdir/slice.xsf","2.842130"); 
+$result+=jt::test_grepexists("$workdir/slice.xsf","1.09822"); 
 jt::stageresult($workdir,$result,"3");
