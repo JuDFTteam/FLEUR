@@ -664,7 +664,7 @@ CONTAINS
       END IF
 
       ! If xsf is specified we create input files for xcrysden
-      IF (xsf.AND.(mpi%irank.EQ.0)) THEN
+      IF (xsf.AND.(mpi%irank.EQ.0).AND.(.NOT.sliceplot%plot(nplo)%vecField)) THEN
          DO i = 1, numOutFiles
             OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
             CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
