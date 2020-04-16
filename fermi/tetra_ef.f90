@@ -31,7 +31,7 @@ MODULE m_tetraef
       INTEGER :: i,j,jspin,iBand,ikpt,nelec,ncr,itet,it,icorn,jcorn
       REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
       REAL    :: weight(4),ecmax(2,size(w,1))
-      REAL    :: wght(2,size(w,2),size(w,1)),eval(4)
+      REAL    :: wght(2,nkpt,size(w,1)),eval(4)
 
 
       DO iBand = 1,size(w,1)
@@ -119,38 +119,39 @@ MODULE m_tetraef
          ENDDO
       ENDDO
       IF (dlow.GT.nelec) THEN
-        WRITE (oUnit,180) elow,dlow,nelec
-        CALL juDFT_error("dos: valence band too high ",calledby="tetra_ef")
+         WRITE (oUnit,180) elow,dlow,nelec
+180      FORMAT (' valence band too high ',/,'  elow ',f10.5,' dlow ',f10.5,' nelec ',i5)
+         CALL juDFT_error("dos: valence band too high ",calledby="tetra_ef")
       ENDIF
-180   FORMAT (' valence band too high ',/,&
-              '  elow ',f10.5,' dlow ',f10.5,' nelec ',i5)
+
 
       it  = 0
       eup = ub                                      ! determine upper bound
- 10   dup = ncr
-      DO ikpt = 1,nkpt
-         DO iBand = 1,size(w,1)
-            DO jspin = 1,jspins
-               ttt = eup - eig(iBand,ikpt,jspin)
-               IF ( eup.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
-               IF (ttt.LT.0.0e0)               ttt = 0.0e0
-               dup = dup + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
+      DO WHILE ((dup-nelec).LT.0.00001)
+         dup = ncr
+         DO ikpt = 1,nkpt
+            DO iBand = 1,size(w,1)
+               DO jspin = 1,jspins
+                  ttt = eup - eig(iBand,ikpt,jspin)
+                  IF ( eup.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
+                  IF (ttt.LT.0.0e0)               ttt = 0.0e0
+                  dup = dup + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
+               ENDDO
             ENDDO
          ENDDO
+
+         IF ( (dup-nelec).LT.0.00001 ) THEN
+            eup = eup + 0.2
+            it  = it + 1
+            IF( it .gt. 10 ) THEN
+               WRITE (oUnit,200) eup,dup,nelec
+200            FORMAT (' valence band too low ',/,'  eup  ',f10.5,' dup  ',f10.5,' nelec ',i5)
+               CALL juDFT_error("dos: valence band too low ",calledby ="tetra_ef")
+            END IF
+         ENDIF
       ENDDO
 
-      IF ( (dup-nelec).LT.0.00001 ) THEN
-         eup = eup + 0.2
-         it  = it + 1
-         IF( it .gt. 10 ) THEN
-            WRITE (oUnit,200) eup,dup,nelec
-            CALL juDFT_error("dos: valence band too low ",calledby ="tetra_ef")
-         END IF
-         GOTO 10
-      ENDIF
 
-  200 FORMAT (' valence band too low ',/,&
-              '  eup  ',f10.5,' dup  ',f10.5,' nelec ',i5)
 
       DO WHILE ( (eup-elow).GT.1.0e-10 )          ! iterate for fermi-energy
          efermi = 0.5*(elow+eup)
@@ -173,8 +174,7 @@ MODULE m_tetraef
       ENDDO
 
       WRITE (oUnit,220) efermi,dfermi,nelec
-220   FORMAT (//,'>>> D O S <<<',//,'   fermi energy =',f10.5,&
-             ' dtot =',f10.5,' nelec =',i5)
+220   FORMAT (//,'>>> D O S <<<',//,'   fermi energy =',f10.5,' dtot =',f10.5,' nelec =',i5)
       !
       !---------------------------------------------------
       ! calculate weight factors for charge density integration
