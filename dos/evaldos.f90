@@ -22,7 +22,6 @@
       USE m_types
       USE m_constants
       USE m_triang
-      USE m_maketetra
       USE m_tetrados
       USE m_dostetra !confusing names (TODO:change/cleanup)
       USE m_dosbin
@@ -183,15 +182,15 @@
             ELSE IF(l_jDOS) THEN
                i = 0
                DO l= 0, 3
-                 DO jj = 1, MERGE(1,2,l==0)
-                    i = i+1
-                    DO iBand = 1, results%neig(k,jsp)
-                       qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
-                    END DO
-                    DO iBand = results%neig(k,jsp)+1, input%neig
-                       qal(i,iBand,k) = 0.0
-                    END DO
-                 ENDDO
+                  DO jj = 1, MERGE(1,2,l==0)
+                     i = i+1
+                     DO iBand = 1, results%neig(k,jsp)
+                        qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
+                     END DO
+                     DO iBand = results%neig(k,jsp)+1, input%neig
+                        qal(i,iBand,k) = 0.0
+                     END DO
+                  ENDDO
                ENDDO
             END IF
 !
@@ -274,7 +273,7 @@
          IF ( (input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3) .and. &
              .not.l_mcd .and. banddos%ndir.NE.-3 .and. .not.l_jDOS) THEN
             !
-            !     DOS calculation: use triangular method!!
+            ! DOS calculation: use triangular method!!
             !
             IF(input%bz_integration.EQ.2) THEN
                IF ( input%film ) THEN
@@ -292,7 +291,7 @@
             ENDIF
          ELSE
             !
-            !     DOS calculation: use histogram method
+            ! DOS calculation: use histogram method
             !
             IF ( .not.l_mcd ) THEN
                CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&

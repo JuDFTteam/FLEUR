@@ -11,7 +11,6 @@ MODULE m_fertri
    USE m_types
    USE m_constants
    USE m_triang
-   USE m_maketetra
    USE m_tetraef
    USE m_dosef
    USE m_dosint
@@ -81,10 +80,10 @@ MODULE m_fertri
 !
 !--->   write results of triang
 
-      IF (.not.film) THEN
-        lb = MINVAL(eig) - 0.01
-        ub = ef + 0.2
-        CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
+      IF(.not.film) THEN
+         lb = MINVAL(eig) - 0.01
+         ub = ef + 0.2
+         CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
       ELSE
 
         DO i = 1,ntria
