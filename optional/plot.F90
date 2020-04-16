@@ -22,8 +22,9 @@ MODULE m_plot
    ! A. Neukirchen & R. Hilgers, September 2019
    !
    ! Added OMP+MPI Parallelization, R. Hilgers March 2020
-   ! Added 3D vectorplot option and single MT only plots,
-   !                                      A. Neukirchen and R. Hilgers April 2020
+   !
+   ! Added 3D vectorplot option and plotting only MT option as well as  
+   ! single MT only plots,  A. Neukirchen and R. Hilgers April 2020
    !
    !-----------------------------------------------------------------------------
 
