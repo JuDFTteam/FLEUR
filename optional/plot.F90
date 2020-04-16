@@ -1233,7 +1233,6 @@ INCLUDE 'mpif.h'
       ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
-      print *, mpi%irank, 'Ive been to makeplots'
       	CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
