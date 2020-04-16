@@ -91,7 +91,6 @@ CONTAINS
 #endif
 
       CALL timestart("subvxc")
-
       integ = 0.0
       bas1 = 0.0
       bas2 = 0.0
@@ -99,6 +98,7 @@ CONTAINS
       vxc = 0
 
       ! Calculate radial functions
+      call timestart("Calculate radial functions")
       mpdata%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
 
@@ -133,10 +133,12 @@ CONTAINS
             END DO
          END IF
       END DO
+      call timestop("Calculate radial functions")
 
       ! Compute APW coefficients
 
       ! Calculate bascof
+      call timestart("Calculate bascof")
       ALLOCATE (ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
 #ifndef CPP_OLDINTEL
@@ -167,6 +169,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("Calculate bascof")
 
       deallocate(ahlp, bhlp)
 
@@ -178,6 +181,7 @@ CONTAINS
          nlharm = sphhar%nlh(typsym)
 
          ! Calculate vxc = vtot - vcoul
+         call timestart("Calculate vxc = vtot - vcoul")
          DO l = 0, nlharm
             DO i = 1, atoms%jri(itype)
                IF (l == 0) THEN
@@ -189,9 +193,11 @@ CONTAINS
                END IF
             END DO
          END DO
+         call timestop("Calculate vxc = vtot - vcoul")
 
          ! Calculate MT contribution to vxc matrix elements
          ! Precompute auxiliary radial integrals
+         call timestart("calc MT contrib aux radial integral")
          DO ilharm = 0, nlharm
             i = 0
             DO l1 = 0, atoms%lmax(itype)
@@ -214,9 +220,11 @@ CONTAINS
                END DO
             END DO
          END DO
+         call timestop("calc MT contrib aux radial integral")
 
          ! Calculate muffin tin contribution to vxc matrix
          vrmat = 0
+         call timestart("calc MT contrib")
 
          j1 = 0
          DO l1 = 0, atoms%lmax(itype) ! loop: left basis function
@@ -245,9 +253,12 @@ CONTAINS
                END DO
             END DO
          END DO
+
+         call timestop("calc MT contrib")
          nnbas = j1
 
          ! Project on bascof
+         call timestart("Project on bascof")
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
             !call zgemm(transa, transb, m, n,      k,   alpha,   a,          lda,              b,                 ldb,           beta,     c,    ldc)
@@ -264,6 +275,7 @@ CONTAINS
                END DO
             END DO
          END DO
+         call timestop("Project on bascof")
       END DO ! End loop over atom types
 
       ! Calculate plane wave contribution
@@ -275,6 +287,7 @@ CONTAINS
       ! Calculate vxc-matrix,  left basis function (ig1)
       !                        right basis function (ig2)
       ic = 0
+      call timestart("Calculate vxc-matrix")
       DO ig1 = 1, lapw%nv(jsp)
          DO ig2 = 1, ig1
             ic = ic + 1
@@ -290,8 +303,10 @@ CONTAINS
             END IF
          END DO
       END DO
+      call timestop("Calculate vxc-matrix")
 
       ! Calculate local orbital contribution
+      call timestart("calculate LO contrib")
       IF (ANY(atoms%nlo /= 0)) THEN
 
          nbasf0 = lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2  ! number of pure APW contributions
@@ -492,11 +507,13 @@ CONTAINS
             END DO ! ieq
          END DO !itype
       END IF ! if any atoms%llo
+      call timestop("calculate LO contrib")
 
       !initialize weighting factor
       a_ex = xcpot%get_exchange_weight()
 
       i = 0
+      call timestart("apply to hmat")
       DO n = 1, hmat%matsize1
          DO nn = 1, n
             i = i + 1
@@ -507,6 +524,7 @@ CONTAINS
             ENDIF
          END DO
       END DO
+      call timestop("apply to hmat")
 
       CALL timestop("subvxc")
 
