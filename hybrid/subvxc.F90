@@ -250,17 +250,17 @@ CONTAINS
          ! Project on bascof
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            carr(:nnbas, :lapw%nv(jsp)) = CONJG(MATMUL(vrmat(:nnbas, :nnbas), &
-                                                       TRANSPOSE(bascof(:lapw%nv(jsp), :nnbas, iatom))))
+            !call zgemm(transa, transb, m, n,      k,   alpha,   a,          lda,              b,                 ldb,           beta,     c,    ldc)
+            call zgemm("N", "T", nnbas, lapw%nv, nnbas, cmplx_1, vrmat(1,1), hybdat%maxlmindx, bascof(1,1,iatom), lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
+            carr = conjg(carr)
+
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
             call zgemm("N", "N", lapw%nv, lapw%nv, nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
             ic = 0
             DO j = 1, lapw%nv(jsp)
-               ! carr(:nnbas) =  matmul(vrmat(:nnbas,:nnbas),bascof(j,:nnbas,iatom) )
                DO i = 1, j
                   ic = ic + 1
                   vxc(ic) = vxc(ic) + carr1(i, j)
-                  ! vxc(ic) = vxc(ic) + conjg(dot_product ( bascof(i,:nnbas,iatom),carr(:nnbas) ))
                END DO
             END DO
          END DO
