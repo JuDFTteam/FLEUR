@@ -106,9 +106,13 @@ CONTAINS
     CALL mpi_bc(this%vec1(3),rank,mpi_comm)
     CALL mpi_bc(this%vec2(3),rank,mpi_comm)
     CALL mpi_bc(this%vec3(3),rank,mpi_comm)
-    CALL mpi_bc(this%grid(1),rank,mpi_comm)
-    CALL mpi_bc(this%grid(2),rank,mpi_comm)
-    CALL mpi_bc(this%grid(3),rank,mpi_comm)
+    CALL mpi_bc(this%zero(1),rank,mpi_comm)
+    CALL mpi_bc(this%zero(2),rank,mpi_comm)
+    CALL mpi_bc(this%zero(3),rank,mpi_comm)
+    CALL mpi_bc(this%filename,rank,mpi_comm)    
+    CALL mpi_bc(this%onlyMT,rank,mpi_comm)  
+    CALL mpi_bc(this%typeMT,rank,mpi_comm)  
+    CALL mpi_bc(this%vecField,rank,mpi_comm)  
 
   END SUBROUTINE mpi_bc_plot
 
