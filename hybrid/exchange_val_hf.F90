@@ -130,7 +130,7 @@ CONTAINS
       REAL                 :: kqpt(3), kqpthlp(3), target_psize
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, mtx_tmp, cprod_vv, carr3_vv, cprod_combined
+      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
 
@@ -166,9 +166,7 @@ CONTAINS
             target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
          endif
          n_parts = ceiling(hybdat%nobd(nkqpt, jsp)/target_psize)
-         n_parts = 3
-         call split_iob_loop(hybdat%nobd(nkqpt, jsp), n_parts, start_idx, psizes)
-         call cprod_combined%alloc(mat_ex%l_real, hybdat%nbasm(iq), hybdat%nobd(nkqpt, jsp) * hybdat%nbands(ik))
+         call split_iob_loop(hybdat, hybdat%nobd(nkqpt, jsp), n_parts, start_idx, psizes)
          do ipart = 1, n_parts
             psize = psizes(ipart)
             ibando = start_idx(ipart)
@@ -176,10 +174,8 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
-               call recombine_parts(cprod_vv, ipart, psizes, cprod_combined)
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
-               call recombine_parts(cprod_vv, ipart, psizes, cprod_combined)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -259,7 +255,6 @@ CONTAINS
                      DO iob = 1, psize
                         exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)* &
                                           zdotc(n, carr1_v%data_c(1, iob + psize*(iband-1)), 1, cprod_vv%data_c(1, iob + psize*(nn2-1)), 1)
-                                          !  dot_product(carr1_v%data_c(:, iob), cprod_vv_c(:n, iob, nn2))
                      enddo
                   END DO !n2
                END IF
@@ -270,13 +265,10 @@ CONTAINS
 
             call cprod_vv%free()
             call carr1_v%free()
-            call mtx_tmp%free()
          enddo
-         call cprod_combined%save_npy("cprod_combined_iq=" // int2str(iq) // ".npy")
-         call cprod_combined%free()
       END DO  !jq
       call MPI_Barrier(mpi%mpi_comm, ierr)
-      ! call judft_error("stopit") 
+
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
 !      DO n2=1,n1
@@ -492,8 +484,10 @@ CONTAINS
       enddo
    end function calc_divergence2
 
-   subroutine split_iob_loop(n_total, n_parts, start_idx, psize)
+   subroutine split_iob_loop(hybdat, n_total, n_parts, start_idx, psize)
+      use m_types
       implicit none
+      type(t_hybdat), intent(inout)       :: hybdat
       integer, intent(in)                 :: n_total, n_parts
       integer, allocatable, intent(inout) :: start_idx(:), psize(:)
 
@@ -513,9 +507,11 @@ CONTAINS
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo
-
-      write (*,*) "Split iob loop into " // int2str(n_parts) // " parts"
-      write (*,*) "sizes: ", psize(1), psize(n_parts)
+      if(hybdat%l_print_iob_splitting) then
+         write (*,*) "Split iob loop into " // int2str(n_parts) // " parts"
+         write (*,*) "sizes: ", psize(1), psize(n_parts)
+         hybdat%l_print_iob_splitting = .False.
+      endif
    end subroutine split_iob_loop
 
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
