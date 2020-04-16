@@ -155,7 +155,7 @@ MODULE m_fertri
         ef = ei
         del = emax - emin
         dez = zc - ct
-        workf = -13.6058*2*ef
+        workf = -hartree_to_ev_const*ef
         IF ( irank == 0 ) THEN
           WRITE (oUnit,FMT=8030) ef,workf,del,dez
         END IF
