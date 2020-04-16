@@ -702,10 +702,10 @@ CONTAINS
 
          !calculate cartesian coordinates if needed
          IF (.NOT.cartesian) THEN
-            vec1=matmul(cell%amat,vec1)/1.8897269
-            vec2=matmul(cell%amat,vec2)/1.8897269
-            vec3=matmul(cell%amat,vec3)/1.8897269
-            zero=matmul(cell%amat,zero)/1.8897269
+            vec1=matmul(cell%amat,vec1)
+            vec2=matmul(cell%amat,vec2)
+            vec3=matmul(cell%amat,vec3)
+            zero=matmul(cell%amat,zero)
          END IF
 
          !Open the file
@@ -866,7 +866,7 @@ CONTAINS
                         tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
                      IF (size(xdnout).GE.4) THEN
-                        tempVecs(ix,iy,iz,1:3)=point(:)
+                        tempVecs(ix,iy,iz,1:3)=point(:)/1.8897269
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
                      END IF
                   ELSE
