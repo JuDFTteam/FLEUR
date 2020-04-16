@@ -3,7 +3,6 @@ fermi/dosef.f
 fermi/dosint.f
 fermi/doswt.f
 fermi/ef_newton.f
-fermi/make_tetra.f
 fermi/trisrt.f
 )
 set(fleur_F90 ${fleur_F90}

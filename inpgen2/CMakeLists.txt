@@ -73,6 +73,7 @@ ${FLEUR_SRC}/kpoints/kvecon.f
 ${FLEUR_SRC}/kpoints/kprep.f
 ${FLEUR_SRC}/kpoints/tetrahedron_regular.f90
 ${FLEUR_SRC}/kpoints/triang.f
+${FLEUR_SRC}/kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/matmul.f
