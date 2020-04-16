@@ -166,7 +166,7 @@ CONTAINS
             target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
          endif
          n_parts = ceiling(hybdat%nobd(nkqpt, jsp)/target_psize)
-         n_parts = 1
+         n_parts = 3
          call split_iob_loop(hybdat%nobd(nkqpt, jsp), n_parts, start_idx, psizes)
          call cprod_combined%alloc(mat_ex%l_real, hybdat%nbasm(iq), hybdat%nobd(nkqpt, jsp) * hybdat%nbands(ik))
          do ipart = 1, n_parts
@@ -175,7 +175,8 @@ CONTAINS
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+               call judft_error("don't do this now")
+               !CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
                call recombine_parts(cprod_vv, ipart, psizes, cprod_combined)
@@ -247,7 +248,7 @@ CONTAINS
                IF (mat_ex%l_real) THEN
                   DO n2 = 1, nsest(iband)!iband
                      nn2 = indx_sest(n2, iband)
-                     DO iob = 1, hybdat%nobd(nkqpt, jsp)
+                     DO iob = 1, psize
                         exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)* &
                                           ddot(n, carr1_v%data_r(1, iob + psize*(iband-1)), 1, cprod_vv%data_r(1, iob + psize*(nn2-1)), 1)
                      enddo
@@ -255,7 +256,7 @@ CONTAINS
                ELSE
                   DO n2 = 1, nsest(iband)!iband
                      nn2 = indx_sest(n2, iband)
-                     DO iob = 1, hybdat%nobd(nkqpt, jsp)
+                     DO iob = 1, psize
                         exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)* &
                                           zdotc(n, carr1_v%data_c(1, iob + psize*(iband-1)), 1, cprod_vv%data_c(1, iob + psize*(nn2-1)), 1)
                                           !  dot_product(carr1_v%data_c(:, iob), cprod_vv_c(:n, iob, nn2))
