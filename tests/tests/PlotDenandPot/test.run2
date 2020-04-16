@@ -30,4 +30,22 @@ $result+=jt::test_fileexists("$workdir/vTot_A1.xsf");
 $result+=jt::test_fileexists("$workdir/vTot_A2.xsf");
 $result+=jt::test_fileexists("$workdir/vTot_A3.xsf");
 
+#3D Vectorplot section
+$result+=jt::test_fileexists("$workdir/vTot_A_vec_plot1.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_A_vec_plot1.xsf");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","1.43300");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","2.5475");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","0.31844");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","2.87382");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","9.23327");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot1.xsf","1.91066");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot1.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot1.xsf","1.43300");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot1.xsf","0.31844");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot1.xsf","1.44136");
+$result+=jt::test_grepexists("$workdir/vTot_A_vec_plot1.xsf","6.92931");
+
+
+
 jt::stageresult($workdir,$result,"2");
