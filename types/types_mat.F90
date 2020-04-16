@@ -223,9 +223,12 @@ CONTAINS
    END SUBROUTINE t_mat_lproblem
 
    SUBROUTINE t_mat_free(mat)
+      use m_judft
       CLASS(t_mat), INTENT(INOUT)::mat
+      call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
+      call timestop("t_mat_free")
    END SUBROUTINE t_mat_free
 
    SUBROUTINE t_mat_add_transpose(mat, mat1)
@@ -284,6 +287,7 @@ CONTAINS
    END SUBROUTINE t_mat_init_template
 
    SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+      use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
@@ -291,6 +295,8 @@ CONTAINS
       character(len=300)           :: errmsg
 
       INTEGER:: err
+
+      call timestart("t_mat_alloc")
       IF (present(l_real)) mat%l_real = l_real
       IF (present(matsize1)) mat%matsize1 = matsize1
       IF (present(matsize2)) mat%matsize2 = matsize2
@@ -316,6 +322,7 @@ CONTAINS
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
       ENDIF
+      call timestop("t_mat_alloc")
    END SUBROUTINE t_mat_alloc
 
    SUBROUTINE t_mat_multiply(mat1, mat2, res)
