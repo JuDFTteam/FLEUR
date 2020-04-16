@@ -18,29 +18,28 @@ MODULE m_tetraef
 
    CONTAINS
 
-   SUBROUTINE tetra_ef(jspins,nkpt,lb,ub,eig,zc,xfac,ntetra,itetra,voltet,efermi,w)
+   SUBROUTINE tetra_ef(kpts,jspins,lb,ub,eig,zc,xfac,efermi,w)
 
-      INTEGER, INTENT (IN)    :: jspins,nkpt,ntetra
-      REAL,    INTENT (IN)    :: lb,ub,zc,xfac
-      INTEGER, INTENT (IN)    :: itetra(:,:) !(4,6*nkptd)
-      REAL,    INTENT (IN)    :: voltet(:)   !(6*nkpt)
-      REAL,    INTENT (INOUT) :: eig(:,:,:)  !(neigd,nkptd,jspd)
-      REAL,    INTENT (OUT)   :: w(:,:,:)    !(neigd,nkptd,jspd)
-      REAL,    INTENT (OUT)   :: efermi
+      TYPE(t_kpts),     INTENT(IN)    :: kpts
+      INTEGER,          INTENT(IN)    :: jspins
+      REAL,             INTENT(IN)    :: lb,ub,zc,xfac
+      REAL,             INTENT(INOUT) :: eig(:,:,:)  !(neigd,nkptd,jspd)
+      REAL,             INTENT(OUT)   :: w(:,:,:)    !(neigd,nkptd,jspd)
+      REAL,             INTENT(OUT)   :: efermi
 
       INTEGER :: i,j,jspin,iBand,ikpt,nelec,ncr,itet,it,icorn,jcorn
       REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
       REAL    :: weight(4),ecmax(2,size(w,1))
-      REAL    :: wght(2,nkpt,size(w,1)),eval(4)
+      REAL    :: wght(2,kpts%nkpt,size(w,1)),eval(4)
 
 
       DO iBand = 1,size(w,1)
          DO jspin = 1,jspins
             ecmax(jspin,iBand) = -1.0e25
-            DO ikpt = 1,nkpt
+            DO ikpt = 1,kpts%nkpt
                wght(jspin,ikpt,iBand) = 0.0e0
                w(iBand,ikpt,jspin) = 0.0e0
-               IF ( eig(iBand,ikpt,jspin).GT.ecmax(jspin,iBand)) ecmax(jspin,iBand) = eig(iBand,ikpt,jspin)
+               IF(eig(iBand,ikpt,jspin).GT.ecmax(jspin,iBand)) ecmax(jspin,iBand) = eig(iBand,ikpt,jspin)
             ENDDO
          ENDDO
       ENDDO
@@ -48,13 +47,13 @@ MODULE m_tetraef
       !  check for energy degeneracies in tetrahedrons
       !
       DO jspin = 1,jspins
-         DO itet = 1,ntetra
+         DO itet = 1,kpts%ntet
             DO iBand = 1,size(w,1)
                DO i = 1,3
-                  icorn = itetra(i,itet)
+                  icorn = kpts%ntetra(i,itet)
                   DO j = i+1,4
-                     jcorn = itetra(j,itet)
-                     IF (abs(eig(iBand,icorn,jspin)-eig(iBand,jcorn,jspin)).LT.1.0e-7) THEN
+                     jcorn = kpts%ntetra(j,itet)
+                     IF(abs(eig(iBand,icorn,jspin)-eig(iBand,jcorn,jspin)).LT.1.0e-7) THEN
                         eig(iBand,icorn,jspin) = eig(iBand,icorn,jspin) + 1.0e-7
                         eig(iBand,jcorn,jspin) = eig(iBand,jcorn,jspin) - 1.0e-7
                      ENDIF
@@ -66,23 +65,23 @@ MODULE m_tetraef
       !
       ! calculate weight factors
       !
-      DO itet=1,ntetra
+      DO itet=1,kpts%ntet
          DO iBand=1,size(w,1)
             DO jspin=1,jspins
 
-               eval = eig(iBand,itetra(:,itet),jspin)
+               eval = eig(iBand,kpts%ntetra(:,itet),jspin)
 
-               IF (ANY(eval.GE.9999.9)) CYCLE
+               IF(ANY(eval.GE.9999.9)) CYCLE
 
                DO i=1,4
                   weight(i) = 1.0
                   DO j=1,4
-                     IF (i.NE.j) weight(i) = weight(i)*(eval(j)-eval(i))
+                     IF(i.NE.j) weight(i) = weight(i)*(eval(j)-eval(i))
                   ENDDO
                ENDDO
                DO i=1,4
-                  icorn = itetra(i,itet)
-                  weight(i) = 6.0*voltet(itet)/weight(i)
+                  icorn = kpts%ntetra(i,itet)
+                  weight(i) = 6.0*kpts%voltet(itet)/(weight(i)*kpts%ntet)
                   wght(jspin,icorn,iBand) = wght(jspin,icorn,iBand) + weight(i)
                ENDDO
 
@@ -92,7 +91,7 @@ MODULE m_tetraef
       !
       !xfac = 2.0/jspins
       DO iBand = 1,size(w,1)
-         DO ikpt = 1,nkpt
+         DO ikpt = 1,kpts%nkpt
             DO jspin = 1,jspins
                wght(jspin,ikpt,iBand)=xfac*wght(jspin,ikpt,iBand)
             ENDDO
@@ -108,7 +107,7 @@ MODULE m_tetraef
 
       elow = lb                                      ! determine lower bound
       dlow = ncr
-      DO ikpt = 1,nkpt
+      DO ikpt = 1,kpts%nkpt
          DO iBand = 1,size(w,1)
             DO jspin = 1,jspins
                ttt = elow - eig(iBand,ikpt,jspin)
@@ -129,7 +128,7 @@ MODULE m_tetraef
       eup = ub                                      ! determine upper bound
       DO WHILE ((dup-nelec).LT.0.00001)
          dup = ncr
-         DO ikpt = 1,nkpt
+         DO ikpt = 1,kpts%nkpt
             DO iBand = 1,size(w,1)
                DO jspin = 1,jspins
                   ttt = eup - eig(iBand,ikpt,jspin)
@@ -140,10 +139,10 @@ MODULE m_tetraef
             ENDDO
          ENDDO
 
-         IF ( (dup-nelec).LT.0.00001 ) THEN
+         IF((dup-nelec).LT.0.00001) THEN
             eup = eup + 0.2
             it  = it + 1
-            IF( it .gt. 10 ) THEN
+            IF(it .gt. 10) THEN
                WRITE (oUnit,200) eup,dup,nelec
 200            FORMAT (' valence band too low ',/,'  eup  ',f10.5,' dup  ',f10.5,' nelec ',i5)
                CALL juDFT_error("dos: valence band too low ",calledby ="tetra_ef")
@@ -153,10 +152,10 @@ MODULE m_tetraef
 
 
 
-      DO WHILE ( (eup-elow).GT.1.0e-10 )          ! iterate for fermi-energy
+      DO WHILE ((eup-elow).GT.1.0e-10)          ! iterate for fermi-energy
          efermi = 0.5*(elow+eup)
          dfermi = real(ncr)
-         DO ikpt = 1,nkpt
+         DO ikpt = 1,kpts%nkpt
             DO iBand = 1,size(w,1)
                DO jspin = 1,jspins
                   ttt  =efermi-eig(iBand,ikpt,jspin)
@@ -180,40 +179,40 @@ MODULE m_tetraef
       ! calculate weight factors for charge density integration
       !---------------------------------------------------
       !
-      DO itet = 1,ntetra
+      DO itet = 1,kpts%ntet
          DO iBand = 1,size(w,1)
             DO jspin = 1,jspins
-               eval = eig(iBand,itetra(:,itet),jspin)
+               eval = eig(iBand,kpts%ntetra(:,itet),jspin)
 
-               IF (ANY(eval.GE.9999.9)) CYCLE
+               IF(ANY(eval.GE.9999.9)) CYCLE
 
                DO i = 1,4
                   weight(i) = 1.0
                   DO j = 1,4
-                     IF (i.NE.j) THEN
+                     IF(i.NE.j) THEN
                         weight(i) = weight(i) * (eval(j) - eval(i))
                      ENDIF
                   ENDDO
-                  weight(i) = 6.0 * voltet(itet) / weight(i)
+                  weight(i) = 6.0 * kpts%voltet(itet)/(weight(i)*kpts%ntet)
                ENDDO
 
                wgs = 0.0e0
                DO i = 1,4
                   ttt = efermi - eval(i)
-                  IF (efermi.GT.ecmax(jspin,iBand)) ttt = ecmax(jspin,iBand) - eval(i)
-                  IF ( ttt.LT.0.0e0 )              ttt = 0.0e0
+                  IF(efermi.GT.ecmax(jspin,iBand)) ttt = ecmax(jspin,iBand) - eval(i)
+                  IF( ttt.LT.0.0e0 )               ttt = 0.0e0
                   wgs = wgs + ttt**3*weight(i)
                ENDDO
                wgs = wgs / 24.0
 
-               w(iBand,itetra(:,itet),jspin) = w(iBand,itetra(:,itet),jspin) + wgs
+               w(iBand,kpts%ntetra(:,itet),jspin) = w(iBand,kpts%ntetra(:,itet),jspin) + wgs
 
             ENDDO
          ENDDO
       ENDDO
 
 !     DO jspin = 1,jspins
-!        DO ikpt = 1,nkpt
+!        DO ikpt = 1,kpts%nkpt
 !           DO iBand = 1,size(w,1)
 !              w(iBand,ikpt,jspin) = xfac * w(iBand,ikpt,jspin)
 !           ENDDO

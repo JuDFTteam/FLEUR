@@ -41,14 +41,12 @@ MODULE m_fertri
       REAL lb,ub,e_set
       LOGICAL film
       INTEGER i,ic,j,jsp,k,neig
-      INTEGER ntria,ntetra      ! number of triangles & tetrahedrons
-      REAL as                   ! total area covered by triangles
+      INTEGER ntria      ! number of triangles & tetrahedrons
+      REAL as            ! total area covered by triangles
 !     ..
 !     .. Local Arrays ..
       INTEGER itria(3,2*size(w,2))  ! index of k-points that are corner points of a triangle
       REAL    atr(2*size(w,2))      ! area of a triangle
-      INTEGER itetra(4,6*size(w,2)) ! ditto for tetrahedrons
-      REAL    voltet(6*kpts%nkpt)
       INTEGER nemax(2)
 !     ..
 !     .. Data statements ..
@@ -84,14 +82,9 @@ MODULE m_fertri
 !--->   write results of triang
 
       IF (.not.film) THEN
-        ntetra = kpts%ntet
-        DO j = 1, ntetra
-          itetra(1:4,j) = kpts%ntetra(1:4,j)
-          voltet(j) = kpts%voltet(j) / ntetra
-        END DO
-        lb = MINVAL(eig(:,:,:)) - 0.01
+        lb = MINVAL(eig) - 0.01
         ub = ef + 0.2
-        CALL tetra_ef(jspins,kpts%nkpt,lb,ub,eig,zc,sfac,ntetra,itetra,voltet,ef,w)
+        CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
       ELSE
 
         DO i = 1,ntria
