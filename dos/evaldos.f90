@@ -262,47 +262,45 @@
              ENDIF
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
-           ELSE
-             l_tria = input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3
            ENDIF
          ENDIF
 
-!
-        IF ( .not.l_mcd ) THEN
-         ALLOCATE (g(ned,qdim))
-        ELSE
-         ALLOCATE (g(ned,3*atoms%ntype*ncored))
-        ENDIF
-!
-         IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3).and..not.l_jDOS) THEN
+         IF ( .not.l_mcd ) THEN
+            ALLOCATE (g(ned,qdim))
+         ELSE
+            ALLOCATE (g(ned,3*atoms%ntype*ncored))
+         ENDIF
+
+         IF ( (input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3) .and. &
+             .not.l_mcd .and. banddos%ndir.NE.-3 .and. .not.l_jDOS) THEN
             !
             !     DOS calculation: use triangular method!!
             !
             IF(input%bz_integration.EQ.2) THEN
-               !Either keyword tria in input or tetrahedrons created via make_tetra
                IF ( input%film ) THEN
                   CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
                              atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
                              qal(:,1:ntb,1:kpts%nkpt),e, g)
                ELSE
-                 write(*,*) efermi
-                 CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
-                 IF (input%jspins.EQ.1) g = 2.0 * g
+                  write(*,*) efermi
+                  CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
+                  IF (input%jspins.EQ.1) g = 2.0 * g
                ENDIF
             ELSEIF(input%bz_integration.EQ.3) THEN
                !Alternative tetrahedron method
                CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jsp),ev,qal,g)
             ENDIF
          ELSE
-!
-!     DOS calculation: use histogram method
-!
+            !
+            !     DOS calculation: use histogram method
+            !
             IF ( .not.l_mcd ) THEN
-            CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
-                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
+               CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
+                            results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
-            CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+               CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
+                            results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt),&
+                            mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
