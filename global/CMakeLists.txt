@@ -8,7 +8,6 @@ global/radsrd.F
 global/radsrdn.f
 global/soc_sym.f
 global/starf.f
-global/triang.f
 global/vacudz.f
 global/vacuz.f
 global/abcrot.f
