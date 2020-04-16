@@ -219,7 +219,7 @@ contains
          if(mpi%irank == 0) THEN
             err_loc = maxloc(abs(olap))
             WRITE(*, *) 'mixedbasis: Bad orthonormality of ' &
-               //lchar(l)//'-mpdatauct basis. Increase tolerance.'
+               //lchar(l)//'-mixet product basis. Increase tolerance.'
             write(*, *) "itype =", itype, "l =", l
             WRITE(*, *) 'Deviation of', &
                maxval(abs(olap)), ' occurred for (', &

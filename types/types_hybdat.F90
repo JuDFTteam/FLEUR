@@ -22,9 +22,10 @@ MODULE m_types_hybdat
    end type t_coul
 
    TYPE t_hybdat
-      LOGICAL                ::  l_subvxc = .false.
-      LOGICAL                ::  l_calhf = .false.
-      LOGICAL                ::  l_addhf = .false.
+      LOGICAL                :: l_subvxc = .false.
+      LOGICAL                :: l_calhf = .false.
+      LOGICAL                :: l_addhf = .false.
+      LOGICAL                :: l_print_iob_splitting = .True.
       INTEGER                :: lmaxcd, maxindxc
       INTEGER                :: maxfac
       REAL, ALLOCATABLE      :: gridf(:, :)
