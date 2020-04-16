@@ -252,7 +252,8 @@ CONTAINS
             iatom = iatom + 1
             carr(:nnbas, :lapw%nv(jsp)) = CONJG(MATMUL(vrmat(:nnbas, :nnbas), &
                                                        TRANSPOSE(bascof(:lapw%nv(jsp), :nnbas, iatom))))
-            carr1(:lapw%nv(jsp), :lapw%nv(jsp)) = MATMUL(bascof(:lapw%nv(jsp), :nnbas, iatom), carr(:nnbas, :lapw%nv(jsp)))
+            !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
+            call zgemm("N", "N", lapw%nv, lapw%nv, nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
             ic = 0
             DO j = 1, lapw%nv(jsp)
                ! carr(:nnbas) =  matmul(vrmat(:nnbas,:nnbas),bascof(j,:nnbas,iatom) )
