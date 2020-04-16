@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      bcc Fe  
+      bcc Fe
    </comment>
    <calculationSetup>
       <cutoffs Kmax="2.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
@@ -60,7 +60,7 @@
             <row-2>0 1 0 .0000000000</row-2>
             <row-3>0 0 1 .0000000000</row-3>
          </symOp>
-        
+
       </symmetryOperations>
    </calculationSetup>
    <cell>
@@ -119,7 +119,7 @@
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
       <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
           <plotting iplot="1" polar="F" format="1">
-         <plot cartesian="t" TwoD="F" grid="10 10 10" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 0.0" file='plot'/>
+         <plot cartesian="t" TwoD="F" grid="10 10 10" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 0.0" file='plot' vecField='T'/>
       </plotting>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
