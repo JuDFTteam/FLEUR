@@ -604,9 +604,15 @@ CONTAINS
          numInDen        = 1
          numOutFiles     = 1
       END IF
+
+      polar = sliceplot%polar
+      xsf=sliceplot%format==PLOT_XSF_FORMAT
+
+      IF (polar.AND.(numOutFiles==4)) THEN
+         numOutFiles = 7
+
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))
-
 
       DO i = 1, numInDen
 
@@ -635,20 +641,6 @@ CONTAINS
       IF (noco%l_ss) THEN
          qssc = MATMUL(TRANSPOSE(cell%bmat),nococonv%qss)
       END IF
-
-      ! Open the plot_inp file for input
-
-      !OPEN (18,file='plot_inp')
-      !READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
-      polar = sliceplot%polar
-      !IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
-      !   polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
-      !     IF (polar) THEN
-      !      numOutFiles = 7
-      !   END IF
-      !END IF
-      xsf=sliceplot%format==PLOT_XSF_FORMAT
-
 
       IF (numOutFiles.EQ.1) THEN
          outFilenames(1) = TRIM(denName)
