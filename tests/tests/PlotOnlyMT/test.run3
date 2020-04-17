@@ -5,4 +5,6 @@ jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
 jt::testrun("$executable ",$workdir);
 
 
+$result+=jt::test_fileexists("$workdir/denIn_A_vec_plotOnlyMT.xsf");
+
 jt::stageresult($workdir,$result,"3");
