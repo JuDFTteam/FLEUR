@@ -9,5 +9,5 @@ $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyCertainMT.xsf","2.866
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyCertainMT.xsf","1.43300");
 
 #If the wrong MT has been removed the following line will be different. This is a test stage only designed to test if the correct MT has been removed.
-#$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyCertainMT.xsf","0.6368888888888*0.95533333333*1.9106666666*0.000000000000000*0.000000000000000*0.00000000000000");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyCertainMT.xsf","0.6368888.*0.955333.*1.91066.*0.0000.*0.000000.*0.0000000");
 jt::stageresult($workdir,$result,"4");
