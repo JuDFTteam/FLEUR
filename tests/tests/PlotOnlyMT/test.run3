@@ -13,6 +13,6 @@ $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","0.0000000000
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","4.6045648");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","3.5526110");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","5.3227640");
-
-
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","8.482447");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","0.439032");
 jt::stageresult($workdir,$result,"3");
