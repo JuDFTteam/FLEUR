@@ -2110,7 +2110,6 @@ CONTAINS
             idum = ix*(ix - 1)/2 + iy
             call omp_set_lock(lock(modulo(idum,lock_size)))
             coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
-            ! coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
             call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
       END DO
