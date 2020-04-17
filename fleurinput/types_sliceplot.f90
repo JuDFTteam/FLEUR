@@ -16,7 +16,7 @@ MODULE m_types_sliceplot
   TYPE ,extends(t_fleurinput_base):: t_plot
     LOGICAL :: cartesian=.false.
     LOGICAL :: twodim=.true.
-    CHARACTER(len=100):: filename="default"
+    CHARACTER(len=100):: filename="plot"
     integer :: grid(3)=[30,30,30]
     real    :: zero(3)=[0.,0.,0.]
     real    :: vec1(3)=[1.,0.,0.]
