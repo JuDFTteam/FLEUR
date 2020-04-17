@@ -229,7 +229,7 @@ contains
       integer :: iat2, it2, l2
       type(t_mat) :: mat_hlp, test_hlp, test_out
 
-      call timestart("spmvec_noinvs")
+      call timestart("spmm_noinvs")
       call mat_hlp%init(mat_in)
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2
@@ -428,7 +428,7 @@ contains
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out%data_c(:, i_vec))
       enddo
-      call timestop("spmvec_noinvs")
+      call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
 
    subroutine spmv_wrapper_inv(fi, mpdata, hybdat, ikpt, vecin, vecout)
