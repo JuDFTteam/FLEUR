@@ -13,7 +13,6 @@ $result+=jt::test_fileexists("$workdir/denIn_A3.xsf");
 $result+=jt::test_fileexists("$workdir/denIn_f.xsf");
 
 #3D Vectorplot section similar to PlotDenandPot test
-$result+=jt::test_fileexists("$workdir/vTot_A_vec_plot.xsf");
 $result+=jt::test_fileexists("$workdir/denIn_A_vec_plot.xsf");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.86600");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","1.43300");
