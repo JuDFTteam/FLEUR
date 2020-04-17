@@ -610,6 +610,7 @@ CONTAINS
 
       IF (polar.AND.(numOutFiles==4)) THEN
          numOutFiles = 7
+      END IF
 
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))
