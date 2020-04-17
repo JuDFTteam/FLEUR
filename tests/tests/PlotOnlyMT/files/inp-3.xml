@@ -119,7 +119,7 @@
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
       <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
           <plotting iplot="2" polar="F" format="1">
-         <plot cartesian="T" TwoD="F" grid="10 10 10" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 0.0" file='plotOnlyMT' vecField='T' onlyMT='T'/>
+         <plot cartesian="f" TwoD="F" grid="10 10 10" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 0.0" file='plotOnlyMT' vecField='T' onlyMT='T'/>
       </plotting>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
