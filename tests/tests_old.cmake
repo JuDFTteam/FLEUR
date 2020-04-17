@@ -7,7 +7,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot SiFilmPlotXML SiFilmSlicePlotXML
+   PlotDenandPot SiFilmPlotXML SiFilmSlicePlotXML PlotOnlyMT
     RelaxMTFeature Fe_bcc_SF_LDA SmAtomjDOS)
 
 #Currently disabled Tests (Hybrid+Greenfct)
@@ -16,7 +16,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
 #  CoUnfold
 #Other disabled tests
 #FePt_film_SSFT FePt_film_SSFT_LO
-#PlotOnlyMT
+
 
 
 
