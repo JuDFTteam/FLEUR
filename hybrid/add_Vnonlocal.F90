@@ -56,6 +56,7 @@ CONTAINS
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
       USE m_io_hybinp
+      use m_judft
 
       IMPLICIT NONE
 
@@ -82,6 +83,8 @@ CONTAINS
       REAL                    :: a_ex
       TYPE(t_mat)             :: olap, tmp, v_x, z
       COMPLEX                 :: exch(input%neig, input%neig)
+
+      call timestart("add_vnonlocal")
 
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
@@ -138,6 +141,7 @@ CONTAINS
                hybdat%div_vv(iband, nk, jsp)*(-hartree_to_ev_const), REAL(exch(iband, iband))*(-hartree_to_ev_const)
          END IF
       END DO
+      call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
 
 END MODULE m_add_vnonlocal
