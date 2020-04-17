@@ -6,5 +6,9 @@ jt::testrun("$executable ",$workdir);
 
 
 $result+=jt::test_fileexists("$workdir/denIn_A_vec_plotOnlyMT.xsf");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","1.43300");
+
+
 
 jt::stageresult($workdir,$result,"3");
