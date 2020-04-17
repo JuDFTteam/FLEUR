@@ -1,0 +1,31 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
+jt::testrun("$executable ",$workdir);
+
+$result+=jt::test_fileexists("$workdir/out");
+$result+=min(jt::test_fileexists("$workdir/cdn1"),jt::test_fileexists("$workdir/cdn.hdf"));
+
+$result+=jt::test_fileexists("$workdir/denIn_A1.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_A2.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_A3.xsf");
+$result+=jt::test_fileexists("$workdir/denIn_f.xsf");
+
+#3D Vectorplot section
+$result+=jt::test_fileexists("$workdir/denIn_A_vec_plot.xsf");
+#Values also tested in PlotDenandPot
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.86600");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","1.43300");
+
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","0.1175948");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","8.923762");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","0.411582");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","5.471464");
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plot.xsf","2.204819");
+
+
+
+
+
+jt::stageresult($workdir,$result,"2");
