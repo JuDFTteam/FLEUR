@@ -55,21 +55,23 @@ MODULE m_types_mpimat
 
 CONTAINS
 
-  SUBROUTINE mpimat_multiply(mat1,mat2,res, transA_p, transB_p)
+  SUBROUTINE mpimat_multiply(mat1,mat2,res, transA, transB)
    use m_judft
     CLASS(t_mpimat),INTENT(INOUT)     :: mat1
     CLASS(t_mat),INTENT(IN)           :: mat2
     CLASS(t_mat),INTENT(OUT),OPTIONAL :: res
-    character(len=1), intent(in), optional :: transA_p, transB_p
+    character(len=1), intent(in), optional :: transA, transB
 
 #ifdef CPP_SCALAPACK
     TYPE(t_mpimat)::m,r
-    character(len=1)  :: transA, transB
+    character(len=1)  :: transA_i, transB_i
 
-    transA = "N"
-    if(present(transA_p)) transA = transA_p
-    transB = "N"
-    if(present(transB_p)) transB = transB_p
+    transA_i = "N"
+    if(present(transA)) transA_i = transA
+    transB_i = "N"
+    if(present(transB)) transB_i = transB
+    if(transA /= "N" .or. transB /= "N") call judft_error("trans /= 'N' not yet implemented for MPI")
+
 
     IF (.NOT.PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
     SELECT TYPE(mat2)
@@ -80,12 +82,12 @@ CONTAINS
           CALL m%copy(mat2,1,1)
           CALL r%init(mat1,res%global_size1,res%global_size2)
           IF (mat1%l_real) THEN
-             CALL pdgemm(transA,transB,mat1%global_size1, m%global_size2,mat1%global_size2, 1.0, &
+             CALL pdgemm(transA_i,transB_i,mat1%global_size1, m%global_size2,mat1%global_size2, 1.0, &
                   mat1%data_r, 1,1,mat1%blacsdata%blacs_desc, &
                   m%data_r, 1,1,m%blacsdata%blacs_desc,0.0, &
                   r%data_r, 1,1,r%blacsdata%blacs_desc )
           ELSE
-             CALL pzgemm(transA,transB,mat1%global_size1, m%global_size2,mat1%global_size2, cmplx_1, &
+             CALL pzgemm(transA_i,transB_i,mat1%global_size1, m%global_size2,mat1%global_size2, cmplx_1, &
                   mat1%data_c, 1,1,mat1%blacsdata%blacs_desc, &
                   m%data_c, 1,1,m%blacsdata%blacs_desc,cmplx_0, &
                   r%data_c, 1,1,r%blacsdata%blacs_desc )

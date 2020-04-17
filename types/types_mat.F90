@@ -325,38 +325,49 @@ CONTAINS
       call timestop("t_mat_alloc")
    END SUBROUTINE t_mat_alloc
 
-   SUBROUTINE t_mat_multiply(mat1, mat2, res, transA_p, transB_p)
+   SUBROUTINE t_mat_multiply(mat1, mat2, res, transA, transB)
       use m_judft
       use m_constants
       CLASS(t_mat), INTENT(INOUT)            :: mat1
       CLASS(t_mat), INTENT(IN)               :: mat2
       CLASS(t_mat), INTENT(OUT), OPTIONAL    :: res
-      character(len=1), intent(in), optional :: transA_p, transB_p
+      character(len=1), intent(in), optional :: transA, transB
 
       integer           :: m,n,k
-      character(len=1)  :: transA, transB
+      character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
 
       call timestart("t_mat_multiply")
-      if (mat1%matsize2 /= mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
 
-      m = mat1%matsize1 
-      k = mat1%matsize2
-      n = mat2%matsize2
+      transA_i = "N"
+      if(present(transA)) transA_i = transA
+      transB_i = "N"
+      if(present(transB)) transB_i = transB
 
-      transA = "N"
-      if(present(transA_p)) transA = transA_p
-      transB = "N"
-      if(present(transB_p)) transB = transB_p
+      if(transA_i == "N") then
+         m = mat1%matsize1 
+         k = mat1%matsize2
+      else 
+         m = mat1%matsize2 
+         k = mat1%matsize1
+      endif
+
+      if(transB_i == "N" ) then 
+         if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
+         n = mat2%matsize2
+      else
+         if(k /= mat2%matsize2) call judft_error("dimensions don't agree for matmul")
+         n = mat2%matsize1
+      endif
 
       IF (present(res)) THEN
          call res%alloc(mat1%l_real, m,n)
          IF (mat1%l_real) THEN
-            !call dgemm(transa,transb,m,n,k,alpha, a,            lda,                   b,           ldb,                     beta,  c,        ldc)
-            call dgemm(transA,transB,m,n,k, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, res%data_r, m)
+            !call dgemm(transA_i,transB_i,m,n,k,alpha, a,            lda,                   b,           ldb,                     beta,  c,        ldc)
+            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, res%data_r, m)
          ELSE
-            !call zgemm(transa,transb,m,n,k,alpha, a,            lda,                    b,           ldb,                      beta, c,         ldc)
-            call zgemm(transa,transb,m,n,k,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,res%data_c,m)
+            !call zgemm(transA_i,transB_i,m,n,k,alpha, a,            lda,                    b,           ldb,                      beta, c,         ldc)
+            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,res%data_c,m)
          ENDIF
       else
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
@@ -364,9 +375,9 @@ CONTAINS
 
          call tmp%alloc(mat1%l_real, n,n)
          if (mat1%l_real) THEN
-            call dgemm(transA,transB,n,n,n, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, tmp%data_r, n)
+            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, tmp%data_r, n)
          ELSE
-            call zgemm(transa,transb,n,n,n,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,tmp%data_c,n)
+            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,tmp%data_c,n)
          ENDIF
          call mat1%copy(tmp,1,1)
          call tmp%free()

@@ -19,23 +19,19 @@ contains
       type(t_mat), intent(inout) :: v_x
 
       integer     :: i, j, nbasfcn
-      type(t_mat) :: trafo, invtrafo, tmp
+      type(t_mat) :: trafo, tmp
 
       CALL timestart("T^-1*mat_ex*T^-1*")
       nbasfcn = lapw%hyb_num_bas_fun(fi)
 
       !calculate trafo from wavefunctions to APW basis
       IF (fi%input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
-
+      
+      call ex%u2l()
       call olap%multiply(z, trafo)
 
-      CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
-      CALL trafo%TRANSPOSE(invtrafo)
-
-      call ex%u2l()
-
-      CALL ex%multiply(invtrafo, tmp)
-      CALL trafo%multiply(tmp, v_x)
+      CALL ex%multiply(trafo, res=tmp, transB="C")
+      CALL trafo%multiply(tmp, res=v_x)
 
       CALL timestop("T^-1*mat_ex*T^-1*")
 
