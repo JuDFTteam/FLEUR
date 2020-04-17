@@ -1,0 +1,8 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
+jt::testrun("$executable ",$workdir);
+
+
+jt::stageresult($workdir,$result,"3");
