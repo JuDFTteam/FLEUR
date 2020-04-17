@@ -168,6 +168,7 @@ CONTAINS
          n_parts = ceiling(hybdat%nobd(nkqpt, jsp)/target_psize)
          call split_iob_loop(hybdat, hybdat%nobd(nkqpt, jsp), n_parts, start_idx, psizes)
          do ipart = 1, n_parts
+            write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ")"
             psize = psizes(ipart)
             ibando = start_idx(ipart)
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
