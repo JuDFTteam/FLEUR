@@ -9,7 +9,7 @@ $result+=jt::test_fileexists("$workdir/denIn_A_vec_plotOnlyMT.xsf");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","2.86600");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","1.43300");
 #Grep density values
-$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","0.00000000.*0.00000000.*0.00000000);
+$result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","0.00000000.*0.00000000.*0.00000000");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","4.6045648");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","3.5526110");
 $result+=jt::test_grepexists("$workdir/denIn_A_vec_plotOnlyMT.xsf","5.3227640");
