@@ -325,28 +325,53 @@ CONTAINS
       call timestop("t_mat_alloc")
    END SUBROUTINE t_mat_alloc
 
-   SUBROUTINE t_mat_multiply(mat1, mat2, res)
-      CLASS(t_mat), INTENT(INOUT)        ::mat1
-      CLASS(t_mat), INTENT(IN)           ::mat2
-      CLASS(t_mat), INTENT(OUT), OPTIONAL ::res
+   SUBROUTINE t_mat_multiply(mat1, mat2, res, transA_p, transB_p)
+      use m_judft
+      use m_constants
+      CLASS(t_mat), INTENT(INOUT)            :: mat1
+      CLASS(t_mat), INTENT(IN)               :: mat2
+      CLASS(t_mat), INTENT(OUT), OPTIONAL    :: res
+      character(len=1), intent(in), optional :: transA_p, transB_p
 
-      if (mat1%matsize2 .ne. mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+      integer           :: m,n,k
+      character(len=1)  :: transA, transB
+      type(t_mat)       :: tmp
+
+      call timestart("t_mat_multiply")
+      if (mat1%matsize2 /= mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+
+      m = mat1%matsize1 
+      k = mat1%matsize2
+      n = mat2%matsize2
+
+      transA = "N"
+      if(present(transA_p)) transA = transA_p
+      transB = "N"
+      if(present(transB_p)) transB = transB_p
 
       IF (present(res)) THEN
-         call res%alloc(mat1%l_real, mat1%matsize1, mat2%matsize2)
+         call res%alloc(mat1%l_real, m,n)
          IF (mat1%l_real) THEN
-            res%data_r = matmul(mat1%data_r(:mat1%matsize1, :mat1%matsize2), mat2%data_r(:mat2%matsize1, :mat2%matsize2))
+            !call dgemm(transa,transb,m,n,k,alpha, a,            lda,                   b,           ldb,                     beta,  c,        ldc)
+            call dgemm(transA,transB,m,n,k, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, res%data_r, m)
          ELSE
-            res%data_c = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
+            !call zgemm(transa,transb,m,n,k,alpha, a,            lda,                    b,           ldb,                      beta, c,         ldc)
+            call zgemm(transa,transb,m,n,k,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,res%data_c,m)
          ENDIF
       else
-         if (mat1%matsize1 .ne. mat1%matsize2) CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+         if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
+            CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+
+         call tmp%alloc(mat1%l_real, n,n)
          if (mat1%l_real) THEN
-            mat1%data_r(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_r(:mat1%matsize1, :mat1%matsize2), mat2%data_r(:mat2%matsize1, :mat2%matsize2))
+            call dgemm(transA,transB,n,n,n, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, tmp%data_r, n)
          ELSE
-            mat1%data_c(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
+            call zgemm(transa,transb,n,n,n,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,tmp%data_c,n)
          ENDIF
+         call mat1%copy(tmp,1,1)
+         call tmp%free()
       end IF
+      call timestop("t_mat_multiply")
    end SUBROUTINE t_mat_multiply
 
    SUBROUTINE t_mat_transpose(mat1, res)
