@@ -91,10 +91,10 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
 
    IF(ANY(lastGradient(:).NE.0.0).OR.ANY(lastParameters(:).NE.0.0)) THEN
 
-      WRITE(2501,'(a,12f10.6)'), '    gradient: ', gradient(:)
-      WRITE(2501,'(a,12f10.6)'), 'lastGradient: ', lastGradient(:)
-      WRITE(2502,'(a,12f10.6)'), '    parameters: ', parameters(:)
-      WRITE(2502,'(a,12f10.6)'), 'lastParameters: ', lastParameters(:)
+      WRITE(2501,'(a,12f10.6)') '    gradient: ', gradient(:)
+      WRITE(2501,'(a,12f10.6)') 'lastGradient: ', lastGradient(:)
+      WRITE(2502,'(a,12f10.6)') '    parameters: ', parameters(:)
+      WRITE(2502,'(a,12f10.6)') 'lastParameters: ', lastParameters(:)
 
       lastGradCorrection(:) = gradient(:) - lastGradient(:)
       lastParamCorrection(:) = parameters(:) - lastParameters(:)

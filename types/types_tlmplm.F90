@@ -45,7 +45,7 @@ CONTAINS
     TYPE(t_atoms)                :: atoms
     INTEGER,INTENT(in)           :: jspins
     LOGICAL,INTENT(IN)           :: l_offdiag
-    INTEGER :: err(7),lmd,mlolotot
+    INTEGER :: err(9),lmd,mlolotot
     mlolotot=DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2
     lmd=atoms%lmaxd*(atoms%lmaxd+2)
     !lmplmd=(lmd*(lmd+3))/2
