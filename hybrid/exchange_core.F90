@@ -74,13 +74,12 @@ CONTAINS
       REAL                    ::  integrand(atoms%jmtd)
       REAL                    ::  primf1(atoms%jmtd), primf2(atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
-      complex, ALLOCATABLE    ::  integral(:, :)
 
       COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
-      complex                 :: c_phase(hybdat%nbands(nk))
-      COMPLEX, ALLOCATABLE    :: carr(:, :), carr2(:, :), carr3(:, :), ctmp_vec(:)
-      type(t_mat)             :: zmat
+      complex                 :: c_phase(hybdat%nbands(nk)), cdum
+      COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
+      type(t_mat)             :: zmat, integral, carr, tmp, dot_result
 
       complex, external   :: zdotc
 
@@ -138,7 +137,9 @@ CONTAINS
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
                      call timestart("Eval rad. integr")
-                     allocate(integral(n, n), carr(n, hybdat%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
+                     call integral%alloc(.False., n,n)
+                     call carr%alloc(.False., n, hybdat%nbands(nk))
+                     allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
 
                      DO i = 1, n
                         CALL primitivef(primf1, fprod(:atoms%jri(itype), i)*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
@@ -148,7 +149,7 @@ CONTAINS
                         primf2(:atoms%jri(itype)) = primf2(:atoms%jri(itype))*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1)
                         DO j = 1, n
                            integrand = fprod(:, j)*(primf1 + primf2)
-                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms, itype, hybdat%gridf)
+                           integral%data_c(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms, itype, hybdat%gridf)
                         END DO
                      END DO
                      call timestop("Eval rad. integr")
@@ -159,9 +160,12 @@ CONTAINS
                         DO M = -l, l
                            m2 = m1 + M
 
-                           carr = 0
+                           carr%data_c = 0
+                           !!$OMP PARALLEL DO default(none) collapse(2)&
+                           !!$OMP private(n1, i, ll, lm, l2)&
+                           !!$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
+                           !!$OMP shared(m1, M, l, l1)
                            DO n1 = 1, hybdat%nbands(nk)
-
                               DO i = 1, n
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
@@ -169,20 +173,29 @@ CONTAINS
                                  lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
                                       + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
 
-                                 carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
+                                 carr%data_c(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
 
                               END DO
+                           enddo
+                           !!$OMP END PARALLEL DO
+
+                           call integral%multiply(carr, res=tmp)
+                           call carr%multiply(tmp, res=dot_result, transA="C")
+
+                           DO n1 = 1, hybdat%nbands(nk)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
-                                 call zgemv("N", n, n, cmplx_1, integral, n, carr(1,nn2), 1, cmplx_0, ctmp_vec, 1)
-                                 exchange(nn2, n1) = exchange(nn2, n1) + zdotc(n, carr(1,n1), 1, ctmp_vec, 1)
+                                 if(nn2 <= n1) then
+                                    exchange(nn2, n1) = exchange(nn2, n1) + dot_result%data_c(n1,nn2)
+                                 endif
                               END DO
                            END DO
                         END DO
                      END DO
                      call timestop("Add everything up")
-
-                     deallocate(integral, carr, carr2, carr3, ctmp_vec)
+                     call integral%free()
+                     call carr%free()
+                     deallocate(carr2, carr3, ctmp_vec)
 
                   END DO
                END DO
