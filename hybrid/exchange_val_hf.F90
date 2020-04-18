@@ -268,7 +268,6 @@ CONTAINS
             call carr1_v%free()
          enddo
       END DO  !jq
-      call MPI_Barrier(mpi%mpi_comm, ierr)
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
