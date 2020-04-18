@@ -161,10 +161,10 @@ CONTAINS
                            m2 = m1 + M
 
                            carr%data_c = 0
-                           !!$OMP PARALLEL DO default(none) collapse(2)&
-                           !!$OMP private(n1, i, ll, lm, l2)&
-                           !!$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
-                           !!$OMP shared(m1, M, l, l1)
+                           !$OMP PARALLEL DO default(none) collapse(2)&
+                           !$OMP private(n1, i, ll, lm, l2)&
+                           !$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
+                           !$OMP shared(m1, M, l, l1)
                            DO n1 = 1, hybdat%nbands(nk)
                               DO i = 1, n
                                  ll = larr(i)
@@ -177,7 +177,7 @@ CONTAINS
 
                               END DO
                            enddo
-                           !!$OMP END PARALLEL DO
+                           !$OMP END PARALLEL DO
 
                            call integral%multiply(carr, res=tmp)
                            call carr%multiply(tmp, res=dot_result, transA="C")
