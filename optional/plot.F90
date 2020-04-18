@@ -1169,6 +1169,7 @@ CONTAINS
       ! No core subtraction done!
       ! Additive term for iplot: 128
       IF (plot_const.EQ.7) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.
