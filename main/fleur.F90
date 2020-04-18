@@ -248,7 +248,7 @@ IF (fi%sliceplot%iplot.NE.0) THEN
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-      CALL rotateMagnetToSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
