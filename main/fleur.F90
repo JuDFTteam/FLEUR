@@ -238,7 +238,7 @@ CONTAINS
 
 !Plot inden if wanted
 IF (fi%sliceplot%iplot.NE.0) THEN
-   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  then 
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
@@ -247,7 +247,7 @@ IF (fi%sliceplot%iplot.NE.0) THEN
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
 
-   IF (mpi%irank.EQ.0fi%noco%l_alignMT)  then 
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
