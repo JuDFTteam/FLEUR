@@ -182,6 +182,9 @@ CONTAINS
                            call integral%multiply(carr, res=tmp)
                            call carr%multiply(tmp, res=dot_result, transA="C")
 
+                           !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
+                           !$OMP private(n1, n2, nn2)&
+                           !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result)
                            DO n1 = 1, hybdat%nbands(nk)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
@@ -190,6 +193,7 @@ CONTAINS
                                  endif
                               END DO
                            END DO
+                           !$OMP END PARALLEL DO
                         END DO
                      END DO
                      call timestop("Add everything up")
