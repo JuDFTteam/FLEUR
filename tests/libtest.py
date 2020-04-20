@@ -24,15 +24,6 @@ class TestEnv:
       self.setup_env(args)
       self.find_binary(args)
       self.nprocs = args.nprocs
-   
-   def __del__(self):
-      self.log_info(f"called __del__ errors = {self.errors}")
-      raise SystemExit
-      sys.exit(self.errors)
-
-   def __exit__(self):
-      self.log_info(f"called __exit__ errors = {self.errors}")
-      sys.exit(self.errors)
 
    def find_binary(self, args):      
       fleur_dir = args.bindir[0]
