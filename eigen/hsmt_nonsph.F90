@@ -16,6 +16,13 @@ CONTAINS
     USE m_hsmt_ab
 #ifdef _OPENACC
     USE cublas
+#define CPP_zgemm cublaszgemm
+#define CPP_zherk cublaszherk
+#define CPP_data_c data_c
+#else
+#define CPP_zgemm zgemm
+#define CPP_zherk zherk
+#define CPP_data_c hmat%data_c
 #endif
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
@@ -86,16 +93,11 @@ CONTAINS
           cchi=MERGE(chi,chi*2,(sym%invsat(na)==0))
           CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
 
-#ifdef _OPENACC
           !$acc update device(ab)
           !$acc host_data use_device(ab,ab1,h_loc)
-          CALL cublaszgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
+          CALL CPP_zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
                      h_loc,size(td%h_loc,1),cmplx(0.,0.),ab1,size_ab1)
           !$acc end host_data
-#else
-          call zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
-                     td%h_loc(0:,0:,n,isp,jsp),size(td%h_loc,1),cmplx(0.,0.),ab1,size_ab1)
-#endif
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
           if (mpi%n_size>1)Then
@@ -111,47 +113,33 @@ CONTAINS
                ab1=conjg(ab1)
                !$acc end kernels
                IF (mpi%n_size==1) THEN !use z-herk trick on single PE
-#ifdef _OPENACC
                  !$acc host_data use_device(data_c,ab1)
-                 CALL cublasZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,data_c,size_data_c)
+                 CALL CPP_ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,CPP_data_c,size_data_c)
                  !$acc end host_data
-#else
-                 call ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,hmat%data_c,size(hmat%data_c,1))
-#endif
                ELSE
-#ifdef _OPENACC
                  !$acc host_data use_device(data_c,ab1,ab_select)
-                 CALL cublaszgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab1,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),data_c,size_data_c)
+                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab1,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),CPP_data_c,size_data_c)
                  !$acc end host_data
-#else
-                 CALL zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
-#endif
                ENDIF
              ELSE !This is the case of a local off-diagonal contribution.
                   !It is not Hermitian, so we need to USE zgemm CALL
                 CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
-#ifdef _OPENACC
                 !$acc update device(ab)
                 !$acc kernels present(ab1)
                 ab=conjg(ab)
                 !$acc end kernels
                 !$acc host_data use_device(ab,data_c,ab1)
-                CALL cublaszgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,ab,size_ab,&
-                     ab_select,size_ab_select,CMPLX(1.0,0.0),data_c,SIZE_data_c)
+                CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,ab,size_ab,&
+                     ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
-#else
-                CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,CONJG(ab),size_ab,&
-                     ab1,SIZE_ab1,CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
-#endif
              ENDIF
           ELSE  !here the l_ss off-diagonal part starts
              !Second set of ab is needed
              CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
              if (isp==jsp) Then
-#ifdef _OPENACC
                 !$acc update device (ab)
                 !$acc host_data use_device(ab,h_loc,ab2)
-                CALL cublaszgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
+                CALL CPP_zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
                      h_loc,size(td%h_loc,1),CMPLX(0.,0.),ab2,size_ab2)
                 !$acc end host_data
                 !$acc kernels present(ab2)
@@ -159,29 +147,17 @@ CONTAINS
                 !$acc end kernels
                 !Multiply for Hamiltonian
                 !$acc host_data use_device(ab2,ab1,data_c)
-                CALL cublaszgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,ab2,size_ab2,&
-                     ab_select,size_ab_select,CMPLX(1.0,0.0),data_c,size_data_c)
+                CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,ab2,size_ab2,&
+                     ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,size_data_c)
                 !$acc end host_data
-#else
-               CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),&
-               td%h_loc(0:,0:,n,isp,jsp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
-               !Multiply for Hamiltonian
-               CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,conjg(ab2),SIZE(ab2,1),&
-               ab_select,size_ab_select,CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
-#endif
              ELSE
-#ifdef _OPENACC
                 !$acc kernels present(ab)
                 ab=conjg(ab)
                 !$acc end kernels
                 !$acc host_data use_device(ab,ab1,data_c)
                 CALL cublaszgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
-                     ab_select,size_ab_select,CMPLX(1.0,0.0),data_c,SIZE_data_c)
+                     ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
-#else
-               CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,CONJG(ab),SIZE(ab,1),&
-               ab_select,size_ab_select,CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
-#endif
              ENDIF
           ENDIF
 

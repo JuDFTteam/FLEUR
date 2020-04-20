@@ -11,9 +11,8 @@ MODULE m_setupMPI
 CONTAINS
   SUBROUTINE setupMPI(nkpt,neigd,mpi)
 !$  use omp_lib
-#ifdef CPP_GPU
+#ifdef _OPENACC
    use openacc
-   use cudafor
 #endif
     use m_omp_checker
     USE m_types
@@ -47,18 +46,18 @@ CONTAINS
           CALL add_usage_data("OMP",omp)
        ENDIF
     endif
-#ifdef CPP_GPU
+#ifdef _OPENACC
+    gpus=acc_get_num_devices(acc_device_nvidia)
+    write(*,*) "Number of GPU per node   :",gpus
 #ifdef CPP_MPI
     CALL MPI_COMM_SIZE(mpi%mpi_comm_same_node,isize,i)
-       if (isize>1) THEN
-           gpus=acc_get_num_devices(acc_device_nvidia)
-           i=cudaGetDeviceCount(ii) 
-           print *,"MPI-Size:",isize,"ACC:",gpus,"CUDA:",ii
- 	   !if (gpus<isize) call judft_error("You need at least as many GPUs per node as PE running")
-           !CALL MPI_COMM_RANK(mpi%mpi_comm_same_node,localrank,i)
-           !call acc_set_device_num(localrank,acc_device_nvidia)
-           !write(*,*) "PE:",mpi%irank,"GPU:",localrank
-       ENDIF
+    if (isize>1) THEN
+      write(*,*) "Number of MPI/PE per node:",isize
+      if (gpus<isize) call judft_error("You need at least as many GPUs per node as PE running")
+      CALL MPI_COMM_RANK(mpi%mpi_comm_same_node,localrank,i)
+      call acc_set_device_num(localrank,acc_device_nvidia)
+      write(*,*) "Assigning PE:",mpi%irank," to local GPU:",localrank
+    ENDIF
 #endif
 #endif
     IF (mpi%isize==1) THEN
