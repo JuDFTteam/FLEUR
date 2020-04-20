@@ -50,6 +50,8 @@ class TestEnv:
          sys.exit(1)
    
    def setup_logger(self,args):
+      if not os.path.isdir(args.testdir[0]):
+         os.makedirs(args.testdir[0])
       logging.basicConfig(filename=f"{args.testdir[0]}/test.log",level=logging.DEBUG, format='%(asctime)s %(message)s')
       logging.info("###############################################################")
 

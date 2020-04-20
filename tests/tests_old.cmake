@@ -89,5 +89,5 @@ endif()
 
 #Hybrid tests
 foreach(test ${HybridTests})
-   add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing)
+   add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
 endforeach()

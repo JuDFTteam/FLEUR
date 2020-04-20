@@ -37,7 +37,7 @@ if ($mpi=~/sequential/){
 }
 print "MPI:$mpi\n";
 
-my $workdir="$ENV{PWD}/Testing/work";
+my $workdir="$ENV{PWD}/Testing/$testdir/work";
 system("rm -r $workdir/*");
 chdir($dir);
 
