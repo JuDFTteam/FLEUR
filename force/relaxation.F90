@@ -108,7 +108,10 @@ CONTAINS
        call atoms_non_displaced%read_xml(xml)
        call xml%freeResources()
        call atoms_non_displaced%init(cell)
-       old_displace=atoms%pos-atoms_non_displaced%pos
+       DO iType = 1, atoms%ntype
+          old_displace(:,iType) = atoms%pos(:,SUM(atoms%neq(:iType-1))+1) - &
+                                  atoms_non_displaced%pos(:,SUM(atoms%neq(:iType-1))+1)
+       END DO
 
        numDispReduce = 0
        overlap=1.0
