@@ -23,7 +23,8 @@ test-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   script:
-    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest
+    - python3 --version
+    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest -V
   artifacts:
     when: on_failure
     paths:
