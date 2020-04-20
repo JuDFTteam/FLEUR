@@ -6,8 +6,8 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    CoMCDXML  Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour
-   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot SiFilmPlotXML SiFilmSlicePlotXML PlotOnlyMT
+   FeFFNLOsSOC
+   SiFilmPlotXML SiFilmSlicePlotXML
     RelaxMTFeature Fe_bcc_SF_LDA SmAtomjDOS)
 
 #Currently disabled Tests (Hybrid+Greenfct)
@@ -18,8 +18,14 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
 #FePt_film_SSFT FePt_film_SSFT_LO
 
 
-
-
+if (${FLEUR_USE_HDF5})
+   set(SerialParallelTests ${SerialParallelTests}
+      Fe_bcc_FlipcdnXLDA
+      Fe_bcc_FlipcdnYGGA
+      PlotDenandPot
+      PlotOnlyMT
+   )
+endif()
 
 set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
