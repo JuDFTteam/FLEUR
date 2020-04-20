@@ -37,7 +37,7 @@ CONTAINS
     INTEGER,INTENT(IN)             :: eig_id
     REAL,INTENT(in)                :: theta(:),phi(:) ! more than a single angle at once...
     REAL,INTENT(OUT)               :: seigvso(:)
-    REAL,INTENT(OUT)               :: h_so(:,:)
+    REAL,INTENT(OUT)               :: h_so(0:,:)
     !     ..
     !     .. Locals ..
 #ifdef CPP_MPI

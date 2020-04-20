@@ -239,10 +239,6 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            IF(mpi%irank == 0) THEN
-               if(atoms%nat > 1) WRITE(oUnit, '(2X,A,I3)') 'Atom', iatom
-               WRITE(oUnit, '(2X,A)') 'k-point    average      (   maximum    )'
-            END IF
 
             DO ikpt = 1, nkpti
                carr1 = 0; carr2 = 0; carr3 = 0
