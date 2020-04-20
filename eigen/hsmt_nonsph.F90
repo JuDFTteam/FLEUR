@@ -114,7 +114,7 @@ CONTAINS
                !$acc end kernels
                IF (mpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
-                 CALL CPP_ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,CPP_data_c,size_data_c)
+                 CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,CPP_data_c,size_data_c)
                  !$acc end host_data
                ELSE
                  !$acc host_data use_device(data_c,ab1,ab_select)
