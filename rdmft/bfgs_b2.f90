@@ -280,7 +280,7 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       temp = MAXVAL(ABS(tempVecA(:numFreeParams-1)))
       maxDisp = 0.05
       IF (temp.GT.maxDisp) tempVecA(:numFreeParams) = tempVecA(:numFreeParams) / (temp/maxDisp)
-      dampingFactor = 0.8
+      dampingFactor = 0.5
       !!! TEST END
 
       j = 1
