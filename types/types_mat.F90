@@ -333,7 +333,7 @@ CONTAINS
       CLASS(t_mat), INTENT(OUT), OPTIONAL    :: res
       character(len=1), intent(in), optional :: transA, transB
 
-      integer           :: m,n,k
+      integer           :: m,n,k, lda, ldb, ldc
       character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
 
@@ -352,6 +352,7 @@ CONTAINS
          k = mat1%matsize1
       endif
 
+      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricieso the same type")
       if(transB_i == "N" ) then 
          if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
          n = mat2%matsize2
@@ -360,24 +361,27 @@ CONTAINS
          n = mat2%matsize1
       endif
 
+      lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
+      ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
       IF (present(res)) THEN
          call res%alloc(mat1%l_real, m,n)
+         ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          IF (mat1%l_real) THEN
-            !call dgemm(transA_i,transB_i,m,n,k,alpha, a,            lda,                   b,           ldb,                     beta,  c,        ldc)
-            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, res%data_r, m)
+            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
-            !call zgemm(transA_i,transB_i,m,n,k,alpha, a,            lda,                    b,           ldb,                      beta, c,         ldc)
-            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,res%data_c,m)
+            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
          ENDIF
       else
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
             CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
 
          call tmp%alloc(mat1%l_real, n,n)
+         ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
+
          if (mat1%l_real) THEN
-            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, size(mat1%data_r, dim=1), mat2%data_r, size(mat2%data_r, dim=1), 0.0, tmp%data_r, n)
+            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
-            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c,size(mat1%data_c, dim=1),mat2%data_c,size(mat2%data_c, dim=1),cmplx_0,tmp%data_c,n)
+            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
          ENDIF
          call mat1%copy(tmp,1,1)
          call tmp%free()
