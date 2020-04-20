@@ -2,7 +2,7 @@ MODULE m_fft_interface
 
    USE m_cfft
    USE m_juDFT
-   USE m_selectFFT
+   USE m_selecFFT
 #ifdef CPP_FFT_MKL        
    USE mkl_dfti
 #endif
@@ -59,7 +59,7 @@ CONTAINS
        l_sparse = PRESENT(indices)
 
        fftRoutine = defaultFFT_const
-       fftRoutine = selectFFT(l_sparse)
+       fftRoutine = selecFFT(l_sparse)
 
        IF(fftRoutine.EQ.spFFT_const) THEN
 #ifdef CPP_SPFFT

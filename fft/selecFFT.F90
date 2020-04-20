@@ -1,4 +1,4 @@
-MODULE m_selectFFT
+MODULE m_selecFFT
 
    USE m_juDFT
 
@@ -22,9 +22,9 @@ MODULE m_selectFFT
 
    CONTAINS
 
-   FUNCTION selectFFT(l_sparse)
+   FUNCTION selecFFT(l_sparse)
 
-      INTEGER             :: selectFFT
+      INTEGER             :: selecFFT
       LOGICAL, INTENT(IN) :: l_sparse
 
       INTEGER :: fftRoutine
@@ -43,7 +43,7 @@ MODULE m_selectFFT
 #ifdef CPP_FFT_MKL
          fftRoutine = mklFFT_const
 #else
-         CALL juDFT_error("Selected FFT (mkl) is not available!", calledby="selectFFT")
+         CALL juDFT_error("Selected FFT (mkl) is not available!", calledby="selecFFT")
 #endif
 
       END IF
@@ -51,7 +51,7 @@ MODULE m_selectFFT
 #ifdef CPP_SPFFT
          IF(l_sparse) fftRoutine = spFFT_const
 #else
-         CALL juDFT_error("Selected FFT (spfft) is not available!", calledby="selectFFT")
+         CALL juDFT_error("Selected FFT (spfft) is not available!", calledby="selecFFT")
 #endif
       END IF
 
@@ -59,8 +59,8 @@ MODULE m_selectFFT
          IF(l_sparse) fftRoutine = defaultFFT_const
       END IF
 
-      selectFFT = fftRoutine
+      selecFFT = fftRoutine
 
    END FUNCTION
 
-END MODULE m_selectFFT
+END MODULE m_selecFFT
