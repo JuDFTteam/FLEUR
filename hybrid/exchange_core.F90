@@ -139,6 +139,8 @@ CONTAINS
                      call timestart("Eval rad. integr")
                      call integral%alloc(.False., n,n)
                      call carr%alloc(.False., n, hybdat%nbands(nk))
+                     call tmp%init(carr)
+                     call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
                      allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
 
                      DO i = 1, n
@@ -205,6 +207,8 @@ CONTAINS
                      call timestop("Add everything up")
                      call integral%free()
                      call carr%free()
+                     call tmp%free()
+                     call dot_result%free()
                      deallocate(carr2, carr3, ctmp_vec)
 
                   END DO
