@@ -330,7 +330,7 @@ CONTAINS
       use m_constants
       CLASS(t_mat), INTENT(INOUT)            :: mat1
       CLASS(t_mat), INTENT(IN)               :: mat2
-      CLASS(t_mat), INTENT(OUT), OPTIONAL    :: res
+      CLASS(t_mat), INTENT(INOUT), OPTIONAL    :: res
       character(len=1), intent(in), optional :: transA, transB
 
       integer           :: m,n,k, lda, ldb, ldc
@@ -364,7 +364,32 @@ CONTAINS
       lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
       IF (present(res)) THEN
-         call res%alloc(mat1%l_real, m,n)
+         ! prepare res matrix
+         if(res%allocated()) then 
+            if(res%l_real .neqv. mat1%l_real) then
+               call res%free()
+            else 
+               if(res%l_real) then
+                  if(any(shape(res%data_r) < [m,n])) then
+                     call res%free()
+                  else
+                     res%data_r = 0.0
+                     res%matsize1 = m
+                     res%matsize2 = n 
+                  endif
+               else
+                  if(any(shape(res%data_c) < [m,n])) then
+                     call res%free()
+                  else
+                     res%data_c = cmplx_0
+                     res%matsize1 = m
+                     res%matsize2 = n 
+                  endif
+               endif
+            endif
+         endif
+         if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
+
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          IF (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)

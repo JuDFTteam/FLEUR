@@ -59,7 +59,7 @@ CONTAINS
    use m_judft
     CLASS(t_mpimat),INTENT(INOUT)     :: mat1
     CLASS(t_mat),INTENT(IN)           :: mat2
-    CLASS(t_mat),INTENT(OUT),OPTIONAL :: res
+    CLASS(t_mat),INTENT(INOUT),OPTIONAL :: res
     character(len=1), intent(in), optional :: transA, transB
 
 #ifdef CPP_SCALAPACK
