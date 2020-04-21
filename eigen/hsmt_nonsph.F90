@@ -155,7 +155,7 @@ CONTAINS
                 ab=conjg(ab)
                 !$acc end kernels
                 !$acc host_data use_device(ab,ab1,data_c)
-                CALL cublaszgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
+                CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
              ENDIF
