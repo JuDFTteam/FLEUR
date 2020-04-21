@@ -77,6 +77,9 @@ sub testrun($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub testrun_seq($$){
@@ -97,6 +100,9 @@ sub testrun_seq($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub test_fileexists($){

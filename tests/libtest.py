@@ -82,6 +82,13 @@ class TestEnv:
          with open(f"{self.workdir}/stderr", "w") as f_stderr:
             subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
       self.log_info("Finished running")
+      try:
+         with open(f"{self.workdir}/out.xml", "r") as outxml:
+            for line in outxml.readlines():
+               if "ERROR Message" in line:
+                  self.log_info(line.strip())
+      except OSError:
+         pass
 
    
    def check_value_outfile(self, before_str, after_str, expected, delta):
