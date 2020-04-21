@@ -65,15 +65,12 @@ sub testrun($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
 
-    my $omps=$ENV{'OMP_NUM_THREADS'};
-    $ENV{'OMP_NUM_THREADS'}=2;
     print LOG "Running OMP_NUM_THREADS=$ENV{'OMP_NUM_THREADS'} $ex:";
     if (system("cd $dir;$ex")==0){
 	print LOG "Done\n";}
     else {
         print LOG "Failed\n";
     }
-    $ENV{'OMP_NUM_THREADS'}=$omps;
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
