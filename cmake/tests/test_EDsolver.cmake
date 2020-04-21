@@ -1,9 +1,12 @@
 #Test if the ARPACK library is present (prerequisite for EDsolver)
+
+set(FLEUR_COMPILE_EDSOLVER FALSE)
+
 try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
             LINK_LIBRARIES ${FLEUR_LIBRARIES})
 
 if(FLEUR_USE_ARPACK)
-  set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
+  set(FLEUR_ARPACK_LIBRARIES " ")
 else()
   #Try to find the library by adding linker options
   foreach(ADD_STRING "-larpack_ifort"
@@ -14,29 +17,25 @@ else()
         try_compile(FLEUR_USE_ARPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ARPACK.f
                     LINK_LIBRARIES ${TEST_LIBRARIES})
        if (FLEUR_USE_ARPACK)
-            set(FLEUR_ARPACK_LIBRARIES ${TEST_LIBRARIES})
-       else()
-            set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
+            set(FLEUR_ARPACK_LIBRARIES ${ADD_STRING})
        endif()
      endif()
   endforeach()
 endif()
 message("ARPACK Library found:${FLEUR_USE_ARPACK}")
 
-
 #Test if the EDsolver library is already present
 try_compile(FLEUR_USE_EDSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_EDsolver.f90
-            LINK_LIBRARIES ${FLEUR_ARPACK_LIBRARIES})
+            LINK_LIBRARIES "${FLEUR_LIBRARIES};${FLEUR_ARPACK_LIBRARIES}")
 if (NOT FLEUR_USE_EDSOLVER)
    if(FLEUR_USE_ARPACK)
-      #try adding -lEDsolver to the linker options
-      set(TEST_LIBRARIES "${FLEUR_ARPACK_LIBRARIES};-lEDsolver")
+      #try adding -lEDsolver to the linker options (before ARPACK)
+      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lEDsolver;${FLEUR_ARPACK_LIBRARIES}")
       try_compile(FLEUR_USE_EDSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_EDsolver.f90
                   LINK_LIBRARIES ${TEST_LIBRARIES})
-      if(FLEUR_USE_EDSOLVER)
-         set(FLEUR_EDSOLVER_LIBRARIES ${TEST_LIBRARIES})
-      else()
-         set(FLEUR_EDSOLVER_LIBRARIES ${FLEUR_ARPACK_LIBRARIES})
+      if (FLEUR_USE_EDSOLVER)
+         #If we are here the EDsolver library is compiled somewhere
+         set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
       endif()
    endif()
 endif()
@@ -91,10 +90,9 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
 endif()
 
 if (FLEUR_USE_EDSOLVER)
-   set(FLEUR_LINK_LIBRARIES ${FLEUR_EDSOLVER_LIBRARIES})
+   if (FLEUR_COMPILE_EDSOLVER)
+      set(FLEUR_LIBRARIES "${FLEUR_LIBRARIES};${FLEUR_ARPACK_LIBRARIES}")
+   endif()
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_EDSOLVER")
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_EDSOLVER")
-   if  (FLEUR_COMPILE_EDSOLVER)
-      set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};EDsolver")
-   endif()
 endif()
