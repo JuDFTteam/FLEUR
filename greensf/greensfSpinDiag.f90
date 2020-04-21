@@ -9,13 +9,13 @@ MODULE m_greensfSpinDiag
    CONTAINS
 
    SUBROUTINE greensfSpinDiag(ikpt_i,nBands,i_gf,l,lp,natom,natomp,atomType,atomTypep,spin,&
-                              l_sphavg,atomPhase,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
+                              l_sphavg,elementPhase,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i !current k-point index in cdnvaljob%k_list
       INTEGER,                   INTENT(IN)     :: nBands !Bands handled on this rank
       INTEGER,                   INTENT(IN)     :: i_gf,l,lp,natom,natomp,atomType,atomTypep,spin !Information about the current element
       LOGICAL,                   INTENT(IN)     :: l_sphavg
-      COMPLEX,                   INTENT(IN)     :: atomPhase
+      COMPLEX,                   INTENT(IN)     :: elementPhase
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_usdus),             INTENT(IN)     :: usdus
@@ -87,15 +87,15 @@ MODULE m_greensfSpinDiag
                   im_tmp(-l:l,-l:l,imat) = matmul( transpose( conjg(sym%d_wgn(-l:l,-l:l,l,isi)) ) , im(-l:l,-l:l,imat))
                   im_tmp(-l:l,-l:l,imat) = matmul( im_tmp(-l:l,-l:l,imat), sym%d_wgn(-l:l,-l:l,l,isi) )
                   IF(l_sphavg) THEN
-                     greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * atomPhase * im_tmp(:,:,imat))
+                     greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * elementPhase * im_tmp(:,:,imat))
                   ELSE IF(imat.EQ.1) THEN
-                     greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * atomPhase * im_tmp(:,:,imat))
+                     greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * elementPhase * im_tmp(:,:,imat))
                   ELSE IF(imat.EQ.2) THEN
-                     greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * atomPhase * im_tmp(:,:,imat))
+                     greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * elementPhase * im_tmp(:,:,imat))
                   ELSE IF(imat.EQ.3) THEN
-                     greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * atomPhase * im_tmp(:,:,imat))
+                     greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * elementPhase * im_tmp(:,:,imat))
                   ELSE IF(imat.EQ.4) THEN
-                     greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * atomPhase * im_tmp(:,:,imat))
+                     greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,spin) + CONJG(fac * elementPhase * im_tmp(:,:,imat))
                   ENDIF
                ENDDO
             ENDDO!it
