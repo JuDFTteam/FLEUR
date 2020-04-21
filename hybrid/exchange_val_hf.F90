@@ -107,8 +107,8 @@ CONTAINS
       INTEGER                 ::  iband, iband1, jq, iq
       INTEGER                 ::  i, ierr
       INTEGER                 ::  j, iq_p
-      INTEGER                 ::  n, n1, n2, nn2
-      INTEGER                 ::  nkqpt, iob
+      INTEGER                 ::  n1, n2, nn2
+      INTEGER                 ::  nkqpt, iob, m,n,k,lda,ldb,ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
       integer, allocatable    :: start_idx(:), psizes(:)
 
@@ -123,11 +123,11 @@ CONTAINS
       COMPLEX              :: exchcorrect(fi%kpts%nkptf)
       COMPLEX              :: dcprod(hybdat%nbands(ik), hybdat%nbands(ik), 3)
       COMPLEX              :: exch_vv(hybdat%nbands(ik), hybdat%nbands(ik))
-      COMPLEX              :: hessian(3, 3)
+      COMPLEX              :: hessian(3, 3), ctmp
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL                 :: kqpt(3), kqpthlp(3), target_psize
+      REAL                 :: kqpt(3), kqpthlp(3), target_psize, rtmp
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
@@ -146,6 +146,7 @@ CONTAINS
       ! the contribution of the Gamma-point is treated separately (see below)
 
       allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik), hybdat%nbands(ik))
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
@@ -153,9 +154,6 @@ CONTAINS
       DO jq = nkpt_EIBZ, 1, -1
          iq = pointer_EIBZ(jq)
          iq_p = fi%kpts%bkp(iq)
-
-         n = hybdat%nbasp + mpdata%n_g(iq)
-         IF (hybdat%nbasm(iq) /= n) call judft_error('error hybdat%nbasm')
 
 
          nkqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
@@ -172,7 +170,6 @@ CONTAINS
             psize = psizes(ipart)
             ibando = start_idx(ipart)
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
-            call dot_result%alloc(mat_ex%l_real, psize * hybdat%nbands(ik),psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
@@ -229,13 +226,13 @@ CONTAINS
                call timestart("apply prefactors carr1_v")
                if(mat_ex%l_real) then
                   DO iob = 1, psize
-                     do i=1,n
+                     do i=1,hybdat%nbasm(iq)
                         carr1_v%data_r(i,iob + psize*(iband-1)) = carr1_v%data_r(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, nkqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                else
                   DO iob = 1, psize
-                     do i=1,n
+                     do i=1,hybdat%nbasm(iq)
                         carr1_v%data_c(i,iob + psize*(iband-1)) = carr1_v%data_c(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, nkqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
@@ -243,38 +240,47 @@ CONTAINS
                call timestop("apply prefactors carr1_v")
             enddo
 
-
             call timestart("exch_vv dot prod")
+            m = hybdat%nbands(ik)
+            n = hybdat%nbands(ik)
+            k = hybdat%nbasm(iq)
+            lda = hybdat%nbasm(iq) * psize
+            ldb = hybdat%nbasm(iq) * psize
+            ldc = hybdat%nbands(ik)
             IF (mat_ex%l_real) THEN
-               DO iband = 1, hybdat%nbands(ik)
-                  DO n2 = 1, nsest(iband)!iband
-                     nn2 = indx_sest(n2, iband)
-                     DO iob = 1, psize
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)&
-                                              * ddot(n, carr1_v%data_r(1, iob + psize*(iband-1)), 1, cprod_vv%data_r(1, iob + psize*(nn2-1)), 1)
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               DO iob = 1, psize
+                  call dgemm("T", "N", m, n, k, 1.0, carr1_v%data_r(1, iob), lda, cprod_vv%data_r(1, iob), ldb, 0.0, dot_result%data_r, ldc)
+
+                  DO iband = 1, hybdat%nbands(ik)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2) * dot_result%data_r(iband, nn2)
                      enddo
-                  END DO !n2
-               END DO  !iband
+                  END DO 
+               END DO  
             ELSE
-               DO iband = 1, hybdat%nbands(ik)
-                  DO n2 = 1, nsest(iband)!iband
-                     nn2 = indx_sest(n2, iband)
-                     DO iob = 1, psize
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)&
-                                              * zdotc(n, carr1_v%data_c(1, iob + psize*(iband-1)), 1, cprod_vv%data_c(1, iob + psize*(nn2-1)), 1)
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               DO iob = 1, psize
+                  call zgemm("C", "N", m, n, k, cmplx_1, carr1_v%data_c(1, iob), lda, cprod_vv%data_c(1, iob), ldb, cmplx_0, dot_result%data_c, ldc)
+
+                  DO iband = 1, hybdat%nbands(ik)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2) * dot_result%data_c(iband, nn2)
                      enddo
-                  END DO !n2
+                  END DO 
                enddo
             END IF
             call timestop("exch_vv dot prod")
 
             call timestop("exchange matrix")
 
-            call dot_result%free()
             call cprod_vv%free()
             call carr1_v%free()
          enddo
       END DO  !jq
+      call dot_result%free()
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
 !   DO n1=1,hybdat%nbands(ik)
