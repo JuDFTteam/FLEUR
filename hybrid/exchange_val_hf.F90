@@ -130,7 +130,7 @@ CONTAINS
       REAL                 :: kqpt(3), kqpthlp(3), target_psize
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv
+      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
 
@@ -172,6 +172,7 @@ CONTAINS
             psize = psizes(ipart)
             ibando = start_idx(ipart)
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
+            call dot_result%alloc(mat_ex%l_real, psize * hybdat%nbands(ik),psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
@@ -225,7 +226,7 @@ CONTAINS
             call timestop("sparse matrix products")
 
             DO iband = 1, hybdat%nbands(ik)
-               call timestart("apply prefactors")
+               call timestart("apply prefactors carr1_v")
                if(mat_ex%l_real) then
                   DO iob = 1, psize
                      do i=1,n
@@ -239,31 +240,37 @@ CONTAINS
                      enddo
                   enddo
                endif
-               call timestop("apply prefactors")
+               call timestop("apply prefactors carr1_v")
+            enddo
 
-               call timestart("exch_vv dot prod")
-               IF (mat_ex%l_real) THEN
+
+            call timestart("exch_vv dot prod")
+            IF (mat_ex%l_real) THEN
+               DO iband = 1, hybdat%nbands(ik)
                   DO n2 = 1, nsest(iband)!iband
                      nn2 = indx_sest(n2, iband)
                      DO iob = 1, psize
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)* &
-                                          ddot(n, carr1_v%data_r(1, iob + psize*(iband-1)), 1, cprod_vv%data_r(1, iob + psize*(nn2-1)), 1)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)&
+                                              * ddot(n, carr1_v%data_r(1, iob + psize*(iband-1)), 1, cprod_vv%data_r(1, iob + psize*(nn2-1)), 1)
                      enddo
                   END DO !n2
-               ELSE
+               END DO  !iband
+            ELSE
+               DO iband = 1, hybdat%nbands(ik)
                   DO n2 = 1, nsest(iband)!iband
                      nn2 = indx_sest(n2, iband)
                      DO iob = 1, psize
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)* &
-                                          zdotc(n, carr1_v%data_c(1, iob + psize*(iband-1)), 1, cprod_vv%data_c(1, iob + psize*(nn2-1)), 1)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)&
+                                              * zdotc(n, carr1_v%data_c(1, iob + psize*(iband-1)), 1, cprod_vv%data_c(1, iob + psize*(nn2-1)), 1)
                      enddo
                   END DO !n2
-               END IF
-               call timestop("exch_vv dot prod")
+               enddo
+            END IF
+            call timestop("exch_vv dot prod")
 
-            END DO  !iband
             call timestop("exchange matrix")
 
+            call dot_result%free()
             call cprod_vv%free()
             call carr1_v%free()
          enddo
