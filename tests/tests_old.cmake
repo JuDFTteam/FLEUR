@@ -15,18 +15,15 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
 #Other disabled tests
 #FePt_film_SSFT FePt_film_SSFT_LO
 
-
-
-
-
 set(SerialOnlyTests  )
+
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 set(HybridTests
-	KClHybridPBE0
-	GaAsHybridPBE0
-	FeHybridPBE0
-	MnHybridNoinv
+   KClHybridPBE0
+   GaAsHybridPBE0
+   FeHybridPBE0
+   MnHybridNoinv
 )
 
 set(FFNTests
@@ -34,7 +31,9 @@ set(FFNTests
    PlotDenandPot PlotOnlyMT
    RelaxMTFeature Fe_bcc_SF_LDA
 )
-if (${FLEUR_USE_HDF5})
+
+
+if (FLEUR_USE_HDF5)
     set(SerialParallelTests ${SerialParallelTests} ${FFNTests})
 endif()
 
@@ -44,37 +43,37 @@ if (all_tests)
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
-if (${FLEUR_USE_WANN})
+if (FLEUR_USE_WANN)
    set(SerialParallelTests ${SerialParallelTests} Cwann CwannXML)
 endif()
 
 #Tests for LibXC
-if (${FLEUR_USE_LIBXC})
+if (FLEUR_USE_LIBXC)
    set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
 endif()
 
 #Tests for EDsolver
-if (${FLEUR_USE_EDSOLVER})
+if (FLEUR_USE_EDSOLVER)
    set(SerialParallelTests ${SerialParallelTests} Gd_Hubbard1 Gd_Hubbard1_SOC Gd_Hubbard1_noSYM)
 endif()
 
 
 #The inpgen tests
-#if (${INPGEN})
+#if (INPGEN)
 foreach(test ${InpgenTests})
    add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2")
 endforeach(test)
 #endif()
 
 #The serial tests
-if (${FLEUR_USE_SERIAL})
+if (FLEUR_USE_SERIAL)
    foreach(test ${SerialParallelTests} ${SerialOnlyTests})
     add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
    endforeach(test)
 endif()
 
 #The parallel tests
-if (${FLEUR_USE_MPI})
+if (FLEUR_USE_MPI)
    if (MPIEXEC)
       set(mpi_exec "${MPIEXEC} ${MPI_NUMPROC_FLAGS} 2")
    else()

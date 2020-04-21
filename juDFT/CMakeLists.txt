@@ -13,7 +13,7 @@ option(JUDFT_COMPILE_HDF5 "HDF5 is compiled as submodule" OFF)
 #set(JUFDT_COMPILEOPTS "-r8")
 
 
-if (${JUDFT_USE_HDF5})
+if (JUDFT_USE_HDF5)
 set(judft_HDF
 hdf_accessprp.F90
 hdf_tools.F90
