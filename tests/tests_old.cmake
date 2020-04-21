@@ -3,12 +3,10 @@ enable_testing()
 set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
-   CoMCDXML  Fe_Kerker Fe_bct_LOXML
+   CoMCDXML  Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour
-   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot SiFilmPlotXML SiFilmSlicePlotXML PlotOnlyMT
-    RelaxMTFeature Fe_bcc_SF_LDA SmAtomjDOS)
+    SmAtomjDOS)
 
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -31,10 +29,14 @@ set(HybridTests
 	MnHybridNoinv
 )
 
-#Removed GW tests
-#if (${FLEUR_USE_HDF5})
-#   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
-#endif()
+set(FFNTests
+   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   PlotDenandPot PlotOnlyMT
+   RelaxMTFeature Fe_bcc_SF_LDA
+)
+if (${FLEUR_USE_HDF5})
+    set(SerialParallelTests ${SerialParallelTests} ${FFNTests})
+endif()
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
