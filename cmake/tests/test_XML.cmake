@@ -6,7 +6,7 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
 if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
       set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
-      if (${LIBXML2_LIBRARIES})
+      if (LIBXML2_LIBRARIES)
           set(TEST_LIBRARIES ${FLEUR_LIBRARIES} ${LIBXML2_LIBRARIES})
       endif()
 try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.f90
