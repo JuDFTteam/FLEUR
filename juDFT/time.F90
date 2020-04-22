@@ -477,9 +477,10 @@ CONTAINS
       IMPLICIT NONE
       INTEGER, INTENT(IN)     :: it
       LOGICAL, INTENT(INOUT)  :: l_cont
-      CHARACTER(len=1000)::wtime_string
-      INTEGER          :: wtime, time_used, time_per_iter
-      INTEGER:: irank = 0
+      CHARACTER(len=1000) :: wtime_string
+      INTEGER             :: time_used, time_per_iter
+      INTEGER             :: irank = 0
+      real                :: wtime
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
