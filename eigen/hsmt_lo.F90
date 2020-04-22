@@ -44,6 +44,7 @@ CONTAINS
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
     !$acc update self(smat%data_r,smat%data_c,hmat%data_r,hmat%data_c) if (atoms%nlo(n).GE.1)
+    !$acc wait
     na = SUM(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
@@ -78,6 +79,7 @@ CONTAINS
        !--->    end loop over equivalent atoms
     END DO
     !$acc update device (smat%data_r,smat%data_c,hmat%data_r,hmat%data_c)if (atoms%nlo(n).GE.1)
+    !$acc wait
     CALL timestop("LO setup")
 
     RETURN
