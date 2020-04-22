@@ -76,11 +76,19 @@ class TestEnv:
       logging.error(text)
 
    def run(self,arg_list):
-      self.log_info(f"Start running command: \n {arg_list}")
+      OMP_NUM_THREADS = os.environ['OMP_NUM_THREADS'] if 'OMP_NUM_THREADS' in os.environ else ''
+      self.log_info(f"Start running command:\nOMP_NUM_THREADS={OMP_NUM_THREADS}\n{arg_list}")
       with open(f"{self.workdir}/stdout", "w") as f_stdout:
          with open(f"{self.workdir}/stderr", "w") as f_stderr:
             subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
       self.log_info("Finished running")
+      try:
+         with open(f"{self.workdir}/out.xml", "r") as outxml:
+            for line in outxml.readlines():
+               if "ERROR Message" in line:
+                  self.log_info(line.strip())
+      except OSError:
+         pass
 
    
    def check_value_outfile(self, before_str, after_str, expected, delta):
