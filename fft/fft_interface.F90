@@ -24,29 +24,8 @@ CONTAINS
       logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
 
-#ifdef CPP_FFT_MKL
-      type(dfti_descriptor), pointer :: dfti_handle
-      integer :: dfti_status
-#endif
-#ifdef CPP_SPFFT
-      INTEGER, ALLOCATABLE :: sparseCoords(:)
-      COMPLEX(C_DOUBLE_COMPLEX), ALLOCATABLE :: recSpaceFunction(:)
-      type(c_ptr)                            :: grid = c_null_ptr
-      type(c_ptr)                            :: transform = c_null_ptr
-      type(c_ptr)                            :: realSpacePtr
-      INTEGER, PARAMETER                     :: numOMPThreads = -1 ! -1 gives you the default number of OMP threads
-      LOGICAL, ALLOCATABLE                   :: nonzeroArea(:, :)
-      INTEGER                                :: xCoord, yCoord, zCoord, maxNumLocalZColumns
-      INTEGER                                :: errorCode, x, y, z, fftMeshIndex
-      COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
-#endif
-
-      ! default variables
-      real, allocatable :: afft(:), bfft(:)
-      integer :: isn
-
       integer :: size_dat, i
-      INTEGER :: fftRoutine, xyPlaneSize, temp
+      INTEGER :: fftRoutine
       LOGICAL :: l_sparse
 
       size_dat = product(length)
@@ -59,8 +38,33 @@ CONTAINS
       fftRoutine = defaultFFT_const
       fftRoutine = selecFFT(l_sparse)
 
-      IF (fftRoutine .EQ. spFFT_const) THEN
+      select case(fftRoutine)
+      case(spFFT_const)
+         call spfft_wrapper(length, dat, forw, indices)
+      case(mklFFT_const)
+         call mklfft_wrapper(length, dat, forw)
+      case default 
+         call cfft_wrapper(length, dat, forw)
+      end select
+
+   contains
+      subroutine spfft_wrapper(length, dat, forw, indices)
+         implicit none
+         integer, intent(in)           :: length(3) !length of data in each direction
+         complex, intent(inout)        :: dat(:)        !data to be transformed, size(dat) should be product(length)
+         logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
+         INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
 #ifdef CPP_SPFFT
+         INTEGER, ALLOCATABLE :: sparseCoords(:)
+         COMPLEX(C_DOUBLE_COMPLEX), ALLOCATABLE :: recSpaceFunction(:)
+         type(c_ptr)                            :: grid = c_null_ptr
+         type(c_ptr)                            :: transform = c_null_ptr
+         type(c_ptr)                            :: realSpacePtr
+         INTEGER, PARAMETER                     :: numOMPThreads = -1 ! -1 gives you the default number of OMP threads
+         LOGICAL, ALLOCATABLE                   :: nonzeroArea(:, :)
+         INTEGER                                :: xCoord, yCoord, zCoord, maxNumLocalZColumns, xyPlaneSize, temp
+         INTEGER                                :: errorCode, x, y, z, fftMeshIndex
+         COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
          ALLOCATE (sparseCoords(3*SIZE(indices)))
          ALLOCATE (recSpaceFunction(SIZE(indices)))
          ALLOCATE (nonzeroArea(0:length(1) - 1, 0:length(2) - 1))
@@ -185,8 +189,20 @@ CONTAINS
 #else
          CALL juDFT_error("Invalid state(1) in fft_interface", calledby="fft_interface")
 #endif
-      ELSE IF (fftRoutine .EQ. mklFFT_const) THEN
+      end subroutine spfft_wrapper
+
+      subroutine mklfft_wrapper(length, dat, forw)
 #ifdef CPP_FFT_MKL
+         USE mkl_dfti
+#endif
+         implicit none
+         integer, intent(in)           :: length(3)
+         complex, intent(inout)        :: dat(:)
+         logical, intent(in)           :: forw
+#ifdef CPP_FFT_MKL
+         type(dfti_descriptor), pointer :: dfti_handle
+         integer :: dfti_status
+
          !using MKL library
          dfti_status = DftiCreateDescriptor(dfti_handle, dfti_double, dfti_complex, 3, length)
          dfti_status = DftiCommitDescriptor(dfti_handle)
@@ -199,24 +215,31 @@ CONTAINS
 #else
          CALL juDFT_error("Invalid state(2) in fft_interface", calledby="fft_interface")
 #endif
-      ELSE
+      end subroutine mklfft_wrapper
 
-         allocate (afft(size_dat), bfft(size_dat))
+      subroutine cfft_wrapper(length, dat, forw)
+         implicit none
+         integer, intent(in)           :: length(3)
+         complex, intent(inout)        :: dat(:)
+         logical, intent(in)           :: forw
+
+         real, allocatable :: afft(:), bfft(:)
+         integer :: isn, size_dat, ok
+
+         size_dat = product(length)
+         allocate (afft(size_dat), bfft(size_dat), stat=ok)
+         if (ok /= 0) call juDFT_error("can't alloc afft & bfft", calledby="fft_interface")
+
          afft = real(dat)
          bfft = aimag(dat)
-         if (forw) then
-            isn = -1
-         else
-            isn = 1
-         end if
+
+         isn = merge(-1, 1, forw)
          CALL cfft(afft, bfft, size_dat, length(1), length(1), isn)
          CALL cfft(afft, bfft, size_dat, length(2), length(1)*length(2), isn)
          CALL cfft(afft, bfft, size_dat, length(3), size_dat, isn)
 
          dat = cmplx(afft, bfft)
-
-      END IF
-
+      end subroutine
    end subroutine fft_interface
 
 END MODULE m_fft_interface
