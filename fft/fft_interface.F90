@@ -20,7 +20,7 @@ CONTAINS
 
     integer, intent(in)           :: dimen         !dimension of fft transformation
     integer, intent(in)           :: length(dimen) !length of data in each direction
-    complex, intent(inout)        :: dat(:)        !data to be transformed, size(dat) should be sum(length)
+    complex, intent(inout)        :: dat(:)        !data to be transformed, size(dat) should be product(length)
     logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
     INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
 
@@ -49,10 +49,8 @@ CONTAINS
     INTEGER :: fftRoutine, xyPlaneSize, temp
     LOGICAL :: l_sparse
 
-       size_dat = 1
-       do i = 1,dimen
-          size_dat = size_dat * length(i)
-       enddo
+       size_dat = product(length)
+       if(product(length)  /= size_dat) call juDFT_error("fine!")
        if (size(dat) .ne. size_dat) call juDFT_error('array bounds are inconsistent',calledby ='fft_interface')
        if (dimen .ne. 3 )  call juDFT_error('sorry, not implemented yet for this value of dimen',calledby ='fft_interface')
 
