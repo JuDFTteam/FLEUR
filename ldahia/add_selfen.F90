@@ -65,7 +65,7 @@ MODULE m_add_selfen
       DO i_match = 1, spin_match
          !Target occupation
          n_target = MERGE(SUM(n_occ(:)),n_occ(i_match),l_match_both_spins)
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(filename,9000) i_hia,i_match
          OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
