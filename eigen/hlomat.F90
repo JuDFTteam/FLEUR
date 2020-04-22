@@ -91,7 +91,7 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-
+       !$acc kernels present(hmat,hmat%data_c,hmat%data_c)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           !--->       calculate the hamiltonian matrix elements with the regular
@@ -318,7 +318,7 @@ CONTAINS
              ENDIF !If this lo to be calculated by mpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
-
+       !$acc end kernels
     END IF
     !$OMP END MASTER
     !$OMP barrier

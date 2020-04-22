@@ -72,6 +72,7 @@ CONTAINS
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
+       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)
        DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
 
           l = atoms%llo(lo,ntyp)
@@ -150,6 +151,7 @@ CONTAINS
              ENDIF ! mod(locol-1,n_size) = nrank
           END DO
        END DO
+       !$acc end kernels
     END IF
   END SUBROUTINE slomat
   !===========================================================================
