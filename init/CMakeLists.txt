@@ -3,7 +3,6 @@ set(fleur_F77 ${fleur_F77}
 init/boxdim.f
 #init/convn_dim.f
 init/gtest.f
-init/ifft235.f
 init/lhcal.f
 init/local_sym.f
 #init/mod_symdata.f
@@ -14,6 +13,7 @@ init/spgrot.f
 init/strgn_dim.F
 )
 set(fleur_F90 ${fleur_F90}
+init/ifft235.f90
 init/fleurinput_postprocess.f90
 init/compile_descr.F90
 init/checks.F90

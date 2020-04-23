@@ -126,9 +126,9 @@ CONTAINS
 !
       iofile = oUnit
       ksfft = 1
-      stars%kxc1_fft = ifft235(iofile, ksfft, mxc1, 2.0)
-      stars%kxc2_fft = ifft235(iofile, ksfft, mxc2, 2.0)
-      stars%kxc3_fft = ifft235(iofile, ksfft, mxc3, 2.0)
+      stars%kxc1_fft = ifft235(ksfft, mxc1, 2.0)
+      stars%kxc2_fft = ifft235(ksfft, mxc2, 2.0)
+      stars%kxc3_fft = ifft235(ksfft, mxc3, 2.0)
 !
 !---> for mxc = 2**p, fft is very fast. if mq very close to 2**p
 !     choose this, even 2**p < mxc . therefore:

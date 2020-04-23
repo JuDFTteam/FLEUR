@@ -116,7 +116,7 @@ ${FLEUR_SRC}/cdn_mt/rhomt21.f90
 ${FLEUR_SRC}/cdn_mt/rhonmt21.f90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 ${FLEUR_SRC}/math/grule.f90
-${FLEUR_SRC}/init/ifft235.f
+${FLEUR_SRC}/init/ifft235.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
