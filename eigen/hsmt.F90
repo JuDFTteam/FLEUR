@@ -130,8 +130,10 @@ CONTAINS
         ENDDO
       END DO
       !$acc end data
-      !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r) if (noco%l_noco.AND..NOT.noco%l_ss)
-      !$acc exit data delete(smat_tmp,hmat_tmp) if (noco%l_noco.AND..NOT.noco%l_ss)
+      if (noco%l_noco.AND..NOT.noco%l_ss) then
+         !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r) if (noco%l_noco.AND..NOT.noco%l_ss)
+         !$acc exit data delete(smat_tmp,hmat_tmp) if (noco%l_noco.AND..NOT.noco%l_ss)
+      endif
       RETURN
     END SUBROUTINE hsmt
   END MODULE m_hsmt

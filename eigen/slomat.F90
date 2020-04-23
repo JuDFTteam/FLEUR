@@ -72,7 +72,10 @@ CONTAINS
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)
+       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
+       !$acc & copyin(l,lapw%kvec(:,:,na),lapw,ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:),atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:))&
+       !$acc default(none)
+
        DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
 
           l = atoms%llo(lo,ntyp)
@@ -90,6 +93,7 @@ CONTAINS
                 k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
+                !$acc loop gang private(fact2,dotp,kp)
                 DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
                         fjgj%fj(kp,l,isp,iintsp)* ( alo1(lo) + &
@@ -98,13 +102,14 @@ CONTAINS
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
-                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
-                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
+                !$acc end loop
                 !--->          calculate the overlap matrix elements with other local
                 !--->          orbitals at the same atom, if they have the same l
                 DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),iintsp==jintsp)
@@ -124,10 +129,10 @@ CONTAINS
                          lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
                          dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                          IF (smat%l_real) THEN
-                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)* &
+                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)* &
                                  cph(k,jintsp)*conjg(cph(kp,iintsp))
                          ELSE
-                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)*&
+                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)*&
                                  cph(k,jintsp)*CONJG(cph(kp,iintsp))
                          ENDIF
                       END DO
@@ -156,6 +161,7 @@ CONTAINS
   END SUBROUTINE slomat
   !===========================================================================
   PURE REAL FUNCTION legpol(l,arg)
+  !$acc routine seq
     !
     IMPLICIT NONE
     !     ..

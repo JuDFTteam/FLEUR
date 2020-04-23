@@ -3,7 +3,11 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifdef _OPENACC
+#define CPP_OMP not_used
+#else
+#define CPP_OMP $OMP
+#endif
 MODULE m_hlomat
   IMPLICIT NONE
 !***********************************************************************
@@ -80,7 +84,7 @@ CONTAINS
     ENDDO
 
 
-    !$OMP MASTER
+    !CPP_OMP MASTER
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
@@ -91,7 +95,12 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-       !$acc kernels present(hmat,hmat%data_c,hmat%data_c)
+       !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
+       !$acc &  copyin(atoms,lapw,ab(:,:,1),tlmplm%tud(:,ntyp,jindex),tlmplm%tuu(:,ntyp,jindex),tlmplm%tdu(:,ntyp,jindex),tlmplm,lapw%nv(:),tlmplm%ind(:,:,ntyp,jindex),tlmplm%tdulo(:,:,:,jindex),tlmplm%tdd(:,ntyp,jindex),tlmplm%tuloulo(:,:,:,jindex),atoms%rmt(ntyp))&
+       !$acc & create(ax,bx,cx)&
+       !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jindex),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp),abclo(1:3,:,:,:,1:2))&
+       !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
+       !$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           !--->       calculate the hamiltonian matrix elements with the regular
@@ -127,16 +136,16 @@ CONTAINS
                       !--->                   not their complex conjugates as in hssphn
                       !--->                   and that a,b,alo... are the complex
                       !--->                   conjugates of the a,b...-coefficients
-                      !$OMP PARALLEL DO DEFAULT(none) &
-                      !$OMP& SHARED(ax,bx,cx) &
-                      !$OMP& SHARED(lapw,ab,ab_size,iintsp) &
-                      !$OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
+                      !CPP_OMP PARALLEL DO DEFAULT(none) &
+                      !CPP_OMP& SHARED(ax,bx,cx) &
+                      !CPP_OMP& SHARED(lapw,ab,ab_size,iintsp) &
+                      !CPP_OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
                       DO kp = 1,lapw%nv(iintsp)
                          ax(kp) = ax(kp) + ab(kp,lmp,1)*utu + ab(kp,ab_size/2+lmp,1)*dtu
                          bx(kp) = bx(kp) + ab(kp,lmp,1)*utd + ab(kp,ab_size/2+lmp,1)*dtd
                          cx(kp) = cx(kp) + ab(kp,lmp,1)*utulo + ab(kp,ab_size/2+lmp,1)*dtulo
                       END DO
-                      !$OMP END PARALLEL DO
+                      !CPP_OMP END PARALLEL DO
                    END IF
                 END DO
              END DO
@@ -320,7 +329,7 @@ CONTAINS
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels
     END IF
-    !$OMP END MASTER
-    !$OMP barrier
+    !CPP_OMP END MASTER
+    !CPP_OMP barrier
   END SUBROUTINE hlomat
 END MODULE m_hlomat

@@ -43,22 +43,21 @@ CONTAINS
 
     INTEGER:: nn,na,ab_size,l,ll,m,size_ab_select
     INTEGER:: size_data_c,size_ab,size_ab1,size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
-    COMPLEX,ALLOCATABLE,TARGET:: ab1(:,:)
+    COMPLEX,ALLOCATABLE:: ab1(:,:),ab_select(:,:)
     COMPLEX,ALLOCATABLE:: ab(:,:),ab2(:,:),h_loc(:,:),data_c(:,:)
     real :: rchi
     complex :: cchi
-    COMPLEX,POINTER::ab_select(:,:)
     CALL timestart("non-spherical setup")
 
+    size_ab=maxval(lapw%nv);size_ab1=lapw%nv(jintsp)
     if (mpi%n_size==1) Then
-      size_ab_select=size_ab
+       size_ab_select=size_ab
     ELSE
       size_ab_select=lapw%num_local_cols(iintsp)
-      ALLOCATE(ab_select(size_ab_select,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     ENDIF
+    ALLOCATE(ab_select(size_ab_select,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
-    size_ab=maxval(lapw%nv);size_ab1=lapw%nv(jintsp)
-
+   
     IF (iintsp.NE.jintsp) THEN
        ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
        size_ab2=lapw%nv(iintsp)
@@ -82,10 +81,10 @@ CONTAINS
        allocate(data_c(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
        size_data_c=size(data_c,1)
     endif
+#endif
     allocate(h_loc(SIZE(td%h_loc,1),SIZE(td%h_loc,1)))
     h_loc=td%h_loc(0:,0:,n,isp,jsp)
     !$acc data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
-#endif
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
@@ -100,13 +99,13 @@ CONTAINS
           !$acc end host_data
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
+          !$acc kernels present(ab1,ab_select)
           if (mpi%n_size>1)Then
-            !$acc kernels present(ab_select,ab1)
             ab_select=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
-            !$acc end kernels
           ELSE
-            ab_select=>ab1 !All of ab1 needed
+            ab_select=ab1 !All of ab1 needed
           ENDIF
+          !$acc end kernels
           IF (iintsp==jintsp) THEN
              IF (isp==jsp) THEN
                !$acc kernels present(ab1)
@@ -128,7 +127,7 @@ CONTAINS
                 !$acc kernels present(ab1)
                 ab=conjg(ab)
                 !$acc end kernels
-                !$acc host_data use_device(ab,data_c,ab1)
+                !$acc host_data use_device(ab,data_c,ab1,ab_select)
                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,ab,size_ab,&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
@@ -146,7 +145,7 @@ CONTAINS
                 ab2=conjg(ab2)
                 !$acc end kernels
                 !Multiply for Hamiltonian
-                !$acc host_data use_device(ab2,ab1,data_c)
+                !$acc host_data use_device(ab2,ab1,data_c,ab_select)
                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,ab2,size_ab2,&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,size_data_c)
                 !$acc end host_data
@@ -154,7 +153,7 @@ CONTAINS
                 !$acc kernels present(ab)
                 ab=conjg(ab)
                 !$acc end kernels
-                !$acc host_data use_device(ab,ab1,data_c)
+                !$acc host_data use_device(ab,ab1,data_c,ab_select)
                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
