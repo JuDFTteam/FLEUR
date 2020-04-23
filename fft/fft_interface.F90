@@ -49,6 +49,7 @@ CONTAINS
 
    contains
       subroutine spfft_wrapper(length, dat, forw, indices)
+         use m_judft
          implicit none
          integer, intent(in)           :: length(3) !length of data in each direction
          complex, intent(inout)        :: dat(:)        !data to be transformed, size(dat) should be product(length)
@@ -65,6 +66,8 @@ CONTAINS
          INTEGER                                :: xCoord, yCoord, zCoord, maxNumLocalZColumns, xyPlaneSize, temp
          INTEGER                                :: errorCode, x, y, z, fftMeshIndex
          COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
+
+         call timestart("FFT: SpFFT")
          ALLOCATE (sparseCoords(3*SIZE(indices)))
          ALLOCATE (recSpaceFunction(SIZE(indices)))
          ALLOCATE (nonzeroArea(0:length(1) - 1, 0:length(2) - 1))
@@ -185,13 +188,14 @@ CONTAINS
             END IF
 
          END IF
-
+         call timestop("FFT: SpFFT")
 #else
          CALL juDFT_error("Invalid state(1) in fft_interface", calledby="fft_interface")
 #endif
       end subroutine spfft_wrapper
 
       subroutine mklfft_wrapper(length, dat, forw)
+         use m_juDFT
 #ifdef CPP_FFT_MKL
          USE mkl_dfti
 #endif
@@ -203,6 +207,7 @@ CONTAINS
          type(dfti_descriptor), pointer :: dfti_handle
          integer :: dfti_status
 
+         call timestart("FFT: MKL")
          !using MKL library
          dfti_status = DftiCreateDescriptor(dfti_handle, dfti_double, dfti_complex, 3, length)
          dfti_status = DftiCommitDescriptor(dfti_handle)
@@ -212,12 +217,14 @@ CONTAINS
             dfti_status = DftiComputeBackward(dfti_handle, dat)
          end if
          dfti_status = DftiFreeDescriptor(dfti_handle)
+         call timestop("FFT: MKL")
 #else
          CALL juDFT_error("Invalid state(2) in fft_interface", calledby="fft_interface")
 #endif
       end subroutine mklfft_wrapper
 
       subroutine cfft_wrapper(length, dat, forw)
+         use m_juDFT
          implicit none
          integer, intent(in)           :: length(3)
          complex, intent(inout)        :: dat(:)
@@ -226,6 +233,7 @@ CONTAINS
          real, allocatable :: afft(:), bfft(:)
          integer :: isn, size_dat, ok
 
+         call timestart("FFT: cfft default")
          size_dat = product(length)
          allocate (afft(size_dat), bfft(size_dat), stat=ok)
          if (ok /= 0) call juDFT_error("can't alloc afft & bfft", calledby="fft_interface")
@@ -239,6 +247,7 @@ CONTAINS
          CALL cfft(afft, bfft, size_dat, length(3), size_dat, isn)
 
          dat = cmplx(afft, bfft)
+         call timestop("FFT: cfft default")
       end subroutine
    end subroutine fft_interface
 
