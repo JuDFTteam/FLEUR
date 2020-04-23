@@ -122,10 +122,7 @@ CONTAINS
                ENDDO
                !--->    new representative found
                stars%ng2 = stars%ng2 + 1
-               IF (stars%ng2.GT.stars%ng2) THEN
-                  if (l_write) write (oUnit,8070) stars%ng2,stars%ng2
-                  CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
-               ENDIF
+          
                DO j = 1,2
                   stars%kv2(j,stars%ng2) = kv(j)
                ENDDO
@@ -191,10 +188,7 @@ CONTAINS
     !-gu
     if (l_write) WRITE (oUnit,'(/'' bmat(3,3),mx3='',f10.5,i5)') cell%bmat(3,3),stars%mx3
 
-    IF (stars%mx3.GT.stars%mx3) THEN
-       WRITE (oUnit,FMT=8000) stars%mx3,stars%mx3
-       CALL juDFT_error("mx3.gt.k3d",calledby="strgn")
-    ENDIF
+
 8000 FORMAT('   mx3.gt.k3d:',2i6)
 
     m0 = -stars%mx3
@@ -212,10 +206,7 @@ CONTAINS
           IF (s.LT.stars%gmax) THEN
              !
              stars%ng3 = stars%ng3 + 1
-             IF (stars%ng3.GT.stars%ng3) THEN
-                WRITE (oUnit,*) stars%ng3,stars%ng3
-                CALL juDFT_error("nq3.GT.n3d",calledby="strgn")
-             ENDIF
+          
              DO j = 1,2
                 stars%kv3(j,stars%ng3) = stars%kv2(j,k2)
              ENDDO
@@ -589,10 +580,7 @@ CONTAINS
                      &                     kv,&
                      &                     kr)
                 stars%ng3 = stars%ng3 + 1
-                IF (stars%ng3.GT.stars%ng3) THEN
-                   WRITE (oUnit,'("nq3 = ",i5," > n3d =",i5)') stars%ng3,stars%ng3
-                   CALL juDFT_error("nq3>n3d",calledby ="strgn")
-                ENDIF
+               
                 DO j = 1,3
                    stars%kv3(j,stars%ng3) = kv(j)
                 ENDDO
