@@ -132,11 +132,11 @@ CONTAINS
       use m_judft
       USE m_constants
         INTEGER:: irank=0
+        CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
         INTEGER ierr(3), i
         CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
-        CALL judft_init(oUnit,.FALSE.)
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
