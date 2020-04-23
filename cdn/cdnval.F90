@@ -156,7 +156,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
    !Greens function always considers the empty states
-   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
@@ -250,7 +250,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,noco%l_mperp.AND.(ispin==jsp_end),&
+         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
                                          gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
          ! perform Brillouin zone integration and summation over the
@@ -307,7 +307,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    IF(gfinp%n>0) THEN
       !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-      DO ispin = MERGE(1,jspin,noco%l_mperp),MERGE(3,jspin,noco%l_mperp)
+      DO ispin = MERGE(1,jspin,gfinp%l_mperp),MERGE(3,jspin,gfinp%l_mperp)
          CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
                                   results,greensfBZintCoeffs,greensfImagPart)
       ENDDO
