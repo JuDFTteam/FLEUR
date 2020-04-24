@@ -177,12 +177,6 @@ CONTAINS
     !
     !---> Determine rkmax box of size mk1, mk2, mk3,
     !     for which |G(mk1,mk2,mk3) + (k1,k2,k3)| < rkmax
-    !
-    CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
-
-    !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-
-
 
     !---> Determine the dimensions kq1d, kq2d, kq3d
     !     of the dimension of the charge density fft-box
