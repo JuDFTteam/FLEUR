@@ -136,7 +136,7 @@ ${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
-${FLEUR_SRC}/init/boxdim.f
+${FLEUR_SRC}/init/boxdim.f90
 )
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
