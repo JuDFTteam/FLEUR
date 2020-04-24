@@ -80,7 +80,7 @@ class TestEnv:
       self.log_info(f"Start running command:\nOMP_NUM_THREADS={OMP_NUM_THREADS}\n{arg_list}")
       with open(f"{self.workdir}/stdout", "w") as f_stdout:
          with open(f"{self.workdir}/stderr", "w") as f_stderr:
-            subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
+            subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=True)
       self.log_info("Finished running")
       try:
          with open(f"{self.workdir}/out.xml", "r") as outxml:
