@@ -33,19 +33,15 @@ CONTAINS
 
       ALLOCATE (gfft(0:ifftd - 1, 2))
 
-      CALL fft3d(&
-     &           gfft(0, 1), gfft(0, 2),&
-     &           ag3,&
-     &           stars, +1)
+      CALL fft3d(gfft(0, 1), gfft(0, 2),&
+     &           ag3,stars, +1)
 
       DO i = 0, ifftd - 1
          gfft(i, :) = gfft(i, :)*ufft(i)
       ENDDO
 
-      CALL fft3d(&
-     &           gfft(0, 1), gfft(0, 2),&
-     &           fg3,&
-     &           stars, -1)
+      CALL fft3d(gfft(0, 1), gfft(0, 2),&
+     &           fg3,stars, -1)
 
       fg3(:stars%ng3) = fg3(:stars%ng3)*stars%nstr(:stars%ng3)
 
