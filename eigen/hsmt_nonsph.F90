@@ -99,17 +99,17 @@ CONTAINS
           !$acc end host_data
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
-          !$acc kernels present(ab1,ab_select)
+          !$acc kernels default(none)
           if (mpi%n_size>1)Then
-            ab_select=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
+            ab_select=ab1(mpi%n_rank+1:size_ab:mpi%n_size,:)
           ELSE
             ab_select=ab1 !All of ab1 needed
           ENDIF
           !$acc end kernels
           IF (iintsp==jintsp) THEN
              IF (isp==jsp) THEN
-               !$acc kernels present(ab1)
-               ab1=conjg(ab1)
+               !$acc kernels default(none) present(ab1)
+               ab1(:,:)=conjg(ab1(:,:))
                !$acc end kernels
                IF (mpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
@@ -124,8 +124,8 @@ CONTAINS
                   !It is not Hermitian, so we need to USE zgemm CALL
                 CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
                 !$acc update device(ab)
-                !$acc kernels present(ab1)
-                ab=conjg(ab)
+                !$acc kernels default(none) present(ab)
+                ab(:,:)=conjg(ab(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(ab,data_c,ab1,ab_select)
                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,ab,size_ab,&
@@ -141,8 +141,8 @@ CONTAINS
                 CALL CPP_zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
                      h_loc,size(td%h_loc,1),CMPLX(0.,0.),ab2,size_ab2)
                 !$acc end host_data
-                !$acc kernels present(ab2)
-                ab2=conjg(ab2)
+                !$acc kernels  default(none) present(ab2)
+                ab2(:,:)=conjg(ab2(:,:))
                 !$acc end kernels
                 !Multiply for Hamiltonian
                 !$acc host_data use_device(ab2,ab1,data_c,ab_select)
@@ -150,8 +150,8 @@ CONTAINS
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,size_data_c)
                 !$acc end host_data
              ELSE
-                !$acc kernels present(ab)
-                ab=conjg(ab)
+                !$acc kernels default(none) present(ab)
+                ab(:,:)=conjg(ab(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(ab,ab1,data_c,ab_select)
                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
@@ -164,11 +164,11 @@ CONTAINS
        end do
 #ifdef _OPENACC
        if (hmat%l_real) THEN
-          !$acc kernels present(hmat,hmat%data_r)
+          !$acc kernels present(hmat,hmat%data_r) default(none)
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        else
-          !$acc kernels present(hmat,hmat%data_r)
+          !$acc kernels present(hmat,hmat%data_r) default(none)
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        endif
