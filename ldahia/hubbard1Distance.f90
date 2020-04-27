@@ -21,7 +21,7 @@ MODULE m_hubbard1Distance
       !Calculates the distance for two density matrices (maximum distance between two elements)
       n_out = 0.0
       n_in = 0.0
-      elementDistance = cmplx_0
+      elementDistance = 0.0
       DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO j = -lmaxU_const,lmaxU_const
             DO k = -lmaxU_const,lmaxU_const
