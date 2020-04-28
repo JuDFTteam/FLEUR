@@ -73,6 +73,7 @@ CONTAINS
        ENDIF
        hmat%data_c=0.0
     ENDIF
+    size_data_c=size(hmat%data_c,1)
 #else
     if (hmat%l_real) THEN
        allocate(data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
@@ -84,7 +85,7 @@ CONTAINS
 #endif
     allocate(h_loc(SIZE(td%h_loc,1),SIZE(td%h_loc,1)))
     h_loc=td%h_loc(0:,0:,n,isp,jsp)
-    !$acc data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
+    !$acc enter data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
@@ -99,11 +100,11 @@ CONTAINS
           !$acc end host_data
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
-          !$acc kernels default(none)
+          !$acc kernels default(none) present(ab_select,ab1)copyin(mpi)
           if (mpi%n_size>1)Then
-            ab_select=ab1(mpi%n_rank+1:size_ab:mpi%n_size,:)
+            ab_select(:,:)=ab1(mpi%n_rank+1:size_ab:mpi%n_size,:)
           ELSE
-            ab_select=ab1 !All of ab1 needed
+            ab_select(:,:)=ab1(:,:) !All of ab1 needed
           ENDIF
           !$acc end kernels
           IF (iintsp==jintsp) THEN
@@ -164,11 +165,11 @@ CONTAINS
        end do
 #ifdef _OPENACC
        if (hmat%l_real) THEN
-          !$acc kernels present(hmat,hmat%data_r) default(none)
+          !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        else
-          !$acc kernels present(hmat,hmat%data_r) default(none)
+          !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        endif
@@ -177,7 +178,7 @@ CONTAINS
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
 #endif
-       !$acc end data
+       !$acc exit data delete(ab2,ab1,ab,data_c,ab_select,h_loc)
 
     CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph
