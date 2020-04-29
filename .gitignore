@@ -11,4 +11,3 @@ build.*
 tags
 .DS_Store
 .vscode
-init/compileinfo.h
