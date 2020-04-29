@@ -153,6 +153,7 @@ if (INPGEN_USE_kplib)
 endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)

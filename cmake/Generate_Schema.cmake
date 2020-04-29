@@ -1,3 +1,4 @@
+file(REMOVE ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h)
 find_program(XXD_PROG xxd)
 if (XXD_PROG)
   ADD_CUSTOM_COMMAND(
