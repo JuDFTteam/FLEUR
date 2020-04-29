@@ -5,7 +5,6 @@ include_directories(include)
 set(FLEURINPUT_COMPILEOPTS "${FLEUR_PRECISION_OPTION}")
 add_subdirectory("fleurinput")
 
-set(c_filesInpgen include/inputSchema.h io/xml/dropInputSchema.c)
 set(c_filesFleur include/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
 if(FLEUR_USE_CUSOLVER)
   set(c_filesFleur ${c_filesFleur} diagonalization/cusolver.c)
@@ -104,3 +103,11 @@ include(cmake/docker.txt)
 #endif()
 
 add_subdirectory("inpgen2")
+
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen2" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen2" fleur_MPI)
+endif ()

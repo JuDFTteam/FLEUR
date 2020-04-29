@@ -57,6 +57,8 @@ old_inp/rw_symfile.f
 old_inp/spg2set.f
 old_inp/inpeig.f90
 
+${CMAKE_BINARY_DIR}/include/buildinfo.h
+
 ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
@@ -138,6 +140,8 @@ ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f90
 )
+
+set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 #Set module directories

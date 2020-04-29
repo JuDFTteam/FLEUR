@@ -1,36 +1,21 @@
 #this file sets some preprocessor variables that are used in
-#init/compile_descr.F90 to determine the programm version and
+#init/compile_descr.F90 to determine the program version and
 #some compilation environment description
 
-cmake_host_system_information(RESULT compile_host QUERY HOSTNAME)
-set(compile_user $ENV{USER})
-string(TIMESTAMP compile_time)
-set(git_hash unknown)
-set(git_describe unknown)
-set(git_branch unknown)
+file(REMOVE ${CMAKE_SOURCE_DIR}/init/compileinfo.h)
+file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "compile_flags=\"${CMAKE_Fortran_FLAGS}\"\nlink_flags=\"${FLEUR_LIBRARIES}\"\n")
+
+set(buildinfo_deps)
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
-  execute_process(COMMAND git describe --tags --match "MaX*" --dirty WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_describe)
-  execute_process(COMMAND git rev-parse --abbrev-ref HEAD  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_branch)
-  execute_process(COMMAND git rev-parse  HEAD WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_hash)
+  execute_process(COMMAND git rev-parse --absolute-git-dir WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE buildinfo_deps)
 elseif (EXISTS "${CMAKE_SOURCE_DIR}/version")
-  file(READ ${CMAKE_SOURCE_DIR}/version git_describe)
+  set(buildinfo_deps "${CMAKE_SOURCE_DIR}/version")
 endif()
 
-#normalize the strings, fix for problems in git commands above
-if (git_hash)
-  string(STRIP  ${git_hash} git_hash)
-else()
-   set(git_hash unknown)
-endif()
-if (git_describe)
-  string(STRIP ${git_describe} git_describe)
-else()
-   set(git_describe unknown)
-endif()
-if (git_branch)   
-  string(STRIP ${git_branch} git_branch)
-else()  
-   set(git_branch unknown)
-endif()
-file(REMOVE ${CMAKE_SOURCE_DIR}/init/compileinfo.h)
-file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "gitdesc=\"${git_describe}\"\ncompile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngitbranch=\"${git_branch}\"\ngithash=\"${git_hash}\"\ncompile_flags=\"${CMAKE_Fortran_FLAGS}\"\nlink_flags=\"${FLEUR_LIBRARIES}\"\n")
+file(REMOVE ${CMAKE_BINARY_DIR}/include/buildinfo.h)
+ADD_CUSTOM_COMMAND(
+        OUTPUT ${CMAKE_BINARY_DIR}/include/buildinfo.h
+        COMMAND ${CMAKE_COMMAND} -P cmake/buildinfo.cmake 2> ${CMAKE_BINARY_DIR}/include/buildinfo.h
+        DEPENDS ${buildinfo_deps}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating buildinfo.h")

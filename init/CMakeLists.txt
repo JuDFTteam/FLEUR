@@ -14,6 +14,7 @@ init/strgn_dim.F
 set(fleur_F90 ${fleur_F90}
 init/ifft235.f90
 init/fleurinput_postprocess.f90
+include/buildinfo.h
 init/compile_descr.F90
 init/checks.F90
 init/efield.f90
