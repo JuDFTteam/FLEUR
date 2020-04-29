@@ -198,8 +198,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_MPI
                CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
-      IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
       CALL juDFT_end("slice OK",mpi%irank)
+   END IF
+
+   IF (sliceplot%iplot.NE.0) THEN
+      CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
    END IF
 
    CALL timestart("cdngen: cdncore")

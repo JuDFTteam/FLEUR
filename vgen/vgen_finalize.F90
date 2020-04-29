@@ -46,9 +46,9 @@ CONTAINS
       CLASS(t_xcpot),   INTENT(IN)    :: xcpot
       TYPE(t_sphhar),   INTENT(IN)    :: sphhar
       TYPE(t_potden),   INTENT(INOUT) :: vTot, vCoul, denRot
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_sliceplot), INTENT(IN)   :: sliceplot
 
-      TYPE(t_potden)                  :: vScal, vCorr
+      TYPE(t_potden)                  :: vScal, vCorr, vxcForPlotting
       TYPE(t_potden), DIMENSION(3)    :: bxc
 
       INTEGER                         :: i, js, n, lh, nat, nd
@@ -132,9 +132,12 @@ CONTAINS
       IF (sliceplot%iplot.NE.0 ) THEN
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
-         !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vCoul,PLOT_POT_COU)
-         !CALL subPotDen(vxcForPlotting,vTot,vCoul)
-         !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,vxcForPlotting,PLOT_POT_VXC)
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
+                        noco,nococonv, vCoul, PLOT_POT_COU, sliceplot)
+         CALL vxcForPlotting%copyPotDen(vTot)
+         CALL subPotDen(vxcForPlotting,vTot,vCoul)
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
+                        noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
       END IF
 
       ! Store vTot(L=0) component as r*vTot(L=0)/sqrt(4*pi):
@@ -150,7 +153,7 @@ CONTAINS
       ! (This normalization is needed for gw!)
       DO js = 1, SIZE(vCoul%pw_w,2)
          DO i = 1, stars%ng3
-            vcoul%pw_w(i,js) = vcoul%pw_w(i,js) / stars%nstr(i)
+            vCoul%pw_w(i,js) = vCoul%pw_w(i,js) / stars%nstr(i)
          END DO
       END DO
 

@@ -608,6 +608,10 @@ CONTAINS
       polar = sliceplot%polar
       xsf=sliceplot%format==PLOT_XSF_FORMAT
 
+      IF((polar).AND.(.NOT.noco%l_noco)) THEN
+         CALL juDFT_warn("l_noco=F and making polar plots is not compatible.",calledby="plot.f90")
+      END IF
+
       IF (polar.AND.(numOutFiles==4)) THEN
          numOutFiles = 7
       END IF
@@ -859,13 +863,16 @@ CONTAINS
                      DO i = 1, numOutFiles
                         tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
-                     IF (size(xdnout).GE.4) THEN
+                     IF ((size(xdnout).GE.4).AND.sliceplot%plot(nplo)%vecField) THEN
                         tempVecs(ix,iy,iz,1:3)=point(:)/1.8897269
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
+                     ELSE IF (sliceplot%plot(nplo)%vecField) THEN
+                        CALL juDFT_warn("l_noco=F and making vector plots is not compatible [yet]. Do a regular plot for a spin-polarized system please!",calledby="plot.f90")
+                        ! TODO: Make it possible for spin-polarized calculations.
                      END IF
                   ELSE
                      tempResults(ix,iy,iz,:)=xdnout(:)
-                     points(ix,iy,iz,:)=point(:)
+                     points(ix,iy,iz,:)=point(:)/1.8897269
                   END IF
                END DO !x-loop
      !$OMP end do
@@ -1014,6 +1021,7 @@ CONTAINS
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
+
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -1190,6 +1198,47 @@ CONTAINS
          END IF
       END IF
 
+      ! Plotting the Coulomb potential as vCoul.
+      ! Plot identifier: PLOT_POT_COU = 8
+      ! No core subtraction done!
+      ! Additive term for iplot: 256
+      IF (plot_const.EQ.8) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         factor = 1.0
+         denName = 'vCoul'
+         score = .FALSE.
+         potnorm = .TRUE.
+         CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
+                     noco, nococonv, score, potnorm, denName, denmat)
+      END IF
+
+      ! Plotting the xc potential as vXc / v_Xc, B_Xc / v_Xc,
+      ! B_xc_1, B_xc_2, B_xc_3.
+      ! Plot identifier: PLOT_POT_TOT = 9
+      ! No core subtraction done!
+      ! Additive term for iplot: 512
+      IF (plot_const.EQ.9) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         factor = 2.0
+         denName = 'vXc'
+         score = .FALSE.
+         potnorm = .TRUE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+                               cell, noco, nococonv, factor, score, potnorm, denmat, &
+                               denName)
+            ELSE
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+                               cell, noco, nococonv, factor, score, potnorm, denmat, &
+                               denName)
+            END IF
+         ELSE
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi ,oneD, sym, cell, &
+                        noco, nococonv, score, potnorm, denName, denmat)
+         END IF
+      END IF
+
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, mpi, oneD, sym, cell, &
@@ -1197,8 +1246,9 @@ CONTAINS
 
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
-      ! whether the plot_inp is there and no oldform is given. If that is not the
-      ! case, we create a plot_inp.
+      ! whether the plot_inp is there or an oldform is given. Both are outdated.
+      ! If that is not the case, we start plotting.
+
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -1228,12 +1278,13 @@ INCLUDE 'mpif.h'
       ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
-      	CALL timestart("Plotting iplot plots")
+
+      CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
          CALL checkplotinp(mpi)
-         CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
-                        noco, nococonv, denmat, plot_const)
+         CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
+                       noco, nococonv, denmat, plot_const)
       END IF
       	CALL timestop("Plotting iplot plots")
 
