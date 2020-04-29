@@ -85,7 +85,12 @@ CONTAINS
 #endif
     allocate(h_loc(SIZE(td%h_loc,1),SIZE(td%h_loc,1)))
     h_loc=td%h_loc(0:,0:,n,isp,jsp)
+#ifdef _OPENACC
     !$acc enter data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
+    !$acc kernels present(data_c) default(none)
+    data_c(:,:)=0.0
+    !$acc end kernels
+#endif
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN

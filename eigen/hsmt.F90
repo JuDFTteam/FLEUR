@@ -131,8 +131,8 @@ CONTAINS
       END DO
       !$acc end data
       if (noco%l_noco.AND..NOT.noco%l_ss) then
-         !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r) if (noco%l_noco.AND..NOT.noco%l_ss)
-         !$acc exit data delete(smat_tmp,hmat_tmp) if (noco%l_noco.AND..NOT.noco%l_ss)
+         !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
+         !$acc exit data delete(smat_tmp,hmat_tmp) 
       endif
       RETURN
     END SUBROUTINE hsmt
