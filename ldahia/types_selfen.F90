@@ -69,21 +69,20 @@ MODULE m_types_selfen
          COMPLEX,         INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
 
          INTEGER :: i,j,iz,ipm,m,mp,ispin,ns
-         COMPLEX,ALLOCATABLE :: tmp(:,:)
-         COMPLEX,ALLOCATABLE :: tmp_off(:,:)
+         COMPLEX,ALLOCATABLE :: swapMat(:,:)
 
          ns = 2*this%l+1
 
-         ALLOCATE(tmp(2*ns,2*ns),source=cmplx_0)
-         ALLOCATE(tmp_off(ns,ns),source=cmplx_0)
+         ALLOCATE(swapMat(2*ns,2*ns),source=cmplx_0)
 
-         !Transformation matrix
-         tmp = 0.0
-         tmp_off = 0.0
+         !Transformation matrix is a Block matrix of form
+         ! | 0  I |
+         ! | I  0 |
+         !to swap the order of the spins
+         swapMat = 0.0
          DO i = 1, ns
-            tmp(i,ns+i) = 1.0
-            tmp(ns+i,i) = 1.0
-            tmp_off(i,ns-i+1) = 1.0
+            swapMat(i,ns+i) = 1.0
+            swapMat(ns+i,i) = 1.0
          ENDDO
 
          DO iz = 1, SIZE(this%data,3)
@@ -93,10 +92,16 @@ MODULE m_types_selfen
                !---------------------------------------------
                this%data(:,:,iz,ipm) = this%data(:,:,iz,ipm)/hartree_to_ev_const
                !---------------------------------------------
-               ! The order of spins is reversed in the Solver
+               ! The order of spins is reversed in the Solver (transformation matrix is symmetric)
                !---------------------------------------------
-               this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),tmp)
-               this%data(:,:,iz,ipm) = matmul(tmp,this%data(:,:,iz,ipm))
+               this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),swapMat)
+               this%data(:,:,iz,ipm) = matmul(swapMat,this%data(:,:,iz,ipm))
+
+               !The offdiagonal parts are the wrong way around
+               !However, they are related by hermitian conjugation
+               this%data(1:ns,ns+1:2*ns,iz,ipm) = conjg(transpose(this%data(1:ns,ns+1:2*ns,iz,ipm)))
+               this%data(ns+1:2*ns,1:ns,iz,ipm) = conjg(transpose(this%data(ns+1:2*ns,1:ns,iz,ipm)))
+
                !---------------------------------------------------------------------
                ! The DFT green's function also includes the previous DFT+U correction
                ! This is removed by substracting it from the selfenergy
@@ -108,8 +113,8 @@ MODULE m_types_selfen
                      DO ispin = 1, MERGE(3,jspins,l_mperp)
                         IF(ispin < 3) THEN
                            this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) = this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) &
-                                                                             - REAL(vmmp(m,mp,ispin))/(3.0-jspins)
-                           IF(jspins.EQ.1) this%data(i+ns,j+ns,iz,ipm) = this%data(i+ns,j+ns,iz,ipm) - REAL(vmmp(-m,-mp,ispin))/(3.0-jspins)
+                                                                             - vmmp(m,mp,ispin)/(3.0-jspins)
+                           IF(jspins.EQ.1) this%data(i+ns,j+ns,iz,ipm) = this%data(i+ns,j+ns,iz,ipm) - vmmp(-m,-mp,ispin)/(3.0-jspins)
                         ELSE
                            !----------------------------------------------------------------------------
                            ! The offdiagonal elements only have to be removed if they are actually added

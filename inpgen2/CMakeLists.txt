@@ -136,7 +136,7 @@ ${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
-${FLEUR_SRC}/init/boxdim.f
+${FLEUR_SRC}/init/boxdim.f90
 )
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
@@ -153,6 +153,7 @@ if (INPGEN_USE_kplib)
 endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)

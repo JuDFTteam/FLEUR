@@ -14,6 +14,7 @@ use judft_tests;
 
 my $testdir=shift;
 my $executable=shift;
+$executable .= " -no_send";
 
 #check MPI environment
 my $mpi=shift;
