@@ -140,8 +140,7 @@ CONTAINS
          exc(ir) = ecp + exp * phi(ir)
       ENDDO
       IF (jspins == 2) THEN
-         WRITE (iofile,'('' WARNING: Wigner correlation !'', &
-                ''only applicable for non-spinpolarized calculations'')')
+         WRITE (iofile,'('' WARNING: Wigner correlation ! Only applicable for non-spinpolarized calculations'')')
       ENDIF
 
       DEALLOCATE (phi)
