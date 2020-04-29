@@ -96,12 +96,6 @@ MODULE m_types_selfen
                !---------------------------------------------
                this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),swapMat)
                this%data(:,:,iz,ipm) = matmul(swapMat,this%data(:,:,iz,ipm))
-
-               !The offdiagonal parts are the wrong way around
-               !However, they are related by hermitian conjugation
-               this%data(1:ns,ns+1:2*ns,iz,ipm) = conjg(transpose(this%data(1:ns,ns+1:2*ns,iz,ipm)))
-               this%data(ns+1:2*ns,1:ns,iz,ipm) = conjg(transpose(this%data(ns+1:2*ns,1:ns,iz,ipm)))
-
                !---------------------------------------------------------------------
                ! The DFT green's function also includes the previous DFT+U correction
                ! This is removed by substracting it from the selfenergy
