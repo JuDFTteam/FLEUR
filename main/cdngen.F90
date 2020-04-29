@@ -202,7 +202,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END IF
 
    IF (sliceplot%iplot.NE.0) THEN
-      CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, 1, sliceplot)
+      CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    END IF
 
    CALL timestart("cdngen: cdncore")

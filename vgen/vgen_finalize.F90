@@ -129,7 +129,7 @@ CONTAINS
 
       END IF
 
-      IF (sliceplot%iplot.NE.0 ) THEN
+      IF (sliceplot%iplot.NE.0) THEN
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &

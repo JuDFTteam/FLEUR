@@ -1051,7 +1051,7 @@ CONTAINS
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          IF(sliceplot%slice) denName='slice'
-         IF(.NOT.sliceplot%slice)denName = 'denIn'
+         IF(.NOT.sliceplot%slice) denName = 'denIn'
          score = .FALSE.
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
@@ -1199,10 +1199,10 @@ CONTAINS
       END IF
 
       ! Plotting the Coulomb potential as vCoul.
-      ! Plot identifier: PLOT_POT_COU = 8
+      ! Plot identifier: PLOT_POT_COU = 9
       ! No core subtraction done!
-      ! Additive term for iplot: 256
-      IF (plot_const.EQ.8) THEN
+      ! Additive term for iplot: 512
+      IF (plot_const.EQ.9) THEN
          IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 1.0
          denName = 'vCoul'
@@ -1214,10 +1214,10 @@ CONTAINS
 
       ! Plotting the xc potential as vXc / v_Xc, B_Xc / v_Xc,
       ! B_xc_1, B_xc_2, B_xc_3.
-      ! Plot identifier: PLOT_POT_TOT = 9
+      ! Plot identifier: PLOT_POT_VXC = 10
       ! No core subtraction done!
-      ! Additive term for iplot: 512
-      IF (plot_const.EQ.9) THEN
+      ! Additive term for iplot: 1024
+      IF (plot_const.EQ.10) THEN
          IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vXc'
