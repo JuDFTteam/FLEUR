@@ -218,16 +218,12 @@ CONTAINS
                    nap = sym%ngopr(iAtom)
                    inap = sym%invtab(nap)
                 END IF
-                DO j = 1,3
-                   fgr(j) = 0.0
-                   DO i = 1,3
-                      IF (oneD%odi%d1) THEN
-                         fgr(j) = fgr(j) + fg(i,iLAPW)*oneD%ods%mrot(i,j,inap)
-                      ELSE
-                         fgr(j) = fgr(j) + fg(i,iLAPW)*sym%mrot(i,j,inap)
-                      END IF
-                   END DO
-                END DO
+
+                IF (oneD%odi%d1) THEN
+                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
+                ELSE
+                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
+                END IF
                 fgp = MATMUL(fgr,cell%bmat)
 
                 DO l = 0,atoms%lmax(iType)
@@ -293,21 +289,17 @@ CONTAINS
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
                    END IF
-                   DO j = 1,3
-                      fkr(j) = 0.0
-                      fgr(j) = 0.0
-                      DO i = 1,3
-                         IF (oneD%odi%d1) THEN
-                            fkr(j) = fkr(j) + fk(i)*oneD%ods%mrot(i,j,inap)
-                            fgr(j) = fgr(j) + fg(i,iLAPW)*oneD%ods%mrot(i,j,inap)
-                         ELSE
-                            fkr(j) = fkr(j) + fk(i)*sym%mrot(i,j,inap)
-                            fgr(j) = fgr(j) + fg(i,iLAPW)*sym%mrot(i,j,inap)
-                         END IF
-                      END DO
-                   END DO
+
+                   IF (oneD%odi%d1) THEN
+                      fkr = MATMUL(fk(:),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
+                      fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
+                   ELSE
+                      fkr = MATMUL(fk(:),TRANSPOSE(sym%mrot(:,:,inap)))
+                      fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
+                   END IF
                    fkp = MATMUL(fkr,cell%bmat)
                    fgp = MATMUL(fgr,cell%bmat)
+
                    CALL ylm4(atoms%lmax(iType),fkp,ylm)
                    CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
                                  lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
