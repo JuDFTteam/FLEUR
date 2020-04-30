@@ -149,7 +149,7 @@ MODULE m_hubbard1_io
          !----------------------------------------------
          ! Write out a warning about the sign convention
          !----------------------------------------------
-         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1inp%arg_vals(i_hia,i_arg).GT.1e-12) THEN
+         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1inp%arg_vals(i_hia,i_arg).GT.0.0) THEN
             WRITE(*,*) "----------------------------------------------"
             WRITE(*,*) "You provided a positive exchange splitting.   "
             WRITE(*,*) "Due to different conventions in the solver    "

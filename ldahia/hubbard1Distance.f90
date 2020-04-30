@@ -48,7 +48,7 @@ MODULE m_hubbard1Distance
       DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          WRITE(oUnit,*)
          WRITE(oUnit,'(A11,I1,A2,f14.8)') "Delta Spin ", ispin, ": ", elementDistance(ispin)
-         WRITE(oUnit,'(14f12.7)') n_mmp_out(-lmaxU_const:,-lmaxU_const:,ispin) - n_mmp_in(-lmaxU_const:,-lmaxU_const:,ispin)
+         WRITE(oUnit,'(7f12.7)') REAL(n_mmp_out(-lmaxU_const:,-lmaxU_const:,ispin) - n_mmp_in(-lmaxU_const:,-lmaxU_const:,ispin))
       ENDDO
 
    END SUBROUTINE hubbard1Distance
