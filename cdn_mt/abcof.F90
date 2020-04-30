@@ -167,14 +167,20 @@ CONTAINS
                 END IF
              END IF
 
+             CALL timestart("hsmt_ab")
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
              abSize = abSize / 2
+             CALL timestop("hsmt_ab")
+
+             CALL timestart("gemm")
              IF (zmat%l_real) THEN
+                ! variant with zgemm
 !                ALLOCATE ( work_c(ne,nvmax) )
 !                work_c(:,:) = work_r(:,:)
 !                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
 !                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
 !                DEALLOCATE(work_c)
+                ! variant with dgemm
                 ALLOCATE(realCoeffs(ne,0:abSize-1),imagCoeffs(ne,0:abSize-1))
                 realCoeffs = 0.0
                 imagCoeffs = 0.0
@@ -191,6 +197,7 @@ CONTAINS
                 CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
                 CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
              END IF
+             CALL timestop("gemm")
 
              DO iLAPW = 1,nvmax
                 IF (noco%l_ss) THEN
