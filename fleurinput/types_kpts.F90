@@ -16,11 +16,11 @@ MODULE m_types_kpts
       INTEGER                        :: ntet = 0
       LOGICAL                        :: l_gamma = .FALSE.
       !(3,nkpt) k-vectors internal units
-      REAL, ALLOCATABLE              :: bk(:, :)
+      REAL, ALLOCATABLE              :: bk(:, :) !(xyz,nk)
       !(nkpts) weights
       REAL, ALLOCATABLE              :: wtkpt(:)
       INTEGER                        :: nkptf = 0   !<k-vectors in full BZ
-      REAL, ALLOCATABLE              :: bkf(:, :)
+      REAL, ALLOCATABLE              :: bkf(:, :) !(xyz,nk)
       INTEGER, ALLOCATABLE           :: bkp(:)
       INTEGER, ALLOCATABLE           :: bksym(:)
       INTEGER                        :: numSpecialPoints = 0
