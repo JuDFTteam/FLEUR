@@ -128,8 +128,8 @@ MODULE m_corespec_eval
     real, intent(in) :: efermi
     integer, intent(in) :: msh
     real, intent    (in) :: vr(atoms%jmtd,atoms%ntype,jspins)
-    real, intent (in) :: f(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
-    real, intent (in) :: g(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
+    real, intent (in) :: f(atoms%jmtd,2,0:atoms%lmaxd,jspins)
+    real, intent (in) :: g(atoms%jmtd,2,0:atoms%lmaxd,jspins)
 
     integer :: nr,lx,lax,lin,lix,nqv,nen,nex
 

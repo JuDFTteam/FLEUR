@@ -142,8 +142,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       jsp_end   = jspin
    END IF
 
-   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
-   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
+   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
+   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
 
    ! Initializations
@@ -179,7 +179,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
    DO iType = 1, atoms%ntype
-      DO ispin = jsp_start, jsp_end
+      DO ispin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)

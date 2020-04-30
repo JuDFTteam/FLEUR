@@ -30,8 +30,8 @@ CONTAINS
     INTEGER, INTENT (IN)  :: itype
     INTEGER, INTENT (IN)  :: jspin
     REAL,    INTENT (IN)  :: vr(atoms%jmtd,atoms%ntype,input%jspins)
-    REAL,    INTENT (IN)  :: f(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
-    REAL,    INTENT (IN)  :: g(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
+    REAL,    INTENT (IN)  :: f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
+    REAL,    INTENT (IN)  :: g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
 
     ! Locals ...
 
