@@ -214,14 +214,10 @@ CONTAINS
 
                 IF (oneD%odi%d1) THEN
                    inap = oneD%ods%ngopr(iAtom)
+                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
                 ELSE
                    nap = sym%ngopr(iAtom)
                    inap = sym%invtab(nap)
-                END IF
-
-                IF (oneD%odi%d1) THEN
-                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
-                ELSE
                    fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
                 END IF
                 fgp = MATMUL(fgr,cell%bmat)
@@ -283,17 +279,14 @@ CONTAINS
                                      fk(2)*atoms%taual(2,iAtom)+&
                                      fk(3)*atoms%taual(3,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                   ELSE
-                      nap = sym%ngopr(iAtom)
-                      inap = sym%invtab(nap)
-                   END IF
 
                    IF (oneD%odi%d1) THEN
+                      inap = oneD%ods%ngopr(iAtom)
                       fkr = MATMUL(fk(:),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
                       fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
                    ELSE
+                      nap = sym%ngopr(iAtom)
+                      inap = sym%invtab(nap)
                       fkr = MATMUL(fk(:),TRANSPOSE(sym%mrot(:,:,inap)))
                       fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
                    END IF
