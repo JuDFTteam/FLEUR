@@ -79,6 +79,7 @@ CONTAINS
       USE m_juDFT
       USE m_rfft
       USE m_cfft
+      use m_wavefproducts_aux
       USE m_fft_interface
       IMPLICIT NONE
       TYPE(t_lapw), INTENT(IN)       :: lapw
@@ -279,25 +280,7 @@ CONTAINS
       ENDIF
       DO ispin = jsp_start, jsp_end
          DO iv = 1, lapw%nv(ispin)
-            !                                              -k1d <= L <= k1d
-            !                                              -k2d <= M <= k2d
-            !                                              -k3d <= N <= k3d
-            il = lapw%gvec(1, iv, ispin)
-            im = lapw%gvec(2, iv, ispin)
-            in = lapw%gvec(3, iv, ispin)
-            !
-            !------>  L,M,N LATTICE POINTS OF G-VECTOR IN POSITIVE DOMAIN
-            !         (since charge density box = two times charge density box
-            !          wrap arround error should not occur )
-            !                                           0<= L <=2*k1-1 = kq1_fft-1
-            !                                           0<= M <=2*k2-1 = kq2_fft-1
-            !                                           0<= N <=2*k3-1 = kq3_fft-1
-            !
-            il = il + stars%kq1_fft*ist(isign(1, il))
-            im = im + stars%kq2_fft*ist(isign(1, im))
-            in = in + stars%kq3_fft*ist(isign(1, in))
-            !
-            iv1d(iv, ispin) = in*ifftq2 + im*ifftq1 + il
+            iv1d(iv, ispin) = stars%g2fft(lapw%gvec(:, iv, ispin))
          ENDDO
       ENDDO
 
