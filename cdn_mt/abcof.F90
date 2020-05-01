@@ -130,6 +130,7 @@ CONTAINS
              ENDIF
 
              ! Filling of work array (modified zMat)
+             CALL timestart("fill work array")
              IF (noco%l_noco) THEN
                 DO iLAPW = 1,nvmax
                    IF (noco%l_ss) THEN
@@ -152,6 +153,7 @@ CONTAINS
                    work_c(:ne,:)=TRANSPOSE(zMat%data_c(:nvmax,:ne))
                 END IF
              END IF
+             CALL timestop("fill work array")
 
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
