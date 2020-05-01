@@ -219,18 +219,16 @@ CONTAINS
              ! (The complementary case is treated far below)
              IF (noco%l_soc.AND.sym%invs) THEN
                 IF (sym%invsat(iAtom).EQ.1) THEN
+                   jatom = sym%invsatnr(iAtom)
                    DO iLAPW = 1,nvmax
                       DO l = 0,atoms%lmax(iType)
                          ll1 = l* (l+1)
                          DO m = -l,l
                             lm = ll1 + m
-                            c_1 = CONJG(abCoeffs(iLAPW,lm+1))
-                            c_2 = CONJG(abCoeffs(iLAPW,lm+1+abSize))
-                            jatom = sym%invsatnr(iAtom)
                             lmp = ll1 - m
                             inv_f = (-1)**(l-m)
-                            c_1 =  CONJG(c_1) * inv_f
-                            c_2 =  CONJG(c_2) * inv_f
+                            c_1 = abCoeffs(iLAPW,lm+1) * inv_f
+                            c_2 = abCoeffs(iLAPW,lm+1+abSize) * inv_f
                             CALL zaxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                             CALL zaxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                          END DO
