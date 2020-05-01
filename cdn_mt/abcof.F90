@@ -15,7 +15,7 @@ CONTAINS
 
     USE m_juDFT
     USE m_types
-    USE m_constants, ONLY : tpi_const, ImagUnit
+    USE m_constants
     USE m_ylm
     USE m_setabc1lo
     USE m_abclocdn
@@ -24,44 +24,44 @@ CONTAINS
 
     IMPLICIT NONE
 
-    TYPE(t_input),INTENT(IN)  :: input
-    TYPE(t_usdus),INTENT(IN)  :: usdus
-    TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_oneD),INTENT(IN)   :: oneD
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_nococonv),INTENT(IN):: nococonv
-    TYPE(t_sym),INTENT(IN)    :: sym
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_mat),INTENT(IN)    :: zMat
+    TYPE(t_input),INTENT(IN)             :: input
+    TYPE(t_usdus),INTENT(IN)             :: usdus
+    TYPE(t_lapw),INTENT(IN)              :: lapw
+    TYPE(t_oneD),INTENT(IN)              :: oneD
+    TYPE(t_noco),INTENT(IN)              :: noco
+    TYPE(t_nococonv),INTENT(IN)          :: nococonv
+    TYPE(t_sym),INTENT(IN)               :: sym
+    TYPE(t_cell),INTENT(IN)              :: cell
+    TYPE(t_atoms),INTENT(IN)             :: atoms
+    TYPE(t_mat),INTENT(IN)               :: zMat
     TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
 
     ! scalar arguments
-    INTEGER, INTENT (IN) :: ne
-    INTEGER, INTENT (IN) :: jspin
+    INTEGER, INTENT(IN)        :: ne
+    INTEGER, INTENT(IN)        :: jspin
 
     ! array arguments
-    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(input%neig)
+    COMPLEX, INTENT(OUT)       :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(OUT)       :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(OUT)       :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+    REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
 
     ! Local objects
     TYPE(t_fjgj) :: fjgj
 
     ! Local scalars
-    COMPLEX cexp,phase,c_1,c_2
-    REAL tmk,qss(3)
-    REAL s2h, s2h_e(ne)
-    INTEGER i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
-    INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
-    LOGICAL l_force
+    INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
+    INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
+    REAL    :: tmk, qss(3), s2h, s2h_e(ne)
+    COMPLEX :: phase, c_1, c_2
+    LOGICAL :: l_force
 
     ! Local arrays
-    REAL fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
-    REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
-    COMPLEX ylm((atoms%lmaxd+1)**2)
-    COMPLEX ccchi(2,2)
+    REAL    :: fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
+    REAL    :: alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins)
+    REAL    :: clo1(atoms%nlod,input%jspins)
+    COMPLEX :: ylm((atoms%lmaxd+1)**2)
+    COMPLEX :: ccchi(2,2)
     REAL,    ALLOCATABLE :: work_r(:,:), realCoeffs(:,:), imagCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: work_c(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
@@ -187,6 +187,7 @@ CONTAINS
              END IF
              CALL timestop("gemm")
 
+             CALL timestart("local orbitals")
              ! Treatment of local orbitals
              DO lo = 1, atoms%nlo(iType)
                 DO nkvec = 1, lapw%nkvec(lo,iAtom)
@@ -214,10 +215,12 @@ CONTAINS
                                  lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
                 END DO
              END DO ! loop over LOs
+             CALL timestop("local orbitals")
 
              ! Treatment of inversion symmetric atoms for noco%l_soc.AND.sym%invs
              ! (The complementary case is treated far below)
              IF (noco%l_soc.AND.sym%invs) THEN
+                CALL timestart("invsym atoms")
                 IF (sym%invsat(iAtom).EQ.1) THEN
                    jatom = sym%invsatnr(iAtom)
                    DO iLAPW = 1,nvmax
@@ -235,10 +238,12 @@ CONTAINS
                       END DO
                    END DO ! loop over LAPWs
                 END IF ! IF (sym%invsat(iAtom).EQ.1)
+                CALL timestop("invsym atoms")
              END IF ! IF (noco%l_soc.AND.sym%invs)
 
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
+                CALL timestart("force contributions")
                 DO iLAPW = 1,nvmax
 
                    fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
@@ -296,6 +301,7 @@ CONTAINS
                       END DO ! loop over m
                    END DO ! loop over l
                 END DO ! loop over LAPWs
+                CALL timestop("force contributions")
              END IF
 
              IF (zmat%l_real) THEN
@@ -328,18 +334,19 @@ CONTAINS
        DO iAtom = 1, atoms%nat
           iType = atoms%itype(iAtom)
           IF (sym%invsat(iAtom).EQ.1) THEN
+             CALL timestart("invsym atoms")
              jAtom = sym%invsatnr(iAtom)
-             cexp = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jAtom) + atoms%taual(:,iAtom),lapw%bkpt))
+             phase = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jAtom) + atoms%taual(:,iAtom),lapw%bkpt))
              DO ilo = 1,atoms%nlo(iType)
                 l = atoms%llo(ilo,iType)
                 DO m = -l,l
                    inv_f = (-1.0)**(m+l)
                    DO ie = 1,ne
-                      ccof(m,ie,ilo,jatom) = inv_f * cexp * CONJG( ccof(-m,ie,ilo,iatom))
+                      ccof(m,ie,ilo,jatom) = inv_f * phase * CONJG( ccof(-m,ie,ilo,iatom))
                       IF(l_force) THEN
-                         force%acoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%acoflo(-m,ie,ilo,iatom))
-                         force%bcoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%bcoflo(-m,ie,ilo,iatom))
-                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * cexp * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
+                         force%acoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%acoflo(-m,ie,ilo,iatom))
+                         force%bcoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%bcoflo(-m,ie,ilo,iatom))
+                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * phase * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
                       END IF
                    END DO
                 END DO
@@ -350,16 +357,17 @@ CONTAINS
                    lm  = ll1 + m
                    lmp = ll1 - m
                    inv_f = (-1.0)**(m+l)
-                   acof(:ne,lm,jAtom) = inv_f * cexp * CONJG(acof(:ne,lmp,iAtom))
-                   bcof(:ne,lm,jAtom) = inv_f * cexp * CONJG(bcof(:ne,lmp,iAtom))
+                   acof(:ne,lm,jAtom) = inv_f * phase * CONJG(acof(:ne,lmp,iAtom))
+                   bcof(:ne,lm,jAtom) = inv_f * phase * CONJG(bcof(:ne,lmp,iAtom))
                    IF (atoms%l_geo(iType).AND.l_force) THEN
-                      force%e1cof(:ne,lm,jAtom) = inv_f * cexp * CONJG(force%e1cof(:ne,lmp,iAtom))
-                      force%e2cof(:ne,lm,jAtom) = inv_f * cexp * CONJG(force%e2cof(:ne,lmp,iAtom))
-                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * cexp * CONJG(force%aveccof(:,:ne,lmp,iAtom))
-                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * cexp * CONJG(force%bveccof(:,:ne,lmp,iAtom))
+                      force%e1cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e1cof(:ne,lmp,iAtom))
+                      force%e2cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e2cof(:ne,lmp,iAtom))
+                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%aveccof(:,:ne,lmp,iAtom))
+                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%bveccof(:,:ne,lmp,iAtom))
                    END IF
                 END DO
              END DO
+             CALL timestop("invsym atoms")
           END IF
        END DO
     END IF
