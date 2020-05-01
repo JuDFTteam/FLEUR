@@ -57,7 +57,6 @@ CONTAINS
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     COMPLEX ylm((atoms%lmaxd+1)**2)
     COMPLEX ccchi(2,2)
-    LOGICAL apw(0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE :: work_r(:,:), realCoeffs(:,:), imagCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: work_c(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
@@ -89,21 +88,6 @@ CONTAINS
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
     END IF
-
-    !+APW+lo
-    DO iType = 1, atoms%ntype
-       DO l = 0,atoms%lmax(iType)
-          apw(l,iType) = .FALSE.
-          DO lo = 1,atoms%nlo(iType)
-             IF (atoms%l_dulo(lo,iType)) apw(l,iType) = .TRUE.
-          ENDDO
-          IF ((input%l_useapw).AND.(atoms%lapw_l(iType).GE.l)) apw(l,iType) = .FALSE.
-       ENDDO
-       DO lo = 1,atoms%nlo(iType)
-          IF (atoms%l_dulo(lo,iType)) apw(atoms%llo(lo,iType),iType) = .TRUE.
-       ENDDO
-    ENDDO
-    !+APW+lo
 
     DO iAtom = 1, atoms%nat
        iType = atoms%itype(iAtom)
