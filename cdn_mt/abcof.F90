@@ -48,7 +48,7 @@ CONTAINS
     COMPLEX cexp,phase,c_1,c_2
     REAL s,tmk,qss(3)
     REAL s2h, s2h_e(ne)
-    INTEGER i,j,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
+    INTEGER i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
     INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
     LOGICAL l_force
 
@@ -130,14 +130,10 @@ CONTAINS
 
           nvmax=lapw%nv(jspin)
           IF (noco%l_ss) nvmax=lapw%nv(iintsp)
-          IF (iintsp .EQ. 1) THEN
-             qss= - nococonv%qss/2
-          ELSE
-             qss= + nococonv%qss/2
-          END IF
+          qss = MERGE(-1.0,1.0,iintsp.EQ.1)*nococonv%qss/2.0
 
           IF ((sym%invsat(iAtom).EQ.0) .OR. (sym%invsat(iAtom).EQ.1)) THEN
-             !--->        loop over lapws
+
              IF (zmat%l_real) THEN
                 ALLOCATE ( work_r(ne,nvmax) )
              ELSE
@@ -200,11 +196,7 @@ CONTAINS
              CALL timestop("gemm")
 
              DO iLAPW = 1,nvmax
-                IF (noco%l_ss) THEN
-                   fg(:,iLAPW) = lapw%gvec(:,iLAPW,iintsp) + qss
-                ELSE
-                   fg(:,iLAPW) = lapw%gvec(:,iLAPW,jspin) + qss
-                END IF ! (noco%l_ss)
+                fg(:,iLAPW) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
                 fk = lapw%bkpt + fg(:,iLAPW)
                 s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                 IF(l_force) THEN
@@ -214,11 +206,11 @@ CONTAINS
 
                 IF (oneD%odi%d1) THEN
                    inap = oneD%ods%ngopr(iAtom)
-                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
+                   fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:,iLAPW))
                 ELSE
                    nap = sym%ngopr(iAtom)
                    inap = sym%invtab(nap)
-                   fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
+                   fgr = MATMUL(sym%mrot(:,:,inap),fg(:,iLAPW))
                 END IF
                 fgp = MATMUL(fgr,cell%bmat)
 
@@ -275,20 +267,18 @@ CONTAINS
                 DO nkvec = 1, lapw%nkvec(lo,iAtom)
                    iLAPW = lapw%kvec(nkvec,lo,iAtom)
                    fk = lapw%bkpt + fg(:,iLAPW)
-                   tmk = tpi_const* (fk(1)*atoms%taual(1,iAtom)+&
-                                     fk(2)*atoms%taual(2,iAtom)+&
-                                     fk(3)*atoms%taual(3,iAtom))
+                   tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
 
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(iAtom)
-                      fkr = MATMUL(fk(:),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
-                      fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(oneD%ods%mrot(:,:,inap)))
+                      fkr = MATMUL(oneD%ods%mrot(:,:,inap),fk(:))
+                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:,iLAPW))
                    ELSE
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
-                      fkr = MATMUL(fk(:),TRANSPOSE(sym%mrot(:,:,inap)))
-                      fgr = MATMUL(fg(:,iLAPW),TRANSPOSE(sym%mrot(:,:,inap)))
+                      fkr = MATMUL(sym%mrot(:,:,inap),fk(:))
+                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:,iLAPW))
                    END IF
                    fkp = MATMUL(fkr,cell%bmat)
                    fgp = MATMUL(fgr,cell%bmat)
