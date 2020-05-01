@@ -51,7 +51,7 @@ CONTAINS
 
     ! Local scalars
     COMPLEX cexp,phase,c_1,c_2
-    REAL s,tmk,qss(3)
+    REAL tmk,qss(3)
     REAL s2h, s2h_e(ne)
     INTEGER i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
     INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
@@ -215,35 +215,55 @@ CONTAINS
                 END DO
              END DO ! loop over LOs
 
-             ! Other stuff
-             DO iLAPW = 1,nvmax
-                fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
-                fk = lapw%bkpt + fg(:)
-                s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
-                IF(l_force) THEN
-                   s2h = 0.5*s
+             ! Treatment of inversion symmetric atoms for noco%l_soc.AND.sym%invs
+             ! (The complementary case is treated far below)
+             IF (noco%l_soc.AND.sym%invs) THEN
+                IF (sym%invsat(iAtom).EQ.1) THEN
+                   DO iLAPW = 1,nvmax
+                      DO l = 0,atoms%lmax(iType)
+                         ll1 = l* (l+1)
+                         DO m = -l,l
+                            lm = ll1 + m
+                            c_1 = CONJG(abCoeffs(iLAPW,lm+1))
+                            c_2 = CONJG(abCoeffs(iLAPW,lm+1+abSize))
+                            jatom = sym%invsatnr(iAtom)
+                            lmp = ll1 - m
+                            inv_f = (-1)**(l-m)
+                            c_1 =  CONJG(c_1) * inv_f
+                            c_2 =  CONJG(c_2) * inv_f
+                            CALL zaxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
+                            CALL zaxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
+                         END DO
+                      END DO
+                   END DO ! loop over LAPWs
+                END IF ! IF (sym%invsat(iAtom).EQ.1)
+             END IF ! IF (noco%l_soc.AND.sym%invs)
+
+             ! Force contributions
+             IF (atoms%l_geo(iType).AND.l_force) THEN
+                DO iLAPW = 1,nvmax
+
+                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
+                   fk = lapw%bkpt + fg(:)
+                   s2h = 0.5 * DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                    s2h_e(:ne) = s2h-eig(:ne)
-                END IF
+                   IF (oneD%odi%d1) THEN
+                      inap = oneD%ods%ngopr(iAtom)
+                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
+                   ELSE
+                      nap = sym%ngopr(iAtom)
+                      inap = sym%invtab(nap)
+                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
+                   END IF
+                   fgp = MATMUL(fgr,cell%bmat)
 
-                IF (oneD%odi%d1) THEN
-                   inap = oneD%ods%ngopr(iAtom)
-                   fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
-                ELSE
-                   nap = sym%ngopr(iAtom)
-                   inap = sym%invtab(nap)
-                   fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
-                END IF
-                fgp = MATMUL(fgr,cell%bmat)
+                   DO l = 0,atoms%lmax(iType)
+                      ll1 = l* (l+1)
+                      DO m = -l,l
+                         lm = ll1 + m
+                         c_1 = CONJG(abCoeffs(iLAPW,lm+1))
+                         c_2 = CONJG(abCoeffs(iLAPW,lm+1+abSize))
 
-                DO l = 0,atoms%lmax(iType)
-                   ll1 = l* (l+1)
-                   !     ----> loop over m
-                   DO m = -l,l
-                      lm = ll1 + m
-                      c_1 = CONJG(abCoeffs(iLAPW,lm+1))
-                      c_2 = CONJG(abCoeffs(iLAPW,lm+1+abSize))
-
-                      IF (atoms%l_geo(iType).AND.l_force) THEN
                          IF (zmat%l_real) THEN
                             force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * work_r(:ne,iLAPW) * s2h_e(:ne)
                             force%e2cof(:ne,lm,iAtom) = force%e2cof(:ne,lm,iAtom) + c_2 * work_r(:ne,iLAPW) * s2h_e(:ne)
@@ -259,18 +279,14 @@ CONTAINS
                                force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * work_c(:ne,iLAPW) * fgp(i)
                             END DO
                          END IF
-                      END IF
 
-                      IF (noco%l_soc.AND.sym%invs) THEN
-                         IF (sym%invsat(iAtom).EQ.1) THEN
-                            jatom = sym%invsatnr(iAtom)
-                            lmp = ll1 - m
-                            inv_f = (-1)**(l-m)
-                            c_1 =  CONJG(c_1) * inv_f
-                            c_2 =  CONJG(c_2) * inv_f
-                            CALL zaxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
-                            CALL zaxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
-                            IF (atoms%l_geo(iType).AND.l_force) THEN
+                         IF (noco%l_soc.AND.sym%invs) THEN
+                            IF (sym%invsat(iAtom).EQ.1) THEN
+                               jatom = sym%invsatnr(iAtom)
+                               lmp = ll1 - m
+                               inv_f = (-1)**(l-m)
+                               c_1 =  CONJG(c_1) * inv_f
+                               c_2 =  CONJG(c_2) * inv_f
                                CALL zaxpy(ne,c_1,work_c(:,iLAPW)*s2h_e(:),1, force%e1cof(1,lmp,jatom),1)
                                CALL zaxpy(ne,c_2,work_c(:,iLAPW)*s2h_e(:),1, force%e2cof(1,lmp,jatom),1)
                                DO i = 1,3
@@ -279,10 +295,10 @@ CONTAINS
                                END DO
                             END IF
                          END IF
-                      END IF
-                   END DO ! loop over m
-                END DO ! loop over l
-             END DO ! loop over LAPWs
+                      END DO ! loop over m
+                   END DO ! loop over l
+                END DO ! loop over LAPWs
+             END IF
 
              IF (zmat%l_real) THEN
                 DEALLOCATE(work_r)
