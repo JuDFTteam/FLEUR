@@ -89,6 +89,7 @@ CONTAINS
        force%cveccof = CMPLX(0.0,0.0)
     END IF
 
+    ! loop over atoms
     DO iAtom = 1, atoms%nat
        iType = atoms%itype(iAtom)
 
@@ -108,7 +109,7 @@ CONTAINS
 
        nintsp = 1
        IF (noco%l_ss) nintsp = 2
-       !---> loop over the interstitial spin
+       ! loop over the interstitial spin
        DO iintsp = 1,nintsp
 
           nvmax=lapw%nv(jspin)
