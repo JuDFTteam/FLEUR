@@ -6,7 +6,6 @@ CONTAINS
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
     !     ************************************************************
-#include "cpp_double.h"
 
     USE m_juDFT
     USE m_types
@@ -65,22 +64,22 @@ CONTAINS
 
     CALL timestart("abcof")
 
-    CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
-
-    ALLOCATE(abCoeffs(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
-
+    ! Checks
     IF (zmat%l_real) THEN
        IF (noco%l_soc.AND.sym%invs) CALL judft_error("BUG in abcof, SOC&INVS but real?")
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
 
+    ! Allocations
+    CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
+    ALLOCATE(abCoeffs(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+    ! Initializations
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
     l_force = .FALSE.
-    IF(PRESENT(eig).AND.input%l_f) THEN
-       l_force = .TRUE.
-    END IF
+    IF(PRESENT(eig).AND.input%l_f) l_force = .TRUE.
     IF(l_force) THEN
        force%acoflo  = CMPLX(0.0,0.0)
        force%bcoflo  = CMPLX(0.0,0.0)
@@ -91,7 +90,7 @@ CONTAINS
        force%cveccof = CMPLX(0.0,0.0)
     END IF
 
-    !+APW_LO
+    !+APW+lo
     DO iType = 1, atoms%ntype
        DO l = 0,atoms%lmax(iType)
           apw(l,iType) = .FALSE.
@@ -104,7 +103,7 @@ CONTAINS
           IF (atoms%l_dulo(lo,iType)) apw(atoms%llo(lo,iType),iType) = .TRUE.
        ENDDO
     ENDDO
-    !+APW_LO
+    !+APW+lo
 
     DO iAtom = 1, atoms%nat
        iType = atoms%itype(iAtom)
@@ -140,6 +139,7 @@ CONTAINS
                 ALLOCATE ( work_c(ne,nvmax) )
              ENDIF
 
+             ! Filling of work array (modified zMat)
              IF (noco%l_noco) THEN
                 DO iLAPW = 1,nvmax
                    IF (noco%l_ss) THEN
@@ -163,11 +163,13 @@ CONTAINS
                 END IF
              END IF
 
+             ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
 
+             ! Obtaining A, B coefficients for eigenfunctions
              CALL timestart("gemm")
              IF (zmat%l_real) THEN
                 ! variant with zgemm
@@ -195,6 +197,7 @@ CONTAINS
              END IF
              CALL timestop("gemm")
 
+             ! Other stuff
              DO iLAPW = 1,nvmax
                 fg(:,iLAPW) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
                 fk = lapw%bkpt + fg(:,iLAPW)
@@ -247,14 +250,14 @@ CONTAINS
                             inv_f = (-1)**(l-m)
                             c_1 =  CONJG(c_1) * inv_f
                             c_2 =  CONJG(c_2) * inv_f
-                            CALL CPP_BLAS_caxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
-                            CALL CPP_BLAS_caxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
+                            CALL zaxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
+                            CALL zaxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                             IF (atoms%l_geo(iType).AND.l_force) THEN
-                               CALL CPP_BLAS_caxpy(ne,c_1,work_c(:,iLAPW)*s2h_e(:),1, force%e1cof(1,lmp,jatom),1)
-                               CALL CPP_BLAS_caxpy(ne,c_2,work_c(:,iLAPW)*s2h_e(:),1, force%e2cof(1,lmp,jatom),1)
+                               CALL zaxpy(ne,c_1,work_c(:,iLAPW)*s2h_e(:),1, force%e1cof(1,lmp,jatom),1)
+                               CALL zaxpy(ne,c_2,work_c(:,iLAPW)*s2h_e(:),1, force%e2cof(1,lmp,jatom),1)
                                DO i = 1,3
-                                  CALL CPP_BLAS_caxpy(ne,c_1,work_c(:,iLAPW)*fgp(i),1, force%aveccof(i,1,lmp,jatom),3)
-                                  CALL CPP_BLAS_caxpy(ne,c_2,work_c(:,iLAPW)*fgp(i),1, force%bveccof(i,1,lmp,jatom),3)
+                                  CALL zaxpy(ne,c_1,work_c(:,iLAPW)*fgp(i),1, force%aveccof(i,1,lmp,jatom),3)
+                                  CALL zaxpy(ne,c_2,work_c(:,iLAPW)*fgp(i),1, force%bveccof(i,1,lmp,jatom),3)
                                END DO
                             END IF
                          END IF
@@ -294,10 +297,12 @@ CONTAINS
              ELSE
                 DEALLOCATE(work_c)
              END IF
+
           END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
 
+    ! Treatment of atoms inversion symmetric to others
     IF (noco%l_soc.AND.sym%invs) THEN
 
        !
