@@ -1,11 +1,17 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_abcof
+
 CONTAINS
+
+  ! The subroutine abcof calculates the A, B, and C coefficients for the
+  ! eigenfunctions. Also some force contributions can be calculated.
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
                    noco,nococonv,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
-    !     ************************************************************
-    !     subroutine constructs the a,b coefficients of the linearized
-    !     m.t. wavefunctions for each band and atom.       c.l. fu
-    !     ************************************************************
 
     USE m_juDFT
     USE m_types
@@ -52,8 +58,7 @@ CONTAINS
     LOGICAL l_force
 
     ! Local arrays
-    REAL fg(3,MAXVAL(lapw%nv(:)))
-    REAL fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
+    REAL fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     COMPLEX ylm((atoms%lmaxd+1)**2)
     COMPLEX ccchi(2,2)
@@ -182,10 +187,38 @@ CONTAINS
              END IF
              CALL timestop("gemm")
 
+             ! Treatment of local orbitals
+             DO lo = 1, atoms%nlo(iType)
+                DO nkvec = 1, lapw%nkvec(lo,iAtom)
+                   iLAPW = lapw%kvec(nkvec,lo,iAtom)
+                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
+                   fk = lapw%bkpt + fg(:)
+                   tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
+                   phase = CMPLX(COS(tmk),SIN(tmk))
+
+                   IF (oneD%odi%d1) THEN
+                      inap = oneD%ods%ngopr(iAtom)
+                      fkr = MATMUL(oneD%ods%mrot(:,:,inap),fk(:))
+                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
+                   ELSE
+                      nap = sym%ngopr(iAtom)
+                      inap = sym%invtab(nap)
+                      fkr = MATMUL(sym%mrot(:,:,inap),fk(:))
+                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
+                   END IF
+                   fkp = MATMUL(fkr,cell%bmat)
+                   fgp = MATMUL(fgr,cell%bmat)
+
+                   CALL ylm4(atoms%lmax(iType),fkp,ylm)
+                   CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
+                                 lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
+                END DO
+             END DO ! loop over LOs
+
              ! Other stuff
              DO iLAPW = 1,nvmax
-                fg(:,iLAPW) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
-                fk = lapw%bkpt + fg(:,iLAPW)
+                fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
+                fk = lapw%bkpt + fg(:)
                 s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                 IF(l_force) THEN
                    s2h = 0.5*s
@@ -194,11 +227,11 @@ CONTAINS
 
                 IF (oneD%odi%d1) THEN
                    inap = oneD%ods%ngopr(iAtom)
-                   fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:,iLAPW))
+                   fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
                 ELSE
                    nap = sym%ngopr(iAtom)
                    inap = sym%invtab(nap)
-                   fgr = MATMUL(sym%mrot(:,:,inap),fg(:,iLAPW))
+                   fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
                 END IF
                 fgp = MATMUL(fgr,cell%bmat)
 
@@ -250,32 +283,6 @@ CONTAINS
                    END DO ! loop over m
                 END DO ! loop over l
              END DO ! loop over LAPWs
-
-             DO lo = 1, atoms%nlo(iType)
-                DO nkvec = 1, lapw%nkvec(lo,iAtom)
-                   iLAPW = lapw%kvec(nkvec,lo,iAtom)
-                   fk = lapw%bkpt + fg(:,iLAPW)
-                   tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
-                   phase = CMPLX(COS(tmk),SIN(tmk))
-
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                      fkr = MATMUL(oneD%ods%mrot(:,:,inap),fk(:))
-                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:,iLAPW))
-                   ELSE
-                      nap = sym%ngopr(iAtom)
-                      inap = sym%invtab(nap)
-                      fkr = MATMUL(sym%mrot(:,:,inap),fk(:))
-                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:,iLAPW))
-                   END IF
-                   fkp = MATMUL(fkr,cell%bmat)
-                   fgp = MATMUL(fgr,cell%bmat)
-
-                   CALL ylm4(atoms%lmax(iType),fkp,ylm)
-                   CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
-                                 lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
-                END DO
-             END DO ! loop over LOs
 
              IF (zmat%l_real) THEN
                 DEALLOCATE(work_r)
