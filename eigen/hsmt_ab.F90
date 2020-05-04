@@ -13,7 +13,7 @@ CONTAINS
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
-    USE m_ylm
+    USE m_ylm 
     USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
@@ -73,14 +73,20 @@ CONTAINS
     !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fjgj,abclo,cell,atoms,sym) &
     !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
+#else
+    !$acc kernels present(ab)
+    ab(:,:)=0.0
+    !$acc end kernels
 #endif
-    !$acc kernels present(fjgj,fjfg%fj,fjgj%gj,ab)
+    
+    !$acc parallel loop present(fjgj%fj,fjgj%gj,ab) private(vmult,k,ylm,lm,invsfct,lo,nkvec) 
     DO k = 1,lapw%nv(iintsp)
        !-->    generate spherical harmonics
        vmult(:) =  gkrot(:,k)
        CALL ylm4(lmax,vmult,ylm)
        !-->  synthesize the complex conjugates of a and b
-       DO l = 0,lmax
+       !$acc  loop vector private(l,ll1,m,term)
+       DO l = 0,lmax 
           ll1 = l* (l+1)
           DO m = -l,l
              term = c_ph(k,iintsp)*ylm(ll1+m+1)
@@ -88,6 +94,7 @@ CONTAINS
              ab(k,ll1+m+1+ab_size) = fjgj%gj(k,l,ispin,iintsp)*term
           END DO
        END DO
+       !$acc end loop 
        IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)
        IF (PRESENT(abclo)) THEN
           !determine also the abc coeffs for LOs
@@ -110,11 +117,15 @@ CONTAINS
        ENDIF
 
     ENDDO !k-loop
-    !$acc kernels
+    !$acc end parallel loop
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif
-    IF (size(ab,1) > lapw%nv(iintsp)) ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
+    IF (size(ab,1) > lapw%nv(iintsp)) THEN
+       !$acc kernels present(ab)
+       ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
+       !$acc end kernels
+    ENDIF
     IF (.NOT.l_apw) ab_size=ab_size*2
 
   END SUBROUTINE hsmt_ab

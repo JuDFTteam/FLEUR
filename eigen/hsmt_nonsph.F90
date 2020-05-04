@@ -96,9 +96,10 @@ CONTAINS
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
           cchi=MERGE(chi,chi*2,(sym%invsat(na)==0))
+          call timestart("hsmt_ab")
           CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
-
-          !$acc update device(ab)
+          call timestop("hsmt_ab")
+          !!$acc update device(ab)
           !$acc host_data use_device(ab,ab1,h_loc)
           CALL CPP_zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
                      h_loc,size(td%h_loc,1),cmplx(0.,0.),ab1,size_ab1)
