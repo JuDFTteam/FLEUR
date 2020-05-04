@@ -4,65 +4,67 @@ MODULE m_doswt
    !     of k.  the array w has beeen cleared before entering.
    !
    USE m_trisrt
+   USE m_types
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE doswt(ei,nemax,jspins,ntria,itria,atr,eig,w)
+   SUBROUTINE doswt(ei,nemax,jspins,kpts,eig,w)
 
-      INTEGER, INTENT(IN) :: jspins
-      INTEGER, INTENT(IN) :: ntria
-      REAL,    INTENT(IN) :: ei
-      INTEGER, INTENT(IN) :: nemax(:)
-      INTEGER, INTENT(IN) :: itria(:,:)      !(3,ntriad)
-      REAL,    INTENT(IN) :: atr(:)          !(ntriad)
-      REAL,    INTENT(IN) :: eig(:,:,:)      !(neigd,nkptd,jspd)
-      REAL,    INTENT(OUT):: w(:,:,:)        !(neigd,nkptd,jspd)
+      INTEGER,       INTENT(IN) :: jspins
+      TYPE(t_kpts),  INTENT(IN) :: kpts
+      REAL,          INTENT(IN) :: ei
+      INTEGER,       INTENT(IN) :: nemax(:)
+      REAL,          INTENT(IN) :: eig(:,:,:)      !(neig,nkpt,jspins)
+      REAL,          INTENT(OUT):: w(:,:,:)        !(neig,nkpt,jspins)
 
-      INTEGER :: jsp,i,n
+      INTEGER :: jspin,iBand,itria
       INTEGER :: k1,k2,k3
       INTEGER :: neig
       REAL    :: e1,e2,e3
       REAl    :: ee,e32,e31,e21,s
 
-      DO jsp = 1,jspins
-         neig = nemax(jsp)
-         DO i = 1,neig
-            DO n = 1,ntria
-               k1 = itria(1,n)
-               k2 = itria(2,n)
-               k3 = itria(3,n)
-               e1 = eig(i,k1,jsp)
-               e2 = eig(i,k2,jsp)
-               e3 = eig(i,k3,jsp)
+      DO jspin = 1,jspins
+         neig = nemax(jspin)
+         DO iBand = 1,neig
+            DO itria = 1,kpts%ntet
+               !Get the k-points and eigenvalues
+               !of the current triangle
+               k1 = kpts%ntetra(1,itria)
+               k2 = kpts%ntetra(2,itria)
+               k3 = kpts%ntetra(3,itria)
+               e1 = eig(iBand,k1,jspin)
+               e2 = eig(iBand,k2,jspin)
+               e3 = eig(iBand,k3,jspin)
+               !Sort by ascending eigenvalues
                CALL trisrt(e1,e2,e3,k1,k2,k3)
-               IF (e1.LE.-9999.0) CYCLE
-               IF (ei.LE.e1) CYCLE
+               IF (e1.LE.-9999.0) CYCLE !Not all eigenvalues available
+               IF (ei.LE.e1) CYCLE !triangle not occupied
                IF (ei.GE.e3) THEN
                   !---> e3<e
-                  s = atr(n)/3.
-                  w(i,k1,jsp) = w(i,k1,jsp) + s
-                  w(i,k2,jsp) = w(i,k2,jsp) + s
-                  w(i,k3,jsp) = w(i,k3,jsp) + s
+                  s = kpts%voltet(itria)/kpts%ntet/3.0
+                  w(iBand,k1,jspin) = w(iBand,k1,jspin) + s
+                  w(iBand,k2,jspin) = w(iBand,k2,jspin) + s
+                  w(iBand,k3,jspin) = w(iBand,k3,jspin) + s
                ELSEIF (ei.GT.e2) THEN
                   !---> e2<ei<e3
                   ee = e3 - ei
                   e31 = ee/ (e3-e1)
                   e32 = ee/ (e3-e2)
-                  s = atr(n)/3.
-                  w(i,k1,jsp) = w(i,k1,jsp) + s* (1.-e31*e31*e32)
-                  w(i,k2,jsp) = w(i,k2,jsp) + s* (1.-e31*e32*e32)
-                  w(i,k3,jsp) =w(i,k3,jsp)+s*(1.-e31*e32*(3.-e31-e32))
+                  s = kpts%voltet(itria)/kpts%ntet/3.0
+                  w(iBand,k1,jspin) = w(iBand,k1,jspin) + s* (1.-e31*e31*e32)
+                  w(iBand,k2,jspin) = w(iBand,k2,jspin) + s* (1.-e31*e32*e32)
+                  w(iBand,k3,jspin) = w(iBand,k3,jspin) + s* (1.-e31*e32*(3.-e31-e32))
                ELSE
                   !---> e1<ei<e2
                   ee = ei - e1
                   e31 = ee/ (e3-e1)
                   e21 = ee/ (e2-e1)
-                  s = atr(n)*e31*e21/3.0
-                  w(i,k1,jsp) = w(i,k1,jsp) + s* (3.0-e21-e31)
-                  w(i,k2,jsp) = w(i,k2,jsp) + s*e21
-                  w(i,k3,jsp) = w(i,k3,jsp) + s*e31
+                  s = kpts%voltet(itria)/kpts%ntet*e31*e21/3.0
+                  w(iBand,k1,jspin) = w(iBand,k1,jspin) + s* (3.0-e21-e31)
+                  w(iBand,k2,jspin) = w(iBand,k2,jspin) + s*e21
+                  w(iBand,k3,jspin) = w(iBand,k3,jspin) + s*e31
                ENDIF
 
             ENDDO

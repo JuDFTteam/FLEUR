@@ -26,15 +26,18 @@ MODULE m_dosef
          s = 0.0
          DO iBand = 1,neig
             DO itria = 1,kpts%ntet
+               !Get the k-points and eigenvalues
+               !of the current triangle
                k1 = kpts%ntetra(1,itria)
                k2 = kpts%ntetra(2,itria)
                k3 = kpts%ntetra(3,itria)
                e1 = eig(iBand,k1,jspin)
                e2 = eig(iBand,k2,jspin)
                e3 = eig(iBand,k3,jspin)
+               !Sort by ascending eigenvalues
                CALL trisrt(e1,e2,e3,k1,k2,k3)
-               IF (e1.LE.-9999.0) cycle
-               IF ((ei.LT.e1) .OR. (ei.GE.e3)) cycle
+               IF (e1.LE.-9999.0) cycle !Not all eigenvalues available
+               IF ((ei.LT.e1) .OR. (ei.GE.e3)) cycle !triangle not contributing
                IF (ei.GT.e2) THEN
                   !--->  e2<ei<e3
                   e31 = e3 - e1
