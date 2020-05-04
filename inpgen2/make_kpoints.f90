@@ -408,7 +408,8 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       !nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       nbound = 0
        random  = bz_integration==2.AND..NOT.film
        idimens = MERGE(2,3,film)
 
