@@ -17,7 +17,7 @@ MODULE m_dosint
       REAL,          INTENT(IN)  :: eig(:,:,:)    !(neig,nkpt,jspins)
       REAL,          INTENT(OUT) :: ct
 
-      INTEGER :: jsp,i,n
+      INTEGER :: jspin,iBand,itria
       INTEGER :: k1,k2,k3
       INTEGER :: neig
       REAL    :: e1,e2,e3
