@@ -146,7 +146,7 @@ MODULE m_fertri
          !
          !--->   obtain weights needed for integration
          !
-         CALL doswt(ei,nemax,jspins,ntria,itria,atr,eig,w)
+         CALL doswt(ei,nemax,jspins,kpts,eig,w)
 
       ENDIF ! .NOT.input%film
       !
