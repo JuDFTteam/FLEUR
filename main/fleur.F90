@@ -439,18 +439,18 @@ END IF
           IF (fi%sliceplot%iplot.NE.0) THEN
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
    !               CDN including core charge
-      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
 #endif
    END IF
                 CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
                                fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
 #endif
    END IF
 END IF
