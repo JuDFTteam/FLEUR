@@ -17,9 +17,9 @@ try:
 
 
    if(te.parallel):
-      te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary])
+      te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary, "-trace"])
    else:
-      te.run([te.binary])
+      te.run([te.binary, "-trace"])
 
 
    te.check_value_outfile("HF total energy=", "htr", [-1063.8587731477, -1063.8383730939], 0.000001)
@@ -28,6 +28,8 @@ try:
    exp_bandgap = 28 * [None]
    exp_bandgap[27] = 0.2771
    te.check_value_outfile("bandgap                     :", "htr", exp_bandgap, 0.0001)
+
+   sys.exit(te.errors)
 
 except Exception as e:
    te.log_error(f"Error: {e}")

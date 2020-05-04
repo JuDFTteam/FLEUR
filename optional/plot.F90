@@ -7,9 +7,6 @@ MODULE m_plot
    USE m_types
    USE m_juDFT
    USE m_constants
-   
-
-
 
    IMPLICIT NONE
 
@@ -24,34 +21,37 @@ MODULE m_plot
    !
    ! A. Neukirchen & R. Hilgers, September 2019
    !
-   !Added OMP+MPI Parallelization, R. Hilgers March 2020
-   !------------------------------------------------
+   ! Added OMP+MPI Parallelization, R. Hilgers March 2020
+   !
+   ! Added 3D vectorplot option and plotting only MT option as well as  
+   ! single MT only plots,  A. Neukirchen and R. Hilgers April 2020
+   !
+   !-----------------------------------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
              matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
-   SUBROUTINE checkplotinp()
+   SUBROUTINE checkplotinp(mpi)
 
       !--------------------------------------------------------------------------
       ! Checks for existing plot input. If an ancient plotin file is used, an
       ! error is called. If no usable plot_inp exists, a new one is generated.
       !--------------------------------------------------------------------------
-
+      TYPE(t_mpi),                 INTENT(IN) :: mpi
       LOGICAL :: oldform,newform
 
       oldform=.FALSE.
-      INQUIRE(file="plotin",exist = oldform)
+      IF(mpi%irank.EQ.0) INQUIRE(file="plotin",exist = oldform)
 
       IF (oldform) THEN
-         CALL juDFT_error("Use of plotin file no longer supported", &
-                          calledby="plot")
+          CALL juDFT_error("Use of plotin file no longer supported", calledby="plot")
       END IF
-      INQUIRE(file="plot_inp",exist = newform)
+      newform=.FALSE.
+      IF(mpi%irank.EQ.0) INQUIRE(file="plot_inp",exist = newform)
       IF (newform) THEN
-        CALL juDFT_error("Use of plot_inp file no longer supported", &
-        calledby="plot")
+         CALL juDFT_error("Use of plot_inp file no longer supported", calledby="plot")
       END IF
 
 
@@ -564,9 +564,10 @@ CONTAINS
       REAL,               ALLOCATABLE :: xdnout(:)
       REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
       REAL,               ALLOCATABLE :: points(:,:,:,:)
+      REAL,               ALLOCATABLE :: tempVecs(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
-      INTEGER                         :: grid(3),k,rank
+      INTEGER                         :: grid(3),k
       REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
@@ -576,7 +577,7 @@ CONTAINS
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
-      integer:: ierr,mpiSize
+      integer:: ierr
 #ifdef CPP_MPI
    INCLUDE 'mpif.h'
 #endif
@@ -603,14 +604,25 @@ CONTAINS
          numInDen        = 1
          numOutFiles     = 1
       END IF
+
+      polar = sliceplot%polar
+      xsf=sliceplot%format==PLOT_XSF_FORMAT
+
+      IF((polar).AND.(.NOT.noco%l_noco)) THEN
+         CALL juDFT_warn("l_noco=F and making polar plots is not compatible.",calledby="plot.f90")
+      END IF
+
+      IF (polar.AND.(numOutFiles==4)) THEN
+         numOutFiles = 7
+      END IF
+
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))
-
 
       DO i = 1, numInDen
 
          ! TODO: Does this work as intended?
-         IF ((numInDen.NE.4).AND.(score)) THEN
+         IF ((numInDen.NE.4).AND.(score).AND.(mpi%irank.EQ.0)) THEN
             OPEN (17,file='cdnc',form='unformatted',status='old')
             REWIND 17
             DO jspin = 1, input%jspins
@@ -627,27 +639,13 @@ CONTAINS
             END DO
             CLOSE (17)
          ELSE IF (score) THEN
-                  IF (mpi%irank == 0) CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
+                 CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
          END IF
       END DO
 
       IF (noco%l_ss) THEN
          qssc = MATMUL(TRANSPOSE(cell%bmat),nococonv%qss)
       END IF
-
-      ! Open the plot_inp file for input
-
-      !OPEN (18,file='plot_inp')
-      !READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
-      polar = sliceplot%polar
-      !IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
-      !   polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
-      !     IF (polar) THEN
-      !      numOutFiles = 7
-      !   END IF
-      !END IF
-      xsf=sliceplot%format==PLOT_XSF_FORMAT
-
 
       IF (numOutFiles.EQ.1) THEN
          outFilenames(1) = TRIM(denName)
@@ -667,11 +665,15 @@ CONTAINS
       END IF
 
       ! If xsf is specified we create input files for xcrysden
-      IF (xsf) THEN
+      IF (xsf.AND.(mpi%irank.EQ.0)) THEN
          DO i = 1, numOutFiles
             OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
             CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
          END DO
+      END IF
+
+      IF (size(sliceplot%plot).EQ.0) THEN
+         CALL juDFT_error('You set iplot/=0 without specifying a plot in the input.', calledby = 'plot')
       END IF
 
       ! Loop over all plots
@@ -679,16 +681,24 @@ CONTAINS
         twodim=sliceplot%plot(nplo)%twodim
         cartesian=sliceplot%plot(nplo)%cartesian
         grid=sliceplot%plot(nplo)%grid
+        IF(.NOT.(MODULO(grid(3),mpi%isize)).EQ.0) CALL juDFT_error('Your grid z component doesnt fit the # of MPI processed. ',calledby='plot.F90')
         ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
         ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
+        ALLOCATE(tempVecs(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
         vec1=sliceplot%plot(nplo)%vec1
         vec2=sliceplot%plot(nplo)%vec2
         vec3=sliceplot%plot(nplo)%vec3
         zero=sliceplot%plot(nplo)%zero
         filename=sliceplot%plot(nplo)%filename
-         IF (twodim.AND.ANY(grid(1:2)<1).AND.mpi%irank == 0) &
+
+         IF (xsf.AND.sliceplot%plot(nplo)%vecField.AND.(mpi%irank.EQ.0)) THEN
+            OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted')
+            CALL xsf_WRITE_atoms(nfile+10,atoms,input%film,oneD%odi%d1,cell%amat)
+         END IF
+
+         IF (twodim.AND.ANY(grid(1:2)<1).AND.(mpi%irank .EQ. 0)) &
                   CALL juDFT_error("Illegal grid size in plot",calledby="plot")
-         IF (.NOT.twodim.AND.ANY(grid<1).AND.mpi%irank == 0) &
+         IF (.NOT.twodim.AND.ANY(grid<1).AND.(mpi%irank .EQ. 0)) &
                    CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (twodim) grid(3) = 1
 
@@ -701,17 +711,17 @@ CONTAINS
          END IF
 
          !Open the file
-         IF (filename =="default".AND.mpi%irank == 0) WRITE(filename,'(a,i2)') "plot",nplo
+         IF (filename =="default".AND.(mpi%irank .EQ. 0)) WRITE(filename,'(a,i2)') "plot",nplo
 
          IF (xsf) THEN
             DO i = 1, numOutFiles
-               IF (mpi%irank == 0) CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+               IF (mpi%irank .EQ.0) CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
             END DO
          ELSE
-            OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
+               IF (mpi%irank .EQ. 0) OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
          END IF
 
-         IF (twodim.AND.mpi%irank == 0) THEN
+         IF (twodim.AND.mpi%irank .EQ. 0) THEN
             IF (numOutFiles.EQ.1) THEN
                WRITE(nfile,'(3a15)') 'x','y','f'
             ELSE IF (numOutFiles.EQ.2) THEN
@@ -722,27 +732,22 @@ CONTAINS
                WRITE(nfile,'(9a15)') 'x','y','f','A1','A2','A3','|A|','theta','phi'
             END IF
          ELSE
-            IF (numOutFiles.EQ.1) THEN
-               WRITE(nfile,'(4a15)') 'x','y','z','f'
-            ELSE IF (numOutFiles.EQ.2) THEN
-               WRITE(nfile,'(5a15)') 'x','y','z','f','g'
-            ELSE IF (numOutFiles.EQ.4) THEN
-               WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
-            ELSE
-               WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
+            IF(mpi%irank == 0) THEN
+              IF (numOutFiles.EQ.1) THEN
+                WRITE(nfile,'(4a15)') 'x','y','z','f'
+              ELSE IF (numOutFiles.EQ.2) THEN
+                WRITE(nfile,'(5a15)') 'x','y','z','f','g'
+              ELSE IF (numOutFiles.EQ.4) THEN
+                WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
+              ELSE
+                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
+              END IF
             END IF
          END IF
-!Serial defaults
-        rank=0
-	mpiSize=1
-#ifdef CPP_MPI
-        CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
-        CALL MPI_COMM_SIZE(MPI_COMM_WORLD,mpiSize,ierr)
-#endif
          !loop over all points
-         DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
+         DO iz = mpi%irank*(grid(3)-1)/mpi%isize, ((mpi%irank+1)*(grid(3)-1))/mpi%isize
             DO iy = 0, grid(2)-1
-        !$OMP parallel shared(iz,iy,points,tempResults,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,rank) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
+        !$OMP parallel shared(iz,iy,points,tempResults,tempVecs,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,mpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
          !$OMP do
                DO ix = 0, grid(1)-1
 
@@ -780,6 +785,14 @@ CONTAINS
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i),xdnout(i))
                   END DO
+
+                  IF (sliceplot%plot(nplo)%onlyMT.AND.(iflag.NE.1)) THEN
+                     xdnout=0.0
+                  ELSE IF (sliceplot%plot(nplo)%typeMT.NE.0) THEN
+                     IF (sliceplot%plot(nplo)%typeMT.NE.nt) THEN
+                        xdnout=0.0
+                     END IF
+                  END IF
 
                   IF (na.NE.0) THEN
                      IF (noco%l_ss) THEN
@@ -854,64 +867,93 @@ CONTAINS
                      DO i = 1, numOutFiles
                         tempResults(ix,iy,iz,i)=xdnout(i)
                      END DO
+                     IF ((size(xdnout).GE.4).AND.sliceplot%plot(nplo)%vecField) THEN
+                        tempVecs(ix,iy,iz,1:3)=point(:)/1.8897269
+                        tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
+                     ELSE IF (sliceplot%plot(nplo)%vecField) THEN
+                        CALL juDFT_warn("l_noco=F and making vector plots is not compatible [yet]. Do a regular plot for a spin-polarized system please!",calledby="plot.f90")
+                        ! TODO: Make it possible for spin-polarized calculations.
+                     END IF
                   ELSE
-                  tempResults(ix,iy,iz,:)=xdnout(:)
-                  points(ix,iy,iz,:)=point(:)
+                     tempResults(ix,iy,iz,:)=xdnout(:)
+                     points(ix,iy,iz,:)=point(:)/1.8897269
                   END IF
                END DO !x-loop
      !$OMP end do
      !$OMP end parallel
             END DO !y-loop
          END DO !z-loop
-!Print out results of the different MPI processes in correct order.
-DO k=0, mpiSize
-   IF(rank.EQ.k) THEN
-     DO iz = rank*(grid(3)-1)/mpiSize, ((rank+1)*(grid(3)-1))/mpiSize
-        DO iy = 0, grid(2)-1
-           DO ix = 0, grid(1)-1
-             IF (xsf) THEN
+
+         !Print out results of the different MPI processes in correct order.
+         IF(mpi%irank.EQ.0) THEN
+            IF (xsf)  THEN
                DO i = 1, numOutFiles
-                 WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
+                  CLOSE(nfile+i)
                END DO
-             ELSE
-               WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
-             END IF
-           END DO
-        END DO
-     END DO
-   END IF
-#ifdef CPP_MPI
-   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
- END DO
-   
-IF (rank.EQ.0) THEN
-         IF (xsf) THEN
-            DO i = 1, numOutFiles
-               CALL xsf_WRITE_endblock(nfile+i,twodim)
-            END DO
-         ELSE
-            CLOSE(nfile)
+               IF (sliceplot%plot(nplo)%vecField) THEN
+                  CLOSE(nfile+10)
+               END IF
+            ELSE
+               CLOSE(nfile)
+            END IF
          END IF
-END IF
+         DO k=0, (mpi%isize-1)
+#ifdef CPP_MPI
+     CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
+            IF(mpi%irank.EQ.k) THEN
+               DO iz = mpi%irank*(grid(3)-1)/ mpi%isize, ((mpi%irank+1)*(grid(3)-1))/ mpi%isize
+                  DO iy = 0, grid(2)-1
+                     DO ix = 0, grid(1)-1
+                        IF (xsf) THEN
+                           DO i = 1, numOutFiles
+                              OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+                              WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
+                              CLOSE(nfile+i)
+                           END DO
+
+                           IF (sliceplot%plot(nplo)%vecField) THEN
+                              OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
+                              WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
+                              CLOSE(nfile+10)
+                           END IF
+
+                        ELSE
+                           OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
+                           WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
+                           CLOSE(nfile)
+                        END IF
+                     END DO
+                  END DO
+               END DO
+            END IF
+#ifdef CPP_MPI
+   CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
+         END DO
+
+
+         IF (xsf.AND.(mpi%irank.EQ.0)) THEN
+            DO i = 1, numOutFiles
+               OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+               CALL xsf_WRITE_endblock(nfile+i,twodim)
+               CLOSE(nfile+i)
+            END DO
+         END IF
+
          DEALLOCATE(tempResults)
          DEALLOCATE(points)
-      END DO !nplo   
-IF (rank.EQ.0) THEN
+      END DO !nplo
 
-      IF (xsf) THEN
-         DO i = 1, numOutFiles
-            CLOSE(nfile+i)
-         END DO
-      END IF
- END IF
       DEALLOCATE(xdnout, outFilenames)
 
    END SUBROUTINE savxsf
 
    SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                          noco,nococonv, factor, score, potnorm, denmat, denName)
-
+#ifdef CPP_MPI
+  INCLUDE 'mpif.h'
+#endif
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
@@ -944,7 +986,9 @@ IF (rank.EQ.0) THEN
 
    SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
                          noco, nococonv,factor, score, potnorm, denmat, denName)
-
+#ifdef CPP_MPI
+  INCLUDE 'mpif.h'
+#endif
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
@@ -981,6 +1025,7 @@ IF (rank.EQ.0) THEN
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
+
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -994,6 +1039,9 @@ IF (rank.EQ.0) THEN
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_potden),    INTENT(IN)    :: denmat
+#ifdef CPP_MPI
+      INCLUDE 'mpif.h'
+#endif
       INTEGER,           INTENT(IN)    :: plot_const
 
       INTEGER            :: i
@@ -1007,7 +1055,7 @@ IF (rank.EQ.0) THEN
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          IF(sliceplot%slice) denName='slice'
-         IF(.NOT.sliceplot%slice)denName = 'denIn'
+         IF(.NOT.sliceplot%slice) denName = 'denIn'
          score = .FALSE.
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
@@ -1133,6 +1181,7 @@ IF (rank.EQ.0) THEN
       ! No core subtraction done!
       ! Additive term for iplot: 128
       IF (plot_const.EQ.7) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.
@@ -1153,15 +1202,57 @@ IF (rank.EQ.0) THEN
          END IF
       END IF
 
+      ! Plotting the Coulomb potential as vCoul.
+      ! Plot identifier: PLOT_POT_COU = 9
+      ! No core subtraction done!
+      ! Additive term for iplot: 512
+      IF (plot_const.EQ.9) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         factor = 1.0
+         denName = 'vCoul'
+         score = .FALSE.
+         potnorm = .TRUE.
+         CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
+                     noco, nococonv, score, potnorm, denName, denmat)
+      END IF
+
+      ! Plotting the xc potential as vXc / v_Xc, B_Xc / v_Xc,
+      ! B_xc_1, B_xc_2, B_xc_3.
+      ! Plot identifier: PLOT_POT_VXC = 10
+      ! No core subtraction done!
+      ! Additive term for iplot: 1024
+      IF (plot_const.EQ.10) THEN
+         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         factor = 2.0
+         denName = 'vXc'
+         score = .FALSE.
+         potnorm = .TRUE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+                               cell, noco, nococonv, factor, score, potnorm, denmat, &
+                               denName)
+            ELSE
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+                               cell, noco, nococonv, factor, score, potnorm, denmat, &
+                               denName)
+            END IF
+         ELSE
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi ,oneD, sym, cell, &
+                        noco, nococonv, score, potnorm, denName, denmat)
+         END IF
+      END IF
+
    END SUBROUTINE procplot
 
-   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input,mpi, oneD, sym, cell, &
+   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, mpi, oneD, sym, cell, &
                         noco, nococonv,denmat, plot_const, sliceplot)
 
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
-      ! whether the plot_inp is there and no oldform is given. If that is not the
-      ! case, we create a plot_inp.
+      ! whether the plot_inp is there or an oldform is given. Both are outdated.
+      ! If that is not the case, we start plotting.
+
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -1176,9 +1267,14 @@ IF (rank.EQ.0) THEN
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-
+#ifdef CPP_MPI
+INCLUDE 'mpif.h'
+#endif
       LOGICAL :: allowplot
-
+      INTEGER :: ierr
+#ifdef CPP_MPI
+      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
       ! The check is done via bitwise operations. If the i-th position of iplot
       ! in binary representation (2^n == n-th position) has a 1, the correspon-
       ! ding plot with number 2^n is plotted.
@@ -1186,21 +1282,16 @@ IF (rank.EQ.0) THEN
       ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
-      IF (mpi%irank == 0) THEN
-      	CALL timestart("Plotting iplot plots")    
-      END IF
+
+      CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
-      	IF (mpi%irank == 0) THEN
-         CALL checkplotinp()
-	END IF
-         CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
-                        noco, nococonv, denmat, plot_const)
+         CALL checkplotinp(mpi)
+         CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
+                       noco, nococonv, denmat, plot_const)
       END IF
-      IF (mpi%irank == 0) THEN
-      	CALL timestop("Plotting iplot plots")    
-      END IF
-  
+      	CALL timestop("Plotting iplot plots")
+
    END SUBROUTINE makeplots
 
    SUBROUTINE getMTSphere(input, cell, atoms, oneD, point, iType, iAtom, pt)

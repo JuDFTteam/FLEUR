@@ -89,6 +89,7 @@ MODULE m_greensf_io
    SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen)
 
       USE m_types
+      USE m_types_selfen
       USE m_constants
       USE m_juDFT
 
@@ -99,7 +100,7 @@ MODULE m_greensf_io
       TYPE(t_greensf),     INTENT(IN)  :: greensf(:)
       INTEGER,             INTENT(IN)  :: archiveType
       COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
-      COMPLEX, OPTIONAL,   INTENT(IN)  :: selfen(:,:,:,:,:) !Only in IO mode for Hubbard 1
+      TYPE(t_selfen), OPTIONAL, INTENT(IN)  :: selfen(:) !Only in IO mode for Hubbard 1
 
       INTEGER(HID_T)    :: elementsGroupID
       INTEGER(HID_T)    :: currentelementGroupID
@@ -263,12 +264,12 @@ MODULE m_greensf_io
          ENDIF
 
          IF(archiveType.EQ.GREENSF_HUBBARD_CONST.AND.PRESENT(selfen)) THEN
-            dims(:5)=[2,2*(2*lmaxU_Const+1),2*(2*lmaxU_Const+1),greensf(i_elem)%contour%nz,2]
+            dims(:5)=[2,2*(2*lmaxU_Const+1),2*(2*selfen(i_elem)%l+1),greensf(i_elem)%contour%nz,2]
             dimsInt=dims
             CALL h5screate_simple_f(5,dims(:5),selfenDataSpaceID,hdfError)
             CALL h5dcreate_f(currentelementGroupID, "selfen", H5T_NATIVE_DOUBLE, selfenDataSpaceID, selfenDataSetID, hdfError)
             CALL h5sclose_f(selfenDataSpaceID,hdfError)
-            CALL io_write_complex4(selfenDataSetID,[-1,1,1,1,1],dimsInt(:5),selfen(:,:,:greensf(i_elem)%contour%nz,:,i_elem))
+            CALL io_write_complex4(selfenDataSetID,[-1,1,1,1,1],dimsInt(:5),selfen(i_elem)%data)
             CALL h5dclose_f(selfenDataSetID, hdfError)
          ENDIF
 

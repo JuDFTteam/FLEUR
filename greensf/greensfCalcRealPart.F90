@@ -20,11 +20,8 @@ MODULE m_greensfCalcRealPart
    USE m_constants
    USE m_kkintgr
    USE m_kk_cutoff
-   IMPLICIT NONE
 
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
+   IMPLICIT NONE
 
    INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
@@ -90,6 +87,11 @@ MODULE m_greensfCalcRealPart
          spin_start = 1
          spin_end   = nspins
       ENDIF
+#else
+      i_gf_start = 1
+      i_gf_end = gfinp%n
+      spin_start = 1
+      spin_end   = nspins
 #endif
 
       DO i_gf = i_gf_start, i_gf_end

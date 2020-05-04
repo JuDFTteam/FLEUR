@@ -10,11 +10,11 @@
 #endif
 MODULE m_hlomat
   IMPLICIT NONE
-!***********************************************************************
-! updates the hamiltonian  matrix with the contributions from the local
-! orbitals.
-! p.kurz sept. 1996
-!***********************************************************************
+  !***********************************************************************
+  ! updates the hamiltonian  matrix with the contributions from the local
+  ! orbitals.
+  ! p.kurz sept. 1996
+  !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
        ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
@@ -39,7 +39,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: na,ntyp
-    INTEGER, INTENT (IN) :: isp,jsp !spin for usdus and tlmplm
+    INTEGER, INTENT (IN) :: jsp,isp !spin for usdus and tlmplm
     INTEGER, INTENT (IN) :: jintsp,iintsp
     COMPLEX, INTENT (IN) :: chi
     !     ..
@@ -52,7 +52,7 @@ CONTAINS
     COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo
     INTEGER im,in,invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i
     INTEGER mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo
-    INTEGER locol,lorow,ii,ij,n,k,ab_size,jindex
+    INTEGER locol,lorow,ii,ij,n,k,ab_size,s
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: ab(:,:,:),ax(:),bx(:),cx(:)
@@ -65,17 +65,15 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
-    CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
-    if (isp==jsp.and.iintsp==jintsp) Then
-      ab(:,:,2)=ab(:,:,1)
-      abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
+    CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
+    IF (isp==jsp.AND.iintsp==jintsp) THEN
+       ab(:,:,2)=ab(:,:,1)
+       abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
     ELSE
-      CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
 
-    jindex=isp
-    if (isp==1.and.jsp==2)jindex=4
-    if (isp==2.and.jsp==1)jindex=3
+
 
     mlo=0;mlolo=0
     DO m=1,ntyp-1
@@ -115,38 +113,27 @@ CONTAINS
              DO lp = 0,atoms%lnonsph(ntyp)
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
-                   in = tlmplm%ind(lmp,lm,ntyp,jindex)
-                   IF (lmp==lm) in=(lm* (lm+3))/2
-                   IF (in.NE.-9999) THEN
-                      IF (in.GE.0) THEN
-                         utu = tlmplm%tuu(in,ntyp,jindex)
-                         dtu = tlmplm%tdu(in,ntyp,jindex)
-                         utd = tlmplm%tud(in,ntyp,jindex)
-                         dtd = tlmplm%tdd(in,ntyp,jindex)
-                      ELSE
-                         im = -in
-                         utu = CONJG(tlmplm%tuu(im,ntyp,jindex))
-                         dtu = CONJG(tlmplm%tud(im,ntyp,jindex))
-                         utd = CONJG(tlmplm%tdu(im,ntyp,jindex))
-                         dtd = CONJG(tlmplm%tdd(im,ntyp,jindex))
-                      END IF
-                      utulo = tlmplm%tuulo(lmp,m,lo+mlo,jindex)
-                      dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jindex)
-                      !--->                   note, that utu,dtu... are the t-matrices and
-                      !--->                   not their complex conjugates as in hssphn
-                      !--->                   and that a,b,alo... are the complex
-                      !--->                   conjugates of the a,b...-coefficients
-                      !CPP_OMP PARALLEL DO DEFAULT(none) &
-                      !CPP_OMP& SHARED(ax,bx,cx) &
-                      !CPP_OMP& SHARED(lapw,ab,ab_size,iintsp) &
-                      !CPP_OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
-                      DO kp = 1,lapw%nv(iintsp)
-                         ax(kp) = ax(kp) + ab(kp,lmp,1)*utu + ab(kp,ab_size/2+lmp,1)*dtu
-                         bx(kp) = bx(kp) + ab(kp,lmp,1)*utd + ab(kp,ab_size/2+lmp,1)*dtd
-                         cx(kp) = cx(kp) + ab(kp,lmp,1)*utulo + ab(kp,ab_size/2+lmp,1)*dtulo
-                      END DO
-                      !CPP_OMP END PARALLEL DO
-                   END IF
+                   s=tlmplm%h_loc2(ntyp)
+                   utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                   dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                   utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                   dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                   utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                   dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                   !--->                   note, that utu,dtu... are the t-matrices and
+                   !--->                   not their complex conjugates as in hssphn
+                   !--->                   and that a,b,alo... are the complex
+                   !--->                   conjugates of the a,b...-coefficients
+                   !$OMP PARALLEL DO DEFAULT(none) &
+                   !$OMP& SHARED(ax,bx,cx) &
+                   !$OMP& SHARED(lapw,ab,ab_size,iintsp) &
+                   !$OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
+                   DO kp = 1,lapw%nv(iintsp)
+                      ax(kp) = ax(kp) + ab(kp,lmp,1)*utu + ab(kp,ab_size/2+lmp,1)*dtu
+                      bx(kp) = bx(kp) + ab(kp,lmp,1)*utd + ab(kp,ab_size/2+lmp,1)*dtd
+                      cx(kp) = cx(kp) + ab(kp,lmp,1)*utulo + ab(kp,ab_size/2+lmp,1)*dtulo
+                   END DO
+                   !$OMP END PARALLEL DO
                 END DO
              END DO
              !+t3e
@@ -211,58 +198,47 @@ CONTAINS
                          lm = l* (l+1) + m
                          DO mp = -lp,lp
                             lmp = lp* (lp+1) + mp
-                            in = tlmplm%ind(lmp,lm,ntyp,jindex)
-                            IF (lmp==lm) in=(lm* (lm+3))/2
-                            IF (in.NE.-9999) THEN
-                               IF (in.GE.0) THEN
-                                  utu = tlmplm%tuu(in,ntyp,jindex)
-                                  dtu = tlmplm%tdu(in,ntyp,jindex)
-                                  utd = tlmplm%tud(in,ntyp,jindex)
-                                  dtd = tlmplm%tdd(in,ntyp,jindex)
-                               ELSE
-                                  im = -in
-                                  utu = CONJG(tlmplm%tuu(im,ntyp,jindex))
-                                  dtu = CONJG(tlmplm%tud(im,ntyp,jindex))
-                                  utd = CONJG(tlmplm%tdu(im,ntyp,jindex))
-                                  dtd = CONJG(tlmplm%tdd(im,ntyp,jindex))
-                               END IF
-                               utulo = tlmplm%tuulo(lmp,m,lo+mlo,jindex)
-                               dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jindex)
-                               ulotu=CONJG(tlmplm%tuulo(lm,mp,lop+mlo,jindex))
-                               ulotd=CONJG(tlmplm%tdulo(lm,mp,lop+mlo,jindex))
-                               !--->                         note that lo > lop
-                               IF (lo>lop) THEN
-                                  lolop = ((lo-1)*lo)/2 + lop
-                                  ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,jindex))
-                               ELSE
-                                  lolop = ((lop-1)*lop)/2 + lo
-                                  ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,jindex))
-                               ENDIF
-                               axx=CONJG(abclo(1,m,nkvec,lo,2))*utu +&
-                                    CONJG(abclo(2,m,nkvec,lo,2))*utd +&
-                                    CONJG(abclo(3,m,nkvec,lo,2))*utulo
-                               bxx=CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
-                                    CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
-                                    CONJG(abclo(3,m,nkvec,lo,2))*dtulo
-                               cxx = &
-                                    CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
-                                    CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
-                                    CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
-                               IF (hmat%l_real) THEN
-                                  hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct * (&
-                                       REAL(abclo(1,mp,nkvecp,lop,1))* REAL(axx) -&
-                                       AIMAG(abclo(1,mp,nkvecp,lop,1))*AIMAG(axx) +&
-                                       REAL(abclo(2,mp,nkvecp,lop,1))* REAL(bxx) -&
-                                       AIMAG(abclo(2,mp,nkvecp,lop,1))*AIMAG(bxx) +&
-                                       REAL(abclo(3,mp,nkvecp,lop,1))* REAL(cxx) -&
-                                       AIMAG(abclo(3,mp,nkvecp,lop,1))*AIMAG(cxx) )
-                               ELSE
-                                  hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct * CONJG(&
-                                       abclo(1,mp,nkvecp,lop,1) * axx +&
-                                       abclo(2,mp,nkvecp,lop,1) * bxx +&
-                                       abclo(3,mp,nkvecp,lop,1) * cxx )
-                               ENDIF
-                            END IF
+                            s=tlmplm%h_loc2(ntyp)
+                            utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                            dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                            utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                            dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                            utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                            dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                            ulotu=CONJG(tlmplm%ulotu(lm,mp,lop+mlo,jsp,isp))
+                            ulotd=CONJG(tlmplm%ulotd(lm,mp,lop+mlo,jsp,isp))
+                            !--->                         note that lo > lop
+                            IF (lo>lop) THEN
+                               lolop = ((lo-1)*lo)/2 + lop
+                               ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,jsp,isp))
+                            ELSE
+                               lolop = ((lop-1)*lop)/2 + lo
+                               ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,jsp,isp))
+                            ENDIF
+                            axx=CONJG(abclo(1,m,nkvec,lo,2))*utu +&
+                                 CONJG(abclo(2,m,nkvec,lo,2))*utd +&
+                                 CONJG(abclo(3,m,nkvec,lo,2))*utulo
+                            bxx=CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
+                                 CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
+                                 CONJG(abclo(3,m,nkvec,lo,2))*dtulo
+                            cxx = &
+                                 CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
+                                 CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
+                                 CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
+                            IF (hmat%l_real) THEN
+                               hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct * (&
+                                    REAL(abclo(1,mp,nkvecp,lop,1))* REAL(axx) -&
+                                    AIMAG(abclo(1,mp,nkvecp,lop,1))*AIMAG(axx) +&
+                                    REAL(abclo(2,mp,nkvecp,lop,1))* REAL(bxx) -&
+                                    AIMAG(abclo(2,mp,nkvecp,lop,1))*AIMAG(bxx) +&
+                                    REAL(abclo(3,mp,nkvecp,lop,1))* REAL(cxx) -&
+                                    AIMAG(abclo(3,mp,nkvecp,lop,1))*AIMAG(cxx) )
+                            ELSE
+                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct * CONJG(&
+                                    abclo(1,mp,nkvecp,lop,1) * axx +&
+                                    abclo(2,mp,nkvecp,lop,1) * bxx +&
+                                    abclo(3,mp,nkvecp,lop,1) * cxx )
+                            ENDIF
                          END DO
                       END DO
                    END DO
@@ -276,51 +252,40 @@ CONTAINS
                       lm = l* (l+1) + m
                       DO mp = -l,l
                          lmp = l* (l+1) + mp
-                         in = tlmplm%ind(lmp,lm,ntyp,jindex)
-                         IF (lmp==lm) in=(lm* (lm+3))/2
-                         IF (in.NE.-9999) THEN
-                            IF (in.GE.0) THEN
-                               utu = tlmplm%tuu(in,ntyp,jindex)
-                               dtu = tlmplm%tdu(in,ntyp,jindex)
-                               utd = tlmplm%tud(in,ntyp,jindex)
-                               dtd = tlmplm%tdd(in,ntyp,jindex)
-                            ELSE
-                               im = -in
-                               utu = CONJG(tlmplm%tuu(im,ntyp,jindex))
-                               dtu = CONJG(tlmplm%tud(im,ntyp,jindex))
-                               utd = CONJG(tlmplm%tdu(im,ntyp,jindex))
-                               dtd = CONJG(tlmplm%tdd(im,ntyp,jindex))
-                            END IF
-                            utulo = tlmplm%tuulo(lmp,m,lo+mlo,jindex)
-                            dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jindex)
-                            ulotu = CONJG(tlmplm%tuulo(lm,mp,lo+mlo,jindex))
-                            ulotd = CONJG(tlmplm%tdulo(lm,mp,lo+mlo,jindex))
-                            lolo = ((lo-1)*lo)/2 + lo
-                            ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,jindex))
-                            axx = CONJG(abclo(1,m,nkvec,lo,2))*utu +&
-                                 CONJG(abclo(2,m,nkvec,lo,2))*utd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*utulo
-                            bxx = CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
-                                 CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*dtulo
-                            cxx = CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
-                                 CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
-                            IF (hmat%l_real) THEN
-                               hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct* (&
-                                    REAL(abclo(1,mp,nkvecp,lo,1))* REAL(axx) -&
-                                    AIMAG(abclo(1,mp,nkvecp,lo,1))*AIMAG(axx) +&
-                                    REAL(abclo(2,mp,nkvecp,lo,1))* REAL(bxx) -&
-                                    AIMAG(abclo(2,mp,nkvecp,lo,1))*AIMAG(bxx) +&
-                                    REAL(abclo(3,mp,nkvecp,lo,1))* REAL(cxx) -&
-                                    AIMAG(abclo(3,mp,nkvecp,lo,1))*AIMAG(cxx) )
-                            ELSE
-                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct* CONJG(&
-                                    abclo(1,mp,nkvecp,lo,1)*axx +&
-                                    abclo(2,mp,nkvecp,lo,1)*bxx +&
-                                    abclo(3,mp,nkvecp,lo,1)*cxx )
-                            ENDIF
-                         END IF
+                         s=tlmplm%h_loc2(ntyp)
+                         utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
+                         dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
+                         utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
+                         dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
+                         utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                         dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                         ulotu = conjg(tlmplm%ulotu(lm,mp,lo+mlo,jsp,isp))
+                         ulotd = conjg(tlmplm%ulotd(lm,mp,lo+mlo,jsp,isp))
+                         lolo = ((lo-1)*lo)/2 + lo
+                         ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,jsp,isp))
+                         axx = CONJG(abclo(1,m,nkvec,lo,2))*utu +&
+                              CONJG(abclo(2,m,nkvec,lo,2))*utd +&
+                              CONJG(abclo(3,m,nkvec,lo,2))*utulo
+                         bxx = CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
+                              CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
+                              CONJG(abclo(3,m,nkvec,lo,2))*dtulo
+                         cxx = CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
+                              CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
+                              CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
+                         IF (hmat%l_real) THEN
+                            hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct* (&
+                                 REAL(abclo(1,mp,nkvecp,lo,1))* REAL(axx) -&
+                                 AIMAG(abclo(1,mp,nkvecp,lo,1))*AIMAG(axx) +&
+                                 REAL(abclo(2,mp,nkvecp,lo,1))* REAL(bxx) -&
+                                 AIMAG(abclo(2,mp,nkvecp,lo,1))*AIMAG(bxx) +&
+                                 REAL(abclo(3,mp,nkvecp,lo,1))* REAL(cxx) -&
+                                 AIMAG(abclo(3,mp,nkvecp,lo,1))*AIMAG(cxx) )
+                         ELSE
+                            hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct* CONJG(&
+                                 abclo(1,mp,nkvecp,lo,1)*axx +&
+                                 abclo(2,mp,nkvecp,lo,1)*bxx +&
+                                 abclo(3,mp,nkvecp,lo,1)*cxx )
+                         ENDIF
                       END DO
                    END DO
                 END DO

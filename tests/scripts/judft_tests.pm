@@ -22,7 +22,7 @@ sub execute_test($$$$){
 	if (-r $workdir){
 	    system("rm -f $workdir/*");
 	}else{
-	    die "Invalid workdir:$workdir" if (system("mkdir $workdir"));
+	    die "Invalid workdir:$workdir" if (system("mkdir -p $workdir"));
 	}
     
 	my $old_dir=`pwd`;

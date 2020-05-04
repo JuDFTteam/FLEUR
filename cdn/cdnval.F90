@@ -25,6 +25,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    !************************************************************************************
 
    USE m_types
+   USE m_constants
    USE m_eig66_io
    USE m_genMTBasis
    USE m_calcDenCoeffs
@@ -52,6 +53,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
+   USE m_tlmplm_cholesky
 
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
@@ -108,7 +110,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-
+   
+   
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
    TYPE (t_denCoeffs)         :: denCoeffs
@@ -118,6 +121,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat
    TYPE (t_gVacMap)           :: gVacMap
+   TYPE (t_tlmplm)           :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
 
    CALL timestart("cdnval")
@@ -138,8 +142,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       jsp_end   = jspin
    END IF
 
-   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
-   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
+   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
+   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
 
    ! Initializations
@@ -152,7 +156,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
    !Greens function always considers the empty states
-   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
@@ -169,13 +173,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    ! calculation of core spectra (EELS) initializations -end-
 
    IF (mpi%irank==0) THEN
-      WRITE (6,FMT=8000) jspin
+      WRITE (oUnit,FMT=8000) jspin
       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
    DO iType = 1, atoms%ntype
-      DO ispin = jsp_start, jsp_end
+      DO ispin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
@@ -246,7 +250,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,noco%l_mperp.AND.(ispin==jsp_end),&
+         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
                                          gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
          ! perform Brillouin zone integration and summation over the
@@ -277,8 +281,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-         IF (input%l_f) CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
-                                                     usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
+         IF (input%l_f) THEN
+           CALL tlmplm%init(atoms,input%jspins,.FALSE.)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,mpi,vTot,input,hub1inp,tlmplm,usdus)
+           CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
+           usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
+         ENDIF
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
@@ -299,7 +307,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    IF(gfinp%n>0) THEN
       !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-      DO ispin = MERGE(1,jspin,noco%l_mperp),MERGE(3,jspin,noco%l_mperp)
+      DO ispin = MERGE(1,jspin,gfinp%l_mperp),MERGE(3,jspin,gfinp%l_mperp)
          CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
                                   results,greensfBZintCoeffs,greensfImagPart)
       ENDDO
@@ -312,7 +320,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN
-            WRITE (6,FMT=8210) ispin
+            WRITE (oUnit,FMT=8210) ispin
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
             CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
          END IF

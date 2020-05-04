@@ -43,6 +43,8 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE ::nz(:)
   !atoms per type
   INTEGER, ALLOCATABLE::neq(:)
+  ! type of each atom itype(atoms%nat) used for OMP unrolling
+  INTEGER, ALLOCATABLE::itype(:)
   !radial grid points
   INTEGER, ALLOCATABLE::jri(:)
   !core states
@@ -158,10 +160,12 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%bmu,rank,mpi_comm)
  CALL mpi_bc(this%pos,rank,mpi_comm)
  CALL mpi_bc(this%taual,rank,mpi_comm)
+ CALL mpi_bc(this%label,rank,mpi_comm)
  CALL mpi_bc(this%relax,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinPhi,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinTheta,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinScale,rank,mpi_comm)
+ call mpi_bc(this%itype,rank,mpi_comm)
 
 #ifdef CPP_MPI
  CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -455,12 +459,12 @@ SUBROUTINE read_xml_atoms(this,xml)
  DO n = 1, this%ntype
     IF (this%nlo(n).GE.1) THEN
        IF (this%nlo(n).GT.this%nlod) THEN
-          WRITE (6,*) 'nlo(n) =',this%nlo(n),' > nlod =',this%nlod
+          WRITE (oUnit,*) 'nlo(n) =',this%nlo(n),' > nlod =',this%nlod
           CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
        END IF
        DO j=1,this%nlo(n)
           IF ( (this%llo(j,n).GT.this%llod).OR.(MOD(-this%llod,10)-1).GT.this%llod ) THEN
-             WRITE (6,*) 'llo(j,n) =',this%llo(j,n),' > llod =',this%llod
+             WRITE (oUnit,*) 'llo(j,n) =',this%llo(j,n),' > llod =',this%llod
              CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
           END IF
        END DO
@@ -477,7 +481,7 @@ SUBROUTINE read_xml_atoms(this,xml)
        END DO
 
        DO ilo = 1,this%nlo(n)
-          WRITE(6,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
+          WRITE(oUnit,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
           IF (this%llo(ilo,n)>this%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
           l = this%llo(ilo,n)
           IF (ilo.EQ.1) THEN
@@ -489,7 +493,7 @@ SUBROUTINE read_xml_atoms(this,xml)
           END IF
           this%nlol(l,n) = this%nlol(l,n) + 1
        END DO
-       WRITE (6,*) 'atoms%lapw_l(n) = ',this%lapw_l(n)
+       WRITE (oUnit,*) 'atoms%lapw_l(n) = ',this%lapw_l(n)
     END IF
 
  END DO
@@ -557,8 +561,19 @@ SUBROUTINE init_atoms(this,cell)
  USE m_types_cell
  CLASS(t_atoms),INTENT(inout):: this
  TYPE(t_cell),INTENT(IN)   :: cell
+ integer :: it, ineq, ic
 
  WHERE (ABS(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
  this%pos(:,:) = MATMUL(cell%amat,this%taual(:,:))
+ 
+ allocate(this%itype(this%nat))
+ ic=0
+ DO it = 1, this%ntype
+   DO ineq = 1, this%neq(it)
+      ic = ic + 1
+      this%itype(ic) = it
+   enddo 
+enddo
+
 END SUBROUTINE init_atoms
 END MODULE m_types_atoms

@@ -16,6 +16,8 @@ CONTAINS
 
 SUBROUTINE closure(mops,mrot,tau,nops,index_op,lclose)
 
+   USE m_constants
+
    IMPLICIT NONE
 
    INTEGER, INTENT (IN)  :: mops           ! number of operations of the bravais lattice
@@ -51,8 +53,8 @@ SUBROUTINE closure(mops,mrot,tau,nops,index_op,lclose)
                IF ( map(ii) .eq. 0 ) THEN
                   map(ii) = kk
                ELSE
-                  write(6,*)'ERROR Closure: Multiplying ', jj,' with ',kk, ' and with ',map(ii)
-                  write(6,*) 'yields the same matrix'
+                  write(oUnit,*)'ERROR Closure: Multiplying ', jj,' with ',kk, ' and with ',map(ii)
+                  write(oUnit,*) 'yields the same matrix'
                   lclose = .false.
                   RETURN
                END IF
@@ -60,7 +62,7 @@ SUBROUTINE closure(mops,mrot,tau,nops,index_op,lclose)
          END DO
 
          IF (map(ii).eq.0) THEN
-            write(6,*)'ERROR Closure:',ii,' times',jj,' leaves group'
+            write(oUnit,*)'ERROR Closure:',ii,' times',jj,' leaves group'
             lclose = .false.
             RETURN
          END IF
@@ -74,6 +76,8 @@ END SUBROUTINE closure
 !*********************************************************************
 
 SUBROUTINE close_pt(nops,mrot,mtable)
+
+   USE m_constants
 
    IMPLICIT NONE
 
@@ -97,29 +101,29 @@ SUBROUTINE close_pt(nops,mrot,mtable)
                IF ( map(i) .eq. 0 ) THEN
                   map(i) = k
                ELSE
-                  WRITE (6,'(" Symmetry error : multiple ops")')
+                  WRITE (oUnit,'(" Symmetry error : multiple ops")')
                   CALL juDFT_error("close_pt: Multiple ops (Bravais)",calledby ="closure")
                END IF
             END IF
          END DO
 
          IF (map(i).eq.0) THEN
-            WRITE(6,*) 'Symmetry operations:'
+            WRITE(oUnit,*) 'Symmetry operations:'
             DO k = 1, nops
-               WRITE(6,*) 'Matrix ', k, ':'
-               WRITE(6,'(3i7)') mrot(:,1,k)
-               WRITE(6,'(3i7)') mrot(:,2,k)
-               WRITE(6,'(3i7)') mrot(:,3,k)
-               WRITE(6,*) ''
+               WRITE(oUnit,*) 'Matrix ', k, ':'
+               WRITE(oUnit,'(3i7)') mrot(:,1,k)
+               WRITE(oUnit,'(3i7)') mrot(:,2,k)
+               WRITE(oUnit,'(3i7)') mrot(:,3,k)
+               WRITE(oUnit,*) ''
             END DO
-            WRITE (6,'(" Group not closed (Bravais lattice)")')
-            WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
-            WRITE(6,*) ''
-            WRITE(6,*) 'Expected product of operations ', j, ' and ', i, ':'
-            WRITE(6,'(3i7)') mp(:,1)
-            WRITE(6,'(3i7)') mp(:,2)
-            WRITE(6,'(3i7)') mp(:,3)
-            WRITE(6,*) ''
+            WRITE (oUnit,'(" Group not closed (Bravais lattice)")')
+            WRITE (oUnit,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
+            WRITE(oUnit,*) ''
+            WRITE(oUnit,*) 'Expected product of operations ', j, ' and ', i, ':'
+            WRITE(oUnit,'(3i7)') mp(:,1)
+            WRITE(oUnit,'(3i7)') mp(:,2)
+            WRITE(oUnit,'(3i7)') mp(:,3)
+            WRITE(oUnit,*) ''
             CALL juDFT_error("close_pt:Not closed",calledby="closure")
          END IF
       END DO
@@ -131,6 +135,8 @@ END SUBROUTINE close_pt
 !*********************************************************************
 
 SUBROUTINE check_close(nops,mrot,tau,multtab,inv_op,optype)
+
+   USE m_constants
 
    IMPLICIT NONE
 
@@ -167,15 +173,15 @@ SUBROUTINE check_close(nops,mrot,tau,multtab,inv_op,optype)
                   multtab(j,i) = k
                   IF (k .eq. 1) inv_op(j)=i
                ELSE
-                  WRITE(6,'(" Symmetry error: multiple ops")')
+                  WRITE(oUnit,'(" Symmetry error: multiple ops")')
                   CALL juDFT_error("check_close: Multiple ops",calledby ="closure")
                END IF
             END IF
          END DO
 
          IF (multtab(j,i).eq.0) THEN
-            WRITE (6,'(" Group not closed")')
-            WRITE (6,'("  j , i =",2i4)') j,i
+            WRITE (oUnit,'(" Group not closed")')
+            WRITE (oUnit,'("  j , i =",2i4)') j,i
             CALL juDFT_error("check_close: Not closed",calledby="closure")
          END IF
       END DO

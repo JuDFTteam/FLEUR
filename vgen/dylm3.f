@@ -38,7 +38,7 @@ C     .. Data Statements ..
 c.....------------------------------------------------------------------
 c     ..
       IF (lmax.GT.lmaxd) THEN
-        WRITE (6,*) lmax,lmaxd
+        WRITE (oUnit,*) lmax,lmaxd
          CALL juDFT_error("lmax.GT.lmaxd",calledby="dylm3")
       ENDIF
 

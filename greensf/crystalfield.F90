@@ -37,7 +37,7 @@ MODULE m_crystalfield
       TYPE(t_hub1data),          INTENT(INOUT) :: hub1data
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour,dummy,i_elem
       REAL    tr,xiSOC,del,eb
       COMPLEX vso
       !-Local Arrays
@@ -52,6 +52,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
+         CALL uniqueElements_gfinp(gfinp,dummy,i_gf,indUnique=i_elem)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
@@ -71,8 +72,8 @@ MODULE m_crystalfield
                   integrand = 0.0
                   DO ie = 1, kkcut
                      integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
-                                     * REAL(greensfImagPart%sphavg(ie,m,mp,i_gf,jspin)/(3.0-input%jspins))
-                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_gf,jspin))/(3.0-input%jspins)
+                                     * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)/(3.0-input%jspins))
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin))/(3.0-input%jspins)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),del,kkcut)
                ENDDO
@@ -173,7 +174,7 @@ MODULE m_crystalfield
          DO m = -l, l
             tr = tr + hub1data%ccfmat(i_hia,m,m)
          ENDDO
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(*,*) "TRACE"
          WRITE(*,"(2f7.3)") tr, tr/(2*l+1)
 #endif
@@ -182,7 +183,7 @@ MODULE m_crystalfield
             hub1data%ccfmat(i_hia,m,m) = hub1data%ccfmat(i_hia,m,m) - tr/(2*l+1)
          ENDDO
 
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(*,*) "TRACELESS (eV)"
          WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
 #endif

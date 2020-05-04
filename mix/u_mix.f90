@@ -15,6 +15,7 @@ CONTAINS
   SUBROUTINE u_mix(input,atoms,noco,n_mmp_in,n_mmp_out)
 
     USE m_types
+    USE m_constants
     USE m_cdn_io
     USE m_nmat_rot
     USE m_xmlOutput
@@ -88,7 +89,7 @@ CONTAINS
                 END DO
              END DO
           END DO
-          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
+          WRITE (oUnit,'(a16,f12.6)') 'n_mmp distance =',sum1
        ELSE
           sum2 = 0.0
           sum3 = 0.0
@@ -117,9 +118,9 @@ CONTAINS
                 END DO
              END DO
           END DO
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-          IF(noco%l_mperp) WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
+          WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
+          WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+          IF(noco%l_mperp) WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
        ENDIF
        n_mmp_in = n_mmp
        DEALLOCATE (n_mmp)
@@ -136,10 +137,10 @@ CONTAINS
           END DO
        END DO
        IF (input%jspins.EQ.1) THEN
-          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
+          WRITE (oUnit,'(a16,f12.6)') 'n_mmp distance =',sum1
        ELSE
           sum2 = 0.0
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
+          WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
           DO i_u = 1, atoms%n_u
              DO j = -3,3
                 DO k = -3,3
@@ -148,11 +149,11 @@ CONTAINS
              END DO
           END DO
           !DO j=-3,3
-          !   WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
+          !   WRITE(oUnit,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
           !END DO
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+          WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
           !DO j=-3,3
-          !   WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
+          !   WRITE(oUnit,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
           !END DO
           IF(noco%l_mperp) THEN
             !Spin off-diagonal
@@ -164,7 +165,7 @@ CONTAINS
                   END DO
                END DO
             END DO
-            WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
+            WRITE (oUnit,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
           ENDIF
        END IF
     END IF ! input%ldauLinMix

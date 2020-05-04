@@ -2,6 +2,7 @@ MODULE m_sgml
   CONTAINS
   REAL FUNCTION sgml(l1,m1,is1,l2,m2,is2)
     USE m_juDFT
+    USE m_constants
     !
     ! FUNCTION SGML ******************************************************
     !
@@ -32,17 +33,17 @@ MODULE m_sgml
        sgm1 = is1
        sgm2 = is2
        IF (l1.LT.0) THEN
-          WRITE (6,FMT=*) ' PROGRAM STOPS IN FUNCTION SGML ( L < 0 ) .'
-          WRITE (6,FMT=*) ' L1 =',l1,'    L2 =',l2
+          WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN FUNCTION SGML ( L < 0 ) .'
+          WRITE (oUnit,FMT=*) ' L1 =',l1,'    L2 =',l2
           CALL juDFT_error("SGMLR",calledby="sgml")
        ELSE IF ((ABS(m1).GT.l1) .OR. (ABS(m2).GT.l2)) THEN
-          WRITE (6,FMT=*) ' PROGRAM STOPS IN SGMLC ( jij%M < L OR L < jij%M )'
-          WRITE (6,FMT=*) ' L1 =',l1,'    L2 =',l2
-          WRITE (6,FMT=*) ' M1 =',m1,'    M2 =',m2
+          WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN SGMLC ( jij%M < L OR L < jij%M )'
+          WRITE (oUnit,FMT=*) ' L1 =',l1,'    L2 =',l2
+          WRITE (oUnit,FMT=*) ' M1 =',m1,'    M2 =',m2
           CALL juDFT_error("SGML",calledby="sgml")
        ELSE IF ((is1.NE.-1.AND.is1.NE.1) .OR. (is2.NE.-1.AND.is2.NE.1)) THEN
-          WRITE (6,FMT=*) ' PROGRAM STOPS IN FUNCTION SGMLC ( S >< +-1/2 ) .'
-          WRITE (6,FMT=*) ' S1 =',0.5*sgm1,'    S2 =',0.5*sgm2
+          WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN FUNCTION SGMLC ( S >< +-1/2 ) .'
+          WRITE (oUnit,FMT=*) ' S1 =',0.5*sgm1,'    S2 =',0.5*sgm2
           CALL juDFT_error("SGML",calledby="sgml")
        END IF
        !

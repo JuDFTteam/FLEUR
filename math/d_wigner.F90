@@ -63,7 +63,7 @@ CONTAINS
   !c**************************************************
   SUBROUTINE real_wigner(nop,mrot,bmat,lmax, d_wgn)
 
-    USE m_constants, ONLY : pi_const, ImagUnit
+    USE m_constants
     USE m_inv3
 
     IMPLICIT NONE
@@ -84,9 +84,6 @@ CONTAINS
 
     REAL                 :: alpha(nop),beta(nop),GAMMA(nop)
     REAL                 :: dmat(3,3),dmati(3,3),det(nop),bmati(3,3)
-
-    INTRINSIC sqrt,max,min
-
 
     pi = pi_const
     !c
@@ -178,9 +175,9 @@ CONTAINS
 
 #ifndef CPP_MPI
     IF(.NOT.written) THEN
-       WRITE (6,8000)
+       WRITE (oUnit,8000)
        DO ns = 1, nop
-          WRITE (6,8010) ns,alpha(ns),beta(ns),GAMMA(ns),det(ns)
+          WRITE (oUnit,8010) ns,alpha(ns),beta(ns),GAMMA(ns),det(ns)
        ENDDO
        written=.TRUE.
     ENDIF

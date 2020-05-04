@@ -171,9 +171,9 @@
       CALL ylmnorm_init(atoms%lmaxd)
 !      IF (mod(lmaxd,2).NE.0) lmaxd = lmaxd + 1
       IF (2*input%neig.LT.MAX(5.0,input%zelec)) THEN
-        WRITE(6,*) input%neig,' states estimated in dimen7 ...'
+        WRITE(oUnit,*) input%neig,' states estimated in dimen7 ...'
         input%neig = MAX(5,NINT(0.75*input%zelec))
-        WRITE(6,*) 'changed input%neig to ',input%neig
+        WRITE(oUnit,*) 'changed input%neig to ',input%neig
       ENDIF
       IF (noco%l_soc .and. (.not. noco%l_noco)) input%neig=2*input%neig
       IF (noco%l_soc .and. noco%l_ss) input%neig=(3*input%neig)/2
@@ -302,8 +302,8 @@
       ENDIF
 
       IF ( xcpot%gmaxxc .le. 10.0**(-6) ) THEN
-         WRITE (6,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default value")')
-         WRITE (6,'(" concerning memory, you may want to choose a smaller value for stars%gmax")')
+         WRITE (oUnit,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default value")')
+         WRITE (oUnit,'(" concerning memory, you may want to choose a smaller value for stars%gmax")')
          xcpot%gmaxxc=stars%gmax
       END IF
 
@@ -325,7 +325,7 @@
         IF(input%gw.eq.2) THEN
           INQUIRE(file='QGpsi',exist=l_kpts) ! Use QGpsi if it exists ot
           IF(l_kpts) THEN
-            WRITE(6,*) 'QGpsi exists and will be used to generate kpts-file'
+            WRITE(oUnit,*) 'QGpsi exists and will be used to generate kpts-file'
             OPEN (15,file='QGpsi',form='unformatted',status='old',action='read')
             OPEN (41,file='kpts',form='formatted',status='unknown')
             REWIND(41)

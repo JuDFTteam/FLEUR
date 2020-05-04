@@ -15,8 +15,10 @@ CONTAINS
                   den,l_noco,l_printData,force_fix,fix,fix_pw_only)
 
     USE m_types
+    USE m_constants
     USE m_cdntot
     USE m_xmlOutput
+
     IMPLICIT NONE
 
     !     .. Scalar Arguments ..
@@ -72,11 +74,11 @@ CONTAINS
           den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
              den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
        END IF
-       WRITE (6,FMT=8000) zc,fix
+       WRITE (oUnit,FMT=8000) zc,fix
     ELSE
        fix = (zc - qtot) / qis + 1.
        den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       WRITE (6,FMT=8001) zc,fix
+       WRITE (oUnit,FMT=8001) zc,fix
     ENDIF
 
     IF (l_noco) THEN

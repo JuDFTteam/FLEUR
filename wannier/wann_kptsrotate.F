@@ -22,10 +22,13 @@ c****************************************
      >               tau,
      x               bkpt,k1,k2,k3,
      x               zMat,nsfactor)
+
       USE m_types
+      use m_constants
       use m_inv3
-      use m_constants,only:pimach
+
       implicit none
+
       integer,intent(in)    :: natd
       integer,intent(in)    :: nlod
       integer,intent(in)    :: llod
@@ -162,8 +165,8 @@ c      print*,testmat
       k2(:,:)   = k2(:,:)   + shiftkpt(2)
       k3(:,:)   = k3(:,:)   + shiftkpt(3)
 
-      write(6,*)"in wann_kptsrotate:"
-      write(6,*) "bkpt=",bkpt
+      write(oUnit,*)"in wann_kptsrotate:"
+      write(oUnit,*) "bkpt=",bkpt
 
       arg = tpi*(
      +        bkpt(1)*shiftnonsymm(1)+

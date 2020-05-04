@@ -236,7 +236,7 @@ CONTAINS
       IF(l_gfOpt) THEN
 205      FORMAT('      <greensFunction l_sphavg="', l1, '" l_mperp="', l1'">')
          WRITE(fileNum, 205) gfinp%l_sphavg, gfinp%l_mperp
-206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" ellup="', f0.8, '"/>')
+206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" elup="', f0.8, '"/>')
          WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
          IF(gfinp%numberContours>0) THEN
             DO iContour = 1, gfinp%numberContours
@@ -263,8 +263,8 @@ CONTAINS
             ENDDO
          ELSE
             !Write out a default contour
-210               FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '" label="', a,'"/>')
-                  WRITE(fileNum, 208) 128, -1.0, 0.0,1.0,"default"
+210         FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '" label="', a,'"/>')
+            WRITE(fileNum, 208) 128, -1.0, 0.0,1.0,"default"
          ENDIF
          WRITE(fileNum, '(a)') '      </greensFunction>'
       ENDIF

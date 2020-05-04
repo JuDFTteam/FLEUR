@@ -8,6 +8,7 @@
 MODULE m_chase_diag
 #ifdef CPP_CHASE
   USE m_judft
+  USE m_constants
 IMPLICIT NONE
 
   interface
@@ -212,7 +213,7 @@ CONTAINS
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        CALL dsygst(1,'U',smat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),info)
        IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in dsygst: info =',info
+          WRITE (oUnit,*) 'Error in dsygst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
@@ -240,7 +241,7 @@ CONTAINS
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
        IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in dtrtrs: info =',info
+          WRITE (oUnit,*) 'Error in dtrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
@@ -266,7 +267,7 @@ CONTAINS
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        CALL zhegst(1,'U',smat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),info)
        IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in zhegst: info =',info
+          WRITE (oUnit,*) 'Error in zhegst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
@@ -295,7 +296,7 @@ CONTAINS
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMatTemp%data_c,zmat%matsize1,info)
        IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in ztrtrs: info =',info
+          WRITE (oUnit,*) 'Error in ztrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
@@ -356,7 +357,7 @@ CONTAINS
         CALL pdsygst(1,'U',smat%global_size1,hmat%data_r,1,1,hmat%blacsdata%blacs_desc,smat%data_r,1,1,smat%blacsdata%blacs_desc,scale,info)
         IF (ABS(scale-1)>1E-10) call judft_error("Scale parameter not implemented in chase_diag")
         IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in pdsygst: info =',info
+          WRITE (oUnit,*) 'Error in pdsygst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
     ELSE
@@ -368,7 +369,7 @@ CONTAINS
         CALL pzhegst(1,'U',smat%global_size1,hmat%data_c,1,1,smat%blacsdata%blacs_desc,smat%data_c,1,1,smat%blacsdata%blacs_desc,scale,info)
         IF (ABS(scale-1)>1E-10) call judft_error("Scale parameter not implemented in chase_diag")
         IF (info.NE.0) THEN
-          WRITE (6,*) 'Error in pzhegst: info =',info
+          WRITE (oUnit,*) 'Error in pzhegst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
     END IF
@@ -425,7 +426,7 @@ CONTAINS
             hmat%data_c,1,1,smat%blacsdata%blacs_desc,info)
     END IF
     IF (info.NE.0) THEN
-       WRITE (6,*) 'Error in p?trtrs: info =',info
+       WRITE (oUnit,*) 'Error in p?trtrs: info =',info
        CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
     ENDIF
 

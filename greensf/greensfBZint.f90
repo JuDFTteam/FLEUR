@@ -76,6 +76,9 @@ MODULE m_greensfBZint
                   phase = 1.0
                ENDIF
 
+               !l-offdiagonal phase
+               phase = phase * ImagUnit**(l-lp)
+
                !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                !Can these be unified ?
                !Spin diagonal elements

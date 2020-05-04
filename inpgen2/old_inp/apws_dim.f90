@@ -143,9 +143,9 @@
 !                      0  PROGRAM, RADIX-2 ONLY
 !                      1  PROGRAM, RADIX-2, RADIX-3,RADIX-5
 
-      kq1d = ifft235(6,ksfft,kq1d,gmaxp)
-      kq2d = ifft235(6,ksfft,kq2d,gmaxp)
-      kq3d = ifft235(6,ksfft,kq3d,gmaxp)
+      kq1d = ifft235(ksfft,kq1d,gmaxp)
+      kq2d = ifft235(ksfft,kq2d,gmaxp)
+      kq3d = ifft235(ksfft,kq3d,gmaxp)
 
       RETURN
       END SUBROUTINE

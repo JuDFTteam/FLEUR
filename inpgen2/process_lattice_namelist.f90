@@ -479,7 +479,7 @@ CONTAINS
     ENDDO
 
     DO j = 1, 3
-       WRITE (6,'("vector ",i1," : ",3f9.5,5x," length : ",f9.5)') j,am(:,j),al(j)
+       WRITE (oUnit,'("vector ",i1," : ",3f9.5,5x," length : ",f9.5)') j,am(:,j),al(j)
     ENDDO
 
     DO i1 = 1, 2
@@ -491,7 +491,7 @@ CONTAINS
           ca  = ca/(al(i1)*al(i2))
           ca = acos(ca)*180/pi_const
 
-          WRITE (6,'("angle between vectors (",i1,",",i1,") =",f9.5)') i1,i2,ca
+          WRITE (oUnit,'("angle between vectors (",i1,",",i1,") =",f9.5)') i1,i2,ca
        ENDDO
     ENDDO
 

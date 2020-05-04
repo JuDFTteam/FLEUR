@@ -12,11 +12,7 @@ MODULE m_qpwtonmt
   !             Stefan Bl"ugel  , IFF, Nov. 1997
   !***************************************************************
 CONTAINS
-  SUBROUTINE qpw_to_nmt(&
-       &                      sphhar,atoms,stars,&
-       &                      sym,cell,oneD,mpi,&
-       &                      jspin,l_cutoff,qpwc,&
-       &                      rho)
+  SUBROUTINE qpw_to_nmt(sphhar,atoms,stars,sym,cell,oneD,mpi,jspin,l_cutoff,qpwc,rho)
     !
     USE m_constants
     USE m_phasy1

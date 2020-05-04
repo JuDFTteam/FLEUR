@@ -14,6 +14,8 @@ c     erich wimmer     july 1981
      >                  v,nkpt,
      <                  it,ntria,at,att,l_f_t)
 
+      USE m_constants
+
 c     Arguments
       INTEGER, INTENT(IN)  :: nkpt
       REAL,    INTENT(IN)  :: v(3,nkpt)
@@ -39,8 +41,9 @@ c
               l_f_t = .false.
               nkpts = j - 1
               IF ((mod(nkpt,nkpts).NE.0).OR.(j.LT.3)) THEN
-                WRITE (6,*) 'tria=T & film=F requires k-point planes'
-                WRITE (6,*) 'with equally distributed k-points !'
+                WRITE (oUnit,*) 
+     +             'tria=T & film=F requires k-point planes'
+                WRITE (oUnit,*) 'with equally distributed k-points !'
 c                 CALL juDFT_error("not a k-point set for tria=T & film=F",calledby="triang")
               ENDIF
 !              RETURN

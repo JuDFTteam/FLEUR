@@ -24,9 +24,10 @@ CONTAINS
     USE m_types_xcpot_inbuild_nofunction
     USE m_types_cell
     USE m_types_hybinp
+    USE m_constants
     USE m_process_lattice_namelist
-
     USE m_inv3
+
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
     CHARACTER(len=40),INTENT(OUT):: kpts_str
@@ -41,7 +42,7 @@ CONTAINS
 
 
     !locals
-    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det
+    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det,temp
     INTEGER             :: ios,n,i
     CHARACTER(len=100)  :: filename
     LOGICAL             :: l_exist
@@ -166,6 +167,21 @@ CONTAINS
     cell%amat(:,1) = aa*SCALE(:)*a1(:)
     cell%amat(:,2) = aa*SCALE(:)*a2(:)
     cell%amat(:,3) = aa*SCALE(:)*a3(:)
+
+    !convert to right-handed unit cell if it is left-handed so far
+    CALL inv3(cell%amat,cell%bmat,det)
+    IF(det.LT.0.0) THEN
+       cell%amat(:,1) = aa*SCALE(:)*a2(:)
+       cell%amat(:,2) = aa*SCALE(:)*a1(:)
+       DO n = 1, SIZE(atom_pos,2)
+          temp = atom_pos(1,n)
+          atom_pos(1,n) = atom_pos(2,n)
+          atom_pos(2,n) = temp
+       END DO
+       WRITE(*,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
+       WRITE(oUnit,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
+    END IF
+
     CALL cell%init(0.0)
 
   END SUBROUTINE read_inpgen_input

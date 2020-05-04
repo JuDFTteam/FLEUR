@@ -4,27 +4,28 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_chkmt
-      USE m_juDFT
-      private
-      public chkmt
+MODULE m_chkmt
+   USE m_juDFT
 !---------------------------------------------------------------------
 !  Check muffin tin radii and determine a reasonable choice for MTRs.
 !  Derive also other parameters for the input file, to provide some
 !  help in the out-file.
 !                         GM'16
 !---------------------------------------------------------------------
-      CONTAINS
-        SUBROUTINE chkmt(atoms,input,vacuum,cell,oneD,l_test,&
+   CONTAINS
+
+   SUBROUTINE chkmt(atoms,input,vacuum,cell,oneD,l_test,&
              l_gga,noel, kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1,&!optional, if l_gga and ... are present suggestions are calculated
              overlap)!this is optional, if present and l_test the routine returns the overlaps and does not stop
 
       USE m_types_fleurinput
+      USE m_constants
       USE m_sort
       USE m_inv3
       USE m_juDFT
+
       IMPLICIT NONE
-!     ..
+
 !     .. Scalar Arguments ..
       TYPE(t_atoms),INTENT(IN) :: atoms
       TYPE(t_input),INTENT(IN) :: input
@@ -35,12 +36,12 @@
       LOGICAL, INTENT (IN),OPTIONAL     :: l_gga
       LOGICAL, INTENT (IN)     ::l_test
       REAL,    INTENT (OUT),OPTIONAL    :: kmax,dtild,dvac1
-!     ..
+
 !     .. Array Arguments ..
       INTEGER, INTENT (OUT),OPTIONAL    :: lmax1(atoms%ntype),jri1(atoms%ntype)
       REAL,    INTENT (OUT),OPTIONAL    :: rmt1(atoms%ntype),dx1(atoms%ntype)
       REAL,OPTIONAL,INTENT(OUT):: overlap(0:atoms%ntype,atoms%ntype)
-!     ..
+
 !     .. Local Scalars ..
       INTEGER na,n
       INTEGER i,j,k,l,jri11,lmax11
@@ -51,7 +52,7 @@
       REAL    rmtFac, cubeLength, amatAuxDet
       REAL    maxSqrDist, dist, currentDist
       LOGICAL error, outOfBounds
-!     ..
+
 !     .. Local Arrays ..
       REAL    t_rmt(0:103), minRmts(0:103)
       REAL    amatAux(3,3), invAmatAux(3,3)
@@ -357,9 +358,9 @@
          rmt1(i) = minRmts(atoms%nz(i))
       END DO
 
-      WRITE (6,*) '----------------------------------------------------'
-      WRITE (6,*) 'Suggested values for input: '
-      WRITE (6,*)
+      WRITE (oUnit,*) '----------------------------------------------------'
+      WRITE (oUnit,*) 'Suggested values for input: '
+      WRITE (oUnit,*)
 
       dvac1 = 0.0
       IF (input%film) THEN
@@ -376,12 +377,12 @@
          END DO
          dvac1 = 2.0 * (dvac1+0.3)
          dtild = dvac1 + 1.5 * MAXVAL(rmt1(:))
-         WRITE (6,'("vacuum distance dvac =",f10.5)') dvac1
-         WRITE (6,'("extra vac.dist. dtild=",f10.5)') dtild
+         WRITE (oUnit,'("vacuum distance dvac =",f10.5)') dvac1
+         WRITE (oUnit,'("extra vac.dist. dtild=",f10.5)') dtild
       END IF
 
       rkm = 0.0
-      WRITE (6,*) 'Atom Z  lmax jri    rmt         dx'
+      WRITE (oUnit,*) 'Atom Z  lmax jri    rmt         dx'
       DO n = 1, atoms%ntype
          IF (rmt1(n).LT.1.8) THEN
             lmax11 = 6
@@ -402,13 +403,13 @@
            dx11 = LOG(3200*rmt1(n))/(jri11-1)
          ENDIF
          rkm = MAX(rkm, lmax11/rmt1(n))
-         WRITE (6,'(a3,i3,2i5,2f10.6)') noel(n),atoms%nz(n),lmax11,jri11,rmt1(n),dx11
+         WRITE (oUnit,'(a3,i3,2i5,2f10.6)') noel(n),atoms%nz(n),lmax11,jri11,rmt1(n),dx11
          dx1(n) = dx11
          lmax1(n) = lmax11
          jri1(n) = jri11
       END DO
-      WRITE (6,'("k_max =",f8.5)') rkm
-      WRITE (6,'("G_max =",f8.5)') 3*rkm
+      WRITE (oUnit,'("k_max =",f8.5)') rkm
+      WRITE (oUnit,'("G_max =",f8.5)') 3*rkm
       kmax = rkm
       ENDIF
 
@@ -422,7 +423,7 @@
                IF (atoms%rmt(i)+atoms%rmt(k).GE.nearestNeighborDists(j,i)) THEN
                   error = .TRUE.
                   IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
-                  WRITE(6,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
+                  WRITE(oUnit,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
                END IF
             END DO
             IF (input%film) THEN
@@ -432,17 +433,17 @@
                      IF ((sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+&
                          atoms%rmt(i)).GT.vacuum%dvac/2.) THEN
                         error=.TRUE.
-                        WRITE(6,241) i ,na
-                        WRITE(6,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
+                        WRITE(oUnit,241) i ,na
+                        WRITE(oUnit,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
                                    atoms%rmt(i),vacuum%dvac/2.
                      END IF
                   ELSE
                      IF (((atoms%pos(3,iAtom)+atoms%rmt(i)).GT. vacuum%dvac/2.).OR.&
                          ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                         error=.TRUE.
-                        WRITE(6,241) i ,na
+                        WRITE(oUnit,241) i ,na
                         IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
-                        WRITE(6,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
+                        WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
                      ENDIF
                   ENDIF
                END DO
@@ -458,5 +459,5 @@
   240 FORMAT('Error in muffin tin radii pair (',i5,',',i5,'):',3f10.5)
   241 FORMAT('   error: atom ',i3,' # ',i3,'reaches out into vaccuum')
 
-      END SUBROUTINE chkmt
-      END MODULE m_chkmt
+   END SUBROUTINE chkmt
+END MODULE m_chkmt

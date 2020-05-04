@@ -1,20 +1,20 @@
 MODULE m_force_a4
 CONTAINS
-  SUBROUTINE force_a4(atoms,sym,sphhar,input,&
-       &                    vr,&
-       &                    force)
+  SUBROUTINE force_a4(atoms,sym,sphhar,input,vr,force)
     !
     ! ************************************************************
     ! rhocore force contribution a la Rici et al.
     !
     ! ************************************************************
     !
-    USE m_intgr, ONLY : intgr0,intgr3
-    USE m_constants, ONLY : sfp_const
-    USE m_differentiate,ONLY: difcub
     USE m_types
+    USE m_constants
+    USE m_intgr, ONLY : intgr0,intgr3
+    USE m_differentiate,ONLY: difcub
     USE m_cdn_io
+
     IMPLICIT NONE
+
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -134,8 +134,8 @@ CONTAINS
              !
              !     write result
              !
-             WRITE (6,FMT=8010) n
-             WRITE (6,FMT=8020) (forc_a4(i),i=1,3)
+             WRITE (oUnit,FMT=8010) n
+             WRITE (oUnit,FMT=8020) (forc_a4(i),i=1,3)
 8010         FORMAT (' FORCES: EQUATION A4 FOR ATOM TYPE',i4)
 8020         FORMAT (' FX_A4=',2f10.6,' FY_A4=',2f10.6,' FZ_A4=',2f10.6)
              ! type loop ends

@@ -22,7 +22,7 @@ c
 c     Frank Freimuth, February 2011
 c*************************************************
 
-      use m_constants, only:pimach
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
@@ -97,7 +97,7 @@ c*************************************************
 
       tpi=2*pimach()
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 c*****************************************************
 c     get num_bands and num_wann from the proj file
 c*****************************************************
@@ -116,8 +116,8 @@ c*****************************************************
       endif
       read (203,*) num_wann,num_bands
       close (203)
-      write(6,*)'According to proj there are ',num_bands,' bands'
-      write(6,*)"and ",num_wann," wannier functions."
+      write(oUnit,*)'According to proj there are ',num_bands,' bands'
+      write(oUnit,*)"and ",num_wann," wannier functions."
 
 c****************************************************************
 c        read in chk
@@ -178,7 +178,7 @@ c****************************************************************
 c     fft5: transformation to Bloch-like    
 c****************************************************************
       allocate( hsomtx2(dim1,dim2,num_wann,num_wann,nkpts) )
-      write(6,*)"fft5: transformation to Bloch-like"
+      write(oUnit,*)"fft5: transformation to Bloch-like"
 
       if(have_disentangled) then       
        hsomtx2=0.0  
@@ -230,7 +230,7 @@ c****************************************************************
 c************************************************************
 c        Calculate matrix elements in real space.
 c***********************************************************      
-      write(6,*)"transform to rs"
+      write(oUnit,*)"transform to rs"
       allocate(hreal(dim1,dim2,num_wann,num_wann,rvecnum))
       hreal=cmplx(0.0,0.0)
       do rvecind=1,rvecnum

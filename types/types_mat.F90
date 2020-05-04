@@ -20,7 +20,7 @@ MODULE m_types_mat
       PROCEDURE        :: transpose => t_mat_transpose          !> transpose the matrix
       PROCEDURE        :: from_packed_real => t_mat_from_packed_real
       PROCEDURE        :: from_packed_cmplx => t_mat_from_packed_cmplx !> initialized from a packed-storage matrix
-      generic          :: from_packed => from_packed_real,from_packed_cmplx
+      generic          :: from_packed => from_packed_real, from_packed_cmplx
       PROCEDURE        :: inverse => t_mat_inverse             !> invert the matrix
       PROCEDURE        :: linear_problem => t_mat_lproblem    !> Solve linear equation
       PROCEDURE        :: to_packed => t_mat_to_packed          !> convert to packed-storage matrix
@@ -32,30 +32,140 @@ MODULE m_types_mat
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
       GENERIC          :: init => init_details, init_template
-      PROCEDURE        :: generate_full_matrix=>t_mat_generate_full_matrix
+      PROCEDURE        :: generate_full_matrix => t_mat_generate_full_matrix
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
       PROCEDURE        :: unsymmetry => t_mat_unsymmetry
+      procedure        :: norm2 => t_mat_norm2
+      procedure        :: subtract => t_mat_subtract
+      procedure        :: u2l => t_mat_u2l
+      procedure        :: l2u => t_mat_l2u
+      procedure        :: size_mb => t_mat_size_mb
    END type t_mat
    PUBLIC t_mat
 CONTAINS
-  function t_mat_allocated(mat) result(var_alloc)
-     implicit none
-     class(t_mat), intent(in) :: mat
-     logical :: var_alloc
+   function t_mat_size_mb(mat) result(mb_size)
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      real :: mb_size
 
-     if(mat%l_real) then
-        var_alloc = allocated(mat%data_r)
-     else
-        var_alloc = allocated(mat%data_c)
-     endif
-  end function t_mat_allocated
+      if(mat%l_real) then
+         mb_size =  8e-6 * size(mat%data_r)
+      else
+         mb_size = 16e-6 * size(mat%data_c)
+      endif
+   end function t_mat_size_mb
+   ! copy lower triangle to upper triangle
+   subroutine t_mat_l2u(mat)
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      integer :: i,j
 
-  SUBROUTINE t_mat_generate_full_matrix(mat)
-    IMPLICIT NONE
-    CLASS(t_mat), INTENT(INOUT)     :: mat
-    INTEGER ::i,j
-    IF (mat%l_real) THEN
+      call timestart("copy lower to upper matrix")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+
+      if(mat%l_real) then
+         do i = 1,mat%matsize1
+            do j = 1,i-1
+               mat%data_r(j,i) = mat%data_r(i,j)
+            enddo
+         enddo
+      else
+         do i = 1,mat%matsize1
+            do j = 1,i-1
+               mat%data_c(j,i) = conjg(mat%data_c(i,j))
+            enddo
+         enddo
+      endif
+      call timestop("copy lower to upper matrix")
+   end subroutine t_mat_l2u
+
+   ! copy upper triangle to lower triangle
+   subroutine t_mat_u2l(mat)
+      use m_judft
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      integer :: i,j
+
+      call timestart("copy upper to lower matrix")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%l_real) then
+         do i = 1,mat%matsize1
+            do j = 1,i-1
+               mat%data_r(i,j) = mat%data_r(j,i)
+            enddo
+         enddo
+      else
+         do i = 1,mat%matsize1
+            do j = 1,i-1
+               mat%data_c(i,j) = conjg(mat%data_c(j,i))
+            enddo
+         enddo
+      endif
+      call timestop("copy upper to lower matrix")
+   end subroutine t_mat_u2l
+
+   subroutine t_mat_subtract(res_mat, mat1, mat2)
+      use iso_c_binding, only: c_loc
+      implicit none
+      class(t_mat), intent(inout) :: res_mat
+      type(t_mat), intent(in)     :: mat1, mat2
+      logical :: real_res
+      integer :: s1, s2
+
+      ! check dimensions
+      if(mat1%matsize1 /= mat2%matsize1) call judft_error("matsize 1 doesn't agree")
+      s1 = mat1%matsize1
+      if(mat1%matsize2 /= mat2%matsize2) call judft_error("matsize 2 doesn't agree")
+      s2 = mat1%matsize2
+
+      ! check real/cmplx
+      real_res = mat1%l_real .and. mat2%l_real
+      if(res_mat%l_real .neqv. real_res) then
+         call res_mat%free()
+      endif
+      if(.not. res_mat%allocated())   call res_mat%alloc(real_res, s1, s2)
+
+      if(res_mat%l_real) then
+         res_mat%data_r = mat1%data_r(:s1,:s2) - mat2%data_r(:s1,:s2)
+      elseif(mat1%l_real .and. (.not. mat2%l_real)) then
+         res_mat%data_c = mat1%data_r(:s1,:s2) - mat2%data_c(:s1,:s2)
+      elseif((.not. mat1%l_real) .and. mat2%l_real) then
+         res_mat%data_c = mat1%data_c(:s1,:s2) - mat2%data_r(:s1,:s2)
+      else
+         res_mat%data_c(:s1,:s2) = mat1%data_c(:s1,:s2) - mat2%data_c(:s1,:s2)
+      endif
+   end subroutine t_mat_subtract
+
+   function t_mat_norm2(mat) result(norm)
+      implicit none
+      class(t_mat), intent(in) :: mat
+      real :: norm
+
+      if (mat%l_real) then
+         norm = norm2(mat%data_r)
+      else
+         norm = norm2(abs(mat%data_c))
+      endif
+   end function t_mat_norm2
+
+   function t_mat_allocated(mat) result(var_alloc)
+      implicit none
+      class(t_mat), intent(in) :: mat
+      logical :: var_alloc
+
+      if (mat%l_real) then
+         var_alloc = allocated(mat%data_r)
+      else
+         var_alloc = allocated(mat%data_c)
+      endif
+   end function t_mat_allocated
+
+   SUBROUTINE t_mat_generate_full_matrix(mat)
+      IMPLICIT NONE
+      CLASS(t_mat), INTENT(INOUT)     :: mat
+      INTEGER ::i, j
+      IF (mat%l_real) THEN
          DO i = 1, mat%matsize2
             DO j = i + 1, mat%matsize1
                mat%data_r(j, i) = mat%data_r(i, j)
@@ -69,7 +179,7 @@ CONTAINS
          ENDDO
       ENDIF
 
-  END subroutine
+   END subroutine
 
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
@@ -86,36 +196,39 @@ CONTAINS
       IF (mat%l_real) THEN
          IF (mat%unsymmetry() < 1E-8) THEN
             !Matrix is symmetric
-            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1,&
-                                vec%data_r, vec%matsize1, INFO)
+            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
+                       vec%data_r, vec%matsize1, INFO)
             IF (INFO > 0) THEN
                !Matrix was not positive definite
                lwork = -1; ALLOCATE (work(1))
                CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                lwork = INT(work(1))
                DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
                CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
             END IF
          ELSE
-            allocate(ipiv(mat%matsize1))
+            allocate (ipiv(mat%matsize1))
             call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
-            if(info /= 0) call judft_error("Error in dgesv for lproblem")
+            if (info /= 0) call judft_error("Error in dgesv for lproblem")
          END IF
       ELSE
          ! I don't to do the whole testing for symmetry:
-         allocate(ipiv(mat%matsize1))
+         allocate (ipiv(mat%matsize1))
          call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
-         if(info /= 0) call judft_error("Error in zgesv for lproblem")
+         if (info /= 0) call judft_error("Error in zgesv for lproblem")
       ENDIF
    END SUBROUTINE t_mat_lproblem
 
    SUBROUTINE t_mat_free(mat)
+      use m_judft
       CLASS(t_mat), INTENT(INOUT)::mat
+      call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
+      call timestop("t_mat_free")
    END SUBROUTINE t_mat_free
 
    SUBROUTINE t_mat_add_transpose(mat, mat1)
@@ -174,12 +287,16 @@ CONTAINS
    END SUBROUTINE t_mat_init_template
 
    SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+      use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
+      character(len=300)           :: errmsg
 
       INTEGER:: err
+
+      call timestart("t_mat_alloc")
       IF (present(l_real)) mat%l_real = l_real
       IF (present(matsize1)) mat%matsize1 = matsize1
       IF (present(matsize2)) mat%matsize2 = matsize2
@@ -191,42 +308,110 @@ CONTAINS
       IF (allocated(mat%data_c)) deallocate (mat%data_c)
 
       IF (mat%l_real) THEN
-         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err)
-         ALLOCATE (mat%data_c(1,1))
+         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
+         ALLOCATE (mat%data_c(0, 0))
+         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                        hint="Errormessage: " // trim(errmsg))
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
-         ALLOCATE (mat%data_r(1,1))
-         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err)
+         ALLOCATE (mat%data_r(0, 0))
+         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
+         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                        hint="Errormessage: " // trim(errmsg))
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
       ENDIF
-
-      IF (err > 0) CALL judft_error("Allocation of memmory failed for mat datatype", hint="You probably run out of memory")
+      call timestop("t_mat_alloc")
    END SUBROUTINE t_mat_alloc
 
-   SUBROUTINE t_mat_multiply(mat1, mat2, res)
-      CLASS(t_mat), INTENT(INOUT)        ::mat1
-      CLASS(t_mat), INTENT(IN)           ::mat2
-      CLASS(t_mat), INTENT(OUT), OPTIONAL ::res
+   SUBROUTINE t_mat_multiply(mat1, mat2, res, transA, transB)
+      use m_judft
+      use m_constants
+      CLASS(t_mat), INTENT(INOUT)            :: mat1
+      CLASS(t_mat), INTENT(IN)               :: mat2
+      CLASS(t_mat), INTENT(INOUT), OPTIONAL    :: res
+      character(len=1), intent(in), optional :: transA, transB
 
-      if (mat1%matsize2 .ne. mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+      integer           :: m,n,k, lda, ldb, ldc
+      character(len=1)  :: transA_i, transB_i
+      type(t_mat)       :: tmp
 
+      call timestart("t_mat_multiply")
+
+      transA_i = "N"
+      if(present(transA)) transA_i = transA
+      transB_i = "N"
+      if(present(transB)) transB_i = transB
+
+      if(transA_i == "N") then
+         m = mat1%matsize1
+         k = mat1%matsize2
+      else
+         m = mat1%matsize2
+         k = mat1%matsize1
+      endif
+
+      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricieso the same type")
+      if(transB_i == "N" ) then
+         if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
+         n = mat2%matsize2
+      else
+         if(k /= mat2%matsize2) call judft_error("dimensions don't agree for matmul")
+         n = mat2%matsize1
+      endif
+
+      lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
+      ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
       IF (present(res)) THEN
-         call res%alloc(mat1%l_real, mat1%matsize1, mat2%matsize2)
+         ! prepare res matrix
+         if(res%allocated()) then
+            if(res%l_real .neqv. mat1%l_real) then
+               call res%free()
+            else
+               if(res%l_real) then
+                  if(any(shape(res%data_r) < [m,n])) then
+                     call res%free()
+                  else
+                     res%data_r = 0.0
+                     res%matsize1 = m
+                     res%matsize2 = n
+                  endif
+               else
+                  if(any(shape(res%data_c) < [m,n])) then
+                     call res%free()
+                  else
+                     res%data_c = cmplx_0
+                     res%matsize1 = m
+                     res%matsize2 = n
+                  endif
+               endif
+            endif
+         endif
+         if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
+
+         ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          IF (mat1%l_real) THEN
-            res%data_r = matmul(mat1%data_r(:mat1%matsize1, :mat1%matsize2), mat2%data_r(:mat2%matsize1, :mat2%matsize2))
+            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
-            res%data_c = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
+            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
          ENDIF
       else
-         if (mat1%matsize1 .ne. mat1%matsize2) CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+         if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
+            CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
+
+         call tmp%alloc(mat1%l_real, n,n)
+         ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
+
          if (mat1%l_real) THEN
-            mat1%data_r(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_r(:mat1%matsize1, :mat1%matsize2), mat2%data_r(:mat2%matsize1, :mat2%matsize2))
+            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
-            mat1%data_c(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
+            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
          ENDIF
+         call mat1%copy(tmp,1,1)
+         call tmp%free()
       end IF
+      call timestop("t_mat_multiply")
    end SUBROUTINE t_mat_multiply
 
    SUBROUTINE t_mat_transpose(mat1, res)
@@ -259,14 +444,18 @@ CONTAINS
       INTEGER:: n, nn, i
       call timestart("t_mat_from_packed_real")
       call mat1%alloc(.true., matsize, matsize)
-      i = 1
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP shared(matsize, mat1, packed_r) private(n, nn, i) &
+      !$OMP schedule(dynamic, 10)
       DO n = 1, matsize
          DO nn = 1, n
+            i = ((n - 1)*n)/2 + nn
             mat1%data_r(n, nn) = packed_r(i)
             mat1%data_r(nn, n) = packed_r(i)
-            i = i + 1
          end DO
       end DO
+      !$OMP END PARALLEL DO
       call timestop("t_mat_from_packed_real")
    end SUBROUTINE t_mat_from_packed_real
 
@@ -279,39 +468,52 @@ CONTAINS
       INTEGER:: n, nn, i
       call timestart("t_mat_from_packed_cmplx")
       call mat1%alloc(.false., matsize, matsize)
-      i = 1
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP shared(matsize, mat1, packed_c) private(n, nn, i) &
+      !$OMP schedule(dynamic, 10)
       DO n = 1, matsize
          DO nn = 1, n
+            i = ((n - 1)*n)/2 + nn
             mat1%data_c(n, nn) = conjg(packed_c(i))
             mat1%data_c(nn, n) = packed_c(i)
             i = i + 1
          end DO
       end DO
+      !$OMP END PARALLEL DO
       call timestop("t_mat_from_packed_cmplx")
    end SUBROUTINE t_mat_from_packed_cmplx
 
    function t_mat_to_packed(mat) result(packed)
-      CLASS(t_mat), INTENT(IN)       :: mat
+      CLASS(t_mat), INTENT(IN)      :: mat
       COMPLEX                       :: packed(mat%matsize1*(mat%matsize1 + 1)/2)
       integer :: n, nn, i
       real, parameter :: tol = 1e-5
       if (mat%matsize1 .ne. mat%matsize2) call judft_error("Could not pack no-square matrix", hint='This is a BUG, please report')
-      i = 1
-      DO n = 1, mat%matsize1
-         DO nn = 1, n
-            if (mat%l_real) THEN
+
+      if (mat%l_real) THEN
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(mat, packed) private(n, nn, i) &
+         !$OMP schedule(dynamic, 10)
+         DO n = 1, mat%matsize1
+            DO nn = 1, n
+               i = ((n - 1)*n)/2 + nn
                packed(i) = (mat%data_r(n, nn) + mat%data_r(nn, n))/2.
-               if (abs(mat%data_r(n, nn) - mat%data_r(nn, n)) > tol) then
-                  call judft_warn("Large unsymmetry in matrix packing n = " // int2str(n) // " nn = " // int2str(nn) // new_line("A") //&
-                                  "mat%data_r(n, nn) = " // float2str(mat%data_r(n, nn)) // " mat%data_r(nn, n) = " // float2str(mat%data_r(nn, n)) )
-               endif
-            else
-               packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
-               if (abs(conjg(mat%data_c(n, nn)) - mat%data_c(nn, n)) > tol) call judft_warn("Large unsymmetry in matrix packing")
-            endif
-            i = i + 1
+            end DO
          end DO
-      end DO
+         !$OMP END PARALLEL DO
+      else
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(mat, packed) private(n, nn, i) &
+         !$OMP schedule(dynamic, 10)
+         DO n = 1, mat%matsize1
+            DO nn = 1, n
+               i = ((n - 1)*n)/2 + nn
+               packed(i) = (conjg(mat%data_c(n, nn)) + mat%data_c(nn, n))/2.
+            end DO
+         end DO
+         !$OMP END PARALLEL DO
+      endif
    end function t_mat_to_packed
 
    subroutine t_mat_inverse(mat)
@@ -409,14 +611,14 @@ CONTAINS
 
       unsymmetry = 0.0
 
-      if(mat%matsize1 /= mat%matsize2) then 
+      if (mat%matsize1 /= mat%matsize2) then
          call judft_error("Rectangular matricies can't be symmetric")
-      else 
+      else
          n = mat%matsize1
-         if(mat%l_real) THEN
-            unsymmetry = maxval(mat%data_r(:n,:n) - transpose(mat%data_r(:n,:n)) )
+         if (mat%l_real) THEN
+            unsymmetry = maxval(mat%data_r(:n, :n) - transpose(mat%data_r(:n, :n)))
          else
-            unsymmetry = maxval(abs(mat%data_c(:n,:n) - conjg(transpose(mat%data_c(:n,:n))) ))
+            unsymmetry = maxval(abs(mat%data_c(:n, :n) - conjg(transpose(mat%data_c(:n, :n)))))
          endif
       endif
    end function t_mat_unsymmetry

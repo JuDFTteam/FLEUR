@@ -7,9 +7,7 @@
       MODULE m_rotdenmat
       use m_juDFT
       CONTAINS
-      SUBROUTINE rot_den_mat(
-     >                       alph,beta,
-     X                       rho11,rho22,rho21)
+      SUBROUTINE rot_den_mat(alph,beta,rho11,rho22,rho21)
 c***********************************************************************
 c This subroutine rotates the direction of the magnetization of the 
 c density matrix by multiplying with the unitary 2x2 spin rotation

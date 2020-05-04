@@ -7,10 +7,7 @@
       MODULE m_prpqfft
       use m_juDFT
       CONTAINS
-      SUBROUTINE prp_qfft(&
-     &                    l_write,stars,&
-     &                    cell,noco,&
-     &                    input)
+      SUBROUTINE prp_qfft(l_write,stars,cell,noco,input)
 !*********************************************************************
 !     This subroutine prepares the necessary variables and checks
 !     to calculate the plane wave chargedensity in the interstitial
@@ -25,12 +22,14 @@
 !     lattice systems.
 !        s.bluegel, IFF, 18.Nov.97
 !*********************************************************************
-!
+
+      USE m_types
+      USE m_constants
       USE m_ifft, ONLY : ifft235
       USE m_boxdim
-      USE m_types
+
       IMPLICIT NONE
-!
+
 !---> Arguments
       !
       LOGICAL,INTENT(IN)           :: l_write
@@ -120,11 +119,11 @@
 !---> fft's are usually fastest for low primes
 !     (restrict kqid to: kwid=  (2**P) * (3**Q) * (5**R)
 !
-      iofile = 6
+      iofile = oUnit
       ksfft  = 1
-      stars%kq1_fft = ifft235 (iofile,ksfft,mq1,gmaxp)
-      stars%kq2_fft = ifft235 (iofile,ksfft,mq2,gmaxp)
-      stars%kq3_fft = ifft235 (iofile,ksfft,mq3,gmaxp)
+      stars%kq1_fft = ifft235(ksfft,mq1,gmaxp)
+      stars%kq2_fft = ifft235(ksfft,mq2,gmaxp)
+      stars%kq3_fft = ifft235(ksfft,mq3,gmaxp)
 !+gb
 !      kq1_fft = mq1
 !      kq2_fft = mq2
@@ -138,9 +137,9 @@
      &             real( stars%kq3_fft )*arltv3)
       rknew = 0.5 * rknew / gmaxp
       IF (rknew.LT.input%rkmax) THEN
-         IF (l_write) WRITE (6,'('' rkmax and true gmax recalculated '')')
-         IF (l_write) WRITE (6,2100) input%rkmax, rknew, rknew*rknew
-         IF (l_write) WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
+         IF (l_write) WRITE (oUnit,'('' rkmax and true gmax recalculated '')')
+         IF (l_write) WRITE (oUnit,2100) input%rkmax, rknew, rknew*rknew
+         IF (l_write) WRITE (oUnit,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
          input%rkmax = rknew
       ENDIF
 !
@@ -148,9 +147,9 @@
 !       (otherwise too few elements in arrays defined in strng1)
 !
       IF (2*input%rkmax.GT.stars%gmax) THEN
-         WRITE (6,'('' gmax must be at least 2*rkmax'')')
-         WRITE (6,'('' increase gmax , or reduce rkmax'')')
-         WRITE (6,'('' rkmax ='',f10.3,''  gmax ='',f10.3)') input%rkmax,stars%gmax
+         WRITE (oUnit,'('' gmax must be at least 2*rkmax'')')
+         WRITE (oUnit,'('' increase gmax , or reduce rkmax'')')
+         WRITE (oUnit,'('' rkmax ='',f10.3,''  gmax ='',f10.3)') input%rkmax,stars%gmax
          CALL juDFT_error("rkmax,gmax",calledby ="prp_qfft",hint&
      &        ="gmax must be at least 2*rkmax")
       ENDIF
@@ -180,15 +179,15 @@
       ENDDO
 !
       IF ( stars%ng3_fft.EQ.0 ) THEN
-         WRITE(6,'('' presumably ng3 too small '')')
-         WRITE(6,'('' sk3max, gmaxp*rkmax '', 2f10.6)') &
+         WRITE(oUnit,'('' presumably ng3 too small '')')
+         WRITE(oUnit,'('' sk3max, gmaxp*rkmax '', 2f10.6)') &
      &                stars%sk3(stars%ng3),gmaxp*input%rkmax
          CALL juDFT_error("presumably ng3 too small","prp_qfft")
       ENDIF
 !
       IF ( stars%ng3_fft.GT.stars%ng3 ) THEN
-         WRITE(6,'('' nq3_fft > n3d '')')
-         WRITE(6,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
+         WRITE(oUnit,'('' nq3_fft > n3d '')')
+         WRITE(oUnit,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
           CALL juDFT_error("nq3_fft > n3d",calledby="prp_qfft")
       ENDIF
 !
@@ -198,9 +197,9 @@
         IF ( ( 2*stars%kv3(1,istr).GT.stars%kq1_fft ) .OR.&
      &       ( 2*stars%kv3(2,istr).GT.stars%kq2_fft ) .OR.&
      &       ( 2*stars%kv3(3,istr).GT.stars%kq3_fft ) ) THEN
-          WRITE (6,'('' not all nq3_fft stars in chg. den. FFT box'')')
-          WRITE (6,'('' inconsistency in def.s see also strgn1'')')
-          WRITE (6,'('' mq1d,mq2d,mq3d,kv1,kv2,kv3 '',6i5)')&
+          WRITE (oUnit,'('' not all nq3_fft stars in chg. den. FFT box'')')
+          WRITE (oUnit,'('' inconsistency in def.s see also strgn1'')')
+          WRITE (oUnit,'('' mq1d,mq2d,mq3d,kv1,kv2,kv3 '',6i5)')&
      &                  stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,2*stars%kv3(1,istr),2*stars%kv3(2,istr),&
      &                                 2*stars%kv3(3,istr)
           CALL juDFT_error("not all nq3_fft stars in chg. den. FFT box",&
@@ -216,7 +215,7 @@
          stars%kmxq_fft = stars%kmxq_fft + stars%nstr(istr)
       ENDDO
       IF ( stars%kmxq_fft .GT. stars%kq1_fft*stars%kq2_fft*stars%kq3_fft ) THEN
-         IF (l_write) WRITE (6,'('' array dimensions in later subroutines too'',&
+         IF (l_write) WRITE (oUnit,'('' array dimensions in later subroutines too'',&
      &             '' small'',2i10)') stars%kmxq_fft,stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
       ENDIF
 !---> 2d vectors
@@ -225,7 +224,7 @@
          kmxq2_fft = kmxq2_fft + stars%nstr2(istr)
       ENDDO
       IF ( kmxq2_fft .GT. stars%kq1_fft*stars%kq2_fft ) THEN
-         IF (l_write) WRITE (6,'('' array dimensions in later subroutines too'',&
+         IF (l_write) WRITE (oUnit,'('' array dimensions in later subroutines too'',&
      &             '' small'',2i10)') kmxq2_fft,stars%kq1_fft*stars%kq2_fft
       ENDIF
 

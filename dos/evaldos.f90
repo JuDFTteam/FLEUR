@@ -19,6 +19,8 @@
 !     ntb=max(nevk)
 !
 !----------------------------------------------------------------------
+      USE m_types
+      USE m_constants
       USE m_triang
       USE m_maketetra
       USE m_tetrados
@@ -26,8 +28,6 @@
       USE m_dosbin
       USE m_ptdos
       USE m_smooth
-      USE m_types
-      USE m_constants
       USE m_cdn_io
       IMPLICIT NONE
       INTEGER,INTENT(IN)             :: eig_id
@@ -108,19 +108,19 @@
       emax =max(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
       efermi = efermiarg*hartree_to_ev_const
 
-      WRITE (6,'(a)') 'DOS-Output is generated!'
+      WRITE (oUnit,'(a)') 'DOS-Output is generated!'
 
       IF ( NINT((emax - emin)/sigma) > ned ) THEN
-        WRITE(6,*) 'sig_dos too small for DOS smoothing:'
-        WRITE(6,*) 'Reduce energy window or enlarge banddos%sig_dos!'
-        WRITE(6,*) 'For now: setting sigma to zero !'
+        WRITE(oUnit,*) 'sig_dos too small for DOS smoothing:'
+        WRITE(oUnit,*) 'Reduce energy window or enlarge banddos%sig_dos!'
+        WRITE(oUnit,*) 'For now: setting sigma to zero !'
         sigma = 0.0
       ENDIF
 
-      WRITE (6,*) 'sigma=   ' , sigma
-      WRITE (6,*) 'emax=   ' , emax
-      WRITE (6,*) 'emin=   ' , emin
-      WRITE (6,*) 'ef_inp=   ' , efermi
+      WRITE (oUnit,*) 'sigma=   ' , sigma
+      WRITE (oUnit,*) 'emax=   ' , emax
+      WRITE (oUnit,*) 'emin=   ' , emin
+      WRITE (oUnit,*) 'ef_inp=   ' , efermi
 !
 !     create energy grid
       emax = emax - efermi
@@ -292,8 +292,8 @@
                CALL make_tetra(kpts%nkpt,kpts%bk,ntria,itria,atr,&
                     ntetra,itetra,voltet)
              ELSE
-               WRITE (6,*) 'no tetrahedron method with these k-points!'
-               WRITE (6,*) sym%nop2,as
+               WRITE (oUnit,*) 'no tetrahedron method with these k-points!'
+               WRITE (oUnit,*) sym%nop2,as
              ENDIF
  67          CONTINUE                       ! tetrahedron-information read or created
            ENDIF

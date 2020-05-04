@@ -26,8 +26,9 @@ CONTAINS
 
 #include"cpp_double.h"
 
-    USE m_hnonmuff
     USE m_types
+    USE m_constants
+    USE m_hnonmuff
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -84,7 +85,7 @@ CONTAINS
 #else
     !---> LAPACK call
     CALL CPP_LAPACK_sspev ('V','U',ne, h, eig,z1, ne,help, info)
-    WRITE (6,FMT=8000) info
+    WRITE (oUnit,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_sspev: info=',i4)
 #endif
 

@@ -128,8 +128,8 @@ MODULE m_corespec_eval
     real, intent(in) :: efermi
     integer, intent(in) :: msh
     real, intent    (in) :: vr(atoms%jmtd,atoms%ntype,jspins)
-    real, intent (in) :: f(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
-    real, intent (in) :: g(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
+    real, intent (in) :: f(atoms%jmtd,2,0:atoms%lmaxd,jspins)
+    real, intent (in) :: g(atoms%jmtd,2,0:atoms%lmaxd,jspins)
 
     integer :: nr,lx,lax,lin,lix,nqv,nen,nex
 
@@ -1057,7 +1057,7 @@ MODULE m_corespec_eval
 !      code=6:   (a,b,c) etc, c=sqrt(1-a^2-b^2), a/b input  ( 48 points)
 !    
        goto (1,2,3,4,5,6) code
-       write (6,*) 'Gen_Oh: Invalid Code'
+       write (oUnit,*) 'Gen_Oh: Invalid Code'
        stop 
     1  continue
        a=1.0

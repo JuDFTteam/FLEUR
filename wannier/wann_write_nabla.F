@@ -25,7 +25,11 @@ c     Write the matrix grad^{k}_{mn} to file WF1.nabl/WF2.nabl
 c
 c     Frank Freimuth
 c*************************************************************
+
+      USE m_constants
+
       implicit none
+
       integer, intent(in)    :: mpi_comm
       logical, intent(in)    :: l_p0
       character, intent(in)  :: filename*(*)
@@ -78,7 +82,7 @@ c**********************************************************
 #endif
 
       write(*,*)"wn: fullnkpts=",fullnkpts
-      write(6,*)"wn: fullnkpts=",fullnkpts
+      write(oUnit,*)"wn: fullnkpts=",fullnkpts
 
       if(l_p0)then
        open (305,file=filename)

@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
-    INTEGER iri,i
+    INTEGER iri
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
@@ -58,19 +58,17 @@ CONTAINS
     my = 2*AIMAG(qa21(itype))
     mz = chmom(itype,1) - chmom(itype,2)
     absmag=SQRT(mx*mx+my*my+mz*mz)
-    WRITE  (6,8025) mx,my,mz,absmag
+    WRITE  (oUnit,8025) mx,my,mz,absmag
     !---> determine the polar angles of the moment vector in the local frame
     CALL pol_angle(mx,my,mz,betah,alphh)
-    WRITE  (6,8026) betah,alphh
+    WRITE  (oUnit,8026) betah,alphh
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
     IF(noco%l_alignMT) THEN
-    DO i=1, atoms%ntype
-      WRITE  (6,8400) nococonv%beta(i),nococonv%alph(i)
+      WRITE  (oUnit,8400) nococonv%beta(itype),nococonv%alph(itype)
       8400   FORMAT(2x,'-->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
-    END DO
     END IF
 
     IF (noco%l_relax(itype)) THEN
@@ -90,8 +88,8 @@ CONTAINS
           mz = (-1.0) * mz_mix
        ENDIF
        CALL pol_angle(mx,my,mz,betah,alphh)
-       WRITE  (6,8027) nococonv%beta(itype),nococonv%alph(itype)-alphdiff
-       WRITE  (6,8028) betah,alphh-alphdiff
+       WRITE  (oUnit,8027) nococonv%beta(itype),nococonv%alph(itype)-alphdiff
+       WRITE  (oUnit,8028) betah,alphh-alphdiff
 8027   FORMAT(2x,'-->',10x,' input nococonv%beta=',f9.5, '  input nococonv%alpha=',f9.5)
 8028   FORMAT(2x,'-->',10x,'output nococonv%beta=',f9.5, ' output nococonv%alpha=',f9.5)
 
@@ -105,7 +103,7 @@ CONTAINS
        mx_mix = 2*REAL(rho21)
        my_mix = 2*AIMAG(rho21)
        mz_mix = rho11 - rho22
-       WRITE  (6,8031) mx_mix,my_mix
+       WRITE  (oUnit,8031) mx_mix,my_mix
 8031   FORMAT(2x,'--> global frame: ','mixed mx=',f9.5,' mixed my=',f9.5)
        ! if magnetic moment (in local frame!) is negative, direction of quantization
        ! has to be antiparallel!
@@ -117,7 +115,7 @@ CONTAINS
        ENDIF
        ! calculate angles alpha and beta in global frame
        CALL pol_angle(mx_mix,my_mix,mz_mix,betah,alphh)
-       WRITE  (6,8029) betah,alphh-alphdiff
+       WRITE  (oUnit,8029) betah,alphh-alphdiff
 8029   FORMAT(2x,'-->',10x,' new nococonv%beta  =',f9.5, '  new nococonv%alpha  =',f9.5)
        nococonv%alph(itype) = alphh
        nococonv%beta(itype) = betah
@@ -136,8 +134,8 @@ CONTAINS
        b_con_outx = scale*mx
        b_con_outy = scale*my
        !--->    mix input and output constraint fields
-       WRITE  (6,8100) nococonv%b_con(1,itype),nococonv%b_con(2,itype)
-       WRITE  (6,8200) b_con_outx,b_con_outy
+       WRITE  (oUnit,8100) nococonv%b_con(1,itype),nococonv%b_con(2,itype)
+       WRITE  (oUnit,8200) b_con_outx,b_con_outy
        nococonv%b_con(1,itype) = nococonv%b_con(1,itype) + noco%mix_b*b_con_outx
        nococonv%b_con(2,itype) = nococonv%b_con(2,itype) + noco%mix_b*b_con_outy
     ENDIF

@@ -1,9 +1,7 @@
 set(fleur_F77 ${fleur_F77}
 #init/bandstr1.F
-init/boxdim.f
 #init/convn_dim.f
 init/gtest.f
-init/ifft235.f
 init/lhcal.f
 init/local_sym.f
 #init/mod_symdata.f
@@ -14,7 +12,9 @@ init/spgrot.f
 init/strgn_dim.F
 )
 set(fleur_F90 ${fleur_F90}
+init/ifft235.f90
 init/fleurinput_postprocess.f90
+include/buildinfo.h
 init/compile_descr.F90
 init/checks.F90
 init/efield.f90
@@ -23,6 +23,7 @@ init/make_sphhar.f90
 init/make_sym.f90
 init/make_forcetheo.f90
 init/make_xcpot.f90
+init/boxdim.f90
 #init/inpeig.f90
 init/mapatom.F90
 init/od_mapatom.F90

@@ -52,7 +52,8 @@ contains
     type(t_potden),    intent(inout) :: outDen
     type(t_results),   intent(inout) :: results
     type(t_potden),    intent(inout) :: inDen
-    integer,           intent(in)    :: archiveType, iteration
+    integer,           intent(in)    :: archiveType
+    integer,           intent(inout) :: iteration
     LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
@@ -109,30 +110,30 @@ contains
     CALL timestart("Mixing")
     SELECT CASE(input%imix)
     CASE(0)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,f10.5)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,f10.5)' ) &
             'STRAIGHT MIXING: alpha=',input%alpha," spin-mixing=",MERGE(input%alpha*input%spinf,0.,input%jspins>1)
        CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
     CASE(3,5)
        CALL judft_error("Broyden 1/2 method not implemented")
     CASE(7)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0)' ) &
             'GENERALIZED ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1
        Call broyden(input%alpha,fsm,sm)
     CASE(9)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,0)
     CASE(11)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PERIODIC PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,input%maxiter)
     CASE(13)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'RESTARTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL pulay(input%alpha,fsm,sm,0)
        IF (it==input%maxiter) CALL mixing_history_limit(0) !Restarting Pulay
     CASE(15)
-       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+       IF (mpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'ADAPTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL a_pulay(input%alpha,fsm,sm)
     CASE DEFAULT
@@ -169,6 +170,7 @@ contains
        !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
        inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
        IF(l_runhia) THEN
+          iteration = 1
           CALL mixing_history_reset(mpi)
           CALL mixvector_reset()
        ENDIF

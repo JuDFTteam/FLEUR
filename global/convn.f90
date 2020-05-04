@@ -2,8 +2,7 @@
         use m_juDFT
         implicit none
       CONTAINS
-      SUBROUTINE convn(&
-     &                 l_write,atoms,stars)
+      SUBROUTINE convn(l_write,atoms,stars)
 !
 !     ***********************************************************
 !     determines the optimum values for the convergence parameter
@@ -14,6 +13,7 @@
 !          m. weinert july 1982
 !     ***********************************************************
       USE m_types
+      USE m_constants
       IMPLICIT NONE
       !     ..
       LOGICAL,INTENT(IN)           :: l_write
@@ -58,14 +58,14 @@
 !--->    output and make sure ncv(n).le.ncvd
 30    CONTINUE
       IF (.not.l_write) return   
-      WRITE (6,FMT=8010)
+      WRITE (oUnit,FMT=8010)
       DO 40 n = 1,atoms%ntype
          nc = atoms%ncv(n)
          l = nc - 1
-         WRITE (6,FMT=8020) n,nc,l
+         WRITE (oUnit,FMT=8020) n,nc,l
    40 CONTINUE
       RETURN
-   60 WRITE (6,FMT=8040) n,sck
+   60 WRITE (oUnit,FMT=8040) n,sck
        CALL juDFT_error("ncv",calledby="convn")
  8000 FORMAT (10i5)
  8010 FORMAT (/,/,10x,'convergence parameters for the pseudocharge',&

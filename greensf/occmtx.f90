@@ -47,9 +47,9 @@ MODULE m_occmtx
 
       !Check for Contours not reproducing occupations
       IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.contourInp%et.NE.0.0) &
-         WRITE(6,*) "Energy contour not ending at efermi: These are not the actual occupations"
+         WRITE(oUnit,*) "Energy contour not ending at efermi: These are not the actual occupations"
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
-         WRITE(6,*) "Energy contour not weighted for occupations: These are not the actual occupations"
+         WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
       mmpMat = 0.0
 
@@ -159,15 +159,15 @@ MODULE m_occmtx
                ndwn = ndwn + gmat%data_r(i,i)
             ENDDO
             !Write to file
-            WRITE(6,*)
+            WRITE(oUnit,*)
 9000        FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
-            WRITE(6,9000) atomType, l
-            WRITE(6,"(A)") "In the |L,S> basis:"
+            WRITE(oUnit,9000) atomType, l
+            WRITE(oUnit,"(A)") "In the |L,S> basis:"
             DO i = 1, 2*ns
-               WRITE(6,"(14f8.4)") gmat%data_r(i,:)
+               WRITE(oUnit,"(14f8.4)") gmat%data_r(i,:)
             ENDDO
-            WRITE(6,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(6,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            WRITE(oUnit,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(oUnit,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
             !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
             !CALL cmat%init(.TRUE.,2*ns,2*ns)
@@ -186,13 +186,13 @@ MODULE m_occmtx
             !ENDDO
 
             !Write to file
-            !WRITE(6,"(A)") "In the |J,mj> basis:"
+            !WRITE(oUnit,"(A)") "In the |J,mj> basis:"
             !DO i = 1, 2*ns
-            !   WRITE(6,"(14f8.4)") jmat%data_r(i,:)
+            !   WRITE(oUnit,"(14f8.4)") jmat%data_r(i,:)
             !ENDDO
-            !WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
-            !WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
-            !WRITE(6,*)
+            !WRITE(oUnit,"(1x,A,f8.4)") "Low J trace: ", nlow
+            !WRITE(oUnit,"(1x,A,f8.4)") "High J trace: ", nhi
+            !WRITE(oUnit,*)
          ENDIF
       ENDIF
 

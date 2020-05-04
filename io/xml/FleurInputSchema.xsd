@@ -484,7 +484,7 @@
       <xsd:attribute name="phi" type="xsd:string" use="optional" default="0.0"/>
       <xsd:attribute name="theta" type="xsd:string" use="optional" default="0.0"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
-      <xsd:attribute name="init_occ" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="calc" name="init_occ"      type="ManualCutoffType" use="optional"/>
       <xsd:attribute default="calc" name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
@@ -492,7 +492,7 @@
    <xsd:complexType name="ExcType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
-      <xsd:attribute name="init_mom" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="calc" name="init_mom" type="ManualCutoffType" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SolverArgType">
@@ -504,7 +504,7 @@
       <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_offdiag" type="FleurBool" use="required"/>
-      <xsd:attribute default="calc" name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -650,6 +650,9 @@
       <xsd:attribute default="0.0 0.0 1.0" name="vec3" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0 0.0 0.0" name="zero" type="xsd:string" use="optional"/>
       <xsd:attribute default="plot" name="file" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="onlyMT" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0" name="typeMT" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="F" name="vecField" type="FleurBool" use="optional"/>
     </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">
@@ -963,6 +966,7 @@
       <xsd:attribute default="F" name="slice" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="mcd" type="FleurBool" use="optional"/>
    </xsd:complexType>
 

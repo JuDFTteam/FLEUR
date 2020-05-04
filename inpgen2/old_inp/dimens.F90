@@ -24,6 +24,7 @@ CONTAINS
     USE m_types_oned
     USE m_types_hybinp
     USE m_types_cell
+    USE m_constants
     USE m_dimen7
     USE m_firstglance
     IMPLICIT NONE
@@ -48,8 +49,8 @@ CONTAINS
     oneD%odd%d1=.TRUE.
     l_kpts=.TRUE.
 
-       IF (l_kpts) WRITE (6,*) ' No fl7para-file found, '
-       WRITE (6,*) ' invoking dimen7... '
+       IF (l_kpts) WRITE (oUnit,*) ' No fl7para-file found, '
+       WRITE (oUnit,*) ' invoking dimen7... '
        !call first_glance to generate k-points
        CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 

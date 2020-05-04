@@ -423,19 +423,21 @@ CONTAINS
     INTEGER:: k
     REAL:: th
     DO k = 1,lapw%nv(iintsp)
-       th= DOT_PRODUCT(lapw%gvec(:,k,iintsp)+(iintsp-1.5)*qss,tau)
+       th= DOT_PRODUCT(lapw%gvec(:,k,iintsp)+(iintsp-1.5)*qss+lapw%bkpt,tau)
        cph(k) = CMPLX(COS(tpi_const*th),-SIN(tpi_const*th))
     END DO
   END SUBROUTINE lapw_phase_factors
 
 
-  SUBROUTINE priv_vec_for_lo(atoms,sym,na,&
-       n,np,noco,nococonv, lapw,cell)
-    USE m_constants,ONLY: tpi_const,fpi_const
+  SUBROUTINE priv_vec_for_lo(atoms,sym,na,n,np,noco,nococonv, lapw,cell)
+
+    USE m_constants
     USE m_orthoglo
     USE m_ylm
     USE m_types_fleurinput
+
     IMPLICIT NONE
+
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_nococonv),INTENT(IN):: nococonv
     TYPE(t_sym),INTENT(IN)    :: sym
@@ -587,10 +589,10 @@ CONTAINS
                    END IF
                 END DO
                 IF ((k.EQ.lapw%nv(iintsp)) .AND. (.NOT.enough)) THEN
-                   WRITE (6,FMT=*) 'vec_for_lo did not find enough linearly independent'
-                   WRITE (6,FMT=*) 'clo coefficient-vectors. the linear independence'
-                   WRITE (6,FMT=*) 'quality, linindq, is set: ',linindq
-                   WRITE (6,FMT=*) 'this value might be to large.'
+                   WRITE (oUnit,FMT=*) 'vec_for_lo did not find enough linearly independent'
+                   WRITE (oUnit,FMT=*) 'clo coefficient-vectors. the linear independence'
+                   WRITE (oUnit,FMT=*) 'quality, linindq, is set: ',linindq
+                   WRITE (oUnit,FMT=*) 'this value might be to large.'
                    WRITE(*,*) na,k,lapw%nv
                    CALL juDFT_error("not enough lin. indep. clo-vectors" ,calledby ="vec_for_lo")
                 END IF

@@ -10,6 +10,8 @@ c
      <                        nmopq)
 
       USE m_symdata , ONLY : nammap,ord2,l_c2
+      USE m_constants
+
       IMPLICIT NONE
 
       INTEGER,INTENT (OUT) :: ntype,nop,nat,nlod,layerd,itmax
@@ -128,7 +130,7 @@ c to find out how many k-points to generate...
       INQUIRE (file='QGpsi',exist=l_kpts)
       IF (.not.l_kpts) INQUIRE (file='kpts',exist=l_kpts)
       IF (.not.l_kpts) THEN
-        WRITE (6,*) 'No kpts-file exists, trying to generate it'
+        WRITE (oUnit,*) 'No kpts-file exists, trying to generate it'
         DO line = 1,6
           READ (5,*,END=95,ERR=95)
         ENDDO
@@ -145,13 +147,15 @@ c to find out how many k-points to generate...
         nmop(1) = 0 ; nmop(2) = 0 ; nmop(3) = 0 ; l_gamma=.false.
         GOTO 96
 
- 95     WRITE (6,*) 'Since you did not provide a kpts-file, you'
-        WRITE (6,*) 'should give k-mesh information at the end of'
-        WRITE (6,*) 'the inp-file, at least how many k-points, e.g.'
-        WRITE (6,*) 'nkpt=  100  -- or give the divisions n in xyz:'
-        WRITE (6,*) 'nkpt=   36,nx= 6,ny= 6,nz= 8,gamma=F'
-        CLOSE (6)
+ 95   WRITE (oUnit,*) 'Since you did not provide a kpts-file, you'
+      WRITE (oUnit,*) 'should give k-mesh information at the end of'
+      WRITE (oUnit,*) 'the inp-file, at least how many k-points, e.g.'
+      WRITE (oUnit,*) 'nkpt=  100  -- or give the divisions n in xyz:'
+      WRITE (oUnit,*) 'nkpt=   36,nx= 6,ny= 6,nz= 8,gamma=F'
+      CLOSE (oUnit)
+
         STOP
+
       ENDIF
  96   CONTINUE
 
@@ -193,8 +197,8 @@ c to find out how many k-points to generate...
 !
 ! Error
 !
-  99  WRITE (6,*) 'Error glancing at inp file at line',line
-      CLOSE (6)
+  99  WRITE (oUnit,*) 'Error glancing at inp file at line',line
+      CLOSE (oUnit)
       CALL juDFT_error("Error glancing at inp file",calledby
      +       ="first_glance")
 

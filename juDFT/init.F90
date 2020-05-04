@@ -10,15 +10,21 @@
       USE m_judft_sysinfo
       USE m_judft_stop
       USE m_judft_args
+      USE m_juDFT_internalParams
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
       CONTAINS
-     
-      SUBROUTINE juDFT_init()
-        IF (.NOT.judft_was_argument("-debugtime")) &
-             CALL signal_handler()
-      CALL checkstack()
+
+      SUBROUTINE juDFT_init(outUnit,l_checkStack)
+
+         INTEGER, INTENT(IN) :: outUnit
+         LOGICAL, INTENT(IN) :: l_checkStack
+
+         juDFT_outUnit = outUnit
+         IF (.NOT.judft_was_argument("-debugtime")) CALL signal_handler()
+         IF (l_checkStack) CALL checkstack()
+
       END SUBROUTINE juDFT_init
 
       SUBROUTINE signal_handler()

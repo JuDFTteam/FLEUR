@@ -19,7 +19,7 @@ c     files WF1.chk (and WF1_um.dat) produced
 c     by wannier90.
 c     FF, December 2009
 c*************************************************
-      use m_constants, only:pimach
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
@@ -98,7 +98,7 @@ c      real                :: kpoints(3,nkpts)
       jspins=jspins_in
       if(l_soc)jspins=1
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 
 c$$$c***************************************************
 c$$$c     read in the kpoints from w90kpts or kpts
@@ -148,8 +148,9 @@ c*****************************************************
          endif
          read (203,*) num_wann,num_bands
          close (203)
-         write(6,*)'According to proj there are ',num_bands,' bands'
-         write(6,*)"and ",num_wann," wannier functions."
+         write(oUnit,*)'According to proj there are ',
+     +                 num_bands,' bands'
+         write(oUnit,*)"and ",num_wann," wannier functions."
 
 c****************************************************************
 c        read in chk
@@ -261,7 +262,7 @@ c        Calculate matrix elements of Nabla in the basis of
 c        rotated Bloch functions.
 c****************************************************************
          allocate( nablamat2(3,num_wann,num_wann,nkpts) )
-         write(6,*)"calculate matrix elements of momentum operator
+         write(oUnit,*)"calculate matrix elements of momentum operator
      &   between wannier orbitals"
 
          if(have_disentangled) then       
@@ -312,7 +313,7 @@ c****************************************************************
 c************************************************************
 c        Calculate matrix elements in real space.
 c***********************************************************      
-         write(6,*)"calculate nabla-mat in rs"
+         write(oUnit,*)"calculate nabla-mat in rs"
 c$$$         hopmin=-5
 c$$$         hopmax=5
 c$$$         allocate(hreal(3,num_wann,num_wann,hopmin:hopmax,

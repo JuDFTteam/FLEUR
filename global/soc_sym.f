@@ -15,7 +15,7 @@
      >                   nop,mrot,theta,phi,amat,
      <                   error)
       
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_inv3
       IMPLICIT NONE
 
@@ -68,16 +68,18 @@
         test = sqa(1)*ssqa(1) + sqa(2)*ssqa(2) + sqa(3)*ssqa(3) 
         IF (abs(test-1.0).GT.0.00001) THEN
           error(iop) = .true.
-          WRITE (6,100) iop,test
+          WRITE (oUnit,100) iop,test
         ENDIF
       ENDDO
- 100  FORMAT ('Symmetry element no.',i3,' incompatible with SQA',f20.10)
+ 100  FORMAT ('Symmetry element no.',i3,
+     +        ' incompatible with SQA',f20.10)
       
       IF ( ANY(error(:)) ) THEN
 !         CALL juDFT_warn
 !     +        ("symmetry incompatible with SOC - Spin Quantization Axis"
 !     +        ,calledby ="soc_sym")
-         WRITE (6,*) 'symmetry incompatible with SOC - Spin Quant Axis'
+         WRITE (oUnit,*) 
+     +      'symmetry incompatible with SOC - Spin Quant Axis'
       ENDIF
       END SUBROUTINE soc_sym
 !---------------------------------------------------------------

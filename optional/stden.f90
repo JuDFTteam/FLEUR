@@ -15,6 +15,9 @@ CONTAINS
 SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
 
+   USE m_juDFT_init
+   USE m_types
+   USE m_types_xcpot_inbuild
    USE m_constants
    USE m_qsf
    USE m_checkdopall
@@ -22,9 +25,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    USE m_cdn_io
    USE m_qfix
    USE m_atom2
-   USE m_types
-   USE m_types_xcpot_inbuild
-   USE m_juDFT_init
 
    IMPLICIT NONE
 
@@ -89,7 +89,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
          !qdel = 2.*input%sigma/natot
       END IF
 
-      WRITE (6,FMT=8000)
+      WRITE (oUnit,FMT=8000)
       8000 FORMAT (/,/,/,' superposition of atomic densities',/,/,' original atomic densities:',/)
       DO n = 1,atoms%ntype
          r = atoms%rmsh(1,n)
@@ -158,7 +158,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
          END IF
          ! list atomic density
          iza = atoms%zatom(n) + 0.0001
-         WRITE (6,FMT=8030) namat_const(iza)
+         WRITE (oUnit,FMT=8030) namat_const(iza)
          8030 FORMAT (/,/,' atom: ',a2,/)
          8040 FORMAT (4 (3x,i5,f8.5,f12.6))
          70 CONTINUE
@@ -213,7 +213,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
       ! Check continuity
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins
-            WRITE (6,'(a8,i2)') 'spin No.',ispin
+            WRITE (oUnit,'(a8,i2)') 'spin No.',ispin
             CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
                            cell,den,ispin)
          END DO ! ispin = 1, input%jspins

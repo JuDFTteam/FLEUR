@@ -62,7 +62,7 @@ c    vkxyz    : vector of kpoint generated; in cartesian representation
 c    wghtkp   : weight associated with k-points for BZ integration
 c
 c-----------------------------------------------------------------------
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_tetcon
       USE m_kvecon
       USE m_fulstar
@@ -115,12 +115,12 @@ c
       tpi = 2.0 * pimach()
 c
    
-      WRITE (6,'('' k-points generated with tetrahedron '',
+      WRITE (oUnit,'('' k-points generated with tetrahedron '',
      >                                              ''method'')')
-      WRITE (6,'(''# k-points generated with tetrahedron '',
+      WRITE (oUnit,'(''# k-points generated with tetrahedron '',
      >                                              ''method'')')
-      WRITE (6,'(3x,'' in irred wedge of 1. Brillouin zone'')')
-      WRITE (6,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
+      WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
+      WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
     
       CALL kvecon(
      >            6,6,mkpt,mface,
@@ -139,17 +139,17 @@ c
      =            nsym,
      <            ntet,voltet,ntetra)
 c
-      WRITE (6,'('' the number of tetrahedra '')')
-      WRITE (6,*) ntet
-      WRITE (6,'('' volumes of the tetrahedra '')')
-      WRITE (6,'(e19.12,1x,i5,5x,''voltet(i),i'')')
+      WRITE (oUnit,'('' the number of tetrahedra '')')
+      WRITE (oUnit,*) ntet
+      WRITE (oUnit,'('' volumes of the tetrahedra '')')
+      WRITE (oUnit,'(e19.12,1x,i5,5x,''voltet(i),i'')')
      >                               (voltet(i),i,i=1,ntet)
-      WRITE (6,'('' corners of the tetrahedra '')')
-      WRITE (6, 999) ((ntetra(j,i),j=1,4),i=1,ntet)
-      WRITE (6,'('' the # of different k-points '')')
-      WRITE (6,*) nkpt
-      WRITE (6,'('' k-points used to construct tetrahedra'')')
-      WRITE (6,'(3(4x,f10.6))') ((vktet(i,j),i=1,3),j=1,nkpt)
+      WRITE (oUnit,'('' corners of the tetrahedra '')')
+      WRITE (oUnit, 999) ((ntetra(j,i),j=1,4),i=1,ntet)
+      WRITE (oUnit,'('' the # of different k-points '')')
+      WRITE (oUnit,*) nkpt
+      WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
+      WRITE (oUnit,'(3(4x,f10.6))') ((vktet(i,j),i=1,3),j=1,nkpt)
   999 FORMAT (4(3x,4i4))
 c
 c --->   calculate weights from volume of tetrahedra
@@ -172,7 +172,7 @@ c
           ENDDO
         ENDIF
       ELSE
-        WRITE (6, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
+        WRITE (oUnit, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
      >                                     sumvol,volirbz
          CALL juDFT_error("sumvol =/= volirbz",calledby="kpttet")
       ENDIF
@@ -183,7 +183,7 @@ c
 c
         DO i = 1, nkpt
            vkxyz(:,i) = vktet(:,i)
-           WRITE (6,'(3(f10.7,1x),f12.10,1x,i4,3x,
+           WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
      +           ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
         ENDDO  
         nkstar = nkpt
@@ -201,10 +201,10 @@ c
          ENDDO
 
          nkpt = ntet
-         WRITE (6,'('' the new number of k-points is '',i4)') nkpt
-         WRITE (6,'('' the new k-points are the '',
+         WRITE (oUnit,'('' the new number of k-points is '',i4)') nkpt
+         WRITE (oUnit,'('' the new k-points are the '',
      +                        ''mid-tetrahedron-points '')')
-         WRITE (6,'(''# the new k-points are the '',
+         WRITE (oUnit,'(''# the new k-points are the '',
      +                        ''mid-tetrahedron-points '')')
          sumwght = 0.00
          DO i=1,ntet
@@ -215,16 +215,16 @@ c
 ! ---> check sumwght; if abs(sumwght-1).lt.eps print kpoints and weights
 !
          IF ( abs(sumwght - one).LT.eps) THEN
-            WRITE (6,'(1x,f12.10,1x,'' sumwght .eq. one'')')
+            WRITE (oUnit,'(1x,f12.10,1x,'' sumwght .eq. one'')')
      +                                                   sumwght
             DO i=1,nkpt
-               WRITE (6,'(3(f10.7,1x),f12.10,1x,i4,3x,
+               WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
      +            ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i), i
             ENDDO
             nkstar = ntet
 
          ELSE
-            WRITE (6,'(1x,f12.10,1x,'' sumwght .ne. one'')')
+            WRITE (oUnit,'(1x,f12.10,1x,'' sumwght .ne. one'')')
      +                                                   sumwght
              CALL juDFT_error("sumwght",calledby="kpttet")
          ENDIF

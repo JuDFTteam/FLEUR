@@ -143,7 +143,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER ki,kj,l,nn,j1,j2,lo,ilo,locol,lorow,ll,nkvec,nkvecp,na,invsfct
+    INTEGER ki,kj,l,nn,j1,j2,lo,ilo,locol_loc,locol_mat,lorow,ll,nkvec,nkvecp,na,invsfct
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
@@ -190,9 +190,9 @@ CONTAINS
           l = atoms%llo(lo,n)
           if (l==0) cycle !no SOC for s-states
           DO nkvec = 1,invsfct* (2*l+1)
-            locol= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-            IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
-              locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
+            locol_mat= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
+            IF (MOD(locol_mat-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
+              locol_loc=(locol_mat-1)/mpi%n_size+1 !this is the column in local storage
               ki=lapw%kvec(nkvec,lo,na) !this LO is attached to this k+G
 
               !--->       legendre polynomials
@@ -228,10 +228,10 @@ CONTAINS
                     clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                     clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
-                    hmat(1,1)%data_c(kj,locol)=hmat(1,1)%data_c(kj,locol) + chi(1,1,j1,j2)*fct
-                    hmat(1,2)%data_c(kj,locol)=hmat(1,2)%data_c(kj,locol) + chi(1,2,j1,j2)*fct
-                    hmat(2,1)%data_c(kj,locol)=hmat(2,1)%data_c(kj,locol) + chi(2,1,j1,j2)*fct
-                    hmat(2,2)%data_c(kj,locol)=hmat(2,2)%data_c(kj,locol) + chi(2,2,j1,j2)*fct
+                    hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + chi(1,1,j1,j2)*fct
+                    hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + chi(1,2,j1,j2)*fct
+                    hmat(2,1)%data_c(kj,locol_loc)=hmat(2,1)%data_c(kj,locol_loc) + chi(2,1,j1,j2)*fct
+                    hmat(2,2)%data_c(kj,locol_loc)=hmat(2,2)%data_c(kj,locol_loc) + chi(2,2,j1,j2)*fct
                   ENDDO
                   !Update LO-LO part
                   DO ilo=1,atoms%nlo(n)
@@ -239,7 +239,7 @@ CONTAINS
                       DO nkvecp = 1,invsfct* (2*l+1)
                         kj=lapw%kvec(nkvecp,ilo,na) !this LO is attached to this k+G
                         lorow= lapw%nv(1)+lapw%index_lo(ilo,na)+nkvecp !local row
-                        if (lorow>locol) cycle
+                        if (lorow>locol_mat) cycle
                         fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                         alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
                         alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
@@ -250,11 +250,11 @@ CONTAINS
                         clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                         clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
-                        * angso(kj,j1,j2)
-                        hmat(1,1)%data_c(lorow,locol)=hmat(1,1)%data_c(lorow,locol) + chi(1,1,j1,j2)*fct
-                        hmat(1,2)%data_c(lorow,locol)=hmat(1,2)%data_c(lorow,locol) + chi(1,2,j1,j2)*fct
-                        hmat(2,1)%data_c(lorow,locol)=hmat(2,1)%data_c(lorow,locol) + chi(2,1,j1,j2)*fct
-                        hmat(2,2)%data_c(lorow,locol)=hmat(2,2)%data_c(lorow,locol) + chi(2,2,j1,j2)*fct
+                       * angso(kj,j1,j2)
+                        hmat(1,1)%data_c(lorow,locol_loc)=hmat(1,1)%data_c(lorow,locol_loc) + chi(1,1,j1,j2)*fct
+                        hmat(1,2)%data_c(lorow,locol_loc)=hmat(1,2)%data_c(lorow,locol_loc) + chi(1,2,j1,j2)*fct
+                        hmat(2,1)%data_c(lorow,locol_loc)=hmat(2,1)%data_c(lorow,locol_loc) + chi(2,1,j1,j2)*fct
+                        hmat(2,2)%data_c(lorow,locol_loc)=hmat(2,2)%data_c(lorow,locol_loc) + chi(2,2,j1,j2)*fct
                       ENDDO
                     ENDIF
                   ENDDO

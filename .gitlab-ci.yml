@@ -13,17 +13,28 @@ build-gfortran-hdf5:
        - build
      expire_in: 1h
   script:
-    - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh GITLAB
+    - cd build
+    - make -j 2
 #  only:
 #    - schedules
 #    - triggers
 #    - web
 
-test-gfortran-hdf5:
+.test-gfortran-hdf5: &test-gfortran-hdf5
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
+  dependencies:
+    - build-gfortran-hdf5
   script:
-    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest
+    - ulimit -s unlimited
+    - export OMP_NUM_THREADS=2
+    - export juDFT_MPI="mpirun -n 2 --allow-run-as-root"
+    - cd $CI_PROJECT_DIR
+    - cd build
+    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
+    - ctest $CTEST_FLAGS -j 1
   artifacts:
     when: on_failure
     paths:
@@ -32,6 +43,51 @@ test-gfortran-hdf5:
 #    - schedules
 #    - triggers
 #    - web
+
+test-gfortran-hdf5-1of3:
+  <<: *test-gfortran-hdf5
+
+test-gfortran-hdf5-2of3:
+  <<: *test-gfortran-hdf5
+
+test-gfortran-hdf5-3of3:
+  <<: *test-gfortran-hdf5
+
+build-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: build
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
+    - cd build.serial
+    - make -j 2
+  artifacts:
+    paths:
+      - build.serial
+    expire_in: 1h
+#  only:
+#    - schedules
+#    - triggers
+#    - web
+
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-serial
+  script:
+    - ulimit -s unlimited
+    - cd $CI_PROJECT_DIR
+    - cd build.serial
+    - ctest -j 2
+  artifacts:
+    when: on_failure
+    paths:
+      - build.serial/Testing
+  only:
+    - schedules
+    - triggers
+    - web
 
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -87,6 +143,7 @@ test-pgi:
   dependencies:
     - build-pgi
   script:
+    - export OMP_NUM_THREADS=2
     - cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
   only:
@@ -103,8 +160,12 @@ build-intel-static:
        - build.intel-static
      expire_in: 1h
   script:
-    - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; ./configure.sh -l intel-static INTEL_DOCKER_STATIC ; cd build.intel-static; make -j 4
+    - set +e && source compilervars.sh intel64 && set -e
+    - ulimit -s unlimited
+    - cd /builds/fleur/fleur
+    - ./configure.sh -l intel-static INTEL_DOCKER_STATIC
+    - cd build.intel-static
+    - make -j 2
   artifacts:
     when: on_success
     paths:
@@ -125,8 +186,12 @@ build-intel:
        - build.intel.debug
      expire_in: 1h
   script:
-    - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
+    - set +e && source compilervars.sh intel64 && set -e
+    - ulimit -s unlimited
+    - cd /builds/fleur/fleur
+    - CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -d -l intel INTEL_MPI
+    - cd build.intel.debug
+    - make -j 2
   allow_failure: true
   only:
     - schedules
@@ -140,7 +205,9 @@ test-intel:
   dependencies:
      - build-intel
   script:
-    - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
+    - set +e && source compilervars.sh intel64 && set -e
+    - ulimit -s unlimited
+    - export OMP_NUM_THREADS=2
     - cd /builds/fleur/fleur/build.intel.debug;ctest
   allow_failure: true
   artifacts:

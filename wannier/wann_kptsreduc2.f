@@ -15,7 +15,11 @@ c*****************************************************************
 c     Apply the symmetries to reduce the number of k-points.
 c     Frank Freimuth
 c*****************************************************************
+
+      USE m_constants
+
       implicit none
+
       integer, intent(in) :: mhp(3)
       integer, intent(in) :: nop
       logical,intent(in)  :: film
@@ -48,7 +52,7 @@ c*****************************************************************
 
 
       bbmat=matmul(bmat,transpose(bmat))
-      write(6,*) "Apply the symmetries to w90kpts"
+      write(oUnit,*) "Apply the symmetries to w90kpts"
 c**************************************************************
 c     The array 'mhp' specifies the Monkhorst-Pack mesh.
 c**************************************************************
@@ -204,9 +208,9 @@ c      close(117)
 
          if (mapk(ikpt)==0)then
             sumweights=sumweights+weight(ikpt)
-            write(6,*)"ikpt=",ikpt
-            write(6,*)"irreducible"
-            write(6,fmt='(a10,3f9.6)')"internal: ",kpoint(:)/scale
+            write(oUnit,*)"ikpt=",ikpt
+            write(oUnit,*)"irreducible"
+            write(oUnit,fmt='(a10,3f9.6)')"internal: ",kpoint(:)/scale
 
             if (film.and..not.l_onedimens)then
                write(119,'(3f10.5)')kpoint(1:2),weight(ikpt)
@@ -215,34 +219,34 @@ c      close(117)
             endif   
       
          elseif(mapkoper(ikpt).gt.0)then
-c            write(6,*)"ikpt=",ikpt
-c            write(6,*)"reducible"
-c            write(6,*)"map=",mapk(ikpt)
+c            write(oUnit,*)"ikpt=",ikpt
+c            write(oUnit,*)"reducible"
+c            write(oUnit,*)"map=",mapk(ikpt)
 c            brot(:)=0.0
 c            do k=1,3
 c               brot(:)=brot(:)+
 c     + mrot(k,:,mapkoper(ikpt))*kpoints(k,mapk(ikpt))
 c            enddo   
-c            write(6,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
+c            write(oUnit,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
          elseif(mapkoper(ikpt).lt.0)then
-c            write(6,*)"ikpt=",ikpt
-c            write(6,*)"reducible"
-c            write(6,*)"map=",mapk(ikpt)
+c            write(oUnit,*)"ikpt=",ikpt
+c            write(oUnit,*)"reducible"
+c            write(oUnit,*)"map=",mapk(ikpt)
 c            brot(:)=0.0
 c            do k=1,3
 c               brot(:)=brot(:)-
 c     + mrot(k,:,-mapkoper(ikpt))*kpoints(k,mapk(ikpt))
 c            enddo   
-c            write(6,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
+c            write(oUnit,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
          endif   
         enddo !k1 
        enddo !k2 
       enddo !k3  
       close(119)
 
-      write(6,*)"reduznumk=",reduznumk     
-      write(6,*)"nkpts=",nkpts
-      write(6,*)"sumweights=",sumweights
+      write(oUnit,*)"reduznumk=",reduznumk     
+      write(oUnit,*)"nkpts=",nkpts
+      write(oUnit,*)"sumweights=",sumweights
       
       IF(sumweights/=nkpts) CALL juDFT_error
      +     ("sum of weights differs from nkpts",calledby

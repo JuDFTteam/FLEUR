@@ -14,6 +14,7 @@ use judft_tests;
 
 my $testdir=shift;
 my $executable=shift;
+$executable .= " -no_send";
 
 #check MPI environment
 my $mpi=shift;
@@ -37,7 +38,7 @@ if ($mpi=~/sequential/){
 }
 print "MPI:$mpi\n";
 
-my $workdir="$ENV{PWD}/Testing/work";
+my $workdir="$ENV{PWD}/Testing/$testdir/work";
 system("rm -r $workdir/*");
 chdir($dir);
 

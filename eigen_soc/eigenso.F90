@@ -24,6 +24,7 @@ CONTAINS
                      sym,cell,noco,nococonv,input,kpts,oneD,vTot,enpara,results,hub1inp,hub1data)
 
     USE m_types
+    USE m_constants
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb
     USE m_alineso
@@ -142,11 +143,10 @@ CONTAINS
             input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
-          WRITE (6,FMT=8010) nk,nsz
-          WRITE (6,FMT=8020) (eig_so(i),i=1,nsz)
+          WRITE (oUnit,FMT=8010) nk,nsz
+          WRITE (oUnit,FMT=8020) (eig_so(i),i=1,nsz)
        ENDIF
-8010   FORMAT (1x,/,/,' #k=',i6,':',/,&
-            ' the',i4,' SOC eigenvalues are:')
+8010   FORMAT (1x,/,/,' #k=',i6,':',/,' the',i4,' SOC eigenvalues are:')
 8020   FORMAT (5x,5f12.6)
 
        IF (mpi%n_rank==0) THEN

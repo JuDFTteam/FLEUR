@@ -14,7 +14,7 @@ MODULE m_spnorb
 CONTAINS
   SUBROUTINE spnorb(atoms,noco,nococonv,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
     USE m_sorad
-    USE m_constants, only : hartree_to_ev_const
+    USE m_constants
     USE m_types
     IMPLICIT NONE
 
@@ -62,7 +62,7 @@ CONTAINS
     !Scale SOC
     DO n= 1,atoms%ntype
        IF (ABS(noco%socscale(n)-1)>1E-5) THEN
-          IF (mpi%irank==0) WRITE(6,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
+          IF (mpi%irank==0) WRITE(oUnit,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
           rsoc%rsopp(n,:,:,:)    = rsoc%rsopp(n,:,:,:)*noco%socscale(n)
           rsoc%rsopdp(n,:,:,:)   = rsoc%rsopdp(n,:,:,:)*noco%socscale(n)
           rsoc%rsoppd(n,:,:,:)   = rsoc%rsoppd(n,:,:,:)*noco%socscale(n)
@@ -88,14 +88,14 @@ CONTAINS
     !DO some IO into out file
       IF ((first_k).AND.(mpi%irank.EQ.0)) THEN
        DO n = 1,atoms%ntype
-          WRITE (6,FMT=8000)
-          WRITE (6,FMT=9000)
-          WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,1,1),l=1,3)
-          WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
-          WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
+          WRITE (oUnit,FMT=8000)
+          WRITE (oUnit,FMT=9000)
+          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,1,1),l=1,3)
+          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
+          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
        ENDDO
        IF (noco%l_spav) THEN
-          WRITE(6,fmt='(A)') 'SOC Hamiltonian is constructed by neglecting B_xc.'
+          WRITE(oUnit,fmt='(A)') 'SOC Hamiltonian is constructed by neglecting B_xc.'
        ENDIF
        first_k=.FALSE.
     ENDIF
@@ -110,6 +110,7 @@ CONTAINS
   END SUBROUTINE spnorb
 
   SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl,compo)
+    USE m_constants
     USE m_anglso
     USE m_sgml
     USE m_sorad
@@ -180,13 +181,12 @@ CONTAINS
     ENDIF
 
     IF (mpi%irank.EQ.0) THEN
-       WRITE (6,FMT=8002)
+       WRITE (oUnit,FMT=8002)
        DO jspin1 = 1,2
           DO jspin2 = 1,2
-             WRITE (6,FMT=*) 'd-states:is1=',jspin1,',is2=',jspin2
-             WRITE (6,FMT='(7x,7i8)') (m1,m1=-3,3,1)
-             WRITE (6,FMT=8003) (m2, (soangl(3,m1,jspin1,3,m2,jspin2),&
-                  m1=-3,3,1),m2=-3,3,1)
+             WRITE (oUnit,FMT=*) 'd-states:is1=',jspin1,',is2=',jspin2
+             WRITE (oUnit,FMT='(7x,7i8)') (m1,m1=-3,3,1)
+             WRITE (oUnit,FMT=8003) (m2, (soangl(3,m1,jspin1,3,m2,jspin2),m1=-3,3,1),m2=-3,3,1)
           ENDDO
        ENDDO
     ENDIF

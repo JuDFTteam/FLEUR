@@ -1,15 +1,12 @@
 MODULE m_force_a3
 CONTAINS
-  SUBROUTINE force_a3(atoms,sym,sphhar,&
-       &                    input,&
-       &                    rho,vr,&
-       &                    force)
+  SUBROUTINE force_a3(atoms,sym,sphhar,input,rho,vr,force)
     ! ************************************************************
     ! Hellman-Feynman force contribution a la Rici et al.
     ! ************************************************************
     !
     USE m_intgr, ONLY : intgr3
-    USE m_constants, ONLY : pi_const
+    USE m_constants
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
@@ -44,7 +41,7 @@ CONTAINS
     grd1(2,1) = CMPLX(0.0,-s38)
     grd1(3,1) = czero
     !
-    WRITE  (6,*)
+    WRITE  (oUnit,*)
     spin: DO jsp = 1,input%jspins
        na = 1
        DO n = 1,atoms%ntype
@@ -88,8 +85,8 @@ CONTAINS
              END DO
              !
              !     write result
-             WRITE (6,FMT=8010) n
-             WRITE (6,FMT=8020) (forc_a3(i),i=1,3)
+             WRITE (oUnit,FMT=8010) n
+             WRITE (oUnit,FMT=8020) (forc_a3(i),i=1,3)
 8010         FORMAT (' FORCES: EQUATION A3 FOR ATOM TYPE',i4)
 8020         FORMAT (' FX_A3=',2f10.6,' FY_A3=',2f10.6,' FZ_A3=',2f10.6)
 

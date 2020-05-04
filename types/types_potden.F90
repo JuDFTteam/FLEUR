@@ -442,10 +442,10 @@ CONTAINS
 !!$          END DO
 !!$          nvaccoeff2 = 2*vacuum%nmzxy*(stars%ng2-1)*vacuum%nvac + 2*vacuum%nmz*vacuum%nvac
 !!$          IF (mapvac2 .NE. nvaccoeff2) THEN
-!!$             WRITE (6,*)'The number of vaccum coefficients off the'
-!!$             WRITE (6,*)'off-diagonal part of the density matrix is'
-!!$             WRITE (6,*)'inconsitent:'
-!!$             WRITE (6,8000) mapvac2,nvaccoeff2
+!!$             WRITE (oUnit,*)'The number of vaccum coefficients off the'
+!!$             WRITE (oUnit,*)'off-diagonal part of the density matrix is'
+!!$             WRITE (oUnit,*)'inconsitent:'
+!!$             WRITE (oUnit,8000) mapvac2,nvaccoeff2
 !!$8000         FORMAT ('mapvac2= ',i12,'nvaccoeff2= ',i12)
 !!$             CALL juDFT_error("brysh1:# of vacuum coeff. inconsistent" ,calledby ="brysh1")
 !!$          ENDIF
@@ -469,18 +469,18 @@ CONTAINS
 !!$
 !!$    mapmtd = atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd
 !!$    IF (mapmt .GT. mapmtd) THEN
-!!$       WRITE(6,*)'The number of mt coefficients is larger than the'
-!!$       WRITE(6,*)'dimensions:'
-!!$       WRITE (6,8040) mapmt,mapmtd
+!!$       WRITE(oUnit,*)'The number of mt coefficients is larger than the'
+!!$       WRITE(oUnit,*)'dimensions:'
+!!$       WRITE (oUnit,8040) mapmt,mapmtd
 !!$8040   FORMAT ('mapmt= ',i12,' > mapmtd= ',i12)
 !!$       CALL juDFT_error("brysh1: mapmt > mapmtd (dimensions)",calledby ="brysh1")
 !!$    ENDIF
 !!$
 !!$    nmap = j
 !!$    IF (nmap.GT.SIZE(sout)) THEN 
-!!$       WRITE(6,*)'The total number of charge density coefficients is'
-!!$       WRITE(6,*)'larger than the dimensions:'
-!!$       WRITE (6,8030) nmap,SIZE(sout)
+!!$       WRITE(oUnit,*)'The total number of charge density coefficients is'
+!!$       WRITE(oUnit,*)'larger than the dimensions:'
+!!$       WRITE (oUnit,8030) nmap,SIZE(sout)
 !!$8030   FORMAT ('nmap= ',i12,' > size(sout)= ',i12)
 !!$       CALL juDFT_error("brysh1: nmap > mmap (dimensions)",calledby ="brysh1")
 !!$    ENDIF

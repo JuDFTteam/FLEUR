@@ -195,7 +195,7 @@ CONTAINS
           alpha(n) = log( rh(j1,n) / rh(jri(n),n) )
           alpha(n) = alpha(n) / ( rmt(n)*rmt(n)*( 1.0-exp( -2.0*dx(n) ) ) )
           acoff(n) = rh(jri(n),n) * exp( alpha(n)*rmt(n)*rmt(n) )
-          WRITE (6,FMT=8010) alpha(n),acoff(n)
+          WRITE (oUnit,FMT=8010) alpha(n),acoff(n)
           DO j = 1,jri(n) - 1
              rh(j,n) = acoff(n) * exp( -alpha(n)*rat(j,n)**2 )
           ENDDO
@@ -238,7 +238,7 @@ CONTAINS
           alpha(n) = 0.0
        ENDIF
        nat = nat+neq(n)
-60  ENDDO
+    ENDDO
     !
 8000 FORMAT (/,10x,'core density and its first derivative ', 'at sph. bound. for atom type', i2,' is',3x,2e15.7)
 8010 FORMAT (/,10x,'alpha=',f10.5,5x,'acoff=',f10.5)
@@ -367,7 +367,7 @@ CONTAINS
           END DO
        END IF
        nat1 = nat1 + neq(n)
-100 END DO
+    END DO
 
   END SUBROUTINE cdnovlp
    END MODULE m_cdnovlp

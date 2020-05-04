@@ -7,7 +7,7 @@ CONTAINS
       !     *******************************************************
       USE m_juDFT
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
-      USE m_constants, ONLY : c_light,sfp_const
+      USE m_constants
       !USE m_setcor
       USE m_differ
       USE m_types
@@ -68,7 +68,7 @@ CONTAINS
             nm = atoms%jri(n)
             CALL intgr3(rhoc,atoms%rmsh(1,n),atoms%dx(n),nm,rhos)
             sea = tec(n,jspin) + rhos
-            WRITE (6,FMT=8030) n,jspin,tec(n,jspin),sea
+            WRITE (oUnit,FMT=8030) n,jspin,tec(n,jspin),sea
             seig = seig + atoms%neq(n)*sea
          ENDDO
          RETURN
@@ -95,7 +95,7 @@ CONTAINS
          ncmsh = NINT( LOG( (atoms%rmt(jatom)+10.0)/rnot ) / dxx + 1 )
          ncmsh = MIN( ncmsh, atoms%msh )
          rn = rnot* (d** (ncmsh-1))
-         WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
+         WRITE (oUnit,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
          DO  j = 1,atoms%jri(jatom)
             rhoss(j)     = 0.0
             if(present(EnergyDen)) rhoss_aux(j) = 0.0
@@ -147,7 +147,7 @@ CONTAINS
 
                CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, eig, a,b,ierr)
                stateEnergies(korb) = eig
-               WRITE (6,FMT=8010) fn,fl,fj,eig,weight
+               WRITE (oUnit,FMT=8010) fn,fl,fj,eig,weight
 
                IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
                IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,eig,&
@@ -194,7 +194,7 @@ CONTAINS
          ENDDO
          CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
          tec(jatom,jspin) = sume - rhs
-         WRITE (6,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
+         WRITE (oUnit,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
          
          !     ---> simpson integration
          rad = atoms%rmt(jatom)
@@ -207,7 +207,7 @@ CONTAINS
          ENDDO
          q = 2*q*dxx/3
          !+sb
-         WRITE (6,FMT=8020) q/input%jspins
+         WRITE (oUnit,FMT=8020) q/input%jspins
          !-sb
          qint(jatom,jspin) = q*atoms%neq(jatom)
          attributes = ''

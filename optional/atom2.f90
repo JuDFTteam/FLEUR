@@ -56,7 +56,7 @@ CONTAINS
       vxc(:, :) = 0.0
       vx(:, :) = 0.0
 !
-      WRITE (6, FMT=8000)
+      WRITE (oUnit, FMT=8000)
 8000  FORMAT(' subroutine atom2 entered')
       z = atoms%zatom(ntyp)
       n = jrc
@@ -259,7 +259,7 @@ CONTAINS
          p1 = 1.0e0/dist
          p = min(pmax, p1)
          p = max(p, pmin)
-         WRITE (6, FMT=8060) it, dist, p
+         WRITE (oUnit, FMT=8060) it, dist, p
          p1 = 1.0e0 - p
          DO ispin = 1, input%jspins
             DO i = 1, n
@@ -270,18 +270,18 @@ CONTAINS
 !
 ! output
 !
-      WRITE (6, FMT=8030) dist
+      WRITE (oUnit, FMT=8030) dist
       conv = .false.
 !     list eigenvalues
-190   IF (conv) WRITE (6, FMT=8040) it, dist
+190   IF (conv) WRITE (oUnit, FMT=8040) it, dist
       DO isp = 1, input%jspins
          ispin=merge(isp,3-isp,(bmu_l>0).or.(input%jspins<2))
-         WRITE (6, '(a8,i2)') 'spin No.',ispin
+         WRITE (oUnit, '(a8,i2)') 'spin No.',ispin
          DO k = 1, nst
             fj = iabs(kappa(k)) - 0.5e0
             l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
             lnum(k) = l
-            WRITE (6, FMT=8050) nprnc(k), kappa(k), l, fj,&
+            WRITE (oUnit, FMT=8050) nprnc(k), kappa(k), l, fj,&
       &                        occ(k, isp), eig(k, isp), rev(k, isp)
          ENDDO
 !
@@ -289,7 +289,7 @@ CONTAINS
 !
          i = atoms%jri(ntyp) - (log(4.0)/atoms%dx(ntyp) + 1.51)
          vbar(isp) = vr1(i, isp)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
-         WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(isp)
+         WRITE (oUnit, '(/,'' reference energy = '',2f12.6,/)') vbar(isp)
       ENDDO
 
 8030  FORMAT(/, /, /, ' $$$ error: not converged, dist=', f10.6,/)

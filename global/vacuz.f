@@ -17,35 +17,33 @@ c     (u(i),i=1,nmz) contains the normalized wavefunction
 c     based on code by m. weinert 
 c*********************************************************************
 
+      USE m_constants
       USE m_intgr, ONLY : intgz0
       IMPLICIT NONE
-C     ..
+
 C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: nmz
       REAL,    INTENT (IN) :: dz,e,vz0
       REAL,    INTENT (OUT):: duz,uz
-C     ..
+
 C     .. Array Arguments ..
       REAL, INTENT (IN) :: vz(nmz)
       REAL, INTENT (OUT)::  u(nmz)
-C     ..
+
 C     .. Local Scalars ..
       REAL a,eps,eru,erw,h,sk1,sk2,sk3,sk4,sl1,sl2,sl3,sl4,tnorm,u1,u10,
      +     u1p,vme,w1,w10,w1p,yn,zn,znm
       INTEGER i,it,n,n1
       LOGICAL tail
-C     ..
+
 C     .. Local Arrays ..
       REAL w(nmz),wp(nmz)
-C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC abs,exp,sqrt
-C     ..
+
 C     .. Data statements ..
       DATA eps/1.e-06/
 C     ..
       IF (e.GE.vz0) THEN
-         WRITE (6,*) 'e>vz0; e=',e,'vz0=',vz0
+         WRITE (oUnit,*) 'e>vz0; e=',e,'vz0=',vz0
          CALL juDFT_error("e>vz0",calledby ="vacuz",hint
      +        ="Vacuum energy parameter too high")
       ENDIF
@@ -102,7 +100,7 @@ c---  >    test quality of corrector and iterate if necessary
             w10 = w1
          ENDDO
          IF (it>10) THEN
-            WRITE (6,FMT=8000) n1,eru,erw
+            WRITE (oUnit,FMT=8000) n1,eru,erw
  8000       FORMAT (' ***vacuz - step may be too big - mesh point',i5,
      +           ', eru,erw=',1p,2e16.7)
          ENDIF

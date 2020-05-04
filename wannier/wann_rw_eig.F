@@ -23,11 +23,13 @@ c****************************************************************
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
      <              nbnd,kpoints,l_gwf,iqpt)
+
+      use m_types
       use m_constants
       use m_cdnread, only:cdn_read
-      use m_types
 
       IMPLICIT NONE
+
       integer,intent(in) :: eig_id
       integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd
       integer,intent(in) :: isize,jspin,nbasfcn,nlotot
@@ -169,9 +171,9 @@ c****************************************************************
       enddo !ikpt
 
       if(l_paulimag)then
-        write(6,*)"sum1=",sum1/fullnkpts
-        write(6,*)"sum2=",sum2/fullnkpts
-        write(6,*)"sum3=",sum3/fullnkpts
+        write(oUnit,*)"sum1=",sum1/fullnkpts
+        write(oUnit,*)"sum2=",sum2/fullnkpts
+        write(oUnit,*)"sum3=",sum3/fullnkpts
       endif  
 
 

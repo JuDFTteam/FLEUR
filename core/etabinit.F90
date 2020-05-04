@@ -16,7 +16,7 @@ CONTAINS
   SUBROUTINE etabinit(atoms,input, vr,&
        etab,ntab,ltab,nkmust)
 
-    USE m_constants, ONLY : c_light
+    USE m_constants
     !USE m_setcor
     USE m_differ
     USE m_types
@@ -44,7 +44,7 @@ CONTAINS
     !
     c = c_light(1.0)
     !
-    WRITE (6,FMT=8020)
+    WRITE (oUnit,FMT=8020)
     !
     ncmsh = atoms%msh
     !     ---> set up densities
@@ -57,7 +57,7 @@ CONTAINS
        rnot = atoms%rmsh(1,jatom)
        d = EXP(atoms%dx(jatom))
        rn = rnot* (d** (ncmsh-1))
-       WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
+       WRITE (oUnit,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
        DO j = 1,atoms%jri(jatom)
           vrd(j) = vr(j,jatom)
        ENDDO
@@ -92,7 +92,7 @@ CONTAINS
           CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,atoms%msh,vrd,&
                e, a,b,ierr)
           IF (ierr/=0)  CALL juDFT_error("error in core-levels",calledby="etabinit")
-          WRITE (6,FMT=8010) fn,fl,fj,e,weight
+          WRITE (oUnit,FMT=8010) fn,fl,fj,e,weight
           eig(korb) = e
        ENDDO
        ic = 0
@@ -118,7 +118,7 @@ CONTAINS
        nkmust(jatom) = ic
 
        DO i=1,nkmust(jatom)
-          WRITE(6,'(f12.6,2i3)') etab(i,jatom),ntab(i,jatom), ltab(i,jatom)
+          WRITE(oUnit,'(f12.6,2i3)') etab(i,jatom),ntab(i,jatom), ltab(i,jatom)
        ENDDO
 
     ENDDO

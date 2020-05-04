@@ -11,11 +11,12 @@ c-----x----x----x----x----x----x----x----x----x----x----x----x----x----
      >                  fn,fl,fj,c,z,h,rnot,rn,d,msh,vr,
      X                  e,
      <                  a,b,ierr)
+      USE m_constants
       USE m_inwint
       USE m_outint
 
       IMPLICIT NONE
-C
+
 C     .. Scalar Arguments ..
       INTEGER,INTENT(IN)  :: msh
       INTEGER,INTENT(OUT) :: ierr
@@ -23,20 +24,16 @@ C     .. Scalar Arguments ..
       REAL,   INTENT(IN)  :: vr(msh)
       REAL,   INTENT(OUT) :: a(msh),b(msh)
       REAL,   INTENT(INOUT) :: e
-C     ..
+
 C     .. Local Scalars ..
       REAL cis,cs,de,del,dg,eabsv,emax,emin,fkap,g,h3,
      +     qcoef,qqqq,r,ra,rb,rg,rj,s,w,wmin
       INTEGER k,ki,kj,n,nodes,nqnt,ntimes
       LOGICAL dbl
-C     ..
+
 C     .. Local Arrays ..
       REAL a0(5),b0(5)
-C     ..
-C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC abs,exp,min,sqrt
-C     ..
+
       a = 0.0
       b = 0.0
       ierr = 0
@@ -65,9 +62,9 @@ c**** too many nodes
    20 IF (e.LT.emax) emax = e
       e = 0.5e0* (e+emin)
       IF ((emax-emin).GT.del) GO TO 10
-      WRITE (6,FMT=8010) nodes,fn,fl,fj,emin,e,emax
-      WRITE (6,FMT=8030) vr
-      WRITE (6,FMT=8030) a
+      WRITE (oUnit,FMT=8010) nodes,fn,fl,fj,emin,e,emax
+      WRITE (oUnit,FMT=8030) vr
+      WRITE (oUnit,FMT=8030) a
       CALL juDFT_error("differ 1: problems with solving dirac equation"
      +     ,calledby ="differ")
 c**** correct number of nodes
@@ -153,18 +150,18 @@ c**** too few nodes
   130 IF (e.GT.emin) emin = e
       e = 0.5e0* (e+emax)
       IF ((emax-emin).GT.del) GO TO 10
-      WRITE (6,FMT=8020) nodes,fn,fl,fj,emin,e,emax
-      WRITE (6,FMT=8030) vr
-      WRITE (6,FMT=8030) a
+      WRITE (oUnit,FMT=8020) nodes,fn,fl,fj,emin,e,emax
+      WRITE (oUnit,FMT=8030) vr
+      WRITE (oUnit,FMT=8030) a
       CALL juDFT_error("differ 2: problems with solving dirac equation"
      +     ,calledby ="differ")
-  140 WRITE (6,FMT=8000)
-      WRITE (6,FMT=8030) fn,fl,fj,emin,emax
-      WRITE (6,FMT=8030) e,de
-      WRITE (6,FMT=8030) ra,rb,w,a(ki),b(ki)
-      WRITE (6,FMT=8000)
-      WRITE (6,FMT=8030) vr
-      WRITE (6,FMT=8030) a
+  140 WRITE (oUnit,FMT=8000)
+      WRITE (oUnit,FMT=8030) fn,fl,fj,emin,emax
+      WRITE (oUnit,FMT=8030) e,de
+      WRITE (oUnit,FMT=8030) ra,rb,w,a(ki),b(ki)
+      WRITE (oUnit,FMT=8000)
+      WRITE (oUnit,FMT=8030) vr
+      WRITE (oUnit,FMT=8030) a
       ierr = 1
  8000 FORMAT (/,/,/,/,10x,' too many tries required')
  8010 FORMAT (/,/,/,/,10x,' too many nodes.',i5,3f4.1,3e15.7)

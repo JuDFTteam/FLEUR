@@ -13,6 +13,7 @@ message("${BRed}\n\n************************Summary***************************${
 message("${Green}Compiler   : ${CReset} ${CMAKE_Fortran_COMPILER}")
 message("${Green}Compiler ID: ${CReset} ${CMAKE_Fortran_COMPILER_ID}")
 message("${Green}Flags      : ${CReset} ${CMAKE_Fortran_FLAGS}")
+message("${Green}Use OpenMP : ${CReset} ${FLEUR_USE_OPENMP}")
 message("${Green}Libraries  : ${CReset} ${FLEUR_LIBRARIES}")
 message("\n${Red}These Libraries are required:${CReset}")
 message("${Green}  XML Library found       : ${CReset}    ${FLEUR_USE_XML}")

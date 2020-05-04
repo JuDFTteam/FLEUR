@@ -47,6 +47,7 @@ contains
       use m_types_kpts
       use m_types_mpi
       use m_types_mpinp
+      USE m_constants
       use m_intgrf, only: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
@@ -172,20 +173,24 @@ contains
       enddo
 
       if(mpi%irank == 0) THEN
-         WRITE(6, '(/A)') 'Mixed basis'
-         WRITE(6, '(A,I5)') 'Number of unique G-vectors: ', mpdata%num_gpts()
-         WRITE(6, *)
-         WRITE(6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpinp%g_cutoff/2*input%rkmax):'
-         WRITE(6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpdata%n_g)
+         WRITE(oUnit, '(/A)') 'Mixed basis'
+         WRITE(oUnit, '(A,I5)') 'Number of unique G-vectors: ', mpdata%num_gpts()
+         WRITE(oUnit, *)
+         WRITE(oUnit, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpinp%g_cutoff/2*input%rkmax):'
+         WRITE(oUnit, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpdata%n_g)
       END if
    end subroutine mpdata_gen_gvec
 
    subroutine mpdata_check_orthonormality(mpdata, atoms, mpi, l, itype, gridf)
-      use m_intgrf, only: intgrf
+
+      use m_judft
       use m_types_setup
       use m_types_mpi
-      use m_judft
+      USE m_constants
+      use m_intgrf, only: intgrf
+
       implicit none
+
       class(t_mpdata)          :: mpdata
       type(t_atoms), intent(in) :: atoms
       type(t_mpi), intent(in)   :: mpi
@@ -214,7 +219,7 @@ contains
          if(mpi%irank == 0) THEN
             err_loc = maxloc(abs(olap))
             WRITE(*, *) 'mixedbasis: Bad orthonormality of ' &
-               //lchar(l)//'-mpdatauct basis. Increase tolerance.'
+               //lchar(l)//'-mixet product basis. Increase tolerance.'
             write(*, *) "itype =", itype, "l =", l
             WRITE(*, *) 'Deviation of', &
                maxval(abs(olap)), ' occurred for (', &
@@ -227,7 +232,7 @@ contains
 
       if(mpi%irank == 0) THEN
          n_radbasfn = mpdata%num_radbasfn(l, itype)
-         WRITE(6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
+         WRITE(oUnit, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
             lchar(l)//':', n_radbasfn, norm2(olap)/n_radbasfn
       END if
       call timestop("check mpdata orthonormality")
@@ -330,7 +335,7 @@ contains
       real, allocatable :: eig_val(:), eig_vec(:, :)
 
       integer              :: n, size_iwork, info
-      real                 :: size_work
+      real                 :: size_work(1)
       integer, allocatable :: iwork(:)
       real, allocatable    :: work(:)
 
@@ -353,11 +358,11 @@ contains
                   size_work, -1, size_iwork, -1, info)
       if(info /= 0) call juDFT_error("diagonalization for size failed")
 
-      allocate(work(int(size_work)))
+      allocate(work(int(size_work(1))))
       allocate(iwork(size_iwork))
 
       call dsyevd('V', 'U', n, eig_vec, n, eig_val, &
-                  work, int(size_work), iwork, size_iwork, info)
+                  work, int(size_work(1)), iwork, size_iwork, info)
       if(info /= 0) call juDFT_error("diagonalization failed")
       call timestop("diagonalize overlap")
    end subroutine mpdata_diagonialize_olap

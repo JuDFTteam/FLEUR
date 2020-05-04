@@ -45,13 +45,13 @@ CONTAINS
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
-      INTEGER, ALLOCATABLE :: k_list(:)
+      INTEGER, ALLOCATABLE :: my_k_list(:), k_owner(:)
 
       CALL timestart("hybrid code")
       call sync_eig(eig_id)
 
       call hybmpi%copy_mpi(mpi)
-      call split_k_to_comm(fi, hybmpi, k_list)
+      call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
 
       INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
@@ -96,20 +96,22 @@ CONTAINS
       CALL timestart("Preparation for hybrid functionals")
       !construct the mixed-basis
       CALL timestart("generation of mixed basis")
-      write (*,*) "iterHF = ", iterHF
+      if(hybmpi%rank == 0) write (*,*) "iterHF = ", iterHF
       CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
                       enpara, mpi, v, iterHF)
       CALL timestop("generation of mixed basis")
 
 
-      if(mpi%irank == 0) then
-         CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
-         CALL coulombmatrix(mpi, fi%atoms, fi%kpts, fi%cell, fi%sym, mpdata, fi%hybinp, hybdat, xcpot)
-         call close_hybinp_io2()
-      endif
+      if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+      do i =1,fi%kpts%nkpt
+         call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
+      enddo
 
-      call hybmpi%barrier()
-      CALL open_hybinp_io2(mpdata, fi%hybinp, hybdat, fi%input, fi%atoms, fi%sym%invs)
+      CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
+
+      do i =1,fi%kpts%nkpt
+         call hybdat%coul(i)%mpi_ibc(fi, hybmpi, k_owner(i))
+      enddo
 
       CALL hf_init(eig_id, mpdata, fi, hybdat)
       CALL timestop("Preparation for hybrid functionals")
@@ -122,8 +124,8 @@ CONTAINS
                        hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
          call timestop("HF_setup")
 
-         DO i = 1,size(k_list)
-            nk = k_list(i)
+         DO i = 1,size(my_k_list)
+            nk = my_k_list(i)
             CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
             CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
                         nococonv, results, xcpot, mpi)
@@ -167,22 +169,44 @@ CONTAINS
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
 
-      subroutine split_k_to_comm(fi, hybmpi, k_list)
+      subroutine split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
          implicit none
 
          type(t_fleurinput), intent(in)      :: fi
          type(t_hybmpi), intent(in)          :: hybmpi
-         integer, allocatable, intent(inout) :: k_list(:)
-         integer   :: i
+         integer, allocatable, intent(inout) :: my_k_list(:)
+         integer, allocatable, intent(inout)  :: k_owner(:)
+         integer   :: i, irank
 
-         if(allocated(k_list)) deallocate(k_list)
-         allocate(k_list(0))
+         if(allocated(my_k_list)) deallocate(my_k_list)
+         allocate(my_k_list(0))
 
          if(fi%kpts%nkpt < hybmpi%size) call judft_error("not enough k-points for mpis")
-
+         
+         ! get my k-list
          do i = hybmpi%rank+1,fi%kpts%nkpt,hybmpi%size
-            k_list = [k_list, i]
+            my_k_list = [my_k_list, i]
          enddo
+
+         ! findout who's got the other k's
+         if(.not. allocated(k_owner)) allocate(k_owner(fi%kpts%nkpt), source=-1)
+
+         do irank = 0,hybmpi%size-1
+            do i = irank+1,fi%kpts%nkpt,hybmpi%size
+               k_owner(i) = irank
+            enddo
+         enddo
+
+         ! sanity check
+         do i = 1,size(my_k_list)
+            if(k_owner(my_k_list(i)) /= hybmpi%rank) then 
+               write (*,*) "my_k_list", my_k_list 
+               write (*,*) "i = ", i
+               write (*,*) "k_owner", k_owner
+               call judft_error("I should own my own k-point")
+            endif
+         enddo
+
       end subroutine split_k_to_comm
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

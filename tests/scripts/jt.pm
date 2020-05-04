@@ -64,15 +64,19 @@ sub testrun($$){
     my $dir=shift;
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
-    print LOG "Running $ex:";
 
+    print LOG "Running OMP_NUM_THREADS=$ENV{'OMP_NUM_THREADS'} $ex:";
     if (system("cd $dir;$ex")==0){
 	print LOG "Done\n";}
-       else {
-	   print LOG "Failed\n";}
+    else {
+        print LOG "Failed\n";
+    }
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub testrun_seq($$){
@@ -80,10 +84,10 @@ sub testrun_seq($$){
     my $dir=shift;
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
-    print LOG "Running $ex:";
 
     my $omps=$ENV{'OMP_NUM_THREADS'};
     $ENV{'OMP_NUM_THREADS'}=1;
+    print LOG "Running OMP_NUM_THREADS=$ENV{'OMP_NUM_THREADS'} $ex:";
     if (system("cd $dir;$ex")==0){
       print LOG "Done\n";}
     else {
@@ -93,6 +97,9 @@ sub testrun_seq($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub test_fileexists($){

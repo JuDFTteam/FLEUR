@@ -46,6 +46,7 @@
           USE m_types_oneD
           USE m_types_hybinp
           USE m_types_kpts
+          USE m_constants
           USE m_setlomap
           IMPLICIT NONE
           !     ..
@@ -124,21 +125,21 @@
 
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
-          WRITE (6,FMT=8030) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
+          WRITE (oUnit,FMT=8030) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
 8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
                ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
 
           IF (input%film.AND.(sym%invs.OR.sym%zrfs)) THEN
              IF ( (sym%invs.AND.sym%zrfs).NEQV.sym%invs2 ) THEN
-                WRITE (6,*) 'Settings of inversion and z-reflection symmetry='
-                WRITE (6,*) 'are inconsistent with vacuum-inversion symmetry!'
+                WRITE (oUnit,*) 'Settings of inversion and z-reflection symmetry='
+                WRITE (oUnit,*) 'are inconsistent with vacuum-inversion symmetry!'
                 CALL juDFT_error("invs, zrfs and invs2 do not match!",calledby ="inped")
              ENDIF
           ENDIF
 
 
           IF (ALL(a1.EQ.0.)) THEN
-             WRITE (6,'(a4,3f10.5,a8,a4)') 'a1 =',a1(:),' latnam=',latnam
+             WRITE (oUnit,'(a4,3f10.5,a8,a4)') 'a1 =',a1(:),' latnam=',latnam
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
@@ -148,7 +149,7 @@
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
-                WRITE(6,'(2(a7,f10.5))') 'dtild:',dtild,' dvac:',vacuum%dvac
+                WRITE(oUnit,'(2(a7,f10.5))') 'dtild:',dtild,' dvac:',vacuum%dvac
                 CALL juDFT_error("dtild < dvac",calledby="inped")
              ENDIF
           ELSE
@@ -170,11 +171,11 @@
           a1(:) = scaleCell*a1(:)
           a2(:) = scaleCell*a2(:)
           a3(:) = scaleCell*a3(:)
-          WRITE (6,FMT=8050) scaleCell
+          WRITE (oUnit,FMT=8050) scaleCell
 8050      FORMAT (' unit cell scaled by    ',f10.6)
-          WRITE (6,FMT=8060) cell%z1
+          WRITE (oUnit,FMT=8060) cell%z1
 8060      FORMAT (' the vacuum begins at z=',f10.6)
-          WRITE (6,FMT=8070) dtild/2.
+          WRITE (oUnit,FMT=8070) dtild/2.
 8070      FORMAT (' dtilda/2=              ',f10.6)
           !     set up bravais matrices of real and reciprocal lattices
           cell%amat(:,1) = a1(:)
@@ -207,16 +208,16 @@
           ENDIF
 
 
-          WRITE (6,FMT=8080)
+          WRITE (oUnit,FMT=8080)
 8080      FORMAT (/,/,1x,'bravais matrices of real and reciprocal lattices', /)
           DO i = 1,3
-             WRITE (6,FMT=8090) (cell%amat(i,j),j=1,3), (cell%bmat(i,j),j=1,3)
+             WRITE (oUnit,FMT=8090) (cell%amat(i,j),j=1,3), (cell%bmat(i,j),j=1,3)
           ENDDO
 8090      FORMAT (3x,3f10.6,3x,3f10.6)
-          WRITE (6,FMT=8100) cell%omtil,cell%vol,cell%area
+          WRITE (oUnit,FMT=8100) cell%omtil,cell%vol,cell%area
 8100      FORMAT (/,4x,'the volume of the unit cell omega-tilda=',f12.6,/, 10x,'the volume of the unit cell omega=',&
                f12.6,/,2x, 'the area of the two-dimensional unit cell=',f12.6)
-          WRITE (6,FMT=8120) namex,relcor
+          WRITE (oUnit,FMT=8120) namex,relcor
 8120      FORMAT (1x,'exchange-correlation: ',a4,2x,a12,1x,'correction')
           xcpot%l_inbuild=.true.
           xcpot%inbuild_name=namex
@@ -254,8 +255,8 @@
 !!$          IF (namex.EQ.'lhse') xcpot%icorr = icorr_hseloc
 !!$
 !!$          IF (xcpot%icorr == -99) THEN
-!!$             WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-!!$             WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
+!!$             WRITE(oUnit,*) 'Name of XC-potential not recognized. Use one of:'
+!!$             WRITE(oUnit,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
 !!$             CALL juDFT_error("Wrong name of XC-potential!",calledby="inped")
 !!$          ENDIF
 !!$          xcpot%krla = 0
@@ -264,9 +265,9 @@
 !!$
 !!$          ENDIF
 
-!!$          IF (xcpot%icorr.EQ.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-!!$          IF (xcpot%icorr.EQ.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-!!$          IF ((xcpot%icorr.EQ.2).AND.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
+!!$          IF (xcpot%icorr.EQ.0) WRITE(oUnit,*) 'WARNING: using X-alpha for XC!'
+!!$          IF (xcpot%icorr.EQ.1) WRITE(oUnit,*) 'INFO   : using Wigner  for XC!'
+!!$          IF ((xcpot%icorr.EQ.2).AND.(namex.NE.'mjw')) WRITE(oUnit,*) 'CAUTION: using MJW(BH) for XC!'
 !!$
 !!$          !+guta
 !!$          IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
@@ -281,11 +282,11 @@
                 CALL trans(namat_const(n),str_up,str_do)
                 IF ( (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_up))) .OR.&
                      &        (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_do))) ) THEN
-                   WRITE( 6,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
+                   WRITE(oUnit,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
                    CALL juDFT_warn ("Element name and nuclear number do not match!" ,calledby ="inped")
                 ENDIF
              ENDIF
-             WRITE (6,8140) noel(n),atoms%nz(n),atoms%econf(n)%num_core_states,atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
+             WRITE (oUnit,8140) noel(n),atoms%nz(n),atoms%econf(n)%num_core_states,atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
 8140         FORMAT (a3,i3,3i5,2f10.6)
              IF (atoms%jri(n)>atoms%jmtd)  CALL juDFT_error("jmtd",calledby ="inped")
              atoms%zatom(n) = atoms%nz(n)
@@ -323,7 +324,7 @@
                 !--->    the in-plane coordinates refer to the lattice vectors a1 and a2,
                 !--->    i.e. they are given in internal units scaled by 'scpos'
                 !
-                WRITE (6,FMT=8170) (atoms%taual(i,na),i=1,3),1.0
+                WRITE (oUnit,FMT=8170) (atoms%taual(i,na),i=1,3),1.0
 8170            FORMAT (4f10.6)
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
@@ -349,11 +350,11 @@
           l_test = .TRUE.                  ! only checking, dont use new parameters
           !CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
-          WRITE (6,FMT=8180) cell%volint
+          WRITE (oUnit,FMT=8180) cell%volint
 8180      FORMAT (13x,' volume of interstitial region=',f12.6)
           atoms%nat = na
           !--->    evaluate cartesian coordinates of positions
-          WRITE (6,FMT=8190) atoms%ntype,atoms%nat
+          WRITE (oUnit,FMT=8190) atoms%ntype,atoms%nat
 8190      FORMAT (/,/,' number of atom types=',i3,/, ' total number of atoms=',i4,/,/,t3,'no.',t10,'type',&
                &       t21,'int.-coord.',t49,'cart.coord.',t76,'rmt',t84, 'jri',t92,'dx',t98,'lmax',/)
           na = 0
@@ -361,7 +362,7 @@
              DO n1 = 1,atoms%neq(n)
                 na = na + 1
                 iz = NINT(atoms%zatom(n))
-                WRITE (6,FMT=8200) na,namat_const(iz),n, (atoms%taual(i,na),i=1,3), (atoms%pos(i,na),i=1,3),&
+                WRITE (oUnit,FMT=8200) na,namat_const(iz),n, (atoms%taual(i,na),i=1,3), (atoms%pos(i,na),i=1,3),&
                      atoms%rmt(n),atoms%jri(n), atoms%dx(n),atoms%lmax(n)
 8200            FORMAT (1x,i3,4x,a2,t12,i3,2x,3f6.2,3x,3f10.6,3x, f10.6,i6,3x,f6.4,3x,i2)
              ENDDO
@@ -382,8 +383,8 @@
 
           !--->    nwd = number of energy windows; lepr = 0 (1) for energy
           !--->    parameters given on absolute (floating) scale
-          WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(0)
-          WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
+          WRITE (oUnit,FMT=8320) input%l_f,input%eonly,1,llr(0)
+          WRITE (oUnit,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
 8320      FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&
                &       'calculate Pulay-forces = ',l1,/,t5,'eigenvalues ',&
                &       'only = ',l1,/,t5,'number of energy windows =',i2,/,t5,&
@@ -398,40 +399,40 @@
           !--->    for floating energy parameters, the window will be given relative
           !--->    to the highest/lowest energy parameters. a sanity check is made here
           !
-          WRITE (6,FMT=8350) input%ellow,input%elup,input%zelec
+          WRITE (oUnit,FMT=8350) input%ellow,input%elup,input%zelec
 8350      FORMAT (1x,/,/,' energy window from',f8.3,' to', f8.3,' hartrees; nr. of electrons=',f6.1)
           !--->    input of wavefunction cutoffs: input is a scaled quantity
           !--->    related to the absolute value by rscale (e.g. a muffin-tin
           !--->    radius)
-          WRITE (6,FMT=8290) input%rkmax
+          WRITE (oUnit,FMT=8290) input%rkmax
 8290      FORMAT (1x,/,' wavefunction cutoff =',f10.5)
           !
-          WRITE (6,FMT=8230) input%bz_integration==1,input%delgau
-          WRITE (6,FMT=8240) input%zelec,input%tkb
+          WRITE (oUnit,FMT=8230) input%bz_integration==1,input%delgau
+          WRITE (oUnit,FMT=8240) input%zelec,input%tkb
 8230      FORMAT (/,10x,'gauss-integration is used  =',3x,l1,/,10x, 'gaussian half width        =',f10.5)
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)
-          WRITE (6,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
-          WRITE (6,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
+          WRITE (oUnit,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
+          WRITE (oUnit,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
 
           IF ((.NOT.sym%invs).AND.input%secvar) THEN
-             WRITE(6,*)'The second variation is not implemented in the'
-             WRITE(6,*)'complex version of the program.'
+             WRITE(oUnit,*)'The second variation is not implemented in the'
+             WRITE(oUnit,*)'complex version of the program.'
              CALL juDFT_error ("second variation not implemented in complex version" ,calledby ="inped")
           ENDIF
 
           IF ( (input%jspins.EQ.1).AND.(input%kcrel.EQ.1) )  THEN
-             WRITE (6,*) 'WARNING : in a non-spinpolarized calculation the'
-             WRITE (6,*) 'coupled-channel relativistic coreprogram (kcrel=1)'
-             WRITE (6,*) 'makes no sense; **** setting kcrel = 0 ****'
+             WRITE (oUnit,*) 'WARNING : in a non-spinpolarized calculation the'
+             WRITE (oUnit,*) 'coupled-channel relativistic coreprogram (kcrel=1)'
+             WRITE (oUnit,*) 'makes no sense; **** setting kcrel = 0 ****'
              input%kcrel = 0
           ENDIF
 
-          WRITE (6,'(a7,l1)') 'swsp = ',input%swsp
-          WRITE (6,'(15f6.2)') (atoms%bmu(i),i=1,atoms%ntype)
+          WRITE (oUnit,'(a7,l1)') 'swsp = ',input%swsp
+          WRITE (oUnit,'(15f6.2)') (atoms%bmu(i),i=1,atoms%ntype)
           IF (vacuum%layers>vacuum%layerd)  CALL juDFT_error("too many layers",calledby ="inped")
           IF (sliceplot%slice) THEN
              input%cdinf = .FALSE.
-             WRITE (6,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s
+             WRITE (oUnit,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s
           END IF
 8390      FORMAT (' slice: k=',i3,' e1s=',f10.6,' e2s=',f10.6)
           !
@@ -441,23 +442,23 @@
              IF (atoms%nlo(n).GE.1) THEN
                 IF (input%secvar)          CALL juDFT_error ("LO + sevcar not implemented",calledby ="inped")
                 IF (atoms%nlo(n).GT.atoms%nlod) THEN
-                   WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
+                   WRITE (oUnit,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
                    CALL juDFT_error("nlo(n)>nlod",calledby ="inped")
                 ENDIF
                 DO j=1,atoms%nlo(n)
                    IF (.NOT.input%l_useapw) THEN
                       IF (atoms%llo(j,n).LT.0) THEN ! CALL juDFT_error("llo<0 ; compile with DCPP_APW!",calledby="inped")
-                         WRITE(6,'(A)') 'Info: l_useapw not set.'
-                         WRITE(6,'(A,I2,A,I2,A)') '      LO #',j,' at atom type',n, ' is an e-derivative.'
+                         WRITE(oUnit,'(A)') 'Info: l_useapw not set.'
+                         WRITE(oUnit,'(A,I2,A,I2,A)') '      LO #',j,' at atom type',n, ' is an e-derivative.'
                       ENDIF
                    ENDIF
                    IF ( (atoms%llo(j,n).GT.atoms%llod).OR.(MOD(-atoms%llod,10)-1).GT.atoms%llod ) THEN
-                      WRITE (6,*) 'llo(j,n) =',atoms%llo(j,n),' > llod =',atoms%llod
+                      WRITE (oUnit,*) 'llo(j,n) =',atoms%llo(j,n),' > llod =',atoms%llod
                       CALL juDFT_error("llo(j,n)>llod",calledby ="inped")
                    ENDIF
                 ENDDO
                 CALL setlomap(n, input%l_useapw,atoms)
-                WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(n)
+                WRITE (oUnit,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(n)
              ENDIF
           ENDDO
           !

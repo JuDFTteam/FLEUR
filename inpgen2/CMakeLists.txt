@@ -57,6 +57,8 @@ old_inp/rw_symfile.f
 old_inp/spg2set.f
 old_inp/inpeig.f90
 
+${CMAKE_BINARY_DIR}/include/buildinfo.h
+
 ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
@@ -116,7 +118,7 @@ ${FLEUR_SRC}/cdn_mt/rhomt21.f90
 ${FLEUR_SRC}/cdn_mt/rhonmt21.f90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 ${FLEUR_SRC}/math/grule.f90
-${FLEUR_SRC}/init/ifft235.f
+${FLEUR_SRC}/init/ifft235.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
@@ -136,36 +138,39 @@ ${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
-${FLEUR_SRC}/init/boxdim.f
+${FLEUR_SRC}/init/boxdim.f90
 )
 
+set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)
+
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/inpgen")
 set_target_properties(inpgen2 PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen)
 target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS})
+target_link_libraries(inpgen2 fleurinput juDFT)
 target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})
-target_link_libraries(inpgen2 juDFT)
-target_link_libraries(inpgen2 fleurinput)
 
 if (INPGEN_USE_kplib)
   target_link_libraries(inpgen2 kplib_static)
 endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)
     ADD_CUSTOM_COMMAND(
-    OUTPUT ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
-    COMMAND ${XXD_PROG} -i default.econfig default_econfig.h
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
+    COMMAND ${XXD_PROG} -i default.econfig ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
     COMMENT "Putting current default.econfig into default_econfig.h")
 else()
     ADD_CUSTOM_COMMAND(
-    OUTPUT ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
-    COMMAND cp  ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
 endif()

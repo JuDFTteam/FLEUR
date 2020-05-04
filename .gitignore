@@ -1,7 +1,4 @@
 docs/mkdocs/site
-init/compileinfo.h
-io/xml/inputSchema.h
-inpgen2/default_econfig.h
 Testing/*
 *~
 \#*

@@ -35,14 +35,15 @@
 !     It is called in a spin loop at the end of vgen.F
 !     *****************************************************************
 
-      USE m_constants, ONLY : tpi_const
+      USE m_types
+      USE m_constants
       USE m_sphbes
       USE m_phasy1
       USE m_gaunt
 #ifdef debug
       USE m_ylm
 #endif
-    USE m_types
+    
       IMPLICIT NONE
       TYPE(t_sym),INTENT(IN)     :: sym
       TYPE(t_stars),INTENT(IN)   :: stars
@@ -553,10 +554,10 @@
       IF (isdone.AND.mtdone) THEN
         force_sf(:,:) = force_is(:,:) - force_mt(:,:)
         force(:,:,isp) = force(:,:,isp) + real(force_sf(:,:))
-        WRITE (6,*)
+        WRITE (oUnit,*)
         DO itype = 1,atoms%ntype
-          WRITE (6,FMT=8010) itype
-          WRITE (6,FMT=8020) (force_sf(dir,itype),dir=1,3)
+          WRITE (oUnit,FMT=8010) itype
+          WRITE (oUnit,FMT=8020) (force_sf(dir,itype),dir=1,3)
         END DO ! itype
         isdone = .false.
         mtdone = .false.

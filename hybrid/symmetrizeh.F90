@@ -12,9 +12,9 @@ CONTAINS
 
    SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
 
-      USE m_constants
-      USE m_types
       USE m_juDFT
+      USE m_types
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -149,7 +149,7 @@ CONTAINS
                PRINT *, g
                PRINT *, bk
                DO i = 1, lapw%nv(jsp)
-                  WRITE (6, *) i, lapw%gvec(:, i, jsp)
+                  WRITE (oUnit, *) i, lapw%gvec(:, i, jsp)
                ENDDO
                call judft_error('symmetrizeh_new: rotated G point not found')
             END IF

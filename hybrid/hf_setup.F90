@@ -12,6 +12,7 @@ CONTAINS
                        cell, oneD, results, jsp, enpara, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
+      USE m_constants
       USE m_eig66_io
       USE m_util
       USE m_intgrf
@@ -45,7 +46,6 @@ CONTAINS
 
       ! local type variables
       TYPE(t_lapw)             :: lapw
-      TYPE(t_mat), ALLOCATABLE :: zmat(:)
 
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
@@ -56,65 +56,37 @@ CONTAINS
 
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
-      LOGICAL              :: skip_kpt(kpts%nkpt)
 
       REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
       COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
-
-      skip_kpt = .FALSE.
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
-         allocate(zmat(kpts%nkptf), stat=ok)
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
-
-         if(.not. allocated(eig_irr)) allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
-         eig_irr = 0
+         if(.not. allocated(eig_irr)) then 
+            allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
+            IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
+         endif
+         eig_irr = 0.0
 
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          hybdat%kveclo_eig = 0
 
-         INQUIRE(file ="z",exist= l_exist)
-         IF(l_exist) THEN
-            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*8)
-            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*16)
-         END IF
 
          ! Reading the eig file
+         call timestart("eig stuff")
          DO nk = 1, kpts%nkpt
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
-            CALL read_eig(hybdat%eig_id, nk, jsp, zmat=zMat(nk))
-
-            IF(l_exist.AND.zmat(1)%l_real) THEN
-               READ(993,rec=nk) zDebug_r(:,:)
-               zMat(nk)%data_r = 0.0
-               zMat(nk)%data_r(:nbasfcn,:input%neig) = zDebug_r(:nbasfcn,:input%neig)
-            END IF
-            IF(l_exist.AND..NOT.zmat(1)%l_real) THEN
-               READ(993,rec=nk) zDebug_c(:,:)
-               zMat(nk)%data_c = 0.0
-               zMat(nk)%data_c(:nbasfcn,:input%neig) = zDebug_c(:nbasfcn,:input%neig)
-            END IF
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
          END DO
-
-         IF(l_exist) CLOSE(993)
-
-         !Allocate further space
-         DO nk = kpts%nkpt + 1, kpts%nkptf
-            nbasfcn = zMat(kpts%bkp(nk))%matsize1
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
-         END DO
+         call timestop("eig stuff")
 
          !determine degenerate states at each k-point
          !
@@ -123,8 +95,8 @@ CONTAINS
          ! degenerat(i) =0  band i  is  degenerat, but is not the lowest band
          !                  of the group of degenerate states
          IF (mpi%irank == 0) THEN
-            WRITE (6, *)
-            WRITE (6, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
+            WRITE (oUnit, *)
+            WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
          hybdat%nobd(:,jsp) = 0
@@ -171,7 +143,6 @@ CONTAINS
                CALL judft_warn("More occupied bands than total no of bands!?")
                hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
             END IF
-            PRINT *, "bands:", nk, hybdat%nobd(nk,jsp), hybdat%nbands(nk), hybdat%ne_eig(nk)
          END DO
 
          ! spread hybdat%nobd from IBZ to whole BZ
@@ -183,7 +154,7 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp, zmat)
+                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
@@ -218,22 +189,25 @@ CONTAINS
             END DO
          END DO
 
-         allocate(basprod(atoms%jmtd), stat=ok)
+         allocate(basprod(atoms%jmtd), stat=ok, source=0.0)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
          allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         basprod = 0; hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
+         hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
          mpdata%n1 = 0; mpdata%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
          ALLOCATE (hybdat%nindxp1(0:maxval(hybinp%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
+
+         !$OMP PARALLEL DO default(none) schedule(dynamic)&
+         !$OMP private(itype, ng, l2, l1, n1, l, nn, n, basprod) &
+         !$OMP shared(atoms, hybinp, mpdata, hybdat)
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
             DO l2 = 0, MIN(atoms%lmax(itype), hybinp%lcutwf(itype))
-               ll = l2
-               DO l1 = 0, ll
+               DO l1 = 0, l2
                   IF (ABS(l1 - l2) <= hybinp%lcutm1(itype)) THEN
                      DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
                         nn = mpdata%num_radfun_per_l(l1, itype)
@@ -263,6 +237,7 @@ CONTAINS
                END DO
             END DO
          END DO
+         !$OMP END PARALLEL DO
          deallocate(basprod)
          CALL timestop("gen_bz and gen_wavf")
 

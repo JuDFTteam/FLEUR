@@ -1,11 +1,11 @@
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/include")
 include_directories(include)
 
 
 set(FLEURINPUT_COMPILEOPTS "${FLEUR_PRECISION_OPTION}")
 add_subdirectory("fleurinput")
 
-set(c_filesInpgen io/xml/inputSchema.h io/xml/dropInputSchema.c)
-set(c_filesFleur io/xml/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
+set(c_filesFleur include/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
 if(FLEUR_USE_CUSOLVER)
   set(c_filesFleur ${c_filesFleur} diagonalization/cusolver.c)
 endif()
@@ -59,26 +59,30 @@ set(fleur_SRC ${fleur_F90} ${fleur_F77})
 set_source_files_properties(${fleur_F90} PROPERTIES Fortran_FORMAT FREE)
 set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 
-string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
-message("Flags: ${CMAKE_Fortran_FLAGS}")
-
-set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};juDFT;fleurinput")
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/fleurinput/modules/fleurinput")
-if (${FLEUR_USE_SERIAL})
+if (FLEUR_USE_SERIAL)
    #Serial executables
    add_executable(fleur ${fleur_SRC} ${c_filesFleur})
    target_compile_definitions(fleur PUBLIC ${FLEUR_DEFINITIONS})
+   target_link_libraries(fleur fleurinput juDFT)
+   if (FLEUR_COMPILE_EDSOLVER)
+      target_link_libraries(fleur EDsolver)
+   endif()
    target_link_libraries(fleur ${FLEUR_LIBRARIES})
    target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
    set_target_properties(fleur PROPERTIES Fortran_MODULE_DIRECTORY modules/fleur COMPILE_OPTIONS -Imodules/fleur)
 endif()
 #parallel executables
-if(${FLEUR_USE_MPI})
+if (FLEUR_USE_MPI)
   #fleur_MPI
   add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur} ${fleur_SRC_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
+  target_link_libraries(fleur_MPI fleurinput juDFT)
+   if (FLEUR_COMPILE_EDSOLVER)
+      target_link_libraries(fleur_MPI EDsolver)
+   endif()
   target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
-  target_link_libraries(fleur_MPI  ${FLEUR_LINK_LIBRARIES})
+  target_link_libraries(fleur_MPI ${FLEUR_LINK_LIBRARIES})
   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY modules/fleur_MPI COMPILE_OPTIONS -Imodules/fleur_MPI)
 endif ()
 
@@ -87,13 +91,23 @@ endif ()
 include(cmake/docker.txt)
 
 
-#if (${FLEUR_USE_SERIAL})
+#if (FLEUR_USE_SERIAL)
 #install(TARGETS fleur inpgen
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
-#if (${FLEUR_USE_MPI})
+#if (FLEUR_USE_MPI)
 #install(TARGETS fleur_MPI
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
+
+add_subdirectory("inpgen2")
+
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen2" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen2" fleur_MPI)
+endif ()

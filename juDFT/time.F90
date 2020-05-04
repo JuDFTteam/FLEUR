@@ -201,7 +201,7 @@ CONTAINS
             sum_time = sum_time + times(i)
             times(i) = 0.0
          ENDDO
-         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/max(1E-10,timer%time*100.)
+         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/max(1E-10,timer%time)*100.
          WRITE (fid, *)
          WRITE (fid, *) "-------------------------------------------------"
          WRITE (fid, *)
@@ -345,6 +345,7 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
+     USE m_juDFT_internalParams
      USE m_judft_usage
      USE m_judft_args
       IMPLICIT NONE
@@ -365,18 +366,18 @@ CONTAINS
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime
          globaltimer%starttime = cputime()
-         WRITE (6, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
+         WRITE (juDFT_outUnit, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
          CALL add_usage_data("Runtime", globaltimer%time)
-         CALL priv_writetimes_longest(globaltimer, fid=6)
+         CALL priv_writetimes_longest(globaltimer, fid=juDFT_outUnit)
 
-         WRITE (6, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
+         WRITE (juDFT_outUnit, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
             INT(globaltimer%time), INT(min_time*globaltimer%time)
 
-         CALL priv_writetimes(globaltimer, 1, 6)
+         CALL priv_writetimes(globaltimer, 1, juDFT_outUnit)
 #ifdef CPP_MPI
          IF (l_mpi) THEN
             CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-            WRITE (6, *) "Program used ", isize, " PE"
+            WRITE (juDFT_outUnit, *) "Program used ", isize, " PE"
          ENDIF
 #endif
       END IF
@@ -476,9 +477,10 @@ CONTAINS
       IMPLICIT NONE
       INTEGER, INTENT(IN)     :: it
       LOGICAL, INTENT(INOUT)  :: l_cont
-      CHARACTER(len=1000)::wtime_string
-      INTEGER          :: wtime, time_used, time_per_iter
-      INTEGER:: irank = 0
+      CHARACTER(len=1000) :: wtime_string
+      INTEGER             :: time_used, time_per_iter
+      INTEGER             :: irank = 0
+      real                :: wtime
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
@@ -598,7 +600,7 @@ CONTAINS
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec')") time, ihours, iminutes, INT(seconds)
       ELSE
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec ->',1x,f5.1,'%')") &
-            time, ihours, iminutes, INT(seconds), time/max(1E-10,ttime*100.0)
+            time, ihours, iminutes, INT(seconds), time/max(1E-10,ttime)*100.0
       ENDIF
    END FUNCTION timestring
 
@@ -617,12 +619,12 @@ CONTAINS
       REAL::cputime
 
       !TRY TO USE mpi OR openmp wall-clock functions
-#ifdef CPP_MPI
-      cputime = MPI_WTIME()
+#ifdef _OPENMP
+      cputime = real(omp_get_wtime(),kind=kind(cputime))
 #elif __INTEL_COMPILER
       cputime = rtc()
-#elif _OPENMP
-      cputime = omp_get_wtime()
+#elif CPP_MPI
+      cputime = real(MPI_WTIME(),kind=kind(cputime))
 #else
       !use f95 intrinsic function
       CALL CPU_TIME(cputime)

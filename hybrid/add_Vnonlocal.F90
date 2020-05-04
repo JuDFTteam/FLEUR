@@ -46,6 +46,8 @@ CONTAINS
                             input, kpts, jsp, results,&
                             xcpot, noco,nococonv, hmat)
 
+      USE m_types
+      USE m_constants
       USE m_symm_hf, ONLY: symm_hf
       USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_exchange_valence_hf
@@ -53,8 +55,8 @@ CONTAINS
       USE m_symmetrizeh
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
-      USE m_types
       USE m_io_hybinp
+      use m_judft
 
       IMPLICIT NONE
 
@@ -82,6 +84,8 @@ CONTAINS
       TYPE(t_mat)             :: olap, tmp, v_x, z
       COMPLEX                 :: exch(input%neig, input%neig)
 
+      call timestart("add_vnonlocal")
+
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
@@ -104,9 +108,9 @@ CONTAINS
 #ifdef CPP_EXPLICIT_HYB
       ! calculate HF energy
       IF (hybdat%l_calhf) THEN
-         WRITE (6, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
+         WRITE (oUnit, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
 
-         WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
+         WRITE (oUnit, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
       END IF
 #endif
 
@@ -132,11 +136,12 @@ CONTAINS
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
          IF (hybdat%l_calhf) THEN
-            WRITE (6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
-               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-27.211608), &
-               hybdat%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
+            WRITE (oUnit, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
+               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-hartree_to_ev_const), &
+               hybdat%div_vv(iband, nk, jsp)*(-hartree_to_ev_const), REAL(exch(iband, iband))*(-hartree_to_ev_const)
          END IF
       END DO
+      call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
 
 END MODULE m_add_vnonlocal

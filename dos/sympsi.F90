@@ -20,6 +20,7 @@ MODULE m_sympsi
 CONTAINS
   SUBROUTINE sympsi(lapw,jspin,sym,ne,cell,eig,noco, ksym,jsym,zMat)
 
+    USE m_constants
     USE m_grp_k
     USE m_inv3
     USE m_types
@@ -118,7 +119,7 @@ CONTAINS
                 CYCLE kloop
              ENDIF
           ENDDO
-          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
+          WRITE(oUnit,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
           CALL timestart("sympsi")
           RETURN
        ENDDO kloop

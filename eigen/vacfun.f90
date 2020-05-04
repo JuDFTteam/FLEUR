@@ -13,6 +13,7 @@ CONTAINS
     !               m. weinert
     !*********************************************************************
 
+    USE m_constants
     USE m_intgr, ONLY : intgz0
     USE m_vacuz
     USE m_vacudz
@@ -104,7 +105,7 @@ CONTAINS
           phase = stars%rgphs(i1,i2,i3)
           ind2 = stars%ig2(ind3)
           IF (ind2.EQ.0) THEN
-             WRITE (6,FMT=8000) ik,jk
+             WRITE (oUnit,FMT=8000) ik,jk
 8000         FORMAT (' **** error in map2 for 2-d stars',2i5)
              CALL juDFT_error("error in map2 for 2-d stars",calledby ="vacfun")
           END IF

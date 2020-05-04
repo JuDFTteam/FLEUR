@@ -14,7 +14,10 @@
 !      for more details look in mapatom.F.    year 2004 
 
       USE m_types
+      USE m_constants
+
       IMPLICIT NONE
+
       TYPE(t_oneD),INTENT(IN)    :: oneD
       TYPE(t_atoms),INTENT(INOUT):: atoms
       TYPE(t_sym),INTENT(INOUT)  :: sym
@@ -33,7 +36,7 @@
         n2 = n1 + atoms%neq(n) - 1
         IF (atoms%neq(n).EQ.1) THEN
            sym%ngopr(n2) = 1
-           WRITE (6,FMT=8010) n2,n2,sym%ngopr(n2)
+           WRITE (oUnit,FMT=8010) n2,n2,sym%ngopr(n2)
            n1 = n1 + atoms%neq(n)
            CYCLE
         END IF
@@ -43,7 +46,7 @@
                   pps(3) = pps(3)+sym%tau(3,np1)/cell%amat(3,3)
                   IF (all(abs(atoms%taual(:,na)-pps(:)).LE.1.e-4 )) THEN
                       sym%ngopr(na) = np1
-                      WRITE (6,FMT=8010) na,n1,sym%ngopr(na)
+                      WRITE (oUnit,FMT=8010) na,n1,sym%ngopr(na)
  8010                 FORMAT (5x,'atom',i3,' can be mapped into atom', i3,' through group  operation',i4)
                       CYCLE
                    END IF
@@ -65,7 +68,7 @@
                      cycle n2loop
                endif
             enddo
-            WRITE (6,FMT=8050) n1,n2
+            WRITE (oUnit,FMT=8050) n1,n2
  8050       FORMAT (' error - n1,n2=',2i3)
             CALL juDFT_error("mult",calledby ="od_mapatom")
         ENDDO n2loop
@@ -73,10 +76,10 @@
 
  8060 FORMAT (1x,24i3)
 
-      WRITE (6,FMT='(//," inverse operations",//)')
+      WRITE (oUnit,FMT='(//," inverse operations",//)')
 
       DO n1 = 1,oneD%odd%nop
-         WRITE (6,FMT=8060) n1,sym%invtab(n1)
+         WRITE (oUnit,FMT=8060) n1,sym%invtab(n1)
       END DO
 
       DO na = 1,atoms%nat
@@ -85,7 +88,7 @@
       END DO
 
       IF (oneD%odd%invs) THEN
-         WRITE (6,FMT=*)
+         WRITE (oUnit,FMT=*)
          nat1 = 1
          DO n = 1,atoms%ntype
             nat2 = nat1 + atoms%neq(n) - 1
@@ -107,7 +110,7 @@
                               sym%invsat(na2) = 2
                               sym%invsatnr(na)  = na2
                               sym%invsatnr(na2) = na
-                              WRITE (6,FMT=9000) n,na,na2
+                              WRITE (oUnit,FMT=9000) n,na,na2
                               CYCLE naloop
                            END IF
                         END DO
@@ -119,7 +122,7 @@
             nat1 = nat1 + atoms%neq(n)
          END DO
       END IF
-      WRITE (6,FMT=*) sym%invsat
+      WRITE (oUnit,FMT=*) sym%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3, ' via 3d inversion')
 
       END SUBROUTINE od_mapatom

@@ -23,6 +23,7 @@ CONTAINS
 
 #include"cpp_double.h"
       USE m_types
+      USE m_constants
       USE m_eigen_hssetup
       USE m_pot_io
       USE m_eigen_diag
@@ -269,12 +270,12 @@ CONTAINS
 #endif
 
       IF(mpi%irank.EQ.0) THEN
-         WRITE(6,'(a)') ''
-         WRITE(6,'(a)') '              basis set size:'
-         WRITE(6,'(a)') '      jsp    ikpt     nv      LOs  overall'
+         WRITE(oUnit,'(a)') ''
+         WRITE(oUnit,'(a)') '              basis set size:'
+         WRITE(oUnit,'(a)') '      jsp    ikpt     nv      LOs  overall'
          DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
             DO nk = 1, fi%kpts%nkpt
-               WRITE(6,'(5i8)') jsp, nk, nvBufferTemp(nk,jsp), fi%atoms%nlotot, nvBufferTemp(nk,jsp) + fi%atoms%nlotot
+               WRITE(oUnit,'(5i8)') jsp, nk, nvBufferTemp(nk,jsp), fi%atoms%nlotot, nvBufferTemp(nk,jsp) + fi%atoms%nlotot
             END DO
          END DO
       END IF

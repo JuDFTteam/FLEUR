@@ -7,8 +7,11 @@ MODULE m_hybrid_core
 CONTAINS
    SUBROUTINE corewf(atoms, jsp, input,&
                       vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
-      USE m_types
+
       USE m_juDFT
+      USE m_types
+      USE m_constants
+
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
@@ -126,7 +129,7 @@ CONTAINS
                         lmaxc, nindxcr, core1, core2, eig_c, mpi)
 
       USE m_intgr, ONLY: intgr3, intgr0, intgr1
-      USE m_constants, ONLY: c_light
+      USE m_constants
       USE m_differ
       USE m_types
       IMPLICIT NONE
@@ -237,7 +240,7 @@ CONTAINS
          ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
          IF (mpi%irank == 0) THEN
-            WRITE (6, FMT=8000) z, rnot, dxx, atoms%jri(itype)
+            WRITE (oUnit, FMT=8000) z, rnot, dxx, atoms%jri(itype)
          END IF
          DO j = 1, atoms%jri(itype)
             vrd(j) = vr0(j, itype, jspin)
@@ -286,7 +289,7 @@ CONTAINS
                eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
 
                IF (mpi%irank == 0) THEN
-                  WRITE (6, FMT=8010) fn, fl, fj, e, weight
+                  WRITE (oUnit, FMT=8010) fn, fl, fj, e, weight
                END IF
                IF (ierr /= 0) call judft_error('error in core-level routine')
             ENDIF
@@ -303,10 +306,10 @@ CONTAINS
 
    SUBROUTINE core_init(input, atoms, lmaxcd, maxindxc)
 
-      USE m_intgr, ONLY: intgr3, intgr0, intgr1
-      USE m_constants, ONLY: c_light
-      USE m_differ
       USE m_types
+      USE m_constants
+      USE m_intgr, ONLY: intgr3, intgr0, intgr1
+      USE m_differ
       IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)       :: input

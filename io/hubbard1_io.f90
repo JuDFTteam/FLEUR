@@ -44,31 +44,7 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first,l_new)
-
-      CHARACTER(len=*), INTENT(IN)  :: path
-      INTEGER,          INTENT(IN)  :: i_hia
-      INTEGER,          INTENT(IN)  :: l
-      REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      TYPE(t_hub1inp),  INTENT(IN)  :: hub1inp
-      TYPE(t_hub1data), INTENT(IN)  :: hub1data
-      REAL,             INTENT(IN)  :: mu
-      INTEGER,          INTENT(IN)  :: n
-      LOGICAL,          INTENT(IN)  :: l_bath
-      LOGICAL,          INTENT(IN)  :: l_first
-      LOGICAL,          INTENT(IN)  :: l_new
-
-      !Old or new input format
-      IF(l_new) THEN
-         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
-      ELSE
-         CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n)
-      ENDIF
-
-   END SUBROUTINE hubbard1_input
-
-
-   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
+   SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: i_hia
@@ -88,7 +64,7 @@ MODULE m_hubbard1_io
       !Main input file
       OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_main)),&
           status="replace", action="write", iostat=io_error)
-      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
 
       CALL startSection(input_iounit,"hamiltonian")
       CALL comment(input_iounit,"Slater Integrals",1)
@@ -103,7 +79,7 @@ MODULE m_hubbard1_io
          CALL writeValue(input_iounit,"Np_min",5)
          CALL writeValue(input_iounit,"Np_max",18)
       ELSE
-         CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1inp%n_occpm))
+         CALL writeValue(input_iounit,"Np_min",MAX(0        ,n-hub1inp%n_occpm))
          CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1inp%n_occpm))
       ENDIF
       CALL comment(input_iounit,"Parameters for the case with bath states (only used when bath is present)",1)
@@ -134,13 +110,15 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit, "eps", sigma)
       CALL endSection(input_iounit)
 
-      CLOSE(input_iounit)
+      CLOSE(unit=input_iounit,iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
+
 
 
       !local hamiltonian
       OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_hloc)),&
       status="replace", action="write", iostat=io_error)
-      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
 
       CALL comment(input_iounit,"Orbital quantum number",1)
       CALL writeValue(input_iounit,"Lorb",l)
@@ -148,7 +126,10 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"ea",-mu)
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
       CALL writeValue(input_iounit,"xiSOC",hub1data%xi(i_hia))
-      !calculate the additional exchange splitting
+
+      !-----------------------------------------------
+      ! Additional Exchange Splitting
+      !-----------------------------------------------
       exc = 0.0
       DO i_exc = 1, hub1inp%n_exc(i_hia)
          exc = exc + hub1inp%exc(i_hia,i_exc)*hub1data%mag_mom(i_hia,i_exc)
@@ -159,6 +140,7 @@ MODULE m_hubbard1_io
          !The sign flip is just a convention between the solver and the DFT calculation
          CALL writeValue(input_iounit,"Exc",-exc)
       ENDIF
+
       !---------------------------------------------------------
       ! Addtional arguments given by addArg are simply passed on
       !---------------------------------------------------------
@@ -167,7 +149,7 @@ MODULE m_hubbard1_io
          !----------------------------------------------
          ! Write out a warning about the sign convention
          !----------------------------------------------
-         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1inp%arg_vals(i_hia,i_arg).GT.1e-12) THEN
+         IF(TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1inp%arg_vals(i_hia,i_arg).GT.0.0) THEN
             WRITE(*,*) "----------------------------------------------"
             WRITE(*,*) "You provided a positive exchange splitting.   "
             WRITE(*,*) "Due to different conventions in the solver    "
@@ -176,6 +158,7 @@ MODULE m_hubbard1_io
          ENDIF
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1inp%arg_keys(i_hia,i_arg))),hub1inp%arg_vals(i_hia,i_arg))
       ENDDO
+
       !------------------------------------
       ! Crystal field contribution
       !------------------------------------
@@ -197,115 +180,9 @@ MODULE m_hubbard1_io
       ENDIF
 
       CLOSE(unit=input_iounit,iostat=io_error)
-      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
 
-   END SUBROUTINE write_hubbard1_input_new
-
-
-   SUBROUTINE write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n)
-
-      CHARACTER(len=*), INTENT(IN)  :: path
-      INTEGER,          INTENT(IN)  :: i_hia
-      INTEGER,          INTENT(IN)  :: l
-      REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      TYPE(t_hub1inp),  INTENT(IN)  :: hub1inp
-      TYPE(t_hub1data), INTENT(IN)  :: hub1data
-      REAL,             INTENT(IN)  :: mu
-      INTEGER,          INTENT(IN)  :: n
-
-      INTEGER :: info, io_error,i_exc
-      REAL exc
-
-      !Main input file
-      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_main)),&
-          status="replace", action="write", iostat=io_error)
-      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_old")
-
-      CALL header(input_iounit,"Parameters for the atomic Hamiltonian in eV",1)
-
-      CALL comment(input_iounit,"Orbital quantum number",1)
-      CALL writeValue(input_iounit,"Lorb",l)
-
-      CALL comment(input_iounit,"Slater Integrals",1)
-      CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
-
-      CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
-      CALL writeValue(input_iounit,"gfact",hub1data%xi(i_hia))
-
-      !calculate the additional exchange splitting
-      exc = 0.0
-      DO i_exc = 1, hub1inp%n_exc(i_hia)
-         exc = exc + hub1inp%exc(i_hia,i_exc)*hub1data%mag_mom(i_hia,i_exc)
-      ENDDO
-
-      CALL comment(input_iounit,"External field",1)
-      CALL writeValue(input_iounit,"Bz",-exc)
-
-      CALL comment(input_iounit,"Inverse temperature",1)
-      CALL writeValue(input_iounit,"beta",hub1inp%beta)
-
-      CALL comment(input_iounit,"Chemical potential",1)
-      CALL writeValue(input_iounit,"mu",mu)
-
-      IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
-         CALL comment(input_iounit,"Crystal field factor",1)
-         CALL writeValue(input_iounit,"ccf",hub1inp%ccf(i_hia))
-      ENDIF
-
-      CALL header(input_iounit,"Parameters for the Solver",1)
-
-      CALL comment(input_iounit,"Minimum and maximum occupation of the orbital",1)
-      CALL writeValue(input_iounit,"Nap_min",MAX(0,n-hub1inp%n_occpm))
-      CALL writeValue(input_iounit,"Nap_max",MIN(2*(2*l+1),n+hub1inp%n_occpm))
-
-      CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
-      CALL writeValue(input_iounit, "method_lancz")
-
-      CALL comment(input_iounit,"Number of iterations",1)
-      CALL writeValue(input_iounit,"N_lancz_iter",100)
-
-      CALL comment(input_iounit,"Number of eigenstates calculated",1)
-      CALL writeValue(input_iounit,"N_lancz_states",35)
-
-      CALL header(input_iounit,"Parameters for the frequency/energy axis",1)
-
-      CALL startSection(input_iounit,"real_freq_axis")
-         CALL writeValue(input_iounit, "omegamin", emin)
-         CALL writeValue(input_iounit, "omegamax", emax)
-         CALL writeValue(input_iounit, "Nomega", ne)
-         CALL writeValue(input_iounit, "eps", sigma)
-      CALL endSection(input_iounit)
-
-      CALL startSection(input_iounit,"matsub_freq_axis")
-         CALL writeValue(input_iounit, "Nmatsub", nmats)
-      CALL endSection(input_iounit)
-
-      CLOSE(unit=input_iounit)
-
-      WRITE(*,"(A)") "You are using an old input file format. This does not support the additional arguments"
-   END SUBROUTINE write_hubbard1_input_old
-
-   SUBROUTINE write_ccfmat(path,ccfmat,l)
-
-      CHARACTER(len=*), INTENT(IN)  :: path
-      REAL,             INTENT(IN)  :: ccfmat(-l:,-l:)
-      INTEGER,          INTENT(IN)  :: l
-
-      INTEGER :: info, io_error,io_unit
-
-      io_unit = 17
-
-      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="replace", action="write", iostat=io_error)
-
-      IF(l.EQ.2) THEN
-         WRITE(io_unit,"(5f10.5)") ccfmat*hartree_to_ev_const
-      ELSE IF(l.EQ.3) THEN
-         WRITE(io_unit,"(7f10.5)") ccfmat*hartree_to_ev_const
-      ENDIF
-
-      CLOSE(io_unit)
-
-   END SUBROUTINE write_ccfmat
+   END SUBROUTINE write_hubbard1_input
 
    SUBROUTINE read_ccfmat(path,ccfmat,l)
 
@@ -327,56 +204,6 @@ MODULE m_hubbard1_io
       CLOSE(unit=io_unit)
 
    END SUBROUTINE read_ccfmat
-
-   SUBROUTINE read_selfen(path,selfen,ne,matsize,l_matsub)
-
-      USE m_constants
-      !This Subroutine reads in the self-energy
-      !produced by the hubbard 1 solver
-
-      COMPLEX,          INTENT(OUT) :: selfen(:,:,:)
-      CHARACTER(len=*), INTENT(IN)  :: path
-      INTEGER,          INTENT(IN)  :: ne
-      INTEGER,          INTENT(IN)  :: matsize
-      LOGICAL,          INTENT(IN)  :: l_matsub
-
-      INTEGER io_error,io_unit
-      INTEGER n,m,i
-      REAL tmp(matsize,matsize)
-      io_unit = 17
-      !Open the selfenergy file
-      IF(l_matsub) THEN
-         OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "selfen_matsub_bundle.dat",status="old", action="read", iostat=io_error)
-
-         IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
-         READ(io_unit,*)
-         DO i = 1, ne
-            READ(io_unit,*)
-            DO m = 1, matsize
-               READ(io_unit,*) selfen(1:matsize,m,i)
-            ENDDO
-         ENDDO
-      ELSE
-         OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "se.atom", status="old", action="read", iostat=io_error)
-
-         IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
-
-         DO i = 1, ne
-            READ(io_unit,9010)
-            READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(1:matsize,1:matsize,i) = tmp(1:matsize,1:matsize)/hartree_to_ev_const
-            READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(1:matsize,1:matsize,i) = selfen(1:matsize,1:matsize,i) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const
-         ENDDO
-      ENDIF
-
-
-      CLOSE(io_unit)
-
-9010  FORMAT(f10.5)
-9020  FORMAT(7f11.5)
-   END SUBROUTINE read_selfen
-
 
 END MODULE m_hubbard1_io
 

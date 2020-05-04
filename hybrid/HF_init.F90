@@ -51,8 +51,5 @@ CONTAINS
             END DO
          END DO
       END DO
-
-      !skip_kpt = .false.
-
    END SUBROUTINE hf_init
 END MODULE m_hf_init

@@ -5,14 +5,16 @@ MODULE m_forcea8
   ! ************************************************************
 CONTAINS
   SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr,rho,force,results)
-    !
+
     USE m_intgr, ONLY : intgr3
-    USE m_constants, ONLY: pi_const, sfp_const, ImagUnit
+    USE m_constants
     USE m_gaunt, ONLY :gaunt1
     USE m_differentiate,ONLY: difcub
     USE m_types
     USE m_juDFT
+
     IMPLICIT NONE
+
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -54,7 +56,7 @@ CONTAINS
 
     CALL timestart("force_a8")
 
-    WRITE  (6,*)
+    WRITE  (oUnit,*)
  
     na = 1
     DO  n = 1,atoms%ntype
@@ -238,8 +240,8 @@ CONTAINS
           !
           !     write result
           !
-          WRITE (6,FMT=8010) n
-          WRITE (6,FMT=8020) (forc_a8(i),i=1,3)
+          WRITE (oUnit,FMT=8010) n
+          WRITE (oUnit,FMT=8020) (forc_a8(i),i=1,3)
 8010      FORMAT (' FORCES: EQUATION A8 FOR ATOM TYPE',i4)
 8020      FORMAT (' FX_A8=',2f10.6,' FY_A8=',2f10.6,' FZ_A8=',2f10.6)
 
@@ -252,40 +254,40 @@ CONTAINS
     !     and b4
     IF (.NOT.input%l_useapw) THEN
 
-       WRITE  (6,*)
+       WRITE  (oUnit,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
-             WRITE  (6,FMT=8030) n
-             WRITE  (6,FMT=8040) (force%f_a12(i,n),i=1,3)
+             WRITE  (oUnit,FMT=8030) n
+             WRITE  (oUnit,FMT=8040) (force%f_a12(i,n),i=1,3)
           ENDIF
 8030      FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
 8040      FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
        ENDDO
     ELSE
-       WRITE  (6,*)
+       WRITE  (oUnit,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
-             WRITE  (6,FMT=8070) n
-             WRITE  (6,FMT=8080) (force%f_b4(i,n),i=1,3)
+             WRITE  (oUnit,FMT=8070) n
+             WRITE  (oUnit,FMT=8080) (force%f_b4(i,n),i=1,3)
           ENDIF
 8070      FORMAT (' FORCES: EQUATION B4 FOR ATOM TYPE',i4)
 8080      FORMAT (' FX_B4=',2f10.6,' FY_B4=',2f10.6,' FZ_B4=',2f10.6)
        ENDDO
-       WRITE  (6,*)
+       WRITE  (oUnit,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
-             WRITE  (6,FMT=8090) n
-             WRITE  (6,FMT=8100) (force%f_b8(i,n),i=1,3)
+             WRITE  (oUnit,FMT=8090) n
+             WRITE  (oUnit,FMT=8100) (force%f_b8(i,n),i=1,3)
           ENDIF
 8090      FORMAT (' FORCES: EQUATION B8 FOR ATOM TYPE',i4)
 8100      FORMAT (' FX_B8=',2f10.6,' FY_B8=',2f10.6,' FZ_B8=',2f10.6)
        ENDDO
     ENDIF
-    WRITE  (6,*)
+    WRITE  (oUnit,*)
     DO n=1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
-          WRITE  (6,FMT=8050) n
-          WRITE  (6,FMT=8060) (force%f_a21(i,n),i=1,3)
+          WRITE  (oUnit,FMT=8050) n
+          WRITE  (oUnit,FMT=8060) (force%f_a21(i,n),i=1,3)
        ENDIF
 8050   FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060   FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)

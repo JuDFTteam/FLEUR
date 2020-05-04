@@ -72,7 +72,7 @@ CONTAINS
       CALL mpi_bc(this%exc,rank,mpi_comm)
       CALL mpi_bc(this%init_mom,rank,mpi_comm)
       CALL mpi_bc(this%n_addArgs,rank,mpi_comm)
-      !CALL mpi_bc(this%arg_keys,rank,mpi_comm) no matching broadcast routine (atm only used on rank 0 but needs to be kept in mind)
+      CALL mpi_bc(this%arg_keys,rank,mpi_comm)
       CALL mpi_bc(this%arg_vals,rank,mpi_comm)
       CALL mpi_bc(this%l_soc_given,rank,mpi_comm)
       CALL mpi_bc(this%l_ccf_given,rank,mpi_comm)
@@ -162,6 +162,7 @@ CONTAINS
             ENDDO
 
             DO i_addArg = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/addArg')
+
                WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/addArg[',i_addArg,']'
                IF(i_addArg>n_maxaddArgs) CALL juDFT_error("Too many additional arguments provided. Maximum is 5.",&
                                                           calledby="read_xml_hub1inp")
@@ -176,7 +177,7 @@ CONTAINS
                   ENDIF
                ENDDO
 
-               SELECT CASE(key)
+               SELECT CASE(TRIM(ADJUSTL(key)))
                CASE('xiSOC')
                   !Do not get soc from DFT and use provided value
                   IF(this%l_soc_given(i_hia)) CALL juDFT_error("Two SOC parameters provided",calledby="read_xml_hub1inp")

@@ -3,6 +3,7 @@
   then
     export FC=mpif90
     export CC=mpicc
+    export CXX=mpicxx
   fi
 
   if  module list 2>&1 | grep -q elpa

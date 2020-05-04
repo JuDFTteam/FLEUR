@@ -32,6 +32,7 @@ CONTAINS
 !                                                  G.Bihlmayer (UniWien)
 
 ! **********************************************************************
+      USE m_constants
       USE m_cfft
       IMPLICIT NONE
 
@@ -54,15 +55,15 @@ CONTAINS
       IF ((isn/=-1) .AND. (isn /= 1))  CALL juDFT_error("choose isn=+/- 1" &
                                                         ,calledby ="rfft")
       IF ((n1d < n1) .OR. (n2d < n2) .OR. (n3d < n3)) THEN
-         WRITE (6,*) 'n1d,n2d,n3d =',n1d,n2d,n3d
-         WRITE (6,*) 'n1 ,n2 ,n3  =',n1 ,n2 ,n3
+         WRITE (oUnit,*) 'n1d,n2d,n3d =',n1d,n2d,n3d
+         WRITE (oUnit,*) 'n1 ,n2 ,n3  =',n1 ,n2 ,n3
          CALL juDFT_error("n(i) > n(i)d",calledby ="rfft")
       ENDIF
       IF ((n1 <= 2*nw1+1) .OR. &
           (n2 <= 2*nw2+1) .OR. &
           (n3 <= 2*nw3+1)) THEN
-         !        WRITE (6,*) 'n1 ,n2 ,n3  =',n1 ,n2 ,n3
-         !        WRITE (6,*) 'nw1,nw2,nw3 =',nw1,nw2,nw3
+         !        WRITE (oUnit,*) 'n1 ,n2 ,n3  =',n1 ,n2 ,n3
+         !        WRITE (oUnit,*) 'nw1,nw2,nw3 =',nw1,nw2,nw3
          l_nopad= .TRUE.
       ELSE
          l_nopad= .FALSE.

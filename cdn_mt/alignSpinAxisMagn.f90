@@ -11,12 +11,15 @@
 MODULE m_alignSpinAxisMagn
 
 
+
 USE m_magnMomFromDen
 USE m_types
 USE m_types_fleurinput
 USE m_flipcdn
 USE m_constants
 USE m_polangle
+
+
 IMPLICIT NONE
 
 CONTAINS
@@ -34,17 +37,21 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_potden), INTENT(INOUT) :: den
 
-   LOGICAL                       :: l_firstIt !Switch which is handed in by function calls which determines if we have to rotate cdn initially.
+   LOGICAL                       :: l_firstIt,nonZeroAngles !Switch which is handed in by function calls which determines if we have to rotate cdn initially.
    REAL                          :: moments(3,atoms%ntype)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype),eps, zeros(atoms%ntype)
-
+   INTEGER                       :: ierr(2)
    INTEGER                       :: i
    eps=0.0001
    zeros(:)=0.0
+   nonZeroAngles=.FALSE.
+   DO i=1, atoms%ntype
+     IF(noco%alph_inp(i).NE.0.0) nonZeroAngles=.TRUE.
+     IF(noco%beta_inp(i).NE.0.0) nonZeroAngles=.TRUE.
+   END DO
 
-
-   IF(l_firstIt) THEN
+   IF(l_firstIt.AND.nonZeroAngles) THEN
 ! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
@@ -58,6 +65,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    !Calculate angular rotation which has to be done.
    diffT=thetaTemp-nococonv%beta
    diffP=phiTemp-nococonv%alph
+
    DO i=1, atoms%ntype
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
      IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
@@ -75,27 +83,30 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
      IF (abs(nococonv%alph(i)).LE.eps) nococonv%alph(i)=0.0
    END DO
 
+
 END SUBROUTINE rotateMagnetToSpinAxis
 
 
 SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
 ,sym,oneD,cell,input,atoms,inDen, den)
-   TYPE(t_input), INTENT(IN)  :: input
-   TYPE(t_atoms), INTENT(IN)  :: atoms
-   TYPE(t_noco), INTENT(IN)	  :: noco
-   TYPE(t_nococonv), INTENT(INOUT)	 :: nococonv
-   TYPE(t_stars),INTENT(IN)	  :: stars
-   TYPE(t_vacuum),INTENT(IN)     :: vacuum
-   TYPE(t_sphhar),INTENT(IN)     :: sphhar
-   TYPE(t_sym),INTENT(IN)        :: sym
-   TYPE(t_oneD),INTENT(IN)	 :: oneD
-   TYPE(t_cell),INTENT(IN)	 :: cell
-   TYPE(t_potden), INTENT(INOUT) ::  inDen
-   TYPE(t_potden), OPTIONAL,INTENT(INOUT) :: den
+   TYPE(t_input), INTENT(IN)             :: input
+   TYPE(t_atoms), INTENT(IN)             :: atoms
+   TYPE(t_noco), INTENT(IN)	             :: noco
+   TYPE(t_nococonv), INTENT(INOUT)	     :: nococonv
+   TYPE(t_stars),INTENT(IN)	             :: stars
+   TYPE(t_vacuum),INTENT(IN)             :: vacuum
+   TYPE(t_sphhar),INTENT(IN)             :: sphhar
+   TYPE(t_sym),INTENT(IN)                :: sym
+   TYPE(t_oneD),INTENT(IN)	             :: oneD
+   TYPE(t_cell),INTENT(IN)	             :: cell
+   TYPE(t_potden), INTENT(INOUT)         ::  inDen
+   TYPE(t_potden), OPTIONAL,INTENT(INOUT):: den
 
-   INTEGER                            :: i
-   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype), zeros(atoms%ntype)
-   REAL                          :: moments(3,atoms%ntype)
+   INTEGER                               :: i
+   REAL                                  :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype), zeros(atoms%ntype)
+   REAL                                  :: moments(3,atoms%ntype)
+   INTEGER                               :: ierr(2)
+
    zeros(:)=0.0
 ! Backwards rotation so SQA and magnetization don't align anymore. This is needed since you otherwise run into issues in the mixing since you mix cdn's which have been rotated
 ! in different directions.

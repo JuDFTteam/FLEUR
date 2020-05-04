@@ -14,6 +14,7 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_juDFT
+      use m_reorder
       IMPLICIT NONE
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -29,7 +30,7 @@ CONTAINS
       REAL, INTENT(IN) ::  coulomb_mt2(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       REAL, INTENT(IN) ::  coulomb_mt3(:, :, :)
-      REAL, INTENT(IN) ::  coulomb_mtir(:)
+      REAL, INTENT(IN) ::  coulomb_mtir(:,:)
       REAL, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
       REAL, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
@@ -46,7 +47,7 @@ CONTAINS
       call timestart("spmvec_invs")
       vecinhlp = vecin
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vecinhlp)
+      call reorder_forw(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -127,10 +128,11 @@ CONTAINS
 
       ! compute vecout for the index-range from ibasm+1:nbasm
 
-      indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
-                                            itype=1, atoms%ntype)/)) + mpdata%n_g(ikpt)
-      CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
-
+      indx1 = sum([(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
+                                            itype=1, atoms%ntype)]) + mpdata%n_g(ikpt)
+      call timestart("ibasm+1 -> dgemv")
+      call dgemv("N", indx1, indx1, 1.0, coulomb_mtir, indx1, vecinhlp(ibasm + 1), 1, 1.0, vecout(ibasm + 1), 1 )
+      call timestop("ibasm+1 -> dgemv")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, atoms%ntype
@@ -196,8 +198,7 @@ CONTAINS
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
-                   mpdata%num_radbasfn,2, vecout)
+      call reorder_back(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecout)
      call timestop("spmvec_invs")
    END SUBROUTINE spmvec_invs
 
@@ -212,6 +213,8 @@ CONTAINS
       USE m_constants
       USE m_types
       USE m_juDFT
+      use m_calc_l_m_from_lm
+      use m_reorder
       IMPLICIT NONE
       TYPE(t_mpdata), INTENT(IN)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -227,7 +230,7 @@ CONTAINS
       COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
-      COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
+      COMPLEX, INTENT(IN) ::  coulomb_mtir(:,:)
       COMPLEX, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
       COMPLEX, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
@@ -236,8 +239,8 @@ CONTAINS
       INTEGER             ::  itype1, ieq1, iatom1, ishift1
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
       INTEGER             ::  ibasm
-      INTEGER             ::  l
-      INTEGER             ::  n, m
+      INTEGER             ::  l, lm
+      INTEGER             ::  n, m, test_idx, iatom2, l1, idx_start, idx_stop
 
       ! - local arrays -
 
@@ -247,48 +250,57 @@ CONTAINS
       vecout = CMPLX_NOT_INITALIZED
       vecinhlp = vecin
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vec_c=vecinhlp)
+      call reorder_forw(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecinhlp)
 
       ibasm = 0
       iatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO m = -l, l
-                  ibasm = ibasm + mpdata%num_radbasfn(l, itype) - 1
-               END DO
-            END DO
+      do iatom = 1, atoms%nat
+         itype = atoms%itype(iatom)
+         DO l = 0, hybinp%lcutm1(itype)
+            ibasm = ibasm + (2*l+1) * (mpdata%num_radbasfn(l, itype) - 1)
          END DO
       END DO
 
       ! compute vecout for the indices from 0:ibasm
+
+      call timestart("0->ibasm: matmul")
       iatom = 0
-      indx1 = 0; indx2 = 0; indx3 = ibasm
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO m = -l, l
-                  indx1 = indx1 + 1
-                  indx2 = indx2 + mpdata%num_radbasfn(l, itype) - 1
-                  indx3 = indx3 + 1
+      indx3 = ibasm
+      do iatom = 1, atoms%nat 
+         itype = atoms%itype(iatom)
+         do lm =1,(hybinp%lcutm1(itype)+1)**2
+            call calc_l_m_from_lm(lm, l, m)
+            idx_start = 0
+            ! go through previous atoms
+            do iatom2 =1,iatom-1
+               do l1=0, hybinp%lcutm1(itype)
+                  idx_start = idx_start + (2*l1+1)*(mpdata%num_radbasfn(l1, atoms%itype(iatom2)) - 1)
+               enddo
+            enddo
+            ! current atom
+            do l1=0, l-1
+               idx_start = idx_start + (2*l1+1)*(mpdata%num_radbasfn(l1, itype) - 1)
+            enddo
+            !current l
+            idx_start = 1 + idx_start + ((m + l) * (mpdata%num_radbasfn(l, itype)-1))
 
-                  vecout(indx1:indx2) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
-                          vecinhlp(indx1:indx2))
 
-                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
+            idx_stop = idx_start + mpdata%num_radbasfn(l, itype) - 2
+            indx3 = indx3 + 1
 
-                  indx1 = indx2
-               END DO
+            vecout(idx_start:idx_stop) = matmul(coulomb_mt1(:mpdata%num_radbasfn(l, itype) - 1, :mpdata%num_radbasfn(l, itype) - 1, l, itype),&
+                  vecinhlp(idx_start:idx_stop))
 
-            END DO
+            vecout(idx_start:idx_stop) = vecout(idx_start:idx_stop) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
          END DO
       END DO
+      call timestop("0->ibasm: matmul")
 
-      IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
+      IF (idx_stop /= ibasm) call judft_error('spmvec: error counting basis functions')
+
 
       IF (ikpt == 1) THEN
+         call timestart("gamma point 1")
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
@@ -325,14 +337,17 @@ CONTAINS
             END DO
 
          END DO
+         call timestop("gamma point 1")
       END IF
-
       ! compute vecout for the index-range from ibasm+1:nbasm
 
-      indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
-                                            itype=1, atoms%ntype)/)) + mpdata%n_g(ikpt)
-      call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
+      indx1 = sum([(((2*l + 1)*atoms%neq(itype), l=0, hybinp%lcutm1(itype)),&
+                                            itype=1, atoms%ntype)]) + mpdata%n_g(ikpt)
+      call timestart("ibasm+1->nbasm: zgemv")
+      call zgemv("N", indx1, indx1, cmplx_1, coulomb_mtir, indx1, vecinhlp(ibasm + 1), 1, cmplx_0, vecout(ibasm + 1), 1 )
+      call timestop("ibasm+1->nbasm: zgemv")
 
+      call timestart("dot prod")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, atoms%ntype
@@ -352,8 +367,11 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("dot prod")
+
 
       IF (ikpt == 1) THEN
+         call timestart("gamma point 2")
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
@@ -396,130 +414,10 @@ CONTAINS
             END DO
          END DO
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
+         call timestop("gamma point 2")
       END IF
 
-      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&
-                   2,&
-                   vec_c=vecout)
+      call reorder_back(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, mpdata%num_radbasfn, vecout)
      call timestop("spmvec_noinvs")
    END SUBROUTINE spmvec_noinvs
-
-   SUBROUTINE reorder(nbasm, atoms, lcutm, maxlcutm, nindxm, imode, vec_r, vec_c)
-      USE m_types
-      USE m_juDFT
-      IMPLICIT NONE
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-
-      ! - scalars -
-      INTEGER, INTENT(IN)   ::  maxlcutm
-      INTEGER, INTENT(IN)   ::  nbasm
-      INTEGER, INTENT(IN)   ::  imode
-
-      ! - arrays -
-      INTEGER, INTENT(IN)   ::  lcutm(:)
-      INTEGER, INTENT(IN)   ::  nindxm(0:maxlcutm, atoms%ntype)
-      REAL, INTENT(INOUT), OPTIONAL::  vec_r(nbasm)
-      COMPLEX, INTENT(INOUT), OPTIONAL::  vec_c(nbasm)
-      ! - local scalars -
-      INTEGER               ::  itype, ieq
-      INTEGER               ::  indx1, indx2
-      INTEGER               ::  l
-      INTEGER               ::  n, m
-      LOGICAL               :: l_real
-      ! - local arrays -
-      REAL                  ::  vechlp_r(nbasm)
-      COMPLEX               ::  vechlp_c(nbasm)
-
-      call timestart("reorder")
-      l_real = PRESENT(vec_r)
-
-      IF (imode /= 1 .and. imode /= 2) call judft_error('reorder: imode equals neither 1 nor 2')
-
-      if (l_real) THEN
-         vechlp_r = vec_r
-      else
-         vechlp_c = vec_c
-      end if
-
-      IF (imode == 1) THEN
-         indx1 = 0
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     DO n = 1, nindxm(l, itype) - 1
-                        indx1 = indx1 + 1
-                        indx2 = indx2 + 1
-                        if (l_real) THEN
-                           vec_r(indx1) = vechlp_r(indx2)
-                        else
-                           vec_c(indx1) = vechlp_c(indx2)
-                        endif
-                     END DO
-                     indx2 = indx2 + 1
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     indx1 = indx1 + 1
-                     indx2 = indx2 + nindxm(l, itype)
-                     if (l_real) THEN
-                        vec_r(indx1) = vechlp_r(indx2)
-                     else
-                        vec_c(indx1) = vechlp_c(indx2)
-                     endif
-
-                  END DO
-               END DO
-            END DO
-         END DO
-      ELSE IF (imode == 2) THEN
-         indx1 = 0
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     DO n = 1, nindxm(l, itype) - 1
-                        indx1 = indx1 + 1
-                        indx2 = indx2 + 1
-                        if (l_real) THEN
-                           vec_r(indx2) = vechlp_r(indx1)
-                        else
-                           vec_c(indx2) = vechlp_c(indx1)
-                        endif
-                     END DO
-                     indx2 = indx2 + 1
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         indx2 = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               DO l = 0, lcutm(itype)
-                  DO m = -l, l
-                     indx1 = indx1 + 1
-                     indx2 = indx2 + nindxm(l, itype)
-                     if (l_real) THEN
-                        vec_r(indx2) = vechlp_r(indx1)
-                     else
-                        vec_c(indx2) = vechlp_c(indx1)
-                     endif
-                  END DO
-               END DO
-            END DO
-         END DO
-      END IF
-      !IR must not be rearranged
-      call timestop("reorder")
-   END SUBROUTINE reorder
 END MODULE

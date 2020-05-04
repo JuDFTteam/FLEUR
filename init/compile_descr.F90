@@ -42,6 +42,8 @@ CONTAINS
 
 !This file is created by cmake at time of configuration
 #include "compileinfo.h"
+!This file is created by cmake at time of build
+#include "buildinfo.h"
 
    END subroutine get_compile_desc
 end MODULE m_compile_descr

@@ -25,6 +25,7 @@ CONTAINS
       !   TE_EXC   : charge density-xc-energy density integral
       !--------------------------------------------------------------------------
       USE m_types
+      USE m_constants
       USE m_rotate_int_den_tofrom_local
       USE m_bfield
       USE m_vgen_coulomb
@@ -69,13 +70,13 @@ CONTAINS
          IF (noco%l_sourceFree) THEN
             CALL magnMomFromDen(input,atoms,noco,den,b,dummy1,dummy2)
             DO i=1,atoms%ntype
-               WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+               WRITE  (oUnit,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
                8025 FORMAT(2x,'Magmom before SF [local frame, atom ',i2,']: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
             END DO
          END IF
       END IF
 
-      IF (mpi%irank==0) WRITE (6,FMT=8000)
+      IF (mpi%irank==0) WRITE (oUnit,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
       IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN

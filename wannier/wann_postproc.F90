@@ -18,7 +18,9 @@ CONTAINS
     !     been computed.
     !     Frank Freimuth
     !***********************************************
+
     USE m_types
+    USE m_constants
     USE m_wann_dipole
     USE m_wann_dipole2
     USE m_wann_wannierize
@@ -31,7 +33,6 @@ CONTAINS
     USE m_wann_nabla_pauli_rs
     USE m_wann_socmat_rs
     USE m_wann_perpmag_rs
-    USE m_types
     USE m_wann_wigner_seitz
     USE m_wann_get_mp
     USE m_wann_get_kpts
@@ -487,8 +488,8 @@ CONTAINS
     CALL CPU_TIME(delta3)
     time_lapw_plot=delta3-delta2
 
-    WRITE(6,*)"time_lapw_expand=",time_lapw_expand
-    WRITE(6,*)"time_lapw_plot=",time_lapw_plot
+    WRITE(oUnit,*)"time_lapw_expand=",time_lapw_expand
+    WRITE(oUnit,*)"time_lapw_plot=",time_lapw_plot
 
     IF(wann%l_finishnocoplot.AND.mpi%irank==0) THEN
        !         write(*,*)'doing the UNK mixing'

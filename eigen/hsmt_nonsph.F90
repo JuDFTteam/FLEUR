@@ -57,7 +57,7 @@ CONTAINS
     ENDIF
     ALLOCATE(ab_select(size_ab_select,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
-   
+
     IF (iintsp.NE.jintsp) THEN
        ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
        size_ab2=lapw%nv(iintsp)
@@ -128,7 +128,7 @@ CONTAINS
                  !$acc end host_data
                ENDIF
              ELSE !This is the case of a local off-diagonal contribution.
-                  !It is not Hermitian, so we need to USE zgemm CALL
+                !It is not Hermitian, so we need to USE zgemm CALL
                 CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
                 !$acc update device(ab)
                 !$acc kernels default(none) present(ab)

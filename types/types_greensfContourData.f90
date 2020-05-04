@@ -34,7 +34,8 @@ MODULE m_types_greensfContourData
          this%nz = contour_in%nz
          ALLOCATE(this%e(this%nz),source=cmplx_0)
          ALLOCATE(this%de(this%nz),source=cmplx_0)
-         this%e = contour_in%e
+
+         this%e  = contour_in%e
          this%de = contour_in%de
       ELSE
          SELECT CASE(contourInp%shape)
@@ -200,40 +201,40 @@ MODULE m_types_greensfContourData
 
       IF(irank.EQ.0) THEN
          !Write out the information about the energy contour
-         WRITE(6,"(A)") "---------------------------------------------"
-         WRITE(6,"(A)") " Green's function energy contour"
-         WRITE(6,"(A)") "---------------------------------------------"
-         WRITE(6,999)  TRIM(ADJUSTL(contourInp%label))
-         WRITE(6,1000) contourInp%shape
-         WRITE(6,*)
+         WRITE(oUnit,"(A)") "---------------------------------------------"
+         WRITE(oUnit,"(A)") " Green's function energy contour"
+         WRITE(oUnit,"(A)") "---------------------------------------------"
+         WRITE(oUnit,999)  TRIM(ADJUSTL(contourInp%label))
+         WRITE(oUnit,1000) contourInp%shape
+         WRITE(oUnit,*)
 
          SELECT CASE(contourInp%shape)
 
          CASE(CONTOUR_RECTANGLE_CONST)
-            WRITE(6,"(A)") "Rectangular Contour: "
-            WRITE(6,1010) this%nz, contourInp%nmatsub,contourInp%n1,contourInp%n2,contourInp%n3
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) contourInp%eb,0.0
+            WRITE(oUnit,"(A)") "Rectangular Contour: "
+            WRITE(oUnit,1010) this%nz, contourInp%nmatsub,contourInp%n1,contourInp%n2,contourInp%n3
+            WRITE(oUnit,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(oUnit,1040) contourInp%eb,0.0
          CASE(CONTOUR_SEMICIRCLE_CONST)
-            WRITE(6,"(A)") "Semicircle Contour: "
-            WRITE(6,1020) this%nz, contourInp%alpha
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) contourInp%eb,contourInp%et
+            WRITE(oUnit,"(A)") "Semicircle Contour: "
+            WRITE(oUnit,1020) this%nz, contourInp%alpha
+            WRITE(oUnit,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(oUnit,1040) contourInp%eb,contourInp%et
          CASE(CONTOUR_DOS_CONST)
-            WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
-            WRITE(6,1030) this%nz, contourInp%sigmaDOS
-            WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-            WRITE(6,1040) contourInp%eb,contourInp%et
+            WRITE(oUnit,"(A)") "Equidistant Contour for DOS calculations: "
+            WRITE(oUnit,1030) this%nz, contourInp%sigmaDOS
+            WRITE(oUnit,"(A)") "Energy limits (rel. to fermi energy): "
+            WRITE(oUnit,1040) contourInp%eb,contourInp%et
          CASE DEFAULT
 
          END SELECT
 
          !Write out points and weights
-         WRITE(6,*)
-         WRITE(6,"(A)") " Energy points: "
-         WRITE(6,"(A)") "---------------------------------------------"
+         WRITE(oUnit,*)
+         WRITE(oUnit,"(A)") " Energy points: "
+         WRITE(oUnit,"(A)") "---------------------------------------------"
          DO iz = 1, this%nz
-            WRITE(6,1050) REAL(this%e(iz)), AIMAG(this%e(iz)), REAL(this%de(iz)), AIMAG(this%de(iz))
+            WRITE(oUnit,1050) REAL(this%e(iz)), AIMAG(this%e(iz)), REAL(this%de(iz)), AIMAG(this%de(iz))
          ENDDO
 
 999      FORMAT("Name of the contour:", A)

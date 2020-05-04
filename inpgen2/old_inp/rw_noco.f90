@@ -51,10 +51,10 @@
              ENDIF
 
              READ (24,*)
-                WRITE (6,8010)        itype,noco%l_relax(itype)
-                WRITE (6,8020)        noco%alph_inp(itype)
-                WRITE (6,8025)         noco%beta_inp(itype)
-                WRITE (6,*)
+                WRITE (oUnit,8010)        itype,noco%l_relax(itype)
+                WRITE (oUnit,8020)        noco%alph_inp(itype)
+                WRITE (oUnit,8025)         noco%beta_inp(itype)
+                WRITE (oUnit,*)
           ENDDO
 8010      FORMAT ('atom-type',i4,',l_relax=',l1,',l_magn=',l1,&
                &',M=',f8.5,',magtype=',i4)
@@ -73,9 +73,9 @@
 !!$          ENDIF
           READ (24,8046) noco%mix_b
 
-          WRITE (6,fmt='(5(A,l1),l1)') &
+          WRITE (oUnit,fmt='(5(A,l1),l1)') &
                & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',noco%l_constr
-          WRITE (6,8040) noco%mix_b
+          WRITE (oUnit,8040) noco%mix_b
 8030      FORMAT ('l_ss=',l1,',l_mperp=',l1,',l_constr=',l1,',l_disp=',l1)
 8035      FORMAT (5x,l1,9x,l1,10x,l1,8x,l1)
 8036      FORMAT (5x,l1,9x,l1,10x,l1)
@@ -95,7 +95,7 @@
                         &      qsc(1),qsc(2),qsc(3)
                    DO j= 1,3
                       IF ( ABS(qsc(j)) < 1.e-6 ) THEN
-                         WRITE (6,fmt='(A,i1,A,1x,f14.10)')&
+                         WRITE (oUnit,fmt='(A,i1,A,1x,f14.10)')&
                               &          'Error reading nocoinp: qsc(',j,') =',qsc(j)
                          CALL juDFT_error("Error reading nocoinp",calledby&
                               &              ="rw_noco")
@@ -104,9 +104,9 @@
                    ENDDO
                 ENDIF
              ENDIF
-             WRITE (6,*) 'This is a Spin-Spiral (SS) calculation. The'
-             WRITE (6,*) 'q-vector of the Spin-Spiral is:'
-             WRITE (6,8060) noco%qss_inp
+             WRITE (oUnit,*) 'This is a Spin-Spiral (SS) calculation. The'
+             WRITE (oUnit,*) 'q-vector of the Spin-Spiral is:'
+             WRITE (oUnit,8060) noco%qss_inp
 8060         FORMAT ('qss=(',f14.10,',',f14.10,',',f14.10,')')
           ENDIF
         END SUBROUTINE rw_noco_read
@@ -115,6 +115,7 @@
       USE m_types_atoms
       USE m_types_noco
       USE m_types_input
+      USE m_constants
       IMPLICIT NONE
 ! ..
 ! ..  Arguments ..
@@ -140,7 +141,7 @@
 
       IF (noco%l_ss) THEN
        WRITE (24,8060) noco%qss_inp
-       WRITE (6,8060) noco%qss_inp
+       WRITE (oUnit,8060) noco%qss_inp
       ENDIF
 8010      FORMAT ('atom-type',i4,',l_relax=',l1,',l_magn=',l1,&
                &',M=',f8.5,',magtype=',i4)

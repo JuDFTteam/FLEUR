@@ -14,6 +14,7 @@ c     vacuum boundary.
 c     based on code by m. weinert
 c*********************************************************************
       use m_juDFT
+      USE m_constants
       USE m_intgr, ONLY : intgz0
       IMPLICIT NONE
 C     ..
@@ -95,7 +96,7 @@ c---  >    test quality of corrector and iterate if necessary
             w10 = w1
          ENDDO
          IF (it>10) THEN
-            WRITE (6,FMT=8000) n1,eru,erw
+            WRITE (oUnit,FMT=8000) n1,eru,erw
  8000       FORMAT (' ***vacudz - step may be too big - mesh point',i5,
      +           ', eru,erw=',1p,2e16.7)
          ENDIF

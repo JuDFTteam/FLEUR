@@ -56,16 +56,16 @@
       DO n = 1,atoms%ntype
          IF (atoms%zatom(n).GE.1.0) THEN
             qe=qe+atoms%neq(n)*atoms%econf(n)%core_electrons
-            WRITE (6,*) 'neq= ',atoms%neq(n),'  ncore= ',qe
+            WRITE (oUnit,*) 'neq= ',atoms%neq(n),'  ncore= ',qe
          ENDIF
       ENDDO
 !---> semi-core and valence electrons
       qe=qe+input%zelec
-      WRITE (6,"(A, F12.8)") 'zelec=  ',input%zelec
+      WRITE (oUnit,"(A, F12.8)") 'zelec=  ',input%zelec
 
-      WRITE (6, '(/,/,a)') ' parameters for external electric field:'
-      WRITE (6, '(3x,a,f12.5)') 'total electronic charge   =', qe
-      WRITE (6, '(3x,a,f12.5)') 'total nuclear charge      =', qn
+      WRITE (oUnit, '(/,/,a)') ' parameters for external electric field:'
+      WRITE (oUnit, '(3x,a,f12.5)') 'total electronic charge   =', qe
+      WRITE (oUnit, '(3x,a,f12.5)') 'total nuclear charge      =', qn
 
       CALL read_efield (efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
 
@@ -78,7 +78,7 @@
       ! in vvac.
       if (efield%autocomp .or. efield%dirichlet) efield%sigma = 0.5*(qe-qn)
 
-      CALL print_efield (6, efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
+      CALL print_efield (oUnit,efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
 
       IF (.NOT. efield%dirichlet&
      &    .AND. ABS (SUM (efield%sig_b) + 2*efield%sigma - (qe-qn)) > eps) THEN
@@ -98,8 +98,8 @@
       ENDIF
 
       IF (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49)) THEN
-        WRITE ( 6,*) 'If you really want to calculate an e-field this'
-        WRITE ( 6,*) 'big, uncomment STOP in efield.f !'
+        WRITE (oUnit,*) 'If you really want to calculate an e-field this'
+        WRITE (oUnit,*) 'big, uncomment STOP in efield.f !'
         CALL juDFT_error("E-field too big or No. of e- not correct"&
      &       ,calledby ="efield")
       ENDIF
@@ -375,13 +375,13 @@
           mask(MAX (FLOOR(x*nx-0.5)+2,1) : MIN (FLOOR((x+w)*nx+0.5),nx),&
      &         MAX (FLOOR(y*ny-0.5)+2,1) : MIN (FLOOR((y+h)*ny+0.5),ny))&
      &      = .true.
-          WRITE (6, *) tag, pos2str (ipos), x, y, h, w, charge,&
+          WRITE (oUnit, *) tag, pos2str (ipos), x, y, h, w, charge,&
      &                 action2str (action), opt2str (iopt)
         ELSE IF (tag == 'rectsinx') THEN
           mask(MAX (FLOOR(x*nx-0.5)+2,1) : MIN (FLOOR((x+w)*nx+0.5),nx),&
      &         MAX (FLOOR(y*ny-0.5)+2,1) : MIN (FLOOR((y+h)*ny+0.5),ny))&
      &      = .true.
-          WRITE (6, *) tag, pos2str (ipos), x, y, h, w, charge, order,&
+          WRITE (oUnit, *) tag, pos2str (ipos), x, y, h, w, charge, order,&
      &                 shift, action2str (action), opt2str (iopt)
         ELSE IF (tag == 'circ') THEN
           DO iy = 1, ny
@@ -391,12 +391,12 @@
      &          mask(ix, iy) = .true.
             END DO
           END DO
-          WRITE (6, *) tag, pos2str (ipos), x, y, radius, charge,&
+          WRITE (oUnit, *) tag, pos2str (ipos), x, y, radius, charge,&
      &                 action2str (action), opt2str (iopt)
         ELSE IF (tag == 'datafile') THEN
-          WRITE (6, '(1x,a,1x,a)', advance="no") tag, pos2str (ipos)
+          WRITE (oUnit, '(1x,a,1x,a)', advance="no") tag, pos2str (ipos)
           call readDataFile (str, data)
-          WRITE (6, *) action2str (action), opt2str (iopt)
+          WRITE (oUnit, *) action2str (action), opt2str (iopt)
           mask = .true.
         ELSE IF (tag == 'polygon') THEN
           DO iy = 1, ny
@@ -527,10 +527,10 @@
         END DO
         CLOSE (1243)
 
-        WRITE (6, '(1x,3a,1x)', advance="no") '"', trim (file), '"'
+        WRITE (oUnit, '(1x,3a,1x)', advance="no") '"', trim (file), '"'
         IF (INDEX (lower_case (str), 'zero_avg') > 0) THEN
           data(:,:) = data - sum(data)/(nx*ny)
-          WRITE (6, '(a,1x)', advance="no") "zero_avg"
+          WRITE (oUnit, '(a,1x)', advance="no") "zero_avg"
         END IF
 
         RETURN ! No error

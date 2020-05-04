@@ -23,6 +23,9 @@ CONTAINS
     !     density through the driver subroutine excallg.f
     !     ** r.pentcheva 08.05.96
     !-----------------------------------------------------------------------
+
+    USE m_types
+    USE m_types_xcpot_libxc
     use m_constants
     USE m_grdrsvac
     USE m_grdchlh
@@ -31,9 +34,9 @@ CONTAINS
     USE m_od_mkgxyz3
     USE m_od_mkgz
     USE m_fft2d
-    USE m_types
-    USE m_types_xcpot_libxc
+
     IMPLICIT NONE
+
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_input),INTENT(IN)     :: input
@@ -93,8 +96,8 @@ CONTAINS
        bmat1(:,:) = cell%bmat(:,:)
     endif
 
-    WRITE (6,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
-    WRITE(6,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
+    WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
+    WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
     ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,input%jspins) )
     ALLOCATE ( rhtdz(vacuum%nmzd,input%jspins),rhtdzz(vacuum%nmzd,input%jspins) )
@@ -204,7 +207,7 @@ CONTAINS
 
        ENDIF   ! xcpot%igrd.GT.0
 
-       !       WRITE(6,'('' 9990nmzxy='',2i5)') nmzxy
+       !       WRITE(oUnit,'('' 9990nmzxy='',2i5)') nmzxy
        ALLOCATE ( rhdx(0:ifftd2-1,input%jspins),rhdy(0:ifftd2-1,input%jspins) )
        ALLOCATE ( rhdz(0:ifftd2-1,input%jspins),rhdxx(0:ifftd2-1,input%jspins) )
        ALLOCATE ( rhdyy(0:ifftd2-1,input%jspins),rhdzz(0:ifftd2-1,input%jspins) )
@@ -393,7 +396,7 @@ CONTAINS
           ENDDO
 
           IF (rhmnv.LT.fixed_chng) THEN
-             WRITE(6,'(/'' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
+             WRITE(oUnit,'(/'' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
              !             CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
           ENDIF
 
@@ -448,8 +451,8 @@ CONTAINS
        ! now treat the non-warping region 
 
        nmzdiff = vacuum%nmz - vacuum%nmzxy
-       !       WRITE(6,'(/'' 9992excz''/(8f15.7))') (excz(ip,1),ip=1,nmz)
-       WRITE(6,'(/'' 9992nmzdiff='',i5)') nmzdiff
+       !       WRITE(oUnit,'(/'' 9992excz''/(8f15.7))') (excz(ip,1),ip=1,nmz)
+       WRITE(oUnit,'(/'' 9992nmzdiff='',i5)') nmzdiff
 
        ! The non-warping region runs from nmzxy+1 to nmz.
        ! The values from nmz0 to nmzxy are taken into account in order
@@ -531,7 +534,7 @@ CONTAINS
 
    
        IF (rhmnv.lt.fixed_chng) THEN
-          WRITE (6,'('' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
+          WRITE (oUnit,'('' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
           !           CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
        ENDIF
 
@@ -544,7 +547,7 @@ CONTAINS
        ENDDO
 
        !
-       WRITE (6,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE (oUnit,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT(/,5x,'vacuum zero for vacuum',i3,' = ',2f14.10)
        !
        !     calculate the ex-corr. energy density now beyond warping region

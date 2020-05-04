@@ -113,11 +113,11 @@ CONTAINS
     IF (mpi%irank.EQ.0) THEN
        CALL startFleur_XMLOutput()
        IF (judft_was_argument("-info")) THEN
-          CLOSE(6)
-          OPEN (6,status='SCRATCH')
+          CLOSE(oUnit)
+          OPEN (oUnit,status='SCRATCH')
        ELSE
           IF (.NOT.judft_was_argument("-no_out")) &
-               OPEN (6,file='out',form='formatted',status='unknown')
+               OPEN (oUnit,file='out',form='formatted',status='unknown')
        ENDIF
        CALL writeOutHeader()
        !this should be removed, it deletes output of old inf file
@@ -151,7 +151,7 @@ CONTAINS
     CALL oned%init(atoms) !call again, because make_stars modified it :-)
     CALL kpts%init(cell, sym, input%film)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
-    CALL gfinp%init(atoms, sym)
+    CALL gfinp%init(atoms, sym, noco)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(mpi,stars,input,cell,xcpot)
@@ -261,17 +261,17 @@ CONTAINS
          IF(wann%l_gwf) THEN
             OPEN(113,file=wann%param_file,status='old')
             READ(113,*)!header
-            WRITE(6,*) 'parameter points for HDWFs generation:'
+            WRITE(oUnit,*) 'parameter points for HDWFs generation:'
             IF(wann%l_sgwf.OR.wann%l_ms) THEN
-               WRITE(6,*)'      q1       ','      q2       ','      q3'
+               WRITE(oUnit,*)'      q1       ','      q2       ','      q3'
             ELSE IF(wann%l_socgwf) THEN
-               WRITE(6,*)'      --       ','     phi       ','    theta'
+               WRITE(oUnit,*)'      --       ','     phi       ','    theta'
             END IF
 
             DO pc = 1, wann%nparampts
                READ(113,'(3(f14.10,1x))') wann%param_vec(1,pc), wann%param_vec(2,pc), wann%param_vec(3,pc)
                wann%param_vec(:,pc) = wann%param_vec(:,pc) / wann%scale_param
-               WRITE(6,'(3(f14.10,1x))') wann%param_vec(1,pc), wann%param_vec(2,pc), wann%param_vec(3,pc)
+               WRITE(oUnit,'(3(f14.10,1x))') wann%param_vec(1,pc), wann%param_vec(2,pc), wann%param_vec(3,pc)
                IF(wann%l_sgwf.OR.wann%l_ms) THEN
                   iAtom = 1
                   DO iType = 1, atoms%ntype

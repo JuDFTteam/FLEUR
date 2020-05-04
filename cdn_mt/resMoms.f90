@@ -77,15 +77,15 @@ SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,nococonv,den,rhoLRes)
    END DO
 
    DO iType = 1, atoms%ntype
-      WRITE(6,*) 'Intraatomic electric and magnetic dipole moments for atom type ', iType,':'
-      WRITE(6,'(a)')        '             lowL  largeL      p_x            p_y            p_z            t_x            t_y            t_z'
-      WRITE(6,'(a,6f15.8)') 'Overall:              ', elecDip(:,iType), t_op(:,iType)
+      WRITE(oUnit,*) 'Intraatomic electric and magnetic dipole moments for atom type ', iType,':'
+      WRITE(oUnit,'(a)')        '             lowL  largeL      p_x            p_y            p_z            t_x            t_y            t_z'
+      WRITE(oUnit,'(a,6f15.8)') 'Overall:              ', elecDip(:,iType), t_op(:,iType)
       DO l = 0, atoms%lmax(iType)
          DO lp = 0, l
             llp = (l* (l+1))/2 + lp
             IF(ALL(ABS(res_T_op(:,iType,llp)).LT.1.0e-8).AND.&
                ALL(ABS(resElecDip(:,iType,llp)).LT.1.0e-8)) CYCLE
-            WRITE(6,'(a,2i6,6f15.8)') '          ', lp, l, resElecDip(:,iType,llp),res_T_op(:,iType,llp)
+            WRITE(oUnit,'(a,2i6,6f15.8)') '          ', lp, l, resElecDip(:,iType,llp),res_T_op(:,iType,llp)
          END DO
       END DO
    END DO

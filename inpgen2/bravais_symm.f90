@@ -9,7 +9,10 @@ MODULE m_bravaissymm
   !********************************************************************
 CONTAINS
   SUBROUTINE bravais_symm(cell,nops,mrot)
+
     USE m_types_cell
+    USE m_constants
+
     IMPLICIT NONE
 
     !==> Arguments
@@ -122,7 +125,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    WRITE (6,'(//," Point group of the Bravais lattice has ",i2," operations")') nops
+    WRITE (oUnit,'(//," Point group of the Bravais lattice has ",i2," operations")') nops
 
     RETURN
 

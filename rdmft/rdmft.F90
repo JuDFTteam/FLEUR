@@ -37,6 +37,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    USE m_exchange_core
    USE m_symmetrizeh
    USE m_bfgs_b2
+   USE m_xmlOutput
 
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -71,7 +72,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_moments)                      :: moments
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
-   INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
+   INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF
    INTEGER                              :: iState, iStep, numStates, numRelevantStates, convIter
@@ -87,6 +88,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    REAL, PARAMETER                      :: minOcc = 1.0e-13
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
+   CHARACTER(LEN=20)                    :: attributes(3)
 
    INTEGER                              :: nsest(fi%input%neig) ! probably too large
    INTEGER                              :: rrot(3,3,fi%sym%nsym)
@@ -126,6 +128,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
+   type(t_hybmpi)    :: hybmpi
 
    complex :: c_phase(fi%input%neig)
 
@@ -173,10 +176,10 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          END DO
          highestState(ikpt,jspin) = highestState(ikpt,jspin) + fi%input%rdmftStatesAbove
          IF((results%neig(ikpt,jsp)-1).LT.highestState(ikpt,jspin)) THEN
-            WRITE(6,*) 'Error: Not enough states calculated:'
-            WRITE(6,*) 'ikpt, jsp: ', ikpt, jsp
-            WRITE(6,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
-            WRITE(6,*) 'results%neig(ikpt,jsp): ', results%neig(ikpt,jsp)
+            WRITE(oUnit,*) 'Error: Not enough states calculated:'
+            WRITE(oUnit,*) 'ikpt, jsp: ', ikpt, jsp
+            WRITE(oUnit,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
+            WRITE(oUnit,*) 'results%neig(ikpt,jsp): ', results%neig(ikpt,jsp)
             CALL juDFT_error('Not enough states calculated', calledby = 'rdmft')
          END IF
          DO iBand = highestState(ikpt,jspin)+1, results%neig(ikpt,jsp)
@@ -186,11 +189,11 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             highestState(ikpt,jspin) = iBand
          END DO
          IF(highestState(ikpt,jspin).EQ.results%neig(ikpt,jsp)) THEN
-            WRITE(6,*) 'Error: Highest state is degenerate:'
-            WRITE(6,*) 'ikpt, jsp: ', ikpt, jsp
-            WRITE(6,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
-            WRITE(6,*) 'results%eig(highestState(ikpt,jspin),ikpt,jsp): ', results%eig(highestState(ikpt,jspin),ikpt,jsp)
-            WRITE(6,*) 'results%eig(highestState(ikpt,jspin)-1,ikpt,jsp): ', results%eig(highestState(ikpt,jspin)-1,ikpt,jsp)
+            WRITE(oUnit,*) 'Error: Highest state is degenerate:'
+            WRITE(oUnit,*) 'ikpt, jsp: ', ikpt, jsp
+            WRITE(oUnit,*) 'highestState(ikpt,jspin): ', highestState(ikpt,jspin)
+            WRITE(oUnit,*) 'results%eig(highestState(ikpt,jspin),ikpt,jsp): ', results%eig(highestState(ikpt,jspin),ikpt,jsp)
+            WRITE(oUnit,*) 'results%eig(highestState(ikpt,jspin)-1,ikpt,jsp): ', results%eig(highestState(ikpt,jspin)-1,ikpt,jsp)
             CALL juDFT_error('Highest state is degenerate', calledby = 'rdmft')
          END IF
       END DO
@@ -332,13 +335,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
             mt(:,:) = 0.0
             DO iType = 1, fi%atoms%ntype
-               DO i = 1, fi%atoms%jri(iType)
-                  mt(i,iType) = singleStateDen%mt(i,0,iType,jsp)
+               DO iGrid = 1, fi%atoms%jri(iType)
+                  mt(iGrid,iType) = singleStateDen%mt(iGrid,0,iType,jsp)
                END DO
 
-               DO j = 1,fi%atoms%jri(iType)
-                  dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
+               DO iGrid = 1, fi%atoms%jri(iType)
+                  dpj(iGrid) = mt(iGrid,iType)/fi%atoms%rmsh(iGrid,iType)
                END DO
+
                CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
                zintn_r(iType) = fi%atoms%neq(iType)*fi%atoms%zatom(iType)*sfp_const*rhs/2.0
@@ -374,13 +378,20 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-!   CALL open_fi%hybinp_io1(fi%sym%invs)
-
    CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybinp_io2(mpdata, fi%hybinp,hybdat,fi%input,fi%atoms,fi%sym%invs)
+   !allocate coulomb matrix
+   IF (.NOT.ALLOCATED(hybdat%coul)) ALLOCATE(hybdat%coul(fi%kpts%nkpt))
+   DO ikpt = 1, fi%kpts%nkpt
+      CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
+   END DO
 
-   CALL coulombmatrix(mpi,fi%atoms,fi%kpts,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,xcpot)
+   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(ikpt,ikpt=1,fi%kpts%nkpt)])
+   
+   CALL hybmpi%copy_mpi(mpi)
+   DO ikpt = 1, fi%kpts%nkpt
+      CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
+   END DO
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
 
@@ -483,7 +494,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
          jsp = MERGE(1,jspin,fi%noco%l_noco)
          ! remove weights(wtkpt) in w_iks
          wl_iks = 0.0
-         DO ikptf=1,fi%kpts%nkptf
+         DO ikptf = 1, fi%kpts%nkptf
             ikpt = fi%kpts%bkp(ikptf)
             DO iBand=1, results%neig(ikpt,jsp)
                wl_iks(iBand,ikptf) = results%w_iks(iBand,ikpt,jspin) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf) Last term to be included after applying functional
@@ -507,7 +518,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         DO ikpt = 1,fi%kpts%nkpt
+         DO ikpt = 1, fi%kpts%nkpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
 
@@ -556,12 +567,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
 
-            DO i = 1, hybdat%nbands(ikpt)
-               DO j = 1, i-1
+            DO iBand = 1, hybdat%nbands(ikpt)
+               DO jBand = 1, iBand-1
                   IF (exMat%l_real) THEN
-                     exMat%data_r(i,j)=exMat%data_r(j,i)
+                     exMat%data_r(iBand,jBand)=exMat%data_r(jBand,iBand)
                   ELSE
-                     exMat%data_c(i,j)=conjg(exMat%data_c(j,i))
+                     exMat%data_c(iBand,jBand)=conjg(exMat%data_c(jBand,iBand))
                   END IF
                END DO
             END DO
@@ -790,15 +801,15 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    mt=0.0
    DO iType = 1, fi%atoms%ntype
-      DO i = 1, fi%atoms%jri(iType)
-         mt(i,iType) = outDen%mt(i,0,iType,1) + outDen%mt(i,0,iType,fi%input%jspins)
+      DO iGrid = 1, fi%atoms%jri(iType)
+         mt(iGrid,iType) = outDen%mt(iGrid,0,iType,1) + outDen%mt(iGrid,0,iType,fi%input%jspins)
       END DO
    END DO
    IF (fi%input%jspins.EQ.1) mt=mt/2.0 !we just added the same value twice
 
    DO iType = 1, fi%atoms%ntype
-      DO j = 1,fi%atoms%jri(iType)
-         dpj(j) = mt(j,iType)/fi%atoms%rmsh(j,iType)
+      DO iGrid = 1,fi%atoms%jri(iType)
+         dpj(iGrid) = mt(iGrid,iType)/fi%atoms%rmsh(iGrid,iType)
       END DO
       CALL intgr3(dpj,fi%atoms%rmsh(1,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),rhs)
 
@@ -820,8 +831,24 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    END DO
 
-
-   WRITE(6,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+   ! Output
+   WRITE(oUnit,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+   CALL openXMLElementPoly('rdmft',(/'energy'/),(/rdmftEnergy/))
+   DO ispin = 1, fi%input%jspins
+      isp = MERGE(1,ispin,fi%noco%l_noco)
+      DO ikpt = 1, fi%kpts%nkpt
+         CALL openXMLElementPoly('occupations',(/'spin  ','kpoint'/),(/ispin,ikpt/))
+         DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
+            occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)
+            WRITE(attributes(1),'(i0)') iBand
+            WRITE(attributes(2),'(f18.10)') results%eig(iBand,ikpt,isp)
+            WRITE(attributes(3),'(f18.10)') occStateI
+            CALL writeXMLElement('state',(/'index     ','energy    ','occupation'/),attributes)
+         END DO
+         CALL closeXMLElement('occupations')
+      END DO
+   END DO
+   CALL closeXMLElement('rdmft')
 
    WRITE(2505,*) '======================================='
    WRITE(2505,*) 'convIter: ', convIter

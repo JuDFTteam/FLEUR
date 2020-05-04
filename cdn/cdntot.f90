@@ -172,8 +172,8 @@ CONTAINS
       END IF
 
       DO jsp = 1,input%jspins
-         WRITE (6,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
-         IF (input%film) WRITE (6,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
+         WRITE (oUnit,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
+         IF (input%film) WRITE (oUnit,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
          mtCharge = SUM(qmt(1:atoms%ntype,jsp) * atoms%neq(1:atoms%ntype))
          names(1) = 'spin'         ; WRITE(attributes(1),'(i0)')    jsp      ; lengths(1,1)=4  ; lengths(1,2)=1
          names(2) = 'total'        ; WRITE(attributes(2),'(f14.7)') q(jsp)   ; lengths(2,1)=5  ; lengths(2,2)=14
@@ -194,7 +194,7 @@ CONTAINS
             END IF
          END IF
       END DO ! loop over spins
-      WRITE (6,FMT=8020) qtot
+      WRITE (oUnit,FMT=8020) qtot
       IF(l_printData) THEN
          CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
       END IF

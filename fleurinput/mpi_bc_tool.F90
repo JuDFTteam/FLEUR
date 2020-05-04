@@ -18,7 +18,7 @@ MODULE m_mpi_bc_tool
      MODULE PROCEDURE  mpi_bc_real_3,mpi_bc_real_fixed2,mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5
      MODULE PROCEDURE  mpi_bc_logical,mpi_bc_logical1,mpi_bc_logical2
-     MODULE PROCEDURE  mpi_bc_character_fixed1
+     MODULE PROCEDURE  mpi_bc_character_fixed1, mpi_bc_character1, mpi_bc_character2
   END INTERFACE mpi_bc
   PUBLIC :: mpi_bc
 CONTAINS
@@ -630,5 +630,58 @@ CONTAINS
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_character_fixed1
 
+  SUBROUTINE mpi_bc_character1(c,irank,mpi_comm)
+    IMPLICIT NONE
+    CHARACTER(len=*),ALLOCATABLE,INTENT(INOUT)   :: c(:)
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr=0,ilow(1),iup(1),myrank
+#ifdef CPP_MPI
+    iup=0;ilow=0
+    CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
+    IF (ALLOCATED(c).AND.myrank==irank) THEN
+       ilow=LBOUND(c)
+       iup=UBOUND(c)
+    END IF
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
+       RETURN
+    ENDIF
+    IF (myrank.NE.irank) THEN
+       IF (ALLOCATED(c)) DEALLOCATE(c)
+       ALLOCATE(c(ilow(1):iup(1)))
+    ENDIF
+    CALL MPI_BCAST(c,SIZE(c)*LEN(c),MPI_CHARACTER,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_character1
+
+  SUBROUTINE mpi_bc_character2(c,irank,mpi_comm)
+    IMPLICIT NONE
+    CHARACTER(len=*),ALLOCATABLE,INTENT(INOUT)   :: c(:,:)
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr=0,ilow(2),iup(2),myrank
+#ifdef CPP_MPI
+    iup=0;ilow=0
+    CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
+    IF (ALLOCATED(c).AND.myrank==irank) THEN
+       ilow=LBOUND(c)
+       iup=UBOUND(c)
+    END IF
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
+       RETURN
+    ENDIF
+    IF (myrank.NE.irank) THEN
+       IF (ALLOCATED(c)) DEALLOCATE(c)
+       ALLOCATE(c(ilow(1):iup(1),ilow(2):iup(2)))
+    ENDIF
+    CALL MPI_BCAST(c,SIZE(c)*LEN(c),MPI_CHARACTER,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_character2
 
 END MODULE m_mpi_bc_tool
