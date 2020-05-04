@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, mat_ex)
+                                  pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -81,6 +81,7 @@ CONTAINS
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       TYPE(t_lapw), INTENT(IN)          :: lapw
+      type(t_stars), intent(in)         :: stars
       TYPE(t_mat), INTENT(INOUT)        :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
@@ -174,7 +175,7 @@ CONTAINS
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
             ELSE
-               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, nkqpt, cprod_vv)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
