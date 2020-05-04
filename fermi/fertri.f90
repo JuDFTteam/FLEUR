@@ -40,11 +40,8 @@ MODULE m_fertri
       REAL chmom,ct,de,del,dez,ei,emax,emin,s,s1,workf
       REAL lb,ub,e_set
       INTEGER i,ic,j,jsp,k,neig
-      INTEGER ntria      ! number of triangles & tetrahedrons
 !     ..
 !     .. Local Arrays ..
-      INTEGER itria(3,2*size(w,2))  ! index of k-points that are corner points of a triangle
-      REAL    atr(2*size(w,2))      ! area of a triangle
       INTEGER nemax(2)
 !     ..
 !     .. Data statements ..
@@ -54,12 +51,6 @@ MODULE m_fertri
         WRITE (oUnit,FMT=8000)
       END IF
  8000 FORMAT (/,/,10x,'linear triangular method')
-
-      itria = 0
-
-      ntria = kpts%ntet
-      itria = kpts%ntetra(:,:kpts%ntet)
-      atr   = kpts%voltet(:kpts%ntet)/kpts%ntet
 
       !
       !--->   clear w and set eig=-9999.9
