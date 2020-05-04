@@ -24,33 +24,24 @@ MODULE m_fertri
 
       TYPE(t_input),INTENT(IN):: input
       TYPE(t_kpts), INTENT(IN):: kpts
-!     ..
-!     .. Scalar Arguments ..
       INTEGER, INTENT (IN)    :: jspins,irank
       REAL,    INTENT (IN)    :: zc,sfac
+      INTEGER, INTENT (IN)    :: ne(:,:)!(nkpt,jspins)
       REAL,    INTENT (OUT)   :: seigv
       REAL,    INTENT (INOUT) :: ef
-!     ..
-!     .. Array Arguments ..
-      INTEGER, INTENT (IN)    :: ne(:,:)!(nkptd,jspd)
-      REAL,    INTENT (OUT)   :: w(:,:,:) !(neigd,nkptd,jspd)
-      REAL,    INTENT (INOUT) :: eig(:,:,:)!(neigd,nkptd,jspd)
-!     ..
-!     .. Local Scalars ..
-      REAL chmom,ct,de,del,dez,ei,emax,emin,s,s1,workf
-      REAL lb,ub,e_set
-      INTEGER i,ic,j,jsp,k,neig
-!     ..
-!     .. Local Arrays ..
-      INTEGER nemax(2)
-!     ..
-!     .. Data statements ..
-      DATA de/5.0e-3/
+      REAL,    INTENT (OUT)   :: w(:,:,:) !(neig,nkpt,jspins)
+      REAL,    INTENT (INOUT) :: eig(:,:,:)!(neig,nkpt,jspins)
+
+      REAL    :: chmom,ct,del,dez,ei,emax,emin,s,s1,workf
+      REAL    :: lb,ub,e_set
+      INTEGER :: i,ic,j,jsp,k,neig
+      INTEGER :: nemax(2)
+      REAL, PARAMETER :: de = 5.0e-3 !Step for initial search
 
       IF ( irank == 0 ) THEN
-        WRITE (oUnit,FMT=8000)
+         WRITE (oUnit,FMT=8000)
+8000     FORMAT (/,/,10x,'linear triangular method')
       END IF
- 8000 FORMAT (/,/,10x,'linear triangular method')
 
       !
       !--->   clear w and set eig=-9999.9
@@ -85,26 +76,36 @@ MODULE m_fertri
 !jr      emin = -9999.9
          emin = +9999.9
          emax = -emin
+         !Find initial boundaries for the bisection method
          ic = 1
-90       IF (ic.GT.100) GO TO 230
-         ic = ic + 1
+         DO WHILE (emin.GT.emax)
+            ic = ic + 1
 
-         CALL dosint(ei,nemax,jspins,kpts,sfac,eig,ct)
+            CALL dosint(ei,nemax,jspins,kpts,sfac,eig,ct)
 
-         IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'ct=',ct
+            IF (irank == 0) WRITE (oUnit,FMT=*) 'ct=',ct
 
-         IF (ct.LT.zc) THEN            ! ei < ef
-            emin = ei
-            ei = ei + de
-            IF (emin.GT.emax) GO TO 90
-         ELSEIF (ct.GT.zc) THEN        ! ei > ef
-            emax = ei
-            ei = ei - de
-            IF (emin.GT.emax) GO TO 90
-         ENDIF
+            IF (ct.LT.zc) THEN ! ei < ef
+               emin = ei
+               ei = ei + de
+            ELSEIF (ct.GT.zc) THEN ! ei > ef
+               emax = ei
+               ei = ei - de
+            ENDIF
+
+            IF (irank==0 .AND. ic.GT.100) THEN
+               WRITE (oUnit,FMT=8050) ei,ef,emin,emax,ct,zc
+8050           FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',&
+                        ' ei,ef,emin,emax,ct,zc',/,10x,6e16.7,/,10x,&
+                        'check number of bands')
+               CALL juDFT_error("initial guess of ef off by 25 mry",calledby="fertri")
+            END IF
+
+         ENDDO
+
          IF (ct.NE.zc) THEN
             IF ( irank == 0 ) WRITE (oUnit,FMT=*) '2nd dosint'
-         !---> refine ef to a value of 5 mry * (2**-20)
+            !---> refine ef to a value of 5 mry * (2**-20)
             iterate : DO i = 1, 40
                ei = 0.5* (emin+emax)
 
@@ -126,10 +127,10 @@ MODULE m_fertri
          workf = -hartree_to_ev_const*ef
          IF ( irank == 0 ) THEN
             WRITE (oUnit,FMT=8030) ef,workf,del,dez
+8030        FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='&
+                    ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',&
+                     2e16.6)
          END IF
-8030     FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='&
-                 ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',&
-                  2e16.6)
          !
          !--->   obtain dos at ef
          !
@@ -140,48 +141,43 @@ MODULE m_fertri
          CALL doswt(ei,nemax,jspins,kpts,eig,w)
 
       ENDIF ! .NOT.input%film
+
       !
       !--->   write weights
       !
-!     DO 190 jsp = 1,jspins
+!     DO jsp = 1,jspins
 !        neig = nemax(jsp)
-!        DO 180 i = 1,neig
-!           DO 170 k = 1,kpts%nkpt
+!        DO i = 1,neig
+!           DO k = 1,kpts%nkpt
 !              WRITE (oUnit,FMT=*) 'w(',i,',',k,',',jsp,')=',w(i,k,jsp)
-!170        CONTINUE
-!180     CONTINUE
-!190  CONTINUE
+!           ENDDO
+!        ENDDO
+!     ENDDO
+
       !
       !--->   obtain sum of weights and valence eigenvalues
       !
       s1 = 0.
       seigv = 0.
-      DO 220 jsp = 1,jspins
+      DO jsp = 1,jspins
          s = 0.
          neig = nemax(jsp)
-         DO 210 i = 1,neig
-            DO 200 k = 1,kpts%nkpt
+         DO i = 1,neig
+            DO k = 1,kpts%nkpt
                s = s + w(i,k,jsp)
                seigv = seigv + w(i,k,jsp)*eig(i,k,jsp)
-200         CONTINUE
-210      CONTINUE
+            ENDDO
+         ENDDO
          s1 = s1 + s
-220   CONTINUE
+      ENDDO
       seigv = sfac*seigv
       chmom = s1 - jspins*s
+
       IF ( irank == 0 ) THEN
-        WRITE (oUnit,FMT=8040) seigv,s1,chmom
+         WRITE (oUnit,FMT=8040) seigv,s1,chmom
+8040     FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
+                  'sum of weights=',f10.6,/,10x,'moment=',f12.6)
       END IF
-8040  FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
-             'sum of weights=',f10.6,/,10x,'moment=',f12.6)
-      RETURN
-!
-230   IF ( irank == 0 ) THEN
-        WRITE (oUnit,FMT=8050) ei,ef,emin,emax,ct,zc
-      END IF
-8050  FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',&
-             ' ei,ef,emin,emax,ct,zc',/,10x,6e16.7,/,10x,&
-             'check number of bands')
-      CALL juDFT_error("initial guess of ef off by 25 mry",calledby="fertri")
+
    END SUBROUTINE fertri
 END MODULE m_fertri
