@@ -3,26 +3,20 @@ MODULE m_dosint
    !     integrated dos to ei
    !
    USE m_trisrt
+   USE m_types
 
    IMPLICIT NONE
 
    CONTAINS
-   SUBROUTINE dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+   SUBROUTINE dosint(ei,nemax,jspins,kpts,sfac,eig,ct)
 
-!     ..
-!     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: jspins
-      INTEGER, INTENT (IN) :: ntria
-      REAL,    INTENT (IN) :: ei,sfac
-      REAL,    INTENT (OUT):: ct
-!     ..
-!     .. Array Arguments ..
-      INTEGER, INTENT (IN) :: nemax(2)
-      INTEGER, INTENT (IN) :: itria(:,:)    !(3,ntriad)
-      REAL,    INTENT (IN) :: atr(:)        !(ntriad)
-      REAL,    INTENT (IN) :: eig(:,:,:)    !(neigd,nkptd,jspd)
-!     ..
-!     .. Local Scalars ..
+      INTEGER,       INTENT(IN)  :: jspins
+      REAL,          INTENT(IN)  :: ei,sfac
+      TYPE(t_kpts),  INTENT(IN)  :: kpts
+      INTEGER,       INTENT(IN)  :: nemax(:)
+      REAL,          INTENT(IN)  :: eig(:,:,:)    !(neig,nkpt,jspins)
+      REAL,          INTENT(OUT) :: ct
+
       INTEGER :: jsp,i,n
       INTEGER :: k1,k2,k3
       INTEGER :: neig
@@ -30,38 +24,45 @@ MODULE m_dosint
       REAl    :: ee,e32,e31,e21,s
 
       s = 0.0
-      DO  jsp = 1,jspins
-         neig = nemax(jsp)
-         DO  i = 1,neig
-            DO  n = 1,ntria
-               k1 = itria(1,n)
-               k2 = itria(2,n)
-               k3 = itria(3,n)
-               e1 = eig(i,k1,jsp)
-               e2 = eig(i,k2,jsp)
-               e3 = eig(i,k3,jsp)
+      DO jspin = 1,jspins
+         neig = nemax(jspin)
+         DO iBand = 1,neig
+            DO itria = 1,kpts%ntet
+               !Get the k-points and eigenvalues
+               !of the current triangle
+               k1 = kpts%ntetra(1,itria)
+               k2 = kpts%ntetra(2,itria)
+               k3 = kpts%ntetra(3,itria)
+               e1 = eig(iBand,k1,jspin)
+               e2 = eig(iBand,k2,jspin)
+               e3 = eig(iBand,k3,jspin)
+               !Sort by ascending eigenvalues
                CALL trisrt(e1,e2,e3,k1,k2,k3)
-               IF (e1.LE.-9999.0) CYCLE
-               IF (ei.LE.e1) CYCLE
+               IF (e1.LE.-9999.0) CYCLE !Not all eigenvalues available
+               IF (ei.LE.e1) CYCLE !triangle not occupied
                IF (ei.GE.e3) THEN
-                 s = s + atr(n)
+                  s = s + kpts%voltet(itria)/kpts%ntet
                ELSEIF (ei.GT.e2) THEN
-                 e31 = e3 - e1
-                 e32 = e3 - e2
-                 ee = e3 - ei
-                 s = s + atr(n)* (1.-ee*ee/ (e31*e32))  
+                  e31 = e3 - e1
+                  e32 = e3 - e2
+                  ee = e3 - ei
+                  s = s + kpts%voltet(itria)/kpts%ntet &
+                         * (1.0-ee*ee/ (e31*e32))
                ELSE
-                 e21 = e2 - e1
-                 e31 = e3 - e1
-                 ee = ei - e1
-                 s = s + atr(n)*ee*ee/ (e21*e31)
+                  e21 = e2 - e1
+                  e31 = e3 - e1
+                  ee = ei - e1
+                  s = s + kpts%voltet(itria)/kpts%ntet &
+                         * ee*ee/ (e21*e31)
                ENDIF
             ENDDO
          ENDDO
       ENDDO
-!jr      ct=2.*s
-!gb      ct = (2./jspins)*s
+
+      !Take into account spin-degeneracy
+!jr   ct=2.*s
+!gb   ct = (2./jspins)*s
       ct = sfac * s
 
-      END SUBROUTINE dosint
-      END MODULE m_dosint
+   END SUBROUTINE dosint
+END MODULE m_dosint

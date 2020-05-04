@@ -98,7 +98,7 @@ MODULE m_fertri
 90       IF (ic.GT.100) GO TO 230
          ic = ic + 1
 
-         CALL dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+         CALL dosint(ei,nemax,jspins,sfac,kpts,eig,ct)
 
          IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'ct=',ct
 
@@ -117,7 +117,7 @@ MODULE m_fertri
             iterate : DO i = 1, 40
                ei = 0.5* (emin+emax)
 
-               CALL dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+               CALL dosint(ei,nemax,jspins,sfac,kpts,eig,ct)
 
                IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'i=',i,', ct=',ct
                IF ( ct == zc ) THEN
