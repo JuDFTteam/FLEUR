@@ -1,6 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 fermi/dosef.f
-fermi/dosint.f
 fermi/doswt.f
 fermi/ef_newton.f
 fermi/trisrt.f
@@ -12,4 +11,5 @@ fermi/fermie.F90
 fermi/fertetra.f90
 fermi/fertri.f90
 fermi/tetra_ef.f90
+fermi/dosint.f90
 )

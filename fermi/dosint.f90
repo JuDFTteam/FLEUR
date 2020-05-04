@@ -1,33 +1,34 @@
-      MODULE m_dosint
-c
-c     integrated dos to ei
-c
-      CONTAINS
-      SUBROUTINE dosint(
-     >                  ei,nemax,jspins,sfac,ntria,itria,atr,eig,
-     <                  ct)
-      USE m_trisrt
-      IMPLICIT NONE
-C     ..
-C     .. Scalar Arguments ..
+MODULE m_dosint
+   !
+   !     integrated dos to ei
+   !
+   USE m_trisrt
+
+   IMPLICIT NONE
+
+   CONTAINS
+   SUBROUTINE dosint(ei,nemax,jspins,sfac,ntria,itria,atr,eig,ct)
+
+!     ..
+!     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
       INTEGER, INTENT (IN) :: ntria
       REAL,    INTENT (IN) :: ei,sfac
       REAL,    INTENT (OUT):: ct
-C     ..
-C     .. Array Arguments ..
+!     ..
+!     .. Array Arguments ..
       INTEGER, INTENT (IN) :: nemax(2)
       INTEGER, INTENT (IN) :: itria(:,:)    !(3,ntriad)
       REAL,    INTENT (IN) :: atr(:)        !(ntriad)
       REAL,    INTENT (IN) :: eig(:,:,:)    !(neigd,nkptd,jspd)
-C     ..
-C     .. Local Scalars ..
-      INTEGER jsp,i,n
-      INTEGER k1,k2,k3
-      INTEGER neig
-      REAL    e1,e2,e3
-      REAl    ee,e32,e31,e21,s
-c
+!     ..
+!     .. Local Scalars ..
+      INTEGER :: jsp,i,n
+      INTEGER :: k1,k2,k3
+      INTEGER :: neig
+      REAL    :: e1,e2,e3
+      REAl    :: ee,e32,e31,e21,s
+
       s = 0.0
       DO  jsp = 1,jspins
          neig = nemax(jsp)
@@ -58,7 +59,7 @@ c
             ENDDO
          ENDDO
       ENDDO
-cjr      ct=2.*s
+!jr      ct=2.*s
 !gb      ct = (2./jspins)*s
       ct = sfac * s
 
