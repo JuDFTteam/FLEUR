@@ -5,7 +5,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    CoMCDXML  Fe_Kerker Fe_bct_LOXML
    FePt_film_SSFT FePt_film_SSFT_LO
-   Fe_bcc_GreensFunction GreensFunction_MultiContour
+   Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_Tria
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
    PlotDenandPot SiFilmPlotXML SiFilmSlicePlotXML RelaxMTFeature
     Fe_bcc_SF_LDA SmAtomjDOS)
