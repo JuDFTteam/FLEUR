@@ -28,6 +28,8 @@ try:
    exp_mm1[-1] = 3.42075
    te.check_value_outfile("--> mm       1", " ", exp_mm1, 0.00001)
 
+   sys.exit(te.errors)
+
 except Exception as e:
    te.log_error(f"Error: {e}")
    sys.exit(1)

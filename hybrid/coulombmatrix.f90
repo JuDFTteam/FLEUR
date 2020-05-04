@@ -2055,15 +2055,15 @@ CONTAINS
       COMPLEX :: cexp1(fi%atoms%ntype)
       complex :: cdum, cdum1 
       logical :: ldum
-      integer, parameter :: lock_size = 100
-      integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
+!$    integer, parameter :: lock_size = 100
+!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("double g-loop")
 
       ! create lock for race-condition in coulomb
-      do i =0,lock_size-1
-         call omp_init_lock(lock(i))
-      enddo
+!$    do i =0,lock_size-1
+!$       call omp_init_lock(lock(i))
+!$    enddo
 
       !$OMP PARALLEL DO default(none) &
       !$OMP private(igpt0, igpt1, igpt2, ix, igptp2, iqnrm2, q2, y2, iy,igptp1, iqnrm1, q1) &
@@ -2108,16 +2108,15 @@ CONTAINS
                ENDDO
             ENDDO
             idum = ix*(ix - 1)/2 + iy
-            call omp_set_lock(lock(modulo(idum,lock_size)))
+!$          call omp_set_lock(lock(modulo(idum,lock_size)))
             coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
-            ! coulomb(idum) = coulomb(idum) + (fpi_const)**3*cdum/fi%cell%vol
-            call omp_unset_lock(lock(modulo(idum,lock_size)))
+!$          call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
       END DO
       !$OMP END PARALLEL DO
-      do i =0,lock_size-1
-         call omp_destroy_lock(lock(i))
-      enddo
+!$    do i =0,lock_size-1
+!$       call omp_destroy_lock(lock(i))
+!$    enddo
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 

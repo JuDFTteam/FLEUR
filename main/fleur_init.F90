@@ -152,7 +152,7 @@ CONTAINS
     CALL oned%init(atoms) !call again, because make_stars modified it :-)
     CALL kpts%init(cell, sym, input%film)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
-    CALL gfinp%init(atoms, sym)
+    CALL gfinp%init(atoms, sym, noco)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(mpi,stars,input,cell,xcpot)

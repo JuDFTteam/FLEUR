@@ -28,6 +28,8 @@ try:
    exp_bandgap[37] = 0.09105
    te.check_value_outfile("bandgap                     :", "htr", exp_bandgap, 0.0001)
 
+   sys.exit(te.errors)
+
 except Exception as e:
    te.log_error(f"Error: {e}")
    sys.exit(1)

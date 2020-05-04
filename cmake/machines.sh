@@ -4,7 +4,7 @@ cd $DIR/cmake/machines/
 for f in *.sh
 do
   config=`basename $f .sh`
-  desc=`head -1 $f|cut -d# -f 2`
+  desc=$(head -n 1 $f | sed 's/[^#]*#\s*//')
   if [ ! "$desc" == "NOSHOW" ]
   then
   known_machines="$known_machines

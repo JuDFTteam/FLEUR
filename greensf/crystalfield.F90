@@ -174,7 +174,7 @@ MODULE m_crystalfield
          DO m = -l, l
             tr = tr + hub1data%ccfmat(i_hia,m,m)
          ENDDO
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(*,*) "TRACE"
          WRITE(*,"(2f7.3)") tr, tr/(2*l+1)
 #endif
@@ -183,7 +183,7 @@ MODULE m_crystalfield
             hub1data%ccfmat(i_hia,m,m) = hub1data%ccfmat(i_hia,m,m) - tr/(2*l+1)
          ENDDO
 
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(*,*) "TRACELESS (eV)"
          WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
 #endif

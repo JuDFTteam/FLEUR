@@ -5,7 +5,7 @@ MODULE m_hubbard1_setup
    USE m_constants
    USE m_uj2f
    USE m_mudc
-   USE m_denmat_dist
+   USE m_hubbard1Distance
    USE m_greensfUtils
    USE m_hubbard1_io
    USE m_types_selfen
@@ -328,15 +328,15 @@ MODULE m_hubbard1_setup
       DEALLOCATE(ctmp)
 #endif
 
-
+      !--------------------------------------------------------------------
+      ! Calculate Distances from last density matrix and update den%mmpmat
+      !--------------------------------------------------------------------
       results%last_mmpMatdistance = 0.0
       results%last_occdistance = 0.0
+
       IF(mpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
-            !----------------------------------------------------------------------
-            ! Calculate the distance and update the density matrix
-            !----------------------------------------------------------------------
-            CALL n_mmp_dist(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
+            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
             DO ispin = 1, MERGE(3,input%jspins,noco%l_mperp)
                den%mmpMat(:,:,atoms%n_u+i_hia,ispin) = mmpMat(:,:,i_hia,ispin)
             ENDDO

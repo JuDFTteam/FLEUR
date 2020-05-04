@@ -30,7 +30,7 @@ MODULE m_constants
   REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
   REAL,             PARAMETER :: eVac0Default_const = -0.25
   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 30'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     Development Version          (based on MaX4.0)'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     Development Version     (based on MaX4.0)'
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
   INTEGER, PARAMETER :: POTDEN_TYPE_OTHER     = 0    ! POTDEN_TYPE <= 0 ==> undefined

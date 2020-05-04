@@ -136,7 +136,9 @@ CONTAINS
       INCLUDE 'mpif.h'
         INTEGER ierr(3), i
         CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
+#endif
         CALL judft_init(oUnit,.FALSE.)
+#ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN

@@ -194,6 +194,7 @@ CONTAINS
 
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),mpi%n_size)
+!Rotate cdn to local frame if specified.
   IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 
 #ifdef CPP_CHASE
@@ -237,9 +238,24 @@ CONTAINS
 
 !Plot inden if wanted
 IF (fi%sliceplot%iplot.NE.0) THEN
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
+      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+#ifdef CPP_MPI
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+#endif
+   END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
+      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+#ifdef CPP_MPI
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+#endif
+   END IF
 END IF
+
+
        !HF
        IF (fi%hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
@@ -419,14 +435,26 @@ END IF
                       archiveType,xcpot,outDen,EnergyDen,greensFunction,hub1data)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
-          IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
-!               CDN including core charge
-               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
-!!               CDN subtracted by core charge
-               ! CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-          END IF
+          
+          IF (fi%sliceplot%iplot.NE.0) THEN
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
+   !               CDN including core charge
+      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
+#ifdef CPP_MPI
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+#endif
+   END IF
+                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
+                               fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
+
+   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
+      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
+#ifdef CPP_MPI
+      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+#endif
+   END IF
+END IF
+
 
           IF (fi%input%l_rdmft) THEN
              SELECT TYPE(xcpot)
@@ -471,6 +499,8 @@ END IF
 !!$             END IF
 
              ! total energy
+             
+             !Rotating from local MT frame in global frame for mixing
              IF (fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
                 CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
              END IF
@@ -494,24 +524,28 @@ END IF
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
             fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
-            IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
-               CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+            
+            !Plots of mixed density
+       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+!               CDN including core charge
+                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
+                                               fi%cell, fi%noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
+!!               CDN subtracted by core charge
+!                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+!                               fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
+      END IF
+ 
+!Rotating in local MT frame  
+       IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
+          CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
                   ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
-            END IF
+       END IF
 #ifdef CPP_MPI
                CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
 
-!Plots of mixed density
-!       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
-!               CDN including core charge
-!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
-!!               CDN subtracted by core charge
-!                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
- !      END IF
+
 
        IF(mpi%irank == 0) THEN
          !Write out information if a hubbard 1 Iteration was performed

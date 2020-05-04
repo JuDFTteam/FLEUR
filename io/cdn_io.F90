@@ -267,6 +267,7 @@ CONTAINS
     END IF
 
     IF (mode.EQ.CDN_DIRECT_MODE) THEN
+      if (noco%l_mtNocoPot) call judft_error("the mtNocoPot switch requires HDF5 for the charge density IO")
        filename = 'cdn1'
        l_rhomatFile = .FALSE.
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN

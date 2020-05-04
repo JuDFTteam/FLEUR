@@ -1,10 +1,6 @@
-      MODULE m_convol
-      CONTAINS
-      SUBROUTINE convol(&
-     &                  stars, &
-     &                  fg3,&
-     &                  ag3,ufft&
-     &                   )
+MODULE m_convol
+CONTAINS
+   SUBROUTINE convol(stars, fg3, ag3, ufft)
 
 !************************************************************
 !*                                                          *
@@ -24,36 +20,32 @@
       USE m_fft3d
       IMPLICIT NONE
 
-      TYPE(t_stars),INTENT(IN) :: stars
+      TYPE(t_stars), INTENT(IN) :: stars
 
-      COMPLEX, INTENT (IN)     :: ag3(stars%ng3)
-      COMPLEX, INTENT (OUT)    :: fg3(stars%ng3)
-      REAL,    INTENT (IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
+      COMPLEX, INTENT(IN)     :: ag3(stars%ng3)
+      COMPLEX, INTENT(OUT)    :: fg3(stars%ng3)
+      REAL, INTENT(IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
 
-      INTEGER i,ifftd
-      REAL, ALLOCATABLE :: gfft(:,:)
+      INTEGER i, ifftd
+      REAL, ALLOCATABLE :: gfft(:, :)
 
-      ifftd=27*stars%mx1*stars%mx2*stars%mx3
+      ifftd = 27*stars%mx1*stars%mx2*stars%mx3
 
-      ALLOCATE (gfft(0:ifftd-1,2))
+      ALLOCATE (gfft(0:ifftd - 1, 2))
 
-      CALL fft3d(&
-     &           gfft(0,1),gfft(0,2),&
-     &           ag3,&
-     &           stars,+1) 
+      CALL fft3d(gfft(0, 1), gfft(0, 2),&
+     &           ag3,stars, +1)
 
-      DO i=0,ifftd-1
-        gfft(i,:)=gfft(i,:)*ufft(i)
+      DO i = 0, ifftd - 1
+         gfft(i, :) = gfft(i, :)*ufft(i)
       ENDDO
 
-      CALL fft3d(&
-     &           gfft(0,1),gfft(0,2),&
-     &           fg3,&
-     &           stars,-1) 
+      CALL fft3d(gfft(0, 1), gfft(0, 2),&
+     &           fg3,stars, -1)
 
-      fg3(:stars%ng3)=fg3(:stars%ng3)*stars%nstr(:stars%ng3)
+      fg3(:stars%ng3) = fg3(:stars%ng3)*stars%nstr(:stars%ng3)
 
       DEALLOCATE (gfft)
 
-      END SUBROUTINE convol
-      END MODULE m_convol
+   END SUBROUTINE convol
+END MODULE m_convol

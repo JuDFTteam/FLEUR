@@ -129,6 +129,7 @@ contains
       call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir_r, indx1, mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1 -> dgemm")
 
+      call timestart("dot prod")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, fi%atoms%ntype
@@ -150,8 +151,11 @@ contains
             END DO
          END DO
       END DO
+      call timestop("dot prod")
+
 
       IF (ikpt == 1) THEN
+         call timestart("gamma point 1")
          iatom = 0
          indx0 = 0
          DO itype = 1, fi%atoms%ntype
@@ -200,6 +204,8 @@ contains
             END DO
          END DO
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
+
+         call timestop("gamma point 1")
       END IF
 
       do i_vec = 1, n_vec
@@ -229,7 +235,7 @@ contains
       integer :: iat2, it2, l2
       type(t_mat) :: mat_hlp, test_hlp, test_out
 
-      call timestart("spmvec_noinvs")
+      call timestart("spmm_noinvs")
       call mat_hlp%init(mat_in)
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2
@@ -428,7 +434,7 @@ contains
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out%data_c(:, i_vec))
       enddo
-      call timestop("spmvec_noinvs")
+      call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
 
    subroutine spmv_wrapper_inv(fi, mpdata, hybdat, ikpt, vecin, vecout)

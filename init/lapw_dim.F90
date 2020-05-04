@@ -177,12 +177,6 @@ CONTAINS
     !
     !---> Determine rkmax box of size mk1, mk2, mk3,
     !     for which |G(mk1,mk2,mk3) + (k1,k2,k3)| < rkmax
-    !
-    CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
-
-    !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-
-
 
     !---> Determine the dimensions kq1d, kq2d, kq3d
     !     of the dimension of the charge density fft-box
@@ -218,9 +212,9 @@ CONTAINS
     !                      0  PROGRAM, RADIX-2 ONLY
     !                      1  PROGRAM, RADIX-2, RADIX-3,RADIX-5
 
-    stars%kq1_fft = ifft235(6,ksfft,stars%kq1_fft,gmaxp)
-    stars%kq2_fft = ifft235(6,ksfft,stars%kq2_fft,gmaxp)
-    stars%kq3_fft = ifft235(6,ksfft,stars%kq3_fft,gmaxp)
+    stars%kq1_fft = ifft235(ksfft,stars%kq1_fft,gmaxp)
+    stars%kq2_fft = ifft235(ksfft,stars%kq2_fft,gmaxp)
+    stars%kq3_fft = ifft235(ksfft,stars%kq3_fft,gmaxp)
 
 
   END SUBROUTINE lapw_fft_dim

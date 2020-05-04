@@ -121,9 +121,9 @@
 !
       iofile = oUnit
       ksfft  = 1
-      stars%kq1_fft = ifft235 (iofile,ksfft,mq1,gmaxp)
-      stars%kq2_fft = ifft235 (iofile,ksfft,mq2,gmaxp)
-      stars%kq3_fft = ifft235 (iofile,ksfft,mq3,gmaxp)
+      stars%kq1_fft = ifft235(ksfft,mq1,gmaxp)
+      stars%kq2_fft = ifft235(ksfft,mq2,gmaxp)
+      stars%kq3_fft = ifft235(ksfft,mq3,gmaxp)
 !+gb
 !      kq1_fft = mq1
 !      kq2_fft = mq2

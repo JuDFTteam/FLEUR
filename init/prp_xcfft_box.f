@@ -65,9 +65,9 @@ c
       iofile = oUnit
       ksfft = 1
       !WRITE (oUnit,*) 'minimum: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
-      kxc1d = ifft235(iofile,ksfft,kxc1d,2.0)
-      kxc2d = ifft235(iofile,ksfft,kxc2d,2.0)
-      kxc3d = ifft235(iofile,ksfft,kxc3d,2.0)
+      kxc1d = ifft235(ksfft,kxc1d,2.0)
+      kxc2d = ifft235(ksfft,kxc2d,2.0)
+      kxc3d = ifft235(ksfft,kxc3d,2.0)
       !WRITE (oUnit,*) 'ifft235: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
 
       RETURN

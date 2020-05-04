@@ -4,9 +4,11 @@ if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
 endif()
 
-set(tmp ${CMAKE_Fortran_FLAGS})
-project(FLEUR LANGUAGES C Fortran)
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${tmp}")
+# sometimes cmake clears CMAKE_Fortran_FLAGS during project()
+set(CMAKE_Fortran_FLAGS_backup ${CMAKE_Fortran_FLAGS})
+set(CMAKE_Fortran_FLAGS "")
+project(FLEUR LANGUAGES C CXX Fortran)
+string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
 include("cmake/CompilerConfig.txt")
 
@@ -17,8 +19,6 @@ include("cmake/Files_and_Targets.txt")
 include("cmake/filespecific.cmake")
 
 include("cmake/ReportConfig.txt")
-
-add_subdirectory("inpgen2")
 
 
 #install(TARGETS fleur inpgen DESTINATION bin)

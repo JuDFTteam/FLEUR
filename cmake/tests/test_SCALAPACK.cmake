@@ -1,4 +1,4 @@
-#First check if we can compile with LAPACK
+#First check if we can compile with ScaLAPACK
 try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )

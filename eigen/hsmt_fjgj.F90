@@ -26,6 +26,9 @@ CONTAINS
     ALLOCATE(fjgj%fj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
     ALLOCATE(fjgj%gj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
 
+    fjgj%fj = 0.0
+    fjgj%gj = 0.0
+
   end subroutine
 
 #ifdef CPP_GPU
@@ -42,7 +45,14 @@ CONTAINS
   REAL gb(0:lmaxd), fb(0:lmaxd)
   REAL ws(jspins)
   REAL ff,gg,gs
-  INTEGER k,l,jspin
+  INTEGER k,l,jspin,jspinStart, jspinEnd
+
+  jspinStart = ispin
+  jspinEnd = ispin
+  IF(l_flag)
+     jspinStart = 1
+     jspinEnd = jspins
+  END IF
 
   DO k = 1,nv
           gs = rk(k)*rmt
@@ -50,25 +60,20 @@ CONTAINS
           CALL dsphbs(lmax,gs,fb,gb)
           DO l = 0,lmax
              !---> set up wronskians for the matching conditions for each ntype
-             DO jspin = 1, jspins
+             DO jspin = jspinStart, jspinEnd
                 ws(jspin) = con1/(uds(l,jspin)*dus(l,jspin) - us(l,jspin)*duds(l,jspin))
              END DO
              ff = fb(l)
              gg = rk(k)*gb(l)
-             IF ( apw(l) ) THEN
-                fj(k,l,ispin) = 1.0*con1 * ff / us(l,ispin)
-                gj(k,l,ispin) = 0.0
-             ELSE
-                IF (l_flag) THEN
-                   DO jspin = 1, jspins
-                      fj(k,l,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
-                      gj(k,l,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
-                   END DO
+             DO jspin = jspinStart, jspinEnd
+                IF ( apw(l) ) THEN
+                   fj(k,l,jspin) = 1.0*con1 * ff / us(l,jspin)
+                   gj(k,l,jspin) = 0.0
                 ELSE
-                   fj(k,l,ispin) = ws(ispin) * ( uds(l,ispin)*gg - duds(l,ispin)*ff )
-                   gj(k,l,ispin) = ws(ispin) * ( dus(l,ispin)*ff - us(l,ispin)*gg )
+                   fj(k,l,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
+                   gj(k,l,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
                 ENDIF
-             ENDIF
+             END DO
           ENDDO
   ENDDO ! k = 1, lapw%nv
 
@@ -144,7 +149,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL con1,ff,gg,gs
 
-    INTEGER k,l,lo,intspin,jspin
+    INTEGER k,l,lo,intspin,jspin, jspinStart, jSpinEnd
     LOGICAL l_socfirst
     !     .. Local Arrays ..
     REAL ws(input%jspins)
@@ -160,11 +165,19 @@ CONTAINS
     DO lo = 1,atoms%nlo(n)
        IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
     ENDDO
+
+    jspinStart = ispin
+    jspinEnd = ispin
+    IF (noco%l_constr.or.l_socfirst.OR.noco%l_mtNocoPot) THEN
+       jspinStart = 1
+       jspinEnd = input%jspins
+    END IF
+
     DO intspin=1,MERGE(2,1,noco%l_ss)
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
        !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
-       !$OMP SHARED(fjgj,intspin,n,ispin,apw)
+       !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
@@ -172,26 +185,21 @@ CONTAINS
 !          !$OMP SIMD PRIVATE(ws,ff,gg)
           DO l = 0,atoms%lmax(n)
              !---> set up wronskians for the matching conditions for each ntype
-             DO jspin = 1, input%jspins
+             DO jspin = jspinStart, jspinEnd
                 ws(jspin) = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)&
                             - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
              END DO
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
-             IF ( apw(l) ) THEN
-                fjgj%fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
-                fjgj%gj(k,l,ispin,intspin) = 0.0
-             ELSE
-                IF (noco%l_constr.or.l_socfirst.OR.noco%l_mtNocoPot) THEN
-                   DO jspin = 1, input%jspins
-                      fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                      fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
-                   END DO
+             DO jspin = jspinStart, jspinEnd
+                IF ( apw(l) ) THEN
+                   fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
+                   fjgj%gj(k,l,jspin,intspin) = 0.0
                 ELSE
-                   fjgj%fj(k,l,ispin,intspin) = ws(ispin) * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
-                   fjgj%gj(k,l,ispin,intspin) = ws(ispin) * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
+                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
                 ENDIF
-             ENDIF
+             END DO
           ENDDO
 !          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv

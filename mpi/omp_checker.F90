@@ -20,8 +20,12 @@ contains
 
 
       !$omp parallel shared(cpu) private(me, num_threads, mycpu)
-      me = omp_get_thread_num()
-      num_threads = omp_get_num_threads()
+!$    if (.false.) then
+      me = 0
+      num_threads = 1
+!$    endif
+!$    me = omp_get_thread_num()
+!$    num_threads = omp_get_num_threads()
       mycpu = findmycpu()
 
       if(me == 0) allocate(cpu(num_threads), source=-1)

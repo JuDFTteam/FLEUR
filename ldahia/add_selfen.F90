@@ -19,12 +19,12 @@ MODULE m_add_selfen
       !The term mu * unity is there to ensure that the number of particles
       !doesn't change and is determined by a two-step process
       !The occupation as a function of mu has a peak in the region where
-      !something is inside the energy interval between e_bot adn e_fermi
+      !something is inside the energy interval between e_bot and e_fermi
       !To determine where we have the same number of particles we first
       !search for the maximum occupation
       !Then the desired chemical potential is found with the bisection method
       !to the right of the maximum
-      !TODO: Parallelization (MPI over hubbard 1 elements OMP over chemical potentials??)
+      !TODO: Parallelization (OMP over chemical potentials in first loop??)
 
       TYPE(t_greensf),  INTENT(IN)     :: g
       INTEGER,          INTENT(IN)     :: i_hia
@@ -65,7 +65,7 @@ MODULE m_add_selfen
       DO i_match = 1, spin_match
          !Target occupation
          n_target = MERGE(SUM(n_occ(:)),n_occ(i_match),l_match_both_spins)
-#ifdef CPP_DEPUG
+#ifdef CPP_DEBUG
          WRITE(filename,9000) i_hia,i_match
          OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
