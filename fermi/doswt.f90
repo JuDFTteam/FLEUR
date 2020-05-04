@@ -1,28 +1,26 @@
       MODULE m_doswt
-c
-c     calculates the weights for each k-point for integrating functions
-c     of k.  the array w has beeen cleared before entering.
-c
+!
+!     calculates the weights for each k-point for integrating functions
+!     of k.  the array w has beeen cleared before entering.
+!
       CONTAINS
-      SUBROUTINE doswt(
-     >                 ei,nemax,jspins,ntria,itria,atr,eig,
-     <                 w)
+      SUBROUTINE doswt(ei,nemax,jspins,ntria,itria,atr,eig,w)
       USE m_trisrt
       IMPLICIT NONE
-C     ..
-C     .. Scalar Arguments ..
+!     ..
+!     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
       INTEGER, INTENT (IN) :: ntria
       REAL,    INTENT (IN) :: ei
-C     ..
-C     .. Array Arguments ..
+!     ..
+!     .. Array Arguments ..
       INTEGER, INTENT (IN) :: nemax(2)
       INTEGER, INTENT (IN) :: itria(:,:)      !(3,ntriad)
       REAL,    INTENT (IN) :: atr(:)          !(ntriad)
       REAL,    INTENT (IN) :: eig(:,:,:)      !(neigd,nkptd,jspd)
       REAL,    INTENT (OUT):: w(:,:,:)        !(neigd,nkptd,jspd)
-C     ..
-C     .. Local Scalars ..
+!     ..
+!     .. Local Scalars ..
       INTEGER jsp,i,n
       INTEGER k1,k2,k3
       INTEGER neig
@@ -43,13 +41,13 @@ C     .. Local Scalars ..
                IF (e1.LE.-9999.0) CYCLE
                IF (ei.LE.e1) CYCLE
                IF (ei.GE.e3) THEN
-c--->    e3<e
+!--->    e3<e
                     s = atr(n)/3.
                     w(i,k1,jsp) = w(i,k1,jsp) + s
                     w(i,k2,jsp) = w(i,k2,jsp) + s
                     w(i,k3,jsp) = w(i,k3,jsp) + s         
                ELSEIF (ei.GT.e2) THEN
-c--->    e2<ei<e3
+!--->    e2<ei<e3
                     ee = e3 - ei
                     e31 = ee/ (e3-e1)
                     e32 = ee/ (e3-e2)
@@ -58,7 +56,7 @@ c--->    e2<ei<e3
                     w(i,k2,jsp) = w(i,k2,jsp) + s* (1.-e31*e32*e32)
                     w(i,k3,jsp) =w(i,k3,jsp)+s*(1.-e31*e32*(3.-e31-e32))
                ELSE
-c--->    e1<ei<e2
+!--->    e1<ei<e2
                     ee = ei - e1
                    e31 = ee/ (e3-e1)
                    e21 = ee/ (e2-e1)
