@@ -11,5 +11,5 @@ fermi/fertetra.f90
 fermi/fertri.f90
 fermi/tetra_ef.f90
 fermi/dosint.f90
-fermi/dosef.f
+fermi/dosef.f90
 )
