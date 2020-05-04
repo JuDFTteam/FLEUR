@@ -528,7 +528,7 @@ END IF
             !Plots of mixed density
        IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
 !               CDN including core charge
-                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
                                                fi%cell, fi%noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
 !!               CDN subtracted by core charge
 !                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
