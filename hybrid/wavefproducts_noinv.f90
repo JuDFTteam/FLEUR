@@ -53,6 +53,7 @@ CONTAINS
       if(norm2(abs(cprod%data_c - cprod_tmp%data_c)) > 1e-12 ) then 
          call cprod%save_npy("faltung.npy")
          call cprod_tmp%save_npy("fft.npy")
+         call save_npy("nbasp.npy", [hybdat%nbasp])
          call save_npy("g.npy", mpdata%g)
          call juDFT_error("the result is wrong")
       endif
@@ -92,8 +93,12 @@ CONTAINS
       type(t_lapw)              :: lapw_nkqpt
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
+      integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3)
       
+      allocate(iob_arr(cprod%matsize2))
+      allocate(iband_arr(cprod%matsize2))
+
       length_zfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
       if(2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then 
          call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
@@ -130,20 +135,30 @@ CONTAINS
       q      = fi%kpts%bkf(:,ik) - fi%kpts%bkf(:,ikq) 
       gshift = q - fi%kpts%to_first_bz(q)
 
+      write (*,*) "G-shift", gshift
+
       do iband = 1,hybdat%nbands(ik)
          do iob = bandoi, bandof 
             prod = psi_k(:,iband) * psi_kqpt(:,iob)
             call fft_interface(3, length_zfft, prod, .true.)
+            ! we still have to devide by the number of mesh points
+            prod = prod / product(length_zfft)
+
             DO igptm = 1, mpdata%n_g(ikq)
                g = mpdata%g(:, igptm) - gshift
+               ! iob_arr(iob + (iband-1)*psize) = iob 
+               ! iband_arr(iob + (iband-1)*psize) = iband
                cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(stars%g2fft(g))               
             enddo
          enddo 
       enddo
+
+      ! call save_npy("iob.npy", iob_arr)
+      ! call save_npy("iband.npy", iband_arr)
    end subroutine wavefproducts_noinv_IS_FFT
 
    subroutine wavefproducts_noinv_IS(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-                                     nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                     nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
@@ -155,7 +170,7 @@ CONTAINS
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
-      type(t_mat), intent(in)         :: z_k_p
+      type(t_mat), intent(in)         :: z_k
       type(t_mat), intent(inout)      :: z_kqpt_p, cprod
 
 !     - scalars -
@@ -236,10 +251,10 @@ CONTAINS
 
       call timestart("hybrid g")
       allocate (ctmp(bandoi:bandof, hybdat%nbands(ik), mpdata%n_g(ikq)), source=(0.0, 0.0))
-      if (z_k_p%l_real) then
+      if (z_k%l_real) then
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
-         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k_p, g_t, jsp, ikq, ik, bandoi, bandof) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, ikq, ik, bandoi, bandof) &
          !$OMP collapse(2)
          DO igptm = 1, mpdata%n_g(ikq)
             DO ig1 = 1, lapw%nv(jsp)
@@ -250,7 +265,7 @@ CONTAINS
 
                DO n1 = 1, hybdat%nbands(ik)
                   DO n2 = bandoi,bandof
-                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + z_k_p%data_r(ig1, n1)*z0(n2, ig2)
+                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + z_k%data_r(ig1, n1)*z0(n2, ig2)
                   END DO
                END DO
 
@@ -260,7 +275,7 @@ CONTAINS
       else
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
-         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k_p, g_t, jsp, ikq, ik, bandoi, bandof) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, ikq, ik, bandoi, bandof) &
          !$OMP collapse(2)
          DO igptm = 1, mpdata%n_g(ikq)
             DO ig1 = 1, lapw%nv(jsp)
@@ -271,13 +286,15 @@ CONTAINS
 
                DO n1 = 1, hybdat%nbands(ik)
                   DO n2 = bandoi,bandof
-                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + conjg(z_k_p%data_c(ig1, n1))*z0(n2, ig2)
+                     ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + conjg(z_k%data_c(ig1, n1))*z0(n2, ig2)
                   END DO
                END DO
             END DO
          END DO
          !$OMP END PARALLEL DO
       endif
+
+      call save_npy("ctmp_fold.npy", ctmp)
 
       call timestart("copy to cprod")
       do igptm = 1, mpdata%n_g(ikq)

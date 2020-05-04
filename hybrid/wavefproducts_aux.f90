@@ -82,6 +82,8 @@ CONTAINS
       integer :: length_zfft(3), fft_idx(3)
 
 
+      length_zfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
+
       DO iv = 1, lapw%nv(jspin)
          ivmap(iv) = stars%g2fft(lapw%gvec(:, iv, jspin))
       ENDDO
@@ -93,7 +95,6 @@ CONTAINS
             psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
          ENDDO
 
-         length_zfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
          call fft_interface(3, length_zfft, psi(:,nu), .false., ivmap(1:lapw%nv(jspin)))
       enddo
    end subroutine wavef2rs_cmplx
