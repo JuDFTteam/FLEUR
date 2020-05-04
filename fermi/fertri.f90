@@ -10,7 +10,6 @@ MODULE m_fertri
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_triang
    USE m_tetraef
    USE m_dosef
    USE m_dosint
@@ -38,10 +37,8 @@ MODULE m_fertri
 !     .. Local Scalars ..
       REAL chmom,ct,de,del,dez,ei,emax,emin,s,s1,workf
       REAL lb,ub,e_set
-      LOGICAL film
       INTEGER i,ic,j,jsp,k,neig
       INTEGER ntria      ! number of triangles & tetrahedrons
-      REAL as            ! total area covered by triangles
 !     ..
 !     .. Local Arrays ..
       INTEGER itria(3,2*size(w,2))  ! index of k-points that are corner points of a triangle
@@ -56,12 +53,16 @@ MODULE m_fertri
       END IF
  8000 FORMAT (/,/,10x,'linear triangular method')
 
-      film = .true.
-      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,film)!keep
+      itria = 0
+
+      ntria = kpts%ntet
+      itria = kpts%ntetra(:,:kpts%ntet)
+      atr   = kpts%voltet(:kpts%ntet)/kpts%ntet
+
 !
 !--->   clear w and set eig=-9999.9
       e_set = -9999.9
-      IF (.NOT.film) e_set = 1.0e10
+      IF (.NOT.input%film) e_set = 1.0e10
       DO jsp = 1,jspins
          nemax(jsp) = 0.0
          DO k = 1,kpts%nkpt
@@ -80,24 +81,20 @@ MODULE m_fertri
 !
 !--->   write results of triang
 
-      IF(.not.film) THEN
+      IF(.not.input%film) THEN
          lb = MINVAL(eig) - 0.01
          ub = ef + 0.2
          CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
       ELSE
 
-        DO i = 1,ntria
-           atr(i) = atr(i)/as
-        ENDDO
         IF ( irank == 0 ) THEN
-          WRITE (oUnit,FMT=8010) ntria,as
+          WRITE (oUnit,FMT=8010) ntria
           DO i = 1,ntria
             WRITE (oUnit,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
           ENDDO
         END IF
  8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,&
                 10x,'number of triangles=',i3,/,10x,&
-                'total area of triangles=',f12.6,/,10x,&
                 'no.,corners and (normalized) area of each triangle:',/)
  8020   FORMAT (10x,i3,3x,3i3,f14.6)
         IF ( irank == 0 ) THEN
@@ -163,7 +160,7 @@ MODULE m_fertri
 !
         CALL doswt(ei,nemax,jspins,ntria,itria,atr,eig,w)
 
-      ENDIF ! .NOT.film
+      ENDIF ! .NOT.input%film
 !
 !--->   write weights
 !
