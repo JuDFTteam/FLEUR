@@ -312,6 +312,7 @@ CONTAINS
     USE m_types_sym
     USE m_kptgen_hybrid
     USE m_tetrahedron_regular
+    USE m_triang
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -366,7 +367,8 @@ CONTAINS
     ! away from (0,0,0) (for even/odd nkpt3)
 
     INTEGER i,j,k,l,mkpt,addSym,nsym
-    LOGICAL random
+    LOGICAL random,l_tria
+    REAL as
     REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
 
     IF (ANY(grid==0)) THEN
@@ -484,7 +486,13 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF(bz_integration==3.AND..NOT.film) THEN
+       IF(bz_integration==2 .AND. film) THEN
+          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+          l_tria = .FALSE.
+          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
+       ENDIF
+
+       IF(bz_integration==3 .AND..NOT.film) THEN
           !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
           !We need to call gen_bz to get the full grid (necessary???)
           CALL kpts%init(cell, sym, film)
@@ -505,7 +513,14 @@ CONTAINS
              kpts%ntetra(:,j) = ntetra(:,j)
              kpts%voltet(j) = ABS(voltet(j))
           END DO
-       END IF
+       ELSE IF( (bz_integration==2 .OR.bz_integration==3) .AND. film) THEN
+          ALLOCATE(kpts%ntetra(3,kpts%ntet))
+          ALLOCATE(kpts%voltet(kpts%ntet))
+          DO j = 1, kpts%ntet
+             kpts%ntetra(:,j) = ntetra(:,j)
+             kpts%voltet(j) = ABS(voltet(j))/as*kpts%ntet
+          END DO
+       ENDIF
     ENDIF
   END SUBROUTINE init_by_grid
 

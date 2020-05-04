@@ -53,7 +53,7 @@ MODULE m_tetrahedron_regular
 
       !Check for invalid indices
       IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) THEN
-            CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
+         CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
       ENDIF
 
       !Temporary Size
