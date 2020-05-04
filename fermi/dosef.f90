@@ -3,36 +3,35 @@ MODULE m_dosef
    !---  >    obtain dos at ei (here: ef)
    !
    USE m_constants
+   USE m_types
    USE m_trisrt
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE dosef(ei,nemax,jspins,sfac,ntria,itria,atr,eig)
+   SUBROUTINE dosef(ei,nemax,jspins,kpts,sfac,eig)
 
-      INTEGER, INTENT(IN) :: jspins
-      INTEGER, INTENT(IN) :: ntria
-      REAL,    INTENT(IN) :: ei,sfac
-      INTEGER, INTENT(IN) :: nemax(:)
-      INTEGER, INTENT(IN) :: itria(:,:) !(3,ntriad)
-      REAL,    INTENT(IN) :: atr(:) !(ntriad)
-      REAL,    INTENT(IN) :: eig(:,:,:) !(neigd,nkptd,jspd)
+      INTEGER,       INTENT(IN) :: jspins
+      TYPE(t_kpts),  INTENT(IN) :: kpts
+      REAL,          INTENT(IN) :: ei,sfac
+      INTEGER,       INTENT(IN) :: nemax(:)
+      REAL,          INTENT(IN) :: eig(:,:,:) !(neig,nkpt,jspins)
 
       REAL     :: e1,e2,e21,e3,e31,e32,s
-      INTEGER  :: i,jsp,k1,k2,k3,n,neig
+      INTEGER  :: iBand,jspin,k1,k2,k3,itria,neig
 
-      DO jsp = 1,jspins
-         neig = nemax(jsp)
+      DO jspin = 1,jspins
+         neig = nemax(jspin)
          s = 0.0
-         DO i = 1,neig
-            DO  n = 1,ntria
-               k1 = itria(1,n)
-               k2 = itria(2,n)
-               k3 = itria(3,n)
-               e1 = eig(i,k1,jsp)
-               e2 = eig(i,k2,jsp)
-               e3 = eig(i,k3,jsp)
+         DO iBand = 1,neig
+            DO itria = 1,kpts%ntet
+               k1 = kpts%ntetra(1,itria)
+               k2 = kpts%ntetra(2,itria)
+               k3 = kpts%ntetra(3,itria)
+               e1 = eig(iBand,k1,jspin)
+               e2 = eig(iBand,k2,jspin)
+               e3 = eig(iBand,k3,jspin)
                CALL trisrt(e1,e2,e3,k1,k2,k3)
                IF (e1.LE.-9999.0) cycle
                IF ((ei.LT.e1) .OR. (ei.GE.e3)) cycle
@@ -40,22 +39,23 @@ MODULE m_dosef
                   !--->  e2<ei<e3
                   e31 = e3 - e1
                   e32 = e3 - e2
-                  s = s + 2.*atr(n)* (e3-ei)/ (e31*e32)
+                  s = s + 2.0*kpts%voltet(itria)/kpts%ntet &
+                         * (e3-ei)/ (e31*e32)
                ELSE
                   !--->  e1<ei<e2
                   e31 = e3 - e1
                   e21 = e2 - e1
-                  s = s + 2.*atr(n)* (ei-e1)/ (e31*e21)
+                  s = s + 2.0*kpts%voltet(itria)/kpts%ntet &
+                         * (ei-e1)/ (e31*e21)
                ENDIF
             ENDDO
          ENDDO
          !gb  s = (2./jspins)*s
          s = sfac * s
-         WRITE (oUnit,FMT=8000) ei,jsp,s
+         WRITE (oUnit,FMT=8000) ei,jspin,s
 8000     FORMAT (/,10x,'density of states at',f12.6,&
                  ' har for spin',i2,'=',e20.8,' states/har')
       ENDDO
-
 
    END SUBROUTINE dosef
 END MODULE m_dosef

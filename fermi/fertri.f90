@@ -142,7 +142,7 @@ MODULE m_fertri
          !
          !--->   obtain dos at ef
          !
-         CALL dosef(ei,nemax,jspins,sfac,ntria,itria,atr,eig)
+         CALL dosef(ei,nemax,jspins,kpts,sfac,eig)
          !
          !--->   obtain weights needed for integration
          !
