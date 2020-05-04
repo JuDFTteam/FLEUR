@@ -26,6 +26,9 @@ CONTAINS
     ALLOCATE(fjgj%fj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
     ALLOCATE(fjgj%gj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
 
+    fjgj%fj = 0.0
+    fjgj%gj = 0.0
+
   end subroutine
 
 #ifdef CPP_GPU

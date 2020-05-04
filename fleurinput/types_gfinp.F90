@@ -7,6 +7,7 @@ MODULE m_types_gfinp
    USE m_juDFT
    USE m_types_fleurinput_base
    USE m_constants
+
    IMPLICIT NONE
    PRIVATE
 
@@ -183,8 +184,10 @@ CONTAINS
          xPathA = '/fleurInput/calculationSetup/greensFunction/contourDOS'
          this%numberContours = this%numberContours + xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
 
-         IF(this%numberContours.EQ.0) CALL juDFT_error("Error reading in gf-information: No complex energy contour specified",&
-                                                   calledby="read_xml_gfinp")
+         IF(this%numberContours.EQ.0) THEN
+            CALL juDFT_error("Error reading in gf-information: No complex energy contour specified",&
+                             calledby="read_xml_gfinp")
+         ENDIF
 
          ALLOCATE(this%contour(this%numberContours))
 
@@ -270,7 +273,8 @@ CONTAINS
             ENDIF
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
+                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                fixedCutoff=fixedCutoff)
                ENDDO
             ENDDO
          ENDDO
@@ -291,7 +295,8 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff,l_inter=.TRUE.)
+                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                fixedCutoff=fixedCutoff,l_inter=.TRUE.)
                ENDDO
             ENDDO
          ENDDO
@@ -309,22 +314,27 @@ CONTAINS
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
             ENDIF
-            CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
+            CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                          fixedCutoff=fixedCutoff)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = this%n
          ENDDO
       ENDDO
 
-      IF(this%n>0.AND..NOT.l_gfinfo_given) CALL juDFT_error("Error reading in gf-information: No general information found for the gf-calculations",&
-                                              calledby="read_xml_gfinp")
+      IF(this%n>0.AND..NOT.l_gfinfo_given) THEN
+         CALL juDFT_error("Error reading in gf-information: No general information found for the gf-calculations",&
+                           calledby="read_xml_gfinp")
+      ENDIF
 
       !Check the input for validity
       IF(this%n.GT.0) THEN
          IF(this%elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
                                               "than 1htr above efermi",calledby="read_xml_gfinp")
          IF(this%elup.LT.this%ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="read_xml_gfinp")
-         IF(ANY(this%elem(:this%n)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="read_xml_gfinp")
-         IF(ANY(this%elem(:this%n)%l.GT.3)) CALL juDFT_error("Green's function only implemented for l<=3",calledby="read_xml_gfinp")
+         IF(ANY(this%elem(:this%n)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",&
+                                                            calledby="read_xml_gfinp")
+         IF(ANY(this%elem(:this%n)%l.GT.3)) CALL juDFT_error("Green's function only implemented for l<=3",&
+                                                             calledby="read_xml_gfinp")
       ENDIF
 
    END SUBROUTINE read_xml_gfinp
@@ -436,7 +446,8 @@ CONTAINS
       LOGICAL l_found
 
       IF(PRESENT(l_inter).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: l_inter and nTypep given",&
-                                                                hint="This is a bug in FLEUR, please report",calledby="add_gfelem")
+                                                                hint="This is a bug in FLEUR, please report",&
+                                                                calledby="add_gfelem")
 
       !Check if this job has already been added
       i_gf = this%find(l,nType,lp,nType,iContour=iContour,l_found=l_found)
@@ -463,7 +474,8 @@ CONTAINS
       ENDIF
       IF(PRESENT(l_fixedCutoffset)) THEN
          IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
-                                                        hint="This is a bug in FLEUR please report",calledby="add_gfelem")
+                                                        hint="This is a bug in FLEUR please report",&
+                                                        calledby="add_gfelem")
          this%elem(this%n)%l_fixedCutoffset = l_fixedCutoffset
          IF(l_fixedCutoffset) THEN
             this%elem(this%n)%fixedCutoff = fixedCutoff
@@ -512,7 +524,8 @@ CONTAINS
          DO natomp = 1, atoms%nat
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
-               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
+               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
+                             fixedCutoff=fixedCutoff)
                dist(natomp) = 9e99 !Eliminate from the list
             ENDIF
          ENDDO
@@ -532,12 +545,15 @@ CONTAINS
       INTEGER, OPTIONAL,   INTENT(IN)    :: iContour
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
+
       INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !These arguments will return whether there
-      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_unique   !is an element before uniqueMax with the same l,lp,nType,nTypep combination
-                                                       !but different contour
-      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found !If this switch is not provided the program
-                                                    !will terminate with an error message if the
-                                                    !element is not found (for adding elements)
+      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_unique   !is an element before uniqueMax with the same (l,lp,nType,nTypep)
+                                                       !combination but different energy contour
+
+      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found    !If this switch is not provided the program
+                                                       !will assume that the element has to be present and
+                                                       !terminate with an error message if the
+                                                       !element is not found (for adding elements)
 
       INTEGER :: i_gf
       LOGICAL :: search
@@ -545,7 +561,8 @@ CONTAINS
       search = .TRUE.
       IF(PRESENT(l_unique)) l_unique = .TRUE.
       IF((PRESENT(l_unique).OR.PRESENT(uniqueMax)).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
-         CALL juDFT_error("Not provided uniqueMax AND l_unique", hint="This is a bug in FLEUR please report",calledby="find_gfelem")
+         CALL juDFT_error("Not provided uniqueMax AND l_unique",&
+                          hint="This is a bug in FLEUR please report",calledby="find_gfelem")
       ENDIF
       i_gf = 0
 
@@ -606,8 +623,7 @@ CONTAINS
 
    FUNCTION find_contour(this,label) result(iContour)
 
-      !Maps between the four indices (l,lp,nType,nTypep) and the position in the
-      !gf arrays
+      !Finds the contour defined with the given label
 
       CLASS(t_gfinp),      INTENT(IN)  :: this
       CHARACTER(len=*),  INTENT(IN)  :: label
