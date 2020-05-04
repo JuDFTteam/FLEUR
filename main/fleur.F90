@@ -514,15 +514,15 @@ END IF
             fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
             
             !Plots of mixed density
-!       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
 !               CDN including core charge
-!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
+                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+                                               fi%cell, fi%noco, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
 !!               CDN subtracted by core charge
 !                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
 !                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, outDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
- !     END IF
+!                               fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
+      END IF
  
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
