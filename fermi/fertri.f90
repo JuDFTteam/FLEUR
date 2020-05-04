@@ -59,8 +59,8 @@ MODULE m_fertri
       itria = kpts%ntetra(:,:kpts%ntet)
       atr   = kpts%voltet(:kpts%ntet)/kpts%ntet
 
-!
-!--->   clear w and set eig=-9999.9
+      !
+      !--->   clear w and set eig=-9999.9
       e_set = -9999.9
       IF (.NOT.input%film) e_set = 1.0e10
       DO jsp = 1,jspins
@@ -76,34 +76,22 @@ MODULE m_fertri
             ENDDO
          ENDDO
       ENDDO
-!
-!      sfac = 2.0/real(jspins)
-!
-!--->   write results of triang
+      !
+      !      sfac = 2.0/real(jspins)
 
       IF(.not.input%film) THEN
          lb = MINVAL(eig) - 0.01
          ub = ef + 0.2
          CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
       ELSE
+         IF ( irank == 0 ) THEN
+            WRITE (oUnit,FMT=*) 'ef_hist=',ef
+         END IF
 
-        IF ( irank == 0 ) THEN
-          WRITE (oUnit,FMT=8010) ntria
-          DO i = 1,ntria
-            WRITE (oUnit,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
-          ENDDO
-        END IF
- 8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,&
-                10x,'number of triangles=',i3,/,10x,&
-                'no.,corners and (normalized) area of each triangle:',/)
- 8020   FORMAT (10x,i3,3x,3i3,f14.6)
-        IF ( irank == 0 ) THEN
-          WRITE (oUnit,FMT=*) 'ef_hist=',ef
-        END IF
-        ei = ef
-!jr     emin = -9999.9
-        emin = +9999.9
-        emax = -emin
+         ei = ef
+!jr      emin = -9999.9
+         emin = +9999.9
+         emax = -emin
         ic = 1
    90   IF (ic.GT.100) GO TO 230
         ic = ic + 1
