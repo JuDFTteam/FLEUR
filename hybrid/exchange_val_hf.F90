@@ -109,7 +109,7 @@ CONTAINS
       INTEGER                 ::  i, ierr
       INTEGER                 ::  j, iq_p
       INTEGER                 ::  n1, n2, nn2
-      INTEGER                 ::  nkqpt, iob, m,n,k,lda,ldb,ldc
+      INTEGER                 ::  ikqpt, iob, m,n,k,lda,ldb,ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
       integer, allocatable    :: start_idx(:), psizes(:)
 
@@ -152,30 +152,31 @@ CONTAINS
 
       exch_vv = 0
 
-      DO jq = nkpt_EIBZ, 1, -1
+      !DO jq = nkpt_EIBZ, 1, -1
+      DO jq = 1,nkpt_EIBZ
          iq = pointer_EIBZ(jq)
          iq_p = fi%kpts%bkp(iq)
 
 
-         nkqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
+         ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
          ! arrays should be less than 5 gb
          if(mat_ex%l_real) then
             target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
          else
             target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
          endif
-         n_parts = ceiling(hybdat%nobd(nkqpt, jsp)/target_psize)
-         call split_iob_loop(hybdat, hybdat%nobd(nkqpt, jsp), n_parts, start_idx, psizes)
+         n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+         call split_iob_loop(hybdat, hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psizes)
          do ipart = 1, n_parts
-            write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ")"
+            if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ")"
             psize = psizes(ipart)
             ibando = start_idx(ipart)
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, nkqpt, cprod_vv)
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, ikqpt, cprod_vv)
             ELSE
-               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, nkqpt, cprod_vv)
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -185,7 +186,7 @@ CONTAINS
             ! in Fourier space
             IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
                call judft_error("HSE not implemented")
-               ! iband1 = hybdat%nobd(nkqpt, jsp)
+               ! iband1 = hybdat%nobd(ikqpt, jsp)
 
                ! exch_vv = exch_vv + &
                !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
@@ -194,7 +195,7 @@ CONTAINS
                !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
                !                                  fi%sym%invsat, fi%sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-               !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(jq))
+               !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
             END IF
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
@@ -228,13 +229,13 @@ CONTAINS
                if(mat_ex%l_real) then
                   DO iob = 1, psize
                      do i=1,hybdat%nbasm(iq)
-                        carr1_v%data_r(i,iob + psize*(iband-1)) = carr1_v%data_r(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, nkqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
+                        carr1_v%data_r(i,iob + psize*(iband-1)) = carr1_v%data_r(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, ikqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                else
                   DO iob = 1, psize
                      do i=1,hybdat%nbasm(iq)
-                        carr1_v%data_c(i,iob + psize*(iband-1)) = carr1_v%data_c(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, nkqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
+                        carr1_v%data_c(i,iob + psize*(iband-1)) = carr1_v%data_c(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, ikqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                endif
