@@ -66,7 +66,7 @@ CONTAINS
       enddo
    end function outer_prod
 
-   subroutine wavef2rs_cmplx(fi, lapw, stars, zmat, bandoi, bandof, jspin, psi)
+   subroutine wavef2rs_cmplx(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
       use m_types
       use m_fft_interface
       implicit none
@@ -74,23 +74,19 @@ CONTAINS
       type(t_lapw), intent(in)       :: lapw
       type(t_mat), intent(in)        :: zmat
       type(t_stars), intent(in)      :: stars
-      integer, intent(in)            :: jspin, bandoi, bandof
+      integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
       complex, intent(inout)         :: psi(0:,bandoi:) ! (nv,ne)
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu
-      integer :: length_zfft(3), fft_idx(3)
-
-
-      length_zfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
 
       DO iv = 1, lapw%nv(jspin)
-         ivmap(iv) = stars%g2fft(lapw%gvec(:, iv, jspin))
+         ivmap(iv) = stars%g2fft(length_zfft, lapw%gvec(:, iv, jspin))
       ENDDO
 
       psi = 0.0
       do nu = bandoi, bandof
-         !------> map WF nto FFTbox
+         !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
             psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
          ENDDO

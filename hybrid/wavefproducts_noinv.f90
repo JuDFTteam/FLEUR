@@ -92,14 +92,15 @@ CONTAINS
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_nkqpt
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob
-      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
+      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iq
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3)
       
       allocate(iob_arr(cprod%matsize2))
       allocate(iband_arr(cprod%matsize2))
 
-      length_zfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
+      length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
+      !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
       if(2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then 
          call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
@@ -111,7 +112,7 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nkqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt)
       
-      fftd = stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1
+      fftd = product(length_zfft) - 1
 
       allocate(psi_k(0:fftd,hybdat%nbands(ik)), stat=ok)
       if(ok /= 0) call juDFT_error("can't allocate psi_k")
@@ -120,19 +121,22 @@ CONTAINS
       allocate(prod(0:fftd), stat=ok)
       if(ok /= 0) call juDFT_error("can't allocate prod")
 
-      !this is for the excat result. Christoph recommend 2*gmax+gcutm for later
-      call wavef2rs_cmplx(fi, lapw, stars, z_k, 1, hybdat%nbands(ik), jsp, psi_k)
+      call wavef2rs_cmplx(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k)
+      call save_npy("psi_k.npy", psi_k)
       psi_k = conjg(psi_k)/sqrt(fi%cell%omtil)
 
+      if(size(psi_k, 1) /= size(stars%ufft)) call juDFT_error("they don't agree at all")
       do iband = 1, hybdat%nbands(ik)
          do irs = 0,fftd
             psi_k(irs,iband) = psi_k(irs,iband) * stars%ufft(irs)
          enddo 
       enddo
 
-      call wavef2rs_cmplx(fi, lapw, stars, z_kqpt, bandoi, bandof, jsp, psi_kqpt)
+      call wavef2rs_cmplx(fi, lapw, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt)
+      call save_npy("psi_kqpt.npy", psi_kqpt)
 
       q      = fi%kpts%bkf(:,ik) - fi%kpts%bkf(:,ikq) 
+      iq     = fi%kpts%get_nk(q)
       gshift = q - fi%kpts%to_first_bz(q)
 
       write (*,*) "G-shift", gshift
@@ -140,21 +144,22 @@ CONTAINS
       do iband = 1,hybdat%nbands(ik)
          do iob = bandoi, bandof 
             prod = psi_k(:,iband) * psi_kqpt(:,iob)
+            if(iband == 1 .and. iob == 1) call save_npy("prod.npy", prod)
             call fft_interface(3, length_zfft, prod, .true.)
             ! we still have to devide by the number of mesh points
             prod = prod / product(length_zfft)
 
             DO igptm = 1, mpdata%n_g(ikq)
-               g = mpdata%g(:, igptm) - gshift
-               ! iob_arr(iob + (iband-1)*psize) = iob 
-               ! iband_arr(iob + (iband-1)*psize) = iband
-               cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(stars%g2fft(g))               
+               g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - gshift
+               iob_arr(iob + (iband-1)*psize) = iob 
+               iband_arr(iob + (iband-1)*psize) = iband
+               cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(stars%g2fft(length_zfft,g))               
             enddo
          enddo 
       enddo
 
-      ! call save_npy("iob.npy", iob_arr)
-      ! call save_npy("iband.npy", iband_arr)
+      call save_npy("iob.npy", iob_arr)
+      call save_npy("iband.npy", iband_arr)
    end subroutine wavefproducts_noinv_IS_FFT
 
    subroutine wavefproducts_noinv_IS(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
