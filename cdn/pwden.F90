@@ -282,7 +282,7 @@ CONTAINS
       fft_size = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
       DO ispin = jsp_start, jsp_end
          DO iv = 1, lapw%nv(ispin)
-            iv1d(iv, ispin) = stars%g2fft(fft_size, lapw%gvec(:, iv, ispin))
+            iv1d(iv, ispin) = g2fft(fft_size, lapw%gvec(:, iv, ispin))
          ENDDO
       ENDDO
 
