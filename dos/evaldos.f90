@@ -277,8 +277,7 @@
             !
             IF(input%bz_integration.EQ.2) THEN
                IF ( input%film ) THEN
-                  CALL ptdos(input%jspins,ned,qdim,ntb,ntria,as,&
-                             atr,itria,kpts%nkpt,ev,qal,e, g)
+                  CALL ptdos(input%jspins,ned,qdim,ntb,kpts,ev,qal,e, g)
                ELSE
                   write(*,*) efermi
                   CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
@@ -423,8 +422,8 @@
 !     >                 emin,emax,jspins,ned,nstars*nvac*layers,neigd,
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
 !     <                 g)
-            CALL ptdos(emin,emax,input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,ntb,ntria&
-                ,as,atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt), qval(:,1:ntb,1:kpts%nkpt),e,g)
+            CALL ptdos(input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,&
+                       ntb,kpts,ev,qval,e,g)
 
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN

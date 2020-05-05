@@ -2,33 +2,36 @@ MODULE m_ptdos
    !-------------------------------------------------------------------------
    ! Density of states calculated by linear triangular method
    !-------------------------------------------------------------------------
+   USE m_types
+
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE ptdos(jspins,ne,ndos,ntb,ntria,as,atr,&
-                       itria,nkpt,ev,qal,e,g)
+   SUBROUTINE ptdos(jspins,ne,ndos,ntb,kpts,ev,qal,e,g)
 
-      INTEGER, INTENT (IN) :: ne,ntria,jspins,ndos,ntb,nkpt
-      INTEGER, INTENT (IN) :: itria(:,:)
-      REAL,    INTENT (IN) :: as
-      REAL,    INTENT (IN) :: atr(:),qal(:,:,:)!(ndos,ntb,nkpt)
-      REAL,    INTENT (IN) :: e(:),ev(:,:)!(ntb,nkpt)
-      REAL,    INTENT (OUT):: g(:,:)      !(ne,ndos)
+      INTEGER,       INTENT(IN)  :: ne,jspins,ndos,ntb
+      TYPE(t_kpts),  INTENT(IN)  :: kpts
+      REAL,          INTENT(IN)  :: qal(:,:,:)  !(ndos,ntb,nkpt)
+      REAL,          INTENT(IN)  :: e(:)
+      REAL,          INTENT(IN)  :: ev(:,:)     !(ntb,nkpt)
+      REAL,          INTENT(OUT) :: g(:,:)      !(ne,ndos)
 
       INTEGER :: i, j, nl, nb, n, nt(3), nc(4)
-      REAL    :: f, fa, ec(4)
+      REAL    :: sfac, fa, ec(4)
 
       !
       !     calculate partial densities of states
       !
-      f = 2*(3-jspins)/as
+
+      !Spin-degeneracy factor
+      sfac = 2.0*(3.0-jspins)
 
       g = 0.
 
-      DO n = 1 , ntria
-         fa = f*atr(n)
-         nt(:) = itria(:,n)
+      DO n = 1 , kpts%ntet
+         fa = sfac*kpts%voltet(n)/kpts%ntet
+         nt(:) = kpts%ntetra(:,n)
          DO nb = 1 , ntb
             ec(1:3) = ev(nb,nt(:))
             nc(1:3) = nt(:)
