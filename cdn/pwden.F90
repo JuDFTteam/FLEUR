@@ -121,7 +121,7 @@ CONTAINS
       INTEGER, PARAMETER::  ist(-1:1) = (/1, 0, 0/)
       REAL, PARAMETER:: zero = 0.00, tol_3 = 1.0e-3
       !
-      INTEGER iv1d(SIZE(lapw%gvec, 2), input%jspins)
+      INTEGER iv1d(SIZE(lapw%gvec, 2), input%jspins), fft_size(3)
       REAL wtf(ne), wsave(stars%kq3_fft + 15)
       REAL, ALLOCATABLE :: psir(:), psii(:), rhon(:)
       REAL, ALLOCATABLE :: psi1r(:), psi1i(:), psi2r(:), psi2i(:)
@@ -278,9 +278,11 @@ CONTAINS
          jsp_start = jspin
          jsp_end = jspin
       ENDIF
+
+      fft_size = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
       DO ispin = jsp_start, jsp_end
          DO iv = 1, lapw%nv(ispin)
-            iv1d(iv, ispin) = stars%g2fft(lapw%gvec(:, iv, ispin))
+            iv1d(iv, ispin) = stars%g2fft(fft_size, lapw%gvec(:, iv, ispin))
          ENDDO
       ENDDO
 
