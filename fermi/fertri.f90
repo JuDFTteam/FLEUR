@@ -22,15 +22,15 @@ MODULE m_fertri
    SUBROUTINE fertri(input,kpts,irank,ne,jspins,zc,eig,sfac,&
                      ef,seigv,w)
 
-      TYPE(t_input),INTENT(IN):: input
-      TYPE(t_kpts), INTENT(IN):: kpts
-      INTEGER, INTENT (IN)    :: jspins,irank
-      REAL,    INTENT (IN)    :: zc,sfac
-      INTEGER, INTENT (IN)    :: ne(:,:)!(nkpt,jspins)
-      REAL,    INTENT (OUT)   :: seigv
-      REAL,    INTENT (INOUT) :: ef
-      REAL,    INTENT (OUT)   :: w(:,:,:) !(neig,nkpt,jspins)
-      REAL,    INTENT (INOUT) :: eig(:,:,:)!(neig,nkpt,jspins)
+      TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_kpts),  INTENT(IN)    :: kpts
+      INTEGER,       INTENT(IN)    :: jspins,irank
+      REAL,          INTENT(IN)    :: zc,sfac
+      INTEGER,       INTENT(IN)    :: ne(:,:)!(nkpt,jspins)
+      REAL,          INTENT(OUT)   :: seigv
+      REAL,          INTENT(INOUT) :: ef
+      REAL,          INTENT(OUT)   :: w(:,:,:) !(neig,nkpt,jspins)
+      REAL,          INTENT(INOUT) :: eig(:,:,:)!(neig,nkpt,jspins)
 
       REAL    :: chmom,ct,del,dez,ei,emax,emin,s,s1,workf
       REAL    :: lb,ub,e_set
@@ -38,7 +38,7 @@ MODULE m_fertri
       INTEGER :: nemax(2)
       REAL, PARAMETER :: de = 5.0e-3 !Step for initial search
 
-      IF ( irank == 0 ) THEN
+      IF (irank == 0) THEN
          WRITE (oUnit,FMT=8000)
 8000     FORMAT (/,/,10x,'linear triangular method')
       END IF
@@ -68,7 +68,7 @@ MODULE m_fertri
          ub = ef + 0.2
          CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
       ELSE
-         IF ( irank == 0 ) THEN
+         IF (irank == 0) THEN
             WRITE (oUnit,FMT=*) 'ef_hist=',ef
          END IF
 
@@ -104,14 +104,14 @@ MODULE m_fertri
          ENDDO
 
          IF (ct.NE.zc) THEN
-            IF ( irank == 0 ) WRITE (oUnit,FMT=*) '2nd dosint'
+            IF (irank == 0) WRITE (oUnit,FMT=*) '2nd dosint'
             !---> refine ef to a value of 5 mry * (2**-20)
             iterate : DO i = 1, 40
                ei = 0.5* (emin+emax)
 
                CALL dosint(ei,nemax,jspins,kpts,sfac,eig,ct)
 
-               IF ( irank == 0 ) WRITE (oUnit,FMT=*) 'i=',i,', ct=',ct
+               IF (irank == 0) WRITE (oUnit,FMT=*) 'i=',i,', ct=',ct
                IF ( ct == zc ) THEN
                   EXIT iterate
                ELSEIF ( ct > zc ) THEN
@@ -125,7 +125,7 @@ MODULE m_fertri
          del = emax - emin
          dez = zc - ct
          workf = -hartree_to_ev_const*ef
-         IF ( irank == 0 ) THEN
+         IF (irank == 0) THEN
             WRITE (oUnit,FMT=8030) ef,workf,del,dez
 8030        FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='&
                     ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',&
@@ -173,7 +173,7 @@ MODULE m_fertri
       seigv = sfac*seigv
       chmom = s1 - jspins*s
 
-      IF ( irank == 0 ) THEN
+      IF (irank == 0) THEN
          WRITE (oUnit,FMT=8040) seigv,s1,chmom
 8040     FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
                   'sum of weights=',f10.6,/,10x,'moment=',f12.6)
