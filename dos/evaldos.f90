@@ -277,9 +277,8 @@
             !
             IF(input%bz_integration.EQ.2) THEN
                IF ( input%film ) THEN
-                  CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
-                             atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
-                             qal(:,1:ntb,1:kpts%nkpt),e, g)
+                  CALL ptdos(input%jspins,ned,qdim,ntb,ntria,as,&
+                             atr,itria,kpts%nkpt,ev,qal,e, g)
                ELSE
                   write(*,*) efermi
                   CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)

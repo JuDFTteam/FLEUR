@@ -6,15 +6,15 @@ MODULE m_ptdos
 
    CONTAINS
 
-   SUBROUTINE ptdos(emin,emax,jspins,ne,ndos,ntb,ntria,as,atr,ntriad,&
+   SUBROUTINE ptdos(jspins,ne,ndos,ntb,ntria,as,atr,&
                        itria,nkpt,ev,qal,e,g)
 
-      INTEGER, INTENT (IN) :: ne,ntria,jspins,ntriad,ndos,ntb,nkpt
-      INTEGER, INTENT (IN) :: itria(3,ntriad)
-      REAL,    INTENT (IN) :: emax,emin,as
-      REAL,    INTENT (IN) :: atr(ntriad),qal(ndos,ntb,nkpt)
-      REAL,    INTENT (IN) :: e(ne),ev(ntb,nkpt)
-      REAL,    INTENT (OUT):: g(ne,ndos)
+      INTEGER, INTENT (IN) :: ne,ntria,jspins,ndos,ntb,nkpt
+      INTEGER, INTENT (IN) :: itria(:,:)
+      REAL,    INTENT (IN) :: as
+      REAL,    INTENT (IN) :: atr(:),qal(:,:,:)!(ndos,ntb,nkpt)
+      REAL,    INTENT (IN) :: e(:),ev(:,:)!(ntb,nkpt)
+      REAL,    INTENT (OUT):: g(:,:)      !(ne,ndos)
 
       INTEGER :: i, j, nl, nb, n, nt(3), nc(4)
       REAL    :: f, fa, ec(4)
@@ -91,6 +91,5 @@ MODULE m_ptdos
          RETURN
       ENDIF
    END FUNCTION dostet
-!
-!-------------------------------------------------------------------------
-      END MODULE m_ptdos
+
+END MODULE m_ptdos
