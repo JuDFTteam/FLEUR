@@ -28,14 +28,10 @@ MODULE m_ptdos
       REAL    :: sfac,fa
       REAL    :: ei(3)
 
-      !
-      !     calculate partial densities of states
-      !
-
       !Spin-degeneracy factor
       sfac = 2.0*(3.0-jspins)
 
-      g = 0.
+      g = 0.0
 
       DO itria = 1 , kpts%ntet
          fa = sfac*kpts%voltet(itria)/kpts%ntet
@@ -50,9 +46,13 @@ MODULE m_ptdos
             !sort in ascending order
             CALL tetsrt(3,ei,ind)
 
+            !
+            !calculate partial densities of states
+            !
+
             DO idos = 1 , ndos
                DO iGrid = 1 , ne
-                  g(iGrid,idos) = g(iGrid,idos) + fa & 
+                  g(iGrid,idos) = g(iGrid,idos) + fa &
                                   * dostet( eGrid(iGrid),ei(ind),qal(idos,iBand,k(ind)) )
                ENDDO
             ENDDO
