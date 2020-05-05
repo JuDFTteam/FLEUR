@@ -160,7 +160,7 @@ MODULE m_tetraef
                DO jspin = 1,jspins
                   ttt  =efermi-eig(iBand,ikpt,jspin)
                   IF ( efermi.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
-                  IF (ttt.LT.0.0e0)                  ttt = 0.0e0
+                  IF (ttt.LT.0.0e0)                   ttt = 0.0e0
                   dfermi = dfermi + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
                ENDDO
             ENDDO

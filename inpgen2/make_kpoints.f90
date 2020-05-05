@@ -497,23 +497,22 @@ CONTAINS
           !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
           !ENDIF
           !write(*,*) as,sym%nop2,l_tria
+
+          !Match normalisation of other methods
+          voltet = voltet/as*kpts%ntet
        ENDIF
 
-       IF(bz_integration==3 .AND..NOT.film) THEN
+       IF(bz_integration==3) THEN
           !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
           !We need to call gen_bz to get the full grid (necessary???)
           CALL kpts%init(cell, sym, film)
           IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
-                                             "needs a gamma centerd kpoint grid",&
-                                             calledby="init_by_grid")
-          CALL tetrahedron_regular(kpts,cell,grid,ntetra,voltet)
+                                                 "needs a gamma centered kpoint grid",&
+                                                 calledby="init_by_grid")
+          CALL tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
        ENDIF
 
-       IF(bz_integration==3.AND.film) THEN
-          CALL juDFT_error("tetra and film: Nothing here yet",calledby="init_by_grid")
-       ENDIF
-
-       IF (bz_integration==2.AND.random.OR.bz_integration==3.AND..NOT.film) THEN
+       IF (bz_integration==2 .AND.random.OR.bz_integration==3 .AND..NOT.film) THEN
           ALLOCATE(kpts%ntetra(4,kpts%ntet))
           ALLOCATE(kpts%voltet(kpts%ntet))
           DO j = 1, kpts%ntet
@@ -525,7 +524,7 @@ CONTAINS
           ALLOCATE(kpts%voltet(kpts%ntet))
           DO j = 1, kpts%ntet
              kpts%ntetra(:,j) = ntetra(:,j)
-             kpts%voltet(j) = ABS(voltet(j))/as*kpts%ntet
+             kpts%voltet(j) = ABS(voltet(j))
           END DO
        ENDIF
     ENDIF
