@@ -21,7 +21,6 @@
 !----------------------------------------------------------------------
       USE m_types
       USE m_constants
-      USE m_triang
       USE m_tetrados
       USE m_dostetra !confusing names (TODO:change/cleanup)
       USE m_dosbin
@@ -52,15 +51,14 @@
 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,col,jj,iBand
+      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,col,jj,iBand
       INTEGER  icore,qdim,n_orb,ncored,jsp,n_jDOS
-      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
+      REAL     de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
-      LOGICAL  l_tria,l_orbcomp,l_error,l_jDOS
+      LOGICAL  l_orbcomp,l_error,l_jDOS
 
-      INTEGER  itria(3,2*kpts%nkpt)
       REAL     kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
-      REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
+      REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
       REAL,    ALLOCATABLE :: mcd_local(:,:,:)
@@ -247,22 +245,6 @@
 !
 !
          ENDDO                                                 ! end of k-point loop
-!
-!     calculate the triangles!
-!
-         IF ( jspin.EQ.1 ) THEN
-           l_tria=.true.
-           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
-             IF (sym%invs) THEN
-               IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-             ELSE
-               IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-             ENDIF
-             write(*,*) as,sym%nop2,l_tria
-!             l_tria=.true.
-           ENDIF
-         ENDIF
 
          IF ( .not.l_mcd ) THEN
             ALLOCATE (g(ned,qdim))

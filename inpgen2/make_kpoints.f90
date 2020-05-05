@@ -491,6 +491,12 @@ CONTAINS
           ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
           l_tria = .FALSE.
           CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
+          !IF (sym%invs) THEN
+          !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
+          !ELSE
+          !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
+          !ENDIF
+          !write(*,*) as,sym%nop2,l_tria
        ENDIF
 
        IF(bz_integration==3 .AND..NOT.film) THEN
