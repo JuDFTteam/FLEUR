@@ -13,5 +13,4 @@ greensf/hybridization.f90
 greensf/occmtx.f90
 #greensf/gfDOS.f90
 greensf/lstojmj.f90
-#greensf/calc_tria.f90
 )
