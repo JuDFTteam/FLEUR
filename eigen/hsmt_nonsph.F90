@@ -83,8 +83,8 @@ CONTAINS
        size_data_c=size(data_c,1)
     endif
 #endif
-    allocate(h_loc(SIZE(td%h_loc,1),SIZE(td%h_loc,1)))
-    h_loc=td%h_loc(0:,0:,n,isp,jsp)
+    allocate(h_loc(SIZE(td%h_loc_nonsph,1),SIZE(td%h_loc_nonsph,1)))
+    h_loc=td%h_loc_nonsph(0:,0:,n,isp,jsp)
 #ifdef _OPENACC
     !$acc enter data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
     !$acc kernels present(data_c) default(none)
@@ -102,7 +102,7 @@ CONTAINS
           !!$acc update device(ab)
           !$acc host_data use_device(ab,ab1,h_loc)
           CALL CPP_zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
-                     h_loc,size(td%h_loc,1),cmplx(0.,0.),ab1,size_ab1)
+                     h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab1)
           !$acc end host_data
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
@@ -146,7 +146,7 @@ CONTAINS
                 !$acc update device (ab)
                 !$acc host_data use_device(ab,h_loc,ab2)
                 CALL CPP_zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
-                     h_loc,size(td%h_loc,1),CMPLX(0.,0.),ab2,size_ab2)
+                     h_loc,size(td%h_loc_nonsph,1),CMPLX(0.,0.),ab2,size_ab2)
                 !$acc end host_data
                 !$acc kernels  default(none) present(ab2)
                 ab2(:,:)=conjg(ab2(:,:))
