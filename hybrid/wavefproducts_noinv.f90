@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
    USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv(fi, ik, z_k, ikq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, nkqpt, cprod)
+   SUBROUTINE wavefproducts_noinv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod)
       USE m_types
       use m_juDFT
       use m_constants, only: cmplx_0
@@ -18,8 +18,8 @@ CONTAINS
       type(t_mat), intent(inout)      :: cprod
 
 !     - scalars -
-      INTEGER, INTENT(IN)        ::  ik, ikq, jsp, bandoi, bandof
-      INTEGER, INTENT(INOUT)     ::  nkqpt
+      INTEGER, INTENT(IN)        ::  ik, iq, jsp, bandoi, bandof
+      INTEGER, INTENT(INOUT)     ::  ikqpt
 
       INTEGER              :: g_t(3), psize
       REAL                 :: kqpt(3), kqpthlp(3)
@@ -29,43 +29,39 @@ CONTAINS
 
       call timestart("wavefproducts_noinv")
       cprod%data_c = cmplx_0
-      nkqpt = 0
+      ikqpt = 0
 
-      ! calculate nkqpt
-      kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, ikq)
+      ! calculate ikqpt
+      kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
       kqpt = fi%kpts%to_first_bz(kqpthlp)
+
+      ! if k+q outside of first BZ put we need this shift
       g_t = nint(kqpt - kqpthlp)
       ! determine number of kqpt
-      nkqpt = fi%kpts%get_nk(kqpt)
-      allocate (c_phase_kqpt(hybdat%nbands(nkqpt)))
+      ikqpt = fi%kpts%get_nk(kqpt)
+      allocate (c_phase_kqpt(hybdat%nbands(ikqpt)))
       call cprod_tmp%init(cprod)
 
       IF (.not. fi%kpts%is_kpt(kqpt)) then
          call juDFT_error('wavefproducts: k-point not found')
       endif
 
-      call wavefproducts_noinv_IS(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-                                  nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      call wavefproducts_noinv_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                  ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      call wavefproducts_noinv_IS_FFT(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                  nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod_tmp)
+      ! call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
+      !                             ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      if(norm2(abs(cprod%data_c - cprod_tmp%data_c)) > 1e-12 ) then 
-         call cprod%save_npy("faltung.npy")
-         call cprod_tmp%save_npy("fft.npy")
-         call save_npy("nbasp.npy", [hybdat%nbasp])
-         call save_npy("g.npy", mpdata%g)
-         call juDFT_error("the result is wrong")
-      endif
-      call wavefproducts_noinv_MT(fi, ik, ikq, bandoi, bandof, nococonv, mpdata, hybdat, &
-                                  jsp, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+
+      call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
+                                  jsp, ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call timestop("wavefproducts_noinv")
 
    END SUBROUTINE wavefproducts_noinv
 
-   subroutine wavefproducts_noinv_IS_FFT(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-      nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+   subroutine wavefproducts_noinv_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+      ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
@@ -82,17 +78,17 @@ CONTAINS
       type(t_mat), intent(in)         :: z_k
       type(t_mat), intent(inout)      :: z_kqpt_p, cprod
       !     - scalars -
-      INTEGER, INTENT(IN)      ::  ik, ikq, jsp, g_t(3), bandoi, bandof
-      INTEGER, INTENT(IN)      ::  nkqpt
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
+      INTEGER, INTENT(IN)      ::  ikqpt
       !     - arrays -
-      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
+      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
       
       complex, allocatable      :: psi_k(:,:), psi_kqpt(:,:), prod(:)
       
       type(t_mat)               :: z_kqpt
-      type(t_lapw)              :: lapw_nkqpt
+      type(t_lapw)              :: lapw_ikqpt
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob
-      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iq
+      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3)
       
@@ -106,11 +102,12 @@ CONTAINS
       endif
 
       psize = bandof - bandoi + 1
-      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
-      nbasfcn = lapw_nkqpt%hyb_num_bas_fun(fi)
+      CALL lapw_ikqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ikqpt, fi%cell, fi%sym%zrfs)
+      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
       call z_kqpt%alloc(.false., nbasfcn, fi%input%neig)
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nkqpt, jsp, z_kqpt, &
-                  c_phase=c_phase_kqpt)
+      call z_kqpt_p%init(z_kqpt)
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
+                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
       
       fftd = product(length_zfft) - 1
 
@@ -122,48 +119,35 @@ CONTAINS
       if(ok /= 0) call juDFT_error("can't allocate prod")
 
       call wavef2rs_cmplx(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k)
-      call save_npy("psi_k.npy", psi_k)
       psi_k = conjg(psi_k)/sqrt(fi%cell%omtil)
 
-      if(size(psi_k, 1) /= size(stars%ufft)) call juDFT_error("they don't agree at all")
       do iband = 1, hybdat%nbands(ik)
          do irs = 0,fftd
             psi_k(irs,iband) = psi_k(irs,iband) * stars%ufft(irs)
          enddo 
       enddo
 
-      call wavef2rs_cmplx(fi, lapw, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt)
-      call save_npy("psi_kqpt.npy", psi_kqpt)
-
-      q      = fi%kpts%bkf(:,ik) - fi%kpts%bkf(:,ikq) 
-      iq     = fi%kpts%get_nk(q)
-      gshift = q - fi%kpts%to_first_bz(q)
-
-      write (*,*) "G-shift", gshift
+      call wavef2rs_cmplx(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt)
 
       do iband = 1,hybdat%nbands(ik)
          do iob = bandoi, bandof 
             prod = psi_k(:,iband) * psi_kqpt(:,iob)
-            if(iband == 1 .and. iob == 1) call save_npy("prod.npy", prod)
             call fft_interface(3, length_zfft, prod, .true.)
             ! we still have to devide by the number of mesh points
             prod = prod / product(length_zfft)
 
-            DO igptm = 1, mpdata%n_g(ikq)
-               g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - gshift
+            DO igptm = 1, mpdata%n_g(iq)
+               g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                iob_arr(iob + (iband-1)*psize) = iob 
                iband_arr(iob + (iband-1)*psize) = iband
-               cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(stars%g2fft(length_zfft,g))               
+               cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(g2fft(length_zfft,g))               
             enddo
          enddo 
       enddo
-
-      call save_npy("iob.npy", iob_arr)
-      call save_npy("iband.npy", iband_arr)
    end subroutine wavefproducts_noinv_IS_FFT
 
-   subroutine wavefproducts_noinv_IS(fi, ik, ikq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-                                     nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+   subroutine wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
+                                     ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
@@ -179,11 +163,11 @@ CONTAINS
       type(t_mat), intent(inout)      :: z_kqpt_p, cprod
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ik, ikq, jsp, g_t(3), bandoi, bandof
-      INTEGER, INTENT(IN)      ::  nkqpt
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
+      INTEGER, INTENT(IN)      ::  ikqpt
 
 !     - arrays -
-      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
+      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2, iob, iband, ok
@@ -192,7 +176,7 @@ CONTAINS
 
       COMPLEX                 ::  cdum, cdum1
 
-      TYPE(t_lapw)            ::  lapw_nkqpt
+      TYPE(t_lapw)            ::  lapw_ikqpt
 
 !      - local arrays -
       INTEGER                 ::  g(3)
@@ -207,20 +191,20 @@ CONTAINS
       allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
       !
-      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
+      ! compute G's fulfilling |bk(:,ikqpt) + G| <= rkmax
       !
-      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
-      nbasfcn = lapw_nkqpt%hyb_num_bas_fun(fi)
+      CALL lapw_ikqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ikqpt, fi%cell, fi%sym%zrfs)
+      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
       call z_kqpt%alloc(.false., nbasfcn, fi%input%neig)
       call z_kqpt_p%init(z_kqpt)
 
-      ! read in z at k-point ik and nkqpt
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nkqpt, jsp, z_kqpt, &
+      ! read in z at k-point ik and ikqpt
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
       g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
-          + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2) &
-          + maxval(abs(mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikq), ikq))), dim=2) + 1
+          + maxval(abs(lapw_ikqpt%gvec(:, :lapw_ikqpt%nv(jsp), jsp)), dim=2) &
+          + maxval(abs(mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(iq), iq))), dim=2) + 1
 
       psize = bandof-bandoi+1
 
@@ -231,21 +215,21 @@ CONTAINS
       !
 
       !(1) prepare list of G vectors
-      call prep_list_of_gvec(lapw, mpdata, g, g_t, ikq, jsp, pointer, gpt0, ngpt0)
+      call prep_list_of_gvec(lapw, mpdata, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
       !(2) calculate convolution
       call timestart("calc convolution")
       call timestart("step function")
       ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
 
-      DO ig2 = 1, lapw_nkqpt%nv(jsp)
+      DO ig2 = 1, lapw_ikqpt%nv(jsp)
          if (z_kqpt%l_real) then
             carr1 = z_kqpt%data_r(ig2, bandoi:bandof)
          else
             carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
          endif
          DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
+            g = gpt0(:, ig) - lapw_ikqpt%gvec(:, ig2, jsp)
             cdum = hybdat%stepfunc(g(1), g(2), g(3))
             DO n2 = bandoi,bandof
                z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
@@ -255,15 +239,15 @@ CONTAINS
       call timestop("step function")
 
       call timestart("hybrid g")
-      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik), mpdata%n_g(ikq)), source=(0.0, 0.0))
+      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik), mpdata%n_g(iq)), source=(0.0, 0.0))
       if (z_k%l_real) then
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
-         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, ikq, ik, bandoi, bandof) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, iq, ik, bandoi, bandof) &
          !$OMP collapse(2)
-         DO igptm = 1, mpdata%n_g(ikq)
+         DO igptm = 1, mpdata%n_g(iq)
             DO ig1 = 1, lapw%nv(jsp)
-               iigptm = mpdata%gptm_ptr(igptm, ikq)
+               iigptm = mpdata%gptm_ptr(igptm, iq)
                g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
@@ -280,11 +264,11 @@ CONTAINS
       else
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
-         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, ikq, ik, bandoi, bandof) &
+         !$OMP shared(mpdata, lapw, pointer, hybdat, ctmp, z0, z_k, g_t, jsp, iq, ik, bandoi, bandof) &
          !$OMP collapse(2)
-         DO igptm = 1, mpdata%n_g(ikq)
+         DO igptm = 1, mpdata%n_g(iq)
             DO ig1 = 1, lapw%nv(jsp)
-               iigptm = mpdata%gptm_ptr(igptm, ikq)
+               iigptm = mpdata%gptm_ptr(igptm, iq)
                g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
@@ -299,10 +283,8 @@ CONTAINS
          !$OMP END PARALLEL DO
       endif
 
-      call save_npy("ctmp_fold.npy", ctmp)
-
       call timestart("copy to cprod")
-      do igptm = 1, mpdata%n_g(ikq)
+      do igptm = 1, mpdata%n_g(iq)
          ic = hybdat%nbasp + igptm
          do iob = 1,psize 
             b_idx = iob - 1 + bandoi
@@ -320,7 +302,7 @@ CONTAINS
       call timestop("wavefproducts_noinv5 IR")
    end subroutine wavefproducts_noinv_IS
 
-   subroutine wavefproducts_noinv_MT(fi, ik, ikq, bandoi, bandof, nococonv, mpdata, hybdat, jsp, ikqpt, &
+   subroutine wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, jsp, ikqpt, &
                                      z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       USE m_constants
@@ -337,7 +319,7 @@ CONTAINS
       type(t_mat), intent(inout)      :: cprod
 
       !     - scalars -
-      INTEGER, INTENT(IN)     ::  ik, ikq, jsp, bandoi, bandof
+      INTEGER, INTENT(IN)     ::  ik, iq, jsp, bandoi, bandof
       INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
@@ -391,7 +373,7 @@ CONTAINS
             ic = ic + 1
             ic1 = 0
 
-            atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, ikq), fi%atoms%taual(:, ic)))
+            atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
 
             DO l = 0, fi%hybinp%lcutm1(itype)
 

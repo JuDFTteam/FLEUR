@@ -81,7 +81,7 @@ CONTAINS
       integer :: iv, nu
 
       DO iv = 1, lapw%nv(jspin)
-         ivmap(iv) = stars%g2fft(length_zfft, lapw%gvec(:, iv, jspin))
+         ivmap(iv) = g2fft(length_zfft, lapw%gvec(:, iv, jspin))
       ENDDO
 
       psi = 0.0
