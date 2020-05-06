@@ -96,10 +96,11 @@ CONTAINS
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
       integer, allocatable :: iob_arr(:), iband_arr(:)
-      real    :: q(3)
+      real    :: q(3), inv_vol 
       type(t_mat)  :: psi_k, psi_kqpt
 
       call timestart("wavef_IS_FFT")
+      inv_vol = 1/sqrt(fi%cell%omtil)
       length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
       fftd = product(length_zfft)
       psize = bandof - bandoi + 1
@@ -123,18 +124,23 @@ CONTAINS
 
 
       call wavef2rs(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k%data_c)
-      psi_k%data_c = conjg(psi_k%data_c)/sqrt(fi%cell%omtil)
+      call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
+      
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(iband, irs) shared(psi_k, stars, inv_vol)&
+      !$OMP collapse(2)
       do iband = 1, hybdat%nbands(ik)
          do irs = 1,fftd
-            psi_k%data_c(irs,iband) = psi_k%data_c(irs,iband) * stars%ufft(irs-1)
+            psi_k%data_c(irs,iband) = conjg(psi_k%data_c(irs,iband)) * stars%ufft(irs-1) * inv_vol
          enddo 
       enddo
-      call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
+      !$OMP END PARALLEL DO
 
 
       ! !$OMP PARALLEL DO default(none) &
-      ! !$OMP private(iband, iob, g) &
-      ! !$OMP shared(hybdat, psi_k, psi_kqpt, cprod) &
+      ! !$OMP private(iband, iob, g, igptm) &
+      ! !$OMP firstprivate(prod) &
+      ! !$OMP shared(hybdat, psi_k, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize) &
       ! !$OMP collapse(2)
       do iband = 1,hybdat%nbands(ik)
          do iob = 1, psize 
@@ -160,7 +166,7 @@ CONTAINS
             endif  
          enddo 
       enddo
-      !!$OMP END PARALLEL DO
+      ! !$OMP END PARALLEL DO
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
