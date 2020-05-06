@@ -130,7 +130,7 @@ CONTAINS
 
       call timestart("Big OMP loop")
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k, ik) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol) 
       do iband = 1,hybdat%nbands(ik)
