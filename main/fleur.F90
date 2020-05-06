@@ -260,7 +260,7 @@ END IF
        IF (fi%hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,enpara,&
+             CALL calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv, stars,enpara,&
                               results,xcpot,vTot,iterHF)
           END SELECT
           IF(hybdat%l_calhf) THEN
