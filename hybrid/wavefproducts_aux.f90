@@ -89,7 +89,7 @@ CONTAINS
       !     - arrays -
       complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
       
-      complex  :: prod(0:27*stars%mx1*stars%mx2*stars%mx3-1)
+      complex, allocatable  :: prod(:), psi_k(:,:)
       
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
@@ -97,7 +97,7 @@ CONTAINS
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3), inv_vol 
-      type(t_mat)  :: psi_k, psi_kqpt
+      type(t_mat)  :: psi_kqpt
 
       call timestart("wavef_IS_FFT")
       inv_vol = 1/sqrt(fi%cell%omtil)
@@ -112,35 +112,30 @@ CONTAINS
       
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
       nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
-      call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig)
+      call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig, mat_name="z_kqpt")
       call z_kqpt_p%init(z_kqpt)
+      allocate(prod(0:fftd-1), stat=ok)
+      if(ok /= 0) call juDFT_error("can't alloc prod")
+      allocate(psi_k(0:fftd-1,1), stat=ok)
+      if(ok /= 0) call juDFT_error("can't alloc psi_k")
+
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
-      
-      call psi_k%alloc(.false., fftd, hybdat%nbands(ik))
-      call psi_kqpt%alloc(.false., fftd, psize)
 
-      call wavef2rs(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k%data_c)
+      call psi_kqpt%alloc(.false., fftd, psize, mat_name="psi_kqpt")
+
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
-      
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(iband, irs) shared(psi_k, stars, inv_vol)&
-      !$OMP collapse(2)
-      do iband = 1, hybdat%nbands(ik)
-         do irs = 1,fftd
-            psi_k%data_c(irs,iband) = conjg(psi_k%data_c(irs,iband)) * stars%ufft(irs-1) * inv_vol
-         enddo 
-      enddo
-      !$OMP END PARALLEL DO
-
 
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(iband, iob, g, igptm, prod) &
-      !$OMP shared(hybdat, psi_k, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize) &
-      !$OMP collapse(2)
+      !$OMP private(iband, iob, g, igptm, prod, psi_k) &
+      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol) 
       do iband = 1,hybdat%nbands(ik)
+         call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
+         psi_k(:,1) = conjg(psi_k(:,1)) * stars%ufft * inv_vol
+
          do iob = 1, psize 
-            prod = psi_k%data_c(:,iband) * psi_kqpt%data_c(:,iob)
+            prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
             call fft_interface(3, length_zfft, prod, .true.)
             if(cprod%l_real) then
                if(any(abs(aimag(prod)) > 1e-10)) call juDFT_error("Imag part non-zero in is_fft")
@@ -163,8 +158,6 @@ CONTAINS
          enddo 
       enddo
       !$OMP END PARALLEL DO
-
-      !$OMP barrier
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
