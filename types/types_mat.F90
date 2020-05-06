@@ -286,13 +286,16 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_init_template
 
-   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init, mat_name)
       use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
-      character(len=300)           :: errmsg
+      character(len=*), intent(in), optional :: mat_name
+
+      character(len=300)            :: errmsg
+      character(len=:), allocatable :: judft_msg
 
       INTEGER:: err
 
@@ -307,18 +310,19 @@ CONTAINS
       IF (allocated(mat%data_r)) deallocate (mat%data_r)
       IF (allocated(mat%data_c)) deallocate (mat%data_c)
 
+      judft_msg = "Allocation of memory failed for mat datatype."
+      if(present(mat_name)) judft_msg = judft_msg  // " mat_name = " // mat_name
+
       IF (mat%l_real) THEN
          ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
          ALLOCATE (mat%data_c(0, 0))
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
-                                        hint="Errormessage: " // trim(errmsg))
+         IF (err /= 0) CALL judft_error(judft_msg, hint="Errormessage: " // trim(errmsg))
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
          ALLOCATE (mat%data_r(0, 0))
          ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
-                                        hint="Errormessage: " // trim(errmsg))
+         IF (err /= 0) CALL judft_error(judft_msg, hint="Errormessage: " // trim(errmsg))
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
       ENDIF
