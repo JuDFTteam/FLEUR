@@ -44,13 +44,11 @@ MODULE m_tetrahedronInit
       LOGICAL,       INTENT(IN)  :: film
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
-      REAL    :: eMesh(1),weight_tmp(1),etetra(4),fac
+      REAL    :: weight_tmp(1),etetra(4),fac
 
-      eMesh(1) = efermi  !Only a single energy point but getWeightSingleBand takes an array
 
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,film)
-
       weights = 0.0
       !More efficient to just loop through all tetrahedra
       DO itet = 1, kpts%ntet
@@ -71,18 +69,17 @@ MODULE m_tetrahedronInit
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
-            !$OMP SHARED(kpts,eig,weights,eMesh) &
+            !$OMP SHARED(kpts,eig,weights,efermi) &
             !$OMP PRIVATE(iband,etetra,weight_tmp)
             !$OMP DO
             DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
-               IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
-
                weight_tmp = 0.0
-               CALL getWeightSingleBand(eMesh,etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
-                                        kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,weight_tmp(:))
 
+               IF( ALL(etetra(:ncorn)>efermi) ) CYCLE
+               CALL getWeightSingleBand([efermi],etetra(:ncorn),1,ncorn,ikpt,kpts%ntetra(:,itet),&
+                                        kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,weight_tmp)
                weights(iband,ikpt) = weights(iband,ikpt) + weight_tmp(1)
             ENDDO
             !$OMP END DO
@@ -292,6 +289,7 @@ MODULE m_tetrahedronInit
          nend   = ne
       ENDIF
 
+      weight = 0.0
       !Calculate the weights
       DO ie = nstart, nend
          CALL tetraWeight(eMesh(ie),etetra(ind),icorn,vol,film,w)

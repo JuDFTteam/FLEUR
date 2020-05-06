@@ -91,6 +91,7 @@ MODULE m_fertetra
 
          ef = (lowBound+upperBound)/2.0
          dfermi = 0.0
+         w = 0.0
          DO jspin = 1, jspins
             !-------------------------------------------------------
             ! Compute the weights for charge density integration
@@ -103,10 +104,12 @@ MODULE m_fertetra
                ENDDO
             ENDDO
          ENDDO
-         IF(dfermi.GT.input%zelec) THEN
-            !Occupation to large -> search in the right interval
+         IF(ABS(dfermi-input%zelec).LT.1e-12) THEN
+            EXIT
+         ELSE IF(dfermi-input%zelec.GT.0.0) THEN
+            !Occupation to large -> search in the left interval
             upperBound = ef
-         ELSE IF(dfermi.LE.input%zelec) THEN
+         ELSE
             !Occupation to small -> search in the right interval
             lowBound = ef
          ENDIF
@@ -118,11 +121,11 @@ MODULE m_fertetra
       !----------------------------------------------
       ! Obtain sum of weights and valence eigenvalues
       !----------------------------------------------
-      s1 = 0.
-      seigv = 0.
+      s1 = 0.0
+      seigv = 0.0
       DO jspin = 1,jspins
-         s = 0.
-         DO iBand = 1,MAXVAL(ne(:,jspin))
+         s = 0.0
+         DO iBand = 1,MINVAL(ne(:,jspin))
             DO ikpt = 1,kpts%nkpt
                s = s + w(iBand,ikpt,jspin)
                seigv = seigv + w(iBand,ikpt,jspin)*eig(iBand,ikpt,jspin)
