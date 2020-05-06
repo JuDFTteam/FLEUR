@@ -73,6 +73,7 @@ CONTAINS
       use m_judft
       use m_fft_interface
       use m_io_hybinp
+      use m_juDFT
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -98,6 +99,7 @@ CONTAINS
       real    :: q(3)
       type(t_mat)  :: psi_k, psi_kqpt
 
+      call timestart("wavef_IS_FFT")
       length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
       fftd = product(length_zfft)
       psize = bandof - bandoi + 1
@@ -130,7 +132,10 @@ CONTAINS
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
 
 
-
+      ! !$OMP PARALLEL DO default(none) &
+      ! !$OMP private(iband, iob, g) &
+      ! !$OMP shared(hybdat, psi_k, psi_kqpt, cprod) &
+      ! !$OMP collapse(2)
       do iband = 1,hybdat%nbands(ik)
          do iob = 1, psize 
             prod = psi_k%data_c(:,iband) * psi_kqpt%data_c(:,iob)
@@ -155,6 +160,8 @@ CONTAINS
             endif  
          enddo 
       enddo
+      !!$OMP END PARALLEL DO
+      call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
