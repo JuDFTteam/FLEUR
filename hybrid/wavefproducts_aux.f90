@@ -124,8 +124,11 @@ CONTAINS
 
       call psi_kqpt%alloc(.false., fftd, psize, mat_name="psi_kqpt")
 
+      call timestart("1st wavef2rs")
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
+      call timestop("1st wavef2rs")
 
+      call timestart("Big OMP loop")
       !$OMP PARALLEL DO default(none) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
@@ -158,6 +161,7 @@ CONTAINS
          enddo 
       enddo
       !$OMP END PARALLEL DO
+      call timestop("Big OMP loop")
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
@@ -180,6 +184,8 @@ CONTAINS
       ENDDO
 
       psi = 0.0
+      !$OMP PARALLEL DO default(none) private(nu, iv) &
+      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       do nu = bandoi, bandof
          !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
@@ -192,6 +198,7 @@ CONTAINS
 
          call fft_interface(3, length_zfft, psi(:,nu), .false., ivmap(1:lapw%nv(jspin)))
       enddo
+      !$OMP END PARALLEL DO
    end subroutine wavef2rs
 
 end module m_wavefproducts_aux
