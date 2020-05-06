@@ -174,7 +174,7 @@ CONTAINS
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, ikqpt, cprod_vv)
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF

@@ -66,7 +66,98 @@ CONTAINS
       enddo
    end function outer_prod
 
-   subroutine wavef2rs_cmplx(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
+   subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+      ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      use m_types
+      use m_constants
+      use m_judft
+      use m_fft_interface
+      use m_io_hybinp
+      implicit NONE
+      type(t_fleurinput), intent(in)  :: fi
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_lapw), INTENT(IN)        :: lapw
+      TYPE(t_mpdata), intent(in)      :: mpdata
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+      type(t_stars), intent(in)       :: stars
+      type(t_mat), intent(in)         :: z_k
+      type(t_mat), intent(inout)      :: z_kqpt_p, cprod
+      !     - scalars -
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
+      INTEGER, INTENT(IN)      ::  ikqpt
+      !     - arrays -
+      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
+      
+      complex, allocatable      :: prod(:)
+      
+      type(t_mat)               :: z_kqpt
+      type(t_lapw)              :: lapw_ikqpt
+      integer :: length_zfft(3), g(3), igptm, gshift(3), iob
+      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
+      integer, allocatable :: iob_arr(:), iband_arr(:)
+      real    :: q(3)
+      type(t_mat)  :: psi_k, psi_kqpt
+
+      length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
+      fftd = product(length_zfft)
+      psize = bandof - bandoi + 1
+      !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
+      if(2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then 
+         write (*,*) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
+         !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
+      endif
+      
+      CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
+      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
+      call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig)
+      call z_kqpt_p%init(z_kqpt)
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
+                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
+      
+      call psi_k%alloc(.false., fftd, hybdat%nbands(ik))
+      call psi_kqpt%alloc(.false., fftd, psize)
+      allocate(prod(0:fftd-1), stat=ok)
+      if(ok /= 0) call juDFT_error("can't allocate prod")
+
+
+      call wavef2rs(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k%data_c)
+      psi_k%data_c = conjg(psi_k%data_c)/sqrt(fi%cell%omtil)
+      do iband = 1, hybdat%nbands(ik)
+         do irs = 1,fftd
+            psi_k%data_c(irs,iband) = psi_k%data_c(irs,iband) * stars%ufft(irs-1)
+         enddo 
+      enddo
+      call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
+
+
+
+      do iband = 1,hybdat%nbands(ik)
+         do iob = 1, psize 
+            prod = psi_k%data_c(:,iband) * psi_kqpt%data_c(:,iob)
+            call fft_interface(3, length_zfft, prod, .true.)
+            if(cprod%l_real) then
+               if(any(abs(aimag(prod)) > 1e-10)) call juDFT_error("Imag part non-zero in is_fft")
+            endif
+            
+            ! we still have to devide by the number of mesh points
+            prod = prod / product(length_zfft)
+
+            if(cprod%l_real) then
+               DO igptm = 1, mpdata%n_g(iq)
+                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
+                  cprod%data_r(hybdat%nbasp+igptm, iob + (iband-1)*psize) = real(prod(g2fft(length_zfft,g)))        
+               enddo
+            else
+               DO igptm = 1, mpdata%n_g(iq)
+                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
+                  cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(g2fft(length_zfft,g))        
+               enddo
+            endif  
+         enddo 
+      enddo
+   end subroutine wavefproducts_IS_FFT
+
+   subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
       use m_types
       use m_fft_interface
       implicit none
@@ -88,10 +179,15 @@ CONTAINS
       do nu = bandoi, bandof
          !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
-            psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
+            if(zMat%l_real) then
+               psi(ivmap(iv), nu) = zMat%data_r(iv, nu)
+            else
+               psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
+            endif
          ENDDO
 
          call fft_interface(3, length_zfft, psi(:,nu), .false., ivmap(1:lapw%nv(jspin)))
       enddo
-   end subroutine wavef2rs_cmplx
+   end subroutine wavef2rs
+
 end module m_wavefproducts_aux
