@@ -289,7 +289,6 @@ MODULE m_tetrahedronInit
          nend   = ne
       ENDIF
 
-      weight = 0.0
       !Calculate the weights
       DO ie = nstart, nend
          CALL tetraWeight(eMesh(ie),etetra(ind),icorn,vol,film,w)
