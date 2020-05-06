@@ -89,14 +89,14 @@ CONTAINS
 
    SUBROUTINE timestart(ttimer, file, line)
       USE m_judft_args
-      use omp_lib
+      !$ use omp_lib
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN)          :: ttimer
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL  :: file
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n
-      if(.not. omp_in_parallel()) then
+      !$ if(.not. omp_in_parallel()) then
          IF (PRESENT(file)) lastfile = file
          IF (PRESENT(line)) lastline = line
          IF (.NOT. ASSOCIATED(current_timer)) THEN
@@ -119,19 +119,19 @@ CONTAINS
          !new subtimer
          CALL priv_new_timer(ttimer)
          CALL priv_debug_output(" started ", current_timer%name)
-      endif
+      !$ endif
    END SUBROUTINE timestart
 
    !>
    !<-- S:timestop(timer)
 
    SUBROUTINE timestop(ttimer)
-      use omp_lib
+      !$ use omp_lib
       CHARACTER(LEN=*), INTENT(IN) :: ttimer
 
       REAL::time
 
-      if(.not. omp_in_parallel()) then
+      !$ if(.not. omp_in_parallel()) then
          IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
             WRITE (*, *) "Current timer:", current_timer%name, " could not stop:", ttimer
             STOP "BUG:timestop"
@@ -150,7 +150,7 @@ CONTAINS
          CALL priv_debug_output(" stopped ", current_timer%name)
 
          current_timer => current_timer%parenttimer
-      endif
+      !$ endif
    END SUBROUTINE timestop
 
    !>
