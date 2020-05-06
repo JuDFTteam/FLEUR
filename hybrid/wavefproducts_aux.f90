@@ -89,7 +89,7 @@ CONTAINS
       !     - arrays -
       complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
       
-      complex, allocatable      :: prod(:)
+      complex  :: prod(0:27*stars%mx1*stars%mx2*stars%mx3-1)
       
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
@@ -119,9 +119,6 @@ CONTAINS
       
       call psi_k%alloc(.false., fftd, hybdat%nbands(ik))
       call psi_kqpt%alloc(.false., fftd, psize)
-      allocate(prod(0:fftd-1), stat=ok)
-      if(ok /= 0) call juDFT_error("can't allocate prod")
-
 
       call wavef2rs(fi, lapw, stars, z_k, length_zfft, 1, hybdat%nbands(ik), jsp, psi_k%data_c)
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
@@ -137,11 +134,10 @@ CONTAINS
       !$OMP END PARALLEL DO
 
 
-      ! !$OMP PARALLEL DO default(none) &
-      ! !$OMP private(iband, iob, g, igptm) &
-      ! !$OMP firstprivate(prod) &
-      ! !$OMP shared(hybdat, psi_k, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize) &
-      ! !$OMP collapse(2)
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(iband, iob, g, igptm, prod) &
+      !$OMP shared(hybdat, psi_k, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize) &
+      !$OMP collapse(2)
       do iband = 1,hybdat%nbands(ik)
          do iob = 1, psize 
             prod = psi_k%data_c(:,iband) * psi_kqpt%data_c(:,iob)
@@ -166,7 +162,9 @@ CONTAINS
             endif  
          enddo 
       enddo
-      ! !$OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
+
+      !$OMP barrier
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
