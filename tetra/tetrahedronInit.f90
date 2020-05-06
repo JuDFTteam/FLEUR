@@ -147,9 +147,13 @@ MODULE m_tetrahedronInit
          DO iband = 1, neig
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
-            IF( ALL(etetra>=MAXVAL(eMesh)) ) CYCLE
+            IF(l_dos) THEN
+               IF( ALL(etetra(:ncorn)>=MAXVAL(eMesh)+del) ) CYCLE
+            ELSE
+               IF( ALL(etetra(:ncorn)>=MAXVAL(eMesh)) ) CYCLE
+            ENDIF
 
-            CALL getWeightSingleBand(eMesh,etetra,ne,ncorn,ikpt,kpts%ntetra(:,itet),&
+            CALL getWeightSingleBand(eMesh,etetra(:ncorn),ne,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,weights(:,iband))
 
             !---------------------------------------------------------------------------
@@ -159,10 +163,10 @@ MODULE m_tetrahedronInit
 
             IF(l_dos) THEN
                !Energy point one step to the left of the grid
-               CALL getWeightSingleBand([MINVAL(eMesh)-del],etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
+               CALL getWeightSingleBand([MINVAL(eMesh)-del],etetra(:ncorn),1,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,end_weights(1:1,iband))
                !Energy point one step to the right of the grid
-               CALL getWeightSingleBand([MAXVAL(eMesh)+del],etetra,1,ncorn,ikpt,kpts%ntetra(:,itet),&
+               CALL getWeightSingleBand([MAXVAL(eMesh)+del],etetra(:ncorn),1,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,end_weights(2:2,iband))
             ENDIF
 
