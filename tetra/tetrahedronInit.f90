@@ -178,6 +178,8 @@ MODULE m_tetrahedronInit
             CALL diff3(calc_weights(:,iband),del,dos_weights)
             weights(1:ne,iband) = dos_weights(2:ne+1)
          ENDDO
+      ELSE
+         weights(:,:neig) = calc_weights
       ENDIF
 
       IF(PRESENT(bounds)) THEN
