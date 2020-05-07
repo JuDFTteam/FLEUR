@@ -251,4 +251,22 @@ CONTAINS
       end subroutine
    end subroutine fft_interface
 
+   function g2fft(fft_size, g_in) result(g_idx)
+      implicit none 
+      integer, intent(in)        :: g_in(3), fft_size(3)
+      integer                    :: g_idx
+  
+      integer ::  shifted_g(3)
+  
+      ! the fft-grid starts at g=0, not -g_max
+      ! therefore all negative g's need to be shifted
+      
+      shifted_g = merge(g_in+fft_size,g_in, g_in<0)
+  
+      ! map it to 1d
+      g_idx = shifted_g(1) &
+            + shifted_g(2) * fft_size(1) &
+            + shifted_g(3) * fft_size(1) * fft_size(2)
+    end function g2fft
+
 END MODULE m_fft_interface
