@@ -39,7 +39,7 @@ MODULE m_juDFT_time
    CHARACTER(LEN=256), SAVE   :: lastfile = ""
    INTEGER, SAVE   :: lastline = 0
 
-   PUBLIC timestart, timestop, writetimes, writeTimesXML
+   PUBLIC timestart, timestop, writetimes, writeTimesXML, cputime
    PUBLIC resetIterationDependentTimers, check_time_for_next_iteration
    PUBLIC juDFT_time_lastlocation !should be used for error handling only
 
