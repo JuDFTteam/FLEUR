@@ -613,8 +613,7 @@ CONTAINS
                      !    m=-l..l{}
                      ! }
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) &
-                     !$OMP collapse(2)
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
                            call calc_l_m_from_lm(lm1, l1, m1)
