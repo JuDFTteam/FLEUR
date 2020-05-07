@@ -20,9 +20,8 @@
 !
 !----------------------------------------------------------------------
       USE m_types
+      USE m_juDFT
       USE m_constants
-      USE m_triang
-      USE m_maketetra
       USE m_tetrados
       USE m_dostetra !confusing names (TODO:change/cleanup)
       USE m_dosbin
@@ -53,15 +52,14 @@
 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra,col,jj,iBand
+      INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,col,jj,iBand
       INTEGER  icore,qdim,n_orb,ncored,jsp,n_jDOS
-      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
+      REAL     de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
-      LOGICAL  l_tria,l_orbcomp,l_error,l_jDOS
+      LOGICAL  l_orbcomp,l_error,l_jDOS
 
-      INTEGER  itria(3,2*kpts%nkpt),itetra(4,6*kpts%nkpt)
-      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
-      REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
+      REAL     kx(kpts%nkpt),vkr(3,kpts%nkpt),ldos(0:3)
+      REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
       REAL,    ALLOCATABLE :: mcd_local(:,:,:)
@@ -183,15 +181,15 @@
             ELSE IF(l_jDOS) THEN
                i = 0
                DO l= 0, 3
-                 DO jj = 1, MERGE(1,2,l==0)
-                    i = i+1
-                    DO iBand = 1, results%neig(k,jsp)
-                       qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
-                    END DO
-                    DO iBand = results%neig(k,jsp)+1, input%neig
-                       qal(i,iBand,k) = 0.0
-                    END DO
-                 ENDDO
+                  DO jj = 1, MERGE(1,2,l==0)
+                     i = i+1
+                     DO iBand = 1, results%neig(k,jsp)
+                        qal(i,iBand,k) = jDOS%comp(iBand,l,jj,n_jDOS,k)*jDOS%qmtp(iBand,n_jDOS,k)/10000.
+                     END DO
+                     DO iBand = results%neig(k,jsp)+1, input%neig
+                        qal(i,iBand,k) = 0.0
+                     END DO
+                  ENDDO
                ENDDO
             END IF
 !
@@ -248,98 +246,41 @@
 !
 !
          ENDDO                                                 ! end of k-point loop
-!
-!     calculate the triangles!
-!
-         IF ( jspin.EQ.1 ) THEN
-           l_tria=.true.
-           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
-             IF (sym%invs) THEN
-               IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-             ELSE
-               IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-             ENDIF
-             write(*,*) as,sym%nop2,l_tria
-!             l_tria=.true.
-           ELSE
-             IF (input%bz_integration==2.OR.input%bz_integration==3) THEN
-               ntetra = kpts%ntet
-               DO i = 1, ntetra
-                 itetra(1:4,i) = kpts%ntetra(1:4,i)
-                 IF(input%bz_integration==2) voltet(i) = kpts%voltet(i) / ntetra
-               END DO
-               l_tria = .true.
-               GOTO 67
-             ELSE
-               GOTO 66
-             END IF
-             voltet(1:ntetra) = voltet(1:ntetra) / ntetra
-             l_tria=.true.
-             GOTO 67
- 66          CONTINUE                       ! no tetrahedron-information of file
-             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
-             l_tria=.true.
-! YM: tetrahedrons is not the way in 1D
-             IF (oneD%odi%d1) as = 0.0
-             IF (sym%invs) THEN
-               IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-             ELSE
-               IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-             ENDIF
 
-             IF (l_tria) THEN
-               CALL make_tetra(kpts%nkpt,kpts%bk,ntria,itria,atr,&
-                    ntetra,itetra,voltet)
-             ELSE
-               WRITE (oUnit,*) 'no tetrahedron method with these k-points!'
-               WRITE (oUnit,*) sym%nop2,as
-             ENDIF
- 67          CONTINUE                       ! tetrahedron-information read or created
-           ENDIF
+         IF ( .not.l_mcd ) THEN
+            ALLOCATE (g(ned,qdim))
+         ELSE
+            ALLOCATE (g(ned,3*atoms%ntype*ncored))
          ENDIF
 
-!
-        IF ( .not.l_mcd ) THEN
-         ALLOCATE (g(ned,qdim))
-        ELSE
-         ALLOCATE (g(ned,3*atoms%ntype*ncored))
-        ENDIF
-!
-         IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3).and..not.l_jDOS) THEN
-!
-!     DOS calculation: use triangular method!!
-!
-            IF(input%bz_integration.NE.3) THEN
-               !Either keyword tria in input or tetrahedrons created via make_tetra
+         IF ( (input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3) .and. &
+             .not.l_mcd .and. banddos%ndir.NE.-3 .and. .not.l_jDOS) THEN
+            !
+            ! DOS calculation: use triangular method!!
+            !
+            IF(input%bz_integration.EQ.2) THEN
                IF ( input%film ) THEN
-   !             CALL ptdos(
-   !    >                  emin,emax,jspins,ned,qdim,neigd,
-   !    >                  ntria,as,atr,2*nkpt,itria,nkpt,ev,qal,e,
-   !    <                  g)
-                 CALL ptdos(emin,emax,input%jspins,ned,qdim,ntb,ntria,as,&
-                           atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt),&
-                           qal(:,1:ntb,1:kpts%nkpt),e, g)
+                  CALL ptdos(input%jspins,ned,qdim,ntb,kpts,ev,qal,e, g)
                ELSE
-                 write(*,*) efermi
-                 CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
-                               itetra,efermi,voltet,e,results%neig(:,jsp), ev,qal, g)
-                 IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
+                  write(*,*) efermi
+                  CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
+                  IF (input%jspins.EQ.1) g = 2.0 * g
                ENDIF
-            ELSE
+            ELSEIF(input%bz_integration.EQ.3) THEN
                !Alternative tetrahedron method
                CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jsp),ev,qal,g)
             ENDIF
          ELSE
-!
-!     DOS calculation: use histogram method
-!
+            !
+            ! DOS calculation: use histogram method
+            !
             IF ( .not.l_mcd ) THEN
-            CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
-                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
+               CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
+                            results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
-            CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+               CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
+                            results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt),&
+                            mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
@@ -460,12 +401,15 @@
 
          IF ( banddos%vacdos .and. input%film ) THEN
             ALLOCATE(g(ned,vacuum%nstars*vacuum%layers*vacuum%nvac))
+            IF(kpts%ntet.EQ.0) THEN
+               CALL juDFT_error("VACDOS requires a kpoint set with generated triangles",calledby="evaldos")
+            ENDIF
 !            CALL ptdos(
 !     >                 emin,emax,jspins,ned,nstars*nvac*layers,neigd,
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
 !     <                 g)
-            CALL ptdos(emin,emax,input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,ntb,ntria&
-                ,as,atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt), qval(:,1:ntb,1:kpts%nkpt),e,g)
+            CALL ptdos(input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,&
+                       ntb,kpts,ev,qval,e,g)
 
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN
