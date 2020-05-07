@@ -33,23 +33,31 @@ MODULE m_tetrahedronInit
 
    CONTAINS
 
-   SUBROUTINE getWeightKpoints(kpts,eig,neig,efermi,film,weights)
+   SUBROUTINE getWeightKpoints(kpts,eig,neig,efermi,film,weightSum,weights)
 
       TYPE(t_kpts),  INTENT(IN)    :: kpts
       REAL,          INTENT(IN)    :: eig(:,:)
-      REAL,          INTENT(INOUT) :: weights(:,:)
-
-      INTEGER,       INTENT(IN)  :: neig
-      REAL,          INTENT(IN)  :: efermi
-      LOGICAL,       INTENT(IN)  :: film
+      INTEGER,       INTENT(IN)    :: neig
+      REAL,          INTENT(IN)    :: efermi
+      LOGICAL,       INTENT(IN)    :: film
+      REAL, OPTIONAL,INTENT(INOUT) :: weightSum
+      REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
-      REAL    :: weight_tmp(1),etetra(4),fac
+      REAL    :: w(1),etetra(4),fac
+
+      IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
+         CALL juDFT_error("No output variable provided (either weightSum or weights)",&
+                           calledby="getWeightKpoints")
+      ENDIF
 
 
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,film)
-      weights = 0.0
+
+      IF(PRESENT(weights)) weights = 0.0
+      IF(PRESENT(weightSum)) weightSum = 0.0
+
       !More efficient to just loop through all tetrahedra
       DO itet = 1, kpts%ntet
          IF(kpts%nkptf.NE.0) THEN
@@ -69,20 +77,21 @@ MODULE m_tetrahedronInit
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
-            !$OMP SHARED(kpts,eig,weights,efermi) &
-            !$OMP PRIVATE(iband,etetra,weight_tmp)
+            !$OMP SHARED(kpts,eig,weights,weightSum,efermi) &
+            !$OMP PRIVATE(iband,etetra,w)
             !$OMP DO
             DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
-               weight_tmp = 0.0
 
                IF( ALL(etetra(:ncorn)>efermi) ) CYCLE
 
+               w = 0.0
                CALL getWeightSingleBand([efermi],etetra(:ncorn),1,ncorn,ikpt,kpts%ntetra(:,itet),&
-                                        kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,weight_tmp)
+                                        kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,w)
 
-               weights(iband,ikpt) = weights(iband,ikpt) + weight_tmp(1)
+               IF(PRESENT(weights)) weights(iband,ikpt) = weights(iband,ikpt) + w(1)
+               IF(PRESENT(weightSum)) weightSum = weightSum + w(1)
             ENDDO
             !$OMP END DO
             !$OMP END PARALLEL
