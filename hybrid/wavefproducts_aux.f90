@@ -96,7 +96,7 @@ CONTAINS
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
       integer, allocatable :: iob_arr(:), iband_arr(:)
-      real    :: q(3), inv_vol 
+      real    :: q(3), inv_vol, t_2ndwavef2rs, t_fft, t_sort, t_start
       type(t_mat)  :: psi_kqpt
 
       call timestart("wavef_IS_FFT")
@@ -129,15 +129,22 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-      ! !$OMP PARALLEL DO default(none) &
-      ! !$OMP private(iband, iob, g, igptm, prod, psi_k, ik) &
-      ! !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      ! !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol) 
+
+      t_2ndwavef2rs = 0.0; t_fft = 0.0; t_sort = 0.0
+
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k, ik, t_start) &
+      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol) &
+      !$OMP reduction(+: t_2ndwavef2rs, t_fft, t_sort)
       do iband = 1,hybdat%nbands(ik)
+         t_start = cputime()
          call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
          psi_k(:,1) = conjg(psi_k(:,1)) * stars%ufft * inv_vol
+         t_2ndwavef2rs = t_2ndwavef2rs + cputime() - t_start
 
-         do iob = 1, psize 
+         do iob = 1, psize
+            t_start = cputime()
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
             call fft_interface(3, length_zfft, prod, .true.)
             if(cprod%l_real) then
@@ -146,7 +153,9 @@ CONTAINS
             
             ! we still have to devide by the number of mesh points
             prod = prod / product(length_zfft)
+            t_fft = t_fft + cputime() - t_start
 
+            t_start = cputime()
             if(cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
@@ -158,11 +167,16 @@ CONTAINS
                   cprod%data_c(hybdat%nbasp+igptm, iob + (iband-1)*psize) = prod(g2fft(length_zfft,g))        
                enddo
             endif  
+            t_sort = t_sort + cputime() - t_start
          enddo 
       enddo
-      ! !$OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
       call timestop("Big OMP loop")
       call timestop("wavef_IS_FFT")
+
+      write (*,*) "t_2ndwavef2rs = " // float2str(t_2ndwavef2rs)
+      write (*,*) "t_sort =        " // float2str(t_sort)
+      write (*,*) "t_fft =         " // float2str(t_fft)
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
