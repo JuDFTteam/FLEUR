@@ -1435,22 +1435,25 @@ CONTAINS
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
                call ylm4(maxl, ra, y)
                y = CONJG(y)
+               !$OMP PARALLEL DO default(none) schedule(dynamic) &
+               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
+               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y)&
+               !$OMP collapse(2)
                DO ikpt = 1, kpts%nkpt
-                  rdum = kpts%bk(1, ikpt)*ptsh(1, i) + kpts%bk(2, ikpt)*ptsh(2, i) + kpts%bk(3, ikpt)*ptsh(3, i)
-                  cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*rdum)
-                  lm = 0
                   DO l = 0, maxl
+                     rdum = dot_product(kpts%bk(:, ikpt), ptsh(:,i))
+                     cexp = EXP(ImagUnit*tpi_const*rdum)
+                     lm = l**2
                      IF (ishell <= conv(l)) THEN
                         cdum = cexp*g(l)
                         DO M = -l, l
                            lm = lm + 1
                            shlp(lm, ikpt) = shlp(lm, ikpt) + cdum*y(lm)
                         END DO
-                     ELSE
-                        lm = lm + 2*l + 1
                      END IF
                   END DO
                END DO
+               !$OMP END PARALLEL DO
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
