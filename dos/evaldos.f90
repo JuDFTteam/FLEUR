@@ -20,6 +20,7 @@
 !
 !----------------------------------------------------------------------
       USE m_types
+      USE m_juDFT
       USE m_constants
       USE m_tetrados
       USE m_dostetra !confusing names (TODO:change/cleanup)
