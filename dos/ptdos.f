@@ -3,19 +3,16 @@
 ! Density of states calculated by linear triangular method
 !-------------------------------------------------------------------------
       CONTAINS
-      SUBROUTINE ptdos(
-     >                 emin,emax,jspins,ne,ndos,ntb,ntria,as,atr,ntriad,
-     >                 itria,nkpt,ev,qal,e,
+      SUBROUTINE ptdos(as,atr,itria,ev,qal,e,
      <                 g)
       IMPLICIT NONE
 c
 c .. Arguments
-      INTEGER, INTENT (IN) :: ne,ntria,jspins,ntriad,ndos,ntb,nkpt
-      INTEGER, INTENT (IN) :: itria(3,ntriad)
-      REAL,    INTENT (IN) :: emax,emin,as
-      REAL,    INTENT (IN) :: atr(ntriad),qal(ndos,ntb,nkpt)
-      REAL,    INTENT (IN) :: e(ne),ev(ntb,nkpt)
-      REAL,    INTENT (OUT):: g(ne,ndos)
+      INTEGER, INTENT (IN) :: itria(:,:) !(3,ntriad)
+      REAL,    INTENT (IN) :: as
+      REAL,    INTENT (IN) :: atr(:),qal(:,:,:)
+      REAL,    INTENT (IN) :: e(:),ev(:,:,:)
+      REAL,    INTENT (OUT):: g(:,:)
 c
 c .. Locals
       INTEGER :: i, j, nl, nb, n, nt(3), nc(4)
@@ -23,15 +20,16 @@ c .. Locals
 c
 c     calculate partial densities of states
 c
-      f = 2*(3-jspins)/as
+      f = 1./as
 c
       g = 0.
 c
-      DO n = 1 , ntria
-         fa = f*atr(n)
-         nt(:) = itria(:,n)
-         DO nb = 1 , ntb
-            ec(1:3) = ev(nb,nt(:))
+      DO js=1,size(qal,3)
+        DO n = 1 , size(itria,2)
+          fa = f*atr(n)
+          nt(:) = itria(:,n)
+          DO nb = 1 , size(ev,1)
+            ec(1:3) = ev(nb,nt(:),js)
             nc(1:3) = nt(:)
             DO i = 1, 2
               DO j = i+1, 3
@@ -42,16 +40,14 @@ c
               ENDDO
             ENDDO
 
-            DO nl = 1 , ndos
-              DO i = 1 , ne
-                g(i,nl) = g(i,nl) + fa* dostet( e(i),ec(1),ec(2),ec(3),
-     +             qal(nl,nb,nc(1)),qal(nl,nb,nc(2)),qal(nl,nb,nc(3)) )
-              ENDDO
+            DO i = 1 , size(e)
+              g(i,js) = g(i,js) + fa* dostet( e(i),ec(1),ec(2),ec(3),
+     +             qal(nb,nc(1),js),qal(nb,nc(2),js),qal(nb,nc(3),js) )
             ENDDO
+          ENDDO
 
-         ENDDO
+        ENDDO
       ENDDO
-      
       END SUBROUTINE ptdos
 !-------------------------------------------------------------------------
       REAL FUNCTION dostet(e,e1,e2,e3,q1,q2,q3)
@@ -65,7 +61,7 @@ c
 
       REAL :: e21 , e31 , e32 , ee
       REAL, PARAMETER :: tol = 1.e-6
- 
+
       dostet = 0.
       IF ( e.LT.e1 ) RETURN
       IF ( e.LE.e2 ) THEN

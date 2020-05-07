@@ -20,7 +20,41 @@ MODULE m_types_dos
      PROCEDURE,PASS :: init => dos_init
   END TYPE t_dos
 
+  TYPE,ABSTRACT:: t_eigdesc
+    !each eigenvalue might be described by weights
+    CHARACTER(len=20),ALLOCATABLE:: weight_names(:)
+  CONTAINS
+    procedure :: get_weight_name
+    procedure,DEFERRED :: get_weight
+    procedure :: get_num_weights
+    procedure :: write_hdf5
+    procedure :: read_hdf5
+    procedure :: write
+    procedure :: read
+  END TYPE
+
+
 CONTAINS
+
+  function get_weight(this,id)
+    class(t_eigdesc),intent(in):: this
+    INTEGER,intent(in)         :: id
+    real,allocatable:: get_weight(:,:,:)
+  end function
+
+  integer function get_num_weights(this)
+    class(t_eigdesc),intent(in):: this
+    get_num_weights=0
+    if (allocated(this%weight_names)) get_num_weights=size(this%weight_names)
+  end function
+
+  character(len=20) function get_weight_name(this,id)
+    class(t_eigdesc),intent(in):: this
+    INTEGER,intent(in)         :: id
+    if (.not.allocated(this%weight_names)) call judft_error("No weight names in t_eigdesc")
+    if (id>size(this%weight_names)) call judft_error("Not enough weight names in t_eigdesc")
+    get_weight_name=this%weight_names(id)
+  end function
 
 SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum)
   USE m_types_input
