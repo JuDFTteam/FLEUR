@@ -400,6 +400,9 @@
 
          IF ( banddos%vacdos .and. input%film ) THEN
             ALLOCATE(g(ned,vacuum%nstars*vacuum%layers*vacuum%nvac))
+            IF(kpts%ntet.EQ.0) THEN
+               CALL juDFT_error("VACDOS requires a kpoint set with generated triangles",calledby="evaldos")
+            ENDIF
 !            CALL ptdos(
 !     >                 emin,emax,jspins,ned,nstars*nvac*layers,neigd,
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
