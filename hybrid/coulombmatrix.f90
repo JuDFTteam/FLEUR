@@ -1437,7 +1437,7 @@ CONTAINS
                y = CONJG(y)
                !$OMP PARALLEL DO default(none) schedule(dynamic) &
                !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
-               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y)&
+               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
                !$OMP collapse(2)
                DO ikpt = 1, kpts%nkpt
                   DO l = 0, maxl
