@@ -4,7 +4,6 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-!TODOS: arg_keys cannot be broadcasted atm (no matching mpi_bc)
 MODULE m_types_hub1inp
    USE m_juDFT
    USE m_constants

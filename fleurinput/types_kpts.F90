@@ -167,14 +167,28 @@ CONTAINS
          this%bk(2, n) = evaluatefirst(str)
          this%bk(3, n) = evaluatefirst(str)
       ENDDO
-      this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
-      ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
-      DO n = 1, this%ntet
-         WRITE (path2, "(a,a,i0,a)") TRIM(path), "/tetraeder/tet[", n, "]"
-         this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
-         str = xml%getAttributeValue(path2)
-         READ (str, *) this%ntetra(:, n)
-      ENDDO
+      n = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder')
+      IF(n.EQ.1) THEN
+         this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
+         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
+         DO n = 1, this%ntet
+            WRITE (path2, "(a,a,i0,a)") TRIM(path), "/tetraeder/tet[", n, "]"
+            this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
+            str = xml%getAttributeValue(path2)
+            READ (str, *) this%ntetra(:, n)
+         ENDDO
+      ENDIF
+      n = xml%GetNumberOfNodes(TRIM(path)//'/triangles')
+      IF(n.EQ.1) THEN
+         this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/triangles/tria')
+         ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
+         DO n = 1, this%ntet
+            WRITE (path2, "(a,a,i0,a)") TRIM(path), "/triangles/tria[", n, "]"
+            this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
+            str = xml%getAttributeValue(path2)
+            READ (str, *) this%ntetra(:, n)
+         ENDDO
+      ENDIF
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
    END SUBROUTINE read_xml_kpts
 
@@ -203,17 +217,29 @@ CONTAINS
             WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
          END DO
          IF (kpts%ntet > 0) THEN
-            WRITE (fh, 207) kpts%ntet
-207         FORMAT('            <tetraeder ntet="', i0, '">')
-            DO n = 1, kpts%ntet
-208            FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
-               WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
-            END DO
-            WRITE (fh, '(a)') '            </tetraeder>'
+            IF(SIZE(kpts%ntetra,1).EQ.4) THEN
+               !Bulk --> Tetrahedrons
+               WRITE (fh, 207) kpts%ntet
+207            FORMAT('            <tetraeder ntet="', i0, '">')
+               DO n = 1, kpts%ntet
+208               FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+                  WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
+               END DO
+               WRITE (fh, '(a)') '            </tetraeder>'
+            ELSE IF(SIZE(kpts%ntetra,1).EQ.3) THEN
+               !Film --> Triangles
+               WRITE (fh, 209) kpts%ntet
+209            FORMAT('            <triangles ntria="', i0, '">')
+               DO n = 1, kpts%ntet
+210               FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
+                  WRITE (fh, 210) kpts%voltet(n), kpts%ntetra(:, n)
+               END DO
+               WRITE (fh, '(a)') '            </triangles>'
+            ENDIF
          ELSE
             DO n = 1, kpts%numSpecialPoints
                WRITE (fh, 209) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
-209            FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
+211            FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
             END DO
          END IF
       !END IF

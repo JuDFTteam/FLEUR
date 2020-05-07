@@ -1904,7 +1904,7 @@ CONTAINS
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1
       integer  :: l2, m2, lm2, n, i, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
-      real     :: q(3), qnorm, svol
+      real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
       integer, allocatable :: lm_arr(:), ic_arr(:)
@@ -1923,8 +1923,10 @@ CONTAINS
             call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't st op here!
          endif
 
-         call ylm4(2, MATMUL(fi%kpts%bk(:, fi%kpts%nkpt), fi%cell%bmat), y1)
-         call ylm4(2, MATMUL(mpdata%g(:, igptp), fi%cell%bmat), y2)
+         tmp_vec = MATMUL(fi%kpts%bk(:, fi%kpts%nkpt), fi%cell%bmat)
+         call ylm4(2, tmp_vec, y1)
+         tmp_vec = MATMUL(mpdata%g(:, igptp), fi%cell%bmat)
+         call ylm4(2, tmp_vec, y2)
          call ylm4(fi%hybinp%lexp, q, y)
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 

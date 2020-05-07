@@ -43,7 +43,7 @@ MODULE m_hsfock
 CONTAINS
 
    SUBROUTINE hsfock(fi, nk, mpdata, lapw, jsp, hybdat, &
-                     eig_irr, nococonv, &
+                     eig_irr, nococonv, stars, &
                      results, xcpot, mpi)
 
       use m_ex_to_vx
@@ -64,6 +64,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      type(t_stars), intent(in)   :: stars
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
@@ -152,7 +153,7 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, ex)
+                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
 

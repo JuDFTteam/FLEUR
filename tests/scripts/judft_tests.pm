@@ -17,13 +17,13 @@ sub execute_test($$$$){
     if ($stages>0) {
 	$executable="$mpi $exec";
 	my $starttime=time();
-	jt::initlog($workdir,$test_name,$executable);
     #prepare the workdir
 	if (-r $workdir){
 	    system("rm -f $workdir/*");
 	}else{
 	    die "Invalid workdir:$workdir" if (system("mkdir -p $workdir"));
 	}
+	jt::initlog($workdir,$test_name,$executable);
     
 	my $old_dir=`pwd`;
 	chomp $old_dir;

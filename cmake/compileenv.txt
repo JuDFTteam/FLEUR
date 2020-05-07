@@ -9,7 +9,7 @@ file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "compile_
 
 set(buildinfo_deps)
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
-   execute_process(COMMAND git rev-parse --absolute-git-dir
+   execute_process(COMMAND "git rev-parse --absolute-git-dir"
                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE buildinfo_deps)
 elseif (EXISTS "${CMAKE_SOURCE_DIR}/version")
    set(buildinfo_deps "${CMAKE_SOURCE_DIR}/version")
