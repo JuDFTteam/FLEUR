@@ -114,10 +114,7 @@ CONTAINS
       nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
       call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig)
       call z_kqpt_p%init(z_kqpt)
-      allocate(prod(0:fftd-1), stat=ok)
-      if(ok /= 0) call juDFT_error("can't alloc prod")
-      allocate(psi_k(0:fftd-1,1), stat=ok)
-      if(ok /= 0) call juDFT_error("can't alloc psi_k")
+      
 
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
@@ -130,13 +127,20 @@ CONTAINS
 
       call timestart("Big OMP loop")
 
-      t_2ndwavef2rs = 0.0; t_fft = 0.0; t_sort = 0.0
 
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k, ik, t_start) &
+      t_2ndwavef2rs = 0.0; t_fft = 0.0; t_sort = 0.0
+      !$OMP PARALLEL default(none) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol) &
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik) &
       !$OMP reduction(+: t_2ndwavef2rs, t_fft, t_sort)
+
+      allocate(prod(0:fftd-1), stat=ok)
+      if(ok /= 0) call juDFT_error("can't alloc prod")
+      allocate(psi_k(0:fftd-1,1), stat=ok)
+      if(ok /= 0) call juDFT_error("can't alloc psi_k")
+
+      !$OMP DO 
       do iband = 1,hybdat%nbands(ik)
          t_start = cputime()
          call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
@@ -170,7 +174,8 @@ CONTAINS
             t_sort = t_sort + cputime() - t_start
          enddo 
       enddo
-      !$OMP END PARALLEL DO
+      !$OMP END DO
+      !$OMP END PARALLEL 
       call timestop("Big OMP loop")
       call timestop("wavef_IS_FFT")
 
@@ -198,8 +203,8 @@ CONTAINS
       ENDDO
 
       psi = 0.0
-      ! !$OMP PARALLEL DO default(none) private(nu, iv) &
-      ! !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      !$OMP PARALLEL DO default(none) private(nu, iv) &
+      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       do nu = bandoi, bandof
          !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
@@ -212,7 +217,7 @@ CONTAINS
 
          call fft_interface(3, length_zfft, psi(:,nu), .false., ivmap(1:lapw%nv(jspin)))
       enddo
-      ! !$OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
    end subroutine wavef2rs
 
 end module m_wavefproducts_aux
