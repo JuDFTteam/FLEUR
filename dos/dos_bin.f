@@ -6,38 +6,37 @@ c    vacuum.
 c
 c*********************************************************
       CONTAINS
-      SUBROUTINE dos_bin(
-     >                   jspins,ndos,ne,emin,emax,neigd,
-     >                   nkpt,neig,wtkpt,eig,qal,
+      SUBROUTINE dos_bin(e,neig,wtkpt,eig,qal,
      <                   g)
 c
       IMPLICIT NONE
+
 c
-      INTEGER,INTENT (IN) :: jspins,ndos,ne,nkpt,neigd,neig(nkpt)
-      REAL,   INTENT (IN) :: emin,emax,wtkpt(nkpt)
-      REAL,   INTENT (IN) :: eig(neigd,nkpt),qal(ndos,neigd,nkpt)
-      REAL,   INTENT (OUT):: g(ne,ndos)
+      INTEGER,INTENT (IN) :: neig(:,:)
+      REAL,   INTENT (IN) :: wtkpt(:),e(:)
+      REAL,   INTENT (IN) :: eig(:,:,:),qal(:,:,:)
+      REAL,   INTENT (OUT):: g(:,:)
 
 c------> local variables
 c
-      INTEGER  nl,k,j, i
+      INTEGER  nl,k,j, i,js
       REAL  de,wk
 c     ..
-      de=(emax-emin)/real(ne-1)
+      de=e(2)-e(1)
       g=0.0
 c
 c----> put weights in the right bins
 c
-      DO k = 1 , nkpt
-         wk = 2.*wtkpt(k)/real(jspins)/de
-         DO j = 1 , neig(k)
-            i = NINT((eig(j,k)-emin)/de) + 1
-            IF ( (i.LE.ne) .AND. (i.GE.1) ) THEN
-                  DO nl = 1 , ndos
-                     g(i,nl) = g(i,nl) + wk*qal(nl,j,k)
-                  ENDDO
+      DO js=1,size(qal,3)
+        DO k = 1 , size(qal,2)
+          wk = wtkpt(k)/de
+          DO j = 1 , neig(k,js)
+            i = NINT((eig(j,k,js)-emin)/de) + 1
+            IF ( (i.LE.size(e)) .AND. (i.GE.1) ) THEN
+              g(i,js) = g(i,js) + wk*qal(j,k,js)
             ENDIF
-         ENDDO
+          ENDDO
+        ENDDO
       ENDDO
 
       END SUBROUTINE dos_bin

@@ -5,10 +5,11 @@
 !--------------------------------------------------------------------------------
 MODULE m_types_dos
   USE m_juDFT
+  USE m_types_eigdesc
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_dos
-  TYPE:: t_dos
+  TYPE,extends(t_eigdesc):: t_dos
      INTEGER, ALLOCATABLE :: jsym(:,:,:)
      INTEGER, ALLOCATABLE :: ksym(:,:,:)
      REAL,    ALLOCATABLE :: qis(:,:,:)
@@ -18,42 +19,48 @@ MODULE m_types_dos
      COMPLEX, ALLOCATABLE :: qstars(:,:,:,:,:,:)
    CONTAINS
      PROCEDURE,PASS :: init => dos_init
+     PROCEDURE      :: get_weight
   END TYPE t_dos
 
-  TYPE,ABSTRACT:: t_eigdesc
-    !each eigenvalue might be described by weights
-    CHARACTER(len=20),ALLOCATABLE:: weight_names(:)
-  CONTAINS
-    procedure :: get_weight_name
-    procedure,DEFERRED :: get_weight
-    procedure :: get_num_weights
-    procedure :: write_hdf5
-    procedure :: read_hdf5
-    procedure :: write
-    procedure :: read
-  END TYPE
-
-
 CONTAINS
-
   function get_weight(this,id)
-    class(t_eigdesc),intent(in):: this
-    INTEGER,intent(in)         :: id
+    class(t_dos),intent(in):: this
+    INTEGER,intent(in)     :: id
     real,allocatable:: get_weight(:,:,:)
-  end function
 
-  integer function get_num_weights(this)
-    class(t_eigdesc),intent(in):: this
-    get_num_weights=0
-    if (allocated(this%weight_names)) get_num_weights=size(this%weight_names)
-  end function
+    INTEGER :: ind,l,ntype,i
+    allocate(get_weight,mold=this%qis)
 
-  character(len=20) function get_weight_name(this,id)
-    class(t_eigdesc),intent(in):: this
-    INTEGER,intent(in)         :: id
-    if (.not.allocated(this%weight_names)) call judft_error("No weight names in t_eigdesc")
-    if (id>size(this%weight_names)) call judft_error("Not enough weight names in t_eigdesc")
-    get_weight_name=this%weight_names(id)
+    if (id==1) get_weight=this%qis
+    ind=1
+    DO ntype=1,size(this%qal,2)
+      DO l=0,3
+        ind=ind+1
+        if (ind==id) get_weight=this%qal(l,ntype,:,:,:)
+      ENDDO
+    ENDDO
+    do i=1,2
+      ind=ind+1
+      if (ind==id) get_weight=this%qvac(:,i,:,:)
+    end do
+    do i=1,size(this%qvlay,2)
+      ind=ind+1
+      if (ind==id) get_weight=this%qvlay(:,i,1,:,:)
+      ind=ind+1
+      if (ind==id) get_weight=this%qvlay(:,i,2,:,:)
+    end do
+    DO l=1,size(this%qstars,3)
+      do i=1,size(this%qstars,1)
+        ind=ind+1
+        if (ind==id) get_weight=real(this%qstars(i,:,l,1,:,:))
+        ind=ind+1
+        if (ind==id) get_weight=aimag(this%qstars(i,:,l,1,:,:))
+        ind=ind+1
+        if (ind==id) get_weight=real(this%qstars(i,:,l,2,:,:))
+        ind=ind+1
+        if (ind==id) get_weight=aimag(this%qstars(i,:,l,2,:,:))
+      end do
+    end do
   end function
 
 SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum)
@@ -68,6 +75,8 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum)
   TYPE(t_kpts),           INTENT(IN)    :: kpts
   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
 
+  INTEGER :: ntype,l,i,ind
+  character :: spdfg(0:4)=["s","p","d","f","g"]
   ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%ksym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
@@ -83,6 +92,39 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum)
   thisDOS%qvac = 0.0
   thisDOS%qvlay = 0.0
   thisDOS%qstars = CMPLX(0.0,0.0)
+  ind=1
+
+  allocate(thisDOS%weight_names(3+3*atoms%ntype+vacuum%layerd*(vacuum%nstars+1)))
+  thisDOS%weight_names(ind)="INT"
+  DO ntype=1,atoms%ntype
+    DO l=0,3
+      ind=ind+1
+      write(thisDOS%weight_names(ind),"(a,i0,a)") "MT:",ntype,spdfg(l)
+    ENDDO
+  ENDDO
+  ind=ind+1
+  thisDOS%weight_names(ind)="VAC1"
+  ind=ind+1
+  thisDOS%weight_names(ind)="VAC2"
+  do i=1,vacuum%layerd
+    ind=ind+1
+    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER1:",i
+    ind=ind+1
+    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER2:",i
+  end do
+  DO l=1,vacuum%layerd
+    do i=1,vacuum%nstars
+      ind=ind+1
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC1):",l,"-",i
+      ind=ind+1
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC1):",l,"-",i
+      ind=ind+1
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC2):",l,"-",i
+      ind=ind+1
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC2):",l,"-",i
+    end do
+  end do
+
 
 END SUBROUTINE dos_init
 

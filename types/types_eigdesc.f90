@@ -3,7 +3,7 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_types_dos
+MODULE m_types_eigdesc
   USE m_juDFT
   IMPLICIT NONE
   PRIVATE
@@ -11,10 +11,10 @@ MODULE m_types_dos
 
   TYPE,ABSTRACT:: t_eigdesc
     !each eigenvalue might be described by weights
-    CHARACTER(len=20),ALLOCATABLE:: weight_names(:)
+    CHARACTER(len=20),ALLOCATABLE:: weight_names(:)!This must be allocated in init of derived type
   CONTAINS
     procedure :: get_weight_name
-    procedure,DEFERRED :: get_weight !This must be allocated in derived type
+    procedure :: get_weight !should be overwritten in derived type
     procedure :: get_num_weights
     !procedure :: write_hdf5 TODO!!
     !procedure :: read_hdf5
