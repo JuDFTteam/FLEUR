@@ -70,6 +70,7 @@ CONTAINS
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
       LOGICAL                 ::  l_mism = .true.
 
+      call timestart("checkolap")
       allocate(z(nkpti))
       DO ikpt = 1, nkpti
          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
@@ -321,6 +322,7 @@ CONTAINS
          END DO
       END DO
 
+      call timestop("checkolap")
    END SUBROUTINE checkolap
 
 END MODULE m_checkolap
