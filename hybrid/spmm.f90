@@ -297,7 +297,7 @@ contains
       IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
 
       IF (ikpt == 1) THEN
-         call timestart("gamma point 1")
+         call timestart("gamma point 1 noinv")
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
          !$OMP private(iatom, itype, indx0, l, m, indx1, indx2, iatom1, indx3) &
          !$OMP private(indx4, i_vec, n_size, itype1, ishift1,ieq1) &
@@ -339,7 +339,7 @@ contains
             enddo
          END DO
          !$OMP END PARALLEL DO
-         call timestop("gamma point 1")
+         call timestop("gamma point 1 noinv")
       END IF
       ! compute vecout for the index-range from ibasm+1:nbasm
 
@@ -380,7 +380,7 @@ contains
       call timestop("dot prod")
 
       IF (ikpt == 1) THEN
-         call timestart("gamma point 2")
+         call timestart("gamma point 2 noinv")
          iatom = 0
          indx0 = 0
          DO itype = 1, fi%atoms%ntype
@@ -428,7 +428,7 @@ contains
             END DO
          END DO
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
-         call timestop("gamma point 2")
+         call timestop("gamma point 2 noinv")
       END IF
 
       do i_vec = 1, n_vec
