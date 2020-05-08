@@ -152,7 +152,9 @@ CONTAINS
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
             call fft_interface(3, length_zfft, prod, .true.)
             if(cprod%l_real) then
-               if(any(abs(aimag(prod)) > 1e-10)) call juDFT_error("Imag part non-zero in is_fft")
+               if(any(abs(aimag(prod)) > 1e-10)) then
+                  call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
+                                float2str(maxval(abs(aimag(prod)))))
             endif
             
             ! we still have to devide by the number of mesh points
