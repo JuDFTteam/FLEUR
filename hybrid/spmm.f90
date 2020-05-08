@@ -80,6 +80,7 @@ contains
       IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
 
       IF (ikpt == 1) THEN
+         call timestart("gamma point 1 inv")
          iatom = 0
          indx0 = 0
          DO itype = 1, fi%atoms%ntype
@@ -116,8 +117,8 @@ contains
                enddo
                indx0 = indx0 + ishift
             END DO
-
          END DO
+         call timestop("gamma point 1 inv")
       END IF
 
       ! compute vecout for the index-range from ibasm+1:nbasm
@@ -155,7 +156,7 @@ contains
 
 
       IF (ikpt == 1) THEN
-         call timestart("gamma point 1 inv")
+         call timestart("gamma point 2 inv")
          iatom = 0
          indx0 = 0
          DO itype = 1, fi%atoms%ntype
@@ -174,12 +175,11 @@ contains
          END DO
 
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
-         !$OMP private(iatom, itype, ishift, indx1, indx2, itype1, ishift1) &
+         !$OMP private(iatom, itype, indx1, indx2, itype1, ishift1) &
          !$OMP private(ieq1, iatom1, indx3, indx4, n_size, i_vec) &
          !$OMP shared(fi, n_vec, mat_out, ibasm, mpdata, mat_hlp, hybdat, ikpt)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
-            ishift = (fi%hybinp%lcutm1(itype) + 1)**2
             indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
 
             iatom1 = 0
@@ -203,8 +203,8 @@ contains
             END DO
          END DO
          !$OMP END PARALLEL DO
+         call timestop("gamma point 2 inv")
 
-         call timestop("gamma point 1 inv")
       END IF
 
       do i_vec = 1, n_vec
@@ -398,36 +398,28 @@ contains
             END DO
          END DO
 
-         iatom = 0
-         indx0 = ibasm
-         DO itype = 1, fi%atoms%ntype
-            ishift = (fi%hybinp%lcutm1(itype) + 1)**2
-            DO ieq = 1, fi%atoms%neq(itype)
-               iatom = iatom + 1
-               indx1 = indx0 + 1
+         do iatom = 1, fi%atoms%nat 
+            itype = fi%atoms%itype(iatom)
+            indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
+            iatom1 = 0
+            indx2 = 0
+            DO itype1 = 1, fi%atoms%ntype
+               ishift1 = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype1) - 1), l=0, fi%hybinp%lcutm1(itype1))])
+               DO ieq1 = 1, fi%atoms%neq(itype1)
+                  iatom1 = iatom1 + 1
+                  IF (iatom1 == iatom) CYCLE
 
-               iatom1 = 0
-               indx2 = 0
-               DO itype1 = 1, fi%atoms%ntype
-                  ishift1 = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype1) - 1), l=0, fi%hybinp%lcutm1(itype1))])
-                  DO ieq1 = 1, fi%atoms%neq(itype1)
-                     iatom1 = iatom1 + 1
-                     IF (iatom1 == iatom) CYCLE
-
-                     indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
-                     indx4 = indx3 + mpdata%num_radbasfn(0, itype1) - 2
-                     n_size = mpdata%num_radbasfn(0, itype1) - 1
-                     do i_vec = 1, n_vec
-                        mat_out%data_c(indx1, i_vec) = mat_out%data_c(indx1, i_vec) &
-                                                       + dot_product(hybdat%coul(ikpt)%mt3_c(:n_size, iatom, iatom1), mat_hlp%data_c(indx3:indx4, i_vec))
-                     enddo
-                  END DO
-                  indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
+                  indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
+                  indx4 = indx3 + mpdata%num_radbasfn(0, itype1) - 2
+                  n_size = mpdata%num_radbasfn(0, itype1) - 1
+                  do i_vec = 1, n_vec
+                     mat_out%data_c(indx1, i_vec) = mat_out%data_c(indx1, i_vec) &
+                                                      + dot_product(hybdat%coul(ikpt)%mt3_c(:n_size, iatom, iatom1), mat_hlp%data_c(indx3:indx4, i_vec))
+                  enddo
                END DO
-               indx0 = indx0 + ishift
+               indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
             END DO
          END DO
-         IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
          call timestop("gamma point 2 noinv")
       END IF
 
