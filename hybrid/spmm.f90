@@ -398,6 +398,9 @@ contains
             END DO
          END DO
 
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(iatom, itype, indx1, iatom1, indx2, itype1, ishift1, indx3, indx4, n_size) &
+         !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
@@ -420,6 +423,7 @@ contains
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
             END DO
          END DO
+         !$OMP END PARALLEL DO
          call timestop("gamma point 2 noinv")
       END IF
 
