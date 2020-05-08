@@ -175,8 +175,10 @@ CONTAINS
          enddo 
       enddo
       !$OMP END DO
+      deallocate(prod, psi_k)
       !$OMP END PARALLEL 
       call timestop("Big OMP loop")
+      call psi_kqpt%free()
       call timestop("wavef_IS_FFT")
 
       write (*,*) "t_2ndwavef2rs = " // float2str(t_2ndwavef2rs)
