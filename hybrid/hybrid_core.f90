@@ -44,6 +44,7 @@ CONTAINS
       REAL, ALLOCATABLE          ::  core1r(:, :, :, :), core2r(:, :, :, :)
       REAL, ALLOCATABLE          ::  eig_cr(:, :, :)
 
+      call timestart("corewf")
       ncstd = maxval(atoms%econf%num_core_states)
       allocate(nindxcr(0:ncstd, atoms%ntype), stat=ok)
 
@@ -121,7 +122,7 @@ CONTAINS
 
       IF (maxindxc /= maxval(nindxc))&
          call judft_error('corewf: counting error nindxc')
-
+      call timestop("corewf")
    END SUBROUTINE corewf
 
    SUBROUTINE calcorewf( input, jspin, atoms,&
@@ -163,6 +164,7 @@ CONTAINS
 
       !   - intrinsic functions -
       INTRINSIC exp, iabs, isign
+      call timestart("calcorewf")
 
       c = c_light(1.0)
 
@@ -302,6 +304,7 @@ CONTAINS
               'weight')
 8010  FORMAT(12x, 2f5.0, f6.1, f10.4, f10.0)
 
+      call timestop("calcorewf")
    END SUBROUTINE calcorewf
 
    SUBROUTINE core_init(input, atoms, lmaxcd, maxindxc)
