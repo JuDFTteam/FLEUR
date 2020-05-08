@@ -148,9 +148,13 @@ CONTAINS
                 END DO
              ELSE
                 IF (zmat%l_real) THEN
+                  !$OMP WORKSHARE
                    work_r(:ne,:)=TRANSPOSE(zMat%data_r(:nvmax,:ne))
+                  !$OMP END WORKSHARE
                 ELSE
+                   !$OMP WORKSHARE
                    work_c(:ne,:)=TRANSPOSE(zMat%data_c(:nvmax,:ne))
+                   !$OMP END WORKSHARE
                 END IF
              END IF
              CALL timestop("fill work array")
