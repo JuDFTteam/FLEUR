@@ -75,17 +75,19 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF
-   INTEGER                              :: iState, iStep, numStates, numRelevantStates, convIter
+   INTEGER                              :: iState, jState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
+   INTEGER                              :: lastGroupEnd, currentGroupEnd
    REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
    REAL                                 :: rdmftFunctionalValue, occStateI, gradSum
    REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
    REAL                                 :: mixParam, rdmftEnergy, occSum
    REAL                                 :: sumOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
-   REAL                                 :: rhs, totz, theta
+   REAL                                 :: rhs, totz, theta, temp
+   REAL                                 :: averageParam, averageGrad
    REAL, PARAMETER                      :: degenEps = 0.00001
-   REAL, PARAMETER                      :: convCrit = 5.0e-6
-   REAL, PARAMETER                      :: minOcc = 1.0e-13
+   REAL, PARAMETER                      :: convCrit = 5.0e-6, occMixParam = 0.5
+   REAL, PARAMETER                      :: minOcc = 1.0e-13, minOccB = 1.0e-5
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
    CHARACTER(LEN=20)                    :: attributes(3)
@@ -122,6 +124,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    REAL, ALLOCATABLE                    :: occupationVec(:)
 
+   INTEGER, ALLOCATABLE                 :: paramGroup(:)
    INTEGER, ALLOCATABLE                 :: indx_sest(:,:)
    INTEGER, ALLOCATABLE                 :: parent(:)
    INTEGER, ALLOCATABLE                 :: pointer_EIBZ(:)
@@ -139,7 +142,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    WRITE(*,*) 'entered RDMFT subroutine'
 
    ! General initializations
-   mixParam = 0.0001
+   mixParam = 0.001
    lagrangeMultiplier = 0.1 !results%ef
    spinDegenFac = 2.0 / fi%input%jspins ! This factor is used to compensate the missing second spin in non-spinpolarized calculations
 
@@ -202,6 +205,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    IF (ANY(results%w_iksRDMFT(:,:,:).NE.0.0)) THEN
       results%w_iks(:,:,:) = results%w_iksRDMFT(:,:,:)
    END IF
+!   results%w_iksRDMFT(:,:,:) = results%w_iks(:,:,:)
 
    ! Move occupations of relevant states well into allowed region
    numRelevantStates = SUM(highestState(:,:)) - SUM(lowestState(:,:)) + fi%input%jspins*fi%kpts%nkpt
@@ -220,12 +224,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             iState = iState + 1
             occupationVec(iState) = results%w_iks(iBand,ikpt,jsp) / (fi%kpts%wtkpt(ikpt))
             sumOcc = sumOcc + results%w_iks(iBand,ikpt,jsp)
-            IF(occupationVec(iState).LT.0.0001) THEN
-               addCharge = addCharge + (0.0001-occupationVec(iState))*fi%kpts%wtkpt(ikpt)
+            IF(occupationVec(iState).LT.minOccB) THEN
+               addCharge = addCharge + (minOccB-occupationVec(iState))*fi%kpts%wtkpt(ikpt)
                addChargeWeight = addChargeWeight + fi%kpts%wtkpt(ikpt)
             END IF
-            IF(occupationVec(iState).GT.0.9999) THEN
-               subCharge = subCharge + (occupationVec(iState)-0.9999)*fi%kpts%wtkpt(ikpt)
+            IF(occupationVec(iState).GT.(1.0-minOccB)) THEN
+               subCharge = subCharge + (occupationVec(iState)-(1.0-minOccB))*fi%kpts%wtkpt(ikpt)
                subChargeWeight = subChargeWeight + fi%kpts%wtkpt(ikpt)
             END IF
          END DO
@@ -237,13 +241,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       DO ikpt = 1, fi%kpts%nkpt
          DO iBand = lowestState(ikpt,jspin), highestState(ikpt,jspin)
             iState = iState + 1
-            IF(occupationVec(iState).LT.0.0001) THEN
+            IF(occupationVec(iState).LT.minOccB) THEN
                occupationVec(iState) = occupationVec(iState) + 0.5*(subCharge+addCharge)*(fi%kpts%wtkpt(ikpt)/addChargeWeight)
             END IF
-            IF(occupationVec(iState).GT.0.9999) THEN
+            IF(occupationVec(iState).GT.(1.0-minOccB)) THEN
                occupationVec(iState) = occupationVec(iState) - 0.5*(subCharge+addCharge)*(fi%kpts%wtkpt(ikpt)/subChargeWeight)
             END IF
-            results%w_iks(iBand,ikpt,jsp) = occupationVec(iState) * fi%kpts%wtkpt(ikpt)
+!            results%w_iks(iBand,ikpt,jsp) = occupationVec(iState) * fi%kpts%wtkpt(ikpt)
          END DO
       END DO
    END DO
@@ -399,6 +403,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    maxHistoryLength = 7*numStates
    maxHistoryLength = 5*numStates
+   maxHistoryLength = 23
 
    ALLOCATE(parent(fi%kpts%nkptf))
    ALLOCATE(exDiag(fi%input%neig,ikpt,fi%input%jspins))
@@ -426,7 +431,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       DO jspin = 1, fi%input%jspins
          DO ikpt = 1,fi%kpts%nkpt
             WRITE(*,*) 'jspin, ikpt: ', jspin, ikpt
-            WRITE(*,'(10f11.6)') results%w_iks(1:10,ikpt,jspin)
+            WRITE(*,'(10f12.7)') results%w_iks(1:10,ikpt,jspin)
          END DO
       END DO
 
@@ -673,6 +678,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
       ALLOCATE (gradient(numStates+1))
       ALLOCATE (parameters(numStates+1))
+      ALLOCATE (paramGroup(numStates+1))
       ALLOCATE (equalityLinCombi(numStates+1))
       ALLOCATE (minConstraints(numStates+1))
       ALLOCATE (maxConstraints(numStates+1))
@@ -711,22 +717,101 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                gradient(numStates+1) = gradient(numStates+1) + occStateI * fi%kpts%wtkpt(ikpt)
 !               parameters(iState) = theta !occStateI
                parameters(iState) = occStateI
+               IF(iBand.EQ.1) THEN
+                  IF(iState.EQ.1) THEN
+                     paramGroup(iState) = 1
+                  ELSE
+                     paramGroup(iState) = paramGroup(iState-1) + 1
+                  END IF
+               ELSE
+                  IF ((results%eig(iBand,ikpt,jsp) - results%eig(iBand-1,ikpt,jsp)).GT.degenEps) THEN
+                     paramGroup(iState) = paramGroup(iState-1) + 1
+                  ELSE
+                     paramGroup(iState) = paramGroup(iState-1)
+                  END IF
+               END IF
             END DO
          END DO
       END DO
       equalityCriterion = fi%input%zelec/(2.0/REAL(fi%input%jspins))
       gradient(numStates+1) = gradient(numStates+1) - equalityCriterion ! This should actually always be 0.0
       parameters(numStates+1) = lagrangeMultiplier
+      paramGroup(numStates+1) = paramGroup(numStates) + 1
+
+      currentGroupEnd = 0
+      lastGroupEnd = 0
+      DO iState = 2, numStates + 1
+         IF (paramGroup(iState).NE.paramGroup(iState-1)) THEN
+            currentGroupEnd = iState - 1
+            averageParam = 0.0
+            averageGrad = 0.0
+            DO jState = lastGroupEnd + 1, currentGroupEnd
+               averageParam = averageParam + parameters(jState)
+               averageGrad = averageGrad + gradient(jState)
+            END DO
+            averageParam = averageParam / (currentGroupEnd - lastGroupEnd)
+            averageGrad = averageGrad / (currentGroupEnd - lastGroupEnd)
+            DO jState = lastGroupEnd + 1, currentGroupEnd
+               temp = ABS(parameters(jState) - averageParam) / (ABS(averageParam) + degenEps)
+               IF (temp.GT.degenEps) THEN
+                  WRITE(*,'(a,i0,a,f15.10,a,f15.10)') 'iState: ', jState, 'average: ', averageParam, 'parameter: ', parameters(jState)
+                  CALL juDFT_error('parameter difference in paramGroup is very large (rdmft-1)')
+               END IF
+               temp = ABS(gradient(jState) - averageGrad) / (ABS(averageGrad) + degenEps)
+               IF (temp.GT.degenEps) THEN
+                  WRITE(*,'(a,i0,a,f15.10,a,f15.10)') 'iState: ', jState, 'average: ', averageGrad, 'gradient: ', gradient(jState)
+                  CALL juDFT_error('Gradient difference in paramGroup is very large (rdmft-1)')
+               END IF
+               parameters(jState) = averageParam
+               gradient(jState) = averageGrad
+            END DO
+            lastGroupEnd = currentGroupEnd
+         END IF
+      END DO
 
       WRITE(*,*) 'gradient(numStates+1): ', gradient(numStates+1)
 
-      mixParam = 0.01 / MAXVAL(ABS(gradient(:numStates)))
+!      mixParam = 0.01 / MAXVAL(ABS(gradient(:numStates)))
 !      mixParam = MIN(0.0002,mixParam)
+      mixParam = 0.001
       WRITE(*,*) 'mixParam: ', mixParam
 
       CALL bfgs_b2(numStates+1,gradient,lastGradient,minConstraints,maxConstraints,enabledConstraints,parameters,&
                    lastParameters,equalityLinCombi,equalityCriterion,maxHistoryLength,paramCorrections,&
                    gradientCorrections,iStep,mixParam,converged,convCrit)
+
+
+      currentGroupEnd = 0
+      lastGroupEnd = 0
+      DO iState = 2, numStates + 1
+         IF (paramGroup(iState).NE.paramGroup(iState-1)) THEN
+            currentGroupEnd = iState - 1
+            averageParam = 0.0
+            averageGrad = 0.0
+            DO jState = lastGroupEnd + 1, currentGroupEnd
+               averageParam = averageParam + parameters(jState)
+               averageGrad = averageGrad + gradient(jState)
+            END DO
+            averageParam = averageParam / (currentGroupEnd - lastGroupEnd)
+            averageGrad = averageGrad / (currentGroupEnd - lastGroupEnd)
+            DO jState = lastGroupEnd + 1, currentGroupEnd
+               temp = ABS(parameters(jState) - averageParam) / (ABS(averageParam) + degenEps)
+               IF (temp.GT.degenEps) THEN
+                  WRITE(*,'(a,i0,a,f15.10,a,f15.10)') 'iState: ', jState, 'average: ', averageParam, 'parameter: ', parameters(jState)
+                  CALL juDFT_error('parameter difference in paramGroup is very large (rdmft-2)')
+               END IF
+               temp = ABS(gradient(jState) - averageGrad) / (ABS(averageGrad) + degenEps)
+               IF (temp.GT.degenEps) THEN
+                  WRITE(*,'(a,i0,a,f15.10,a,f15.10)') 'iState: ', jState, 'average: ', averageGrad, 'gradient: ', gradient(jState)
+                  CALL juDFT_error ('Gradient difference in paramGroup is very large (rdmft-2)')
+               END IF
+               parameters(jState) = averageParam
+               gradient(jState) = averageGrad
+            END DO
+            lastGroupEnd = currentGroupEnd
+         END IF
+      END DO
+
 
       WRITE(3555,*) 'Occupation numbers:'
       iState = 0
@@ -746,10 +831,24 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       WRITE(3555,'(a,f15.10)') 'total occupation: ', SUM(parameters(:numStates))
 
       DEALLOCATE (enabledConstraints,maxConstraints,minConstraints)
-      DEALLOCATE (parameters,gradient,equalityLinCombi)
+      DEALLOCATE (parameters,gradient,paramGroup,equalityLinCombi)
 
 
    END DO ! WHILE (.NOT.converged)
+
+   ! Only mix a part of the newly determined occupation numbers into the occupation numbers from the
+   ! previous iteration.
+!   WRITE(*,*) 'Test: mixing in only a part of newly determined occupation numbers!'
+!   DO ispin = 1, fi%input%jspins
+!      isp = MERGE(1,ispin,fi%noco%l_noco)
+!      DO ikpt = 1, fi%kpts%nkpt
+!         DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
+!            results%w_iks(iBand,ikpt,isp) = (1.0-occMixParam) * results%w_iksRDMFT(iBand,ikpt,isp) + &
+!                                            occMixParam * results%w_iks(iBand,ikpt,isp)
+!         END DO
+!      END DO
+!   END DO
+
 
    WRITE(2503,*) 'convIter: ', convIter
 
