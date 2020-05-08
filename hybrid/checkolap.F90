@@ -4,7 +4,6 @@ CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, mpi, &
                         input, sym, noco, nococonv, oneD, cell, lapw, jsp)
-
       USE m_util, ONLY: chr, sphbessel, harmonicsr
       use m_intgrf, only: intgrf, intgrf_init
       use m_calc_cmt
@@ -12,6 +11,8 @@ CONTAINS
       USE m_types
       USE m_io_hybinp
       USE m_types_hybdat
+      use omp_lib
+      use m_calc_l_m_from_lm
 
       IMPLICIT NONE
 
@@ -48,7 +49,7 @@ CONTAINS
       COMPLEX, PARAMETER     ::  img = (0.0, 1.0)
 
       ! -local arrays -
-      INTEGER                 ::  iarr(2), gpt(3)
+      INTEGER                 ::  iarr(2), gpt(3), idum
       INTEGER, ALLOCATABLE   ::  olapcv_loc(:, :, :, :, :)
 
       REAL                    ::  sphbes(0:atoms%lmaxd)
@@ -69,6 +70,9 @@ CONTAINS
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
       LOGICAL                 ::  l_mism = .true.
+
+!$    integer, parameter :: lock_size = 100
+!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("checkolap")
       allocate(z(nkpti))
@@ -236,6 +240,10 @@ CONTAINS
       allocate(carr2(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
       allocate(carr3(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
 
+      ! create lock for race-condition in coulomb
+!$    do i =0,lock_size-1
+!$       call omp_init_lock(lock(i))
+!$    enddo
       iatom = 0
       DO itype = 1, atoms%ntype
          DO ineq = 1, atoms%neq(itype)
@@ -246,8 +254,11 @@ CONTAINS
 
                ! calculate k1,k2,k3
                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
-
+               call timestart("pw-part")
                ! PW part
+               !$OMP PARALLEL DO default(none) schedule(dynamic) &
+               !$OMP private(igpt, gpt, cexp, q, qnorm, sphbes, y, lm, cdum, iband, idum)&
+               !$OMP shared(lapw, jsp, atoms, kpts, iatom, ikpt, hybdat, lock, cell, itype, z, carr2)
                DO igpt = 1, lapw%nv(jsp)
                   gpt = lapw%gvec(:, igpt, jsp)
 
@@ -265,32 +276,40 @@ CONTAINS
                      DO m = -l, l
                         lm = lm + 1
                         DO iband = 1, hybdat%nbands(ikpt)
+                           idum = lm * hybdat%nbands(ikpt) + iband
+!$                         call omp_set_lock(lock(modulo(idum,lock_size)))
                            if(z(1)%l_real) THEN
                               carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
-                           Else
+                           else
                               carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
                            END if
+!$                         call omp_unset_lock(lock(modulo(idum,lock_size)))
                         end DO
                      END DO
                   END DO
                END DO
+               !$OMP END PARALLEL DO
+!$             do i=0,lock_size-1
+!$                call omp_destroy_lock(lock(i))
+!$             enddo
+               call timestop("pw-part")
 
+               call timestart("MT-part")
                ! MT
-               lm = 0
                lm1 = 0
-               DO l = 0, atoms%lmax(itype)
-                  DO m = -l, l
-                     lm = lm + 1
-                     DO n = 1, mpdata%num_radfun_per_l(l, itype)
-                        lm1 = lm1 + 1
-                        rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
-                        DO iband = 1, hybdat%nbands(ikpt)
-                           carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
-                        END DO
+               do lm = 1,(atoms%lmax(itype)+1)**2
+                  call calc_l_m_from_lm(lm, l, m)
+                  DO n = 1, mpdata%num_radfun_per_l(l, itype)
+                     lm1 = lm1 + 1
+                     rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
+                     DO iband = 1, hybdat%nbands(ikpt)
+                        carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
                      END DO
                   END DO
                END DO
+               call timestop("MT-part")
                carr1 = carr2 - carr3
+
 
                rarr = 0
                lm = 0
@@ -304,20 +323,6 @@ CONTAINS
                !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
                !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
                !             CALL writeout(outtext,mpi%irank)
-!             IF( iatom .eq. 6 ) THEN
-!               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),[0.0,0.0,1.0] ))
-!               lm = 0
-!               DO l = 0,lmax(itype)
-!                 DO m = -l,l
-!                   lm = lm + 1
-!                   DO iband = 1,nbands(ikpt)
-!                     WRITE(700+ikpt,'(3i4,6f15.10)') iband,l,m,carr2(iband,lm),carr3(iband,lm),
-!                                                     carr2(iband,lm)/(carr3(iband,lm))
-!                   END DO
-!                 END DO
-!               END DO
-!             END IF
-
             END DO
          END DO
       END DO
