@@ -9,7 +9,7 @@ MODULE m_kk_cutoff
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
+   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,ne,del,e_bot,e_top,cutoff)
 
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
@@ -17,6 +17,7 @@ MODULE m_kk_cutoff
 
       REAL,                INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
+      LOGICAL,             INTENT(IN)     :: l_mperp
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
       INTEGER,             INTENT(IN)     :: ne
@@ -56,8 +57,8 @@ MODULE m_kk_cutoff
       !ENDDO
 !#endif
 
-      spins_cut = MERGE(1,jspins,noco%l_noco.AND.noco%l_mperp)
-      n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_noco.AND.noco%l_mperp)
+      spins_cut = MERGE(1,jspins,noco%l_noco.AND.l_mperp)
+      n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_noco.AND.l_mperp)
 
       cutoff(:,1) = 1   !we don't modify the lower bound
       cutoff(:,2) = ne
@@ -67,7 +68,7 @@ MODULE m_kk_cutoff
          !----------------------------------------
          !Check the integral up to the hard cutoff
          !----------------------------------------
-         IF(spins_cut.EQ.1.AND.jspins.EQ.2) projDOS(:,1) = projDOS(:,1) + projDOS(:,2)
+         IF(spins_cut.EQ.1 .AND.jspins.EQ.2) projDOS(:,1) = projDOS(:,1) + projDOS(:,2)
          integral =  trapz(projDOS(:,ispin),del,ne)
 
 #ifdef CPP_DEBUG

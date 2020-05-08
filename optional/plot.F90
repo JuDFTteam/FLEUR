@@ -672,6 +672,10 @@ CONTAINS
          END DO
       END IF
 
+      IF (size(sliceplot%plot).EQ.0) THEN
+         CALL juDFT_error('You set iplot/=0 without specifying a plot in the input.', calledby = 'plot')
+      END IF
+
       ! Loop over all plots
       DO nplo = 1, size(sliceplot%plot)
         twodim=sliceplot%plot(nplo)%twodim

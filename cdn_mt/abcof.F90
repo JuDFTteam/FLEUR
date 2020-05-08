@@ -50,7 +50,7 @@ CONTAINS
     TYPE(t_fjgj) :: fjgj
 
     ! Local scalars
-    INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
+    INTEGER :: i,j,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
     INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
     REAL    :: tmk, qss(3), s2h, s2h_e(ne)
     COMPLEX :: phase, c_1, c_2
@@ -148,9 +148,21 @@ CONTAINS
                 END DO
              ELSE
                 IF (zmat%l_real) THEN
-                   work_r(:ne,:)=TRANSPOSE(zMat%data_r(:nvmax,:ne))
+                   !$OMP PARALLEL DO default(shared) private(i,j) collapse(2)
+                   do i = 1,ne 
+                     do j = 1, nvmax 
+                        work_r(i,j) = zMat%data_r(j,i)
+                     enddo
+                   enddo
+                   !$OMP END PARALLEL DO 
                 ELSE
-                   work_c(:ne,:)=TRANSPOSE(zMat%data_c(:nvmax,:ne))
+                  !$OMP PARALLEL DO default(shared) private(i,j) collapse(2)
+                  do i = 1,ne 
+                    do j = 1, nvmax 
+                       work_c(i,j) = zMat%data_c(j,i)
+                    enddo
+                  enddo
+                  !$OMP END PARALLEL DO 
                 END IF
              END IF
              CALL timestop("fill work array")

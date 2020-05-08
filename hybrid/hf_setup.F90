@@ -94,12 +94,14 @@ CONTAINS
          ! degenerat(i) =j  band i  has j-1 degenart states ( i, i+1, ..., i+j)
          ! degenerat(i) =0  band i  is  degenerat, but is not the lowest band
          !                  of the group of degenerate states
+
+         call timestart("degenerate treatment")
          IF (mpi%irank == 0) THEN
             WRITE (oUnit, *)
             WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
-         hybdat%nobd(:,jsp) = 0
+         hybdat%nobd(:,jsp) = 0         
          DO nk = 1, kpts%nkpt
             DO i = 1, hybdat%ne_eig(nk)
                DO j = i + 1, hybdat%ne_eig(nk)
@@ -144,6 +146,7 @@ CONTAINS
                hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
             END IF
          END DO
+         call timestop("degenerate treatment")
 
          ! spread hybdat%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf

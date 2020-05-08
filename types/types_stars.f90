@@ -78,29 +78,8 @@ MODULE m_types_stars
      REAL, ALLOCATABLE    :: ufft(:)
    CONTAINS
      PROCEDURE :: mpi_bc=>mpi_bc_stars
-     procedure :: g2fft=>stars_g2fft
   END TYPE t_stars
 CONTAINS
-  function stars_g2fft(stars, g_in) result(g_idx)
-    implicit none 
-    class(t_stars), intent(in) :: stars
-    integer, intent(in)        :: g_in(3)
-    integer                    :: g_idx 
-
-    integer :: shift_vec(3), shifted_g(3)
-    shift_vec = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft] 
-
-    ! the fft-grid starts at g=0, not -g_max
-    ! therefore all negative g's need to be shifted
-    
-    shifted_g = merge(g_in+shift_vec,g_in, g_in<0)
-
-    ! map it to 1d
-    g_idx = shifted_g(1) &
-          + shifted_g(2) * stars%kq1_fft &
-          + shifted_g(3) * stars%kq1_fft*stars%kq2_fft 
-  end function stars_g2fft
-
   SUBROUTINE mpi_bc_stars(this,mpi_comm,irank)
     USE m_mpi_bc_tool
     CLASS(t_stars),INTENT(INOUT)::this

@@ -339,14 +339,16 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco)
 
       USE m_types_atoms
       USE m_types_sym
+      USE m_types_noco
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
+      TYPE(t_noco),     INTENT(IN)     :: noco
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
       INTEGER :: hiaElem(atoms%n_hia)
@@ -372,6 +374,11 @@ CONTAINS
       IF(ALLOCATED(this%hiaElem)) DEALLOCATE(this%hiaElem)
       ALLOCATE(this%hiaElem(atoms%n_hia))
       this%hiaElem = hiaElem
+
+      IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
+         CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+                          calledby="init_gfinp")
+      ENDIF
 
    END SUBROUTINE init_gfinp
 

@@ -312,6 +312,7 @@ CONTAINS
     USE m_types_sym
     USE m_kptgen_hybrid
     USE m_tetrahedron_regular
+    USE m_triang
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -366,7 +367,8 @@ CONTAINS
     ! away from (0,0,0) (for even/odd nkpt3)
 
     INTEGER i,j,k,l,mkpt,addSym,nsym
-    LOGICAL random
+    LOGICAL random,l_tria
+    REAL as
     REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
 
     IF (ANY(grid==0)) THEN
@@ -406,7 +408,8 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       !nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       nbound = 0
        random  = bz_integration==2.AND..NOT.film
        idimens = MERGE(2,3,film)
 
@@ -484,28 +487,46 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF(bz_integration==3.AND..NOT.film) THEN
+       IF(bz_integration==2 .AND. film) THEN
+          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+          l_tria = .FALSE.
+          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
+          !IF (sym%invs) THEN
+          !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
+          !ELSE
+          !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
+          !ENDIF
+          !write(*,*) as,sym%nop2,l_tria
+
+          !Match normalisation of other methods
+          voltet = voltet/as*kpts%ntet
+       ENDIF
+
+       IF(bz_integration==3) THEN
           !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
           !We need to call gen_bz to get the full grid (necessary???)
           CALL kpts%init(cell, sym, film)
           IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
-                                             "needs a gamma centerd kpoint grid",&
-                                             calledby="init_by_grid")
-          CALL tetrahedron_regular(kpts,cell,grid,ntetra,voltet)
+                                                 "needs a gamma centered kpoint grid",&
+                                                 calledby="init_by_grid")
+          CALL tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
        ENDIF
 
-       IF(bz_integration==3.AND.film) THEN
-          CALL juDFT_error("tetra and film: Nothing here yet",calledby="init_by_grid")
-       ENDIF
-
-       IF (bz_integration==2.AND.random.OR.bz_integration==3.AND..NOT.film) THEN
+       IF (bz_integration==2 .AND.random.OR.bz_integration==3 .AND..NOT.film) THEN
           ALLOCATE(kpts%ntetra(4,kpts%ntet))
           ALLOCATE(kpts%voltet(kpts%ntet))
           DO j = 1, kpts%ntet
              kpts%ntetra(:,j) = ntetra(:,j)
              kpts%voltet(j) = ABS(voltet(j))
           END DO
-       END IF
+       ELSE IF( (bz_integration==2 .OR.bz_integration==3) .AND. film) THEN
+          ALLOCATE(kpts%ntetra(3,kpts%ntet))
+          ALLOCATE(kpts%voltet(kpts%ntet))
+          DO j = 1, kpts%ntet
+             kpts%ntetra(:,j) = ntetra(:,j)
+             kpts%voltet(j) = ABS(voltet(j))
+          END DO
+       ENDIF
     ENDIF
   END SUBROUTINE init_by_grid
 

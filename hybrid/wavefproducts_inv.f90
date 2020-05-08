@@ -13,11 +13,12 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, nkqpt, cprod)
+   SUBROUTINE wavefproducts_inv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod)
       IMPLICIT NONE
       type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata
       type(t_nococonv), intent(in)  :: nococonv
+      type(t_stars), intent(in)     :: stars
       type(t_mat), intent(in)       :: z_k  ! = z_k_p since ik < nkpt
       TYPE(t_lapw), INTENT(IN)      :: lapw
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -25,7 +26,7 @@ CONTAINS
 
       ! - scalars -
       INTEGER, INTENT(IN)      :: jsp, ik, iq, bandoi, bandof
-      INTEGER, INTENT(INOUT)   :: nkqpt
+      INTEGER, INTENT(INOUT)   :: ikqpt
 
 
       ! - local scalars -
@@ -37,30 +38,30 @@ CONTAINS
 
       CALL timestart("wavefproducts_inv5")
       cprod%data_r = 0.0
-      nkqpt = -1
+      ikqpt = -1
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt = fi%kpts%to_first_bz(kqpthlp)
       g_t = nint(kqpt - kqpthlp)
 
       ! determine number of kqpt
-      nkqpt = fi%kpts%get_nk(kqpt)
+      ikqpt = fi%kpts%get_nk(kqpt)
       allocate (c_phase_k(hybdat%nbands(ik)))
-      allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(nkqpt))))
+      allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(ikqpt))))
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-      call wavefproducts_inv_IS(fi, jsp, lapw, ik, iq, bandoi, bandof, g_t, hybdat, mpdata, &
-                                nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                 ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv
 
    subroutine wavefproducts_inv_IS(fi, jsp, lapw, ik, iq, bandoi, bandof, g_t, hybdat, mpdata, &
-                                   nococonv, nkqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                   nococonv, ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       implicit NONE
       type(t_fleurinput), intent(in):: fi
@@ -72,10 +73,10 @@ CONTAINS
       TYPE(t_mat), intent(inout)    :: z_kqpt_p, cprod
       ! - scalars -
       INTEGER, INTENT(IN)      :: jsp, ik, iq, g_t(3), bandoi, bandof
-      INTEGER, INTENT(IN)      :: nkqpt
+      INTEGER, INTENT(IN)      :: ikqpt
 
       ! - arrays -
-      complex, intent(inout)   :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
+      complex, intent(inout)   :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
 
       ! - local scalars -
       INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm, psize, b_idx
@@ -96,15 +97,15 @@ CONTAINS
       if(ok /= 0) call juDFT_error("Can't allocaten rarr2 in wavefproducts_inv_IS")
       psize = bandof-bandoi+1
       !
-      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
+      ! compute G's fulfilling |bk(:,ikqpt) + G| <= rkmax
       !
-      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fi%sym%zrfs)
+      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ikqpt, fi%cell, fi%sym%zrfs)
       nbasfcn = lapw_nkqpt%hyb_num_bas_fun(fi)
       call z_kqpt%alloc(.true., nbasfcn, fi%input%neig)
       call z_kqpt_p%init(z_kqpt)
 
-      ! read in z at k-point nkqpt
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, nkqpt, jsp, z_kqpt, &
+      ! read in z at k-point ikqpt
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
       g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
@@ -182,7 +183,7 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                   nkqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                   ikqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_calc_cmt
       implicit NONE
       type(t_fleurinput), intent(in):: fi
@@ -195,10 +196,10 @@ CONTAINS
 
       ! - scalars -
       INTEGER, INTENT(IN)      :: ik, iq, jsp, bandoi, bandof
-      INTEGER, INTENT(IN)      :: nkqpt
+      INTEGER, INTENT(IN)      :: ikqpt
 
       ! - arrays -
-      complex, intent(in)        :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(nkqpt))
+      complex, intent(in)        :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
 
       ! - local scalars -
       INTEGER                 ::    i, iband, psize, iob
@@ -219,7 +220,7 @@ CONTAINS
       INTEGER                 ::    lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
       REAL                    ::    cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat)
-      REAL                    ::    cmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, fi%atoms%nat)
+      REAL                    ::    cmt_nkqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
       REAL, allocatable       ::    rarr2(:,:),rarr3(:,:,:)
 
       COMPLEX                 ::    cmplx_exp(fi%atoms%nat), cexp_nk(fi%atoms%nat)
@@ -244,7 +245,7 @@ CONTAINS
       !ccmt_nkqpt(input%neig, hybdat%maxlmindx, fi%atoms%nat), &
       allocate (ccmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
                 ccmt_nk2(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
-                ccmt_nkqpt(hybdat%nbands(nkqpt), hybdat%maxlmindx, fi%atoms%nat), &
+                ccmt_nkqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat), &
                 source=cmplx(0.0, 0.0), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
 
@@ -253,7 +254,7 @@ CONTAINS
 
       !read in cmt coefficients at k+q point
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                    fi%sym, fi%oneD, z_kqpt_p, jsp, nkqpt, c_phase_kqpt, ccmt_nkqpt)
+                    fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, ccmt_nkqpt)
 
       iatom = 0
       DO itype = 1, fi%atoms%ntype
