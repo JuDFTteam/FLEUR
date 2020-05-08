@@ -231,7 +231,7 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, iatom2, l1, lm, idx1_start, idx3_start
-      integer :: iat2, it2, l2
+      integer :: iat2, it2, l2, iat
       type(t_mat) :: mat_hlp, test_hlp, test_out
 
       call timestart("spmm_noinvs")
@@ -298,46 +298,47 @@ contains
 
       IF (ikpt == 1) THEN
          call timestart("gamma point 1")
-         iatom = 0
-         indx0 = 0
-         DO itype = 1, fi%atoms%ntype
-            ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
-            DO ieq = 1, fi%atoms%neq(itype)
-               iatom = iatom + 1
-               l = 0
-               m = 0
+         !$OMP PARALLEL DO default(none) schedule(dynamic)&
+         !$OMP private(iatom, itype, indx0, l, m, indx1, indx2, iatom1, indx3) &
+         !$OMP private(indx4, i_vec, n_size, itype1, ishift1,ieq1) &
+         !$OMP shared(fi, n_vec, mpdata, hybdat, ibasm, mat_out, mat_hlp, ikpt, mat_in)
+         do iatom = 1,fi%atoms%nat
+            itype = fi%atoms%itype(iatom)
+            indx0 = 0
+            do iat = 1,iatom-1
+               indx0 = indx0 + sum([((2*l + 1)*(mpdata%num_radbasfn(l, fi%atoms%itype(iat)) - 1), l=0, fi%hybinp%lcutm1(fi%atoms%itype(iat)))])
+            enddo
+            l = 0
+            m = 0
 
-               indx1 = indx0 + 1
-               indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
+            indx1 = indx0 + 1
+            indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
 
-               iatom1 = 0
-               indx3 = ibasm
-               n_size = mpdata%num_radbasfn(l, itype) - 1
-               DO itype1 = 1, fi%atoms%ntype
-                  ishift1 = (fi%hybinp%lcutm1(itype1) + 1)**2
-                  DO ieq1 = 1, fi%atoms%neq(itype1)
-                     iatom1 = iatom1 + 1
-                     indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
-                     IF (iatom == iatom1) CYCLE
-                     do i_vec = 1, n_vec
-                        mat_out%data_c(indx1:indx2, i_vec) = mat_out%data_c(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_c(:n_size, iatom1, iatom)*mat_hlp%data_c(indx4, i_vec)
-                     enddo
-                  END DO
-                  indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
+            iatom1 = 0
+            indx3 = ibasm
+            n_size = mpdata%num_radbasfn(l, itype) - 1
+            DO itype1 = 1, fi%atoms%ntype
+               ishift1 = (fi%hybinp%lcutm1(itype1) + 1)**2
+               DO ieq1 = 1, fi%atoms%neq(itype1)
+                  iatom1 = iatom1 + 1
+                  indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
+                  IF (iatom == iatom1) CYCLE
+                  do i_vec = 1, n_vec
+                     mat_out%data_c(indx1:indx2, i_vec) = mat_out%data_c(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_c(:n_size, iatom1, iatom)*mat_hlp%data_c(indx4, i_vec)
+                  enddo
                END DO
-
-               IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
-
-               n_size = mpdata%num_radbasfn(l, itype) - 1
-               do i_vec = 1, n_vec
-                  mat_out%data_c(indx1:indx2, i_vec) = mat_out%data_c(indx1:indx2, i_vec) &
-                                                       + hybdat%coul(ikpt)%mt2_c(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in%data_c(indx3 + 1, i_vec)
-               enddo
-
-               indx0 = indx0 + ishift
+               indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
             END DO
 
+            IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+
+            n_size = mpdata%num_radbasfn(l, itype) - 1
+            do i_vec = 1, n_vec
+               mat_out%data_c(indx1:indx2, i_vec) = mat_out%data_c(indx1:indx2, i_vec) &
+                                                      + hybdat%coul(ikpt)%mt2_c(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in%data_c(indx3 + 1, i_vec)
+            enddo
          END DO
+         !$OMP END PARALLEL DO
          call timestop("gamma point 1")
       END IF
       ! compute vecout for the index-range from ibasm+1:nbasm
