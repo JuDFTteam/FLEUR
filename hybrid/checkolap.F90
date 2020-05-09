@@ -53,7 +53,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   ::  olapcv_loc(:, :, :, :, :)
 
       REAL                    ::  sphbes(0:atoms%lmaxd)
-      REAL                    ::  q(3)
+      REAL                    ::  q(3), t_start, t_bess, t_harm, tot_bess, tot_harm, tot_carr2, t_carr2
       REAL                    ::  integrand(atoms%jmtd)
       REAL                    ::  rarr(maxval(hybdat%nbands))
       REAL, ALLOCATABLE   ::  olapcb(:)
@@ -71,7 +71,7 @@ CONTAINS
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
       LOGICAL                 ::  l_mism = .true.
 
-!$    integer, parameter :: lock_size = 100
+!$    integer, parameter :: lock_size = 500
 !$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("checkolap")
@@ -244,6 +244,7 @@ CONTAINS
 !$    do i =0,lock_size-1
 !$       call omp_init_lock(lock(i))
 !$    enddo
+      tot_bess = 0; tot_harm = 0; tot_carr2 = 0
       iatom = 0
       DO itype = 1, atoms%ntype
          DO ineq = 1, atoms%neq(itype)
@@ -255,10 +256,12 @@ CONTAINS
                ! calculate k1,k2,k3
                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
                call timestart("pw-part")
+               t_harm = 0; t_bess = 0; t_carr2 = 0
                ! PW part
                !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP private(igpt, gpt, cexp, q, qnorm, sphbes, y, lm, cdum, iband, idum)&
-               !$OMP shared(lapw, jsp, atoms, kpts, iatom, ikpt, hybdat, lock, cell, itype, z, carr2)
+               !$OMP private(igpt, gpt, cexp, q, qnorm, sphbes, y, lm, cdum, iband, idum, t_start, l, m)&
+               !$OMP shared(lapw, jsp, atoms, kpts, iatom, ikpt, hybdat, lock, cell, itype, z, carr2)&
+               !$OMP reduction(+: t_bess, t_harm, t_carr2)
                DO igpt = 1, lapw%nv(jsp)
                   gpt = lapw%gvec(:, igpt, jsp)
 
@@ -267,31 +270,49 @@ CONTAINS
                   q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
 
                   qnorm = norm2(q)
+                  t_start = cputime()
                   call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
+                  t_bess = t_bess + cputime() - t_start
+                  
+                  t_start = cputime()
                   call harmonicsr(y, q, atoms%lmax(itype))
                   y = conjg(y)
-                  lm = 0
-                  DO l = 0, atoms%lmax(itype)
-                     cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
-                     DO m = -l, l
-                        lm = lm + 1
+                  t_harm = t_harm + cputime() - t_start
+
+                  t_start = cputime()
+                  if(z(1)%l_real) THEN
+                     do lm = 1, (atoms%lmax(itype)+1)**2
+                        call calc_l_m_from_lm(lm, l, m)
+                        cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
                         DO iband = 1, hybdat%nbands(ikpt)
                            idum = lm * hybdat%nbands(ikpt) + iband
-!$                         call omp_set_lock(lock(modulo(idum,lock_size)))
-                           if(z(1)%l_real) THEN
-                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
-                           else
-                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
-                           END if
-!$                         call omp_unset_lock(lock(modulo(idum,lock_size)))
+!$                            call omp_set_lock(lock(modulo(idum,lock_size)))
+                           carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
+!$                            call omp_unset_lock(lock(modulo(idum,lock_size)))
+                        enddo
+                     enddo
+                  else
+                     do lm = 1, (atoms%lmax(itype)+1)**2
+                        call calc_l_m_from_lm(lm, l, m)
+                        cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
+                        DO iband = 1, hybdat%nbands(ikpt)
+                           idum = lm * hybdat%nbands(ikpt) + iband
+!$                            call omp_set_lock(lock(modulo(idum,lock_size)))
+                           carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
+!$                            call omp_unset_lock(lock(modulo(idum,lock_size)))
                         end DO
                      END DO
-                  END DO
-               END DO
+                  endif
+                  t_carr2 = t_carr2 + cputime() - t_start
+               enddo
                !$OMP END PARALLEL DO
 !$             do i=0,lock_size-1
 !$                call omp_destroy_lock(lock(i))
 !$             enddo
+
+               tot_bess  = tot_bess  + t_bess 
+               tot_harm  = tot_harm  + t_harm
+               tot_carr2 = tot_carr2 + t_carr2
                call timestop("pw-part")
 
                call timestart("MT-part")
@@ -326,7 +347,9 @@ CONTAINS
             END DO
          END DO
       END DO
-
+      write (*,*) "tot_bess  =", tot_bess
+      write (*,*) "tot_harm  =", tot_harm
+      write (*,*) "tot_carr2 =", tot_carr2
       call timestop("checkolap")
    END SUBROUTINE checkolap
 
