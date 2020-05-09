@@ -50,7 +50,7 @@ CONTAINS
     TYPE(t_fjgj) :: fjgj
 
     ! Local scalars
-    INTEGER :: i,j,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
+    INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType
     INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
     REAL    :: tmk, qss(3), s2h, s2h_e(ne)
     COMPLEX :: phase, c_1, c_2
@@ -62,8 +62,8 @@ CONTAINS
     REAL    :: clo1(atoms%nlod,input%jspins)
     COMPLEX :: ylm((atoms%lmaxd+1)**2)
     COMPLEX :: ccchi(2,2)
-    REAL,    ALLOCATABLE :: work_r(:,:), realCoeffs(:,:), imagCoeffs(:,:)
-    COMPLEX, ALLOCATABLE :: work_c(:,:)
+    REAL,    ALLOCATABLE :: work_r(:,:), realCoeffs(:,:), imagCoeffs(:,:), workTrans_r(:,:)
+    COMPLEX, ALLOCATABLE :: work_c(:,:), workTrans_c(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
 
     CALL timestart("abcof")
@@ -124,45 +124,45 @@ CONTAINS
           IF ((sym%invsat(iAtom).EQ.0) .OR. (sym%invsat(iAtom).EQ.1)) THEN
 
              IF (zmat%l_real) THEN
-                ALLOCATE ( work_r(ne,nvmax) )
+                ALLOCATE (work_r(nvmax,ne))
              ELSE
-                ALLOCATE ( work_c(ne,nvmax) )
+                ALLOCATE (work_c(nvmax,ne))
              ENDIF
 
              ! Filling of work array (modified zMat)
              CALL timestart("fill work array")
              IF (noco%l_noco) THEN
-                DO iLAPW = 1,nvmax
-                   IF (noco%l_ss) THEN
-                      ! the coefficients of the spin-down basis functions are
-                      ! stored in the second half of the eigenvector
-                      kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
-                      work_c(:ne,iLAPW) = ccchi(iintsp,jspin)*zMat%data_c(kspin+iLAPW,:ne)
-                   ELSE
-                      ! perform sum over the two interstitial spin directions
-                      ! and take into account the spin boundary conditions
-                      ! (jspin counts the local spin directions inside each MT)
-                      kspin = lapw%nv(1)+atoms%nlotot
-                      work_c(:ne,iLAPW) = ccchi(1,jspin)*zMat%data_c(iLAPW,:ne) + ccchi(2,jspin)*zMat%data_c(kspin+iLAPW,:ne)
-                   END IF
-                END DO
+                IF (noco%l_ss) THEN
+                   ! the coefficients of the spin-down basis functions are
+                   ! stored in the second half of the eigenvector
+                   kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
+                   work_c(:,:) = ccchi(iintsp,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
+                ELSE
+                   ! perform sum over the two interstitial spin directions
+                   ! and take into account the spin boundary conditions
+                   ! (jspin counts the local spin directions inside each MT)
+                   kspin = lapw%nv(1)+atoms%nlotot
+                   work_c(:,:) = ccchi(1,jspin)*zMat%data_c(:nvmax,:ne) + ccchi(2,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
+                END IF
              ELSE
                 IF (zmat%l_real) THEN
-                   !$OMP PARALLEL DO default(shared) private(i,j) collapse(2)
-                   do i = 1,ne 
-                     do j = 1, nvmax 
-                        work_r(i,j) = zMat%data_r(j,i)
-                     enddo
-                   enddo
-                   !$OMP END PARALLEL DO 
+                   work_r(:,:) = zMat%data_r(:nvmax,:ne)
+!                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+!                   DO i = 1, ne
+!                      DO iLAPW = 1, nvmax
+!                         work_r(iLAPW,i) = zMat%data_r(iLAPW,i)
+!                      END DO
+!                   END DO
+!                   !$OMP END PARALLEL DO
                 ELSE
-                  !$OMP PARALLEL DO default(shared) private(i,j) collapse(2)
-                  do i = 1,ne 
-                    do j = 1, nvmax 
-                       work_c(i,j) = zMat%data_c(j,i)
-                    enddo
-                  enddo
-                  !$OMP END PARALLEL DO 
+                   work_c(:,:) = zMat%data_c(:nvmax,:ne)
+!                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+!                   DO i = 1, ne
+!                      DO iLAPW = 1, nvmax
+!                         work_c(iLAPW,i) = zMat%data_c(iLAPW,i)
+!                      END DO
+!                   END DO
+!                   !$OMP END PARALLEL DO
                 END IF
              END IF
              CALL timestop("fill work array")
@@ -179,25 +179,25 @@ CONTAINS
                 ! variant with zgemm
 !                ALLOCATE ( work_c(ne,nvmax) )
 !                work_c(:,:) = work_r(:,:)
-!                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
-!                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
+!                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
+!                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
 !                DEALLOCATE(work_c)
                 ! variant with dgemm
                 ALLOCATE(realCoeffs(ne,0:abSize-1),imagCoeffs(ne,0:abSize-1))
                 realCoeffs = 0.0
                 imagCoeffs = 0.0
-                CALL dgemm("N","N",ne,abSize,nvmax,1.0,work_r,ne,REAL(abCoeffs(:nvmax,:abSize)),nvmax,0.0,realCoeffs,ne)
-                CALL dgemm("N","N",ne,abSize,nvmax,-1.0,work_r,ne,AIMAG(abCoeffs(:nvmax,:abSize)),nvmax,0.0,imagCoeffs,ne)
+                CALL dgemm("T","N",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:nvmax,:abSize)),nvmax,0.0,realCoeffs,ne)
+                CALL dgemm("T","N",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:nvmax,:abSize)),nvmax,0.0,imagCoeffs,ne)
                 acof(:ne,0:abSize-1,iAtom) = acof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
                 realCoeffs = 0.0
                 imagCoeffs = 0.0
-                CALL dgemm("N","N",ne,abSize,nvmax,1.0,work_r,ne,REAL(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,realCoeffs,ne)
-                CALL dgemm("N","N",ne,abSize,nvmax,-1.0,work_r,ne,AIMAG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,imagCoeffs,ne)
+                CALL dgemm("T","N",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,realCoeffs,ne)
+                CALL dgemm("T","N",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,imagCoeffs,ne)
                 bcof(:ne,0:abSize-1,iAtom) = bcof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
                 DEALLOCATE(realCoeffs,imagCoeffs)
              ELSE
-                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
-                CALL zgemm("N","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,ne,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
+                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,CONJG(abCoeffs(:nvmax,:abSize)),nvmax,CMPLX(1.0,0.0),acof(:ne,0:abSize-1,iAtom),ne)
+                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,CONJG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,CMPLX(1.0,0.0),bcof(:ne,0:abSize-1,iAtom),ne)
              END IF
              CALL timestop("gemm")
 
@@ -231,29 +231,54 @@ CONTAINS
              END DO ! loop over LOs
              CALL timestop("local orbitals")
 
+             IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
+                CALL timestart("transpose work array")
+                ! For transposing the work array an OpenMP parallelization with explicit loops is used.
+                ! This solution works fastest on all compilers. Note that this section can actually be
+                ! a bottleneck without parallelization if many OpenMP threads are used.
+                IF (zmat%l_real) THEN
+                   ALLOCATE (workTrans_r(ne,nvmax))
+                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                   DO i = 1,ne 
+                      DO iLAPW = 1, nvmax 
+                         workTrans_r(i,iLAPW) = work_r(iLAPW,i)
+                      END DO
+                   END DO
+                   !$OMP END PARALLEL DO
+                ELSE
+                   ALLOCATE (workTrans_c(ne,nvmax))
+                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                   DO i = 1,ne 
+                      DO iLAPW = 1, nvmax 
+                         workTrans_c(i,iLAPW) = work_c(iLAPW,i)
+                      END DO
+                   END DO
+                   !$OMP END PARALLEL DO
+                ENDIF
+                CALL timestop("transpose work array")
+             END IF
+
              ! Treatment of inversion symmetric atoms for noco%l_soc.AND.sym%invs
              ! (The complementary case is treated far below)
-             IF (noco%l_soc.AND.sym%invs) THEN
+             IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
                 CALL timestart("invsym atoms")
-                IF (sym%invsat(iAtom).EQ.1) THEN
-                   jatom = sym%invsatnr(iAtom)
-                   DO iLAPW = 1,nvmax
-                      DO l = 0,atoms%lmax(iType)
-                         ll1 = l* (l+1)
-                         DO m = -l,l
-                            lm = ll1 + m
-                            lmp = ll1 - m
-                            inv_f = (-1)**(l-m)
-                            c_1 = abCoeffs(iLAPW,lm+1) * inv_f
-                            c_2 = abCoeffs(iLAPW,lm+1+abSize) * inv_f
-                            CALL zaxpy(ne,c_1,work_c(:,iLAPW),1, acof(:,lmp,jatom),1)
-                            CALL zaxpy(ne,c_2,work_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
-                         END DO
+                jatom = sym%invsatnr(iAtom)
+                DO iLAPW = 1,nvmax
+                   DO l = 0,atoms%lmax(iType)
+                      ll1 = l* (l+1)
+                      DO m = -l,l
+                         lm = ll1 + m
+                         lmp = ll1 - m
+                         inv_f = (-1)**(l-m)
+                         c_1 = abCoeffs(iLAPW,lm+1) * inv_f
+                         c_2 = abCoeffs(iLAPW,lm+1+abSize) * inv_f
+                         CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
+                         CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                       END DO
-                   END DO ! loop over LAPWs
-                END IF ! IF (sym%invsat(iAtom).EQ.1)
+                   END DO
+                END DO ! loop over LAPWs
                 CALL timestop("invsym atoms")
-             END IF ! IF (noco%l_soc.AND.sym%invs)
+             END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
 
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
@@ -282,40 +307,46 @@ CONTAINS
                          c_2 = CONJG(abCoeffs(iLAPW,lm+1+abSize))
 
                          IF (zmat%l_real) THEN
-                            force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * work_r(:ne,iLAPW) * s2h_e(:ne)
-                            force%e2cof(:ne,lm,iAtom) = force%e2cof(:ne,lm,iAtom) + c_2 * work_r(:ne,iLAPW) * s2h_e(:ne)
+                            force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * workTrans_r(:ne,iLAPW) * s2h_e(:ne)
+                            force%e2cof(:ne,lm,iAtom) = force%e2cof(:ne,lm,iAtom) + c_2 * workTrans_r(:ne,iLAPW) * s2h_e(:ne)
                             DO i = 1,3
-                               force%aveccof(i,:ne,lm,iAtom) = force%aveccof(i,:ne,lm,iAtom) + c_1 * work_r(:ne,iLAPW) * fgp(i)
-                               force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * work_r(:ne,iLAPW) * fgp(i)
+                               force%aveccof(i,:ne,lm,iAtom) = force%aveccof(i,:ne,lm,iAtom) + c_1 * workTrans_r(:ne,iLAPW) * fgp(i)
+                               force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * workTrans_r(:ne,iLAPW) * fgp(i)
                             END DO
                          ELSE
-                            force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * work_c(:ne,iLAPW) * s2h_e(:ne)
-                            force%e2cof(:ne,lm,iAtom) = force%e2cof(:ne,lm,iAtom) + c_2 * work_c(:ne,iLAPW) * s2h_e(:ne)
+                            force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * workTrans_c(:ne,iLAPW) * s2h_e(:ne)
+                            force%e2cof(:ne,lm,iAtom) = force%e2cof(:ne,lm,iAtom) + c_2 * workTrans_c(:ne,iLAPW) * s2h_e(:ne)
                             DO i = 1,3
-                               force%aveccof(i,:ne,lm,iAtom) = force%aveccof(i,:ne,lm,iAtom) + c_1 * work_c(:ne,iLAPW) * fgp(i)
-                               force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * work_c(:ne,iLAPW) * fgp(i)
+                               force%aveccof(i,:ne,lm,iAtom) = force%aveccof(i,:ne,lm,iAtom) + c_1 * workTrans_c(:ne,iLAPW) * fgp(i)
+                               force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * workTrans_c(:ne,iLAPW) * fgp(i)
                             END DO
                          END IF
 
-                         IF (noco%l_soc.AND.sym%invs) THEN
-                            IF (sym%invsat(iAtom).EQ.1) THEN
-                               jatom = sym%invsatnr(iAtom)
-                               lmp = ll1 - m
-                               inv_f = (-1)**(l-m)
-                               c_1 =  CONJG(c_1) * inv_f
-                               c_2 =  CONJG(c_2) * inv_f
-                               CALL zaxpy(ne,c_1,work_c(:,iLAPW)*s2h_e(:),1, force%e1cof(1,lmp,jatom),1)
-                               CALL zaxpy(ne,c_2,work_c(:,iLAPW)*s2h_e(:),1, force%e2cof(1,lmp,jatom),1)
-                               DO i = 1,3
-                                  CALL zaxpy(ne,c_1,work_c(:,iLAPW)*fgp(i),1, force%aveccof(i,1,lmp,jatom),3)
-                                  CALL zaxpy(ne,c_2,work_c(:,iLAPW)*fgp(i),1, force%bveccof(i,1,lmp,jatom),3)
-                               END DO
-                            END IF
+                         IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
+                            jatom = sym%invsatnr(iAtom)
+                            lmp = ll1 - m
+                            inv_f = (-1)**(l-m)
+                            c_1 =  CONJG(c_1) * inv_f
+                            c_2 =  CONJG(c_2) * inv_f
+                            CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW)*s2h_e(:),1, force%e1cof(1,lmp,jatom),1)
+                            CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW)*s2h_e(:),1, force%e2cof(1,lmp,jatom),1)
+                            DO i = 1,3
+                               CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW)*fgp(i),1, force%aveccof(i,1,lmp,jatom),3)
+                               CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW)*fgp(i),1, force%bveccof(i,1,lmp,jatom),3)
+                            END DO
                          END IF
                       END DO ! loop over m
                    END DO ! loop over l
                 END DO ! loop over LAPWs
                 CALL timestop("force contributions")
+             END IF
+
+             IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
+                IF (zmat%l_real) THEN
+                   DEALLOCATE (workTrans_r)
+                ELSE
+                   DEALLOCATE (workTrans_c)
+                ENDIF
              END IF
 
              IF (zmat%l_real) THEN
@@ -354,7 +385,7 @@ CONTAINS
              DO ilo = 1,atoms%nlo(iType)
                 l = atoms%llo(ilo,iType)
                 DO m = -l,l
-                   inv_f = (-1.0)**(m+l)
+                   inv_f = (-1)**(m+l)
                    DO ie = 1,ne
                       ccof(m,ie,ilo,jatom) = inv_f * phase * CONJG( ccof(-m,ie,ilo,iatom))
                       IF(l_force) THEN
@@ -370,7 +401,7 @@ CONTAINS
                 DO m =-l,l
                    lm  = ll1 + m
                    lmp = ll1 - m
-                   inv_f = (-1.0)**(m+l)
+                   inv_f = (-1)**(m+l)
                    acof(:ne,lm,jAtom) = inv_f * phase * CONJG(acof(:ne,lmp,iAtom))
                    bcof(:ne,lm,jAtom) = inv_f * phase * CONJG(bcof(:ne,lmp,iAtom))
                    IF (atoms%l_geo(iType).AND.l_force) THEN
