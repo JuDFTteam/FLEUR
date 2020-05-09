@@ -146,23 +146,21 @@ CONTAINS
                 END IF
              ELSE
                 IF (zmat%l_real) THEN
-                   work_r(:,:) = zMat%data_r(:nvmax,:ne)
-!                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-!                   DO i = 1, ne
-!                      DO iLAPW = 1, nvmax
-!                         work_r(iLAPW,i) = zMat%data_r(iLAPW,i)
-!                      END DO
-!                   END DO
-!                   !$OMP END PARALLEL DO
+                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                   DO i = 1, ne
+                      DO iLAPW = 1, nvmax
+                         work_r(iLAPW,i) = zMat%data_r(iLAPW,i)
+                      END DO
+                   END DO
+                   !$OMP END PARALLEL DO
                 ELSE
-                   work_c(:,:) = zMat%data_c(:nvmax,:ne)
-!                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-!                   DO i = 1, ne
-!                      DO iLAPW = 1, nvmax
-!                         work_c(iLAPW,i) = zMat%data_c(iLAPW,i)
-!                      END DO
-!                   END DO
-!                   !$OMP END PARALLEL DO
+                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                   DO i = 1, ne
+                      DO iLAPW = 1, nvmax
+                         work_c(iLAPW,i) = zMat%data_c(iLAPW,i)
+                      END DO
+                   END DO
+                   !$OMP END PARALLEL DO
                 END IF
              END IF
              CALL timestop("fill work array")
