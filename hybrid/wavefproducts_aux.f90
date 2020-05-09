@@ -153,8 +153,10 @@ CONTAINS
             call fft_interface(3, length_zfft, prod, .true.)
             if(cprod%l_real) then
                if(any(abs(aimag(prod)) > 1e-10)) then
-                  call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
-                                float2str(maxval(abs(aimag(prod)))))
+                  write (*,*) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
+                                float2str(maxval(abs(aimag(prod))))
+                  ! call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
+                  !               float2str(maxval(abs(aimag(prod)))))
                endif
             endif
             
