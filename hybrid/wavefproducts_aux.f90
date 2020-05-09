@@ -155,6 +155,7 @@ CONTAINS
                if(any(abs(aimag(prod)) > 1e-10)) then
                   call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
                                 float2str(maxval(abs(aimag(prod)))))
+               endif
             endif
             
             ! we still have to devide by the number of mesh points
