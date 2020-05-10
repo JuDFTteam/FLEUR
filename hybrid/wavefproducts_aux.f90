@@ -134,7 +134,7 @@ CONTAINS
       !$OMP PARALLEL default(none) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik) &
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned) &
       !$OMP reduction(+: t_2ndwavef2rs, t_fft, t_sort)
 
       allocate(prod(0:fftd-1), stat=ok)
