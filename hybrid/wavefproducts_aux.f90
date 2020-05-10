@@ -98,6 +98,8 @@ CONTAINS
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3), inv_vol, t_2ndwavef2rs, t_fft, t_sort, t_start
       type(t_mat)  :: psi_kqpt
+      logical :: real_warned
+      real_warned = .False.
 
       call timestart("wavef_IS_FFT")
       inv_vol = 1/sqrt(fi%cell%omtil)
@@ -152,9 +154,10 @@ CONTAINS
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
             call fft_interface(3, length_zfft, prod, .true.)
             if(cprod%l_real) then
-               if(any(abs(aimag(prod)) > 1e-10)) then
+               if(any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*,*) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
                                 float2str(maxval(abs(aimag(prod))))
+                  real_warned = .True.
                   ! call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
                   !               float2str(maxval(abs(aimag(prod)))))
                endif
