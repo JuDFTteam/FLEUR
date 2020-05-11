@@ -103,15 +103,15 @@ MODULE m_greensfSpinOffDiag
          ELSE
             DO imat = 1, MERGE(1,4,l_sphavg)
                IF(l_sphavg) THEN
-                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) + elementPhase * im(:,:,imat)
+                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_gf,3) + CONJG(elementPhase * im(:,:,imat))
                ELSE IF(imat.EQ.1) THEN
-                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) + elementPhase * im(:,:,imat)
+                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_gf,3) + CONJG(elementPhase * im(:,:,imat))
                ELSE IF(imat.EQ.2) THEN
-                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) + elementPhase * im(:,:,imat)
+                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_gf,3) + CONJG(elementPhase * im(:,:,imat))
                ELSE IF(imat.EQ.3) THEN
-                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) + elementPhase * im(:,:,imat)
+                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_gf,3) + CONJG(elementPhase * im(:,:,imat))
                ELSE IF(imat.EQ.4) THEN
-                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) + elementPhase * im(:,:,imat)
+                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) = greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_gf,3) + CONJG(elementPhase * im(:,:,imat))
                ENDIF
             ENDDO
          ENDIF

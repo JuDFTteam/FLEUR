@@ -330,7 +330,7 @@ MODULE m_types_greensf
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
-            IF(ispin.EQ.2.AND.input%jspins.EQ.1) CYCLE
+            IF(ispin.EQ.2 .AND.input%jspins.EQ.1) CYCLE
             IF(.NOT.PRESENT(spin)) THEN
                IF(ispin < 3) THEN
                   spin1 = ispin
