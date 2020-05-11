@@ -39,7 +39,7 @@ MODULE m_juDFT_time
    CHARACTER(LEN=256), SAVE   :: lastfile = ""
    INTEGER, SAVE   :: lastline = 0
 
-   PUBLIC timestart, timestop, writetimes, writeTimesXML
+   PUBLIC timestart, timestop, writetimes, writeTimesXML, cputime
    PUBLIC resetIterationDependentTimers, check_time_for_next_iteration
    PUBLIC juDFT_time_lastlocation !should be used for error handling only
 
@@ -95,28 +95,28 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n
-      IF (PRESENT(file)) lastfile = file
-      IF (PRESENT(line)) lastline = line
-      IF (.NOT. ASSOCIATED(current_timer)) THEN
-         CALL priv_new_timer("Total Run")
-         l_debug = judft_was_Argument("-debugtime")
-      ENDIF
-
-      DO n = 1, current_timer%n_subtimers
-         IF (TRIM(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) THEN
-            current_timer => current_timer%subtimer(n)%p
-            IF (current_timer%starttime > 0) THEN
-               WRITE (*, *) "Timer already running:", ttimer
-               STOP "BUG:starttime"
-            ENDIF
-            current_timer%starttime = cputime()
-            CALL priv_debug_output(" started ", current_timer%name)
-            RETURN
+         IF (PRESENT(file)) lastfile = file
+         IF (PRESENT(line)) lastline = line
+         IF (.NOT. ASSOCIATED(current_timer)) THEN
+            CALL priv_new_timer("Total Run")
+            l_debug = judft_was_Argument("-debugtime")
          ENDIF
-      ENDDO
-      !new subtimer
-      CALL priv_new_timer(ttimer)
-      CALL priv_debug_output(" started ", current_timer%name)
+
+         DO n = 1, current_timer%n_subtimers
+            IF (TRIM(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) THEN
+               current_timer => current_timer%subtimer(n)%p
+               IF (current_timer%starttime > 0) THEN
+                  WRITE (*, *) "Timer already running:", ttimer
+                  STOP "BUG:starttime"
+               ENDIF
+               current_timer%starttime = cputime()
+               CALL priv_debug_output(" started ", current_timer%name)
+               RETURN
+            ENDIF
+         ENDDO
+         !new subtimer
+         CALL priv_new_timer(ttimer)
+         CALL priv_debug_output(" started ", current_timer%name)
    END SUBROUTINE timestart
 
    !>
@@ -127,24 +127,24 @@ CONTAINS
 
       REAL::time
 
-      IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
-         WRITE (*, *) "Current timer:", current_timer%name, " could not stop:", ttimer
-         STOP "BUG:timestop"
-      ENDIF
-      IF (current_timer%starttime < 0) THEN
-         WRITE (*, *) "Timer not initialized:"//ttimer
-         STOP "BUG:timestop"
-      ENDIF
-      time = cputime() - current_timer%starttime !This runtime
-      current_timer%time = current_timer%time + time
-      current_timer%no_calls = current_timer%no_calls + 1
-      current_timer%mintime = MIN(current_timer%mintime, time)
-      current_timer%maxtime = MAX(current_timer%maxtime, time)
-      current_timer%starttime = -1
+         IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
+            WRITE (*, *) "Current timer:", current_timer%name, " could not stop:", ttimer
+            STOP "BUG:timestop"
+         ENDIF
+         IF (current_timer%starttime < 0) THEN
+            WRITE (*, *) "Timer not initialized:"//ttimer
+            STOP "BUG:timestop"
+         ENDIF
+         time = cputime() - current_timer%starttime !This runtime
+         current_timer%time = current_timer%time + time
+         current_timer%no_calls = current_timer%no_calls + 1
+         current_timer%mintime = MIN(current_timer%mintime, time)
+         current_timer%maxtime = MAX(current_timer%maxtime, time)
+         current_timer%starttime = -1
 
-      CALL priv_debug_output(" stopped ", current_timer%name)
+         CALL priv_debug_output(" stopped ", current_timer%name)
 
-      current_timer => current_timer%parenttimer
+         current_timer => current_timer%parenttimer
    END SUBROUTINE timestop
 
    !>

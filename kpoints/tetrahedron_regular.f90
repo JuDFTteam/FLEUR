@@ -22,9 +22,10 @@ MODULE m_tetrahedron_regular
 
    CONTAINS
 
-   SUBROUTINE tetrahedron_regular(kpts,cell,grid,ntetra,voltet)
+   SUBROUTINE tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
 
       TYPE(t_kpts),           INTENT(INOUT)  :: kpts
+      LOGICAL,                INTENT(IN)     :: film
       TYPE(t_cell),           INTENT(IN)     :: cell
       INTEGER,                INTENT(IN)     :: grid(:)
       INTEGER, ALLOCATABLE,   INTENT(INOUT)  :: ntetra(:,:)
@@ -32,13 +33,30 @@ MODULE m_tetrahedron_regular
 
 
       INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra
-      REAL    :: vol,sumvol,volbz
-      INTEGER :: tetra(4,24),iarr(3),kcorn(8)
+      REAL    :: vol,sumvol,volbz,diag(2)
+      INTEGER :: iarr(3)
+      INTEGER, ALLOCATABLE :: tetra(:,:)
+      INTEGER, ALLOCATABLE :: kcorn(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
 
-      volbz = ABS(det(cell%bmat))
-      !Choose the tetrahedra decomposition along the shortest diagonal
-      CALL get_tetra(kpts,cell,grid,ntetraCube,vol,tetra)
+      !Determine the decomposition of each individual cube
+      ! and the total volume of the brillouin zone
+      IF(film) THEN
+         volbz = cell%bmat(1,1)*cell%bmat(2,2)-cell%bmat(1,2)*cell%bmat(2,1)
+         ALLOCATE(tetra(3,2),source=0)
+         ALLOCATE(kcorn(4),source=0)
+         ntetraCube = 2
+         tetra = reshape ( [ 1,2,3, 2,3,4], [ 3,2 ] )
+         diag = cell%bmat(:2,2)/grid(:2) - cell%bmat(:2,1) / grid(:2)
+         vol =  sum(diag*diag)/4.0
+      ELSE
+         volbz = ABS(det(cell%bmat))
+         ALLOCATE(tetra(4,24),source=0)
+         ALLOCATE(kcorn(8),source=0)
+         !Choose the tetrahedra decomposition along the shortest diagonal
+         CALL get_tetra(kpts,cell,grid,ntetraCube,vol,tetra)
+      ENDIF
+
       !Set up pointer array for the kpts
       ALLOCATE(p(0:grid(1),0:grid(2),0:grid(3)),source=0)
       p = 0
@@ -53,17 +71,22 @@ MODULE m_tetrahedron_regular
 
       !Check for invalid indices
       IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) THEN
-            CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
+         CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
       ENDIF
 
       !Temporary Size
-      ALLOCATE(ntetra(4,kpts%nkptf*6),source=0)
-      ALLOCATE(voltet(kpts%nkptf*6),source=0.0)
+      IF(film) THEN
+         ALLOCATE(ntetra(3,kpts%nkptf*2),source=0)
+         ALLOCATE(voltet(kpts%nkptf*2),source=0.0)
+      ELSE
+         ALLOCATE(ntetra(4,kpts%nkptf*6),source=0)
+         ALLOCATE(voltet(kpts%nkptf*6),source=0.0)
+      ENDIF
 
       kpts%ntet = 0
       sumvol = 0.0
       !Set up the tetrahedrons
-      DO k3 = 0, grid(3)-1
+      DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
             DO k1 = 0, grid(1)-1
                !Corners of the current cube
@@ -71,18 +94,20 @@ MODULE m_tetrahedron_regular
                kcorn(2) = p(k1+1,k2  ,k3  )
                kcorn(3) = p(k1  ,k2+1,k3  )
                kcorn(4) = p(k1+1,k2+1,k3  )
-               kcorn(5) = p(k1  ,k2  ,k3+1)
-               kcorn(6) = p(k1+1,k2  ,k3+1)
-               kcorn(7) = p(k1  ,k2+1,k3+1)
-               kcorn(8) = p(k1+1,k2+1,k3+1)
+               IF(.NOT.film) THEN
+                  kcorn(5) = p(k1  ,k2  ,k3+1)
+                  kcorn(6) = p(k1+1,k2  ,k3+1)
+                  kcorn(7) = p(k1  ,k2+1,k3+1)
+                  kcorn(8) = p(k1+1,k2+1,k3+1)
+               ENDIF
 
                !Now divide the cube into tetrahedra
                DO itetra = 1, ntetraCube
                   !Drop all tetrahedra without kpoints inside the IBZ
                   sumvol = sumvol + vol
-                  IF(ALL(kcorn(tetra(1:4,itetra)).GT.kpts%nkpt)) CYCLE
+                  IF(ALL(kcorn(tetra(:,itetra)).GT.kpts%nkpt)) CYCLE
                   kpts%ntet = kpts%ntet+1
-                  ntetra(1:4,kpts%ntet) = kcorn(tetra(1:4,itetra))
+                  ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
                   voltet(kpts%ntet) = vol
                ENDDO
             ENDDO
@@ -93,9 +118,12 @@ MODULE m_tetrahedron_regular
       IF(ABS(sumvol-volbz).GT.1E-10) THEN
             CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
       ENDIF
+
+      !Normalize volumes
       voltet = voltet/volbz
 
       !Rescale volumes for IO to inp.xml
+      !(so weights dont get to small for IO with dense meshes)
       voltet = voltet * kpts%ntet
 
    END SUBROUTINE tetrahedron_regular

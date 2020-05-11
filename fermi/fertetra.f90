@@ -23,7 +23,7 @@ MODULE m_fertetra
 
       INTEGER :: jspin,jspins,ikpt,it,iBand
       REAL    :: dlow,dup,dfermi,s1,s,chmom
-      REAL    :: lowBound,upperBound
+      REAL    :: lowBound,upperBound,weightSum
 
 
       jspins = MERGE(1,input%jspins,noco%l_noco)
@@ -38,12 +38,8 @@ MODULE m_fertetra
       dlow = 0.0
       DO jspin = 1, jspins
          CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                              lowBound,input%film,w(:,:,jspin))
-         DO ikpt = 1, kpts%nkpt
-            DO iBand = 1, MINVAL(ne(:,jspin))
-               dlow = dlow + w(iBand,ikpt,jspin) * 2.0/input%jspins
-            ENDDO
-         ENDDO
+                              lowBound,input%film,weightSum=weightSum)
+         dlow = dlow + weightSum * 2.0/input%jspins
       ENDDO
 
       IF (dlow.GT.input%zelec) THEN
@@ -59,12 +55,8 @@ MODULE m_fertetra
          dup = 0.0
          DO jspin = 1, jspins
             CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                                 upperBound,input%film,w(:,:,jspin))
-            DO ikpt = 1, kpts%nkpt
-               DO iBand = 1, MINVAL(ne(:,jspin))
-                  dup = dup + w(iBand,ikpt,jspin) * 2.0/input%jspins
-               ENDDO
-            ENDDO
+                                 upperBound,input%film,weightSum=weightSum)
+            dup = dup + weightSum * 2.0/input%jspins
          ENDDO
 
          IF (dup.GT.input%zelec) THEN
@@ -93,24 +85,36 @@ MODULE m_fertetra
          dfermi = 0.0
          DO jspin = 1, jspins
             !-------------------------------------------------------
-            ! Compute the weights for charge density integration
+            ! Compute the current occupation
             !-------------------------------------------------------
             CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                                 ef,input%film,w(:,:,jspin))
-            DO ikpt = 1, kpts%nkpt
-               DO iBand = 1, MINVAL(ne(:,jspin))
-                  dfermi = dfermi + w(iBand,ikpt,jspin) * 2.0/input%jspins
-               ENDDO
-            ENDDO
+                                 ef,input%film,weightSum=weightSum)
+            dfermi = dfermi + weightSum * 2.0/input%jspins
          ENDDO
-         IF(dfermi.GT.input%zelec) THEN
-            !Occupation to large -> search in the right interval
+         IF(ABS(dfermi-input%zelec).LT.1e-12) THEN
+            EXIT
+         ELSE IF(dfermi-input%zelec.GT.0.0) THEN
+            !Occupation to large -> search in the left interval
             upperBound = ef
-         ELSE IF(dfermi.LE.input%zelec) THEN
+         ELSE
             !Occupation to small -> search in the right interval
             lowBound = ef
          ENDIF
       ENDDO
+
+      !---------------------------------------------------------------------
+      !Calculate final occupation and weights for individual kpts and bands
+      !---------------------------------------------------------------------
+      dfermi = 0.0
+      DO jspin = 1, jspins
+         !-------------------------------------------------------
+         ! Compute the weights for charge density integration
+         !-------------------------------------------------------
+         CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
+                              ef,input%film,weightSum=weightSum,weights=w(:,:,jspin))
+         dfermi = dfermi + weightSum * 2.0/input%jspins
+      ENDDO
+
       WRITE (oUnit,9200) ef,dfermi,input%zelec
 9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy ',f10.5,&
                  ' dtot ',f10.5,' nelec ',f10.5)
@@ -118,11 +122,11 @@ MODULE m_fertetra
       !----------------------------------------------
       ! Obtain sum of weights and valence eigenvalues
       !----------------------------------------------
-      s1 = 0.
-      seigv = 0.
+      s1 = 0.0
+      seigv = 0.0
       DO jspin = 1,jspins
-         s = 0.
-         DO iBand = 1,MAXVAL(ne(:,jspin))
+         s = 0.0
+         DO iBand = 1,MINVAL(ne(:,jspin))
             DO ikpt = 1,kpts%nkpt
                s = s + w(iBand,ikpt,jspin)
                seigv = seigv + w(iBand,ikpt,jspin)*eig(iBand,ikpt,jspin)

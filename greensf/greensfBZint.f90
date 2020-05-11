@@ -39,6 +39,7 @@ MODULE m_greensfBZint
          spin1 = jspin
          spin2 = jspin
       ENDIF
+
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
       !$OMP PARALLEL DEFAULT(NONE) &
       !$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
@@ -62,7 +63,7 @@ MODULE m_greensfBZint
          DO natom = SUM(atoms%neq(:atomType-1)) + 1, SUM(atoms%neq(:atomType))
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,SUM(atoms%neq(:atomType-1)) + 1,atomType==atomTypep)
+            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
             natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))     ,atomType==atomTypep)
 
             DO natomp = natomp_start, natomp_end
@@ -85,6 +86,7 @@ MODULE m_greensfBZint
                CALL greensfSpinDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,&
                                     gfinp%l_sphavg,phase,sym,atoms,usdus,eigVecCoeffs,greensfBZintCoeffs)
                IF(spin1/=spin2) THEN
+                  IF(natom /= SUM(atoms%neq(:atomType-1)) + 1) CYCLE
                   !Spin offdiagonal elements
                   CALL greensfSpinOffDiag(ikpt_i,nBands,i_elem,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
                                           gfinp%l_sphavg,phase,sym,atoms,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs)

@@ -196,7 +196,7 @@ MODULE m_add_selfen
       ENDDO
       CALL vmat%free()
       !Test throw out elements smaller than 1e-4
-      DO ispin = 1, input%jspins
+      DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO m = -l, l
             DO mp=-l, l
                IF(ABS(mmpMat(m,mp,ispin)).LT.1e-4) mmpMat(m,mp,ispin) = 0.0

@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,enpara,&
+   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
 
       USE m_types_hybdat
@@ -31,6 +31,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
       TYPE(t_mpi), INTENT(IN)           :: mpi
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      type(t_stars), intent(in)         :: stars
       TYPE(t_enpara), INTENT(IN)        :: enpara
       TYPE(t_results), INTENT(INOUT)    :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -128,7 +129,7 @@ CONTAINS
             nk = my_k_list(i)
             CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
             CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
-                        nococonv, results, xcpot, mpi)
+                        nococonv, stars, results, xcpot, mpi)
          END DO
       END DO
       CALL timestop("Calculation of non-local HF potential")

@@ -116,7 +116,7 @@ MODULE m_greensfCalcRealPart
             !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
             !
             CALL timestart("On-Site: Integration Cutoff")
-            CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,l,input%jspins,&
+            CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
                            gfinp%ne,del,eb,et,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
             CALL timestop("On-Site: Integration Cutoff")
          ELSE IF (l_fixedCutoffset) THEN

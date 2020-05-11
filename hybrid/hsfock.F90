@@ -43,7 +43,7 @@ MODULE m_hsfock
 CONTAINS
 
    SUBROUTINE hsfock(fi, nk, mpdata, lapw, jsp, hybdat, &
-                     eig_irr, nococonv, &
+                     eig_irr, nococonv, stars, &
                      results, xcpot, mpi)
 
       use m_ex_to_vx
@@ -64,6 +64,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      type(t_stars), intent(in)   :: stars
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
@@ -132,13 +133,12 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)
       
-      CALL timestart("symm_hf")
+
       CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
                    fi%noco, nococonv, fi%oneD, z_k, c_phase_k, jsp, &
                    rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
-      CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf
@@ -152,7 +152,7 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, nsest, indx_sest, mpi, ex)
+                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
 
