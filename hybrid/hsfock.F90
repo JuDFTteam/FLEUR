@@ -133,13 +133,12 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)
       
-      CALL timestart("symm_hf")
+
       CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
                    fi%noco, nococonv, fi%oneD, z_k, c_phase_k, jsp, &
                    rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
-      CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf

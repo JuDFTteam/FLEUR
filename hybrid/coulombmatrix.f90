@@ -613,8 +613,7 @@ CONTAINS
                      !    m=-l..l{}
                      ! }
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) &
-                     !$OMP collapse(2)
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
                            call calc_l_m_from_lm(lm1, l1, m1)
@@ -1436,22 +1435,25 @@ CONTAINS
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
                call ylm4(maxl, ra, y)
                y = CONJG(y)
+               !$OMP PARALLEL DO default(none) schedule(dynamic) &
+               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
+               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
+               !$OMP collapse(2)
                DO ikpt = 1, kpts%nkpt
-                  rdum = kpts%bk(1, ikpt)*ptsh(1, i) + kpts%bk(2, ikpt)*ptsh(2, i) + kpts%bk(3, ikpt)*ptsh(3, i)
-                  cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*rdum)
-                  lm = 0
                   DO l = 0, maxl
+                     rdum = dot_product(kpts%bk(:, ikpt), ptsh(:,i))
+                     cexp = EXP(ImagUnit*tpi_const*rdum)
+                     lm = l**2
                      IF (ishell <= conv(l)) THEN
                         cdum = cexp*g(l)
                         DO M = -l, l
                            lm = lm + 1
                            shlp(lm, ikpt) = shlp(lm, ikpt) + cdum*y(lm)
                         END DO
-                     ELSE
-                        lm = lm + 2*l + 1
                      END IF
                   END DO
                END DO
+               !$OMP END PARALLEL DO
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
@@ -1512,29 +1514,38 @@ CONTAINS
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
             call ylm4(maxl, ka, y)
             IF (norm2(ka(:)) .LT. 1.0e-16) y(2:(maxl + 1)**2) = CMPLX(0.0, 0.0)
-            cdum = 1.0
             lm = 0
+            !$OMP PARALLEL default(none) &
+            !$OMP private(l, M, lm, ic1, ic2, cexp) &
+            !$OMP shared(ishell, conv, g, y, maxl, structconst, atoms, ikpt, ki)
+
+            !$OMP DO schedule(dynamic)
             DO l = 0, maxl
+               lm = l**2
                IF (ishell <= conv(l)) THEN
                   DO M = -l, l
                      lm = lm + 1
-                     y(lm) = CONJG(y(lm))*cdum*g(l)
+                     y(lm) = CONJG(y(lm))*g(l)*  ImagUnit**l
                   END DO
                ELSE
                   y(lm + 1:lm + 2*l + 1) = 0
-                  lm = lm + 2*l + 1
                END IF
-               cdum = cdum*CMPLX(0.0, 1.0)
             END DO
+            !$OMP END DO
+
+            !$OMP DO schedule(dynamic) collapse(2)
             DO ic2 = 1, atoms%nat
                DO ic1 = 1, atoms%nat
                   IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
-                  cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(ki, atoms%taual(:, ic1) - atoms%taual(:, ic2)))
+                  cexp = EXP(ImagUnit*tpi_const*dot_PRODUCT(ki, atoms%taual(:, ic1) - atoms%taual(:, ic2)))
                   DO lm = 1, (maxl + 1)**2
                      structconst(lm, ic1, ic2, ikpt) = structconst(lm, ic1, ic2, ikpt) + cexp*y(lm)
                   END DO
                END DO
             END DO
+            !$OMP END DO
+            !$OMP END PARALLEL 
+
          END DO
       END DO
       call timestop("fourierspace sum")

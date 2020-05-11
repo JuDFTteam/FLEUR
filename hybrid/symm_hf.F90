@@ -22,7 +22,7 @@ MODULE m_symm_hf
 CONTAINS
 
    SUBROUTINE symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
-
+      use m_juDFT
       IMPLICIT NONE
 
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -35,6 +35,7 @@ CONTAINS
       INTEGER :: i
       REAL    :: rotkpt(3)
 
+      CALL timestart("symm_hf_init")
       nsymop = 0
       ! calculate rotations in reciprocal space
       DO i = 1, sym%nsym
@@ -69,6 +70,7 @@ CONTAINS
       WRITE(oUnit, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
       WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
 
+      CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
@@ -78,6 +80,7 @@ CONTAINS
       USE m_olap
       USE m_trafo
       use m_calc_cmt
+      use m_juDFT
 
       IMPLICIT NONE
 
@@ -150,13 +153,14 @@ CONTAINS
       COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
+      CALL timestart("symm_hf")
       parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
       WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
       ! applying the symmetry operations of the little group of k
-
+      call timestart("calc EIBZ")
       neqvkpt = 0
 
       DO i = 1, kpts%nkptf
@@ -204,9 +208,11 @@ CONTAINS
       END DO
 
       WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
+      call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
+      call timestart("calc n_q")
       IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
       allocate(n_q(nkpt_EIBZ), source=0)
 
@@ -230,6 +236,7 @@ CONTAINS
          END IF
       END DO
       IF(ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
+      call timestop("calc n_q")
 
       ! calculate degeneracy:
       ! degenerat(i) = 1 state i  is not degenerat,
@@ -276,6 +283,7 @@ CONTAINS
       IF(ok /= 0) call judft_error('symm: failure allocation olapmt')
       olapmt = 0
 
+      call timestart("calc olapmt")
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
             nn = mpdata%num_radfun_per_l(l, itype)
@@ -289,11 +297,13 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("calc olapmt")
 
       allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
       wavefolap = 0
 
+      call timestart("calc wavefolap")
       iatom = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
@@ -316,6 +326,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("calc wavefolap")
 
       DO iband1 = 1, hybdat%nbands(nk)
          DO iband2 = 1, iband1
@@ -348,7 +359,7 @@ CONTAINS
       ! generate index field which contain the band combinations (n1,n2),
       ! which are non zero
       !
-
+      call timestart("calc bandcombos")
       ic1 = 0
       indx_sest = 0
       nsest = 0
@@ -377,6 +388,7 @@ CONTAINS
             END IF
          END DO
       END DO
+      call timestop("calc bandcombos")
 
       !
       ! calculate representations for core states
@@ -391,6 +403,7 @@ CONTAINS
 
       pi = pimach()
 
+      call timestart("calc core repr")
       IF(hybdat%lmaxcd > atoms%lmaxd) then
          call judft_error('symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs')
       endif
@@ -417,7 +430,9 @@ CONTAINS
          END DO
          iatom0 = iatom0 + atoms%neq(itype)
       END DO
+      call timestop("calc core repr")
 
+      CALL timestop("symm_hf")
    END SUBROUTINE symm_hf
 
    INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts, nk, sym)
