@@ -20,10 +20,11 @@ c
 c------> local variables
 c
       INTEGER  nl,k,j, i,js
-      REAL  de,wk
+      REAL  de,wk,emin
 c     ..
       de=e(2)-e(1)
       g=0.0
+      emin=minval(e)
 c
 c----> put weights in the right bins
 c
