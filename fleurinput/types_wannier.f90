@@ -14,27 +14,27 @@ MODULE m_types_wannier
   !
   TYPE,EXTENDS(t_fleurinput_base):: t_wann
     !New parameters not handled correctly yet...
-    LOGICAL :: l_socmatvec
-    LOGICAL :: l_socmatvecrs
-    LOGICAL :: l_mmn0_unf_to_spn_unf
-      LOGICAL :: l_mmn0_to_spn_unf
-      LOGICAL :: l_mmn0_to_spn
-      LOGICAL :: l_mmn0_to_spn2
-      LOGICAL :: l_mmn0_unf_to_spn
-      LOGICAL :: l_perpmag_unf_to_tor_unf
-      LOGICAL :: l_perpmag_to_tor_unf
-      LOGICAL :: l_perpmag_to_tor
-      LOGICAL :: l_perpmag_unf_to_tor
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
-      LOGICAL :: l_hsomtx_unf_to_hsoc_unf
-      LOGICAL :: l_hsomtx_to_hsoc_unf
-      LOGICAL :: l_hsomtx_to_hsoc
-      LOGICAL :: l_hsomtx_unf_to_hsoc
+    LOGICAL :: l_socmatvec=.FALSE.
+    LOGICAL :: l_socmatvecrs=.FALSE.
+    LOGICAL :: l_mmn0_unf_to_spn_unf=.FALSE.
+      LOGICAL :: l_mmn0_to_spn_unf=.FALSE.
+      LOGICAL :: l_mmn0_to_spn=.FALSE.
+      LOGICAL :: l_mmn0_to_spn2=.FALSE.
+      LOGICAL :: l_mmn0_unf_to_spn=.FALSE.
+      LOGICAL :: l_perpmag_unf_to_tor_unf=.FALSE.
+      LOGICAL :: l_perpmag_to_tor_unf=.FALSE.
+      LOGICAL :: l_perpmag_to_tor=.FALSE.
+      LOGICAL :: l_perpmag_unf_to_tor=.FALSE.
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf=.FALSE.
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf=.FALSE.
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc=.FALSE.
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc=.FALSE.
+      LOGICAL :: l_hsomtx_unf_to_hsoc_unf=.FALSE.
+      LOGICAL :: l_hsomtx_to_hsoc_unf=.FALSE.
+      LOGICAL :: l_hsomtx_to_hsoc=.FALSE.
+      LOGICAL :: l_hsomtx_unf_to_hsoc=.FALSE.
       INTEGER :: perpmagl
-      LOGICAL :: l_perpmagatlres
+      LOGICAL :: l_perpmagatlres=.FALSE.
 
      INTEGER :: wan90version =3
      INTEGER :: oc_num_orbs =0
@@ -237,6 +237,11 @@ CONTAINS
     CALL mpi_bc(this%l_plotw90,rank,mpi_comm)
     CALL mpi_bc(this%l_byindex,rank,mpi_comm)
     CALL mpi_bc(this%l_byenergy,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0_unf_to_spn_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0_to_spn_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0_to_spn,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0_to_spn2,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0_unf_to_spn,rank,mpi_comm)
     CALL mpi_bc(this%l_proj_plot,rank,mpi_comm)
     CALL mpi_bc(this%l_bestproj,rank,mpi_comm)
     CALL mpi_bc(this%l_ikptstart,rank,mpi_comm)
@@ -461,6 +466,16 @@ CONTAINS
              this%l_byenergy=.TRUE.
           ELSEIF(this%jobList(i).EQ.'finishnocoplot') THEN
              this%l_finishnocoplot=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_unf_to_spn_unf') THEN
+             this%l_mmn0_unf_to_spn_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn_unf') THEN
+             this%l_mmn0_to_spn_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn') THEN
+             this%l_mmn0_to_spn=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn2') THEN
+             this%l_mmn0_to_spn2=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_unf_to_spn') THEN
+             this%l_mmn0_unf_to_spn=.TRUE.            
           ELSEIF(this%jobList(i).EQ.'finishgwf') THEN
              this%l_finishgwf=.TRUE.
           ELSEIF(this%jobList(i).EQ.'skipkov') THEN

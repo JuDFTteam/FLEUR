@@ -40,9 +40,12 @@ MODULE m_crystalfield
       INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour,dummy,i_elem
       REAL    tr,xiSOC,del,eb
       COMPLEX vso
+      LOGICAL, PARAMETER :: l_correctMinus = .TRUE.
+      REAL, PARAMETER :: excTolerance = 0.05/hartree_to_ev_const
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      REAL :: shift(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: integrand(gfinp%ne), norm(gfinp%ne)
 
       h_loc = 0.0
@@ -82,15 +85,19 @@ MODULE m_crystalfield
 #ifdef CPP_DEBUG
          WRITE(*,*) "UP"
          WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
-         IF(input%jspins.EQ.2) WRITE(*,*) "DOWN"
-         IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         IF(input%jspins.EQ.2) THEN
+            WRITE(*,*) "DOWN"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         ENDIF
 #endif
          !Remove LDA+U potential
          i_u = atoms%n_u+i_hia !position in the v%mmpmat array
          DO jspin = 1, input%jspins
             DO m = -l, l
                DO mp = -l, l
-                  IF(ABS(REAL(v%mmpmat(m,mp,i_u,jspin))).GT.1e-4) h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+                  IF(ABS(REAL(v%mmpmat(m,mp,i_u,jspin))).GT.1e-4) THEN
+                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+                  ENDIF
                ENDDO
             ENDDO
          ENDDO
@@ -111,40 +118,74 @@ MODULE m_crystalfield
 #ifdef CPP_DEBUG
          WRITE(*,*) "UP-REMOVED"
          WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
-         IF(input%jspins.EQ.2) WRITE(*,*) "DOWN-REMOVED"
-         IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         IF(input%jspins.EQ.2) THEN
+            WRITE(*,*) "DOWN-REMOVED"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         ENDIF
 #endif
-         ex = 0.0
-         DO m= -l, l
-            DO mp = -l, l
-               ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
+         IF(input%jspins.EQ.2) THEN
+            ex = 0.0
+            DO m= -l, l
+               DO mp = -l, l
+                  ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
+               ENDDO
             ENDDO
-         ENDDO
 #ifdef CPP_DEBUG
-         IF(input%jspins.EQ.2) WRITE(*,*) "Exchange (eV)"
-         IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
+            WRITE(*,*) "Exchange (eV)"
+            WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
 #endif
-         !------------------------------------------------------------------------------------
-         ! If states move close to the cutoff we get some shift in the results on the diagonal
-         ! The reason for this is a bit unclear we remove these results and replace them
-         ! with either the -m or corresponding opposite spin result (only diagonal)
-         !------------------------------------------------------------------------------------
-        !IF(.FALSE.) THEN
-        !DO m = -l, l
-            !100 meV cutoff
-            !IF(ABS(ex(m,m)).LT.0.1/hartree_to_ev_const) CYCLE
-            !IF(ex(-m,-m).LT.0.1/hartree_to_ev_const) THEN
-            !Assume the error is on the spin-down states
-            !IF(m.EQ.0) THEN
-            !   WRITE(*,*) "Replacing m 0 spin down with m 0 spin up"
-            !   h_loc(0,0,i_hia,2) = h_loc(0,0,i_hia,1)
-            !ELSE
-            !   WRITE(*,*) "Replacing m ", m
-            !   h_loc(m,m,i_hia,2) = h_loc(-m,-m,i_hia,2)
-            !ENDIF
-         !ENDIF
-         !ENDDO
-        !ENDIF
+            !------------------------------------------------------------------------------------
+            ! If states move close to the cutoff we get some shift in the results on the diagonal
+            ! The reason for this is a bit unclear we remove these results and replace them
+            ! with either the -m or corresponding opposite spin result (only diagonal)
+            !------------------------------------------------------------------------------------
+            !Shift m=0 exchange to 0
+            IF(l_correctMinus)THEN
+               IF(ABS(ex(0,0)).LT.excTolerance) THEN
+                  !There is no big discrepancy between m=0 spin up/down => simply eleminate the exchange
+                  DO m = -l, l
+                     h_loc(m,m,i_hia,1) = h_loc(m,m,i_hia,1) - ex(0,0)/2.0
+                     h_loc(m,m,i_hia,2) = h_loc(m,m,i_hia,2) + ex(0,0)/2.0
+                  ENDDO
+               ELSE
+                  !There is a big discrepancy due to numerical problems => Take the spin up part
+                  h_loc(0,0,i_hia,2) = h_loc(0,0,i_hia,1)
+               ENDIF
+
+               !Recalculate exchange
+               ex = 0.0
+               DO m= -l, l
+                  DO mp = -l, l
+                     ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
+                  ENDDO
+               ENDDO
+#ifdef CPP_DEBUG
+               WRITE(*,*) "Exchange shifted (eV)"
+               WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
+#endif
+               !Calculate shifts for numerically "troubled" elements
+               shift=0.0
+               DO m = -l, -1
+                  !Normal leftover from SOC+numerical problems
+                  IF(ABS(ex(m,m)).LT.excTolerance) CYCLE
+                  shift(m,m) = ex(m,m) + ex(-m,-m)
+               ENDDO
+               h_loc(:,:,i_hia,2) = h_loc(:,:,i_hia,2) + shift
+
+#ifdef CPP_DEBUG
+               !Recalculate differences for verification
+               ex = 0.0
+               DO m= -l, l
+                  DO mp = -l, l
+                     ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
+                  ENDDO
+               ENDDO
+
+               WRITE(*,*) "Exchange after Correction (eV)"
+               WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
+#endif
+            ENDIF
+        ENDIF
 
          !Average over spins
          hub1data%ccfmat(i_hia,:,:) = 0.0
@@ -159,16 +200,24 @@ MODULE m_crystalfield
          WRITE(*,*) "Average"
          WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)
 #endif
-         DO m = -l, l
-            DO mp = -l, l
-               hub1data%ccfmat(i_hia,m,mp) = (hub1data%ccfmat(i_hia,m,mp)+hub1data%ccfmat(i_hia,-m,-mp))/2.0
-               hub1data%ccfmat(i_hia,-m,-mp) = hub1data%ccfmat(i_hia,m,mp)
+
+         !-----------------------------------
+         ! Symmetrize Matrix
+         ! Delta_CF(m,mp) = Delta_CF(-m,-mp)
+         !-----------------------------------
+         IF(input%jspins.EQ.2) THEN
+            DO m = -l, l
+               DO mp = -l, l
+                  hub1data%ccfmat(i_hia,m,mp) = (hub1data%ccfmat(i_hia,m,mp)+hub1data%ccfmat(i_hia,-m,-mp))/2.0
+                  hub1data%ccfmat(i_hia,-m,-mp) = hub1data%ccfmat(i_hia,m,mp)
+               ENDDO
             ENDDO
-         ENDDO
+         ENDIF
 #ifdef CPP_DEBUG
-         WRITE(*,*) "SOC"
+         WRITE(*,*) "Average symmetrized"
          WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)
 #endif
+
          tr = 0.0
          !calculate the trace
          DO m = -l, l
@@ -184,7 +233,7 @@ MODULE m_crystalfield
          ENDDO
 
 #ifdef CPP_DEBUG
-         WRITE(*,*) "TRACELESS (eV)"
+         WRITE(*,*) "TRACELESS ccf (eV)"
          WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
 #endif
       ENDDO
