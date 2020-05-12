@@ -389,11 +389,14 @@ CONTAINS
                               ! precalculated Gaunt coefficient
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                               IF (abs(rdum) > 1e-12) THEN
+                                 !$OMP parallel do default(none) collapse(2) &
+                                 !$OMP private(iband, ibando, rdum1, rdum2) &
+                                 !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2)
                                  DO iband = 1, hybdat%nbands(ik)
-                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                    rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
-                                    ! loop over occupied bands
                                     DO ibando = bandoi,bandof
+                                       rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                                       rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
 
                                        rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
                                                                  + rdum1*cmt_nkqpt(ibando, lmp2, iatom1) + rdum2*cmt_nkqpt(ibando, lmp2, iatom2)
@@ -403,6 +406,7 @@ CONTAINS
 
                                     END DO  !ibando
                                  END DO  !iband
+                                 !$OMP END parallel DO
                               END IF  ! rdum
                            END IF  ! abs(m2) .le. l2
 
