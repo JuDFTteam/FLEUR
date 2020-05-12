@@ -450,13 +450,13 @@ c       close(321)
 #ifdef CPP_INTEL           
      &                     ,convert='BIG_ENDIAN'
 #endif     
-     )
+     &     )
 	else
            open(321,file='tunf',form='unformatted'
 #ifdef CPP_INTEL           
      &                     ,convert='BIG_ENDIAN'
 #endif     
-     )
+     &    )
 	endif
 	do rvecind=1,rvecnum
 	 do j=1,num_wann2
