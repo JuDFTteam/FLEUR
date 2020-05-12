@@ -566,7 +566,7 @@ MODULE m_types_setup
       LOGICAL :: l_mmn0_to_spn
       LOGICAL :: l_mmn0_to_spn2
       LOGICAL :: l_mmn0_unf_to_spn
-      LOGICAL :: l_perpmag_unf_to_tor_unf 
+      LOGICAL :: l_perpmag_unf_to_tor_unf
       LOGICAL :: l_perpmag_to_tor_unf
       LOGICAL :: l_perpmag_to_tor
       LOGICAL :: l_perpmag_unf_to_tor
@@ -698,7 +698,7 @@ MODULE m_types_setup
 
    END TYPE t_wann
 CONTAINS
-   pure function calc_nsp_atom(self) result(nsp) 
+   pure function calc_nsp_atom(self) result(nsp)
       implicit none
       CLASS(t_atoms),INTENT(IN)      :: self
       INTEGER                        :: nsp

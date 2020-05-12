@@ -50,6 +50,7 @@ CONTAINS
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
     USE m_judft_usage
+    use m_juDFT_string
     USE m_judft_xmloutput
     IMPLICIT NONE
     CHARACTER*(*),INTENT(IN)          :: message
@@ -93,11 +94,11 @@ CONTAINS
     ELSE
        callstop = .TRUE.
     ENDIF
-    
+
 #ifdef CPP_MPI
     if (l_mpi) CALL collect_messages(message,message_list,first_pe)
 #endif
-    
+
     IF (first_pe) THEN
        IF (.NOT.warn) THEN
           WRITE(0,'(a)') "**************juDFT-Error*****************"
@@ -138,7 +139,7 @@ CONTAINS
        END IF
 #endif
        WRITE(0,'(2a)') "*****************************************"
-       
+
        IF (.NOT.warn) CALL juDFT_time_lastlocation()
        IF (callstop.and.warn) WRITE(0,'(a)')"Warnings not ignored. Touch 'JUDFT_WARN_ONLY' to make the warning nonfatal"
        IF (callstop) THEN
@@ -161,7 +162,7 @@ CONTAINS
     ENDIF
 
     IF (callstop) THEN
-       CALL add_usage_data("Error",message)
+       CALL add_usage_data("Error",replace_text(message, new_line('A'), " "))
        !$OMP MASTER
        CALL send_usage_data()
        !$OMP END MASTER
@@ -213,7 +214,7 @@ CONTAINS
        END IF
     END IF
     IF (TRIM(message)=="") STOP ! simple stop if no end message is given
-    
+
     if(present(irank)) then
        is_root = (irank == 0)
     else
@@ -317,9 +318,9 @@ CONTAINS
     INTEGER,ALLOCATABLE::ihandle(:)
     CHARACTER(len=100):: message
     REAL :: t1,t2
-    
+
     message=mymessage
-    
+
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
     ALLOCATE(message_list(0:isize-1))
@@ -355,5 +356,3 @@ CONTAINS
     ENDDO
   END SUBROUTINE priv_wait
 END MODULE m_juDFT_stop
-
-
