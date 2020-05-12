@@ -461,6 +461,16 @@ CONTAINS
              this%l_byenergy=.TRUE.
           ELSEIF(this%jobList(i).EQ.'finishnocoplot') THEN
              this%l_finishnocoplot=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_unf_to_spn_unf') THEN
+             this%l_mmn0_unf_to_spn_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn_unf') THEN
+             this%l_mmn0_to_spn_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn') THEN
+             this%l_mmn0_to_spn=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_to_spn2') THEN
+             this%l_mmn0_to_spn2=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'mmn0_unf_to_spn') THEN
+             this%l_mmn0_unf_to_spn=.TRUE.            
           ELSEIF(this%jobList(i).EQ.'finishgwf') THEN
              this%l_finishgwf=.TRUE.
           ELSEIF(this%jobList(i).EQ.'skipkov') THEN
