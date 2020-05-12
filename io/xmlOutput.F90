@@ -33,8 +33,8 @@ MODULE m_xmlOutput
 
 #ifdef CPP_MPI
       include "mpif.h"
-      INTEGER           :: err, isize
 #endif
+      INTEGER           :: err, isize
       INTEGER           :: numFlags
       INTEGER           :: nOMPThreads
       CHARACTER(LEN=8)  :: date
@@ -48,7 +48,7 @@ MODULE m_xmlOutput
       CHARACTER(:), ALLOCATABLE :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
       CHARACTER(:), ALLOCATABLE :: compile_flags,link_flags
       CHARACTER(LEN=1000) :: gitdescTemp,githashTemp,gitbranchTemp,compile_dateTemp,compile_userTemp,compile_hostTemp
-      CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
+      CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp,line
       CHARACTER(LEN=20) :: attributes(7)
       
       CALL startxmloutput("out.xml","fleurOutput")
@@ -99,6 +99,23 @@ MODULE m_xmlOutput
       CALL writeXMLElementFormPoly('mpi',(/'mpiProcesses'/),&
                                    attributes(:1),reshape((/13,8/),(/1,2/)))
 #endif
+
+      line="MemTotal: unknown"
+      OPEN(544,FILE="/proc/meminfo",status='old',action='read',iostat=err)
+      IF (err==0) THEN
+         DO
+            READ(544,'(a)',iostat=err) line
+            IF (err.NE.0) EXIT
+            IF (INDEX(line,"MemTotal:")>0) EXIT
+         ENDDO
+         CLOSE(544)
+      END IF
+      IF (INDEX(line,"MemTotal:")>0) THEN
+         attributes(1)=ADJUSTL(TRIM(line(10:)))
+         CALL writeXMLElementFormPoly('mem',(/'memoryPerNode'/),&
+                                   attributes(:1),reshape((/14,15/),(/1,2/)))
+      ENDIF
+
       CALL closeXMLElement('parallelSetup')
       
       CALL DATE_AND_TIME(date,time,zone)
