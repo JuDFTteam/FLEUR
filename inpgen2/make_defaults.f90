@@ -45,7 +45,6 @@ CONTAINS
     !
     !input
     !
-    input%delgau = input%tkb
     IF (input%jspins==1.AND.(noco%l_ss.OR.noco%l_noco)) CALL judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
     IF (noco%l_ss) noco%l_noco = .TRUE.
     !check for magnetism
