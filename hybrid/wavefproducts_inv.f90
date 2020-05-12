@@ -451,7 +451,7 @@ CONTAINS
                         !$OMP PARALLEL DO default(none) collapse(3) &
                         !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
                         !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
-                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, itype)
+                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, itype, mpdata)
                         DO iband = 1, hybdat%nbands(ik)
                            DO ibando = bandoi,bandof
                               DO i = 1, mpdata%num_radbasfn(l, itype)
