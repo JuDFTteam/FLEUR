@@ -271,7 +271,7 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot.AND.gfinp%l_mperp,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
 
          !----------------------------------------------------------------------
          ! Solution of the Dyson Equation
@@ -338,7 +338,7 @@ MODULE m_hubbard1_setup
          DO i_hia = 1, atoms%n_hia
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
-               den%mmpMat(:,:,atoms%n_u+i_hia,ispin) = mmpMat(:,:,i_hia,ispin)
+               den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)
             ENDDO
          ENDDO
       ENDIF
