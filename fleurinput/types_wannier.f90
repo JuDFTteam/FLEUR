@@ -203,6 +203,18 @@ CONTAINS
     CALL mpi_bc(this%l_perpmag,rank,mpi_comm)
     CALL mpi_bc(this%l_perpmagat,rank,mpi_comm)
     CALL mpi_bc(this%l_perpmagatrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmag_unf_to_tor_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmag_to_tor_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmag_to_tor,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmag_unf_to_tor,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtxvec_unf_to_lmpzsoc_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtxvec_to_lmpzsoc_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtxvec_to_lmpzsoc,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtxvec_unf_to_lmpzsoc,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtx_unf_to_lmpzsoc_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtx_to_lmpzsoc_unf,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtx_to_lmpzsoc,rank,mpi_comm)
+    CALL mpi_bc(this%l_hsomtx_unf_to_lmpzsoc,rank,mpi_comm)   
     CALL mpi_bc(this%l_socmatrs,rank,mpi_comm)
     CALL mpi_bc(this%l_socmat,rank,mpi_comm)
     CALL mpi_bc(this%l_soctomom,rank,mpi_comm)
@@ -476,6 +488,30 @@ CONTAINS
              this%l_mmn0_to_spn2=.TRUE.
           ELSEIF(this%jobList(i).EQ.'mmn0_unf_to_spn') THEN
              this%l_mmn0_unf_to_spn=.TRUE.            
+          ELSEIF(this%jobList(i).EQ.'permag_unf_to_tor_unf') THEN
+             this%l_perpmag_unf_to_tor_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'perpmag_to_tor_unf') THEN
+             this%l_perpmag_to_tor_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'perpmag_to_tor') THEN
+             this%l_perpmag_to_tor=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'perpmag_unf_to_tor') THEN
+             this%l_perpmag_unf_to_tor=.TRUE.                    
+          ELSEIF(this%jobList(i).EQ.'hsomtxvec_unf_to_lmpzsoc_unf') THEN
+             this%l_hsomtxvec_unf_to_lmpzsoc_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtxvec_to_lmpzsoc_unf') THEN
+             this%l_hsomtxvec_to_lmpzsoc_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtxvec_to_lmpzsoc') THEN
+             this%l_hsomtxvec_to_lmpzsoc=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtxvec_unf_to_lmpzsoc') THEN
+             this%l_hsomtxvec_unf_to_lmpzsoc=.TRUE.  
+          ELSEIF(this%jobList(i).EQ.'hsomtx_unf_to_hsoc_unf') THEN
+             this%l_hsomtx_unf_to_hsoc_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtx_to_hsoc_unf') THEN
+             this%l_hsomtx_to_hsoc_unf=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtx_to_hsoc') THEN
+             this%l_hsomtx_to_hsoc=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'hsomtx_unf_to_hsoc') THEN
+             this%l_hsomtx_unf_to_hsoc=.TRUE.  
           ELSEIF(this%jobList(i).EQ.'finishgwf') THEN
              this%l_finishgwf=.TRUE.
           ELSEIF(this%jobList(i).EQ.'skipkov') THEN
