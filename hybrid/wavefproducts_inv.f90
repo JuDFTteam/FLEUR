@@ -392,7 +392,7 @@ CONTAINS
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
                                  !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2)
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
                                  DO iband = 1, hybdat%nbands(ik)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
@@ -418,7 +418,7 @@ CONTAINS
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
                                  !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2)
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
                                  DO iband = 1, hybdat%nbands(ik)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
@@ -450,7 +450,8 @@ CONTAINS
                         rfac2 = cos(rdum)/sqrt(2.0)
                         !$OMP PARALLEL DO default(none) collapse(3) &
                         !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
-                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3, bandoi,bandof,rfac1,rfac2)
+                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
+                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, itype)
                         DO iband = 1, hybdat%nbands(ik)
                            DO ibando = bandoi,bandof
                               DO i = 1, mpdata%num_radbasfn(l, itype)
