@@ -415,11 +415,14 @@ CONTAINS
                               lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
                               IF (abs(rdum) > 1e-12) THEN
+                                 !$OMP parallel do default(none) collapse(2) &
+                                 !$OMP private(iband, ibando, rdum1, rdum2) &
+                                 !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2)
                                  DO iband = 1, hybdat%nbands(ik)
-                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
-                                    rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
-                                    ! loop over occupied bands
                                     DO ibando = bandoi,bandof
+                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
+                                       rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
                                        rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
                                                                  + rdum1*cmt_nkqpt(ibando, lmp1, iatom1) + rdum2*cmt_nkqpt(ibando, lmp1, iatom2)
 
@@ -427,6 +430,7 @@ CONTAINS
                                                                  + rdum1*cmt_nkqpt(ibando, lmp1, iatom2) - rdum2*cmt_nkqpt(ibando, lmp1, iatom1)
                                     END DO  !ibando
                                  END DO  !iband
+                                 !$OMP END parallel DO
                               END IF  ! rdum .ne. 0
                            END IF  ! abs(m2) .le. l2 .and. offdiag
 
@@ -444,14 +448,17 @@ CONTAINS
                         rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
                         rfac1 = sin(rdum)/sqrt(2.0)
                         rfac2 = cos(rdum)/sqrt(2.0)
+                        !$OMP PARALLEL DO default(none) collapse(3) &
+                        !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
+                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3, bandoi,bandof,rfac1,rfac2)
                         DO iband = 1, hybdat%nbands(ik)
                            DO ibando = bandoi,bandof
-                              iob = ibando + 1 - bandoi
-                              rdum1 = rarr3(1, ibando, iband)
-                              rdum2 = rarr3(2, ibando, iband)
-                              add1 = rdum1*rfac2 + rdum2*rfac1
-                              add2 = rdum2*rfac2 - rdum1*rfac1
                               DO i = 1, mpdata%num_radbasfn(l, itype)
+                                 iob = ibando + 1 - bandoi
+                                 rdum1 = rarr3(1, ibando, iband)
+                                 rdum2 = rarr3(2, ibando, iband)
+                                 add1 = rdum1*rfac2 + rdum2*rfac1
+                                 add2 = rdum2*rfac2 - rdum1*rfac1
                                  j = lm1 + i
                                  cprod%data_r(j, iob + (iband-1)*psize) &
                                     = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
@@ -462,6 +469,7 @@ CONTAINS
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
                         END DO  !iband
+                        !$OMP end parallel do
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
