@@ -446,11 +446,17 @@ c       close(321)
        if(l_unformatted)then
 	allocate(perpmag(num_wann2,num_wann2,3,rvecnum))
         if(l_ndegen)then
-           open(321,file='tunfndegen',form='unformatted',
-     &                     convert='BIG_ENDIAN')
+           open(321,file='tunfndegen',form='unformatted'
+#ifdef CPP_INTEL           
+     &                     ,convert='BIG_ENDIAN'
+#endif     
+     )
 	else
-           open(321,file='tunf',form='unformatted',
-     &                     convert='BIG_ENDIAN')
+           open(321,file='tunf',form='unformatted'
+#ifdef CPP_INTEL           
+     &                     ,convert='BIG_ENDIAN'
+#endif     
+     )
 	endif
 	do rvecind=1,rvecnum
 	 do j=1,num_wann2
