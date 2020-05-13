@@ -86,6 +86,10 @@ MODULE m_kkintgr
             sigma(nsmooth) = AIMAG(ez(iz))
          ENDDO outer
          ALLOCATE(smoothed(nsmooth,ne), source=0.0)
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(nsmooth,smoothed,sigma,ne,e,im) &
+         !$OMP PRIVATE(ismooth)
+         !$OMP DO
          DO ismooth = 1, nsmooth
             smoothed(ismooth,:) = im(:ne)
             IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
@@ -96,9 +100,12 @@ MODULE m_kkintgr
                CALL smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
             CASE DEFAULT
                CALL juDFT_error("No valid smooth_method set",&
-                                hint="This is a bug in FLEUR, please report", calledby="kkintgr")
+                                hint="This is a bug in FLEUR, please report",&
+                                calledby="kkintgr")
             END SELECT
          ENDDO
+         !$OMP END DO
+         !$OMP END PARALLEL
          CALL timestop("kkintgr: smoothing")
       ENDIF
 
