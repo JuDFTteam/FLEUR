@@ -45,6 +45,7 @@ MODULE m_tetrahedronInit
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
       REAL    :: w(1),etetra(4),fac
+      REAL    :: weightSum_Band
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
          CALL juDFT_error("No output variable provided (either weightSum or weights)",&
@@ -77,8 +78,9 @@ MODULE m_tetrahedronInit
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,fac) &
-            !$OMP SHARED(kpts,eig,weights,weightSum,efermi) &
-            !$OMP PRIVATE(iband,etetra,w)
+            !$OMP SHARED(kpts,eig,weights,efermi,weightSum) &
+            !$OMP PRIVATE(iband,etetra,w,weightSum_Band)
+            weightSum_Band = 0.0
             !$OMP DO
             DO iband = 1, neig
 
@@ -91,9 +93,14 @@ MODULE m_tetrahedronInit
                                         kpts%voltet(itet)/kpts%ntet*fac,film,.FALSE.,w)
 
                IF(PRESENT(weights)) weights(iband,ikpt) = weights(iband,ikpt) + w(1)
-               IF(PRESENT(weightSum)) weightSum = weightSum + w(1)
+               weightSum_Band = weightSum_Band + w(1)
             ENDDO
             !$OMP END DO
+            IF(PRESENT(weightSum)) THEN
+               !$OMP CRITICAL
+               weightSum = weightSum + weightSum_Band
+               !$OMP END CRITICAL
+            ENDIF
             !$OMP END PARALLEL
          ENDDO
       ENDDO
