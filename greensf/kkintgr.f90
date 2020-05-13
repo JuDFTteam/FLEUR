@@ -22,6 +22,11 @@ MODULE m_kkintgr
 
    INTEGER, PARAMETER :: method_maclaurin = 1
    INTEGER, PARAMETER :: method_deriv     = 2
+   INTEGER, PARAMETER :: method_direct    = 3
+   INTEGER, PARAMETER :: method_fft       = 4
+
+   CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(or gaussian)
+
 
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8
@@ -52,61 +57,100 @@ MODULE m_kkintgr
       !Information about the method
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      INTEGER  :: iz,n1,n2,i
-      REAL     ::  e(ne)
-      REAL     ::  im_calc(ne) !Array where the smoothed version of im is stored
-      REAL     :: sigma,re_n1,re_n2,im_n1,im_n2
+      INTEGER  :: iz,izp,n1,n2,i
+      INTEGER  :: ismooth,nsmooth
+      REAL     :: e(ne)
+      REAL     :: re_n1,re_n2,im_n1,im_n2
+      INTEGER  :: smoothInd(nz)
+      REAL     :: sigma(nz)
+      REAL, ALLOCATABLE :: smoothed(:,:)
 
       DO i = 1, ne
          e(i) = (i-1) * del + eb
       ENDDO
 
+      IF(method.NE.method_direct) THEN
+         CALL timestart("kkintgr: smoothing")
+         !Smooth the imaginary part beforehand
+         !Determine how many unique values there are for the imaginary part
+         nsmooth = 0
+         outer: DO iz = 1, nz
+            DO izp = 1, iz-1
+               IF(ABS(AIMAG(ez(izp))-AIMAG(ez(iz))).LT.1e-12) THEN
+                  smoothInd(iz) = smoothInd(izp)
+                  CYCLE outer
+               ENDIF
+            ENDDO
+            nsmooth = nsmooth + 1
+            smoothInd(iz) = nsmooth
+            sigma(nsmooth) = AIMAG(ez(iz))
+         ENDDO outer
+         ALLOCATE(smoothed(nsmooth,ne), source=0.0)
+         DO ismooth = 1, nsmooth
+            smoothed(ismooth,:) = im(:ne)
+            IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
+            SELECT CASE (TRIM(ADJUSTL(smooth_method)))
+            CASE('lorentzian')
+               CALL lorentzian_smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+            CASE('gaussian')
+               CALL smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+            CASE DEFAULT
+               CALL juDFT_error("No valid smooth_method set",&
+                                hint="This is a bug in FLEUR, please report", calledby="kkintgr")
+            END SELECT
+         ENDDO
+         CALL timestop("kkintgr: smoothing")
+      ENDIF
+
+
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im,e) &
-      !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
-      sigma = 0.0
+      !$OMP SHARED(g,ez,im,e,smoothed,smoothInd) &
+      !$OMP PRIVATE(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
       !$OMP DO
       DO iz = 1, nz
-         IF(method.EQ.3) THEN
+         SELECT CASE(method)
+
+         CASE(method_direct)
             g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
-         ELSE
-            IF(ABS(AIMAG(ez(iz))).GT.1e-12.AND.ABS(AIMAG(ez(iz))-sigma).GT.1e-12) THEN
-               !Sigma is changed, so we need to smooth here
-               im_calc = im(:ne) !Get the original version
-               sigma = AIMAG(ez(iz))
-               CALL smooth(e,im_calc,sigma,ne)
-            ENDIF
+         CASE(method_maclaurin, method_deriv)
+            !Use the previously smoothed version and interpolate after
             !Next point to the left
             n1 = INT((REAL(ez(iz))-eb)/del) +1
             !next point to the right
             n2 = n1 + 1
             !Here we perform the Kramers-kronig-Integration
-            re_n2 = re_ire(im_calc,ne,n2,method)
-            re_n1 = re_ire(im_calc,ne,n1,method)
+            re_n2 = re_ire(smoothed(smoothInd(iz),:),ne,n2,method)
+            re_n1 = re_ire(smoothed(smoothInd(iz),:),ne,n1,method)
             !Interpolate to the energy ez(iz)
             !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
 
             !Imaginary Part (0 outside of the energy range)
             IF(n1.LE.ne.AND.n1.GE.1) THEN
-               im_n1 = im_calc(n1)
+               im_n1 = smoothed(smoothInd(iz),n1)
             ELSE
                im_n1 = 0.0
             ENDIF
             IF(n2.LE.ne.AND.n2.GE.1) THEN
-               im_n2 = im_calc(n2)
+               im_n2 = smoothed(smoothInd(iz),n2)
             ELSE
                im_n2 = 0.0
             ENDIF
 
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
+
             IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
             ENDIF
+
             IF(l_conjg) g(iz) = conjg(g(iz))
-         ENDIF
+         CASE(method_fft)
+            CALL juDFT_error("Not implemented yet", calledby="kkintgr")
+         CASE DEFAULT
+            CALL juDFT_error("Not a valid integration method", calledby="kkintgr")
+         END SELECT
       ENDDO
       !$OMP END DO
       !$OMP END PARALLEL
@@ -192,50 +236,41 @@ MODULE m_kkintgr
    END FUNCTION re_ire
 
    !This is essentially smooth out of m_smooth but with a lorentzian distribution
-   SUBROUTINE lorentzian_smooth(dx,f,sigma,n)
+   SUBROUTINE lorentzian_smooth(e,f,sigma,n)
 
       INTEGER, INTENT(IN)    :: n
       REAL,    INTENT(INOUT) :: f(:)
       REAL,    INTENT(IN)    :: sigma
-      REAL,    INTENT(IN)    :: dx
+      REAL,    INTENT(IN)    :: e(:)
 
-      REAL :: c , f0(n)
-      INTEGER :: i , j , j1 , j2 , m1, m
+      REAL :: dx
+      REAL :: f0(n), ee(n)
+      INTEGER :: ie , je , j1 , j2 , numPoints
 
-      INTEGER ie,je
-      REAL fac,sum,energy
-
-      !LORENTZIAN SMOOTHING COMPARE https://heasarc.nasa.gov/xanadu/xspec/models/glsmooth.html
       f0 = f
       f = 0.0
+      ee = 0.0
+      dx = e(2)-e(1)
+
+      DO ie =1,  n
+
+         ee(ie) = 1/pi_const * sigma/dx * 1.0/((ie-1)**2+(sigma/dx)**2)
+
+         IF ( ee(ie).LT.cut ) EXIT
+      ENDDO
+      numPoints = ie - 1
+
       DO ie = 1, n
 
-         energy = (ie-0.5)*dx
-
-         fac = 1.0
-         je = ie
-         sum = 0.0
-         DO WHILE(fac.GT.cut.AND.je.GE.1)
-            fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
-                                 -atan(2*((je-1)*dx-energy)/sigma) )
-
-            f(je) = f(je) + fac * f0(ie)
-            sum = sum + fac
-            je = je-1
+         j1 = ie - numPoints + 1
+         j1 = MERGE(1,j1,j1.LT.1)
+         j2 = ie + numPoints - 1
+         j2 = MERGE(n,j2,j2.GT.n)
+         DO je = j1 , j2
+            f(ie) = f(ie) + ee(IABS(je-ie)+1)*f0(je)
          ENDDO
 
-         fac = 1.0
-         je = ie+1
-         DO WHILE(fac.GT.cut.AND.je.LE.n)
-            fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
-                                 -atan(2*((je-1)*dx-energy)/sigma) )
-
-            f(je) = f(je) + fac * f0(ie)
-            sum = sum + fac
-            je = je+1
-         ENDDO
       ENDDO
-      !IF(ANY(ieee_IS_NAN(f(:)))) CALL juDFT_error("Smoothing failed", calledby="lorentzian_smooth")
 
 
    END SUBROUTINE lorentzian_smooth
