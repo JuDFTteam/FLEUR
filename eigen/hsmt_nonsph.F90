@@ -110,7 +110,7 @@ CONTAINS
           if (mpi%n_size>1)Then
             ab_select(:,:)=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
           ELSE
-            ab_select(:,:)=ab1(:,:) !All of ab1 needed
+            ab_select(:size_ab1,:)=ab1(:,:) !All of ab1 needed
           ENDIF
           !$acc end kernels
           IF (iintsp==jintsp) THEN
