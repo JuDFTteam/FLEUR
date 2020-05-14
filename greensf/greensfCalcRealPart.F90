@@ -23,7 +23,7 @@ MODULE m_greensfCalcRealPart
 
    IMPLICIT NONE
 
-   INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
+   INTEGER, PARAMETER :: int_method(3) = (/method_direct,method_direct,method_maclaurin/)
 
    CONTAINS
 
