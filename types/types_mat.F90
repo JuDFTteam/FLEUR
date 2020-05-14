@@ -45,69 +45,69 @@ MODULE m_types_mat
    PUBLIC t_mat
 CONTAINS
    function t_mat_size_mb(mat) result(mb_size)
-      implicit none 
-      class(t_mat), intent(inout) :: mat 
-      real :: mb_size 
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      real :: mb_size
 
-      if(mat%l_real) then 
+      if(mat%l_real) then
          mb_size =  8e-6 * size(mat%data_r)
       else
          mb_size = 16e-6 * size(mat%data_c)
-      endif 
+      endif
    end function t_mat_size_mb
    ! copy lower triangle to upper triangle
    subroutine t_mat_l2u(mat)
-      implicit none 
-      class(t_mat), intent(inout) :: mat 
-      integer :: i,j 
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      integer :: i,j
 
       call timestart("copy lower to upper matrix")
       if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
 
-      if(mat%l_real) then  
-         do i = 1,mat%matsize1 
+      if(mat%l_real) then
+         do i = 1,mat%matsize1
             do j = 1,i-1
                mat%data_r(j,i) = mat%data_r(i,j)
-            enddo 
+            enddo
          enddo
-      else         
-         do i = 1,mat%matsize1 
+      else
+         do i = 1,mat%matsize1
             do j = 1,i-1
                mat%data_c(j,i) = conjg(mat%data_c(i,j))
-            enddo 
+            enddo
          enddo
       endif
-      call timestop("copy lower to upper matrix") 
+      call timestop("copy lower to upper matrix")
    end subroutine t_mat_l2u
 
    ! copy upper triangle to lower triangle
    subroutine t_mat_u2l(mat)
       use m_judft
-      implicit none 
-      class(t_mat), intent(inout) :: mat 
-      integer :: i,j 
+      implicit none
+      class(t_mat), intent(inout) :: mat
+      integer :: i,j
 
       call timestart("copy upper to lower matrix")
       if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
-      if(mat%l_real) then  
-         do i = 1,mat%matsize1 
+      if(mat%l_real) then
+         do i = 1,mat%matsize1
             do j = 1,i-1
                mat%data_r(i,j) = mat%data_r(j,i)
-            enddo 
+            enddo
          enddo
-      else         
-         do i = 1,mat%matsize1 
+      else
+         do i = 1,mat%matsize1
             do j = 1,i-1
                mat%data_c(i,j) = conjg(mat%data_c(j,i))
-            enddo 
+            enddo
          enddo
       endif
-      call timestop("copy upper to lower matrix")   
+      call timestop("copy upper to lower matrix")
    end subroutine t_mat_u2l
 
    subroutine t_mat_subtract(res_mat, mat1, mat2)
       use iso_c_binding, only: c_loc
-      implicit none 
+      implicit none
       class(t_mat), intent(inout) :: res_mat
       type(t_mat), intent(in)     :: mat1, mat2
       logical :: real_res
@@ -121,7 +121,7 @@ CONTAINS
 
       ! check real/cmplx
       real_res = mat1%l_real .and. mat2%l_real
-      if(res_mat%l_real .neqv. real_res) then 
+      if(res_mat%l_real .neqv. real_res) then
          call res_mat%free()
       endif
       if(.not. res_mat%allocated())   call res_mat%alloc(real_res, s1, s2)
@@ -129,18 +129,18 @@ CONTAINS
       if(res_mat%l_real) then
          res_mat%data_r = mat1%data_r(:s1,:s2) - mat2%data_r(:s1,:s2)
       elseif(mat1%l_real .and. (.not. mat2%l_real)) then
-         res_mat%data_c = mat1%data_r(:s1,:s2) - mat2%data_c(:s1,:s2) 
+         res_mat%data_c = mat1%data_r(:s1,:s2) - mat2%data_c(:s1,:s2)
       elseif((.not. mat1%l_real) .and. mat2%l_real) then
          res_mat%data_c = mat1%data_c(:s1,:s2) - mat2%data_r(:s1,:s2)
-      else 
+      else
          res_mat%data_c(:s1,:s2) = mat1%data_c(:s1,:s2) - mat2%data_c(:s1,:s2)
       endif
    end subroutine t_mat_subtract
 
    function t_mat_norm2(mat) result(norm)
-      implicit none 
+      implicit none
       class(t_mat), intent(in) :: mat
-      real :: norm 
+      real :: norm
 
       if (mat%l_real) then
          norm = norm2(mat%data_r)
@@ -345,15 +345,15 @@ CONTAINS
       if(present(transB)) transB_i = transB
 
       if(transA_i == "N") then
-         m = mat1%matsize1 
+         m = mat1%matsize1
          k = mat1%matsize2
-      else 
-         m = mat1%matsize2 
+      else
+         m = mat1%matsize2
          k = mat1%matsize1
       endif
 
       if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricieso the same type")
-      if(transB_i == "N" ) then 
+      if(transB_i == "N" ) then
          if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
          n = mat2%matsize2
       else
@@ -365,17 +365,17 @@ CONTAINS
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
       IF (present(res)) THEN
          ! prepare res matrix
-         if(res%allocated()) then 
+         if(res%allocated()) then
             if(res%l_real .neqv. mat1%l_real) then
                call res%free()
-            else 
+            else
                if(res%l_real) then
                   if(any(shape(res%data_r) < [m,n])) then
                      call res%free()
                   else
                      res%data_r = 0.0
                      res%matsize1 = m
-                     res%matsize2 = n 
+                     res%matsize2 = n
                   endif
                else
                   if(any(shape(res%data_c) < [m,n])) then
@@ -383,7 +383,7 @@ CONTAINS
                   else
                      res%data_c = cmplx_0
                      res%matsize1 = m
-                     res%matsize2 = n 
+                     res%matsize2 = n
                   endif
                endif
             endif

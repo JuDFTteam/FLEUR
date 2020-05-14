@@ -43,7 +43,6 @@ CONTAINS
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
-
     na = SUM(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
@@ -51,6 +50,8 @@ CONTAINS
 
 
           IF (atoms%nlo(n).GE.1) THEN
+
+
              !--->          set up the a,b and c  coefficients
              !--->          for the local orbitals, if necessary.
              !--->          actually, these are the fj,gj equivalents
@@ -70,6 +71,7 @@ CONTAINS
              ENDIF
              CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
                   n,na,fjgj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat)
+
           ENDIF
        END IF
        !--->    end loop over equivalent atoms

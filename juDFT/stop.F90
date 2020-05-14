@@ -200,7 +200,6 @@ CONTAINS
     INTEGER :: ierr
     CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
-
     l_endXML_local = .TRUE.
     IF(PRESENT(l_endXML)) THEN
        l_endXML_local = l_endXML

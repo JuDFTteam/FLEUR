@@ -27,12 +27,12 @@ CONTAINS
     USE m_juDFT
     USE m_types_mpimat
     USE m_types_mat
-#ifdef CPP_ELPA  
+#ifdef CPP_ELPA
     USE elpa1
 #ifdef CPP_ELPA2
     USE elpa2
 #endif
-#ifdef CPP_ELPA_201705003    
+#ifdef CPP_ELPA_201705003
     USE elpa
 #endif
 #endif
@@ -42,8 +42,8 @@ CONTAINS
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)::ev
     REAL,INTENT(out)              :: eig(:)
     INTEGER,INTENT(INOUT)         :: ne
-    
-#ifdef CPP_ELPA  
+
+#ifdef CPP_ELPA
     INCLUDE 'mpif.h'
     !...  Local variables
     !
@@ -61,7 +61,7 @@ CONTAINS
     REAL,ALLOCATABLE     :: tmp2_r(:,:)
     COMPLEX,ALLOCATABLE  :: tmp2_c(:,:)
     INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
-#ifdef CPP_ELPA_201705003    
+#ifdef CPP_ELPA_201705003
     INTEGER :: kernel
     CLASS(elpa_t),pointer :: elpa_obj
 
@@ -74,10 +74,10 @@ CONTAINS
     SELECT TYPE(smat)
     TYPE IS (t_mpimat)
 
-    CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)    
+    CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,err)
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,err)
-   
+
 
     !Create communicators for ELPA
 #if defined (CPP_ELPA_201705003)
@@ -90,7 +90,7 @@ CONTAINS
 #endif
 
     num2=ne !no of states solved for
-    
+
     ALLOCATE ( eig2(hmat%global_size1), stat=err ) ! The eigenvalue array for ScaLAPACK
     IF (err.NE.0) CALL juDFT_error('Failed to allocated "eig2"', calledby ='elpa')
 
@@ -104,12 +104,12 @@ CONTAINS
     ENDIF
     IF (err.NE.0) CALL juDFT_error('Failed to allocated "tmp2"', calledby ='elpa')
 
-    
-    
+
+
     nb=hmat%blacsdata%blacs_desc(5)! Blocking factor
     IF (nb.NE.hmat%blacsdata%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
 
-#ifdef CPP_ELPA_201705003    
+#ifdef CPP_ELPA_201705003
     CALL elpa_obj%set("na", hmat%global_size1, err)
     CALL elpa_obj%set("nev", num2, err)
     CALL elpa_obj%set("local_nrows", hmat%matsize1, err)
@@ -118,10 +118,14 @@ CONTAINS
     CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
     CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
     CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
+#ifdef _OPENACC
+     CALL elpa_obj%set("gpu", 1,err)
+#else
 #ifdef CPP_ELPA2
     CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #else
     CALL elpa_obj%set("solver", ELPA_SOLVER_1STAGE)
+#endif
 #endif
     err = elpa_obj%setup()
     if (myid == 0) then
@@ -134,7 +138,7 @@ CONTAINS
     !
     ! 1. Calculate Cholesky factorization of Matrix S = U**T * U
     !    and invert triangular matrix U.
-    !    Cholesky factorization: 
+    !    Cholesky factorization:
     !         Only upper triangle needs to be set. On return, the upper triangle contains
     !         the Cholesky factor and the lower triangle is set to 0.
     !    invert_triangular:
@@ -192,12 +196,12 @@ CONTAINS
        n_col = indxl2g(i,     nb, hmat%blacsdata%mycol, 0, hmat%blacsdata%npcol)
        n_row = numroc (n_col, nb, hmat%blacsdata%myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
-          hmat%data_r(n_row+1:hmat%matsize1,i) = 0.0 
+          hmat%data_r(n_row+1:hmat%matsize1,i) = 0.0
        ELSE
           hmat%data_c(n_row+1:hmat%matsize1,i) = 0.0
        ENDIF
     ENDDO
- 
+
     ! Use the ev_dist array to store the calculated values for the lower part.
     IF (hmat%l_real) THEN
        CALL pdtran(hmat%global_size1,hmat%global_size1,1.0,hmat%data_r,1,1,&
@@ -219,7 +223,7 @@ CONTAINS
           hmat%data_c(n_row+1:hmat%matsize1,i) = ev_dist%data_c(n_row+1:ev_dist%matsize1,i)
        ENDIF
     ENDDO
- 
+
 
 #if defined (CPP_ELPA_201705003)
     IF (hmat%l_real) THEN
@@ -454,7 +458,7 @@ CONTAINS
 #endif
     !
     !     Each process has all eigenvalues in output
-    eig(:num2) = eig2(:num2)    
+    eig(:num2) = eig2(:num2)
     DEALLOCATE(eig2)
     !
     !
@@ -488,5 +492,5 @@ CONTAINS
     ENDIF
 
 #endif
-  END SUBROUTINE elpa_diag 
+  END SUBROUTINE elpa_diag
 END MODULE m_elpa
