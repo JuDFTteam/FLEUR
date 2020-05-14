@@ -83,20 +83,15 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
       l_flip(itype)=MERGE(.TRUE.,.FALSE.,(rotAnglePhi(itype).NE.0.0) .OR.(rotAngleTheta(itype).NE.0.0))
    END DO
    !rot_den_mat(alph,beta,rho11,rho22,rho21)
+   archiveType = MERGE(CDN_ARCHIVE_TYPE_NOCO_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_noco)
    IF(.NOT.PRESENT(optDen)) THEN
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-         IF(noco%l_noco) THEN
-      archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-   ELSE
-      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-   END IF
       ! read the charge density
-       CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                    CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
+      CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
    ELSE
       den=optDen
    END IF
-
 
    ! flip cdn for each atom with rotation angles given
    na = 1
