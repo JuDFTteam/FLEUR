@@ -166,7 +166,7 @@ CONTAINS
                       END DO
                    END DO
                    !$CPP_ACC end parallel loop
-                   !$CPP_OMP PARALLEL DO
+                   !$CPP_OMP END PARALLEL DO
                 ELSE
                    !$CPP_OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
                    !$CPP_ACC parallel loop collapse(2) copyin(zMat%data_c)
