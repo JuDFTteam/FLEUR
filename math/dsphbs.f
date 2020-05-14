@@ -11,7 +11,7 @@
       SUBROUTINE dsphbs(
      >                  lmax,x,fj,
      <                  dfj)
-
+!$acc routine
       IMPLICIT NONE
 !     ..
 !     .. Arguments ..

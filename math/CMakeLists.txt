@@ -24,7 +24,7 @@ math/SphBessel.f90
 math/DoubleFactorial.f90
 math/LattHarmsSphHarmsConv.f90
 math/ExpSave.f90
-math/grule.f90
+#math/grule.f90
 math/intgr.F90
 math/trapz.f90
 math/ylm4.F90

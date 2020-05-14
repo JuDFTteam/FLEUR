@@ -177,6 +177,8 @@ CONTAINS
        DO i_gf = 1, fi%gfinp%n
           CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
        ENDDO
+    ELSE
+       ALLOCATE(greensFunction(0))
     ENDIF
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)

@@ -67,21 +67,24 @@ CONTAINS
        ENDIF
        CALL smat_tmp%init(hmat(1,1))
        CALL hmat_tmp%init(hmat(1,1))
+       !$acc enter data copyin(smat_tmp,hmat_tmp)create(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
     ENDIF
 
 
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,isp,noco)
-
+    !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
     DO n=1,atoms%ntype
        DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
           CALL timestart("fjgj coefficients")
           CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,n,ispin)
+          !$acc update device(fjgj%fj,fjgj%gj)
           CALL timestop("fjgj coefficients")
           DO jspin=ispin,MERGE(2,isp,noco%l_noco)
             IF (.NOT.noco%l_noco) THEN
               !This is for collinear calculations: the (1,1) element of the matrices is all
               !that is needed and allocated
+
               CALL hsmt_sph(n,atoms,mpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat(1,1),hmat(1,1))
               CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,jspin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1))
               CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat(1,1),smat(1,1))
@@ -126,8 +129,11 @@ CONTAINS
           ENDDO
         ENDDO
       END DO
-
-
+      !$acc end data
+      if (noco%l_noco.AND..NOT.noco%l_ss) then
+         !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
+         !$acc exit data delete(smat_tmp,hmat_tmp) 
+      endif
       RETURN
     END SUBROUTINE hsmt
   END MODULE m_hsmt
