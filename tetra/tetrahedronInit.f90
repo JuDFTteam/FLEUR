@@ -82,7 +82,7 @@ MODULE m_tetrahedronInit
             !$OMP SHARED(kpts,eig,weights,efermi,weightSum) &
             !$OMP PRIVATE(iband,etetra,w,weightSum_Band)
             weightSum_Band = 0.0
-            !$OMP DO
+            !$OMP DO SCHEDULE(DYNAMIC,1)
             DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
@@ -173,7 +173,7 @@ MODULE m_tetrahedronInit
          !$OMP SHARED(itet,neig,ikpt,film,ncorn,vol,k) &
          !$OMP SHARED(kpts,eig,calc_weights,calc_eMesh) &
          !$OMP PRIVATE(iband,etetra)
-         !$OMP DO
+         !$OMP DO SCHEDULE(DYNAMIC,1)
          DO iband = 1, neig
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
@@ -187,24 +187,31 @@ MODULE m_tetrahedronInit
          !$OMP END PARALLEL
       ENDDO
 
-      !---------------------------------------------------
-      ! Weights for DOS -> differentiate with respect to E
-      !---------------------------------------------------
-      IF(l_dos) THEN
-         ALLOCATE(dos_weights(ne+2),source=0.0)
-         DO iband = 1, neig
+
+      !-------------------------------------
+      ! PostProcess weights
+      !-------------------------------------
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(neig,l_dos,ne,del) &
+      !$OMP SHARED(calc_weights,weights,bounds) &
+      !$OMP PRIVATE(iband,dos_weights,ie)
+      IF(l_dos) ALLOCATE(dos_weights(ne+2),source=0.0)
+      !$OMP DO SCHEDULE(DYNAMIC,1)
+      DO iband = 1, neig
+         !---------------------------------------------------
+         ! Weights for DOS -> differentiate with respect to E
+         !---------------------------------------------------
+         IF(l_dos) THEN
             CALL diff3(calc_weights(:,iband),del,dos_weights)
             weights(1:ne,iband) = dos_weights(2:ne+1)
-         ENDDO
-      ELSE
-         weights(:,:neig) = calc_weights
-      ENDIF
-
-      IF(PRESENT(bounds)) THEN
-         DO iband = 1, neig
-            !--------------------------------------------------------------
-            !Find the range where the weights are bigger than weightCutoff
-            !--------------------------------------------------------------
+         ELSE
+            weights(:,:neig) = calc_weights
+         ENDIF
+         !--------------------------------------------------------------
+         ! Find the range where the weights are bigger than weightCutoff
+         !--------------------------------------------------------------
+         IF(PRESENT(bounds)) THEN
+            !--------------------
             ! Lower bound
             !--------------------
             ie = 1
@@ -238,6 +245,7 @@ MODULE m_tetrahedronInit
                   ENDIF
                ENDIF
             ENDDO
+            !For safety
             IF(bounds(iband,1).GT.bounds(iband,2)) THEN
                bounds(iband,1) = 1
                bounds(iband,2) = 1
@@ -245,8 +253,11 @@ MODULE m_tetrahedronInit
             IF(ANY(weights(bounds(iband,1):bounds(iband,2),iband)<0.0)) THEN
                CALL juDFT_error("TetraWeight error: Unexpected negative weight", calledby="getWeightEnergyMesh")
             ENDIF
-         ENDDO
-      ENDIF
+         ENDIF
+      ENDDO
+      !$OMP END DO
+      !$OMP END PARALLEL
+
 
    END SUBROUTINE getWeightEnergyMesh
 
