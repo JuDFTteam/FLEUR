@@ -42,21 +42,21 @@ CONTAINS
 
 
     INTEGER:: nn,na,ab_size,l,ll,m,size_ab_select
-    INTEGER:: size_data_c,size_ab,size_ab1,size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
+    INTEGER:: size_data_c,size_ab,size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
     COMPLEX,ALLOCATABLE:: ab1(:,:),ab_select(:,:)
     COMPLEX,ALLOCATABLE:: ab(:,:),ab2(:,:),h_loc(:,:),data_c(:,:)
     real :: rchi
     complex :: cchi
     CALL timestart("non-spherical setup")
 
-    size_ab=maxval(lapw%nv);size_ab1=lapw%nv(jintsp)
+    size_ab=maxval(lapw%nv)
     if (mpi%n_size==1) Then
        size_ab_select=size_ab
     ELSE
       size_ab_select=lapw%num_local_cols(iintsp)
     ENDIF
     ALLOCATE(ab_select(size_ab_select,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
-    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(size_ab,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 
     IF (iintsp.NE.jintsp) THEN
        ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
@@ -102,13 +102,13 @@ CONTAINS
           !!$acc update device(ab)
           !$acc host_data use_device(ab,ab1,h_loc)
           CALL CPP_zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
-                     h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab1)
+                     h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab)
           !$acc end host_data
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
           !$acc kernels default(none) present(ab_select,ab1)copyin(mpi)
           if (mpi%n_size>1)Then
-            ab_select(:,:)=ab1(mpi%n_rank+1:size_ab:mpi%n_size,:)
+            ab_select(:,:)=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
           ELSE
             ab_select(:,:)=ab1(:,:) !All of ab1 needed
           ENDIF
@@ -120,11 +120,11 @@ CONTAINS
                !$acc end kernels
                IF (mpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
-                 CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab1,1.0,CPP_data_c,size_data_c)
+                 CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,1.0,CPP_data_c,size_data_c)
                  !$acc end host_data
                ELSE
                  !$acc host_data use_device(data_c,ab1,ab_select)
-                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab1,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),CPP_data_c,size_data_c)
+                 CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),CPP_data_c,size_data_c)
                  !$acc end host_data
                ENDIF
              ELSE !This is the case of a local off-diagonal contribution.
