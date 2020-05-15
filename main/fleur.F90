@@ -126,7 +126,7 @@ CONTAINS
                               stars,fi%input,fi%sym,fi%cell,fi%sliceplot,xcpot,fi%noco,fi%oneD)
 
     IF (fi%input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
-       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
+!       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(fi%input,fi%kpts,fi%atoms,fi%sym,fi%cell,fi%oneD,fi%noco,wann)
     END IF
 
@@ -177,6 +177,9 @@ CONTAINS
        DO i_gf = 1, fi%gfinp%n
           CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
        ENDDO
+        	
+    ELSE
+	   ALLOCATE(greensFunction(0))
     ENDIF
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
