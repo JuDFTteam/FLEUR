@@ -198,7 +198,7 @@ contains
     END IF
 
     ! Plots of mixed density
-    IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+    IF ((sliceplot%iplot.NE.0 ) ) THEN
        ! CDN including core charge
        CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi, oneD, sym, &
                          cell, noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, sliceplot)
@@ -212,7 +212,7 @@ contains
     ! is the last plot tablet_potden to appear in the scf loop and BEFORE the mixed density is written out (so it is quasi
     ! post-process).
 
-    IF(fi%sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
+    IF(sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
     END IF
 
