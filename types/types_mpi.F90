@@ -58,6 +58,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#else 
+   INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_real
 
@@ -83,6 +85,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#else 
+   INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_cmplx
 
@@ -108,6 +112,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#else 
+   INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_int
 
