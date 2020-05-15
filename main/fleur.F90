@@ -126,7 +126,7 @@ CONTAINS
                               stars,fi%input,fi%sym,fi%cell,fi%sliceplot,xcpot,fi%noco,fi%oneD)
 
     IF (fi%input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
-!       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
+       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(fi%input,fi%kpts,fi%atoms,fi%sym,fi%cell,fi%oneD,fi%noco,wann)
     END IF
 
@@ -177,8 +177,6 @@ CONTAINS
        DO i_gf = 1, fi%gfinp%n
           CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
        ENDDO
-    ELSE
-       ALLOCATE(greensFunction(0))
     ENDIF
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
@@ -525,18 +523,7 @@ END IF
        ! mix fi%input and output densities
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
-            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
-            
-            !Plots of mixed density
-       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
-!               CDN including core charge
-                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
-                                               fi%cell, fi%noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
-!!               CDN subtracted by core charge
-!                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-      END IF
+            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter,nococonv,fi%sliceplot)
  
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
@@ -613,11 +600,6 @@ END IF
 
        IF (mpi%irank.EQ.0) THEN
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
-       END IF
-
-  !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-       IF(fi%sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
-          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
