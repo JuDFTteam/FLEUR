@@ -65,7 +65,7 @@ contains
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix,l_firstItU
-    INTEGER                          :: it,maxiter
+    INTEGER                          :: it,maxiter,ierr
     INTEGER                          :: indStartHIA, indEndHIA
 
 
@@ -212,6 +212,11 @@ contains
     ! Break SCF loop if Plots were generated in ongoing run (iplot=/=0). This needs to happen here, as the mixed density
     ! is the last plot tablet_potden to appear in the scf loop and BEFORE the mixed density is written out (so it is quasi
     ! post-process).
+
+#ifdef CPP_MPI
+       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
+
 
     IF(sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
