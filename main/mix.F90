@@ -45,7 +45,7 @@ contains
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
-    type(t_nococonv),  intent(in)    :: noco
+    type(t_nococonv),  intent(in)    :: nococonv
     TYPE(t_sliceplot), INTENT(IN)   :: sliceplot
     
     type(t_mpi),       intent(in)    :: mpi
