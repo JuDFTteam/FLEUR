@@ -5,7 +5,7 @@ jt::testrun("$executable ",$workdir);
 
 $result+=jt::test_fileexists("$workdir/out");
 
-$result+=jt::test_grep_lastnumber("$workdir/out","nococonv%beta=","nococonv%beta*= *([^ ]*)",1.64401,0.0005);
+$result+=jt::test_grep_lastnumber("$workdir/out","nococonv%beta=","nococonv%beta*= *([^ ]*)",1.6415,0.0005);
 $result+=jt::test_grep_lastnumber("$workdir/out","nococonv%alpha=","nococonv%alpha*= *([^ ]*)",1.6921,0.0005);
 
 jt::stageresult($workdir,$result,1);
