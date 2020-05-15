@@ -121,6 +121,7 @@ CONTAINS
             ALLOCATE (real_data_ptr(length))
 #endif
             CALL MPI_WIN_CREATE(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
+            if(e /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
          ELSEIF (PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, int_data_ptr, (/length/type_size/))
@@ -128,6 +129,7 @@ CONTAINS
             ALLOCATE (int_data_ptr(length))
 #endif
             CALL MPI_WIN_CREATE(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
+            if(e /= 0) call judft_error("Can't create MPI_Win for int_data_ptr")
          ELSE
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, cmplx_data_ptr, (/length/type_size/))
@@ -135,6 +137,7 @@ CONTAINS
             ALLOCATE (cmplx_data_ptr(length))
 #endif
             CALL MPI_WIN_CREATE(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
+            if(e /= 0) call judft_error("Can't create MPI_Win for cmplx_data_ptr")
          ENDIF
 #endif
       END SUBROUTINE priv_create_memory
@@ -284,14 +287,15 @@ CONTAINS
 
    SUBROUTINE sync_eig(id)
       use m_judft
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       INTEGER, INTENT(IN)    :: id
 
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
       INTEGER:: err
-#ifdef CPP_MPI3
+#if defined(CPP_MPI3) && defined(CPP_MPI)
       CALL priv_find_data(id, d)
-
-      call juDFT_error("TRAAAACE!")
 
       IF (d%read_epoch) THEN
          d%read_epoch = .FALSE.

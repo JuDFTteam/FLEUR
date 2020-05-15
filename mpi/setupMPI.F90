@@ -89,6 +89,7 @@ CONTAINS
     ALLOCATE(mpi%k_list(SIZE([(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )])))
     mpi%k_list=[(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )]
 
+    call mpi%set_errhandler()
     if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI

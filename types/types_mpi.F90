@@ -18,6 +18,7 @@ MODULE m_types_mpi
       !Communicator for PE on same node
       INTEGER :: mpi_comm_same_node
    CONTAINS
+      procedure :: set_errhandler    => t_mpi_set_errhandler
       procedure :: is_root => mpi_is_root
    END TYPE t_mpi
 contains
@@ -27,4 +28,37 @@ contains
       logical :: is_root 
       is_root = mpi%irank == 0
    end function mpi_is_root
+
+   subroutine t_mpi_set_errhandler(self)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      class(t_mpi), intent(in) :: self
+
+#ifdef CPP_MPI
+      integer                  :: err_handler, ierr 
+
+      call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't create Error handler")
+
+      call MPI_Comm_Set_Errhandler(MPI_COMM_WORLD, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't assign Error handler to MPI_COMM_WORLD")
+
+      call MPI_Comm_Set_Errhandler(self%mpi_comm, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't assign Error handler to self%mpi_comm")
+
+      call MPI_Comm_Set_Errhandler(self%sub_comm, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't assign Error handler to self%sub_comm")
+#endif
+   end subroutine t_mpi_set_errhandler
+
+   subroutine judft_mpi_error_handler(comm, error_code) 
+      use m_judft
+      implicit none 
+      integer, intent(in) :: comm, error_code 
+
+      call judft_error("MPI failed with Error_code = " // int2str(error_code))
+   end subroutine judft_mpi_error_handler
 END MODULE m_types_mpi
