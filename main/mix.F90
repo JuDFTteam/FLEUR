@@ -218,7 +218,7 @@ contains
 #endif
 
 
-    IF(sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
+    IF(sliceplot%iplot.NE.0) THEN
        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
     END IF
 
