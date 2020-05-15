@@ -34,6 +34,7 @@ contains
     use m_types_mixvector
     USE m_distance
     use m_mixing_history
+    USE m_plot
     implicit none
 
     type(t_oneD),      intent(in)    :: oneD
