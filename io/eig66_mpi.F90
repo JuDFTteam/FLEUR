@@ -81,6 +81,7 @@ CONTAINS
       CALL timestop("create data spaces in ei66_mpi")
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
+         use m_types_mpi, only: judft_win_create
          IMPLICIT NONE
          INTEGER, INTENT(IN)           :: slot_size, local_slots
          INTEGER, POINTER, OPTIONAL, ASYNCHRONOUS  :: int_data_ptr(:)
@@ -120,24 +121,21 @@ CONTAINS
 #else
             ALLOCATE (real_data_ptr(length))
 #endif
-            CALL MPI_WIN_CREATE(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
-            if(e /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
+            call judft_win_create(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSEIF (PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, int_data_ptr, (/length/type_size/))
 #else
             ALLOCATE (int_data_ptr(length))
 #endif
-            CALL MPI_WIN_CREATE(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
-            if(e /= 0) call judft_error("Can't create MPI_Win for int_data_ptr")
+            call judft_win_create(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSE
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, cmplx_data_ptr, (/length/type_size/))
 #else
             ALLOCATE (cmplx_data_ptr(length))
 #endif
-            CALL MPI_WIN_CREATE(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle, e)
-            if(e /= 0) call judft_error("Can't create MPI_Win for cmplx_data_ptr")
+            call judft_win_create(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ENDIF
 #endif
       END SUBROUTINE priv_create_memory
@@ -285,26 +283,36 @@ CONTAINS
 #endif
    END SUBROUTINE read_eig
 
-   SUBROUTINE sync_eig(id)
+   SUBROUTINE sync_eig(id, fi)
       use m_judft
 #ifdef CPP_MPI 
       use mpi 
 #endif
+      type(t_fleurinput) :: fi
       INTEGER, INTENT(IN)    :: id
 
+      logical                                 :: l_real, l_soc
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
       INTEGER:: err
 #if defined(CPP_MPI3) && defined(CPP_MPI)
       CALL priv_find_data(id, d)
 
+      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
+      l_soc =fi%noco%l_soc
+
       IF (d%read_epoch) THEN
          d%read_epoch = .FALSE.
          CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%eig_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 1")
-         CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%zr_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 2")
-         CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%zc_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 3")
+
+         IF (l_real .AND. .NOT. l_soc) THEN
+            CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%zr_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 2")
+         ELSE
+            CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%zc_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 3")
+         ENDIF
+
          CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%neig_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 4")
          CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%w_iks_handle, err)
@@ -313,10 +321,13 @@ CONTAINS
          d%read_epoch = .TRUE.
          CALL MPI_Win_fence(MPI_MODE_NOPUT, d%eig_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 6")
-         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zr_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 7")
-         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zc_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 8")
+         IF (l_real .AND. .NOT. l_soc) THEN
+            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zr_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 7")
+         ELSE
+            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zc_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 8")
+         ENDIF
          CALL MPI_Win_fence(MPI_MODE_NOPUT, d%neig_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 9")
          CALL MPI_Win_fence(MPI_MODE_NOPUT, d%w_iks_handle, err)

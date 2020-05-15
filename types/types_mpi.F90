@@ -21,6 +21,13 @@ MODULE m_types_mpi
       procedure :: set_errhandler    => t_mpi_set_errhandler
       procedure :: is_root => mpi_is_root
    END TYPE t_mpi
+
+   INTERFACE juDFT_win_create
+      MODULE PROCEDURE  juDFT_win_create_real, juDFT_win_create_cmplx, juDFT_win_create_int
+   END INTERFACE juDFT_win_create
+
+   PRIVATE
+   PUBLIC :: juDFT_win_create, t_mpi
 contains
    function mpi_is_root(mpi) result(is_root)
       implicit none 
@@ -28,6 +35,81 @@ contains
       logical :: is_root 
       is_root = mpi%irank == 0
    end function mpi_is_root
+
+   subroutine juDFT_win_create_real(base, size, disp_unit, info, comm, win)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
+      integer, intent(in)      :: disp_unit, info, comm
+      integer, intent(inout)   :: win
+
+#ifdef CPP_MPI
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      integer                  :: err, err_handler
+
+      CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
+      if(err /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
+
+      call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
+      if(err /= 0) call judft_error("Can't create Error handler")
+
+      CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
+      if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#endif
+   end subroutine juDFT_win_create_real
+
+   subroutine juDFT_win_create_cmplx(base, size, disp_unit, info, comm, win)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:)
+      integer, intent(in)      :: disp_unit, info, comm
+      integer, intent(inout)   :: win
+
+#ifdef CPP_MPI
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      integer                  :: err, err_handler
+
+      CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
+      if(err /= 0) call judft_error("Can't create MPI_Win for cmplx_data_ptr")
+
+      call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
+      if(err /= 0) call judft_error("Can't create Error handler")
+
+      CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
+      if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#endif
+   end subroutine juDFT_win_create_cmplx
+
+   subroutine juDFT_win_create_int(base, size, disp_unit, info, comm, win)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      integer, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
+      integer, intent(in)      :: disp_unit, info, comm
+      integer, intent(inout)   :: win
+
+#ifdef CPP_MPI
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      integer                  :: err, err_handler
+
+      CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
+      if(err /= 0) call judft_error("Can't create MPI_Win for cmplx_data_ptr")
+
+      call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
+      if(err /= 0) call judft_error("Can't create Error handler")
+
+      CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
+      if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#endif
+   end subroutine juDFT_win_create_int
 
    subroutine t_mpi_set_errhandler(self)
       use m_judft
@@ -55,10 +137,19 @@ contains
    end subroutine t_mpi_set_errhandler
 
    subroutine judft_mpi_error_handler(comm, error_code) 
+#ifdef CPP_MPI
+      use mpi
+#endif
       use m_judft
       implicit none 
       integer, intent(in) :: comm, error_code 
+      integer             :: str_len, ierr
+      character(len=3000) :: error_str
 
-      call judft_error("MPI failed with Error_code = " // int2str(error_code))
+#ifdef CPP_MPI  
+      call MPI_ERROR_STRING(error_code, error_str, str_len, ierr)
+      call judft_error("MPI failed with Error_code = " // int2str(error_code) // new_line("A") // &
+                       error_str(1:str_len))
+#endif
    end subroutine judft_mpi_error_handler
 END MODULE m_types_mpi

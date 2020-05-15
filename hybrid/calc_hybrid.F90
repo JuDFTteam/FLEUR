@@ -49,7 +49,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: my_k_list(:), k_owner(:)
 
       CALL timestart("hybrid code")
-      call sync_eig(eig_id)
+      call sync_eig(eig_id, fi)
 
       call hybmpi%copy_mpi(mpi)
       call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
@@ -139,7 +139,7 @@ CONTAINS
       call timestop("Hybrid imbalance")
 #endif
 
-      call sync_eig(eig_id)
+      call sync_eig(eig_id, fi)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
