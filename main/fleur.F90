@@ -526,7 +526,7 @@ END IF
        ! mix fi%input and output densities
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
-            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter,nococonv,fi%sliceplot)
+            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
  
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
@@ -603,6 +603,25 @@ END IF
 
        IF (mpi%irank.EQ.0) THEN
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
+       END IF
+       
+           ! Plots of mixed density
+        IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+           ! CDN including core charge
+           CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi, fi%oneD, fi%sym, &
+                         fi%cell, fi%noco, nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
+           !! CDN subtracted by core charge
+           !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+           !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+           !fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
+        END IF
+
+       ! Break SCF loop if Plots were generated in ongoing run (iplot=/=0). This needs to happen here, as the mixed density
+       ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
+       ! post-process).
+
+       IF((sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0)) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
