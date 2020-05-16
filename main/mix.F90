@@ -198,7 +198,7 @@ contains
     END IF
 
     !write out mixed density (but not for a plotting run)
-    IF ((mpi%irank==0).AND.(sliceplot%iplot.==.0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF ((mpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)
 
 #ifdef CPP_HDF
