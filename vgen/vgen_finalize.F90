@@ -138,7 +138,7 @@ CONTAINS
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
-         IF ((mpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
+         IF ((mpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
             CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
          END IF
       END IF
