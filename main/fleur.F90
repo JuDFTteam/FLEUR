@@ -66,7 +66,6 @@ CONTAINS
    USE m_metagga
    USE m_plot
    USE m_hubbard1_setup
-
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -249,6 +248,10 @@ IF (fi%sliceplot%iplot.NE.0) THEN
    END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+
+       IF ((mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.EQ.2)) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
@@ -449,6 +452,10 @@ END IF
    END IF
                 CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
                                fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
+
+       IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
