@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, nococonv, sliceplot)
+       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia)
 
     use m_juDFT
     use m_constants
@@ -46,8 +46,6 @@ contains
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
-    type(t_nococonv),  intent(in)    :: nococonv
-    TYPE(t_sliceplot), INTENT(IN)   :: sliceplot
     
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
@@ -65,7 +63,7 @@ contains
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix,l_firstItU
-    INTEGER                          :: it,maxiter,ierr
+    INTEGER                          :: it,maxiter
     INTEGER                          :: indStartHIA, indEndHIA
 
 
@@ -198,32 +196,8 @@ contains
        END IF
     END IF
 
-    ! Plots of mixed density
-    IF ((sliceplot%iplot.NE.0 ) ) THEN
-       ! CDN including core charge
-       CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi, oneD, sym, &
-                         cell, noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, sliceplot)
-       !! CDN subtracted by core charge
-       !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-       !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-       !fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-     END IF
-
-    ! Break SCF loop if Plots were generated in ongoing run (iplot=/=0). This needs to happen here, as the mixed density
-    ! is the last plot tablet_potden to appear in the scf loop and BEFORE the mixed density is written out (so it is quasi
-    ! post-process).
-
-#ifdef CPP_MPI
-       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#endif
-
-
-    IF(sliceplot%iplot.NE.0) THEN
-       CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-    END IF
-
-    !write out mixed density
-    IF (mpi%irank==0) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    !write out mixed density (but not for a plotting run)
+    IF ((mpi%irank==0).AND.(sliceplot%iplot.==.0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)
 
 #ifdef CPP_HDF
