@@ -526,7 +526,7 @@ END IF
        ! mix fi%input and output densities
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
-            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
+            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter,fi%sliceplot)
  
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
