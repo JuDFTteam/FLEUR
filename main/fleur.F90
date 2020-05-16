@@ -620,7 +620,7 @@ END IF
        ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
        ! post-process).
 
-       IF((sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0)) THEN
+       IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0)) THEN
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
