@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia)
+       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
 
     use m_juDFT
     use m_constants
@@ -46,6 +46,7 @@ contains
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
+    TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
     
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
