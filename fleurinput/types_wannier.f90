@@ -192,7 +192,27 @@ CONTAINS
     ELSE
        rank=0
     END IF
-
+    CALL mpi_bc(this%socmatvecfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatvecrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%anglmomrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%anglmomfmt,rank,mpi_comm)
+    CALL mpi_bc(this%torquefmt,rank,mpi_comm)
+    CALL mpi_bc(this%torquersfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagatrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%paulifmt,rank,mpi_comm)
+    CALL mpi_bc(this%pauliatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%hoppingfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixmmnfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixamnfmt,rank,mpi_comm)
+    CALL mpi_bc(this%mmn0fmt,rank,mpi_comm)
+    CALL mpi_bc(this%mmn0atfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixuHufmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixuHudmifmt,rank,mpi_comm)
     CALL mpi_bc(this%wan90version ,rank,mpi_comm)
     CALL mpi_bc(this%oc_num_orbs ,rank,mpi_comm)
     CALL mpi_bc(this%oc_orbs,rank,mpi_comm)
