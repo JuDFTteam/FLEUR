@@ -25,7 +25,7 @@ MODULE m_kkintgr
    INTEGER, PARAMETER :: method_direct    = 3
    INTEGER, PARAMETER :: method_fft       = 4
 
-   CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(or gaussian)
+   CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(lorentzian or gaussian)
 
 
    !PARAMETER FOR LORENTZIAN SMOOTHING
@@ -33,7 +33,7 @@ MODULE m_kkintgr
 
    CONTAINS
 
-   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,nz,method)
+   SUBROUTINE kkintgr(im,eMesh,ez,l_conjg,g,method)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
       !Re(G(E+i * delta)) = -1/pi * int_bot^top dE' P(1/(E-E')) * Im(G(E'+i*delta))
@@ -42,32 +42,28 @@ MODULE m_kkintgr
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
       USE m_smooth
 
-      !Information about the integrand
       REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
-      REAL,          INTENT(IN)     :: eb          !Bottom energy cutoff
-      REAL,          INTENT(IN)     :: del         !Energy step on the real axis
-      INTEGER,       INTENT(IN)     :: ne          !Number of energy points on the real axis
-
-      !Information about the complex energy contour
-      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
+      REAL,          INTENT(IN)     :: eMesh(:)    !Energy grid on the real axis
       COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
-      INTEGER,       INTENT(IN)     :: nz          !Number of energy points on the complex contour
-
-      !Information about the method
+      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      INTEGER  :: iz,izp,n1,n2,i
+      INTEGER  :: iz,izp,n1,n2,i,ne,nz
       INTEGER  :: ismooth,nsmooth
-      REAL     :: e(ne)
+      REAL     :: eb,del
       REAL     :: re_n1,re_n2,im_n1,im_n2
-      INTEGER  :: smoothInd(nz)
-      REAL     :: sigma(nz)
-      REAL, ALLOCATABLE :: smoothed(:,:)
+      INTEGER, ALLOCATABLE :: smoothInd(:)
+      REAL, ALLOCATABLE    :: sigma(:)
+      REAL, ALLOCATABLE    :: smoothed(:,:)
 
-      DO i = 1, ne
-         e(i) = (i-1) * del + eb
-      ENDDO
+      nz  = SIZE(ez)
+      ne  = SIZE(eMesh)
+      eb  = eMesh(1)
+      del = eMesh(2) - eMesh(1)
+
+      ALLOCATE(smoothInd(nz),source=0)
+      ALLOCATE(sigma(nz),source=0.0)
 
       IF(method.NE.method_direct) THEN
          CALL timestart("kkintgr: smoothing")
@@ -87,7 +83,7 @@ MODULE m_kkintgr
          ENDDO outer
          ALLOCATE(smoothed(nsmooth,ne), source=0.0)
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(nsmooth,smoothed,sigma,ne,e,im) &
+         !$OMP SHARED(nsmooth,smoothed,sigma,ne,eMesh,im) &
          !$OMP PRIVATE(ismooth)
          !$OMP DO
          DO ismooth = 1, nsmooth
@@ -95,9 +91,9 @@ MODULE m_kkintgr
             IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
             SELECT CASE (TRIM(ADJUSTL(smooth_method)))
             CASE('lorentzian')
-               CALL lorentzian_smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+               CALL lorentzian_smooth(eMesh,smoothed(ismooth,:),sigma(ismooth),ne)
             CASE('gaussian')
-               CALL smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+               CALL smooth(eMesh,smoothed(ismooth,:),sigma(ismooth),ne)
             CASE DEFAULT
                CALL juDFT_error("No valid smooth_method set",&
                                 hint="This is a bug in FLEUR, please report",&
@@ -113,7 +109,7 @@ MODULE m_kkintgr
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im,e,smoothed,smoothInd) &
+      !$OMP SHARED(g,ez,im,smoothed,smoothInd) &
       !$OMP PRIVATE(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
       !$OMP DO
       DO iz = 1, nz
