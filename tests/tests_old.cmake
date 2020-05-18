@@ -53,7 +53,7 @@ endif()
 
 #Tests for EDsolver
 if (FLEUR_USE_EDSOLVER)
-   set(SerialParallelTests ${SerialParallelTests} Gd_Hubbard1 Gd_Hubbard1_SOC Gd_Hubbard1_noSYM)
+   set(SerialParallelTests ${SerialParallelTests} Gd_Hubbard1 Gd_Hubbard1_noSYM)
 endif()
 
 
