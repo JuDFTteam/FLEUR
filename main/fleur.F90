@@ -141,7 +141,7 @@ CONTAINS
 
     !Warning on strange choice of switches before starting density is generated.
     IF (fi%input%l_onlyMtStDen.AND..NOT.fi%noco%l_mtNocoPot) THEN
-    	CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.",calledby='types_input')
+       CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.",calledby='types_input')
     END IF
 
     CALL inDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
@@ -183,9 +183,9 @@ CONTAINS
     ! Open/allocate eigenvector storage (start)
     l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
     if(fi%noco%l_soc.and.fi%input%l_wann)then
-    	 !! Weed up and down spinor components for SOC MLWFs.
-    	 !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
-    	 !! Make sure we always get up and down spinors when SOC=true.
+       !! Weed up and down spinor components for SOC MLWFs.
+       !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
+       !! Make sure we always get up and down spinors when SOC=true.
        wannierspin=2
     else
        wannierspin = fi%input%jspins
@@ -202,14 +202,7 @@ CONTAINS
     ! Open/allocate eigenvector storage (end)
     scfloop:DO WHILE (l_cont)
        iter = iter + 1
-       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
-          DO i_gf = 1, fi%gfinp%n
-             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
-          ENDDO
-          hub1data%iter = hub1data%iter + 1
-          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
-                              greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
-       ENDIF
+
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -226,6 +219,16 @@ CONTAINS
           WRITE (oUnit,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
+
+
+       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
+          DO i_gf = 1, fi%gfinp%n
+             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
+          ENDDO
+          hub1data%iter = hub1data%iter + 1
+          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
+                              greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
+       ENDIF
 
 #ifdef CPP_CHASE
        CALL chase_distance(results%last_distance)
@@ -368,11 +371,11 @@ END IF
 
 	  IF (fi%input%gw.GT.0) THEN
 	    IF (mpi%irank.EQ.0) THEN
-	       CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,fi%hub1inp,vTot,vCoul,vx,mpi,&
-		  	     results,eig_id,fi%oneD,sphhar,stars,fi%vacuum)
+          CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,fi%hub1inp,vTot,vCoul,vx,mpi,&
+              results,eig_id,fi%oneD,sphhar,stars,fi%vacuum)
 	    END IF
 	    IF (fi%input%gw.EQ.2) THEN
-	       CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
 	    END IF
 	  END IF
 
