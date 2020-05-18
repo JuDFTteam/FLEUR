@@ -79,9 +79,7 @@ CONTAINS
     ENDDO;ENDDO
     CALL hsmt(atoms,sym,enpara,isp,input,mpi,noco,nococonv,cell,lapw,ud,td,smat,hmat)
     DO i=1,nspins;DO j=1,nspins;if (hmat(1,1)%l_real) THEN
-       print *,"Trying",i,j
       !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r)
-       print*,"copyout:", i,j
     ELSE
       !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c)
     ENDIF;ENDDO;ENDDO
