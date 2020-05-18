@@ -371,9 +371,14 @@ CONTAINS
 
     CHARACTER(len=100):: xPathA
     CHARACTER(len=255):: valueString
-
+    CHARACTER(len=30):: jobname
+    CHARACTER(len=30):: param
+    INTEGER           :: parampos
+    INTEGER           :: stat
     INTEGER           :: numberNodes,i,n,numtokens
     LOGICAL,ALLOCATABLE:: wannAtomList(:)
+    LOGICAL :: l_param
+    REAL :: version_real    
 
     xPathA = '/fleurInput/output/wannier'
     numberNodes = xml%getNumberOfNodes(xPathA)
@@ -424,6 +429,15 @@ CONTAINS
        DO i = 1, numTokens
           this%jobList(i) = xml%popFirstStringToken(valueString)
           IF(this%jobList(i)(1:1).EQ.'!')cycle
+          parampos=index(this%jobList(i),'=')
+          if(parampos.gt.1)then
+             jobname=this%jobList(i)(1:parampos-1)
+             param=this%jobList(i)(parampos+1:)
+             l_param=.true.
+          else   
+             jobname=this%jobList(i)
+             l_param=.false.
+          endif   
           IF(this%jobList(i).EQ.'socmat')THEN
              this%l_socmat=.TRUE.
           ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
@@ -499,8 +513,14 @@ CONTAINS
              this%l_wann_plot=.TRUE.
           ELSEIF(this%jobList(i).EQ.'bynumber')THEN
              this%l_bynumber=.TRUE.
-          ELSEIF(this%jobList(i).EQ.'matrixmmn')THEN
-             this%l_matrixmmn=.TRUE.
+          ELSEIF(jobname.EQ.'matrixmmn')THEN
+            this%l_matrixmmn=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%matrixmmnfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
           ELSEIF(this%jobList(i).EQ.'projmethod')THEN
              this%l_projmethod=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
@@ -561,20 +581,28 @@ CONTAINS
              this%l_matrixuHu=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixuhu-dmi') THEN
              this%l_matrixuHu_dmi=.TRUE.
-         !Not done
-         ! ELSEIF(this%jobList(i).EQ.'wan90version')THEN
-         !    backspace(916)
-         !    read(916,*,iostat=ios)task,version_real
-         !    if (ios /= 0) CALL judft_error("error reading wan90version", calledby="wann_read_inp")
-         !    if(abs(version_real-1.1).lt.1.e-9)THEN
-         !       this%wan90version=1
-         !    ELSEIF(abs(version_real-1.2).lt.1.e-9)THEN
-         !       this%wan90version=2
-         !    ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
-         !       this%wan90version=3
-         !    ELSE
-         !      CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
-         !    endif
+        
+          ELSEIF(jobname.EQ.'wan90version')THEN
+             if(l_param)then
+                read(param,*,iostat=stat) version_real
+                if(stat/=0)then
+                   write(*,*)"problem with jobparam=",param
+                   CALL juDFT_error ("problem with jobparam", calledby="wann_read_inp")
+                endif                                
+             else
+                  CALL juDFT_error ("parameter needed in wan90version", calledby="wann_read_inp")
+             endif   
+         
+         
+             if(abs(version_real-1.1).lt.1.e-9)THEN
+                this%wan90version=1
+             ELSEIF(abs(version_real-1.2).lt.1.e-9)THEN
+                this%wan90version=2
+             ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
+                this%wan90version=3
+             ELSE
+               CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
+             endif
          !Not done
          ! ELSEIF(this%jobList(i).EQ.'ikptstart')THEN
          !    this%l_ikptstart=.TRUE.
