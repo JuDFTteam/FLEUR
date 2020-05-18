@@ -15,31 +15,33 @@ MODULE m_types_wannier
   TYPE,EXTENDS(t_fleurinput_base):: t_wann
     !New parameters not handled correctly yet...
     LOGICAL :: l_socmatvec=.FALSE.
+    INTEGER :: socmatvecfmt=1
     LOGICAL :: l_socmatvecrs=.FALSE.
+    INTEGER :: socmatvecrsfmt=1
     LOGICAL :: l_mmn0_unf_to_spn_unf=.FALSE.
-      LOGICAL :: l_mmn0_to_spn_unf=.FALSE.
-      LOGICAL :: l_mmn0_to_spn=.FALSE.
-      LOGICAL :: l_mmn0_to_spn2=.FALSE.
-      LOGICAL :: l_mmn0_unf_to_spn=.FALSE.
-      LOGICAL :: l_perpmag_unf_to_tor_unf=.FALSE.
-      LOGICAL :: l_perpmag_to_tor_unf=.FALSE.
-      LOGICAL :: l_perpmag_to_tor=.FALSE.
-      LOGICAL :: l_perpmag_unf_to_tor=.FALSE.
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc=.FALSE.
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc=.FALSE.
-      LOGICAL :: l_hsomtx_unf_to_hsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtx_to_hsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtx_to_hsoc=.FALSE.
-      LOGICAL :: l_hsomtx_unf_to_hsoc=.FALSE.
-      INTEGER :: perpmagl
-      LOGICAL :: l_perpmagatlres=.FALSE.
+    LOGICAL :: l_mmn0_to_spn_unf=.FALSE.
+    LOGICAL :: l_mmn0_to_spn=.FALSE.
+    LOGICAL :: l_mmn0_to_spn2=.FALSE.
+    LOGICAL :: l_mmn0_unf_to_spn=.FALSE.
+    LOGICAL :: l_perpmag_unf_to_tor_unf=.FALSE.
+    LOGICAL :: l_perpmag_to_tor_unf=.FALSE.
+    LOGICAL :: l_perpmag_to_tor=.FALSE.
+    LOGICAL :: l_perpmag_unf_to_tor=.FALSE.
+    LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtxvec_to_lmpzsoc=.FALSE.
+    LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc=.FALSE.
+    LOGICAL :: l_hsomtx_unf_to_hsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtx_to_hsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtx_to_hsoc=.FALSE.
+    LOGICAL :: l_hsomtx_unf_to_hsoc=.FALSE.
+    INTEGER :: perpmagl
+    LOGICAL :: l_perpmagatlres=.FALSE.
 
-     INTEGER :: wan90version =3
-     INTEGER :: oc_num_orbs =0
-     INTEGER, ALLOCATABLE :: oc_orbs(:)
-     LOGICAL :: l_unformatted =.FALSE.
+    INTEGER :: wan90version =3
+    INTEGER :: oc_num_orbs =0
+    INTEGER, ALLOCATABLE :: oc_orbs(:)
+    LOGICAL :: l_unformatted =.FALSE.
      LOGICAL :: l_oc_f=.FALSE.
      LOGICAL :: l_ndegen=.FALSE.
      LOGICAL :: l_orbitalmom=.FALSE.
@@ -50,7 +52,9 @@ MODULE m_types_wannier
      LOGICAL :: l_perturb=.FALSE.
      LOGICAL :: l_nedrho=.FALSE.
      LOGICAL :: l_anglmomrs=.FALSE.
+     INTEGER :: anglmomrsfmt=1
      LOGICAL :: l_anglmom=.FALSE.
+     INTEGER :: anglmomfmt=1
      LOGICAL :: l_spindisp=.FALSE.
      LOGICAL :: l_spindisprs=.FALSE.
      LOGICAL :: l_socspicom=.FALSE.
@@ -58,17 +62,25 @@ MODULE m_types_wannier
      LOGICAL :: l_offdiposoprs=.FALSE.
      LOGICAL :: l_offdiposop=.FALSE.
      LOGICAL :: l_torque=.FALSE.
+     INTEGER :: torquefmt=1
      LOGICAL :: l_torquers=.FALSE.
+     INTEGER :: torquersfmt=1
      LOGICAL :: l_atomlist=.FALSE.
      INTEGER :: atomlist_num=0
      INTEGER, ALLOCATABLE :: atomlist(:)
      LOGICAL :: l_berry=.FALSE.
      LOGICAL :: l_perpmagrs=.FALSE.
+     INTEGER :: perpmagrsfmt=1
      LOGICAL :: l_perpmag=.FALSE.
+     INTEGER :: perpmagfmt=1
      LOGICAL :: l_perpmagat=.FALSE.
+     INTEGER :: peromagatfmt=1
      LOGICAL :: l_perpmagatrs=.FALSE.
+     INTEGER :: perpmagatrsfmt=1
      LOGICAL :: l_socmatrs=.FALSE.
+     INTEGER :: socmatrsfmt=1
      LOGICAL :: l_socmat=.FALSE.
+     INTEGER :: socmatfmt=1
      LOGICAL :: l_soctomom=.FALSE.
      LOGICAL :: l_kptsreduc2=.FALSE.
      LOGICAL :: l_nablapaulirs=.FALSE.
@@ -81,13 +93,16 @@ MODULE m_types_wannier
      LOGICAL :: l_nabla=.FALSE.
      LOGICAL :: l_socodi=.FALSE.
      LOGICAL :: l_pauli=.FALSE.
+     INTEGER :: paulifmt=1
      LOGICAL :: l_pauliat=.FALSE.
+     INTEGER :: pauliatfmt=1
      LOGICAL :: l_potmat=.FALSE.
      LOGICAL :: l_projgen=.FALSE.
      LOGICAL :: l_plot_symm=.FALSE.
      LOGICAL :: l_socmmn0=.FALSE.
      LOGICAL :: l_bzsym=.FALSE.
      LOGICAL :: l_hopping=.FALSE.
+     INTEGER :: hoppingfmt=1
      LOGICAL :: l_kptsreduc=.FALSE.
      LOGICAL :: l_prepwan90=.FALSE.
      LOGICAL :: l_plot_umdat=.FALSE.
@@ -95,7 +110,9 @@ MODULE m_types_wannier
      LOGICAL :: l_bynumber=.FALSE.
      LOGICAL :: l_stopopt=.FALSE.
      LOGICAL :: l_matrixmmn=.FALSE.
+     INTEGER :: matrixmmnfmt=1
      LOGICAL :: l_matrixamn=.FALSE.
+     INTEGER :: matrixamnfmt=1
      LOGICAL :: l_projmethod=.FALSE.
      LOGICAL :: l_wannierize=.FALSE.
      LOGICAL :: l_plotw90=.FALSE.
@@ -111,7 +128,9 @@ MODULE m_types_wannier
      LOGICAL :: l_dipole2=.FALSE.
      LOGICAL :: l_dipole3=.FALSE.
      LOGICAL :: l_mmn0=.FALSE.
+     INTEGER :: mmn0fmt=1
      LOGICAL :: l_mmn0at=.FALSE.
+     INTEGER :: mmn0atfmt=1
      LOGICAL :: l_manyfiles=.FALSE.
      LOGICAL :: l_collectmanyfiles=.FALSE.
      LOGICAL :: l_ldauwan=.FALSE.
@@ -123,7 +142,9 @@ MODULE m_types_wannier
      LOGICAL :: l_finishgwf=.FALSE.
      LOGICAL :: l_skipkov=.FALSE.
      LOGICAL :: l_matrixuHu=.FALSE.
+     INTEGER :: matrixuHufmt=1
      LOGICAL :: l_matrixuHu_dmi=.FALSE.
+     INTEGER :: matrixuHudmifmt=1
      INTEGER :: ikptstart=1
      INTEGER :: band_min(1:2)=-1
      INTEGER :: band_max(1:2)=-1
