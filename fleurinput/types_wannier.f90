@@ -74,7 +74,7 @@ MODULE m_types_wannier
      LOGICAL :: l_perpmag=.FALSE.
      INTEGER :: perpmagfmt=1
      LOGICAL :: l_perpmagat=.FALSE.
-     INTEGER :: peromagatfmt=1
+     INTEGER :: perpmagatfmt=1
      LOGICAL :: l_perpmagatrs=.FALSE.
      INTEGER :: perpmagatrsfmt=1
      LOGICAL :: l_socmatrs=.FALSE.
