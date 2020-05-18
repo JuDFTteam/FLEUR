@@ -295,7 +295,7 @@ CONTAINS
       logical                                 :: l_real, l_soc
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
       INTEGER:: err
-#ifdef(CPP_MPI)
+#ifdef CPP_MPI
       if(eig66_data_mode(id) == MPI_mode) then
          CALL priv_find_data(id, d)
 
