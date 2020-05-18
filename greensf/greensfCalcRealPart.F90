@@ -44,7 +44,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: spin_cut,nn,natom,contourShape,dummy
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
-      LOGICAL :: l_onsite,l_fixedCutoffset
+      LOGICAL :: l_onsite,l_fixedCutoffset,l_skip
       REAL    :: fac,del,eb,et,fixedCutoff
       REAL, ALLOCATABLE :: eMesh(:)
 
@@ -146,6 +146,18 @@ MODULE m_greensfCalcRealPart
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                DO m= -l,l
                   DO mp= -lp,lp
+
+                     !Don't waste time on empty elements
+                     l_skip = .FALSE.
+                     DO ie = 1, SIZE(eMesh)
+                        IF(ABS(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                        IF(ie==SIZE(eMesh)) l_skip = .TRUE.
+                     ENDDO
+                     IF(l_skip) THEN
+                        g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = cmplx_0
+                        CYCLE
+                     ENDIF
+
                      IF(gfinp%l_sphavg) THEN
                         CALL kkintgr(greensfImagPart%sphavg(:,m,mp,i_elem,jspin),eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%gmmpMat(:,m,mp,jspin,ipm),int_method(contourShape))
