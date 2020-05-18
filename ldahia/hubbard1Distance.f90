@@ -38,7 +38,7 @@ MODULE m_hubbard1Distance
          END DO
       ENDDO
       results%last_occdistance = results%last_occdistance + ABS(n_out-n_in)
-      results%last_mmpMatdistance = MAXVAL(elementDistance)
+      results%last_mmpMatdistance = MAX(results%last_mmpMatdistance,MAXVAL(elementDistance))
 
       !IO to out file
       WRITE(oUnit,'(A)') "Hubbard 1 Distances:"

@@ -14,7 +14,6 @@ MODULE m_kkintgr
    ! TODO: Look at FFT for Transformation
    !       How to do changing imaginary parts
    !------------------------------------------------------------------------------
-   USE ieee_arithmetic
    USE m_constants
    USE m_juDFT
 
@@ -25,15 +24,11 @@ MODULE m_kkintgr
    INTEGER, PARAMETER :: method_direct    = 3
    INTEGER, PARAMETER :: method_fft       = 4
 
-   CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(or gaussian)
-
-
-   !PARAMETER FOR LORENTZIAN SMOOTHING
-   REAL,    PARAMETER :: cut              = 1e-8
+   CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(lorentzian or gaussian)
 
    CONTAINS
 
-   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,nz,method)
+   SUBROUTINE kkintgr(im,eMesh,ez,l_conjg,g,method)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
       !Re(G(E+i * delta)) = -1/pi * int_bot^top dE' P(1/(E-E')) * Im(G(E'+i*delta))
@@ -41,33 +36,30 @@ MODULE m_kkintgr
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
       USE m_smooth
+      USE m_lorentzian_smooth
 
-      !Information about the integrand
       REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
-      REAL,          INTENT(IN)     :: eb          !Bottom energy cutoff
-      REAL,          INTENT(IN)     :: del         !Energy step on the real axis
-      INTEGER,       INTENT(IN)     :: ne          !Number of energy points on the real axis
-
-      !Information about the complex energy contour
-      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
+      REAL,          INTENT(IN)     :: eMesh(:)    !Energy grid on the real axis
       COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
-      INTEGER,       INTENT(IN)     :: nz          !Number of energy points on the complex contour
-
-      !Information about the method
+      COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      INTEGER  :: iz,izp,n1,n2,i
+      INTEGER  :: iz,izp,n1,n2,i,ne,nz
       INTEGER  :: ismooth,nsmooth
-      REAL     :: e(ne)
+      REAL     :: eb,del
       REAL     :: re_n1,re_n2,im_n1,im_n2
-      INTEGER  :: smoothInd(nz)
-      REAL     :: sigma(nz)
-      REAL, ALLOCATABLE :: smoothed(:,:)
+      INTEGER, ALLOCATABLE :: smoothInd(:)
+      REAL, ALLOCATABLE    :: sigma(:)
+      REAL, ALLOCATABLE    :: smoothed(:,:)
 
-      DO i = 1, ne
-         e(i) = (i-1) * del + eb
-      ENDDO
+      nz  = SIZE(ez)
+      ne  = SIZE(eMesh)
+      eb  = eMesh(1)
+      del = eMesh(2) - eMesh(1)
+
+      ALLOCATE(smoothInd(nz),source=0)
+      ALLOCATE(sigma(nz),source=0.0)
 
       IF(method.NE.method_direct) THEN
          CALL timestart("kkintgr: smoothing")
@@ -85,19 +77,19 @@ MODULE m_kkintgr
             smoothInd(iz) = nsmooth
             sigma(nsmooth) = AIMAG(ez(iz))
          ENDDO outer
-         ALLOCATE(smoothed(nsmooth,ne), source=0.0)
+         ALLOCATE(smoothed(ne,nsmooth), source=0.0)
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(nsmooth,smoothed,sigma,ne,e,im) &
+         !$OMP SHARED(nsmooth,smoothed,sigma,ne,eMesh,im) &
          !$OMP PRIVATE(ismooth)
          !$OMP DO
          DO ismooth = 1, nsmooth
-            smoothed(ismooth,:) = im(:ne)
+            smoothed(:,ismooth) = im(:ne)
             IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
             SELECT CASE (TRIM(ADJUSTL(smooth_method)))
             CASE('lorentzian')
-               CALL lorentzian_smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+               CALL lorentzian_smooth(eMesh,smoothed(:,ismooth),sigma(ismooth),ne)
             CASE('gaussian')
-               CALL smooth(e,smoothed(ismooth,:),sigma(ismooth),ne)
+               CALL smooth(eMesh,smoothed(:,ismooth),sigma(ismooth),ne)
             CASE DEFAULT
                CALL juDFT_error("No valid smooth_method set",&
                                 hint="This is a bug in FLEUR, please report",&
@@ -113,14 +105,14 @@ MODULE m_kkintgr
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im,e,smoothed,smoothInd) &
+      !$OMP SHARED(g,ez,im,smoothed,smoothInd) &
       !$OMP PRIVATE(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
       !$OMP DO
       DO iz = 1, nz
          SELECT CASE(method)
 
          CASE(method_direct)
-            g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
+            g(iz) = kk_direct(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
          CASE(method_maclaurin, method_deriv)
             !Use the previously smoothed version and interpolate after
             !Next point to the left
@@ -128,31 +120,28 @@ MODULE m_kkintgr
             !next point to the right
             n2 = n1 + 1
             !Here we perform the Kramers-kronig-Integration
-            re_n2 = re_ire(smoothed(smoothInd(iz),:),ne,n2,method)
-            re_n1 = re_ire(smoothed(smoothInd(iz),:),ne,n1,method)
+            re_n2 = kk_num(smoothed(:,smoothInd(iz)),ne,n2,method)
+            re_n1 = kk_num(smoothed(:,smoothInd(iz)),ne,n1,method)
             !Interpolate to the energy ez(iz)
             !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
 
             !Imaginary Part (0 outside of the energy range)
             IF(n1.LE.ne.AND.n1.GE.1) THEN
-               im_n1 = smoothed(smoothInd(iz),n1)
+               im_n1 = smoothed(n1,smoothInd(iz))
             ELSE
                im_n1 = 0.0
             ENDIF
             IF(n2.LE.ne.AND.n2.GE.1) THEN
-               im_n2 = smoothed(smoothInd(iz),n2)
+               im_n2 = smoothed(n2,smoothInd(iz))
             ELSE
                im_n2 = 0.0
             ENDIF
 
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
 
-            IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
-               CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
-            ENDIF
-
             IF(l_conjg) g(iz) = conjg(g(iz))
+
          CASE(method_fft)
             CALL juDFT_error("Not implemented yet", calledby="kkintgr")
          CASE DEFAULT
@@ -165,7 +154,7 @@ MODULE m_kkintgr
 
    END SUBROUTINE kkintgr
 
-   COMPLEX FUNCTION g_circle(im,ne,z,del,eb)
+   COMPLEX FUNCTION kk_direct(im,ne,z,del,eb)
 
       USE m_trapz
 
@@ -183,11 +172,11 @@ MODULE m_kkintgr
          integrand(i) = 1.0/(z-(i-1)*del-eb) * im(i)
       ENDDO
 
-      g_circle = -1/pi_const *( trapz(REAL(integrand(:)),del,ne) &
+      kk_direct = -1/pi_const *( trapz(REAL(integrand(:)),del,ne) &
                         + ImagUnit * trapz(AIMAG(integrand(:)),del,ne))
-   END FUNCTION g_circle
+   END FUNCTION kk_direct
 
-   REAL FUNCTION re_ire(im,ne,ire,method)
+   REAL FUNCTION kk_num(im,ne,ire,method)
 
       REAL,    INTENT(IN)  :: im(:) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
@@ -196,7 +185,7 @@ MODULE m_kkintgr
       INTEGER i,j
       REAL    y,im_ire
 
-      re_ire = 0.0
+      kk_num = 0.0
       IF(ire.LE.ne.AND.ire.GE.1) THEN
          im_ire = im(ire)
       ELSE
@@ -216,8 +205,8 @@ MODULE m_kkintgr
                i = 2*j
             ENDIF
             y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
-            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
-            re_ire = re_ire + y
+            IF(j.EQ.1 .OR. j.EQ.INT(ne/2.0)) y = y/2.0
+            kk_num = kk_num + y
          ENDDO
 
       CASE (method_deriv)
@@ -230,56 +219,17 @@ MODULE m_kkintgr
                   y = -1/pi_const * (im(2)-im(1))
                ELSE IF(ire.EQ.ne) THEN
                   y = -1/pi_const * (im(ne)-im(ne-1))
-               ELSE IF((ire.LE.ne).AND.(ire.GE.1)) THEN
+               ELSE IF((ire.LT.ne).AND.(ire.GT.1)) THEN
                   y = -1/pi_const * (im(ire+1)-im(ire-1))/2.0
                ENDIF
             ENDIF
-            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
-            re_ire = re_ire + y
+            IF(j.EQ.1 .OR. j.EQ.ne) y = y/2.0
+            kk_num = kk_num + y
          ENDDO
       CASE default
          CALL juDFT_error("No valid method for KK-integration chosen",calledby="kkintgr")
       END SELECT
-   END FUNCTION re_ire
 
-   !This is essentially smooth out of m_smooth but with a lorentzian distribution
-   SUBROUTINE lorentzian_smooth(e,f,sigma,n)
-
-      INTEGER, INTENT(IN)    :: n
-      REAL,    INTENT(INOUT) :: f(:)
-      REAL,    INTENT(IN)    :: sigma
-      REAL,    INTENT(IN)    :: e(:)
-
-      REAL :: dx
-      REAL :: f0(n), ee(n)
-      INTEGER :: ie , je , j1 , j2 , numPoints
-
-      f0 = f
-      f = 0.0
-      ee = 0.0
-      dx = e(2)-e(1)
-
-      DO ie =1,  n
-
-         ee(ie) = 1/pi_const * sigma/dx * 1.0/((ie-1)**2+(sigma/dx)**2)
-
-         IF ( ee(ie).LT.cut ) EXIT
-      ENDDO
-      numPoints = ie - 1
-
-      DO ie = 1, n
-
-         j1 = ie - numPoints + 1
-         j1 = MERGE(1,j1,j1.LT.1)
-         j2 = ie + numPoints - 1
-         j2 = MERGE(n,j2,j2.GT.n)
-         DO je = j1 , j2
-            f(ie) = f(ie) + ee(IABS(je-ie)+1)*f0(je)
-         ENDDO
-
-      ENDDO
-
-
-   END SUBROUTINE lorentzian_smooth
+   END FUNCTION kk_num
 
 END MODULE m_kkintgr

@@ -15,31 +15,33 @@ MODULE m_types_wannier
   TYPE,EXTENDS(t_fleurinput_base):: t_wann
     !New parameters not handled correctly yet...
     LOGICAL :: l_socmatvec=.FALSE.
+    INTEGER :: socmatvecfmt=1
     LOGICAL :: l_socmatvecrs=.FALSE.
+    INTEGER :: socmatvecrsfmt=1
     LOGICAL :: l_mmn0_unf_to_spn_unf=.FALSE.
-      LOGICAL :: l_mmn0_to_spn_unf=.FALSE.
-      LOGICAL :: l_mmn0_to_spn=.FALSE.
-      LOGICAL :: l_mmn0_to_spn2=.FALSE.
-      LOGICAL :: l_mmn0_unf_to_spn=.FALSE.
-      LOGICAL :: l_perpmag_unf_to_tor_unf=.FALSE.
-      LOGICAL :: l_perpmag_to_tor_unf=.FALSE.
-      LOGICAL :: l_perpmag_to_tor=.FALSE.
-      LOGICAL :: l_perpmag_unf_to_tor=.FALSE.
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtxvec_to_lmpzsoc=.FALSE.
-      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc=.FALSE.
-      LOGICAL :: l_hsomtx_unf_to_hsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtx_to_hsoc_unf=.FALSE.
-      LOGICAL :: l_hsomtx_to_hsoc=.FALSE.
-      LOGICAL :: l_hsomtx_unf_to_hsoc=.FALSE.
-      INTEGER :: perpmagl
-      LOGICAL :: l_perpmagatlres=.FALSE.
+    LOGICAL :: l_mmn0_to_spn_unf=.FALSE.
+    LOGICAL :: l_mmn0_to_spn=.FALSE.
+    LOGICAL :: l_mmn0_to_spn2=.FALSE.
+    LOGICAL :: l_mmn0_unf_to_spn=.FALSE.
+    LOGICAL :: l_perpmag_unf_to_tor_unf=.FALSE.
+    LOGICAL :: l_perpmag_to_tor_unf=.FALSE.
+    LOGICAL :: l_perpmag_to_tor=.FALSE.
+    LOGICAL :: l_perpmag_unf_to_tor=.FALSE.
+    LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtxvec_to_lmpzsoc=.FALSE.
+    LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc=.FALSE.
+    LOGICAL :: l_hsomtx_unf_to_hsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtx_to_hsoc_unf=.FALSE.
+    LOGICAL :: l_hsomtx_to_hsoc=.FALSE.
+    LOGICAL :: l_hsomtx_unf_to_hsoc=.FALSE.
+    INTEGER :: perpmagl
+    LOGICAL :: l_perpmagatlres=.FALSE.
 
-     INTEGER :: wan90version =3
-     INTEGER :: oc_num_orbs =0
-     INTEGER, ALLOCATABLE :: oc_orbs(:)
-     LOGICAL :: l_unformatted =.FALSE.
+    INTEGER :: wan90version =3
+    INTEGER :: oc_num_orbs =0
+    INTEGER, ALLOCATABLE :: oc_orbs(:)
+    LOGICAL :: l_unformatted =.FALSE.
      LOGICAL :: l_oc_f=.FALSE.
      LOGICAL :: l_ndegen=.FALSE.
      LOGICAL :: l_orbitalmom=.FALSE.
@@ -50,7 +52,9 @@ MODULE m_types_wannier
      LOGICAL :: l_perturb=.FALSE.
      LOGICAL :: l_nedrho=.FALSE.
      LOGICAL :: l_anglmomrs=.FALSE.
+     INTEGER :: anglmomrsfmt=1
      LOGICAL :: l_anglmom=.FALSE.
+     INTEGER :: anglmomfmt=1
      LOGICAL :: l_spindisp=.FALSE.
      LOGICAL :: l_spindisprs=.FALSE.
      LOGICAL :: l_socspicom=.FALSE.
@@ -58,17 +62,25 @@ MODULE m_types_wannier
      LOGICAL :: l_offdiposoprs=.FALSE.
      LOGICAL :: l_offdiposop=.FALSE.
      LOGICAL :: l_torque=.FALSE.
+     INTEGER :: torquefmt=1
      LOGICAL :: l_torquers=.FALSE.
+     INTEGER :: torquersfmt=1
      LOGICAL :: l_atomlist=.FALSE.
      INTEGER :: atomlist_num=0
      INTEGER, ALLOCATABLE :: atomlist(:)
      LOGICAL :: l_berry=.FALSE.
      LOGICAL :: l_perpmagrs=.FALSE.
+     INTEGER :: perpmagrsfmt=1
      LOGICAL :: l_perpmag=.FALSE.
+     INTEGER :: perpmagfmt=1
      LOGICAL :: l_perpmagat=.FALSE.
+     INTEGER :: perpmagatfmt=1
      LOGICAL :: l_perpmagatrs=.FALSE.
+     INTEGER :: perpmagatrsfmt=1
      LOGICAL :: l_socmatrs=.FALSE.
+     INTEGER :: socmatrsfmt=1
      LOGICAL :: l_socmat=.FALSE.
+     INTEGER :: socmatfmt=1
      LOGICAL :: l_soctomom=.FALSE.
      LOGICAL :: l_kptsreduc2=.FALSE.
      LOGICAL :: l_nablapaulirs=.FALSE.
@@ -81,13 +93,16 @@ MODULE m_types_wannier
      LOGICAL :: l_nabla=.FALSE.
      LOGICAL :: l_socodi=.FALSE.
      LOGICAL :: l_pauli=.FALSE.
+     INTEGER :: paulifmt=1
      LOGICAL :: l_pauliat=.FALSE.
+     INTEGER :: pauliatfmt=1
      LOGICAL :: l_potmat=.FALSE.
      LOGICAL :: l_projgen=.FALSE.
      LOGICAL :: l_plot_symm=.FALSE.
      LOGICAL :: l_socmmn0=.FALSE.
      LOGICAL :: l_bzsym=.FALSE.
      LOGICAL :: l_hopping=.FALSE.
+     INTEGER :: hoppingfmt=1
      LOGICAL :: l_kptsreduc=.FALSE.
      LOGICAL :: l_prepwan90=.FALSE.
      LOGICAL :: l_plot_umdat=.FALSE.
@@ -95,7 +110,9 @@ MODULE m_types_wannier
      LOGICAL :: l_bynumber=.FALSE.
      LOGICAL :: l_stopopt=.FALSE.
      LOGICAL :: l_matrixmmn=.FALSE.
+     INTEGER :: matrixmmnfmt=1
      LOGICAL :: l_matrixamn=.FALSE.
+     INTEGER :: matrixamnfmt=1
      LOGICAL :: l_projmethod=.FALSE.
      LOGICAL :: l_wannierize=.FALSE.
      LOGICAL :: l_plotw90=.FALSE.
@@ -111,7 +128,9 @@ MODULE m_types_wannier
      LOGICAL :: l_dipole2=.FALSE.
      LOGICAL :: l_dipole3=.FALSE.
      LOGICAL :: l_mmn0=.FALSE.
+     INTEGER :: mmn0fmt=1
      LOGICAL :: l_mmn0at=.FALSE.
+     INTEGER :: mmn0atfmt=1
      LOGICAL :: l_manyfiles=.FALSE.
      LOGICAL :: l_collectmanyfiles=.FALSE.
      LOGICAL :: l_ldauwan=.FALSE.
@@ -123,7 +142,9 @@ MODULE m_types_wannier
      LOGICAL :: l_finishgwf=.FALSE.
      LOGICAL :: l_skipkov=.FALSE.
      LOGICAL :: l_matrixuHu=.FALSE.
+     INTEGER :: matrixuHufmt=1
      LOGICAL :: l_matrixuHu_dmi=.FALSE.
+     INTEGER :: matrixuHudmifmt=1
      INTEGER :: ikptstart=1
      INTEGER :: band_min(1:2)=-1
      INTEGER :: band_max(1:2)=-1
@@ -171,7 +192,27 @@ CONTAINS
     ELSE
        rank=0
     END IF
-
+    CALL mpi_bc(this%socmatvecfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatvecrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%anglmomrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%anglmomfmt,rank,mpi_comm)
+    CALL mpi_bc(this%torquefmt,rank,mpi_comm)
+    CALL mpi_bc(this%torquersfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%perpmagatrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%socmatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%paulifmt,rank,mpi_comm)
+    CALL mpi_bc(this%pauliatfmt,rank,mpi_comm)
+    CALL mpi_bc(this%hoppingfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixmmnfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixamnfmt,rank,mpi_comm)
+    CALL mpi_bc(this%mmn0fmt,rank,mpi_comm)
+    CALL mpi_bc(this%mmn0atfmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixuHufmt,rank,mpi_comm)
+    CALL mpi_bc(this%matrixuHudmifmt,rank,mpi_comm)
     CALL mpi_bc(this%wan90version ,rank,mpi_comm)
     CALL mpi_bc(this%oc_num_orbs ,rank,mpi_comm)
     CALL mpi_bc(this%oc_orbs,rank,mpi_comm)
@@ -330,9 +371,14 @@ CONTAINS
 
     CHARACTER(len=100):: xPathA
     CHARACTER(len=255):: valueString
-
+    CHARACTER(len=30):: jobname
+    CHARACTER(len=30):: param
+    INTEGER           :: parampos
+    INTEGER           :: stat
     INTEGER           :: numberNodes,i,n,numtokens
     LOGICAL,ALLOCATABLE:: wannAtomList(:)
+    LOGICAL :: l_param
+    REAL :: version_real    
 
     xPathA = '/fleurInput/output/wannier'
     numberNodes = xml%getNumberOfNodes(xPathA)
@@ -383,6 +429,15 @@ CONTAINS
        DO i = 1, numTokens
           this%jobList(i) = xml%popFirstStringToken(valueString)
           IF(this%jobList(i)(1:1).EQ.'!')cycle
+          parampos=index(this%jobList(i),'=')
+          if(parampos.gt.1)then
+             jobname=this%jobList(i)(1:parampos-1)
+             param=this%jobList(i)(parampos+1:)
+             l_param=.true.
+          else   
+             jobname=this%jobList(i)
+             l_param=.false.
+          endif   
           IF(this%jobList(i).EQ.'socmat')THEN
              this%l_socmat=.TRUE.
           ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
@@ -458,8 +513,30 @@ CONTAINS
              this%l_wann_plot=.TRUE.
           ELSEIF(this%jobList(i).EQ.'bynumber')THEN
              this%l_bynumber=.TRUE.
-          ELSEIF(this%jobList(i).EQ.'matrixmmn')THEN
-             this%l_matrixmmn=.TRUE.
+          ELSEIF(jobname.EQ.'matrixmmn')THEN
+            this%l_matrixmmn=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%matrixmmnfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
+          ELSEIF(jobname.EQ.'perpmag')THEN
+            this%l_perpmag=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%perpmagfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif           
+          ELSEIF(jobname.EQ.'perpmagrs')THEN
+            this%l_perpmagrs=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%perpmagrsfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif        
           ELSEIF(this%jobList(i).EQ.'projmethod')THEN
              this%l_projmethod=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
@@ -520,20 +597,28 @@ CONTAINS
              this%l_matrixuHu=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixuhu-dmi') THEN
              this%l_matrixuHu_dmi=.TRUE.
-         !Not done
-         ! ELSEIF(this%jobList(i).EQ.'wan90version')THEN
-         !    backspace(916)
-         !    read(916,*,iostat=ios)task,version_real
-         !    if (ios /= 0) CALL judft_error("error reading wan90version", calledby="wann_read_inp")
-         !    if(abs(version_real-1.1).lt.1.e-9)THEN
-         !       this%wan90version=1
-         !    ELSEIF(abs(version_real-1.2).lt.1.e-9)THEN
-         !       this%wan90version=2
-         !    ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
-         !       this%wan90version=3
-         !    ELSE
-         !      CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
-         !    endif
+        
+          ELSEIF(jobname.EQ.'wan90version')THEN
+             if(l_param)then
+                read(param,*,iostat=stat) version_real
+                if(stat/=0)then
+                   write(*,*)"problem with jobparam=",param
+                   CALL juDFT_error ("problem with jobparam", calledby="wann_read_inp")
+                endif                                
+             else
+                  CALL juDFT_error ("parameter needed in wan90version", calledby="wann_read_inp")
+             endif   
+         
+         
+             if(abs(version_real-1.1).lt.1.e-9)THEN
+                this%wan90version=1
+             ELSEIF(abs(version_real-1.2).lt.1.e-9)THEN
+                this%wan90version=2
+             ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
+                this%wan90version=3
+             ELSE
+               CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
+             endif
          !Not done
          ! ELSEIF(this%jobList(i).EQ.'ikptstart')THEN
          !    this%l_ikptstart=.TRUE.

@@ -186,8 +186,8 @@ MODULE m_types_greensfContourData
 
          !Equidistant contour (without vertical edges)
          del = (contourInp%et-contourInp%eb)/REAL(this%nz-1)
-         DO iz = 1, contourInp%nDOS
-            this%e(iz) = (iz-1) * del + contourInp%eb + ImagUnit * contourInp%sigmaDOS
+         DO iz = 1, this%nz
+            this%e(iz) = (iz-1) * del + contourInp%eb +ef + ImagUnit * contourInp%sigmaDOS
             IF(contourInp%l_dosfermi) THEN
                this%de(iz) = del * 1.0/(1.0+exp_save((REAL(this%e(iz))-ef)/contourInp%sigmaDOS))
             ELSE
