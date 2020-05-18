@@ -283,13 +283,14 @@ CONTAINS
 #endif
    END SUBROUTINE read_eig
 
-   SUBROUTINE sync_eig(id, fi)
+   SUBROUTINE sync_eig(id, fi, start_read_only)
       use m_judft
 #ifdef CPP_MPI 
       use mpi 
 #endif
-      type(t_fleurinput) :: fi
-      INTEGER, INTENT(IN)    :: id
+      type(t_fleurinput)  :: fi
+      INTEGER, INTENT(IN) :: id
+      logical, intent(in) :: start_read_only
 
       logical                                 :: l_real, l_soc
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
@@ -300,7 +301,22 @@ CONTAINS
       l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
       l_soc =fi%noco%l_soc
 
-      IF (d%read_epoch) THEN
+      IF (start_read_only) THEN
+         d%read_epoch = .TRUE.
+         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%eig_handle, err)
+         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 6")
+         IF (l_real .AND. .NOT. l_soc) THEN
+            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zr_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 7")
+         ELSE
+            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zc_handle, err)
+            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 8")
+         ENDIF
+         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%neig_handle, err)
+         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 9")
+         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%w_iks_handle, err)
+         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 10")
+      ELSE
          d%read_epoch = .FALSE.
          CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%eig_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 1")
@@ -317,21 +333,6 @@ CONTAINS
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 4")
          CALL MPI_Win_fence(MPI_MODE_NOSTORE, d%w_iks_handle, err)
          if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 5")
-      ELSE
-         d%read_epoch = .TRUE.
-         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%eig_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 6")
-         IF (l_real .AND. .NOT. l_soc) THEN
-            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zr_handle, err)
-            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 7")
-         ELSE
-            CALL MPI_Win_fence(MPI_MODE_NOPUT, d%zc_handle, err)
-            if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 8")
-         ENDIF
-         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%neig_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 9")
-         CALL MPI_Win_fence(MPI_MODE_NOPUT, d%w_iks_handle, err)
-         if(err /= 0) call juDFT_error("MPI_Win_fence isn't happy. No. 10")
       ENDIF
 #endif
    END SUBROUTINE sync_eig
