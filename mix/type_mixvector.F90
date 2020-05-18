@@ -406,7 +406,7 @@ CONTAINS
     IF (isize == 1) RETURN !No parallelization
     js = MERGE(jspins, 3,.NOT. l_noco)!distribute spins
     js = MIN(js, isize)
-    CALL MPI_COMM_SPLIT(mpi_comm, MOD(irank, js), irank, new_comm, err)
+    CALL judft_comm_split(mpi_comm, MOD(irank, js), irank, new_comm)
     spin_here = (/MOD(irank, js) == 0, MOD(irank, js) == 1, (isize == 2 .AND. irank == 0) .OR. MOD(irank, js) == 2/)
 
     CALL mpi_comm_rank(new_comm, irank, err)
