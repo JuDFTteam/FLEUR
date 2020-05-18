@@ -171,14 +171,11 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
+    ALLOCATE(greensFunction(MAX(1,fi%gfinp%n)))
     IF(fi%gfinp%n>0) THEN
-       ALLOCATE(greensFunction(fi%gfinp%n))
        DO i_gf = 1, fi%gfinp%n
           CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
        ENDDO
-        	
-    ELSE
-	   ALLOCATE(greensFunction(0))
     ENDIF
     ! Initialize Green's function (end)
     IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
