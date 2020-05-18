@@ -23,7 +23,7 @@ CONTAINS
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii
 #ifdef CPP_MPI
     include 'mpif.h'
-    CALL MPI_COMM_SPLIT_TYPE(mpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,mpi%mpi_comm_same_node,i)
+    CALL juDFT_COMM_SPLIT_TYPE(mpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,mpi%mpi_comm_same_node)
 #endif
     call omp_checker()
     !$ omp=omp_get_max_threads()

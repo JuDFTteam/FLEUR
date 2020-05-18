@@ -215,6 +215,7 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_distribute(jobs)
+        use m_types_mpi
         TYPE(t_job),INTENT(INOUT)::jobs(:)
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -251,7 +252,7 @@ CONTAINS
             IF ((irank.GE.min_pe).AND.(irank<min_pe+jobs(i)%PE_requested)) EXIT
         ENDDO
         jobs%mpi_comm=MPI_UNDEFINED
-        CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,i,irank,new_comm,ierr)
+        CALL judft_comm_split(MPI_COMM_WORLD,i,irank,new_comm)
         IF (i.LE.size(jobs)) THEN
             if(size(jobs) > 1) PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
             jobs(i)%mpi_comm=new_comm

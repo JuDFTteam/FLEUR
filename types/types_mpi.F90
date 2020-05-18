@@ -27,7 +27,7 @@ MODULE m_types_mpi
    END INTERFACE juDFT_win_create
 
    PRIVATE
-   PUBLIC :: juDFT_win_create, t_mpi
+   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi
 contains
    function mpi_is_root(mpi) result(is_root)
       implicit none 
@@ -116,6 +116,50 @@ contains
    INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_int
+
+   subroutine judft_comm_split(comm, color, key, new_comm)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none
+      integer, intent(in)    :: comm, color, key 
+      integer, intent(inout) :: new_comm 
+#ifdef CPP_MPI
+      integer                :: ierr, err_handler
+
+      CALL MPI_COMM_SPLIT(comm,color,key,new_comm,ierr)
+      if(ierr /= 0) call judft_error("Can't split comm") 
+
+      call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't create Error handler")
+
+      call MPI_Comm_Set_Errhandler(new_comm, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't assign Error handler to new_comm")
+#endif
+   end subroutine judft_comm_split
+
+   subroutine judft_comm_split_type(comm, split_type, key, info, new_comm)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none
+      integer, intent(in)    :: comm, split_type, key, info
+      integer, intent(inout) :: new_comm 
+      integer                :: ierr, err_handler
+
+#ifdef CPP_MPI
+      call MPI_comm_split_type(comm, split_type, key, info, new_comm, ierr)
+      if(ierr /= 0) call judft_error("Can't split comm") 
+
+      call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't create Error handler")
+
+      call MPI_Comm_Set_Errhandler(new_comm, err_handler, ierr)
+      if(ierr /= 0) call judft_error("Can't assign Error handler to new_comm")
+#endif
+   end subroutine judft_comm_split_type
 
    subroutine t_mpi_set_errhandler(self)
       use m_judft
