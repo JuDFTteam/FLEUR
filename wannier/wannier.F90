@@ -2339,7 +2339,7 @@ CONTAINS
                   mpi%mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,&
                   maptopair,pair_to_do,nbnd,bpt,gb,&
                   mpi%isize,mpi%irank,"            ",&
-                  mmnk,wann%l_unformatted)
+                  mmnk,wann%matrixmmnfmt==2) !    wann%l_unformatted)
           ENDIF !wann%l_matrixmmn
 
 912       CONTINUE
