@@ -14,7 +14,6 @@ MODULE m_kkintgr
    ! TODO: Look at FFT for Transformation
    !       How to do changing imaginary parts
    !------------------------------------------------------------------------------
-   USE ieee_arithmetic
    USE m_constants
    USE m_juDFT
 
@@ -27,10 +26,6 @@ MODULE m_kkintgr
 
    CHARACTER(len=10), PARAMETER :: smooth_method = 'lorentzian' !(lorentzian or gaussian)
 
-
-   !PARAMETER FOR LORENTZIAN SMOOTHING
-   REAL,    PARAMETER :: cut              = 1e-8
-
    CONTAINS
 
    SUBROUTINE kkintgr(im,eMesh,ez,l_conjg,g,method)
@@ -41,6 +36,7 @@ MODULE m_kkintgr
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
       USE m_smooth
+      USE m_lorentzian_smooth
 
       REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
       REAL,          INTENT(IN)     :: eMesh(:)    !Energy grid on the real axis
@@ -106,7 +102,6 @@ MODULE m_kkintgr
       ENDIF
 
 
-      g = 0.0
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
@@ -145,11 +140,8 @@ MODULE m_kkintgr
 
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
 
-            IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
-               CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
-            ENDIF
-
             IF(l_conjg) g(iz) = conjg(g(iz))
+
          CASE(method_fft)
             CALL juDFT_error("Not implemented yet", calledby="kkintgr")
          CASE DEFAULT
@@ -213,7 +205,7 @@ MODULE m_kkintgr
                i = 2*j
             ENDIF
             y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
-            IF(j.EQ.1 .OR.j.EQ.INT(ne/2.0)) y = y/2.0
+            IF(j.EQ.1 .OR. j.EQ.INT(ne/2.0)) y = y/2.0
             kk_num = kk_num + y
          ENDDO
 
@@ -227,56 +219,17 @@ MODULE m_kkintgr
                   y = -1/pi_const * (im(2)-im(1))
                ELSE IF(ire.EQ.ne) THEN
                   y = -1/pi_const * (im(ne)-im(ne-1))
-               ELSE IF((ire.LE.ne).AND.(ire.GE.1)) THEN
+               ELSE IF((ire.LT.ne).AND.(ire.GT.1)) THEN
                   y = -1/pi_const * (im(ire+1)-im(ire-1))/2.0
                ENDIF
             ENDIF
-            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
+            IF(j.EQ.1 .OR. j.EQ.ne) y = y/2.0
             kk_num = kk_num + y
          ENDDO
       CASE default
          CALL juDFT_error("No valid method for KK-integration chosen",calledby="kkintgr")
       END SELECT
+
    END FUNCTION kk_num
-
-   !This is essentially smooth out of m_smooth but with a lorentzian distribution
-   SUBROUTINE lorentzian_smooth(e,f,sigma,n)
-
-      INTEGER, INTENT(IN)    :: n
-      REAL,    INTENT(INOUT) :: f(:)
-      REAL,    INTENT(IN)    :: sigma
-      REAL,    INTENT(IN)    :: e(:)
-
-      REAL :: dx
-      REAL :: f0(n), ee(n)
-      INTEGER :: ie , je , j1 , j2 , numPoints
-
-      f0 = f
-      f = 0.0
-      ee = 0.0
-      dx = e(2)-e(1)
-
-      DO ie =1,  n
-
-         ee(ie) = 1/pi_const * sigma/dx * 1.0/((ie-1)**2+(sigma/dx)**2)
-
-         IF ( ee(ie).LT.cut ) EXIT
-      ENDDO
-      numPoints = ie - 1
-
-      DO ie = 1, n
-
-         j1 = ie - numPoints + 1
-         j1 = MERGE(1,j1,j1.LT.1)
-         j2 = ie + numPoints - 1
-         j2 = MERGE(n,j2,j2.GT.n)
-         DO je = j1 , j2
-            f(ie) = f(ie) + ee(IABS(je-ie)+1)*f0(je)
-         ENDDO
-
-      ENDDO
-
-
-   END SUBROUTINE lorentzian_smooth
 
 END MODULE m_kkintgr
