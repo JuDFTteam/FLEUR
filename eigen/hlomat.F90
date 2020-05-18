@@ -16,7 +16,7 @@ MODULE m_hlomat
   ! p.kurz sept. 1996
   !***********************************************************************
 CONTAINS
-  SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,jsp,isp,&
+  SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
        ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
     !
     USE m_hsmt_ab
