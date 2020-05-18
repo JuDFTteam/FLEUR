@@ -69,7 +69,6 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    END DO ! l
    qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
-   print *,"hssph:",mpi%irank
    !$acc  data &
    !$acc&   copyin(jintsp,iintsp,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssbti,qssbtj)&
    !$acc&   copyin(lapw,atoms,mpi,input,usdus)&
@@ -237,7 +236,6 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
    qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
-   print *,"hssph:",mpi%irank
    !$OMP      DO SCHEDULE(DYNAMIC,1)
    DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
       kj_end=min(ki,lapw%nv(iintsp))
