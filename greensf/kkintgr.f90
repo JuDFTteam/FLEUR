@@ -106,6 +106,7 @@ MODULE m_kkintgr
       ENDIF
 
 
+      g = 0.0
       CALL timestart("kkintgr: integration")
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
@@ -116,7 +117,7 @@ MODULE m_kkintgr
          SELECT CASE(method)
 
          CASE(method_direct)
-            g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
+            g(iz) = kk_direct(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
          CASE(method_maclaurin, method_deriv)
             !Use the previously smoothed version and interpolate after
             !Next point to the left
@@ -161,7 +162,7 @@ MODULE m_kkintgr
 
    END SUBROUTINE kkintgr
 
-   COMPLEX FUNCTION g_circle(im,ne,z,del,eb)
+   COMPLEX FUNCTION kk_direct(im,ne,z,del,eb)
 
       USE m_trapz
 
@@ -179,9 +180,9 @@ MODULE m_kkintgr
          integrand(i) = 1.0/(z-(i-1)*del-eb) * im(i)
       ENDDO
 
-      g_circle = -1/pi_const *( trapz(REAL(integrand(:)),del,ne) &
+      kk_direct = -1/pi_const *( trapz(REAL(integrand(:)),del,ne) &
                         + ImagUnit * trapz(AIMAG(integrand(:)),del,ne))
-   END FUNCTION g_circle
+   END FUNCTION kk_direct
 
    REAL FUNCTION re_ire(im,ne,ire,method)
 
@@ -212,7 +213,7 @@ MODULE m_kkintgr
                i = 2*j
             ENDIF
             y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
-            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
+            IF(j.EQ.1 .OR.j.EQ.INT(ne/2.0)) y = y/2.0
             re_ire = re_ire + y
          ENDDO
 
