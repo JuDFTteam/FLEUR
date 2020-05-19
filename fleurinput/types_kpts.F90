@@ -276,22 +276,25 @@ CONTAINS
       kpts%specialPointNames(kpts%numspecialpoints) = name
    END SUBROUTINE add_special_line
 
-   SUBROUTINE init_kpts(self, cell, sym, film)
+   SUBROUTINE init_kpts(kpts, cell, sym, film)
       USE m_types_cell
       USE m_types_sym
-      CLASS(t_kpts), INTENT(inout):: self
+      CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film
 
       INTEGER :: n
 
-      DO n = 1, self%nkpt
-         self%l_gamma = self%l_gamma .OR. ALL(ABS(self%bk(:, n)) < 1E-9)
+      DO n = 1, kpts%nkpt
+         kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
       ENDDO
-      IF (self%nkptf == 0) CALL gen_bz(self, sym)
+      IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
-      call self%calc_nkpt_EIBZ(sym)
+      call kpts%calc_nkpt_EIBZ(sym)
+      do n = 1,kpts%nkpt 
+         write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
+      enddo
    END SUBROUTINE init_kpts
 
    SUBROUTINE gen_bz(kpts, sym)
