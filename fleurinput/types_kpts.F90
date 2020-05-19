@@ -428,6 +428,7 @@ CONTAINS
       REAL                  ::  rotkpt(3)
 
       allocate(kpts%nkpt_EIBZ(kpts%nkpt))
+      allocate (psym(sym%nsym))
 
       do nk = 1, kpts%nkpt
          ! calculate rotations in reciprocal space
@@ -445,7 +446,6 @@ CONTAINS
          ! psym   :: points to the symmetry-operation
 
          ic = 0
-         allocate (psym(sym%nsym))
 
          DO iop = 1, sym%nsym
             rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
