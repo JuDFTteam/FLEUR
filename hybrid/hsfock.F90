@@ -136,8 +136,7 @@ CONTAINS
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
-                   fi%noco, nococonv, fi%oneD, z_k, c_phase_k, jsp, &
+      CALL symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
                    rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks

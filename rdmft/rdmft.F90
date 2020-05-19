@@ -544,8 +544,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
-                         fi%noco,nococonv, fi%oned, zMat, c_phase,jspin,&
+            call symm_hf(fi,ikpt,hybdat,eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
