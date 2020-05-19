@@ -134,7 +134,7 @@ CONTAINS
                    c_phase=c_phase_k)
       
 
-      CALL symm_hf_init(fi%sym, fi%kpts, nk, nsymop, rrot, psym)
+      CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi%kpts, nk, fi%sym, hybdat, eig_irr, fi%input, fi%atoms, mpdata, fi%hybinp, fi%cell, lapw, &
                    fi%noco, nococonv, fi%oneD, z_k, c_phase_k, jsp, &

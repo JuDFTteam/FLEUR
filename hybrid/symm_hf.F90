@@ -21,15 +21,14 @@ MODULE m_symm_hf
 
 CONTAINS
 
-   SUBROUTINE symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
+   SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
       use m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_kpts), INTENT(IN)    :: kpts
+      type(t_fleurinput), intent(in)    :: fi
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(INOUT) :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(:, :, :) ! 3,3,sym%nsym
+      INTEGER, INTENT(INOUT) :: rrot(:, :, :) ! 3,3,fi%sym%nsym
       INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
@@ -38,11 +37,11 @@ CONTAINS
       CALL timestart("symm_hf_init")
       nsymop = 0
       ! calculate rotations in reciprocal space
-      DO i = 1, sym%nsym
-         IF(i <= sym%nop) THEN
-            rrot(:, :, i) = transpose(sym%mrot(:, :, sym%invtab(i)))
+      DO i = 1, fi%sym%nsym
+         IF(i <= fi%sym%nop) THEN
+            rrot(:, :, i) = transpose(fi%sym%mrot(:, :, fi%sym%invtab(i)))
          ELSE
-            rrot(:, :, i) = -rrot(:, :, i - sym%nop)
+            rrot(:, :, i) = -rrot(:, :, i - fi%sym%nop)
          END IF
       END DO
 
@@ -53,21 +52,21 @@ CONTAINS
 
       psym = 0
       nsymop = 0
-      DO i = 1, sym%nsym
-         rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
+      DO i = 1, fi%sym%nsym
+         rotkpt = matmul(rrot(:, :, i), fi%kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = kpts%to_first_bz(rotkpt)
+         rotkpt = fi%kpts%to_first_bz(rotkpt)
 
          !check if rotkpt is identical to bk(:,nk)
-         IF(maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
+         IF(maxval(abs(rotkpt - fi%kpts%bkf(:, nk))) <= 1E-07) THEN
             nsymop = nsymop + 1
             psym(nsymop) = i
          END IF
       END DO
 
       WRITE(oUnit, '(A,i3)') 'current nk: ', nk
-      WRITE(oUnit, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
+      WRITE(oUnit, '(A,3f10.5)') ' fi%kpts%bkf(:,nk):', fi%kpts%bkf(:, nk)
       WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
 
       CALL timestop("symm_hf_init")

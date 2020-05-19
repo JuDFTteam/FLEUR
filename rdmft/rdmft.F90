@@ -543,7 +543,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
             indx_sest = 0
 
-            call symm_hf_init(fi%sym,fi%kpts,ikpt,nsymop,rrot,psym)
+            call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
             call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
                          fi%noco,nococonv, fi%oned, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
