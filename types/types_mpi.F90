@@ -192,7 +192,7 @@ contains
 #endif
       use m_judft
       implicit none 
-      integer, intent(in) :: comm, error_code 
+      integer  :: comm, error_code 
       integer             :: str_len, ierr
       character(len=3000) :: error_str
 
