@@ -73,7 +73,7 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
-                      rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
+                      rrot, nsymop, psym, n_q, parent, pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
       USE m_trafo
@@ -93,7 +93,6 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
       INTEGER, INTENT(IN)              :: jsp
-      INTEGER, INTENT(INOUT)           :: nkpt_EIBZ
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
@@ -145,7 +144,7 @@ CONTAINS
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
       CALL timestart("symm_hf")
-      parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
+      parent = 0; nsest = 0; indx_sest = 0;
       WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
@@ -181,11 +180,8 @@ CONTAINS
       parent(1) = 1
       neqvkpt(1) = 1
 
-      ! determine number of members in the EIBZ(k)
-      nkpt_EIBZ = fi%kpts%nkpt_EIBZ(nk)
-
       IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
-      allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
+      allocate(pointer_EIBZ(fi%kpts%nkpt_EIBZ(nk)), source=0)
       ic = 0
       DO ikpt = 1, fi%kpts%nkptf
          IF(parent(ikpt) == ikpt) THEN
@@ -194,14 +190,14 @@ CONTAINS
          END IF
       END DO
 
-      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
+      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%nkpt_EIBZ(nk)
       call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
       call timestart("calc n_q")
       IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
-      allocate(n_q(nkpt_EIBZ), source=0)
+      allocate(n_q(fi%kpts%nkpt_EIBZ(nk)), source=0)
 
       ic = 0
       n_q = 0
@@ -222,7 +218,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      IF(ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
+      IF(ic /= fi%kpts%nkpt_EIBZ(nk)) call judft_error('symm: failure EIBZ')
       call timestop("calc n_q")
 
       ! calculate degeneracy:

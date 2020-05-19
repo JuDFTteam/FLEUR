@@ -82,7 +82,6 @@ CONTAINS
       INTEGER                 ::  ikpt, ikpt0
       INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
-      INTEGER                 ::  nkpt_EIBZ
       INTEGER                 ::  ncstd
       INTEGER                 ::  ok
       REAL                    ::  a_ex
@@ -137,7 +136,7 @@ CONTAINS
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
-                   rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
+                   rrot, nsymop, psym, n_q, parent, pointer_EIBZ, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf
@@ -150,7 +149,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
