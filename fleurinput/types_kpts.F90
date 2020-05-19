@@ -11,7 +11,7 @@ MODULE m_types_kpts
    PRIVATE
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
       CHARACTER(len=20)              :: name = "default"
-      character(len=100)             :: comment=""
+      character(len=100)             :: comment = ""
       INTEGER                        :: nkpt = 0
       INTEGER                        :: ntet = 0
       LOGICAL                        :: l_gamma = .FALSE.
@@ -30,6 +30,7 @@ MODULE m_types_kpts
       INTEGER, ALLOCATABLE           :: ntetra(:, :)
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
+      integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
    CONTAINS
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
@@ -40,6 +41,7 @@ MODULE m_types_kpts
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
       procedure :: nkpt3 => nkpt3_kpts
+      procedure :: calc_nkpt_EIBZ => calc_nkpt_EIBZ_kpts
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -54,7 +56,7 @@ CONTAINS
 
       ret_idx = 0
       DO idx = 1, kpts%nkptf
-         IF (all(abs(  kpts%to_first_bz(kpoint) &
+         IF (all(abs(kpts%to_first_bz(kpoint) &
                      - kpts%to_first_bz(kpts%bkf(:, idx))) < 1E-06)) THEN
             ret_idx = idx
             exit
@@ -70,7 +72,7 @@ CONTAINS
 
       k = k_in
       ! everything close to 0 or 1 get's mapped to 0 and 1
-      where(abs(k - nint(k)) < 1e-8) k = nint(k)
+      where (abs(k - nint(k)) < 1e-8) k = nint(k)
 
       ! map to 0 -> 1 interval
       k = k - floor(k)
@@ -117,7 +119,7 @@ CONTAINS
       USE m_types_xml
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
-      TYPE(t_xml),INTENT(INOUT) ::xml
+      TYPE(t_xml), INTENT(INOUT) ::xml
 
       INTEGER:: number_sets, n
       CHARACTER(len=200)::str, path, path2
@@ -129,14 +131,14 @@ CONTAINS
          IF (TRIM(ADJUSTL(this%name)) == xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
       enddo
       IF (n == 0) then
-        CALL judft_warn(("No kpoints named:"//TRIM(this%name)//" found"))
-           this%nkpt=1
-           ALLOCATE (this%bk(3, this%nkpt))
-           ALLOCATE (this%wtkpt(this%nkpt))
-           this%bk=0.0
-           this%wtkpt=0.0
-           print *,"Using Gamma-point only as fallback"
-        RETURN
+         CALL judft_warn(("No kpoints named:"//TRIM(this%name)//" found"))
+         this%nkpt = 1
+         ALLOCATE (this%bk(3, this%nkpt))
+         ALLOCATE (this%wtkpt(this%nkpt))
+         this%bk = 0.0
+         this%wtkpt = 0.0
+         print *, "Using Gamma-point only as fallback"
+         RETURN
       endif
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
@@ -168,7 +170,7 @@ CONTAINS
          this%bk(3, n) = evaluatefirst(str)
       ENDDO
       n = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder')
-      IF(n.EQ.1) THEN
+      IF (n .EQ. 1) THEN
          this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
          ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
          DO n = 1, this%ntet
@@ -179,7 +181,7 @@ CONTAINS
          ENDDO
       ENDIF
       n = xml%GetNumberOfNodes(TRIM(path)//'/triangles')
-      IF(n.EQ.1) THEN
+      IF (n .EQ. 1) THEN
          this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/triangles/tria')
          ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
          DO n = 1, this%ntet
@@ -212,36 +214,36 @@ CONTAINS
 205   FORMAT('         <kPointList name="', a, '" count="', i0, '">')
       WRITE (fh, 205) adjustl(trim(kpts%name)), kpts%nkpt
       !IF (kpts%numSpecialPoints < 2) THEN
-         DO n = 1, kpts%nkpt
-206         FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-            WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
-         END DO
-         IF (kpts%ntet > 0) THEN
-            IF(SIZE(kpts%ntetra,1).EQ.4) THEN
-               !Bulk --> Tetrahedrons
-               WRITE (fh, 207) kpts%ntet
-207            FORMAT('            <tetraeder ntet="', i0, '">')
-               DO n = 1, kpts%ntet
-208               FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
-                  WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
-               END DO
-               WRITE (fh, '(a)') '            </tetraeder>'
-            ELSE IF(SIZE(kpts%ntetra,1).EQ.3) THEN
-               !Film --> Triangles
-               WRITE (fh, 209) kpts%ntet
-209            FORMAT('            <triangles ntria="', i0, '">')
-               DO n = 1, kpts%ntet
-210               FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
-                  WRITE (fh, 210) kpts%voltet(n), kpts%ntetra(:, n)
-               END DO
-               WRITE (fh, '(a)') '            </triangles>'
-            ENDIF
-         ELSE
-            DO n = 1, kpts%numSpecialPoints
-               WRITE (fh, 209) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
-211            FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
+      DO n = 1, kpts%nkpt
+206      FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
+         WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
+      END DO
+      IF (kpts%ntet > 0) THEN
+         IF (SIZE(kpts%ntetra, 1) .EQ. 4) THEN
+            !Bulk --> Tetrahedrons
+            WRITE (fh, 207) kpts%ntet
+207         FORMAT('            <tetraeder ntet="', i0, '">')
+            DO n = 1, kpts%ntet
+208            FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+               WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-         END IF
+            WRITE (fh, '(a)') '            </tetraeder>'
+         ELSE IF (SIZE(kpts%ntetra, 1) .EQ. 3) THEN
+            !Film --> Triangles
+            WRITE (fh, 209) kpts%ntet
+209         FORMAT('            <triangles ntria="', i0, '">')
+            DO n = 1, kpts%ntet
+210            FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
+               WRITE (fh, 210) kpts%voltet(n), kpts%ntetra(:, n)
+            END DO
+            WRITE (fh, '(a)') '            </triangles>'
+         ENDIF
+      ELSE
+         DO n = 1, kpts%numSpecialPoints
+            WRITE (fh, 209) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
+211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
+         END DO
+      END IF
       !END IF
       WRITE (fh, '(a)') ('         </kPointList>')
       IF (PRESENT(filename)) CLOSE (fh)
@@ -288,6 +290,8 @@ CONTAINS
          self%l_gamma = self%l_gamma .OR. ALL(ABS(self%bk(:, n)) < 1E-9)
       ENDDO
       IF (self%nkptf == 0) CALL gen_bz(self, sym)
+
+      call self%calc_nkpt_EIBZ(sym)
    END SUBROUTINE init_kpts
 
    SUBROUTINE gen_bz(kpts, sym)
@@ -392,13 +396,129 @@ CONTAINS
       nkpt3 = 0
 
       do ikpt = 1, kpts%nkptf
-         k = kpts%bkf(:,ikpt)
+         k = kpts%bkf(:, ikpt)
 #ifdef CPP_EXPLICIT_HYB
-         write (*,"(I5,A,F8.4,F8.4,F8.4)") ikpt, ": ", kpts%bkf(:,ikpt)
+         write (*, "(I5,A,F8.4,F8.4,F8.4)") ikpt, ": ", kpts%bkf(:, ikpt)
 #endif
-         if(abs(k(2)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(1) = nkpt3(1) + 1
-         if(abs(k(1)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(2) = nkpt3(2) + 1
-         if(abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
+         if (abs(k(2)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(1) = nkpt3(1) + 1
+         if (abs(k(1)) < 1e-10 .and. abs(k(3)) < 1e-10) nkpt3(2) = nkpt3(2) + 1
+         if (abs(k(1)) < 1e-10 .and. abs(k(2)) < 1e-10) nkpt3(3) = nkpt3(3) + 1
       enddo
    end function nkpt3_kpts
+
+   subroutine calc_nkpt_EIBZ_kpts(kpts, sym)
+      USE m_types_sym
+      USE m_juDFT
+      IMPLICIT NONE
+      class(t_kpts), INTENT(INOUT)  :: kpts
+      TYPE(t_sym),   INTENT(IN)     :: sym
+
+!     - scalar input -
+      INTEGER  :: nk
+!     - array input -
+
+!     - local scalars -
+      INTEGER               ::  isym, ic, iop, ikpt, ikpt1
+      INTEGER               ::  nsymop, nrkpt
+!     - local arrays -
+      INTEGER               ::  rrot(3, 3, sym%nsym)
+      INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
+                               symop(kpts%nkptf)
+      INTEGER, ALLOCATABLE  ::  psym(:)
+      REAL                  ::  rotkpt(3)
+
+      allocate(kpts%nkpt_EIBZ(kpts%nkpt))
+
+      do nk = 1, kpts%nkpt
+         ! calculate rotations in reciprocal space
+         DO isym = 1, sym%nsym
+            IF (isym <= sym%nop) THEN
+               rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
+            ELSE
+               rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
+            END IF
+         END DO
+
+         ! determine little group of k., i.e. those symmetry operations
+         ! which keep bk(:,nk,nw) invariant
+         ! nsymop :: number of such symmetry-operations
+         ! psym   :: points to the symmetry-operation
+
+         ic = 0
+         allocate (psym(sym%nsym))
+
+         DO iop = 1, sym%nsym
+            rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
+
+            !transfer rotkpt into BZ
+            rotkpt = kpts%to_first_bz(rotkpt)
+
+            !check if rotkpt is identical to bk(:,nk)
+            IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
+               ic = ic + 1
+               psym(ic) = iop
+            END IF
+         END DO
+         nsymop = ic
+
+         ! reallocate psym
+         !       ALLOCATE(help(ic))
+         !       help = psym(1:ic)
+         !       DEALLOCATE(psym)
+         !       ALLOCATE(psym(ic))
+         !       psym = help
+         !       DEALLOCATE(help)
+
+         ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
+         ! those k-points, which can generate the whole BZ by
+         ! applying the symmetry operations of the little group of k
+
+         neqvkpt = 0
+
+         !       list = [(ikpt-1, ikpt=1,nkpt) ]
+         DO ikpt = 1, kpts%nkptf
+            list(ikpt) = ikpt - 1
+         END DO
+
+         DO ikpt = 2, kpts%nkptf
+            DO iop = 1, nsymop
+
+               rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
+
+               !transfer rotkpt into BZ
+               rotkpt = kpts%to_first_bz(rotkpt)
+
+               !determine number of rotkpt
+               nrkpt = 0
+               DO ikpt1 = 1, kpts%nkptf
+                  IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
+                     nrkpt = ikpt1
+                     EXIT
+                  END IF
+               END DO
+               IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
+
+               IF (list(nrkpt) /= 0) THEN
+                  list(nrkpt) = 0
+                  neqvkpt(ikpt) = neqvkpt(ikpt) + 1
+                  parent(nrkpt) = ikpt
+                  symop(nrkpt) = psym(iop)
+               END IF
+               IF (all(list == 0)) EXIT
+
+            END DO
+         END DO
+
+         ! for the Gamma-point holds:
+         parent(1) = 1
+         neqvkpt(1) = 1
+
+         ! determine number of members in the EIBZ(k)
+         ic = 0
+         DO ikpt = 1, kpts%nkptf
+            IF (parent(ikpt) == ikpt) ic = ic + 1
+         END DO
+         kpts%nkpt_EIBZ(nk) = ic
+      enddo
+   END subroutine calc_nkpt_EIBZ_kpts
 END MODULE m_types_kpts
