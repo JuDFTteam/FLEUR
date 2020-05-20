@@ -65,8 +65,10 @@ MODULE m_add_selfen
       DO i_match = 1, spin_match
          !Target occupation
          n_target = MERGE(SUM(n_occ(:)),n_occ(i_match),l_match_both_spins)
+
 #ifdef CPP_DEBUG
          WRITE(filename,9000) i_hia,i_match
+9000     FORMAT("mu_",I2.2,"_",I1)
          OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
 
@@ -107,9 +109,6 @@ MODULE m_add_selfen
                ENDDO
             ENDDO
             CALL occmtx(gp,i_gf,gfinp,input,mmpMat,err,check=.TRUE.)
-#ifdef CPP_DEBUG
-            !IF(err) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
-#endif
             !Calculate the trace
             n = 0.0
             DO ispin = 1, input%jspins
@@ -118,7 +117,7 @@ MODULE m_add_selfen
                ENDDO
             ENDDO
 #ifdef CPP_DEBUG
-            WRITE(1337+i_hia,"(2f15.8)") mu,n
+            WRITE(1337+i_hia,'(2f15.8)') mu,n
 #endif
             IF(n.GT.n_max) THEN
                mu_max = mu
@@ -132,11 +131,14 @@ MODULE m_add_selfen
          !Sanity check for the maximum occupation
          IF(n_max-2*ns.GT.1) THEN
             !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
-            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",calledby="add_selfen")
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",&
+                              calledby="add_selfen")
          ENDIF
 
-         IF(n_max-n_target.LT.0.0) CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",&
-                                                    calledby="add_selfen")
+         IF(n_max-n_target.LT.0.0) THEN
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",&
+                              calledby="add_selfen")
+         ENDIF
 
          !Set up the interval for the bisection method (mu_max,mu_b)
          mu_a = mu_max
@@ -174,21 +176,21 @@ MODULE m_add_selfen
                   n = n + REAL(mmpMat(m,m,ispin))
                ENDDO
             ENDDO
-            IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.1e-4) THEN
+            IF(ABS(n-n_target).LT.1e-8.OR.ABS((mu_b - mu_a)/2.0).LT.1e-8) THEN
                !We found the chemical potential to within the desired accuracy
-#ifdef CPP_DEBUG
-               WRITE(*,"(A)") "Calculated mu to match Self-energy to DFT-GF"
-               WRITE(*,"(TR3,A4,f8.4)") "mu = ", mu
-#endif
+               WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
+               WRITE(oUnit,'(TR3,A4,f8.4)') "mu = ", mu
                !----------------------------------------------------
                ! Check if the final mmpMat contains invalid elements
                !----------------------------------------------------
-               IF(err) CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
+               IF(err) THEN
+                  CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
+               ENDIF
                EXIT
-            ELSE IF((n - n_target).GT.0) THEN
+            ELSE IF((n - n_target).GT.0.0) THEN
                !The occupation is to big --> choose the right interval
                mu_a = mu
-            ELSE IF((n - n_target).LT.0) THEN
+            ELSE IF((n - n_target).LT.0.0) THEN
                !The occupation is to small --> choose the left interval
                mu_b = mu
             ENDIF
@@ -203,8 +205,6 @@ MODULE m_add_selfen
             ENDDO
          ENDDO
       ENDDO
-
-9000  FORMAT("mu_",I2.2,"_",I1)
 
    END SUBROUTINE add_selfen
 
