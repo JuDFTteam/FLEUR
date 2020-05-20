@@ -49,7 +49,7 @@ MODULE m_greensfCalcRealPart
       REAL, ALLOCATABLE :: eMesh(:)
 
       !Get the information on the real axis energy mesh
-      CALL gfinp%eMesh(ef,del_out=del,eb_out=eb,et_out=et,eMesh=eMesh)
+      CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
 
       nspins = MERGE(3,input%jspins,gfinp%l_mperp)
 
@@ -118,7 +118,7 @@ MODULE m_greensfCalcRealPart
             !
             CALL timestart("On-Site: Integration Cutoff")
             CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
-                           gfinp%ne,del,eb,et,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
+                           eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
             CALL timestop("On-Site: Integration Cutoff")
          ELSE IF (l_fixedCutoffset) THEN
             greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1

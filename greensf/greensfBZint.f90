@@ -10,8 +10,8 @@ MODULE m_greensfBZint
 
    CONTAINS
 
-   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,l_mperp,&
-                           gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,l_mperp,gfinp,sym,atoms,kpts,&
+                           usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
       INTEGER,                   INTENT(IN)     :: nBands             !Bands handled on this rank

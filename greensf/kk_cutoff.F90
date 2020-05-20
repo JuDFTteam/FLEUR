@@ -9,7 +9,7 @@ MODULE m_kk_cutoff
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,ne,del,e_bot,e_top,cutoff)
+   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,eMesh,cutoff)
 
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
@@ -20,15 +20,19 @@ MODULE m_kk_cutoff
       LOGICAL,             INTENT(IN)     :: l_mperp
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
-      INTEGER,             INTENT(IN)     :: ne
-      REAL,                INTENT(IN)     :: del
-      REAL,                INTENT(IN)     :: e_bot
-      REAL,                INTENT(IN)     :: e_top
+      REAL,                INTENT(IN)     :: eMesh(:)
       INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
 
-      INTEGER :: m,ispin,spins_cut
-      REAL    :: lowerBound,upperBound,integral,n_states,scale,e_cut
+      INTEGER :: m,ispin,spins_cut,ne
+      REAL    :: lowerBound,upperBound,integral,n_states,scale
+      REAL    :: ec,del,eb,et
       REAL, ALLOCATABLE :: projDOS(:,:)
+
+      ne = SIZE(eMesh)
+      del = eMesh(2)-eMesh(1)
+      eb = eMesh(1)
+      et = eMesh(ne)
+
 
       !Calculate the trace over m,mp of the Imaginary Part matrix to obtain the projected DOS
       !n_f(e) = -1/pi * TR[Im(G_f(e))]
@@ -79,13 +83,13 @@ MODULE m_kk_cutoff
          ELSE
             !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
 
-            lowerBound = e_bot
-            upperBound = e_top
+            lowerBound = eb
+            upperBound = et
 
             DO WHILE(ABS(upperBound-lowerBound).GT.del/2.0)
 
-               e_cut = (lowerBound+upperBound)/2.0
-               cutoff(ispin,2) = INT((e_cut-e_bot)/del)+1
+               ec = (lowerBound+upperBound)/2.0
+               cutoff(ispin,2) = INT((ec-eb)/del)+1
 
                !Integrate the DOS up to the cutoff
                integral =  trapz(projDOS(:,ispin),del,cutoff(ispin,2))
@@ -94,17 +98,17 @@ MODULE m_kk_cutoff
                   EXIT
                ELSE IF(integral.LT.n_states) THEN
                   !integral to small -> choose the right interval
-                  lowerBound = e_cut
+                  lowerBound = ec
                ELSE IF(integral.GT.n_states) THEN
                   !integral to big   -> choose the left interval
-                  upperBound = e_cut
+                  upperBound = ec
                END IF
 
             ENDDO
 
 #ifdef CPP_DEBUG
             WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(ispin,2)
-            WRITE(*,*) "CORRESPONDING ENERGY", e_cut
+            WRITE(*,*) "CORRESPONDING ENERGY", ec
             WRITE(*,*) "INTEGRAL OVER projDOS with cutoff: ", integral
 #endif
             !Copy cutoff to second spin if only one was calculated
