@@ -39,7 +39,7 @@ MODULE m_greensfCalcImagPart
 
 
       !Get the information on the real axis energy mesh
-      CALL gfinp%eMesh(results%ef,del_out=del,eb_out=eb,eMesh=eMesh)
+      CALL gfinp%eMesh(results%ef,del,eb,eMesh=eMesh)
 
       !Spin degeneracy and additional factors
       fac = -2.0/input%jspins * ImagUnit * pi_const

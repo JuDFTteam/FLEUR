@@ -34,7 +34,7 @@ CONTAINS
     !     .. Data statements ..
     DATA zero/0.e0/,eps/1.e-5/,eup/3.0e0/,elow/-3.0e0/
     !     ..
-    fact1 = input%delgau/SQRT(pi_const)
+    fact1 = input%tkb/SQRT(pi_const)
     !     ---> determines ef
     ifl = 0
     conv_loop:DO WHILE (.TRUE.)
@@ -46,7 +46,7 @@ CONTAINS
                 nbnd = ne(k,jspin)
                 DO  i = 1,nbnd
                    en = eig(i,k,jspin)
-                   de = (en-ef)/input%delgau
+                   de = (en-ef)/input%tkb
                    wt = 2.0
                    IF (de.GT.eup) wt = 0.0
                    IF (de.GE.elow .AND. de.LE.eup) THEN
@@ -124,7 +124,7 @@ CONTAINS
              s = s + w_iks(i,k,jspin)
              seigv = seigv + w_iks(i,k,jspin)*eig(i,k,jspin)
              en = eig(i,k,jspin)
-             de = (en-ef)/input%delgau
+             de = (en-ef)/input%tkb
              !     ---> correction term
              IF (ABS(de).LT.3.) THEN
                 de = de*de
@@ -146,4 +146,3 @@ CONTAINS
 
   END SUBROUTINE fergwt
 END MODULE m_fergwt
-

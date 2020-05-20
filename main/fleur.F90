@@ -66,7 +66,6 @@ CONTAINS
    USE m_metagga
    USE m_plot
    USE m_hubbard1_setup
-
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -126,7 +125,7 @@ CONTAINS
                               stars,fi%input,fi%sym,fi%cell,fi%sliceplot,xcpot,fi%noco,fi%oneD)
 
     IF (fi%input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
-       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
+!       IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(fi%input,fi%kpts,fi%atoms,fi%sym,fi%cell,fi%oneD,fi%noco,wann)
     END IF
 
@@ -142,7 +141,7 @@ CONTAINS
 
     !Warning on strange choice of switches before starting density is generated.
     IF (fi%input%l_onlyMtStDen.AND..NOT.fi%noco%l_mtNocoPot) THEN
-    	CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.",calledby='types_input')
+       CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.",calledby='types_input')
     END IF
 
     CALL inDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
@@ -172,8 +171,8 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
+    ALLOCATE(greensFunction(MAX(1,fi%gfinp%n)))
     IF(fi%gfinp%n>0) THEN
-       ALLOCATE(greensFunction(fi%gfinp%n))
        DO i_gf = 1, fi%gfinp%n
           CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
        ENDDO
@@ -184,9 +183,9 @@ CONTAINS
     ! Open/allocate eigenvector storage (start)
     l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
     if(fi%noco%l_soc.and.fi%input%l_wann)then
-    	 !! Weed up and down spinor components for SOC MLWFs.
-    	 !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
-    	 !! Make sure we always get up and down spinors when SOC=true.
+       !! Weed up and down spinor components for SOC MLWFs.
+       !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
+       !! Make sure we always get up and down spinors when SOC=true.
        wannierspin=2
     else
        wannierspin = fi%input%jspins
@@ -203,14 +202,7 @@ CONTAINS
     ! Open/allocate eigenvector storage (end)
     scfloop:DO WHILE (l_cont)
        iter = iter + 1
-       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
-          DO i_gf = 1, fi%gfinp%n
-             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
-          ENDDO
-          hub1data%iter = hub1data%iter + 1
-          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
-                              greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
-       ENDIF
+
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -227,6 +219,16 @@ CONTAINS
           WRITE (oUnit,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
+
+
+       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
+          DO i_gf = 1, fi%gfinp%n
+             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
+          ENDDO
+          hub1data%iter = hub1data%iter + 1
+          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
+                              greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
+       ENDIF
 
 #ifdef CPP_CHASE
        CALL chase_distance(results%last_distance)
@@ -246,6 +248,10 @@ IF (fi%sliceplot%iplot.NE.0) THEN
    END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+
+       IF ((mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.EQ.2)) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
@@ -365,11 +371,11 @@ END IF
 
 	  IF (fi%input%gw.GT.0) THEN
 	    IF (mpi%irank.EQ.0) THEN
-	       CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,fi%hub1inp,vTot,vCoul,vx,mpi,&
-		  	     results,eig_id,fi%oneD,sphhar,stars,fi%vacuum)
+          CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,fi%hub1inp,vTot,vCoul,vx,mpi,&
+              results,eig_id,fi%oneD,sphhar,stars,fi%vacuum)
 	    END IF
 	    IF (fi%input%gw.EQ.2) THEN
-	       CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
 	    END IF
 	  END IF
 
@@ -447,6 +453,10 @@ END IF
                 CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
                                fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
+       IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
+
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
 #ifdef CPP_MPI
@@ -523,18 +533,7 @@ END IF
        ! mix fi%input and output densities
        CALL mix_charge(field2,mpi,(iter==fi%input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,fi%atoms,sphhar,fi%vacuum,fi%input,&
-            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter)
-            
-            !Plots of mixed density
-       IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
-!               CDN including core charge
-                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
-                                               fi%cell, fi%noco,nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
-!!               CDN subtracted by core charge
-!                CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-!                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
-!                               fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-      END IF
+            fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter,fi%sliceplot)
  
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
@@ -612,9 +611,23 @@ END IF
        IF (mpi%irank.EQ.0) THEN
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
+       
+           ! Plots of mixed density
+        IF ((fi%sliceplot%iplot.NE.0 ) ) THEN
+           ! CDN including core charge
+           CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi, fi%oneD, fi%sym, &
+                         fi%cell, fi%noco, nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
+           !! CDN subtracted by core charge
+           !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+           !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+           !fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
+        END IF
 
-  !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-       IF(fi%sliceplot%iplot.NE.0.AND.(mpi%irank.EQ.0)) THEN
+       ! Break SCF loop if Plots were generated in ongoing run (iplot=/=0). This needs to happen here, as the mixed density
+       ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
+       ! post-process).
+
+       IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0)) THEN
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 

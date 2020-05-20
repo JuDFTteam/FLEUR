@@ -21,15 +21,14 @@ MODULE m_symm_hf
 
 CONTAINS
 
-   SUBROUTINE symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
+   SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
       use m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_kpts), INTENT(IN)    :: kpts
+      type(t_fleurinput), intent(in)    :: fi
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(INOUT) :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(:, :, :) ! 3,3,sym%nsym
+      INTEGER, INTENT(INOUT) :: rrot(:, :, :) ! 3,3,fi%sym%nsym
       INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
@@ -38,11 +37,11 @@ CONTAINS
       CALL timestart("symm_hf_init")
       nsymop = 0
       ! calculate rotations in reciprocal space
-      DO i = 1, sym%nsym
-         IF(i <= sym%nop) THEN
-            rrot(:, :, i) = transpose(sym%mrot(:, :, sym%invtab(i)))
+      DO i = 1, fi%sym%nsym
+         IF(i <= fi%sym%nop) THEN
+            rrot(:, :, i) = transpose(fi%sym%mrot(:, :, fi%sym%invtab(i)))
          ELSE
-            rrot(:, :, i) = -rrot(:, :, i - sym%nop)
+            rrot(:, :, i) = -rrot(:, :, i - fi%sym%nop)
          END IF
       END DO
 
@@ -53,29 +52,28 @@ CONTAINS
 
       psym = 0
       nsymop = 0
-      DO i = 1, sym%nsym
-         rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
+      DO i = 1, fi%sym%nsym
+         rotkpt = matmul(rrot(:, :, i), fi%kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = kpts%to_first_bz(rotkpt)
+         rotkpt = fi%kpts%to_first_bz(rotkpt)
 
          !check if rotkpt is identical to bk(:,nk)
-         IF(maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
+         IF(maxval(abs(rotkpt - fi%kpts%bkf(:, nk))) <= 1E-07) THEN
             nsymop = nsymop + 1
             psym(nsymop) = i
          END IF
       END DO
 
       WRITE(oUnit, '(A,i3)') 'current nk: ', nk
-      WRITE(oUnit, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
+      WRITE(oUnit, '(A,3f10.5)') ' fi%kpts%bkf(:,nk):', fi%kpts%bkf(:, nk)
       WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
 
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input, atoms, mpdata, hybinp, cell, &
-                      lapw, noco, nococonv,oneD, zmat, c_phase, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
-                      pointer_EIBZ, nsest, indx_sest)
+   SUBROUTINE symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
+                      rrot, nsymop, psym, n_q, parent, pointer_EIBZ, nsest, indx_sest)
 
       USE m_olap
       USE m_trafo
@@ -84,32 +82,24 @@ CONTAINS
 
       IMPLICIT NONE
 
+      type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(IN) :: hybdat
 
-      TYPE(t_input), INTENT(IN)  :: input
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
-      TYPE(t_kpts), INTENT(IN)   :: kpts
-      TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
-      type(t_noco), intent(in)   :: noco
       type(t_nococonv), intent(in):: nococonv
-      type(t_oneD), intent(in)   :: oneD
       type(t_mat), intent(in)    :: zmat
 
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
       INTEGER, INTENT(IN)              :: jsp
-      INTEGER, INTENT(INOUT)           :: nkpt_EIBZ
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
       complex, intent(in)              :: c_phase(hybdat%nbands(nk))
       INTEGER, INTENT(IN)              :: rrot(:, :, :)
       INTEGER, INTENT(IN)              :: psym(:)
-      INTEGER, INTENT(INOUT)           :: parent(kpts%nkptf)
+      INTEGER, INTENT(INOUT)           :: parent(fi%kpts%nkptf)
       INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk))
       INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(INOUT) :: pointer_EIBZ(:)
@@ -135,15 +125,15 @@ CONTAINS
       COMPLEX, PARAMETER             :: img = (0.0, 1.0)
 
 !     - local arrays -
-      INTEGER                         :: neqvkpt(kpts%nkptf)
-      INTEGER                         :: list(kpts%nkptf)
+      INTEGER                         :: neqvkpt(fi%kpts%nkptf)
+      INTEGER                         :: list(fi%kpts%nkptf)
       INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
-      COMPLEX                         :: carr1(hybdat%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
+      COMPLEX                         :: carr1(hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
@@ -154,7 +144,7 @@ CONTAINS
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
       CALL timestart("symm_hf")
-      parent = 0; nsest = 0; indx_sest = 0; nkpt_EIBZ = 0;
+      parent = 0; nsest = 0; indx_sest = 0;
       WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
@@ -163,17 +153,17 @@ CONTAINS
       call timestart("calc EIBZ")
       neqvkpt = 0
 
-      DO i = 1, kpts%nkptf
+      DO i = 1, fi%kpts%nkptf
          list(i) = i - 1
       END DO
 
-      DO ikpt = 2, kpts%nkptf
+      DO ikpt = 2, fi%kpts%nkptf
          DO iop = 1, nsymop
 
-            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
+            rotkpt = matmul(rrot(:, :, psym(iop)), fi%kpts%bkf(:, ikpt))
 
             !determine number of rotkpt
-            nrkpt = kpts%get_nk(rotkpt)
+            nrkpt = fi%kpts%get_nk(rotkpt)
             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF(list(nrkpt) /= 0) THEN
@@ -190,52 +180,45 @@ CONTAINS
       parent(1) = 1
       neqvkpt(1) = 1
 
-      ! determine number of members in the EIBZ(k)
-      ic = 0
-      DO ikpt = 1, kpts%nkptf
-         IF(parent(ikpt) == ikpt) ic = ic + 1
-      END DO
-      nkpt_EIBZ = ic
-
       IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
-      allocate(pointer_EIBZ(nkpt_EIBZ), source=0)
+      allocate(pointer_EIBZ(fi%kpts%nkpt_EIBZ(nk)), source=0)
       ic = 0
-      DO ikpt = 1, kpts%nkptf
+      DO ikpt = 1, fi%kpts%nkptf
          IF(parent(ikpt) == ikpt) THEN
             ic = ic + 1
             pointer_EIBZ(ic) = ikpt
          END IF
       END DO
 
-      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
+      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%nkpt_EIBZ(nk)
       call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
       call timestart("calc n_q")
       IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
-      allocate(n_q(nkpt_EIBZ), source=0)
+      allocate(n_q(fi%kpts%nkpt_EIBZ(nk)), source=0)
 
       ic = 0
       n_q = 0
-      DO ikpt = 1, kpts%nkptf
+      DO ikpt = 1, fi%kpts%nkptf
          IF(parent(ikpt) == ikpt) THEN
             ic = ic + 1
             DO iop = 1, nsymop
                isym = psym(iop)
-               rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, ikpt))
+               rotkpt = matmul(rrot(:, :, isym), fi%kpts%bkf(:, ikpt))
 
                !transfer rotkpt into BZ
-               rotkpt = kpts%to_first_bz(rotkpt)
+               rotkpt = fi%kpts%to_first_bz(rotkpt)
 
                !check if rotkpt is identical to bk(:,ikpt)
-               IF(maxval(abs(rotkpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
+               IF(maxval(abs(rotkpt - fi%kpts%bkf(:, ikpt))) <= 1E-06) THEN
                   n_q(ic) = n_q(ic) + 1
                END IF
             END DO
          END IF
       END DO
-      IF(ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
+      IF(ic /= fi%kpts%nkpt_EIBZ(nk)) call judft_error('symm: failure EIBZ')
       call timestop("calc n_q")
 
       ! calculate degeneracy:
@@ -275,24 +258,24 @@ CONTAINS
       END DO
 #endif
       ! read in cmt and z at current k-point (nk)
-      call calc_cmt(atoms, cell, input, noco,nococonv, hybinp, hybdat, mpdata, kpts, &
-                          sym, oneD, zmat, jsp, nk, c_phase, cmt)
+      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+                          fi%sym, fi%oned, zmat, jsp, nk, c_phase, cmt)
 
       IF(allocated(olapmt)) deallocate(olapmt)
-      allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+      allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:fi%atoms%lmaxd, fi%atoms%ntype), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation olapmt')
       olapmt = 0
 
       call timestart("calc olapmt")
-      DO itype = 1, atoms%ntype
-         DO l = 0, atoms%lmax(itype)
+      DO itype = 1, fi%atoms%ntype
+         DO l = 0, fi%atoms%lmax(itype)
             nn = mpdata%num_radfun_per_l(l, itype)
             DO n2 = 1, nn
                DO n1 = 1, nn
                   olapmt(n1, n2, l, itype) = intgrf( &
                                              hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype) &
                                              + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype), &
-                                             atoms, itype, hybdat%gridf)
+                                             fi%atoms, itype, hybdat%gridf)
                END DO
             END DO
          END DO
@@ -305,11 +288,11 @@ CONTAINS
 
       call timestart("calc wavefolap")
       iatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
+      DO itype = 1, fi%atoms%ntype
+         DO ieq = 1, fi%atoms%neq(itype)
             iatom = iatom + 1
             lm = 0
-            DO l = 0, atoms%lmax(itype)
+            DO l = 0, fi%atoms%lmax(itype)
                DO M = -l, l
                   nn = mpdata%num_radfun_per_l(l, itype)
                   DO iband1 = 1, hybdat%nbands(nk)
@@ -404,150 +387,34 @@ CONTAINS
       pi = pimach()
 
       call timestart("calc core repr")
-      IF(hybdat%lmaxcd > atoms%lmaxd) then
-         call judft_error('symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs')
+      IF(hybdat%lmaxcd > fi%atoms%lmaxd) then
+         call judft_error('symm_hf: The very impropable case that hybdat%lmaxcd > fi%atoms%lmaxd occurs')
       endif
       iatom = 0
       iatom0 = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
+      DO itype = 1, fi%atoms%ntype
+         DO ieq = 1, fi%atoms%neq(itype)
             iatom = iatom + 1
             DO iop = 1, nsymop
                isym = psym(iop)
-               IF(isym <= sym%nop) THEN
+               IF(isym <= fi%sym%nop) THEN
                   iisym = isym
                ELSE
-                  iisym = isym - sym%nop
+                  iisym = isym - fi%sym%nop
                END IF
 
-               ratom = hybinp%map(iatom, isym)
-               rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, nk))
-               g = nint(rotkpt - kpts%bkf(:, nk))
+               ratom = fi%hybinp%map(iatom, isym)
+               rotkpt = matmul(rrot(:, :, isym), fi%kpts%bkf(:, nk))
+               g = nint(rotkpt - fi%kpts%bkf(:, nk))
 
-               cdum = exp(-2*pi*img*dot_product(rotkpt, sym%tau(:, iisym)))* &
-                      exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
+               cdum = exp(-2*pi*img*dot_product(rotkpt, fi%sym%tau(:, iisym)))* &
+                      exp(2*pi*img*dot_product(g, fi%atoms%taual(:, ratom)))
             END DO
          END DO
-         iatom0 = iatom0 + atoms%neq(itype)
+         iatom0 = iatom0 + fi%atoms%neq(itype)
       END DO
       call timestop("calc core repr")
 
       CALL timestop("symm_hf")
    END SUBROUTINE symm_hf
-
-   INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts, nk, sym)
-
-      USE m_util, ONLY: modulo1
-      USE m_types
-      USE m_juDFT
-      IMPLICIT NONE
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_kpts), INTENT(IN)   :: kpts
-
-!     - scalar input -
-      INTEGER, INTENT(IN)   :: nk
-!     - array input -
-
-!     - local scalars -
-      INTEGER               ::  isym, ic, iop, ikpt, ikpt1
-      INTEGER               ::  nsymop, nrkpt
-!     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym)
-      INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
-                               symop(kpts%nkptf)
-      INTEGER, ALLOCATABLE  ::  psym(:)!,help(:)
-      REAL                  ::  rotkpt(3)
-
-      ! calculate rotations in reciprocal space
-      DO isym = 1, sym%nsym
-         IF(isym <= sym%nop) THEN
-            rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
-         ELSE
-            rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
-         END IF
-      END DO
-
-      ! determine little group of k., i.e. those symmetry operations
-      ! which keep bk(:,nk,nw) invariant
-      ! nsymop :: number of such symmetry-operations
-      ! psym   :: points to the symmetry-operation
-
-      ic = 0
-      allocate(psym(sym%nsym))
-
-      DO iop = 1, sym%nsym
-         rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
-
-         !transfer rotkpt into BZ
-         rotkpt = kpts%to_first_bz(rotkpt)
-
-         !check if rotkpt is identical to bk(:,nk)
-         IF(maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
-            ic = ic + 1
-            psym(ic) = iop
-         END IF
-      END DO
-      nsymop = ic
-
-      ! reallocate psym
-!       ALLOCATE(help(ic))
-!       help = psym(1:ic)
-!       DEALLOCATE(psym)
-!       ALLOCATE(psym(ic))
-!       psym = help
-!       DEALLOCATE(help)
-
-      ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
-      ! those k-points, which can generate the whole BZ by
-      ! applying the symmetry operations of the little group of k
-
-      neqvkpt = 0
-
-!       list = [(ikpt-1, ikpt=1,nkpt) ]
-      DO ikpt = 1, kpts%nkptf
-         list(ikpt) = ikpt - 1
-      END DO
-
-      DO ikpt = 2, kpts%nkptf
-         DO iop = 1, nsymop
-
-            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
-
-            !transfer rotkpt into BZ
-            rotkpt = kpts%to_first_bz(rotkpt)
-
-            !determine number of rotkpt
-            nrkpt = 0
-            DO ikpt1 = 1, kpts%nkptf
-               IF(maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
-                  nrkpt = ikpt1
-                  EXIT
-               END IF
-            END DO
-            IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
-            IF(list(nrkpt) /= 0) THEN
-               list(nrkpt) = 0
-               neqvkpt(ikpt) = neqvkpt(ikpt) + 1
-               parent(nrkpt) = ikpt
-               symop(nrkpt) = psym(iop)
-            END IF
-            IF(all(list == 0)) EXIT
-
-         END DO
-      END DO
-
-      ! for the Gamma-point holds:
-      parent(1) = 1
-      neqvkpt(1) = 1
-
-      ! determine number of members in the EIBZ(k)
-      ic = 0
-      DO ikpt = 1, kpts%nkptf
-         IF(parent(ikpt) == ikpt) ic = ic + 1
-      END DO
-      symm_hf_nkpt_EIBZ = ic
-
-   END FUNCTION symm_hf_nkpt_EIBZ
-
 END MODULE m_symm_hf

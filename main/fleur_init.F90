@@ -106,7 +106,6 @@ CONTAINS
 #else
     mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
-
     CALL check_command_line()
 #ifdef CPP_HDF
     CALL hdf_init()
@@ -164,13 +163,14 @@ CONTAINS
     IF (.NOT.noco%l_noco) &
          CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
-
+#ifndef _OPENACC    
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
             cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
+#endif
     !
     !--> determine more dimensions
     !

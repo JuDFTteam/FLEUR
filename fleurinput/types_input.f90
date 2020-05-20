@@ -37,7 +37,6 @@ MODULE m_types_input
   REAL    :: epsforce =0.00001!< minimal force. If all forces <epsforce stop
   REAL    :: force_converged=0.00001
   INTEGER :: forcemix=2
-  REAL    :: delgau =0.001  !TODO = tkb?
   REAL    :: alpha=0.05
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
@@ -119,7 +118,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
  CALL mpi_bc(this%epsforce,rank,mpi_comm)
  CALL mpi_bc(this%force_converged,rank,mpi_comm)
  CALL mpi_bc(this%forcemix,rank,mpi_comm)
- CALL mpi_bc(this%delgau,rank,mpi_comm)
  CALL mpi_bc(this%alpha,rank,mpi_comm)
  CALL mpi_bc(this%preconditioning_param,rank,mpi_comm)
  CALL mpi_bc(this%spinf,rank,mpi_comm)
@@ -331,7 +329,7 @@ SUBROUTINE read_xml_input(this,xml)
     ! Read in general output switches
     this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
     this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
-    !this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
+    this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
     ! Read in optional switches for checks
     xPathA = '/fleurInput/output/checks'
     numberNodes = xml%GetNumberOfNodes(xPathA)

@@ -657,34 +657,32 @@ CONTAINS
 
    END FUNCTION find_contour
 
-   SUBROUTINE eMesh_gfinp(this,ef,del_out,eb_out,et_out,eMesh)
+   SUBROUTINE eMesh_gfinp(this,ef,del,eb,eMesh)
 
       !Gives back the information for the energy mesh on the real axis
       !Energies are shifted according to the fermi level
 
       CLASS(t_gfinp),               INTENT(IN)    :: this
       REAL,                         INTENT(IN)    :: ef
-      REAL, OPTIONAL,               INTENT(INOUT) :: del_out
-      REAL, OPTIONAL,               INTENT(INOUT) :: eb_out
-      REAL, OPTIONAL,               INTENT(INOUT) :: et_out
+      REAL, OPTIONAL,               INTENT(INOUT) :: del
+      REAL, OPTIONAL,               INTENT(INOUT) :: eb
       REAL, ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: eMesh(:)
 
       INTEGER :: ie
-      REAL :: del,eb
+      REAL :: delTmp,ebTmp
 
-      eb = ef+this%ellow
-      del = (this%elup-this%ellow)/REAL(this%ne-1)
+      ebTmp  = ef+this%ellow
+      delTmp = (this%elup-this%ellow)/REAL(this%ne-1)
 
-      IF(PRESENT(eb_out)) eb_out = eb
-      IF(PRESENT(et_out)) et_out = ef+this%elup
-      IF(PRESENT(del_out)) del_out = del
+      IF(PRESENT(eb)) eb = ebTmp
+      IF(PRESENT(del)) del = delTmp
 
       IF(PRESENT(eMesh)) THEN
          IF(ALLOCATED(eMesh)) DEALLOCATE(eMesh)
          ALLOCATE(eMesh(this%ne))
 
          DO ie = 1, this%ne
-            eMesh(ie) = (ie-1)*del+eb
+            eMesh(ie) = (ie-1)*delTmp+ebTmp
          ENDDO
       ENDIF
 

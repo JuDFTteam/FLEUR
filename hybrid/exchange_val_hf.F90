@@ -59,7 +59,7 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, nkpt_EIBZ, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
@@ -91,7 +91,7 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: ik, nkpt_EIBZ
+      INTEGER, INTENT(IN)    :: ik
 
       ! arrays
       INTEGER, INTENT(IN)    ::  n_q(:)
@@ -152,8 +152,7 @@ CONTAINS
 
       exch_vv = 0
 
-      !DO jq = nkpt_EIBZ, 1, -1
-      DO jq = 1,nkpt_EIBZ
+      DO jq = 1,fi%kpts%nkpt_EIBZ(ik)
          iq = pointer_EIBZ(jq)
          iq_p = fi%kpts%bkp(iq)
 

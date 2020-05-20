@@ -1,7 +1,6 @@
 module m_juDFT_string
    implicit none
    character(len=3), parameter :: whitespaces = " "//achar(9)//achar(13) ! list of all whitespaces
-
    interface int2str
       module procedure int2str_int4, int2str_int8
    end interface int2str
@@ -32,9 +31,9 @@ contains
       integer                      :: int
       integer                      :: stat
 
-      read (str, *, iostat=stat) int
-      if (stat /= 0) then
-         write (*, *) "str reading failed", str
+      read(str, *, iostat=stat) int
+      if(stat /= 0) then
+         write(*, *) "str reading failed", str
          stop 9
       endif
    end function str2int

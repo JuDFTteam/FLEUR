@@ -101,8 +101,8 @@ MODULE m_types_selfen
                ! This is removed by substracting it from the selfenergy
                !---------------------------------------------------------------------
                DO i = 1, ns
+                  m  = i-1-this%l
                   DO j = 1, ns
-                     m  = i-1-this%l
                      mp = j-1-this%l
                      DO ispin = 1, MERGE(3,jspins,l_mperp)
                         IF(ispin < 3) THEN

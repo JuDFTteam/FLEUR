@@ -2,6 +2,7 @@ set(fleur_F77 ${fleur_F77}
 
 )
 set(fleur_F90 ${fleur_F90}
+ldahia/crystalfield.F90
 ldahia/hubbard1_setup.F90
 ldahia/mudc.f90
 ldahia/hubbard1Distance.f90

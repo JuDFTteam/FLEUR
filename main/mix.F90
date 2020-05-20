@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia)
+       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
 
     use m_juDFT
     use m_constants
@@ -34,6 +34,7 @@ contains
     use m_types_mixvector
     USE m_distance
     use m_mixing_history
+    USE m_plot
     implicit none
 
     type(t_oneD),      intent(in)    :: oneD
@@ -45,6 +46,7 @@ contains
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
+    TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
     
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
@@ -195,9 +197,8 @@ contains
        END IF
     END IF
 
-
-    !write out mixed density
-    IF (mpi%irank==0) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    !write out mixed density (but not for a plotting run)
+    IF ((mpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)
 
 #ifdef CPP_HDF

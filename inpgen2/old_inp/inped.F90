@@ -407,7 +407,7 @@
           WRITE (oUnit,FMT=8290) input%rkmax
 8290      FORMAT (1x,/,' wavefunction cutoff =',f10.5)
           !
-          WRITE (oUnit,FMT=8230) input%bz_integration==1,input%delgau
+          WRITE (oUnit,FMT=8230) input%bz_integration==1,input%tkb
           WRITE (oUnit,FMT=8240) input%zelec,input%tkb
 8230      FORMAT (/,10x,'gauss-integration is used  =',3x,l1,/,10x, 'gaussian half width        =',f10.5)
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)

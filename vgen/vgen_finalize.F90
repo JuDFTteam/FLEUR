@@ -138,6 +138,9 @@ CONTAINS
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
+         IF ((mpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         END IF
       END IF
 
       ! Store vTot(L=0) component as r*vTot(L=0)/sqrt(4*pi):

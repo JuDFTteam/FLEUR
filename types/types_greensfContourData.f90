@@ -76,7 +76,6 @@ MODULE m_types_greensfContourData
    SUBROUTINE eContour_greensfContourData(this,contourInp,ef,irank)
 
       USE m_grule
-      USE m_ExpSave
 
       !Calculates the complex energy contour and
       !writes it into the corresponding arrays in gf
@@ -89,19 +88,23 @@ MODULE m_types_greensfContourData
       INTEGER iz,n,i_gf,iContour
       REAL e1, e2, sigma
       COMPLEX del
-      REAL r, xr
+      REAL r, xr, expo, ff
       REAL, ALLOCATABLE :: x(:), w(:)
 
       !Help arrays
       ALLOCATE(x(this%nz),source=0.0)
       ALLOCATE(w(this%nz),source=0.0)
 
+
+      !Transform from relative to ef to absolute
+      e1 = ef+contourInp%eb
+      e2 = ef+contourInp%et
+
       SELECT CASE(contourInp%shape)
 
       CASE(CONTOUR_RECTANGLE_CONST)
          sigma = contourInp%sigma * pi_const
          IF(contourInp%nmatsub > 0) THEN
-            e1 = ef+contourInp%eb
             n = 0
 
             !Left Vertical part (e1,0) -> (e1,sigma)
@@ -146,7 +149,14 @@ MODULE m_types_greensfContourData
                n = n + 1
                IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
                this%e(n)  = del*x(iz)+ef +  2 * contourInp%nmatsub * ImagUnit * sigma
-               this%de(n) = w(iz)*del/(1.0+exp_save((REAL(this%e(n))-ef)/contourInp%sigma))
+               expo = -ABS(REAL(this%e(n))-ef)/contourInp%sigma
+               expo = EXP(expo)
+               IF(REAL(this%e(n))<ef) THEN
+                  ff = 1.0/(expo+1.0)
+               ELSE
+                  ff = expo/(expo+1.0)
+               ENDIF
+               this%de(n) = w(iz)*del * ff
             ENDDO
 
             !Matsubara frequencies
@@ -158,10 +168,6 @@ MODULE m_types_greensfContourData
             ENDDO
          ENDIF
       CASE(CONTOUR_SEMICIRCLE_CONST)
-
-         !Semicircle
-         e1 = ef+contourInp%eb
-         e2 = ef+contourInp%et
 
          !Radius
          r  = (e2-e1)*0.5
@@ -186,14 +192,26 @@ MODULE m_types_greensfContourData
 
          !Equidistant contour (without vertical edges)
          del = (contourInp%et-contourInp%eb)/REAL(this%nz-1)
-         DO iz = 1, contourInp%nDOS
-            this%e(iz) = (iz-1) * del + contourInp%eb + ImagUnit * contourInp%sigmaDOS
+         DO iz = 1, this%nz
+            this%e(iz) = (iz-1) * del + e1 + ImagUnit * contourInp%sigmaDOS
             IF(contourInp%l_dosfermi) THEN
-               this%de(iz) = del * 1.0/(1.0+exp_save((REAL(this%e(iz))-ef)/contourInp%sigmaDOS))
+               expo = -ABS(REAL(this%e(iz))-ef)/contourInp%sigmaDOS
+               expo = EXP(expo)
+               IF(REAL(this%e(iz))<ef) THEN
+                  ff = 1.0/(expo+1.0)
+               ELSE
+                  ff = expo/(expo+1.0)
+               ENDIF
+               this%de(iz) = del * ff
             ELSE
                this%de(iz) = del
             ENDIF
          ENDDO
+
+         !Not really important but for trapezian method
+         !the weight is half at the edges
+         this%de(1) = this%de(1)/2.0
+         this%de(this%nz) = this%de(this%nz)/2.0
 
       CASE DEFAULT
          CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="eContour_gfinp")

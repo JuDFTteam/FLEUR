@@ -8,7 +8,7 @@ c********************************************************************
       SUBROUTINE sphbes(
      >                  lmax,x,
      <                  fj)
-
+!$acc routine 
       IMPLICIT NONE
 !     ..
 !     .. Arguments ..
@@ -36,7 +36,11 @@ c********************************************************************
          END IF
          RETURN
       ENDIF
-      IF (x.LT.zero)  CALL juDFT_error("sphbes2",calledby="sphbes")
+!#ifdef _OPENACC
+!      IF (x.LT.zero)  stop "sphbes2"
+!#else
+!      IF (x.LT.zero)  CALL juDFT_error("sphbes2",calledby="sphbes")
+!#endif
       xx = x*x
       IF (x.GE.small) THEN
          xinv = 1./x

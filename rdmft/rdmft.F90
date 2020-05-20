@@ -74,7 +74,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_lapw)                         :: lapw
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
-   INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF
+   INTEGER                              :: nsymop, ikptf, iterHF
    INTEGER                              :: iState, jState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
    INTEGER                              :: lastGroupEnd, currentGroupEnd
@@ -543,13 +543,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
             indx_sest = 0
 
-            call symm_hf_init(fi%sym,fi%kpts,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi%kpts,ikpt,fi%sym,hybdat,eig_irr,fi%input,fi%atoms,mpdata,fi%hybinp,fi%cell,lapw,&
-                         fi%noco,nococonv, fi%oned, zMat, c_phase,jspin,&
-                         rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
+            call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
+            call symm_hf(fi,ikpt,hybdat,eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
+                         rrot,nsymop,psym,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(ikpt,fi,zMat, c_phase,nkpt_EIBZ,mpdata,jspin,hybdat,lapw,&
+            CALL exchange_valence_hf(ikpt,fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&

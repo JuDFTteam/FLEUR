@@ -1075,10 +1075,10 @@ CONTAINS
       END IF
 
       ! Plotting the output density matrix as n / n, m / n, mx, my, mz.
-      ! Plot identifier: PLOT_OUTDEN_Y_CORE = 2
+      ! Plot identifier: PLOT_OUTDEN_Y_CORE = 5
       ! No core subtraction done!
-      ! Additive term for iplot: 4
-      IF (plot_const.EQ.2) THEN
+      ! Additive term for iplot: 32
+      IF (plot_const.EQ.5) THEN
          factor = 1.0
          denName = 'denOutWithCore'
          score = .FALSE.
@@ -1099,36 +1099,36 @@ CONTAINS
          END IF
       END IF
 
-      ! Plotting the output density matrix as n / n, m / n, mx, my, mz.
-      ! Plot identifier: PLOT_OUTDEN_N_CORE = 3
-      ! Core subtraction done!
-      ! Additive term for iplot: 8
-      IF (plot_const.EQ.3) THEN
-         factor = 1.0
-         denName = 'denOutNOCore'
-         score = .TRUE.
-         potnorm = .FALSE.
-         IF (input%jspins.EQ.2) THEN
-            IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
-                               cell, noco, nococonv, factor, score, potnorm, denmat, &
-                               denName)
-            ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
-                               cell, noco, nococonv, factor, score, potnorm, denmat, &
-                               denName)
-            END IF
-         ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
-                        noco, nococonv, score, potnorm, denName, denmat)
-         END IF
-      END IF
+      !! Plotting the output density matrix as n / n, m / n, mx, my, mz.
+      !! Plot identifier: PLOT_OUTDEN_N_CORE = 3
+      !! Core subtraction done!
+      !! Additive term for iplot: 8
+      !IF (plot_const.EQ.3) THEN
+      !   factor = 1.0
+      !   denName = 'denOutNOCore'
+      !   score = .TRUE.
+      !   potnorm = .FALSE.
+      !   IF (input%jspins.EQ.2) THEN
+      !      IF (noco%l_noco) THEN
+      !         CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+      !                         cell, noco, nococonv, factor, score, potnorm, denmat, &
+      !                         denName)
+      !      ELSE
+      !         CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+      !                         cell, noco, nococonv, factor, score, potnorm, denmat, &
+      !                         denName)
+      !      END IF
+      !   ELSE
+      !      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, mpi ,oneD, sym, cell, &
+      !                  noco, nococonv, score, potnorm, denName, denmat)
+      !   END IF
+      !END IF
 
       ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz.
-      ! Plot identifier: PLOT_MIXDEN_Y_CORE = 4
+      ! Plot identifier: PLOT_MIXDEN_Y_CORE = 6
       ! No core subtraction done!
-      ! Additive term for iplot: 16
-      IF (plot_const.EQ.4) THEN
+      ! Additive term for iplot: 128
+      IF (plot_const.EQ.6) THEN
          factor = 1.0
          denName = 'denOutMixWithCore'
          score = .FALSE.
@@ -1149,38 +1149,38 @@ CONTAINS
          END IF
       END IF
 
-      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz.
-      ! Plot identifier: PLOT_MIXDEN_N_CORE = 5
-      ! Core subtraction done!
-      ! Additive term for iplot: 32
-      IF (plot_const.EQ.5) THEN
-         factor = 1.0
-         denName = 'denOutMixNoCore'
-         score = .TRUE.
-         potnorm = .FALSE.
-         IF (input%jspins.EQ.2) THEN
-            IF (noco%l_noco) THEN
-               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input,mpi, oneD, sym, &
-                               cell, noco, nococonv, factor, score, potnorm, denmat, &
-                               denName)
-            ELSE
-               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
-                               cell, noco, nococonv, factor, score, potnorm, denmat, &
-                               denName)
-            END IF
-         ELSE
-            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi , oneD, sym, cell, &
-                        noco, nococonv, score, potnorm, denName, denmat)
-         END IF
-      END IF
+      !! Plotting the mixed density matrix as n / n, m / n, mx, my, mz.
+      !! Plot identifier: PLOT_MIXDEN_N_CORE = 5
+      !! Core subtraction done!
+      !! Additive term for iplot: 32
+      !IF (plot_const.EQ.5) THEN
+      !   factor = 1.0
+      !   denName = 'denOutMixNoCore'
+      !   score = .TRUE.
+      !   potnorm = .FALSE.
+      !   IF (input%jspins.EQ.2) THEN
+      !      IF (noco%l_noco) THEN
+      !         CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input,mpi, oneD, sym, &
+      !                         cell, noco, nococonv, factor, score, potnorm, denmat, &
+      !                         denName)
+      !      ELSE
+      !         CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, &
+      !                         cell, noco, nococonv, factor, score, potnorm, denmat, &
+      !                         denName)
+      !      END IF
+      !   ELSE
+      !      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,mpi , oneD, sym, cell, &
+      !                  noco, nococonv, score, potnorm, denName, denmat)
+      !   END IF
+      !END IF
 
 
       ! Plotting the total potential as vTot / v_eff, B_eff / v_eff,
       ! B_xc_1, B_xc_2, B_xc_3.
-      ! Plot identifier: PLOT_POT_TOT = 7
+      ! Plot identifier: PLOT_POT_TOT = 2
       ! No core subtraction done!
-      ! Additive term for iplot: 128
-      IF (plot_const.EQ.7) THEN
+      ! Additive term for iplot: 4
+      IF (plot_const.EQ.2) THEN
          IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vTot'
@@ -1203,10 +1203,10 @@ CONTAINS
       END IF
 
       ! Plotting the Coulomb potential as vCoul.
-      ! Plot identifier: PLOT_POT_COU = 9
+      ! Plot identifier: PLOT_POT_COU = 3
       ! No core subtraction done!
-      ! Additive term for iplot: 512
-      IF (plot_const.EQ.9) THEN
+      ! Additive term for iplot: 8
+      IF (plot_const.EQ.3) THEN
          IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 1.0
          denName = 'vCoul'
@@ -1218,10 +1218,10 @@ CONTAINS
 
       ! Plotting the xc potential as vXc / v_Xc, B_Xc / v_Xc,
       ! B_xc_1, B_xc_2, B_xc_3.
-      ! Plot identifier: PLOT_POT_VXC = 10
+      ! Plot identifier: PLOT_POT_VXC = 4
       ! No core subtraction done!
-      ! Additive term for iplot: 1024
-      IF (plot_const.EQ.10) THEN
+      ! Additive term for iplot: 16
+      IF (plot_const.EQ.4) THEN
          IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vXc'
@@ -1290,7 +1290,7 @@ INCLUDE 'mpif.h'
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
                        noco, nococonv, denmat, plot_const)
       END IF
-      	CALL timestop("Plotting iplot plots")
+      CALL timestop("Plotting iplot plots")
 
    END SUBROUTINE makeplots
 

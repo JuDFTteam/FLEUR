@@ -15,7 +15,7 @@ contains
       call timestart("calc smat")
       call smat%alloc(.False., mpdata%num_gpts(),mpdata%num_gpts())
       !$OMP PARALLEL DO default(none) schedule(guided)&
-      !$OMP private(igpt2,igpt1, g, gnorm, itype, rdum)&
+      !$OMP private(ic,igpt2,igpt1, g, gnorm, itype, rdum)&
       !$OMP shared(mpdata, fi, smat)
       DO igpt2 = 1, mpdata%num_gpts()
          DO igpt1 = 1, igpt2

@@ -1,6 +1,5 @@
 MODULE m_greensfPostProcess
 
-   !Contains the main routines called from cdnval and cdngen
    USE m_juDFT
    USE m_constants
    USE m_types

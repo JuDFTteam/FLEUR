@@ -2,8 +2,14 @@
         IMPLICIT NONE
         PRIVATE
 !---> check whether  or not normalizations are needed
+#ifndef _OPENACC
         REAL, ALLOCATABLE, SAVE  :: ynorm(:)
+#else
+        REAL, SAVE :: ynorm(33*33)
+        !$acc declare create(ynorm)
+#endif
         INTEGER,           SAVE  :: lmaxd = -1  ! initial value
+        !$acc declare create(lmaxd)
         PUBLIC ylm4,ylmnorm_init
 #ifdef CPP_GPU 
         PUBLIC ylm4_dev
@@ -128,6 +134,7 @@
 
 
       SUBROUTINE ylm4(lmax,v,ylm)
+        !$acc routine vector
 !************************************************************
 !     generate the spherical harmonics for the vector v
 !     using a stable upward recursion in l.  (see notes
@@ -155,7 +162,11 @@
 
 
       IF (lmax.GT.lmaxd) THEN
+#ifdef _OPENACC
+         STOP "BUG in ylm4"
+#else
          CALL juDFT_error("lmaxd too small in ylm4")
+#endif
       ENDIF
 
 !--->    calculate sin and cos of theta and phi
@@ -235,8 +246,15 @@
       INTEGER,INTENT(IN):: lmax
       INTEGER l,lm0,m
       REAL    a,cd,fpi
+#ifndef _OPENACC
       IF ( allocated(ynorm) ) DEALLOCATE(ynorm)
       ALLOCATE ( ynorm( (lmax+1)**2 ) )   ! allocate array
+#else
+      if ((lmax+1)**2>size(ynorm)) THEN
+         print *,lmax,size(ynorm)
+         call judft_error("lmax too large in ylm4-init")
+      endif
+#endif
       lmaxd = lmax
 
       fpi = 4.0*pimach()
@@ -253,7 +271,7 @@
             ynorm(lm0-m) = ( (-1.0)**m )*ynorm(lm0+m)
          ENDDO
       ENDDO
-
+      !$acc update device(lmaxd,ynorm)
       RETURN
       END SUBROUTINE ylmnorm_init
 
