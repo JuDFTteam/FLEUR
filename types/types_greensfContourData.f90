@@ -95,12 +95,16 @@ MODULE m_types_greensfContourData
       ALLOCATE(x(this%nz),source=0.0)
       ALLOCATE(w(this%nz),source=0.0)
 
+
+      !Transform from relative to ef to absolute
+      e1 = ef+contourInp%eb
+      e2 = ef+contourInp%et
+
       SELECT CASE(contourInp%shape)
 
       CASE(CONTOUR_RECTANGLE_CONST)
          sigma = contourInp%sigma * pi_const
          IF(contourInp%nmatsub > 0) THEN
-            e1 = ef+contourInp%eb
             n = 0
 
             !Left Vertical part (e1,0) -> (e1,sigma)
@@ -165,10 +169,6 @@ MODULE m_types_greensfContourData
          ENDIF
       CASE(CONTOUR_SEMICIRCLE_CONST)
 
-         !Semicircle
-         e1 = ef+contourInp%eb
-         e2 = ef+contourInp%et
-
          !Radius
          r  = (e2-e1)*0.5
          !midpoint
@@ -193,7 +193,7 @@ MODULE m_types_greensfContourData
          !Equidistant contour (without vertical edges)
          del = (contourInp%et-contourInp%eb)/REAL(this%nz-1)
          DO iz = 1, this%nz
-            this%e(iz) = (iz-1) * del + contourInp%eb + ef + ImagUnit * contourInp%sigmaDOS
+            this%e(iz) = (iz-1) * del + e1 + ImagUnit * contourInp%sigmaDOS
             IF(contourInp%l_dosfermi) THEN
                expo = -ABS(REAL(this%e(iz))-ef)/contourInp%sigmaDOS
                expo = EXP(expo)
@@ -208,6 +208,8 @@ MODULE m_types_greensfContourData
             ENDIF
          ENDDO
 
+         !Not really important but for trapezian method
+         !the weight is half at the edges
          this%de(1) = this%de(1)/2.0
          this%de(this%nz) = this%de(this%nz)/2.0
 
