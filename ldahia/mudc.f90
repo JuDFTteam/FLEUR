@@ -10,9 +10,9 @@ MODULE m_mudc
       IMPLICIT NONE
 
       TYPE(t_utype), INTENT(IN)  :: lda_u
-      REAL,    INTENT(IN)  :: n(:)
-      REAL,    INTENT(OUT) :: mu
-      INTEGER, INTENT(IN)  :: jspins
+      REAL,          INTENT(IN)  :: n(:)
+      INTEGER,       INTENT(IN)  :: jspins
+      REAL,          INTENT(OUT) :: mu
 
       REAL vdcfll1,vdcfll2
       REAL vdcamf1,vdcamf2

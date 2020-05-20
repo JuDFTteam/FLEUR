@@ -179,7 +179,7 @@ MODULE m_add_selfen
             IF(ABS(n-n_target).LT.1e-8.OR.ABS((mu_b - mu_a)/2.0).LT.1e-8) THEN
                !We found the chemical potential to within the desired accuracy
                WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
-               WRITE(oUnit,'(TR3,A4,f8.4)') "mu = ", mu
+               WRITE(oUnit,'(TR3,A4,f8.4)') "muMatch = ", mu
                !----------------------------------------------------
                ! Check if the final mmpMat contains invalid elements
                !----------------------------------------------------
