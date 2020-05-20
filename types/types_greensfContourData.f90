@@ -76,7 +76,6 @@ MODULE m_types_greensfContourData
    SUBROUTINE eContour_greensfContourData(this,contourInp,ef,irank)
 
       USE m_grule
-      USE m_ExpSave
 
       !Calculates the complex energy contour and
       !writes it into the corresponding arrays in gf
@@ -89,7 +88,7 @@ MODULE m_types_greensfContourData
       INTEGER iz,n,i_gf,iContour
       REAL e1, e2, sigma
       COMPLEX del
-      REAL r, xr
+      REAL r, xr, expo, ff
       REAL, ALLOCATABLE :: x(:), w(:)
 
       !Help arrays
@@ -146,7 +145,14 @@ MODULE m_types_greensfContourData
                n = n + 1
                IF(n.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="eContour_gfinp")
                this%e(n)  = del*x(iz)+ef +  2 * contourInp%nmatsub * ImagUnit * sigma
-               this%de(n) = w(iz)*del/(1.0+exp_save((REAL(this%e(n))-ef)/contourInp%sigma))
+               expo = -ABS(REAL(this%e(n))-ef)/contourInp%sigma
+               expo = EXP(expo)
+               IF(REAL(this%e(n))<ef) THEN
+                  ff = 1.0/(expo+1.0)
+               ELSE
+                  ff = expo/(expo+1.0)
+               ENDIF
+               this%de(n) = w(iz)*del * ff
             ENDDO
 
             !Matsubara frequencies
@@ -187,13 +193,23 @@ MODULE m_types_greensfContourData
          !Equidistant contour (without vertical edges)
          del = (contourInp%et-contourInp%eb)/REAL(this%nz-1)
          DO iz = 1, this%nz
-            this%e(iz) = (iz-1) * del + contourInp%eb +ef + ImagUnit * contourInp%sigmaDOS
+            this%e(iz) = (iz-1) * del + contourInp%eb + ef + ImagUnit * contourInp%sigmaDOS
             IF(contourInp%l_dosfermi) THEN
-               this%de(iz) = del * 1.0/(1.0+exp_save((REAL(this%e(iz))-ef)/contourInp%sigmaDOS))
+               expo = -ABS(REAL(this%e(iz))-ef)/contourInp%sigmaDOS
+               expo = EXP(expo)
+               IF(REAL(this%e(iz))<ef) THEN
+                  ff = 1.0/(expo+1.0)
+               ELSE
+                  ff = expo/(expo+1.0)
+               ENDIF
+               this%de(iz) = del * ff
             ELSE
                this%de(iz) = del
             ENDIF
          ENDDO
+
+         this%de(1) = this%de(1)/2.0
+         this%de(this%nz) = this%de(this%nz)/2.0
 
       CASE DEFAULT
          CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="eContour_gfinp")
