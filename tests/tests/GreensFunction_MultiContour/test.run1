@@ -15,6 +15,6 @@ $result+=jt::test_grepnumber("$workdir/out","Contour(RectangleExample)    Spin-D
 $result+=jt::test_grepnumber("$workdir/out","Contour(default)    Spin-Up trace:",": *([^ ]*)",4.0354,0.0005);
 $result+=jt::test_grepnumber("$workdir/out","Contour(default)    Spin-Down trace:",": *([^ ]*)",1.8764,0.0005);
 #DOS (not weighted with fermi function)
-$result+=jt::test_grepnumber("$workdir/out","Contour(DOSExample)    Spin-Up trace:",": *([^ ]*)",4.9913,0.0005);
-$result+=jt::test_grepnumber("$workdir/out","Contour(DOSExample)    Spin-Down trace:",": *([^ ]*)",4.9907,0.0005);
+$result+=jt::test_grepnumber("$workdir/out","Contour(DOSExample)    Spin-Up trace:",": *([^ ]*)",4.9907,0.0005);
+$result+=jt::test_grepnumber("$workdir/out","Contour(DOSExample)    Spin-Down trace:",": *([^ ]*)",4.9901,0.0005);
 jt::stageresult($workdir,$result,"1");
