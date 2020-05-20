@@ -71,67 +71,20 @@
       DATA spin12/'.1' , '.2'/
       DATA ch_mcd/'.+' , '.-' , '.0'/
 
-      ncored =  MAX(0,MAXVAL(mcd%ncore))
-      qdim = lmax*atoms%ntype+3
-      l_orbcomp = banddos%l_orb
-      l_jDOS = banddos%l_jDOS
-      n_orb = 0
-      n_jDOS = 0
-      IF (banddos%ndir.EQ.-3) THEN
-        qdim = 2*slab%nsld
-        n_orb = 0
-        IF (banddos%l_orb) THEN
-           n_orb = banddos%orbCompAtom
-           WRITE (*,*) 'DOS: orbcomp',n_orb
-           qdim = 23
-        END IF
-      ENDIF
 
-      IF(l_jDOS) THEN
-         qdim = 7
-         n_jDOS = banddos%jDOSAtom
-         WRITE(*,*) 'DOS: jDOS', n_jDOS
-      ENDIF
-
-      ALLOCATE( qal(qdim,input%neig,kpts%nkpt),&
-     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,input%neig,kpts%nkpt),&
-     &          qlay(input%neig,vacuum%layerd,2))
-      IF (l_mcd) THEN
-         ALLOCATE(mcd_local(3*atoms%ntype*ncored,input%neig,kpts%nkpt) )
-      ELSE
-         ALLOCATE(mcd_local(0,0,0))
-      ENDIF
-!
 
       DO jspin = 1,MERGE(1,input%jspins,l_jDOS)
          ntb = 0
          DO k = 1,kpts%nkpt
 
-            qal(:,:,k) = 0.0
-            qval(:,:,k) = 0.0
-
             jsp = MERGE(1,jspin,noco%l_noco)
             ntb = max(ntb,results%neig(k,jsp))
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,input%neig/))
             IF (.NOT.l_orbcomp.AND..NOT.l_jDOS) THEN
-               qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
-               qal(lmax*atoms%ntype+2,:,k)=dos%qvac(:,1,k,jspin) ! vacuum 1
-               qal(lmax*atoms%ntype+3,:,k)=dos%qvac(:,2,k,jspin) ! vacuum 2
-               qal(lmax*atoms%ntype+1,:,k)=dos%qis(:,k,jspin)    ! interstitial
+
             ELSE IF(l_orbcomp) THEN
                IF (n_orb == 0) THEN
-                  qal(1:slab%nsld,:,k)             = slab%qintsl(:,:,k,jspin)
-                  qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
-               ELSE
-                  DO i = 1, 23
-                     DO l = 1, results%neig(k,jsp)
-                        qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
-                     END DO
-                     DO l = results%neig(k,jsp)+1, input%neig
-                        qal(i,l,k) = 0.0
-                     END DO
-                  END DO
-               END IF
+
             ELSE IF(l_jDOS) THEN
                i = 0
                DO l= 0, 3
@@ -146,28 +99,7 @@
                  ENDDO
                ENDDO
             END IF
-!
-!     set vacuum partial charge zero, if bulk calculation
-!     otherwise, write vacuum charge in correct arrays
-!
-            IF ((.NOT.input%film).AND.(banddos%ndir.NE.-3).AND..NOT.l_jDOS) THEN
-               DO n = 1,input%neig
-                  qal(lmax*atoms%ntype+2,n,k) = 0.0
-                  qal(lmax*atoms%ntype+3,n,k) = 0.0
-               ENDDO
-            ELSEIF ( banddos%vacdos .and. input%film ) THEN
-               DO i = 1,results%neig(k,jsp)
-                  DO v = 1,vacuum%nvac
-                     DO l = 1,vacuum%layers
-                        index = (l-1)*vacuum%nstars + (v-1)*(vacuum%nstars*vacuum%layers) + 1
-                        qval(index,i,k) = qlay(i,l,v)
-                        DO s = 1,vacuum%nstars - 1
-                           qval(index+s,i,k) = real(dos%qstars(s,i,l,v,k,jspin))
-                        ENDDO
-                     ENDDO
-                  ENDDO
-               ENDDO
-            ENDIF
+
 !
 !     calculate interstitial dos if not noco
 !     in the noco case, qis has been calculated in pwden and is read in from tmp_dos

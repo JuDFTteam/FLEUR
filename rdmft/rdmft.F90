@@ -268,7 +268,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    vmdSSDen(:,:,:) = 0.0
 
    CALL regCharges%init(fi%input,fi%atoms)
-   CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%vacuum)
+   CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%vacuum,results%eig)
    CALL moments%init(mpi,fi%input,sphhar,fi%atoms)
    CALL overallDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
    CALL overallVCoul%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTCOUL)
@@ -391,7 +391,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    END DO
 
    CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(ikpt,ikpt=1,fi%kpts%nkpt)])
-   
+
    CALL hybmpi%copy_mpi(mpi)
    DO ikpt = 1, fi%kpts%nkpt
       CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)

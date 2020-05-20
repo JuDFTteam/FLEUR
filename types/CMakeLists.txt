@@ -33,8 +33,6 @@ types/types_greensfContourData.f90
 types/types_greensfCoeffs.F90
 types/types_hub1data.f90
 types/types_nococonv.F90
-types/types_eigdesc.f90
-types/types_dosdata.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}

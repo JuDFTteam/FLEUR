@@ -11,26 +11,36 @@ MODULE m_types_banddos
   PRIVATE
   PUBLIC:: t_banddos
   TYPE,EXTENDS(t_fleurinput_base):: t_banddos
+     character(len=10) :: dos_mode="none"
      LOGICAL :: dos =.FALSE.
-     LOGICAL :: band =.FALSE.
-     LOGICAL :: l_mcd =.FALSE.
-     LOGICAL :: l_orb =.FALSE.
-     LOGICAL :: l_jDOS = .FALSE.
      LOGICAL :: vacdos =.FALSE.
-     INTEGER :: ndir =0
-     INTEGER :: orbCompAtom=0
-     INTEGER :: jDOSAtom=0
      REAL    :: e1_dos=0.5
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
-     INTEGER :: projdos !selects one atomtype and prints the projected dos if there are to many atoms
-     REAL    :: e_mcd_lo =-10.0
-     REAL    :: e_mcd_up= 0.0
+     INTEGER :: ndos_points=1301
+
+
+     LOGICAL :: band =.FALSE.
      LOGICAL :: unfoldband =.FALSE.
      INTEGER :: s_cell_x=1
      INTEGER :: s_cell_y=1
      INTEGER :: s_cell_z=1
+
+
+     LOGICAL :: l_mcd =.FALSE.
+     REAL    :: e_mcd_lo =-10.0
+     REAL    :: e_mcd_up= 0.0
+     LOGICAL :: l_orb =.FALSE.
      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
+     LOGICAL :: l_jDOS = .FALSE.
+
+     LOGICAL :: l_slab=.false.
+
+     LOGICAL,ALLOCATABLE :: dos_atom(:) ! for each atom (not type) switch on DOS
+     !INTEGER :: ndir =0
+     !INTEGER :: orbCompAtom=0
+     !INTEGER :: jDOSAtom=0
+     !INTEGER :: projdos !selects one atomtype and prints the projected dos if there are to many atoms
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_banddos
      PROCEDURE :: mpi_bc=>mpi_bc_banddos
@@ -53,9 +63,6 @@ CONTAINS
     CALL mpi_bc(this%l_orb ,rank,mpi_comm)
     CALL mpi_bc(this%l_jDOS,rank,mpi_comm)
     CALL mpi_bc(this%vacdos ,rank,mpi_comm)
-    CALL mpi_bc(this%ndir ,rank,mpi_comm)
-    CALL mpi_bc(this%orbCompAtom,rank,mpi_comm)
-    CALL mpi_bc(this%jDOSAtom,rank,mpi_comm)
     CALL mpi_bc(this%e1_dos,rank,mpi_comm)
     CALL mpi_bc(this%e2_dos,rank,mpi_comm)
     CALL mpi_bc(this%sig_dos,rank,mpi_comm)
@@ -68,6 +75,10 @@ CONTAINS
     CALL mpi_bc(this%alpha,rank,mpi_comm)
     CALL mpi_bc(this%beta,rank,mpi_comm)
     CALL mpi_bc(this%gamma,rank,mpi_comm)
+    CALL mpi_bc(this%dos_atom,rank,mpi_comm)
+    CALL mpi_bc(this%l_slab,rank,mpi_comm)
+    CALL mpi_bc(this%ndos_points,rank,mpi_comm)
+
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -80,7 +91,8 @@ CONTAINS
     LOGICAL::l_orbcomp,l_jDOS
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
-    this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
+    !this%l_slab = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@slab'))
+    !this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
     this%l_mcd = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@mcd'))
 
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/densityOfStates')
@@ -90,15 +102,14 @@ CONTAINS
     END IF
 
     IF (numberNodes.EQ.1) THEN
-       this%ndir = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@ndir'))
+      this%dos_mode='hist'
+       !this%dos_mode = xml%GetAttributeValue('/fleurInput/output/densityOfStates/@dos_mode')
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@maxEnergy'))
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@sigma'))
     END IF
     IF (this%band) THEN
        this%dos=.TRUE.
-       this%ndir = -4
-       WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
     ENDIF
 
     ! Read in optional magnetic circular dichroism parameters
@@ -112,7 +123,8 @@ CONTAINS
        this%e_mcd_lo = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyLo'))
        this%e_mcd_up = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyUp'))
     END IF
-
+    allocate(this%dos_atom(xml%get_nat()))
+    this%dos_atom=.false.
     na = 0
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
@@ -121,22 +133,21 @@ CONTAINS
           WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/relPos[',i,']'
           l_orbcomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
           IF(l_orbcomp) THEN
-             IF(this%l_orb) THEN
-                CALL juDFT_error("Multiple orbcomp flags set.", calledby = "read_xml_banddos")
-             END IF
-             this%l_orb = .TRUE.
-             this%orbCompAtom = na
+            this%l_orb=.true.
+            this%dos_atom(na)=.true.
           ENDIF
           l_jDOS = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@jDOS'))
           IF(l_jDOS) THEN
-             IF(this%l_jDOS) THEN
-                CALL juDFT_error("Multiple jDOS flags set.", calledby="read_xml_banddos")
-             ENDIF
-             this%l_jDOS = .TRUE.
-             this%jDOSAtom = na
+            this%l_jDOS=.true.
+            this%dos_atom(na)=.true.
           ENDIF
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@DOS')==1) THEN
+    !        this%dos_atom(na)=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@DOS'))
+          endif
        ENDDO
     ENDDO
+    !In case of dos or band mode and no single dos_atom, we assume that all should be calculated
+    if ((this%dos.or.this%band).and..not.any(this%dos_atom)) this%dos_atom=.true.
     IF(this%l_orb.AND.this%l_jDOS) THEN
        CALL juDFT_error("Both jDOS and orbcomp flag set", calledby="read_xml_banddos")
     ENDIF

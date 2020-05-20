@@ -1,0 +1,83 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+MODULE m_make_dos
+  USE m_juDFT
+  !
+  !-- now write cdninf for all kpts if on T3E
+  !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
+  !
+CONTAINS
+  SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
+                      sliceplot,noco,sym,cell,results,eigdos,oneD)
+    USE m_types
+    USE m_constants
+    USE m_cdn_io
+    USE m_unfold_band_kpts
+    !USE m_cdninf
+    USE m_types_eigdos
+    IMPLICIT NONE
+
+
+    TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_banddos),INTENT(IN)   :: banddos
+    TYPE(t_sliceplot),INTENT(IN) :: sliceplot
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_cell),INTENT(IN)      :: cell
+    TYPE(t_kpts),INTENT(IN)      :: kpts
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_results),INTENT(IN)   :: results
+    CLASS(t_eigdos_list),INTENT(IN)   :: eigdos(:)
+
+    !    locals
+    INTEGER :: ne,ikpt,kspin,j,i,n
+    LOGICAL :: l_error
+    real    :: eFermiPrev
+
+
+    CALL readPrevEFermi(eFermiPrev,l_error)
+    eFermiPrev=merge(results%ef,eFermiPrev,l_error)
+
+    IF (banddos%band) THEN
+#ifdef CPP_HDF
+!      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
+!      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+!      CALL closeBandDOSFile(banddosFile_id)
+#else
+      open(888,file="eigdesc.bin")
+      write(888) eFermiPrev,4
+      DO n=1,size(eigdos)
+        CALL eigdos(n)%p%write(888)
+      ENDDO
+      close(888)
+#endif
+      IF (banddos%unfoldband) &
+        CALL write_band_sc(kpts,results,eFermiPrev)
+    ENDIF
+
+    IF (input%cdinf) then
+      DO kspin = 1,input%jspins
+        DO ikpt=1,kpts%nkpt
+          !CALL cdninf(input,sym,noco,kspin,atoms,vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
+          !kpts%wtkpt(ikpt),cell,kpts,results%neig(ikpt,kspin),results%eig(:,ikpt,kspin),eigdesc(1))
+        END DO
+      END DO
+    endif
+
+    IF (banddos%dos) THEN
+      DO n=1,size(eigdos)
+         call eigdos(n)%p%make_dos(kpts,banddos,efermiPrev)
+         call eigdos(n)%p%smooth(banddos)
+         call eigdos(n)%p%write_dos()
+       enddo
+    endif
+
+    RETURN
+  END SUBROUTINE make_dos
+END MODULE m_make_dos

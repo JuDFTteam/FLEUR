@@ -6,13 +6,11 @@ c    vacuum.
 c
 c*********************************************************
       CONTAINS
-      SUBROUTINE dos_bin(e,neig,wtkpt,eig,qal,
-     <                   g)
+      SUBROUTINE dos_bin(wtkpt,e,eig,qal,g)
 c
       IMPLICIT NONE
 
 c
-      INTEGER,INTENT (IN) :: neig(:,:)
       REAL,   INTENT (IN) :: wtkpt(:),e(:)
       REAL,   INTENT (IN) :: eig(:,:,:),qal(:,:,:)
       REAL,   INTENT (OUT):: g(:,:)
@@ -22,7 +20,7 @@ c
       INTEGER  nl,k,j, i,js
       REAL  de,wk,emin
 c     ..
-      de=e(2)-e(1)
+      de=abs(e(2)-e(1))
       g=0.0
       emin=minval(e)
 c
@@ -31,7 +29,7 @@ c
       DO js=1,size(qal,3)
         DO k = 1 , size(qal,2)
           wk = wtkpt(k)/de
-          DO j = 1 , neig(k,js)
+          DO j = 1 , size(eig,1)
             i = NINT((eig(j,k,js)-emin)/de) + 1
             IF ( (i.LE.size(e)) .AND. (i.GE.1) ) THEN
               g(i,js) = g(i,js) + wk*qal(j,k,js)

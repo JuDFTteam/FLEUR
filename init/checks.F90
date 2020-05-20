@@ -32,7 +32,7 @@ MODULE m_checks
 #ifdef CPP_MPI
       CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
-      
+
       IF (irank.EQ.0) THEN
          IF (isize>1) THEN
             IF (TRIM(juDFT_string_for_argument("-eig"))=="-mem") CALL judft_error(&
@@ -58,22 +58,7 @@ MODULE m_checks
 
            ! Check DOS related stuff (from inped)
 
-     IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN
-        CALL juDFT_error('STOP banddos: the inbuild dos-program  <0'//&
-             ' can only be used if dos = true',calledby ="postprocessInput")
-     END IF
-
-     IF ((banddos%ndir.LT.0).AND.banddos%dos) THEN
-        IF (banddos%e1_dos-banddos%e2_dos.LT.1e-3) THEN
-           CALL juDFT_error("STOP banddos: no valid energy window for "//&
-                "internal dos-program",calledby ="postprocessInput")
-        END IF
-        IF (banddos%sig_dos.LT.0) THEN
-           CALL juDFT_error("STOP DOS: no valid broadening (sig_dos) for "//&
-                "internal dos-PROGRAM",calledby ="postprocessInput")
-        END IF
-     END IF
-
+  
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
         CALL juDFT_error("jDOS+collinear is not implemented at the moment.",&
                          hint="If you need this feature please create an issue on the fleur git")

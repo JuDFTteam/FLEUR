@@ -5,49 +5,30 @@
 !--------------------------------------------------------------------------------
 MODULE m_types_dosdata
   USE m_juDFT
+  use m_types
+  use m_constants
   IMPLICIT NONE
 
-
   PRIVATE
-  PUBLIC:: t_eigdesc
-
+  PUBLIC:: t_dos_data
   TYPE:: t_dos_data
     !each eigenvalue might be described by weights
-    CHARACTER(len=20),ALLOCATABLE:: weight_names(:)!This must be allocated in init of derived type
+    CHARACTER(len=20),ALLOCATABLE:: weight_name(:)!This must be allocated in init of derived type
     real,ALLOCATABLE             :: e(:)
     real,allocatable             :: dos(:,:,:)
   CONTAINS
     PROCEDURE :: init
-    PROCEDURE :: smooth
+    PROCEDURE :: smooth=>dosdata_smooth
     PROCEDURE :: write
   END TYPE
 
 
 CONTAINS
 
-  subroutine write(dos_data,filename)
-    class(t_dos_data),INTENT(INOUT):: dos_data
-    character(len=*),OPTIONAL,intent(in)::filename
+  
 
-    integer:: jspin,i,ind
-    character(len=100)::file
-
-    DO jspin=1,size(dos_data%dos,2)
-      if (present(filename)) THEN
-        write(file,"(a,a,i0)") trim(adjustl(filename)),".",jspin
-      ELSE
-        write(file,"(a,i0)") "DOS.",jspin
-      ENDIF
-      open(999,file)
-      write(999,"(999a21)") "#energy",dos_data%weight_names
-      DO i=1,size(dos_data%e)
-        write(999,"(999(f12.8,1x))") dos_data%e(i),dos_data%dos(i,jspin,:)
-      ENDDO
-      close(999)
-    ENDDO
-  END subroutine
-
-subroutine smooth(dos_data,banddos)
+subroutine dosdata_smooth(dos_data,banddos)
+  use m_smooth
   use m_types_banddos
   class(t_dos_data),INTENT(INOUT):: dos_data
   type(t_banddos),INTENT(IN)     :: banddos
@@ -56,7 +37,7 @@ subroutine smooth(dos_data,banddos)
 
   if (banddos%sig_dos==0.0) RETURN
 
-  IF ( NINT((maxval(dos_data%e) - minval(dos_data%e))/(banddos%sig_dos*hartree_to_ev_const)) > size(dos_data%e) ) THEN
+  IF ( NINT((maxval(dos_data%e) - minval(dos_data%e))/banddos%sig_dos) > size(dos_data%e) ) THEN
     WRITE(oUnit,*) 'sig_dos too small for DOS smoothing:'
     WRITE(oUnit,*) 'Reduce energy window or enlarge banddos%sig_dos!'
     WRITE(oUnit,*) 'For now: no smoothing done'
@@ -65,32 +46,35 @@ subroutine smooth(dos_data,banddos)
 
   DO i=1,size(dos_data%dos,3)
     DO jspin=1,size(dos_data%dos,2)
-      CALL smooth(dos_data%e,dos%data%dos(:,jspin,i),banddos%sig_dos*hartree_to_ev_const,size(dos_data%e))
+      CALL smooth(dos_data%e,dos_data%dos(:,jspin,i),banddos%sig_dos,size(dos_data%e))
+    ENDDO
   ENDDO
 END subroutine
 
 
-subroutine init(dos_data,ned,jspins,emin,emax,efermi,eigdesc)
+subroutine init(dos_data,banddos,jspins,efermi,eigdesc)
+  use m_types_eigdesc
   class(t_dos_data),INTENT(OUT):: dos_data
-  integer,intent(in)           :: jspins,ned
-  REAL,INTENT(IN)              :: emin,emax,efermi
-  class(t_eigdesc),INTENT(IN)  :: eigdesc(:) !These are e.g. of t_dos,t_orbcomp...
+  type(t_banddos),INTENT(IN)   :: banddos
+  integer,intent(in)           :: jspins
+  REAL,INTENT(IN)              :: efermi
+  class(t_eigdesc_list),INTENT(IN)  :: eigdesc(:) !These are e.g. of t_dos,t_orbcomp...
 
-  integer:: ind
+  integer:: ind,i,j
   ind=0
   DO i=1,size(eigdesc)
-    ind=ind+eigdesc(i)%get_num_weights()
+    ind=ind+eigdesc(i)%p%get_num_weights()
   ENDDO
-  ALLOCATE(dos_data%weight_names(ind),dos_data%dos(ned,jspins,ind))
+  ALLOCATE(dos_data%weight_name(ind),dos_data%dos(banddos%ndos_points,jspins,ind))
   ind=0
   DO i=1,size(eigdesc)
-    DO j=1,eigdesc(i)%get_num_weights()
+    DO j=1,eigdesc(i)%p%get_num_weights()
       ind=ind+1
-      dos%weight_names(ind)=eigdesc(i)%get_weight_names(j)
+      dos_data%weight_name(ind)=eigdesc(i)%p%get_weight_name(j)
     ENDDO
   ENDDO
 
-  dos_data%e=generate_grid(ned,emin,emax,efermi)
+  dos_data%e=generate_grid(banddos%ndos_points,banddos%e1_dos,banddos%e2_dos,efermi)
 
 end subroutine
 
@@ -102,9 +86,9 @@ function generate_grid(ned,emin_arg,emax_arg,efermi_arg)result(e)
   REAL :: emin,emax,efermi,de
   INTEGER :: i
   ! scale energies
-  emin =emin_arg*hartree_to_ev_const
-  emax =emax_arg*hartree_to_ev_const
-  efermi = efermiarg*hartree_to_ev_const
+  emin =emin_arg
+  emax =emax_arg
+  efermi = efermi_arg
   !
   !     create energy grid
   !
