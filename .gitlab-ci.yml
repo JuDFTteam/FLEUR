@@ -146,6 +146,10 @@ test-pgi:
     - export OMP_NUM_THREADS=2
     - cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
+    artifacts:
+    when: on_failure
+    paths:
+      - build.pgi/Testing
   only:
      - schedules
      - web
@@ -213,8 +217,8 @@ test-intel:
   artifacts:
     when: on_failure
     paths:
-      - build.intel.debug/Testing/failed
-      - build.intel.debug/Testing/test.oldlogs
+      - build.intel.debug/Testing#/failed
+#      - build.intel.debug/Testing/test.oldlogs
   only:
      - schedules
      - web
