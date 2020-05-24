@@ -146,7 +146,7 @@ test-pgi:
     - export OMP_NUM_THREADS=2
     - cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
-    artifacts:
+  artifacts:
     when: on_failure
     paths:
       - build.pgi/Testing
