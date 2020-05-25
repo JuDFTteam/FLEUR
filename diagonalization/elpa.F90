@@ -29,7 +29,7 @@ CONTAINS
     USE m_types_mat
 #ifdef CPP_ELPA_201705003
     USE elpa
-#elif
+#else
 #ifdef CPP_ELPA
     USE elpa1
 #ifdef CPP_ELPA2
