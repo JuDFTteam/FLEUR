@@ -27,13 +27,14 @@ CONTAINS
     USE m_juDFT
     USE m_types_mpimat
     USE m_types_mat
+#ifdef CPP_ELPA_201705003
+    USE elpa
+#elif
 #ifdef CPP_ELPA
     USE elpa1
 #ifdef CPP_ELPA2
     USE elpa2
 #endif
-#ifdef CPP_ELPA_201705003
-    USE elpa
 #endif
 #endif
     IMPLICIT NONE
