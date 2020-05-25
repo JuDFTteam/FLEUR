@@ -218,7 +218,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(mpi%irank.EQ.0) THEN
-      IF(.FALSE.) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+      IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
