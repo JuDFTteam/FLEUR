@@ -126,7 +126,7 @@ CONTAINS
       call print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
    END SUBROUTINE integrate_realspace
 
-   SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
+   SUBROUTINE cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
 
       USE m_intgr, ONLY : intgr3
@@ -140,6 +140,7 @@ CONTAINS
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
+      TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -162,6 +163,7 @@ CONTAINS
       CHARACTER(LEN=20) :: attributes(6), names(6)
 
       CALL timestart("cdntot")
+      IF (mpi%irank.EQ.0) THEN
       call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
 
@@ -204,6 +206,7 @@ CONTAINS
 8010  FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
 8020  FORMAT (/,10x,'total charge  =',f12.6)
 
+      END IF ! mpi%irank = 0
       CALL timestop("cdntot")
    END SUBROUTINE cdntot
 
