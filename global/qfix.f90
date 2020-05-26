@@ -74,11 +74,11 @@ CONTAINS
           den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
              den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
        END IF
-       WRITE (oUnit,FMT=8000) zc,fix
+       IF (mpi%irank.EQ.0) WRITE (oUnit,FMT=8000) zc,fix
     ELSE
        fix = (zc - qtot) / qis + 1.
        den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       WRITE (oUnit,FMT=8001) zc,fix
+       IF (mpi%irank.EQ.0) WRITE (oUnit,FMT=8001) zc,fix
     ENDIF
 
     IF (l_noco) THEN
@@ -92,9 +92,11 @@ CONTAINS
 
     IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
 
-    CALL openXMLElementNoAttributes('fixedCharges')
-    CALL cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis)
-    CALL closeXMLElement('fixedCharges')
+    IF (mpi%irank.EQ.0) THEN
+       CALL openXMLElementNoAttributes('fixedCharges')
+       CALL cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis)
+       CALL closeXMLElement('fixedCharges')
+    ENDIF
 
     IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
     IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
