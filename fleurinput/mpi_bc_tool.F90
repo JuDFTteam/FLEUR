@@ -49,8 +49,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -79,8 +79,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -121,8 +121,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -151,8 +151,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -182,8 +182,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,3,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,3,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -211,8 +211,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,4,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,4,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -240,8 +240,8 @@ CONTAINS
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
-    CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,5,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,5,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -312,8 +312,8 @@ CONTAINS
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
-    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -341,8 +341,8 @@ CONTAINS
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
-    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -371,8 +371,8 @@ CONTAINS
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
-    CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,3,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,3,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -401,8 +401,8 @@ CONTAINS
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
-    CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,4,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,4,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -431,8 +431,8 @@ CONTAINS
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
-    CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,5,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,5,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -479,8 +479,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -509,8 +509,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -539,8 +539,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,3,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,3,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -570,8 +570,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,4,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,4,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -600,8 +600,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,5,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,5,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -643,8 +643,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
@@ -670,8 +670,8 @@ CONTAINS
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
-    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
-    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,irank,mpi_comm,ierr)
     IF (ALL(Ilow==0).AND.ALL(Iup==0)) THEN
        RETURN
     ENDIF
