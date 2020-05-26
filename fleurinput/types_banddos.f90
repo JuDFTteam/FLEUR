@@ -11,7 +11,6 @@ MODULE m_types_banddos
   PRIVATE
   PUBLIC:: t_banddos
   TYPE,EXTENDS(t_fleurinput_base):: t_banddos
-     character(len=10) :: dos_mode="none"
      LOGICAL :: dos =.FALSE.
      LOGICAL :: vacdos =.FALSE.
      REAL    :: e1_dos=0.5
@@ -102,8 +101,6 @@ CONTAINS
     END IF
 
     IF (numberNodes.EQ.1) THEN
-      this%dos_mode='hist'
-       !this%dos_mode = xml%GetAttributeValue('/fleurInput/output/densityOfStates/@dos_mode')
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@maxEnergy'))
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@sigma'))
