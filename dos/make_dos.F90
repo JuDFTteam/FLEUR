@@ -17,7 +17,7 @@ CONTAINS
     USE m_constants
     USE m_cdn_io
     USE m_unfold_band_kpts
-    !USE m_cdninf
+    USE m_cdninf
     USE m_types_eigdos
     IMPLICIT NONE
 
@@ -62,18 +62,17 @@ CONTAINS
     ENDIF
 
     IF (input%cdinf) then
-      DO kspin = 1,input%jspins
-        DO ikpt=1,kpts%nkpt
-          !CALL cdninf(input,sym,noco,kspin,atoms,vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
-          !kpts%wtkpt(ikpt),cell,kpts,results%neig(ikpt,kspin),results%eig(:,ikpt,kspin),eigdesc(1))
-        END DO
-      END DO
+      call cdninf(input,sym,noco,atoms,vacuum,&
+                    cell,kpts,eigdos(1)%p)
     endif
 
     IF (banddos%dos) THEN
       DO n=1,size(eigdos)
-         call eigdos(n)%p%make_dos(kpts,banddos,efermiPrev)
+         print *,"Makedos:",n
+         call eigdos(n)%p%make_dos(kpts,input,banddos,efermiPrev)
+         print *,"Smooth:",n
          call eigdos(n)%p%smooth(banddos)
+         print *,"WriteDos:",n
          call eigdos(n)%p%write_dos()
        enddo
     endif

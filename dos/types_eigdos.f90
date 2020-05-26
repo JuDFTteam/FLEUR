@@ -85,10 +85,11 @@ subroutine dosdata_smooth(eigdos,banddos)
   integer :: jspin,i
   real,allocatable :: dos_grid(:)
 
-  dos_grid=eigdos%get_dos_grid()
   if (.not.allocated(eigdos%dos)) return
+  if (size(eigdos%dos)==0) return
   if (size(eigdos%dos)<1) return
   if (banddos%sig_dos==0.0) RETURN
+  dos_grid=eigdos%get_dos_grid()
 
   IF ( NINT((maxval(dos_grid) - minval(dos_grid))/banddos%sig_dos) > size(dos_grid) ) THEN
     WRITE(oUnit,*) 'sig_dos too small for DOS smoothing:'
@@ -113,6 +114,7 @@ subroutine write_dos(eigdos,filename)
     real,allocatable:: dos_grid(:)
 
     if (.not.allocated(eigdos%dos)) return
+    if (size(eigdos%dos)==0) return
 
     DO jspin=1,size(eigdos%dos,2)
       if (present(filename)) THEN
@@ -125,21 +127,24 @@ subroutine write_dos(eigdos,filename)
       write(*,"(999a21)") file,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
       dos_grid=eigdos%get_dos_grid()
       DO i=1,size(dos_grid)
-        write(999,"(999(f12.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id),id=1,eigdos%get_num_weights())
+        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id),id=1,eigdos%get_num_weights())
       ENDDO
       close(999)
       write(*,*) "done:",file
     ENDDO
   END subroutine
 
-  subroutine t_eigdos_make_dos(eigdos,kpts,banddos,efermi)
+  subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
     use m_types_banddos
+    use m_types_input
     use m_dosbin
+    use m_dostetra
     use m_types_kpts
 
     class(t_eigdos),intent(inout):: eigdos
     type(t_banddos),intent(in)   :: banddos
     type(t_kpts),intent(in)      :: kpts
+    type(t_input),intent(in)     :: input
     real,intent(in)              :: efermi
 
     integer ::n,dims(2)
@@ -150,7 +155,6 @@ subroutine write_dos(eigdos,filename)
     if (allocated(eigdos%dos)) return
     dims=eigdos%get_dims()
     allocate(eigdos%dos(banddos%ndos_points,dims(2),eigdos%get_num_weights()))
-
     !Generate DOS grid
     if (allocated(eigdos%dos_grid)) deallocate(eigdos%dos_grid)
     allocate(eigdos%dos_grid(banddos%ndos_points))
@@ -159,12 +163,12 @@ subroutine write_dos(eigdos,filename)
     ENDDO
 
     DO n=1,eigdos%get_num_weights()
-      select case (trim(banddos%dos_mode))
-      case ("hist")
-        call dos_bin(kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(n),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
-      case default
-        call judft_error("No integration method for DOS choosen")
-      end select
+      print *,eigdos%name_of_dos,n
+      if (kpts%ntet==0) then
+        call dos_bin(input%jspins,kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(n),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+      ELSE
+        CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(n),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+      endif
     end do
   END subroutine
 

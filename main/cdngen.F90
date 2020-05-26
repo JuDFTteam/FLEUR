@@ -116,7 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL dos%init(input,atoms,kpts,vacuum,results%eig); eigdos(1)%p=>dos
    CALL mcd%init(banddos,input,atoms,kpts,results%eig);eigdos(2)%p=>mcd
    CALL slab%init(banddos,atoms,cell,input,kpts);eigdos(3)%p=>slab
-   CALL orbcomp%init(input,banddos,atoms,kpts);eigdos(4)%p=>orbcomp
+   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig);eigdos(4)%p=>orbcomp
    CALL jDOS%init(input,banddos,atoms,kpts);eigdos(5)%p=>jDOS
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)

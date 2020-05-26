@@ -6,11 +6,12 @@ c    vacuum.
 c
 c*********************************************************
       CONTAINS
-      SUBROUTINE dos_bin(wtkpt,e,eig,qal,g)
+      SUBROUTINE dos_bin(jspins,wtkpt,e,eig,qal,g)
 c
       IMPLICIT NONE
 
 c
+      INTEGER,INTENT(IN)  :: jspins
       REAL,   INTENT (IN) :: wtkpt(:),e(:)
       REAL,   INTENT (IN) :: eig(:,:,:),qal(:,:,:)
       REAL,   INTENT (OUT):: g(:,:)
@@ -31,8 +32,8 @@ c
           wk = wtkpt(k)/de
           DO j = 1 , size(eig,1)
             i = NINT((eig(j,k,js)-emin)/de) + 1
-            IF ( (i.LE.size(e)) .AND. (i.GE.1) ) THEN
-              g(i,js) = g(i,js) + wk*qal(j,k,js)
+            IF ( (i.LE.size(g,1)) .AND. (i.GE.1) ) THEN
+              g(i,js) = g(i,js) + wk*qal(j,k,js)* 2.0/jspins
             ENDIF
           ENDDO
         ENDDO

@@ -64,7 +64,7 @@ CONTAINS
   end function
 
 
-SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
+SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts,eig)
 
    USE m_types_setup
    USE m_types_kpts
@@ -77,10 +77,12 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
 
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
+   REAL,INTENT(IN)                      :: eig(:,:,:)
 
    IF ((banddos%l_orb).AND.banddos%dos) THEN
       ALLOCATE(thisOrbcomp%comp(input%neig,23,atoms%nat,kpts%nkpt,input%jspins))
       ALLOCATE(thisOrbcomp%qmtp(input%neig,atoms%nat,kpts%nkpt,input%jspins))
+      thisOrbcomp%eig=eig
    ELSE
      ALLOCATE(thisOrbcomp%dos(0,0,0))
       ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
@@ -89,7 +91,7 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
 
    thisOrbcomp%comp = 0.0
    thisOrbcomp%qmtp = 0.0
-
+   thisOrbcomp%name_of_dos="Orbcomp"
 END SUBROUTINE orbcomp_init
 
 end module m_types_orbcomp

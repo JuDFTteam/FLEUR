@@ -83,7 +83,7 @@ CONTAINS
    TYPE(t_kpts),       INTENT(IN)    :: kpts
 
    INTEGER :: nsld
-
+   thisSlab%name_of_dos="SLAB"
    nsld=1
    IF (banddos%l_slab.AND.banddos%dos) THEN
       CALL slab_dim(atoms, nsld)

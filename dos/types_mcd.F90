@@ -35,13 +35,15 @@ function get_dos_grid(this)
   get_dos_grid=this%mcd_grid
 end function
 
-subroutine make_dos(eigdos,kpts,banddos,efermi)
+subroutine make_dos(eigdos,kpts,input,banddos,efermi)
     use m_types_banddos
+    use m_types_input
     use m_dosbin
     use m_types_kpts
 
     class(t_mcd),intent(inout)   :: eigdos
     type(t_banddos),intent(in)   :: banddos
+    type(t_input),intent(in)     :: input
     type(t_kpts),intent(in)      :: kpts
     real,intent(in)              :: efermi
 
@@ -50,7 +52,7 @@ subroutine make_dos(eigdos,kpts,banddos,efermi)
     real,allocatable:: dos(:,:,:)
     if (allocated(eigdos%dos)) return
     !Call the routine of the parent-class
-    call t_eigdos_make_dos(eigdos,kpts,banddos,efermi)
+    call t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
 
     !Only unoccupied states
     DO n=1,size(eigdos%dos_grid)
@@ -69,20 +71,20 @@ subroutine make_dos(eigdos,kpts,banddos,efermi)
     allocate(dos,mold=eigdos%dos)
     dos=0.0
     ind=0
-    DO ntype=1,size(eigdos%dos,3)/3
+    DO ntype=1,size(eigdos%ncore)
       DO nc=1,eigdos%ncore(ntype)
-        DO i=1,size(eigdos%dos_grid)-1
+        DO k = 1,3
+          ind=ind+1
           DO jspin=1,size(eigdos%e_mcd,2)
-            e1=-1*eigdos%dos_grid(i)-efermi+eigdos%e_mcd(ntype,jspin,nc)
-            e2=-1*eigdos%dos_grid(i+1)-efermi+eigdos%e_mcd(ntype,jspin,nc)
-            DO l=1,size(eigdos%mcd_grid)
-              IF ((e2.LE.(l)).AND. (e1.GT.eigdos%mcd_grid(l))) THEN
-                fac = (eigdos%mcd_grid(l)-e1)/(e2-e1)
-                DO k = 1,3
-                  ind=ind+1
+            DO i=1,size(eigdos%dos_grid)-1
+              e1=-1*eigdos%dos_grid(i)-efermi+eigdos%e_mcd(ntype,jspin,nc)
+              e2=-1*eigdos%dos_grid(i+1)-efermi+eigdos%e_mcd(ntype,jspin,nc)
+              DO l=1,size(eigdos%mcd_grid)
+                IF ((e2.LE.(l)).AND. (e1.GT.eigdos%mcd_grid(l))) THEN
+                  fac = (eigdos%mcd_grid(l)-e1)/(e2-e1)
                   dos(l,jspin,ind) = dos(l,jspin,ind)+ eigdos%dos(i,jspin,ind)*(1.-fac) + fac * eigdos%dos(i+1,jspin,ind)
-                ENDDO
-              ENDIF
+                ENDIF
+              ENDDO
             ENDDO
           ENDDO
         ENDDO
