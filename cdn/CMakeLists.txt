@@ -6,7 +6,7 @@ cdn/rot_den_mat.f
 )
 set(fleur_F90 ${fleur_F90}
 cdn/cdnovlp.F90
-cdn/cdntot.f90
+cdn/cdntot.F90
 cdn/cdnval.F90
 cdn/eparas.f90
 cdn/int_21.f90
