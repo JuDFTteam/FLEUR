@@ -131,8 +131,8 @@ CONTAINS
       call print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
    END SUBROUTINE integrate_realspace
 
-   SUBROUTINE cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,&
-                     den,l_printData,qtot,qistot)
+   SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
+                     den,l_printData,qtot,qistot,mpi)
 
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -145,7 +145,6 @@ CONTAINS
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
-      TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -156,11 +155,12 @@ CONTAINS
       TYPE(t_potden),INTENT(IN) :: den
       LOGICAL,INTENT(IN)        :: l_printData
       REAL,INTENT(OUT)          :: qtot,qistot
+      TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
 
 !     .. Local Scalars ..
       COMPLEX x(stars%ng3)
       REAL q(input%jspins),qis(input%jspins),w,mtCharge
-      INTEGER i,ivac,j,jsp,n,nz
+      INTEGER i,ivac,j,jsp,n,nz, irank
 !     ..
 !     .. Local Arrays ..
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
@@ -168,50 +168,56 @@ CONTAINS
       CHARACTER(LEN=20) :: attributes(6), names(6)
 
       CALL timestart("cdntot")
-      IF (mpi%irank.EQ.0) THEN
-      call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+      IF (PRESENT(mpi)) THEN
+         irank = mpi%irank
+      ELSE
+         irank = 0
+      ENDIF
+
+      IF (irank.EQ.0) THEN
+         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
 
-      IF (input%film) THEN
-         ALLOCATE(lengths(4+vacuum%nvac,2))
-      ELSE
-         ALLOCATE(lengths(4,2))
-      END IF
-
-      DO jsp = 1,input%jspins
-         WRITE (oUnit,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
-         IF (input%film) WRITE (oUnit,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
-         mtCharge = SUM(qmt(1:atoms%ntype,jsp) * atoms%neq(1:atoms%ntype))
-         names(1) = 'spin'         ; WRITE(attributes(1),'(i0)')    jsp      ; lengths(1,1)=4  ; lengths(1,2)=1
-         names(2) = 'total'        ; WRITE(attributes(2),'(f14.7)') q(jsp)   ; lengths(2,1)=5  ; lengths(2,2)=14
-         names(3) = 'interstitial' ; WRITE(attributes(3),'(f14.7)') qis(jsp) ; lengths(3,1)=12 ; lengths(3,2)=14
-         names(4) = 'mtSpheres'    ; WRITE(attributes(4),'(f14.7)') mtCharge ; lengths(4,1)=9  ; lengths(4,2)=14
-         IF(l_printData) THEN
-            IF(input%film) THEN
-               DO i = 1, vacuum%nvac
-                  WRITE(names(4+i),'(a6,i0)') 'vacuum', i
-                  WRITE(attributes(4+i),'(f14.7)') qvac(i,jsp)
-                  lengths(4+i,1)=7
-                  lengths(4+i,2)=14
-               END DO
-               CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4+vacuum%nvac),&
-                                            attributes(1:4+vacuum%nvac),lengths)
-            ELSE
-               CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4),attributes(1:4),lengths)
-            END IF
+         IF (input%film) THEN
+            ALLOCATE(lengths(4+vacuum%nvac,2))
+         ELSE
+            ALLOCATE(lengths(4,2))
          END IF
-      END DO ! loop over spins
-      WRITE (oUnit,FMT=8020) qtot
-      IF(l_printData) THEN
-         CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
-      END IF
-8000  FORMAT (/,10x,'total charge for spin',i3,'=',f12.6,/,10x,&
+
+         DO jsp = 1,input%jspins
+            WRITE (oUnit,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
+            IF (input%film) WRITE (oUnit,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
+            mtCharge = SUM(qmt(1:atoms%ntype,jsp) * atoms%neq(1:atoms%ntype))
+            names(1) = 'spin'         ; WRITE(attributes(1),'(i0)')    jsp      ; lengths(1,1)=4  ; lengths(1,2)=1
+            names(2) = 'total'        ; WRITE(attributes(2),'(f14.7)') q(jsp)   ; lengths(2,1)=5  ; lengths(2,2)=14
+            names(3) = 'interstitial' ; WRITE(attributes(3),'(f14.7)') qis(jsp) ; lengths(3,1)=12 ; lengths(3,2)=14
+            names(4) = 'mtSpheres'    ; WRITE(attributes(4),'(f14.7)') mtCharge ; lengths(4,1)=9  ; lengths(4,2)=14
+            IF(l_printData) THEN
+               IF(input%film) THEN
+                  DO i = 1, vacuum%nvac
+                     WRITE(names(4+i),'(a6,i0)') 'vacuum', i
+                     WRITE(attributes(4+i),'(f14.7)') qvac(i,jsp)
+                     lengths(4+i,1)=7
+                     lengths(4+i,2)=14
+                  END DO
+                  CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4+vacuum%nvac),&
+                                            attributes(1:4+vacuum%nvac),lengths)
+               ELSE
+                  CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4),attributes(1:4),lengths)
+               END IF
+            END IF
+         END DO ! loop over spins
+         WRITE (oUnit,FMT=8020) qtot
+         IF(l_printData) THEN
+            CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
+         END IF
+8000     FORMAT (/,10x,'total charge for spin',i3,'=',f12.6,/,10x,&
                'interst. charge =   ',f12.6,/,&
                (10x,'mt charge=          ',4f12.6,/))
-8010  FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
-8020  FORMAT (/,10x,'total charge  =',f12.6)
+8010     FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
+8020     FORMAT (/,10x,'total charge  =',f12.6)
 
-      END IF ! mpi%irank = 0
+      END IF ! irank = 0
       CALL timestop("cdntot")
    END SUBROUTINE cdntot
 
