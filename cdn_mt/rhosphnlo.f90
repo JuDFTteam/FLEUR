@@ -12,14 +12,16 @@ MODULE m_rhosphnlo
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
-       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,rholres,qmtllo)
+  SUBROUTINE rhosphnlo(itype,ispin,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
+       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,moments,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
+    USE m_types
     USE m_radsra
     USE m_radsrdn
-    USE m_types
+
     IMPLICIT NONE
+
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -27,7 +29,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,    INTENT (IN) :: itype
+    INTEGER,    INTENT (IN) :: itype, ispin
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: aclo(:),bclo(:),cclo(:,:)
@@ -39,7 +41,8 @@ CONTAINS
     REAL,    INTENT (IN) :: f(:,:,0:),g(:,:,0:)
     REAL,    INTENT (INOUT) :: qmtllo(0:)
     REAL,    INTENT (INOUT) :: rho(:,0:)
-    REAL,    INTENT (INOUT) :: rhoLRes(:,0:,0:)
+    TYPE(t_moments), INTENT(INOUT) :: moments
+
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2
@@ -101,7 +104,7 @@ CONTAINS
                  bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
           rho(j,0) = rho(j,0) + temp
           IF (l.LE.input%lResMax) THEN
-             rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+             moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
           END IF
        END DO
        DO lop = 1,atoms%nlo(itype)
@@ -111,7 +114,7 @@ CONTAINS
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,0) = rho(j,0) + temp
                 IF (l.LE.input%lResMax) THEN
-                   rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+                   moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
                 END IF
              END DO
           END IF
@@ -132,7 +135,7 @@ CONTAINS
                      bcnmt(lp,lo,lh) * (g(j,1,lp)*flo(j,1,lo) +g(j,2,lp)*flo(j,2,lo) ) )
                 rho(j,lh) = rho(j,lh) + temp
                 IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
-                   rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
                 END IF
              END DO
           END DO
@@ -147,7 +150,7 @@ CONTAINS
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,lh) = rho(j,lh) + temp
                 IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
-                   rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
                 END IF
              END DO
           END DO

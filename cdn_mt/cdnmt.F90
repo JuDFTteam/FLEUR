@@ -135,14 +135,14 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,input,atoms,sphhar,sym,&
+          CALL rhosphnlo(itype,ispin,input,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
                usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
                vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
                denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0:,:,:,itype,ispin),&
                denCoeffs%bcnmt(0:,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
-               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,0:,itype,ispin),qmtllo)
+               rho(:,0:,itype,ispin),moments,qmtllo)
 
 
           !--->       l-decomposed density for each atom type
