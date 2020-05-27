@@ -9,10 +9,13 @@ MODULE m_qfix
   ! qfix=1 (qfix=f in inp.xml) means we fix only in INT (only done in firstcall)
   ! qfix=2 (qfix=t in inp.xml) means we fix total charge
   ! qfix file no longer supported!
+  ! If l_par=.TRUE., MPI parallelization in the cdntot will be used.
+  ! Be carefull not to set it to .TRUE. if you are calling only from one MPI
+  ! rank.
 
 CONTAINS
   SUBROUTINE qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-                  den,l_noco,l_printData,force_fix,fix,fix_pw_only)
+                  den,l_noco,l_printData,l_par,force_fix,fix,fix_pw_only)
 
     USE m_types
     USE m_constants
@@ -32,7 +35,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_potden),INTENT(INOUT) :: den
-    LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix
+    LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
     REAL,    INTENT (OUT)        :: fix
     LOGICAL,INTENT(IN),OPTIONAL  :: fix_pw_only
     !     .. Local Scalars ..

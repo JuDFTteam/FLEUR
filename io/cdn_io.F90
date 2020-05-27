@@ -1006,10 +1006,10 @@ CONTAINS
        CASE (0,1) !just qfix the density
           IF (mpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
           IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
+               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
           IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
+               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
           IF (mpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
        CASE default

@@ -184,7 +184,7 @@ contains
     endif
 
     !fix charge of the new density
-    IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
+    IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
 
 
 
