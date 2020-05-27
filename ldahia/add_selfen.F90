@@ -4,7 +4,7 @@ MODULE m_add_selfen
    USE m_types_selfen
    USE m_constants
    USE m_juDFT
-   USE m_greensfUtils
+   USE m_occmtx
 
    IMPLICIT NONE
 

@@ -5,7 +5,8 @@ MODULE m_greensfPostProcess
    USE m_types
    USE m_greensfCalcRealPart
    USE m_greensf_io
-   USE m_greensfUtils
+   USE m_occmtx
+   USE m_crystalfield
 
    IMPLICIT NONE
 

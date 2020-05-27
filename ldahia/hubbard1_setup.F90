@@ -6,7 +6,7 @@ MODULE m_hubbard1_setup
    USE m_uj2f
    USE m_mudc
    USE m_hubbard1Distance
-   USE m_greensfUtils
+   USE m_occmtx
    USE m_hubbard1_io
    USE m_types_selfen
    USE m_add_selfen
