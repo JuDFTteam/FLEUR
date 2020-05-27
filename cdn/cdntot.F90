@@ -25,8 +25,9 @@ CONTAINS
       REAL, INTENT(out)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                                    qvac(2,input%jspins), qtot, qistot
       TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
-      INTEGER                   :: jsp, j, ivac, nz, n, irank
+      INTEGER                   :: jsp, j, ivac, nz, n, irank, intstart, intstop
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
+      REAL                      :: sum_over_ng3
       COMPLEX                   :: x(stars%ng3)
 #ifdef CPP_MPI
       INTEGER ierr
@@ -77,13 +78,16 @@ CONTAINS
                END IF
             ENDDO
          END IF
-!     -----is region
-         qis(jsp) = 0.
 
-         CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,x)
-         DO j = 1,stars%ng3
-            qis(jsp) = qis(jsp) + integrand%pw(j,jsp)*x(j)*stars%nstr(j)
+!     -----is region
+         intstart = 1
+         intstop = stars%ng3
+         CALL pwint_all(stars,atoms,sym,oneD,cell,intstart,intstop,x)
+         sum_over_ng3 = 0.0
+         DO j = intstart,intstop
+            sum_over_ng3 = sum_over_ng3 + integrand%pw(j,jsp)*x(j)*stars%nstr(j)
          ENDDO
+         qis(jsp) = sum_over_ng3
 
          qistot = qistot + qis(jsp)
          q(jsp) = q(jsp) + qis(jsp)
