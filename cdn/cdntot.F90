@@ -5,7 +5,7 @@ MODULE m_cdntot
 !     ********************************************************
 CONTAINS
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
-                                   q, qis, qmt, qvac, qtot, qistot)
+                                   q, qis, qmt, qvac, qtot, qistot, mpi)
       USE m_intgr, ONLY : intgr3
       USE m_constants
       USE m_qsf
@@ -24,7 +24,8 @@ CONTAINS
       TYPE(t_potden),INTENT(IN) :: integrand
       REAL, INTENT(out)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                                    qvac(2,input%jspins), qtot, qistot
-      INTEGER                   :: jsp, j, ivac, nz, n
+      TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
+      INTEGER                   :: jsp, j, ivac, nz, n, irank
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       COMPLEX                   :: x(stars%ng3)
 #ifdef CPP_MPI
@@ -33,6 +34,13 @@ CONTAINS
       INCLUDE "mpif.h"
 #endif
 
+      IF (PRESENT(mpi)) THEN
+         irank = mpi%irank
+      ELSE
+         irank = 0
+      ENDIF
+
+      IF (irank.EQ.0) THEN
       qtot = 0.0
       qistot = 0.0
       qvac=0.0
@@ -81,6 +89,7 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
+      END IF ! irank = 0
    END SUBROUTINE integrate_cdn
 
    SUBROUTINE integrate_realspace(xcpot, atoms, sym, sphhar, input, &
@@ -170,14 +179,15 @@ CONTAINS
       CALL timestart("cdntot")
       IF (PRESENT(mpi)) THEN
          irank = mpi%irank
+         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+                                   q, qis, qmt, qvac, qtot, qistot, mpi)
       ELSE
          irank = 0
+         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+                                   q, qis, qmt, qvac, qtot, qistot)
       ENDIF
 
       IF (irank.EQ.0) THEN
-         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
-                                   q, qis, qmt, qvac, qtot, qistot)
-
          IF (input%film) THEN
             ALLOCATE(lengths(4+vacuum%nvac,2))
          ELSE
