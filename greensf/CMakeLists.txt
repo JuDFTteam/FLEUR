@@ -9,7 +9,6 @@ greensf/greensfPostProcess.F90
 greensf/kkintgr.f90
 greensf/lorentzian_smooth.f90
 greensf/kk_cutoff.F90
-greensf/hybridization.f90
 greensf/occmtx.f90
 greensf/lstojmj.f90
 )

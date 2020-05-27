@@ -4,7 +4,6 @@ MODULE m_greensfUtils
    !calculate stuff from the greens function
 
    USE m_occmtx
-   USE m_hybridization
    USE m_crystalfield
 
 END MODULE m_greensfUtils

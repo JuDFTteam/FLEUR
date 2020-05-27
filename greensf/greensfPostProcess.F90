@@ -58,12 +58,8 @@ MODULE m_greensfPostProcess
          DO i_gf = 1, gfinp%n
             !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
             !IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
-            !Density of states from Greens function
-            !CALL gfDOS(greensFunction,l,nType,i_gf,gfinp,input,results%ef)
             !Occupation matrix
             CALL occmtx(greensFunction(i_gf),i_gf,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
-            !Hybridization function
-            !CALL hybridization(greensFunction(i_gf),i_gf,gfinp,input,results%ef)
          ENDDO
          CALL timestop("Green's Function: Occupation/DOS")
 
