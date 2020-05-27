@@ -25,10 +25,10 @@ CONTAINS
       REAL, INTENT(out)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                                    qvac(2,input%jspins), qtot, qistot
       TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
-      INTEGER                   :: jsp, j, ivac, nz, n, irank, intstart, intstop
+      INTEGER                   :: jsp, j, ivac, nz, n, irank, nsize, intstart, intstop, chunk_size, leftover
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       REAL                      :: sum_over_ng3
-      COMPLEX                   :: x(stars%ng3)
+      COMPLEX,ALLOCATABLE       :: x(:) !(1:stars%ng3), may be distributed over MPI ranks
 #ifdef CPP_MPI
       INTEGER ierr
 #include "cpp_double.h"
@@ -37,8 +37,10 @@ CONTAINS
 
       IF (PRESENT(mpi)) THEN
          irank = mpi%irank
+         nsize = mpi%isize
       ELSE
          irank = 0
+         nsize = 1
       ENDIF
 
       qtot = 0.0
@@ -81,15 +83,31 @@ CONTAINS
          END IF ! irank = 0
 
 !     -----is region
-         intstart = 1
-         intstop = stars%ng3
+         chunk_size = stars%ng3/nsize
+         leftover = stars%ng3 - chunk_size*nsize
+         IF ( leftover > irank ) THEN
+            chunk_size = chunk_size + 1
+            intstart = irank * chunk_size + 1
+         ELSE
+            intstart = leftover * (chunk_size+1) + (irank - leftover) * chunk_size + 1
+         ENDIF 
+         intstop = intstart + chunk_size -1
+         ALLOCATE(x(intstart:intstop))
          CALL pwint_all(stars,atoms,sym,oneD,cell,intstart,intstop,x)
          sum_over_ng3 = 0.0
          DO j = intstart,intstop
             sum_over_ng3 = sum_over_ng3 + integrand%pw(j,jsp)*x(j)*stars%nstr(j)
          ENDDO
+         DEALLOCATE(x)
+#ifdef CPP_MPI
+         IF (PRESENT(mpi)) THEN
+            CALL MPI_reduce(sum_over_ng3,qis(jsp),1,CPP_MPI_REAL,MPI_SUM,0,mpi%mpi_comm,ierr)
+         ELSE
+            qis(jsp) = sum_over_ng3
+         ENDIF
+#else
          qis(jsp) = sum_over_ng3
-
+#endif
          qistot = qistot + qis(jsp)
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
