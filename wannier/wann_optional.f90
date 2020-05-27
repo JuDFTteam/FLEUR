@@ -40,7 +40,7 @@ CONTAINS
     LOGICAL       :: l_nocosoc,l_stopopt
 
     l_nocosoc=noco%l_noco.OR.noco%l_soc
-    l_stopopt=l_stopopt
+    l_stopopt=wann%l_stopopt
     !-----read the input file to determine what to do
 !    CALL wann_read_inp(input,.TRUE.,wann) !call wann_read_inp now in fleur_init
 
