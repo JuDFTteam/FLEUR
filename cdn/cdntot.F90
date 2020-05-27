@@ -41,7 +41,6 @@ CONTAINS
          irank = 0
       ENDIF
 
-      IF (irank.EQ.0) THEN
       qtot = 0.0
       qistot = 0.0
       qvac=0.0
@@ -49,35 +48,37 @@ CONTAINS
       qis=0.0
       qmt=0.0
       DO jsp = 1,input%jspins
-         q(jsp) = 0.0
+         IF (irank.EQ.0) THEN
+            q(jsp) = 0.0
 !     -----mt charge
-         CALL timestart("MT")
-         DO n = 1,atoms%ntype
-            CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
-            qmt(n, jsp) = w*sfp_const
-            q(jsp) = q(jsp) + atoms%neq(n)*qmt(n,jsp)
-         ENDDO
-         CALL timestop("MT")
-!     -----vacuum region
-         IF (input%film) THEN
-            DO ivac = 1,vacuum%nvac
-               DO nz = 1,vacuum%nmz
-                  IF (oneD%odi%d1) THEN
-                     rht1(nz,ivac,jsp) = (cell%z1+(nz-1)*vacuum%delz)*&
-                                           integrand%vacz(nz,ivac,jsp)
-                  ELSE
-                     rht1(nz,ivac,jsp) =  integrand%vacz(nz,ivac,jsp)
-                  END IF
-               END DO
-               CALL qsf(vacuum%delz,rht1(1,ivac,jsp),q2,vacuum%nmz,0)
-               qvac(ivac,jsp) = q2(1)*cell%area
-               IF (.NOT.oneD%odi%d1) THEN
-                  q(jsp) = q(jsp) + qvac(ivac,jsp)*2./real(vacuum%nvac)
-               ELSE
-                  q(jsp) = q(jsp) + cell%area*q2(1)
-               END IF
+            CALL timestart("MT")
+            DO n = 1,atoms%ntype
+               CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
+               qmt(n, jsp) = w*sfp_const
+               q(jsp) = q(jsp) + atoms%neq(n)*qmt(n,jsp)
             ENDDO
-         END IF
+            CALL timestop("MT")
+!     -----vacuum region
+            IF (input%film) THEN
+               DO ivac = 1,vacuum%nvac
+                  DO nz = 1,vacuum%nmz
+                     IF (oneD%odi%d1) THEN
+                        rht1(nz,ivac,jsp) = (cell%z1+(nz-1)*vacuum%delz)*&
+                                           integrand%vacz(nz,ivac,jsp)
+                     ELSE
+                        rht1(nz,ivac,jsp) =  integrand%vacz(nz,ivac,jsp)
+                     END IF
+                  END DO
+                  CALL qsf(vacuum%delz,rht1(1,ivac,jsp),q2,vacuum%nmz,0)
+                  qvac(ivac,jsp) = q2(1)*cell%area
+                  IF (.NOT.oneD%odi%d1) THEN
+                     q(jsp) = q(jsp) + qvac(ivac,jsp)*2./real(vacuum%nvac)
+                  ELSE
+                     q(jsp) = q(jsp) + cell%area*q2(1)
+                  END IF
+               ENDDO
+            END IF
+         END IF ! irank = 0
 
 !     -----is region
          intstart = 1
@@ -93,7 +94,6 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
-      END IF ! irank = 0
    END SUBROUTINE integrate_cdn
 
    SUBROUTINE integrate_realspace(xcpot, atoms, sym, sphhar, input, &
