@@ -149,9 +149,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0 .AND. greensfImagPart%l_calc) THEN
-     CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                             nococonv,vTot,hub1inp,hub1data,results)
+   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
+      IF(greensfImagPart%l_calc) THEN
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+                                 nococonv,vTot,hub1inp,hub1data,results)
+      ENDIF
    ENDIF
 
    call val_den%copyPotDen(outDen)

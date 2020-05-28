@@ -250,9 +250,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF(gfinp%n>0 .AND. greensfImagPart%l_calc) THEN
-            CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
-                              gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+         IF(gfinp%n>0) THEN
+            IF(greensfImagPart%l_calc) THEN
+               CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
+                                 gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+            ENDIF
          ENDIF
 
          ! perform Brillouin zone integration and summation over the
@@ -307,12 +309,14 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    END DO
 #endif
 
-   IF(gfinp%n>0 .AND. greensfImagPart%l_calc) THEN
-      !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-      DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
-         CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
-                                  results,greensfBZintCoeffs,greensfImagPart)
-      ENDDO
+   IF(gfinp%n>0) THEN
+      IF(greensfImagPart%l_calc) THEN
+         !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
+         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
+                                     results,greensfBZintCoeffs,greensfImagPart)
+         ENDDO
+      ENDIF
    ENDIF
 
    CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
