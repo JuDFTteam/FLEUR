@@ -1966,7 +1966,7 @@ CONTAINS
                               interchi,addnoco,addnoco2,&
                               lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
@@ -1977,7 +1977,7 @@ CONTAINS
                               interchi,addnoco,addnoco2,&
                               lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
