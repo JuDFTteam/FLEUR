@@ -162,7 +162,7 @@ CONTAINS
    END SUBROUTINE integrate_realspace
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
-                     den,l_printData,qtot,qistot,mpi)
+                     den,l_printData,qtot,qistot,mpi,l_par)
 
       USE m_types
       USE m_juDFT
@@ -177,29 +177,26 @@ CONTAINS
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_potden),INTENT(IN) :: den
-      LOGICAL,INTENT(IN)        :: l_printData
+      LOGICAL,INTENT(IN)        :: l_printData,l_par
       REAL,INTENT(OUT)          :: qtot,qistot
-      TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
+      TYPE(t_mpi),INTENT(IN)    :: mpi
 
 !     .. Local Scalars ..
       REAL q(input%jspins),qis(input%jspins),w,mtCharge
-      INTEGER irank
 !     ..
 !     .. Local Arrays ..
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
 
       CALL timestart("cdntot")
-      IF (PRESENT(mpi)) THEN
-         irank = mpi%irank
+      IF (l_par) THEN
          CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot, mpi)
       ELSE
-         irank = 0
          CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
       ENDIF
 
-      IF (irank.EQ.0) CALL cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
+      IF (mpi%irank.EQ.0) CALL cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
       CALL timestop("cdntot")
    END SUBROUTINE cdntot
 

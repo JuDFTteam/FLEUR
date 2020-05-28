@@ -188,7 +188,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
    IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
-   CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,mpi)
+   CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,mpi,.TRUE.)
    IF (mpi%irank.EQ.0) THEN
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
