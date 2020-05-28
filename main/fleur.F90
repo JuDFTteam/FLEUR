@@ -231,6 +231,7 @@ CONTAINS
                                  greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
           ELSE
              IF(mpi%irank.EQ.0) WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
+             hub1data%l_runthisiter = .FALSE. !To prevent problems in mixing later on
           ENDIF
        ENDIF
 
