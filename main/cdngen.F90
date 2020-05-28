@@ -119,13 +119,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
       DO i_gf = 1, gfinp%n
+         IF(.NOT.greensFunction(i_gf)%l_calc) CYCLE
          iContour = gfinp%elem(i_gf)%iContour
          CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,mpi%irank)
          CALL greensFunction(i_gf)%reset()
       ENDDO
-      CALL greensfImagPart%init(gfinp,input,noco)
+      CALL greensfImagPart%init(gfinp,input,noco,ANY(greensFunction(:)%l_calc))
       !CALL greensFunction%reset(gfinp)
-      IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
+      IF(atoms%n_hia.GT.0 .AND. mpi%irank==0 .AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
@@ -148,7 +149,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
+   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0 .AND. greensfImagPart%l_calc) THEN
      CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
                              nococonv,vTot,hub1inp,hub1data,results)
    ENDIF

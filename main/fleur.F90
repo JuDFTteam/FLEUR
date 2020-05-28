@@ -225,9 +225,13 @@ CONTAINS
           DO i_gf = 1, fi%gfinp%n
              CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm,mpi%irank)
           ENDDO
-          hub1data%iter = hub1data%iter + 1
-          CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
-                              greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
+          IF(ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
+             hub1data%iter = hub1data%iter + 1
+             CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
+                                 greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
+          ELSE
+             WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
+          ENDIF
        ENDIF
 
 #ifdef CPP_CHASE
@@ -430,6 +434,17 @@ END IF
                   (/eig_id/),(fi%sym%invs).AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco),fi%kpts%nkpt)
           END IF
           !-Wannier
+
+          !Check if the greensFunction have to be calculated
+          IF(fi%gfinp%n>0) THEN
+             DO i_gf = 1, fi%gfinp%n
+                !Either the set distance has been reached (or is negative)
+                !or we are in the first iteration for Hubbard 1
+                greensFunction(i_gf)%l_calc = results%last_distance < fi%gfinp%minCalcDistance .OR. &
+                                              (iter==1 .AND.(hub1data%iter == 0 &
+                                              .AND.ALL(ABS(vTot%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)).LT.1e-12)))
+             ENDDO
+          ENDIF
 
           ! charge density generation
           CALL timestart("generation of new charge density (total)")

@@ -35,6 +35,7 @@ MODULE m_types_greensfCoeffs
 
          !Contains the imaginary part of the greens function
          INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:,:)
+         LOGICAL :: l_calc = .FALSE.
 
          REAL, ALLOCATABLE :: sphavg(:,:,:,:,:)
 
@@ -87,17 +88,20 @@ MODULE m_types_greensfCoeffs
       END SUBROUTINE greensfBZintCoeffs_init
 
 
-      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco)
+      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco,l_calc)
 
          CLASS(t_greensfImagPart),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),             INTENT(IN)     :: gfinp
          TYPE(t_input),             INTENT(IN)     :: input
          TYPE(t_noco),              INTENT(IN)     :: noco
+         LOGICAL,                   INTENT(IN)     :: l_calc
 
          INTEGER lmax,spin_dim, uniqueElements
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
+
+         this%l_calc = l_calc
 
          !Determine number of unique gf elements
          CALL uniqueElements_gfinp(gfinp,uniqueElements)

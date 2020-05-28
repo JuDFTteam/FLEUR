@@ -38,6 +38,8 @@ MODULE m_types_greensf
 
    TYPE t_greensf
 
+      LOGICAL :: l_calc = .FALSE.
+
       !Energy contour parameters
       TYPE(t_greensfContourData) :: contour
 
@@ -103,6 +105,8 @@ MODULE m_types_greensf
          ELSE
             rank = 0
          END IF
+
+         CALL mpi_bc(this%l_calc,rank,mpi_comm)
 
          CALL this%contour%mpi_bc(mpi_comm,irank)
 
@@ -171,6 +175,10 @@ MODULE m_types_greensf
          INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep
          LOGICAL l_radial,l_full
+
+         IF(.NOT.this%l_calc) THEN
+            CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
+         ENDIF
 
          l  = gfinp%elem(i_gf)%l
          lp = gfinp%elem(i_gf)%lp

@@ -707,6 +707,7 @@
       </xsd:sequence>
       <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
       <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ERealAxisType">
