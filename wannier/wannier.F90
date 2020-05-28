@@ -889,7 +889,7 @@ CONTAINS
           !*************************************************************
           IF(l_p0)THEN
              CALL wann_write_eig(&
-                  cell,noco,nococonv,input,kpts,sym,atoms,  &      
+                  mpi,cell,noco,nococonv,input,kpts,sym,atoms,  &      
                   eig_id,l_real,&
                   atoms%ntype,input%neig,&
                   lapw%dim_nvd(),wannierspin,&
