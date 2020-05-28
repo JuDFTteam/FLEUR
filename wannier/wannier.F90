@@ -1212,8 +1212,8 @@ CONTAINS
                    IF ((eigg(i).GE.sliceplot%e1s.AND.nslibd.LT.numbands.AND.&
                         wann%l_bynumber).OR.&
                         (eigg(i).GE.sliceplot%e1s.AND.eigg(i).LE.sliceplot%e2s.AND.&
-                        wann%l_byenergy).OR.(i.GE.wann%band_min(jspin).AND.&
-                        (i.LE.wann%band_max(jspin)).AND.wann%l_byindex))THEN
+                        wann%l_byenergy).OR.(i.GE.wann%band_min(jspin2).AND.&
+                        (i.LE.wann%band_max(jspin2)).AND.wann%l_byindex))THEN
 
                       !           print*,i
                       nslibd = nslibd + 1
@@ -1556,8 +1556,8 @@ CONTAINS
                          IF((eigg(i).GE.sliceplot%e1s.AND.nslibd_b.LT.numbands&
                               .AND.wann%l_bynumber).OR.&
                               (eigg(i).GE.sliceplot%e1s.AND.eigg(i).LE.sliceplot%e2s.AND.&
-                              wann%l_byenergy).OR.(i.GE.wann%band_min(jspin).AND.&
-                              (i.LE.wann%band_max(jspin)).AND.&
+                              wann%l_byenergy).OR.(i.GE.wann%band_min(jspin2).AND.&
+                              (i.LE.wann%band_max(jspin2)).AND.&
                               wann%l_byindex))THEN
                             nslibd_b = nslibd_b + 1
                             eig_b(nslibd_b) = eigg(i)
