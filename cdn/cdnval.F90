@@ -104,7 +104,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
+   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec, l_empty
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
@@ -141,6 +141,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       jsp_start = jspin
       jsp_end   = jspin
    END IF
+
+   !Do we need to consider the unoccupied states
+   l_empty = banddos%dos
+   IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+      l_empty = l_empty.OR.greensfImagPart%l_calc
+   ENDIF
 
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
@@ -202,7 +208,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.gfinp%n>0)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)
