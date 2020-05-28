@@ -231,7 +231,7 @@ CONTAINS
     REAL,PARAMETER :: condquant=7.7480917e-5
     INTEGER :: npotmatfile,ig3,maxvac,irec,imz,ivac,ipot
     LOGICAL :: l_orbcompinp
-    INTEGER :: num_angl,nbasfcn,nbasfcn_b
+    INTEGER :: num_angl,nbasfcn,nbasfcn_b,noconbasfcn,noconbasfcn_b
     COMPLEX,ALLOCATABLE :: vxy(:,:,:)
 
 
@@ -1411,8 +1411,10 @@ CONTAINS
                 !------mmn0-matrix
                 IF(wann%l_mmn0)THEN
                    addnoco=0
+                   noconbasfcn=nbasfcn
                    IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                       addnoco=lapw%nv(1)+atoms%nlotot
+                      noconbasfcn=nbasfcn-addnoco
                    ENDIF
 
                    !-----> interstitial contribution to mmn0-matrix
@@ -1421,7 +1423,7 @@ CONTAINS
                         cmplx_1,addnoco,addnoco,&
                         lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                         stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),input%neig,nbasfcn,nbasfcn,zMat,nslibd,&
+                        lapw%nv(jspin),input%neig,noconbasfcn,noconbasfcn,zMat,nslibd,&
                         lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
                         lapw%nv(jspin),zMat,nslibd,&
                         nbnd,&
@@ -1627,16 +1629,20 @@ CONTAINS
 
                       addnoco=0
                       addnoco2=0
+                      noconbasfcn=nbasfcn
+                      noconbasfcn_b=nbasfcn_b
                       IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                          addnoco  = lapw%nv(1)   + atoms%nlotot
                          addnoco2 = lapw_b%nv(1) + atoms%nlotot
+                         noconbasfcn=nbasfcn-addnoco
+                         noconbasfcn_b=nbasfcn_b-addnoco2
                       ENDIF
 
                       CALL wann_mmkb_int(&
                            cmplx_1,addnoco,addnoco2,&
                            lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
-                           lapw%nv(jspin2),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
+                           lapw%nv(jspin2),input%neig,noconbasfcn,noconbasfcn_b,zMat,nslibd,&
                            lapw_b%k1(:,jspin2),lapw_b%k2(:,jspin2),lapw_b%k3(:,jspin2),&
                            lapw_b%nv(jspin2),zMat_b,nslibd_b,&
                            nbnd,&
