@@ -889,10 +889,11 @@ CONTAINS
           !*************************************************************
           IF(l_p0)THEN
              CALL wann_write_eig(&
+                  cell,noco,nococonv,input,kpts,sym,atoms,  &      
                   eig_id,l_real,&
-                  atoms%lmaxd,atoms%ntype,atoms%nlod,input%neig,&
+                  atoms%ntype,input%neig,&
                   lapw%dim_nvd(),wannierspin,&
-                  mpi%isize,jspin,lapw%dim_nbasfcn(),atoms%nlotot,&
+                  mpi%isize,jspin,lapw%dim_nbasfcn(),&
                   noco%l_ss,noco%l_noco,nrec,fullnkpts,&
                   wann%l_bzsym,wann%l_byindex,wann%l_bynumber,&
                   wann%l_byenergy,&
