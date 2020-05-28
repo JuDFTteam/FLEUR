@@ -78,7 +78,7 @@ c****************************************************************
 !      real,parameter   :: hartree=27.21138505  !now in module constants
 
       TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
-     TYPE(t_lapw)  :: lapw
+      TYPE(t_lapw)  :: lapw
 
 
       zMat%l_real = l_real
