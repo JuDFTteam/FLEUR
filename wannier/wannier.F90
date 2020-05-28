@@ -231,7 +231,7 @@ CONTAINS
     REAL,PARAMETER :: condquant=7.7480917e-5
     INTEGER :: npotmatfile,ig3,maxvac,irec,imz,ivac,ipot
     LOGICAL :: l_orbcompinp
-    INTEGER :: num_angl
+    INTEGER :: num_angl,nbasfcn,nbasfcn_b
     COMPLEX,ALLOCATABLE :: vxy(:,:,:)
 
 
@@ -1124,42 +1124,43 @@ CONTAINS
              ENDIF ! l_gwf
 
           ENDIF !l_matrixmmn
-          zzMat%l_real = l_real
-          zzMat%matsize1 = lapw%dim_nbasfcn()
-          zzMat%matsize2 = input%neig
-          IF(l_real) THEN
-             IF(.NOT.ALLOCATED(zzMat%data_r))&
-               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-          ELSE
-               IF(.NOT.ALLOCATED(zzMat%data_c))&
-               ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-          END IF
+! Replace the following by calls to zmat%init further below          
+!          zzMat%l_real = l_real
+!          zzMat%matsize1 = lapw%dim_nbasfcn()
+!          zzMat%matsize2 = input%neig
+!          IF(l_real) THEN
+!             IF(.NOT.ALLOCATED(zzMat%data_r))&
+!               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+!          ELSE
+!               IF(.NOT.ALLOCATED(zzMat%data_c))&
+!               ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+!          END IF
 
-          zMat%l_real = zzMat%l_real
-          zMat%matsize1 = zzMat%matsize1
-          zMat%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-             IF(.NOT.ALLOCATED(zMat%data_r))&
-                  ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-             zMat%data_r = 0.0
-          ELSE
-             IF(.NOT.ALLOCATED(zMat%data_c))&
-                  ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-             zMat%data_c = CMPLX(0.0,0.0)
-          END IF
+!          zMat%l_real = zzMat%l_real
+!          zMat%matsize1 = zzMat%matsize1
+!          zMat%matsize2 = zzMat%matsize2
+!          IF (zzMat%l_real) THEN
+!             IF(.NOT.ALLOCATED(zMat%data_r))&
+!                  ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!             zMat%data_r = 0.0
+!          ELSE
+!             IF(.NOT.ALLOCATED(zMat%data_c))&
+!                  ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!             zMat%data_c = CMPLX(0.0,0.0)
+!          END IF
 
-          zMat_b%l_real = zzMat%l_real
-          zMat_b%matsize1 = zzMat%matsize1
-          zMat_b%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-               IF(.NOT.ALLOCATED(zMat_b%data_r))&
-               ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_r = 0.0
-          ELSE
-               IF(.NOT.ALLOCATED(zMat_b%data_c))&
-               ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_c = CMPLX(0.0,0.0)
-          END IF
+ !         zMat_b%l_real = zzMat%l_real
+ !         zMat_b%matsize1 = zzMat%matsize1
+ !         zMat_b%matsize2 = zzMat%matsize2
+ !         IF (zzMat%l_real) THEN
+ !              IF(.NOT.ALLOCATED(zMat_b%data_r))&
+ !              ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+ !            zMat_b%data_r = 0.0
+ !         ELSE
+ !              IF(.NOT.ALLOCATED(zMat_b%data_c))&
+ !              ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+ !            zMat_b%data_c = CMPLX(0.0,0.0)
+ !         END IF
 
           i_rec = 0 ; n_rank = 0
 
@@ -1185,6 +1186,11 @@ CONTAINS
                 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
                 CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+                  CALL zzMat%init(l_real,nbasfcn,input%neig)
+                      CALL zMat%init(l_real,nbasfcn,input%neig)
+
 
                 CALL cdn_read(&
                      eig_id,&
@@ -1415,7 +1421,7 @@ CONTAINS
                         cmplx_1,addnoco,addnoco,&
                         lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                         stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                        lapw%nv(jspin),input%neig,nbasfcn,nbasfcn,zMat,nslibd,&
                         lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
                         lapw%nv(jspin),zMat,nslibd,&
                         nbnd,&
@@ -1525,10 +1531,17 @@ CONTAINS
                       n_start=1
                       n_end=input%neig
                       call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      
+                      
+                    nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
+                              CALL zMat_b%init(l_real,nbasfcn_b,input%neig)
+                              CALL zzMat%init(l_real,nbasfcn_b,input%neig)
+                      
+                      
                       CALL cdn_read(&
                            eig_id,&
                            lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
-                           kptibz_b,jspin,lapw%dim_nbasfcn(),&
+                           kptibz_b,jspin,nbasfcn_b,&
                            noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                            nbands_b,eigg,zzMat)
 
@@ -1623,7 +1636,7 @@ CONTAINS
                            cmplx_1,addnoco,addnoco2,&
                            lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
-                           lapw%nv(jspin2),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                           lapw%nv(jspin2),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
                            lapw_b%k1(:,jspin2),lapw_b%k2(:,jspin2),lapw_b%k3(:,jspin2),&
                            lapw_b%nv(jspin2),zMat_b,nslibd_b,&
                            nbnd,&
