@@ -59,10 +59,8 @@ MODULE m_types_gfinp
       LOGICAL :: l_mperp = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
-      !Number of elements !(TODO: NAME??)
+      !Number of elements
       INTEGER :: n = 0
-      !Number of j0 calculations
-      INTEGER :: n_j0 = 0
       !Information on the elements to be calculated
       TYPE(t_gfelementtype), ALLOCATABLE :: elem(:)
       !Parameters for the energy mesh on the real axis
@@ -104,7 +102,6 @@ CONTAINS
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
-      CALL mpi_bc(this%n_j0,rank,mpi_comm)
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
       CALL mpi_bc(this%elup,rank,mpi_comm)
@@ -343,16 +340,18 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,input)
 
       USE m_types_atoms
       USE m_types_sym
       USE m_types_noco
+      USE m_types_input
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
       INTEGER :: hiaElem(atoms%n_hia)
@@ -382,6 +381,14 @@ CONTAINS
       IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
          CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
                           calledby="init_gfinp")
+      ENDIF
+
+      IF(this%minCalcDistance>=0.0) THEN
+         IF(input%mindistance>this%minCalcDistance) THEN
+            CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
+                            "is smaller than the distance requirement:"//&
+                            "No Green's Functions will be calculated", calledby="init_gfinp")
+         ENDIF
       ENDIF
 
    END SUBROUTINE init_gfinp
