@@ -6,13 +6,14 @@ MODULE m_cdntot
 CONTAINS
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot, mpi)
+      ! if called with mpi variable, distribute the calculation of the pwint 
+      ! over MPI processes in mpi%mpi_comm
       USE m_intgr, ONLY : intgr3
       USE m_constants
       USE m_qsf
       USE m_pwint
       USE m_types
       USE m_juDFT
-      USE m_convol
       IMPLICIT NONE
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -22,7 +23,7 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_potden),INTENT(IN) :: integrand
-      REAL, INTENT(out)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
+      REAL, INTENT(OUT)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                                    qvac(2,input%jspins), qtot, qistot
       TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
       INTEGER                   :: jsp, j, ivac, nz, n, irank, nsize, intstart, intstop, chunk_size, leftover
@@ -53,13 +54,11 @@ CONTAINS
          IF (irank.EQ.0) THEN
             q(jsp) = 0.0
 !     -----mt charge
-            CALL timestart("MT")
             DO n = 1,atoms%ntype
                CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
                qmt(n, jsp) = w*sfp_const
                q(jsp) = q(jsp) + atoms%neq(n)*qmt(n,jsp)
             ENDDO
-            CALL timestop("MT")
 !     -----vacuum region
             IF (input%film) THEN
                DO ivac = 1,vacuum%nvac
@@ -165,14 +164,8 @@ CONTAINS
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot,mpi)
 
-      USE m_intgr, ONLY : intgr3
-      USE m_constants
-      USE m_qsf
-      USE m_pwint
       USE m_types
       USE m_juDFT
-      USE m_convol
-      USE m_xmlOutput
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
@@ -189,14 +182,11 @@ CONTAINS
       TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
 
 !     .. Local Scalars ..
-      COMPLEX x(stars%ng3)
       REAL q(input%jspins),qis(input%jspins),w,mtCharge
-      INTEGER i,ivac,j,jsp,n,nz, irank
+      INTEGER irank
 !     ..
 !     .. Local Arrays ..
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
-      INTEGER, ALLOCATABLE :: lengths(:,:)
-      CHARACTER(LEN=20) :: attributes(6), names(6)
 
       CALL timestart("cdntot")
       IF (PRESENT(mpi)) THEN
@@ -209,15 +199,44 @@ CONTAINS
                                    q, qis, qmt, qvac, qtot, qistot)
       ENDIF
 
-      IF (irank.EQ.0) THEN
-         IF (input%film) THEN
-            ALLOCATE(lengths(4+vacuum%nvac,2))
-         ELSE
-            ALLOCATE(lengths(4,2))
-         END IF
+      IF (irank.EQ.0) CALL cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
+      CALL timestop("cdntot")
+   END SUBROUTINE cdntot
 
-         DO jsp = 1,input%jspins
-            WRITE (oUnit,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
+   SUBROUTINE cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
+
+      USE m_constants
+      USE m_types
+      USE m_juDFT
+      USE m_xmlOutput
+      IMPLICIT NONE
+
+!     .. Scalar Arguments ..
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      LOGICAL,INTENT(IN)        :: l_printData
+      REAL,INTENT(IN)           :: q(input%jspins),qis(input%jspins)
+      REAL,INTENT(IN)           :: qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
+      REAL,INTENT(IN)           :: qtot
+
+!     .. Local Scalars ..
+      REAL mtCharge
+      INTEGER i,jsp,n
+!     ..
+!     .. Local Arrays ..
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+      CHARACTER(LEN=20) :: attributes(6), names(6)
+
+
+      IF (input%film) THEN
+         ALLOCATE(lengths(4+vacuum%nvac,2))
+      ELSE
+         ALLOCATE(lengths(4,2))
+      END IF
+
+      DO jsp = 1,input%jspins
+         WRITE (oUnit,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
             IF (input%film) WRITE (oUnit,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
             mtCharge = SUM(qmt(1:atoms%ntype,jsp) * atoms%neq(1:atoms%ntype))
             names(1) = 'spin'         ; WRITE(attributes(1),'(i0)')    jsp      ; lengths(1,1)=4  ; lengths(1,2)=1
@@ -249,9 +268,7 @@ CONTAINS
 8010     FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
 8020     FORMAT (/,10x,'total charge  =',f12.6)
 
-      END IF ! irank = 0
-      CALL timestop("cdntot")
-   END SUBROUTINE cdntot
+   END SUBROUTINE cdntot_writings
 
    SUBROUTINE print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
       use  ieee_arithmetic
