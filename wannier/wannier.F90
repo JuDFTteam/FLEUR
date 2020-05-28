@@ -1450,8 +1450,8 @@ CONTAINS
                            stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,&
                            stars%ig2,cell%area,cell%bmat,&
-                           cell%bbmat,enpara%evac0(:,jspin),lapw%bkpt,vz(:,:,jspin2),&
-                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
+                           cell%bbmat,enpara%evac0(:,jspin2),lapw%bkpt,vz(:,:,jspin2),&
+                           nslibd,jspin2,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
                            lapw%dim_nbasfcn(),input%neig,zMat,lapw%nv,cell%omtil,&
                            mmn(:,:,ikpt))
                    ELSEIF (oneD%odi%d1) THEN
