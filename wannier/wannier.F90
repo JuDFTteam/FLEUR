@@ -1438,7 +1438,7 @@ CONTAINS
                         atoms%nlo,atoms%llo,acof(1:noccbd,:,:),&
                         bcof(1:noccbd,:,:),ccof(:,1:noccbd,:,:),&
                         usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),&
-                        usdus%dulon(:,:,jspin),usdus%uloulopn,&
+                        usdus%dulon(:,:,jspin),usdus%uloulopn(:,:,:,jspin),&
                         mmn(:,:,ikpt))
                    !---> vacuum contribution to mmn0-matrix
 
