@@ -16,9 +16,6 @@ if (DEFINED CLI_FLEUR_USE_LIBXC)
                             "We tried: 'git submodule init external/libxc-git && git submodule update' and resulted in error" )
              endif()
 	   endif()
-
-           #patch libxc
-           execute_process(COMMAND "sh" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/external/libxc-git" INPUT_FILE "${PROJECT_SOURCE_DIR}/external/patch-libxc.sh")
 	   message("libxc was patched")
 
 
@@ -28,7 +25,7 @@ if (DEFINED CLI_FLEUR_USE_LIBXC)
 	   add_subdirectory (external/libxc-git EXCLUDE_FROM_ALL)
 	   include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external")
 	   set(FLEUR_USE_LIBXC TRUE)
-	   set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};xcf90;xcf03")
+	   set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};xcf90")
            set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}/external/libxc-git")
        endif()
     else()
