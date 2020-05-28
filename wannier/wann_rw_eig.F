@@ -15,7 +15,7 @@ c      Frank Freimuth, October 2006
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_write_eig(
-    >     cell,noco,nococonv,input,kpts,sym,atoms,          
+     >     cell,noco,nococonv,input,kpts,sym,atoms,          
      >              eig_id,l_real,
      >              ntypd,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,
