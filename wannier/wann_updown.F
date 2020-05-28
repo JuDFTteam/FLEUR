@@ -1187,7 +1187,7 @@ c$$$       enddo !i
      >         cmplx(1.,0.),addnoco,addnoco2,
      >         nvd,stars%mx1,stars%mx2,stars%mx3,
      > stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     > lapw%nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
+     > lapw%nv(jspin),neigd,nbasfcn,nbasfcn,zMat(1),nslibd,
      > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
