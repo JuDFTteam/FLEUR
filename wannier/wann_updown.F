@@ -498,9 +498,10 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
+     >           cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
-     >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,nlotot,
+     >            ntypd,neigd,nvd,wannierspin,
+     >            isize,jspin,nbasfcn,
      >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
