@@ -312,6 +312,8 @@ MODULE m_types_greensf
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,ispin_end
 
+         this%l_calc = .TRUE. !If its set it counts as calculated
+
          l  = gfinp%elem(i_gf)%l
          lp = gfinp%elem(i_gf)%lp
          atomType  = gfinp%elem(i_gf)%atomType

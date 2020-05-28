@@ -230,7 +230,7 @@ CONTAINS
              CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
                                  greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
           ELSE
-             WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
+             IF(mpi%irank.EQ.0) WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
           ENDIF
        ENDIF
 
