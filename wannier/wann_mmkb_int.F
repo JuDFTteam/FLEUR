@@ -9,7 +9,7 @@
       subroutine wann_mmkb_int(
      >               interchi,addnoco,addnoco2,nvd,k1d,k2d,k3d,
      >               n3d,k1,k2,k3,
-     >               nv,neigd,nbasfcn,zMat,nslibd,
+     >               nv,neigd,nbasfcn,nbasfcn_b,zMat,nslibd,
      >               k1_b,k2_b,k3_b,
      >               nv_b,zMat_b,nslibd_b,
      >               nbnd,rgphs,ustep,ig,gb,
@@ -24,7 +24,7 @@
 
       integer, intent(in) :: addnoco,addnoco2
       integer, intent(in) :: nvd,n3d,k1(nvd),k2(nvd),k3(nvd)
-      integer, intent(in) :: nv,neigd,nbasfcn,nslibd,nslibd_b
+      integer, intent(in) :: nv,neigd,nbasfcn,nbasfcn_b,nslibd,nslibd_b
       integer, intent(in) :: nv_b,k1_b(nvd),k2_b(nvd),k3_b(nvd)
       integer, intent(in) :: nbnd
       integer, intent(in) :: k1d,k2d,k3d
