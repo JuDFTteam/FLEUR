@@ -74,8 +74,8 @@ c-->     determine index and phase factor
       enddo
       IF(zMat%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv,nslibd_b,nv_b,real(1.0),
-     &               stepf_r,nv_b,zMat_b%data_r(1+addnoco2,1),nbasfcn,
-c     &               stepf_r,nv_b,zMat_b%data_r,nbasfcn,
+     &               stepf_r,nv_b,zMat_b%data_r(1+addnoco2,1),nbasfcn_b,
+c     &               stepf_r,nv_b,zMat_b%data_r,nbasfcn_b,
      &               real(0.0),phasusbmat_r,nv)
          call CPP_BLAS_sgemm('T','N',nslibd,nslibd_b,nv,real(1.0),
      &               zMat%data_r(1+addnoco,1),nbasfcn,phasusbmat_r,nv,
@@ -87,7 +87,7 @@ c     &               zMat%data_r,nbasfcn,phasusbmat_r,nv,
          call CPP_BLAS_cgemm('T','N',nv,nslibd_b,nv_b,cmplx(1.0),
      &               stepf_c,nv_b,zMat_b%data_c(1+addnoco2,1),
 c     &               stepf_c,nv_b,zMat_b%data_c,
-     &               nbasfcn,cmplx(0.0),
+     &               nbasfcn_b,cmplx(0.0),
      &               phasusbmat_c,nv)
          phasusbmat_c=conjg(phasusbmat_c)            
          call CPP_BLAS_cgemm('T','N',nslibd,nslibd_b,nv,interchi, 
