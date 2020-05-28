@@ -460,8 +460,8 @@ c******************************************************************
 
       call wann_read_eig(
      >              eig_id,
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              lmaxd,ntypd,neigd,nvd,jspd,
+     >              irank,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eigg,zzMat,
      >              .false.,1)
