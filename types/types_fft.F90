@@ -59,7 +59,7 @@ contains
       implicit none 
       class(t_fft), intent(inout) :: fft
       complex, intent(inout)      :: dat(:) 
-      integer :: isn, size_dat 
+      integer :: isn, size_dat, ok
 
       size_dat = product(fft%length)
 
@@ -68,10 +68,10 @@ contains
          call juDFT_error("not yet implemented")
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         if (forw) then
-            dfti_status = DftiComputeForward(dfti_handle, dat)
+         if (fft%forw) then
+            ok = DftiComputeForward(fft%dfti_handle, dat)
          else
-            dfti_status = DftiComputeBackward(dfti_handle, dat)
+            ok = DftiComputeBackward(fft%dfti_handle, dat)
          end if
 #endif
       case default
@@ -89,6 +89,7 @@ contains
    subroutine t_fft_free(fft)
       implicit none 
       class(t_fft) :: fft 
+      integer :: ok
 
       fft%initialized = .False.
       fft%backend    = -1
@@ -103,7 +104,7 @@ contains
          call juDFT_error("not yet implemented")
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         dfti_status = DftiFreeDescriptor(dfti_handle)
+         ok = DftiFreeDescriptor(fft%dfti_handle)
 #endif
       case default
          
