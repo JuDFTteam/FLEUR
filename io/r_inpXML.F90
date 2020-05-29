@@ -38,7 +38,7 @@ CONTAINS
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
-      USE xc_f03_lib_m
+      USE xc_f90_lib_m
 #endif
       IMPLICIT NONE
 
@@ -1253,21 +1253,21 @@ CONTAINS
       ELSEIF (xmlGetNumberOfNodes(TRIM(xPathB)) == 1) THEN
 #ifdef CPP_LIBXC
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exchange')))
-         vxc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+         vxc_id_x =  xc_f90_functional_get_number(TRIM(valueString))
 
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@correlation')))
-         vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         vxc_id_c =  xc_f90_functional_get_number(TRIM(valueString))
 
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
-            exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+            exc_id_x =  xc_f90_functional_get_number(TRIM(valueString))
          ELSE
             exc_id_x = vxc_id_x
          ENDIF
 
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
-            exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+            exc_id_c =  xc_f90_functional_get_number(TRIM(valueString))
          ELSE
             exc_id_c = vxc_id_c
          ENDIF
