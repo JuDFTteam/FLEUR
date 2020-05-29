@@ -4,11 +4,11 @@
       title   
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
-      <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="62"/>
+      <scfLoop itmax="15" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
-      <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="t" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
@@ -66,7 +66,7 @@
          <force calculate="T" relaxXYZ="TTT"/>
       </atomGroup>
    </atomGroups>
-   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
+   <output dos="F" band="F" vacdos="F" slice="F" mcd="F" wannier="T" eig66="f">
       <checks vchk="F" cdinf="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
@@ -75,6 +75,10 @@
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
+      <wannier>
+        <bandSelection minSpinUp="21" maxSpinUp="56"/>
+        <jobList> prepwan90 matrixmmn matrixamn mmn0  </jobList>
+      </wannier>
    </output>
   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
