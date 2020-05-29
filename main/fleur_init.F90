@@ -144,6 +144,8 @@ CONTAINS
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(mpi%irank==0,atoms,sphhar,sym,cell,oneD)
+    ! Store structure data (has to be performed before calling make_stars)
+    CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
     CALL make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     CALL lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
@@ -152,8 +154,6 @@ CONTAINS
     CALL kpts%init(cell, sym, input%film)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
     CALL gfinp%init(atoms, sym, noco, input)
-    ! Store structure data
-    CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(mpi,stars,input,cell,xcpot)
     CALL convn(mpi%irank==0,atoms,stars)
     IF (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
