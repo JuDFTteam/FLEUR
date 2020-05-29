@@ -202,7 +202,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    IF (mpi%irank == 0) THEN
 
       ! Check the normalization of total density
-      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,.FALSE.,.true.,fix)
+      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN
          CALL judft_warn("Starting density not charge neutral",hint= &

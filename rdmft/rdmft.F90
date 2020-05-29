@@ -450,7 +450,8 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL cdncore(mpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
-         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,fi%noco%l_noco,.TRUE.,.FALSE.,.true.,fix)
+         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
+                   fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
