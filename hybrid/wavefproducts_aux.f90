@@ -203,6 +203,7 @@ CONTAINS
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
+      !$ use omp_lib
       use m_types
       use m_fft_interface
       implicit none
@@ -213,21 +214,30 @@ CONTAINS
       integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
       complex, intent(inout)         :: psi(0:,bandoi:) ! (nv,ne)
 
-      type(t_fft) :: fft
+      type(t_fft), allocatable :: fft(:)
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu
+      integer :: iv, nu, n_threads, me
 
+      
       DO iv = 1, lapw%nv(jspin)
          ivmap(iv) = g2fft(length_zfft, lapw%gvec(:, iv, jspin))
       ENDDO
 
       psi = 0.0
-      !$OMP PARALLEL default(none) private(nu, iv, fft) &
-      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      n_threads = 1
+      me = 1
+      !$OMP PARALLEL default(none) private(nu, iv, n_threads, me) &
+      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin, fft)
+
+      !$n_threads = omp_get_num_threads()
+      !$me = omp_get_thread_num() + 1
+      !$OMP single
+      allocate(fft(n_threads))
+      !$OMP end single
 
       !$OMP critical
-      call fft%init(length_zfft, .false.)
+      call fft(me)%init(length_zfft, .false.)
       !$OMP end critical
 
       !$OMP DO
@@ -240,12 +250,16 @@ CONTAINS
                psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
             endif
          ENDDO
-         call fft%exec(psi(:,nu))
+         call fft(me)%exec(psi(:,nu))
       enddo
       !$OMP ENDDO
       !$OMP critical
-      call fft%free()
+      call fft(me)%free()
       !$OMP end critical
+
+      !$OMP single
+      deallocate(fft)
+      !$OMP end single
       !$OMP END PARALLEL
    end subroutine wavef2rs
 
