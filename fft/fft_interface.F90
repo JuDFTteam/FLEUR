@@ -16,6 +16,8 @@ MODULE m_fft_interface
 CONTAINS
 
    subroutine fft_interface(dimen, length, dat, forw, indices)
+      use m_types_fft
+      implicit none
       ! provides interfaces to fft subroutines
 
       integer, intent(in)           :: dimen         !dimension of fft transformation
@@ -24,28 +26,16 @@ CONTAINS
       logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
 
-      integer :: size_dat, i
-      INTEGER :: fftRoutine
-      LOGICAL :: l_sparse
+      integer :: size_dat
+      type(t_fft) :: fft
 
       size_dat = product(length)
-      if (product(length) /= size_dat) call juDFT_error("fine!")
       if (size(dat) .ne. size_dat) call juDFT_error('array bounds are inconsistent', calledby='fft_interface')
       if (dimen .ne. 3) call juDFT_error('sorry, not implemented yet for this value of dimen', calledby='fft_interface')
 
-      l_sparse = PRESENT(indices)
-
-      fftRoutine = defaultFFT_const
-      fftRoutine = selecFFT(l_sparse)
-
-      select case(fftRoutine)
-      case(spFFT_const)
-         call spfft_wrapper(length, dat, forw, indices)
-      case(mklFFT_const)
-         call mklfft_wrapper(length, dat, forw)
-      case default 
-         call cfft_wrapper(length, dat, forw)
-      end select
+      call fft%init(length, forw, indices)
+      call fft%exec(dat)
+      call fft%free()
 
    contains
       subroutine spfft_wrapper(length, dat, forw, indices)
