@@ -57,57 +57,56 @@ CONTAINS
     
     CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis,mpi,.FALSE.)
 
-    !The total nucleii charge
-    zc=SUM(atoms%neq(:)*atoms%zatom(:))
-    !zc = zc + 2*input%sigma !TODO : reactivate fields
-
-    IF (fixtotal) THEN
-       !-roa
-       fix = zc/qtot
-       na = 1
-       DO n = 1,atoms%ntype
-          lh = sphhar%nlh(sym%ntypsy(na))
-          jm = atoms%jri(n)
-          den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
-          na = na + atoms%neq(n)
-       ENDDO
-       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       IF (input%film) THEN
-          den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
-          den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
-             den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
-       END IF
-       IF (mpi%irank.EQ.0) WRITE (oUnit,FMT=8000) zc,fix
-    ELSE
-       fix = (zc - qtot) / qis + 1.
-       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       IF (mpi%irank.EQ.0) WRITE (oUnit,FMT=8001) zc,fix
-    ENDIF
-
-    IF (l_noco) THEN
-       !fix also the off-diagonal part of the density matrix
-       den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
-       IF (input%film.AND.fixtotal) THEN
-          den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
-          den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
-       END IF
-    END IF
-
-    IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
-
     IF (mpi%irank.EQ.0) THEN
+       !The total nucleii charge
+       zc=SUM(atoms%neq(:)*atoms%zatom(:))
+       !zc = zc + 2*input%sigma !TODO : reactivate fields
+
+       IF (fixtotal) THEN
+          !-roa
+          fix = zc/qtot
+          na = 1
+          DO n = 1,atoms%ntype
+             lh = sphhar%nlh(sym%ntypsy(na))
+             jm = atoms%jri(n)
+             den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
+             na = na + atoms%neq(n)
+          ENDDO
+          den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
+          IF (input%film) THEN
+             den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
+             den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
+                den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
+          END IF
+          WRITE (oUnit,FMT=8000) zc,fix
+       ELSE
+          fix = (zc - qtot) / qis + 1.
+          den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
+          WRITE (oUnit,FMT=8001) zc,fix
+       ENDIF
+
+       IF (l_noco) THEN
+          !fix also the off-diagonal part of the density matrix
+          den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
+          IF (input%film.AND.fixtotal) THEN
+             den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
+             den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
+          END IF
+       END IF
+
+       IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+
        CALL openXMLElementNoAttributes('fixedCharges')
        CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis,mpi,.FALSE.)
        CALL closeXMLElement('fixedCharges')
+
+       IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
+       IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
+
+8000   FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
+8001   FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
+       !-roa
     ENDIF
-
-    IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
-    IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
-
-
-8000 FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
-8001 FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
-    !-roa
 
   END SUBROUTINE qfix
 END MODULE m_qfix
