@@ -179,10 +179,10 @@ contains
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         if (forw) then
-            dfti_status = DftiComputeForward(dfti_handle, dat)
+         if (fft%forw) then
+            ok = DftiComputeForward(fft%dfti_handle, dat)
          else
-            dfti_status = DftiComputeBackward(dfti_handle, dat)
+            ok = DftiComputeBackward(fft%dfti_handle, dat)
          end if
 #endif
       case default
@@ -201,6 +201,7 @@ contains
       implicit none 
       integer      :: ok
       class(t_fft) :: fft 
+      integer :: ok
 
       fft%initialized = .False.
       fft%backend    = -1
@@ -219,7 +220,7 @@ contains
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         dfti_status = DftiFreeDescriptor(dfti_handle)
+         ok = DftiFreeDescriptor(fft%dfti_handle)
 #endif
       case default
          
