@@ -54,7 +54,7 @@ CONTAINS
          INTEGER, PARAMETER                     :: numOMPThreads = -1 ! -1 gives you the default number of OMP threads
          LOGICAL, ALLOCATABLE                   :: nonzeroArea(:, :)
          INTEGER                                :: xCoord, yCoord, zCoord, maxNumLocalZColumns, xyPlaneSize, temp
-         INTEGER                                :: errorCode, x, y, z, fftMeshIndex
+         INTEGER                                :: errorCode, x, y, z, fftMeshIndex, i
          COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
 
          ALLOCATE (sparseCoords(3*SIZE(indices)))
