@@ -8,6 +8,9 @@ module m_types_fft
 #ifdef CPP_SPFFT
    USE spfft
 #endif
+#ifdef CPP_FFTW 
+   use fftw3
+#endif
 
    type t_fft 
       logical :: initialized = .False.
