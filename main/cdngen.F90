@@ -228,7 +228,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (mpi%irank == 0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')
-      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.TRUE.,.true.,fix)
+      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.FALSE.,.TRUE.,fix)
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins == 2) THEN
