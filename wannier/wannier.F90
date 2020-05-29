@@ -1423,10 +1423,10 @@ CONTAINS
                    CALL wann_mmkb_int(&
                         cmplx_1,addnoco,addnoco,&
                         lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
-                        stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),input%neig,noconbasfcn,noconbasfcn,zMat,nslibd,&
-                        lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),zMat,nslibd,&
+                        stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),input%neig,noconbasfcn,noconbasfcn,zMat,nslibd,&
+                        lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),zMat,nslibd,&
                         nbnd,&
                         stars%rgphs,stars%ustep,stars%ig,(/ 0,0,0 /),&
                         mmn(:,:,ikpt))
