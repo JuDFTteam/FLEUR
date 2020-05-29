@@ -5,7 +5,7 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
-      <scfLoop itmax="15" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
