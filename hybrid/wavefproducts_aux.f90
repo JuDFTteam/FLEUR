@@ -188,7 +188,9 @@ CONTAINS
       enddo
       !$OMP END DO
       deallocate(prod, psi_k)
+      !$OMP critical
       call fft%free()
+      !$OMP end critical
       !$OMP END PARALLEL 
 
       call timestop("Big OMP loop")
@@ -225,7 +227,7 @@ CONTAINS
       !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
 
       !$OMP critical
-      call fft%init(length_zfft, .false., ivmap(1:lapw%nv(jspin)))
+      call fft%init(length_zfft, .false.)
       !$OMP end critical
 
       !$OMP DO
@@ -241,7 +243,9 @@ CONTAINS
          call fft%exec(psi(:,nu))
       enddo
       !$OMP ENDDO
+      !$OMP critical
       call fft%free()
+      !$OMP end critical
       !$OMP END PARALLEL
    end subroutine wavef2rs
 
