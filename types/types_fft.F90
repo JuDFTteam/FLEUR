@@ -201,7 +201,6 @@ contains
       implicit none 
       integer      :: ok
       class(t_fft) :: fft 
-      integer :: ok
 
       fft%initialized = .False.
       fft%backend    = -1
