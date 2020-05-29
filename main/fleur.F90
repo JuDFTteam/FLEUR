@@ -148,12 +148,12 @@ CONTAINS
 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-    IF(mpi%irank.EQ.0) THEN
-       CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF(mpi%irank.EQ.0) CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
-       CALL timestart("Qfix")
-       CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.FALSE.,.FALSE.,fix)
-       CALL timestop("Qfix")
+    CALL timestart("Qfix")
+    CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.FALSE.,.FALSE.,fix)
+    CALL timestop("Qfix")
+    IF(mpi%irank.EQ.0) THEN
        IF(fi%noco%l_alignMT.AND.mpi%irank==0) THEN
          CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
          CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)

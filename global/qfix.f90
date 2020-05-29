@@ -55,7 +55,7 @@ CONTAINS
     ! qfix==0 means no qfix was given in inp.xml. 
     ! In this case do nothing except when forced to fix!
     
-    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis,mpi,.FALSE.)
+    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis,mpi,l_par)
 
     IF (mpi%irank.EQ.0) THEN
        !The total nucleii charge
