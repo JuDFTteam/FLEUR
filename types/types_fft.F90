@@ -32,8 +32,8 @@ module m_types_fft
       COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
 #endif
 #ifdef CPP_FFTW
-      type(c_ptr) :: plan  
-      complex(C_DOUBLE_COMPLEX), allocatable :: in(:), out(:)       
+      type(c_ptr) :: plan, ptr_in, ptr_out
+      complex(C_DOUBLE_COMPLEX), pointer :: in(:), out(:)       
 #endif
    contains 
       procedure :: init => t_fft_init
@@ -64,15 +64,19 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         allocate(fft%in(product(length)))
-         allocate(fft%out(product(length)))
+         ! allocate(fft%in(product(length)))
+         ! allocate(fft%out(product(length)))
          !$OMP critical
+         fft%ptr_in = fftw_alloc_complex(int(product(length), C_SIZE_T))
+         call c_f_pointer(fft%ptr_in, fft%in, [product(length)])
+         fft%ptr_out = fftw_alloc_complex(int(product(length), C_SIZE_T))
+         call c_f_pointer(fft%ptr_out, fft%out, [product(length)])
          if(fft%forw) then
             fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_FORWARD,FFTW_ESTIMATE) 
+                                        fft%in, fft%out, FFTW_FORWARD,FFTW_MEASURED) 
          else
             fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_ESTIMATE) 
+                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_MEASURED) 
          endif
          !$OMP end critical
 #endif
@@ -239,10 +243,12 @@ contains
 #ifdef CPP_FFTW
       !$OMP critical
       call fftw_destroy_plan(fft%plan)
+      call fftw_free(fft%ptr_in)
+      call fftw_free(fft%ptr_out)
       !$OMP end critical
       fft%plan  = c_null_ptr
-      if(allocated(fft%in)) deallocate(fft%in)
-      if(allocated(fft%out)) deallocate(fft%out)       
+      ! if(allocated(fft%in)) deallocate(fft%in)
+      ! if(allocated(fft%out)) deallocate(fft%out)       
 #endif
       select case(fft%backend)
 #ifdef CPP_SPFFT
