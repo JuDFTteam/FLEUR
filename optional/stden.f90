@@ -65,9 +65,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
 
    IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
 
-!   IF (input%jspins.EQ.2 .AND. MAXVAL(ABS(atoms%econf(:)%occupation(:,1)-atoms%econf(:)%occupation(:,2))).EQ.0 ) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any acutal polarization given in the systems occupation. You're sure you want that?", calledby = "stden")
-
-
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
@@ -321,6 +318,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
          CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
    END IF ! mpi%irank == 0
+   
    DEALLOCATE ( rat,eig )
    DEALLOCATE ( rh,rh1)
    DEALLOCATE ( vbar,sigm )
