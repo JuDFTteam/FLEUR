@@ -237,7 +237,9 @@ contains
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
 #ifdef CPP_FFTW
+      !$OMP critical
       call fftw_destroy_plan(fft%plan)
+      !$OMP end critical
       fft%plan  = c_null_ptr
       if(allocated(fft%in)) deallocate(fft%in)
       if(allocated(fft%out)) deallocate(fft%out)       
