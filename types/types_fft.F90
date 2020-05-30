@@ -73,10 +73,10 @@ contains
          call c_f_pointer(fft%ptr_out, fft%out, [product(length)])
          if(fft%forw) then
             fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_FORWARD,FFTW_MEASURED) 
+                                        fft%in, fft%out, FFTW_FORWARD,FFTW_MEASURE) 
          else
             fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_MEASURED) 
+                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_MEASURE) 
          endif
          !$OMP end critical
 #endif
