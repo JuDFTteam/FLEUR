@@ -133,11 +133,11 @@ CONTAINS
 
 
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0
-      !$OMP PARALLEL default(none) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned) &
-      !$OMP reduction(+: t_2ndwavef2rs, time_fft, t_sort)
+      !!$OMP PARALLEL default(none) &
+      !!$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
+      !!$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
+      !!$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned) &
+      !!$OMP reduction(+: t_2ndwavef2rs, time_fft, t_sort)
 
       allocate(prod(0:fftd-1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc prod")
@@ -146,7 +146,7 @@ CONTAINS
 
       ! this one can't be SpFFT
       call fft%init(length_zfft, .true.)
-      !$OMP DO 
+      !!$OMP DO 
       do iband = 1,hybdat%nbands(ik)
          t_start = cputime()
          call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
@@ -184,10 +184,10 @@ CONTAINS
             t_sort = t_sort + cputime() - t_start
          enddo 
       enddo
-      !$OMP END DO
+      !!$OMP END DO
       deallocate(prod, psi_k)
       call fft%free()
-      !$OMP END PARALLEL 
+      !!$OMP END PARALLEL 
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()
@@ -223,8 +223,8 @@ CONTAINS
       psi = 0.0
       n_threads = 1
       me = 1
-      !$OMP PARALLEL default(none) private(nu, iv, n_threads, me, fft) &
-      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      ! a!$OMP PARALLEL default(none) private(nu, iv, n_threads, me, fft) &
+      ! !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       
       call fft%init(length_zfft, .false.)
      
@@ -240,9 +240,9 @@ CONTAINS
          ENDDO
          call fft%exec(psi(:,nu))
       enddo
-      !$OMP ENDDO
+      !!$OMP ENDDO
       call fft%free()
-      !$OMP END PARALLEL
+      !!$OMP END PARALLEL
    end subroutine wavef2rs
 
 end module m_wavefproducts_aux
