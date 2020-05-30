@@ -31,6 +31,10 @@ module m_types_fft
       COMPLEX(C_DOUBLE_COMPLEX), ALLOCATABLE :: recSpaceFunction(:)
       COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
 #endif
+#ifdef CPP_FFTW
+      type(c_ptr) :: plan  
+      complex(C_DOUBLE_COMPLEX), allocatable :: in(:), out(:)       
+#endif
    contains 
       procedure :: init => t_fft_init
       procedure :: exec => t_fft_exec
@@ -58,6 +62,21 @@ contains
       fft%forw    = forw
 
       select case(fft%backend)
+#ifdef CPP_FFTW
+      case(FFTW_const)
+         allocate(fft%in(product(length)))
+         allocate(fft%out(product(length)))
+         !$OMP critical
+         if(fft%forw) then
+            fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                        fft%in, fft%out, FFTW_FORWARD,FFTW_ESTIMATE) 
+         else
+            fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_ESTIMATE) 
+         endif
+         !$OMP end critical
+#endif
+
 #ifdef CPP_SPFFT
       case(spFFT_const)
          fft%indices = indices
@@ -139,6 +158,12 @@ contains
       size_dat = product(fft%length)
 
       select case(fft%backend)
+#ifdef CPP_FFTW
+      case(fftw_const)
+         fft%in = dat
+         call fftw_execute_dft(fft%plan, fft%in, fft%out)
+         dat = fft%out
+#endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
          IF (fft%forw) THEN
@@ -211,7 +236,12 @@ contains
 
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
- 
+#ifdef CPP_FFTW
+      call fftw_destroy_plan(fft%plan)
+      fft%plan  = c_null_ptr
+      if(allocated(fft%in)) deallocate(fft%in)
+      if(allocated(fft%out)) deallocate(fft%out)       
+#endif
       select case(fft%backend)
 #ifdef CPP_SPFFT
       case(spFFT_const)

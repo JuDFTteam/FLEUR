@@ -1,4 +1,4 @@
-include_directories("/usr/include")
+#include_directories("/usr/include")
 #First check if we can compile with FFT from FFTW
 try_compile(FLEUR_USE_FFTW ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_FFTW.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES} 

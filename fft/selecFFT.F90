@@ -15,7 +15,7 @@ MODULE m_selecFFT
    LOGICAL, PARAMETER :: mklFFT_available = .FALSE.
 #endif
 
-#ifdef CPP_fftw
+#ifdef CPP_FFTW
    LOGICAL, PARAMETER :: fftw_available = .TRUE.
 #else
    LOGICAL, PARAMETER :: fftw_available = .FALSE.
@@ -37,7 +37,7 @@ MODULE m_selecFFT
       INTEGER :: fftRoutine
 
       fftRoutine = defaultFFT_const
-#ifdef CPP_fftw
+#ifdef CPP_FFTW
       fftRoutine = fftw_const
 #endif
 
