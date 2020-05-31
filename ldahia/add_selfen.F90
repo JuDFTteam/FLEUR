@@ -212,7 +212,7 @@ MODULE m_add_selfen
       ENDDO
 
       !Get the occupation matrix
-      CALL occmtx(g,i_gf,gfinp,input,mmpMat,l_invalidElements,check=.TRUE.)
+      CALL occmtx(g,i_gf,gfinp,input,mmpMat,l_invalidElements,check=.TRUE.,occError=l_invalidElements)
 
       !Compute the trace
       nocc = 0.0

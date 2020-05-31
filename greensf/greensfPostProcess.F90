@@ -33,7 +33,6 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
-      LOGICAL  err
 
 #ifdef CPP_HDF
       INTEGER(HID_T) :: greensf_fileID
@@ -60,7 +59,7 @@ MODULE m_greensfPostProcess
             !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
             !IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
             !Occupation matrix
-            CALL occmtx(greensFunction(i_gf),i_gf,gfinp,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
+            CALL occmtx(greensFunction(i_gf),i_gf,gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
          ENDDO
          CALL timestop("Green's Function: Occupation/DOS")
 

@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,i_gf,gfinp,input,mmpMat,err,l_write,check)
+   SUBROUTINE occmtx(g,i_gf,gfinp,input,mmpMat,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -26,9 +26,9 @@ MODULE m_occmtx
       TYPE(t_input),          INTENT(IN)    :: input
       INTEGER,                INTENT(IN)    :: i_gf
       COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
-      LOGICAL,                INTENT(INOUT) :: err
       LOGICAL, OPTIONAL,      INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
       LOGICAL, OPTIONAL,      INTENT(IN)    :: check
+      LOGICAL, OPTIONAL,      INTENT(INOUT) :: occError
 
 
 
@@ -103,23 +103,24 @@ MODULE m_occmtx
          ENDDO
       ENDDO
 
-      err = .FALSE.
       !Sanity check are the occupations reasonable?
       IF(PRESENT(check)) THEN
          IF(check) THEN
+            IF(PRESENT(occError)) occError = .FALSE.
             DO ispin = 1, input%jspins
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)
                   IF(REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).GT.1.05&
                      .OR.REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).LT.-0.01) THEN
-                     err = .TRUE.
+
+                     IF(PRESENT(occError)) occError = .TRUE.
                      WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
                      CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                   ENDIF
                ENDDO
                IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
-                  err = .TRUE.
+                  IF(PRESENT(occError)) occError = .TRUE.
                   WRITE(message,9100) ispin,tr
                   CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                ENDIF

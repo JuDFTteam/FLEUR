@@ -23,8 +23,8 @@ MODULE m_hubbard1_setup
 #endif
 #include"cpp_double.h"
 
-   CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
-   CHARACTER(len=30), PARAMETER :: out_file    = "out"
+   CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
+   CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"
 
    CONTAINS
 
@@ -48,7 +48,7 @@ MODULE m_hubbard1_setup
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
       REAL    :: mu_dc
-      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,occ_err
+      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=2)   :: l_type
@@ -79,7 +79,7 @@ MODULE m_hubbard1_setup
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
-         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
+         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(hubbard1CalcFolder))
          CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
          !Remove everything from the last iteration (Good Idea??)
          CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
@@ -116,7 +116,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
+            CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
@@ -248,7 +248,7 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
          !Open the output file for the solver
          hubbardioUnit = 4000+i_hia
-         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(out_file)),&
+         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(hubbard1Outfile)),&
               status="replace", action="write", iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
          e = gdft(i_hia)%contour%e*hartree_to_ev_const
@@ -282,10 +282,10 @@ MODULE m_hubbard1_setup
          ! We introduce an additional chemical potential mu, which is determined
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
-         CALL timestart("Hubbard 1: Add Selfenenergy")
+         CALL timestart("Hubbard 1: Add Selfenergy")
          CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),gfinp,input,noco,&
                          n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
-         CALL timestop("Hubbard 1: Add Selfenenergy")
+         CALL timestop("Hubbard 1: Add Selfenergy")
 
       ENDDO
 
@@ -352,7 +352,7 @@ MODULE m_hubbard1_setup
 
       !Defines the folder structure
       ! The Solver is run in the subdirectories
-      ! Hubbard1/ if only one Hubbard1 prodcedure is run
+      ! Hubbard1/ if only one Hubbard1 procedure is run
       ! Hubbard1/atom_label_l if there are more
 
       TYPE(t_atoms),       INTENT(IN)  :: atoms
@@ -360,17 +360,15 @@ MODULE m_hubbard1_setup
       CHARACTER(len=300),  INTENT(OUT) :: xPath
 
       CHARACTER(len=300) :: folder,fmt
-      CHARACTER(len=1)   :: l_name(0:3)
+      CHARACTER(len=1),PARAMETER :: spdfg(0:4) = ['s','p','d','f','g']
       INTEGER nType,l
-
-      l_name(0:3) = ["s","p","d","f"]
 
       nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
       l = atoms%lda_u(atoms%n_u+i_hia)%l
-      xPath = TRIM(ADJUSTL(main_folder))
+      xPath = TRIM(ADJUSTL(hubbard1CalcFolder))
       IF(atoms%n_hia>1) THEN
          WRITE(fmt,'("(A",I2.2,",A1,A1,A1)")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-         WRITE(folder,fmt) TRIM(ADJUSTL(atoms%label(nType))),"_",l_name(l),"/"
+         WRITE(folder,fmt) TRIM(ADJUSTL(atoms%label(nType))),"_",spdfg(l),"/"
       ELSE
          folder=""
       ENDIF
