@@ -42,7 +42,7 @@ MODULE m_hubbard1_setup
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
-      INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm,n
+      INTEGER :: i_hia,nType,l,n_occ,ispin,m,i_exc,n
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd,i_gf
       INTEGER :: hubbardioUnit
@@ -51,8 +51,6 @@ MODULE m_hubbard1_setup
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
-      CHARACTER(len=2)   :: l_type
-      CHARACTER(len=9)   :: l_form
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
