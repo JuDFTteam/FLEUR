@@ -59,7 +59,7 @@ MODULE m_greensfPostProcess
             !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
             !IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
             !Occupation matrix
-            CALL occmtx(greensFunction(i_gf),i_gf,gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+            CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
          ENDDO
          CALL timestop("Green's Function: Occupation/DOS")
 

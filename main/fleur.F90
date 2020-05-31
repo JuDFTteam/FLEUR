@@ -174,7 +174,7 @@ CONTAINS
     ALLOCATE(greensFunction(MAX(1,fi%gfinp%n)))
     IF(fi%gfinp%n>0) THEN
        DO i_gf = 1, fi%gfinp%n
-          CALL greensFunction(i_gf)%init(i_gf,fi%gfinp,fi%input,fi%noco)
+          CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf),fi%gfinp,fi%input)
        ENDDO
     ENDIF
     ! Initialize Green's function (end)

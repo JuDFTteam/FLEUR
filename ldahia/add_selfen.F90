@@ -35,7 +35,7 @@ MODULE m_add_selfen
       TYPE(t_greensf),  INTENT(INOUT)  :: g
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER :: l,ispin,m,mp,i_gf
+      INTEGER :: l,ispin,m,mp
       INTEGER :: nMatch,iMatch
       REAL    :: mu_a,mu_b,mu_step
       REAL    :: mu,nocc,nTarget,muMax,nMax
@@ -48,8 +48,7 @@ MODULE m_add_selfen
       !Are we matching the spin polarized self-energy with one chemical potential
       l_fullMatch = nMatch.EQ.1!.AND.input%jspins.EQ.2
 
-      i_gf = gfinp%hiaElem(i_hia)
-      l = gfinp%elem(i_gf)%l
+      l = g0%elem%l
 
       !Search for the maximum of occupation
       DO iMatch = 1, nMatch
@@ -78,7 +77,7 @@ MODULE m_add_selfen
 
             mu = mu + mu_step
 
-            CALL getOccupationMtx(g0,i_gf,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+            CALL getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
                                   g,mmpMat,nocc,l_invalidElements)
 
             IF(nocc.GT.nMax) THEN
@@ -113,7 +112,7 @@ MODULE m_add_selfen
          DO WHILE (ABS(nocc-nTarget).GT.1e-8.AND.ABS((mu_b - mu_a)/2.0).GT.1e-8)
             mu = (mu_a + mu_b)/2.0
 
-            CALL getOccupationMtx(g0,i_gf,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+            CALL getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
                                   g,mmpMat,nocc,l_invalidElements)
 
             IF((nocc - nTarget).GT.0.0) THEN
@@ -146,13 +145,12 @@ MODULE m_add_selfen
 
    END SUBROUTINE add_selfen
 
-   SUBROUTINE getOccupationMtx(g0,i_gf,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+   SUBROUTINE getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
                                g,mmpMat,nocc,l_invalidElements)
 
       USE m_occmtx
 
       TYPE(t_greensf),     INTENT(IN)    :: g0           !DFT Green's Function
-      INTEGER,             INTENT(IN)    :: i_gf         !Index in elem array
       TYPE(t_gfinp),       INTENT(IN)    :: gfinp
       TYPE(t_input),       INTENT(IN)    :: input
       TYPE(t_selfen),      INTENT(IN)    :: selfen       !Atomic self-energy (with removed LDA+U potential)
@@ -169,7 +167,7 @@ MODULE m_add_selfen
 
       TYPE(t_mat) :: vmat,gmat
 
-      l = gfinp%elem(i_gf)%l
+      l = g0%elem%l
       ns = 2*l+1
       matsize = ns*MERGE(2,1,l_fullMatch)
       CALL vmat%init(.false.,matsize,matsize)
@@ -191,9 +189,9 @@ MODULE m_add_selfen
 
             !Read in the DFT-Green's Function at the energy point
             IF(l_fullMatch) THEN
-               CALL g0%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+               CALL g0%get(iz,ipm.EQ.2,gmat)
             ELSE
-               CALL g0%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=iMatch)
+               CALL g0%get(iz,ipm.EQ.2,gmat,spin=iMatch)
             ENDIF
 
             !----------------------------------------------------
@@ -203,16 +201,16 @@ MODULE m_add_selfen
 
             !Set the Impurity-Green's Function at the energy point
             IF(l_fullMatch) THEN
-               CALL g%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
+               CALL g%set(iz,ipm.EQ.2,gmat)
             ELSE
-               CALL g%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=iMatch)
+               CALL g%set(iz,ipm.EQ.2,gmat,spin=iMatch)
             ENDIF
 
          ENDDO
       ENDDO
 
       !Get the occupation matrix
-      CALL occmtx(g,i_gf,gfinp,input,mmpMat,l_invalidElements,check=.TRUE.,occError=l_invalidElements)
+      CALL occmtx(g,gfinp,input,mmpMat,check=.TRUE.,occError=l_invalidElements)
 
       !Compute the trace
       nocc = 0.0

@@ -81,7 +81,7 @@ MODULE m_types_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
-   PUBLIC t_gfinp, t_contourInp
+   PUBLIC t_gfinp, t_contourInp, t_gfelementtype
    PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
    PUBLIC uniqueElements_gfinp
 

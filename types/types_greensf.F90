@@ -43,6 +43,9 @@ MODULE m_types_greensf
       !Energy contour parameters
       TYPE(t_greensfContourData) :: contour
 
+      !Pointer to the element type in gfinp
+      TYPE(t_gfelementtype), POINTER :: elem => NULL()
+
       !Arrays for Green's function
       COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:)
 
@@ -65,20 +68,21 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE init_greensf(this,i_gf,gfinp,input,noco,contour_in)
+      SUBROUTINE init_greensf(this,gfelem,gfinp,input,contour_in)
 
-         CLASS(t_greensf),    INTENT(INOUT)  :: this
-         INTEGER,             INTENT(IN)     :: i_gf
-         TYPE(t_gfinp),       INTENT(IN)     :: gfinp
-         TYPE(t_input),       INTENT(IN)     :: input
-         TYPE(t_noco),        INTENT(IN)     :: noco !Stays for now until everyting clear
+         CLASS(t_greensf),             INTENT(INOUT)  :: this
+         TYPE(t_gfelementtype), TARGET,INTENT(IN)     :: gfelem
+         TYPE(t_gfinp),                INTENT(IN)     :: gfinp
+         TYPE(t_input),                INTENT(IN)     :: input
          !Pass a already calculated energy contour to the type
          TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)   :: contour_in
 
          INTEGER spin_dim,lmax
 
+         this%elem => gfelem
+
          !Initialize the contour
-         CALL this%contour%init(gfinp%contour(gfinp%elem(i_gf)%iContour),contour_in=contour_in)
+         CALL this%contour%init(gfinp%contour(this%elem%iContour),contour_in=contour_in)
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
@@ -152,7 +156,7 @@ MODULE m_types_greensf
 #endif
       END SUBROUTINE collect_greensf
 
-      SUBROUTINE get_gf(this,i_gf,gmat,gfinp,input,iz,l_conjg,spin,u,udot)
+      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,u,udot)
 
          USE m_types_mat
 
@@ -160,12 +164,8 @@ MODULE m_types_greensf
          !when jr (and jrp) are given return for that radial point
 
          CLASS(t_greensf),    INTENT(IN)  :: this
-         TYPE(t_input),       INTENT(IN)  :: input
-         TYPE(t_gfinp),       INTENT(IN)  :: gfinp
          TYPE(t_mat),         INTENT(OUT) :: gmat !Return matrix
-
          INTEGER,             INTENT(IN)  :: iz
-         INTEGER,             INTENT(IN)  :: i_gf
          LOGICAL,             INTENT(IN)  :: l_conjg
          INTEGER, OPTIONAL,   INTENT(IN)  :: spin
          REAL   , OPTIONAL,   INTENT(IN)  :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
@@ -180,13 +180,13 @@ MODULE m_types_greensf
             CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
          ENDIF
 
-         l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
-         atomType  = gfinp%elem(i_gf)%atomType
-         atomTypep = gfinp%elem(i_gf)%atomTypep
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType  = this%elem%atomType
+         atomTypep = this%elem%atomTypep
 
-         IF(PRESENT(u).OR.PRESENT(udot).AND.gfinp%l_sphavg) THEN
-            CALL juDFT_error("Greens function not calculated for radial dependence", calledby="get_gf")
+         IF(PRESENT(u).OR.PRESENT(udot).AND.ALLOCATED(this%gmmpMat)) THEN
+            CALL juDFT_error("Green's function not calculated for radial dependence", calledby="get_gf")
          ENDIF
 
          IF((PRESENT(u).AND..NOT.PRESENT(udot)).OR.&
@@ -197,7 +197,7 @@ MODULE m_types_greensf
          l_radial = PRESENT(u).AND.PRESENT(udot)
 
          IF(PRESENT(spin)) THEN
-            IF(spin.GT.4.OR.spin.LT.1) THEN
+            IF(spin.GT.4 .OR. spin.LT.1) THEN
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
             ENDIF
          END IF
@@ -216,7 +216,7 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = cmplx_0
-         ispin_end = MERGE(4,2,gfinp%l_mperp)
+         ispin_end = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the corresponding physical spin indices
@@ -231,7 +231,7 @@ MODULE m_types_greensf
                spin2 = 2
             ENDIF
             !Find the correct spin index in gmmpMat arrays
-            spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
+            spin_ind = MERGE(1,ispin,SIZE(this%gmmpMat,4).EQ.1)
             spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
             !Find the right quadrant in gmat
             IF(l_full) THEN
@@ -252,7 +252,7 @@ MODULE m_types_greensf
                   !-------------------------------------------------------------------
                   ! Check wether we need to do some operation on the indices m and mp
                   !-------------------------------------------------------------------
-                  IF(ispin.EQ.2.AND.input%jspins.EQ.1) THEN
+                  IF(ispin.EQ.2 .AND. SIZE(this%gmmpMat,4).EQ.1) THEN
                      !For a non-spin-polarized calculation we might still want the full
                      !matrix. Then we need to reverse the order (SOC prop m*s_z)
                      m_ind  = -m
@@ -282,7 +282,7 @@ MODULE m_types_greensf
                   ! Additional operations
                   !------------------------
                   !Spin-degeneracy when using a full matrix and having input%jspins.EQ.1
-                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3.0-input%jspins)
+                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) * MERGE(0.5,1.0,SIZE(this%gmmpMat,4).EQ.1)
                   !Complex conjugate for spin 4
                   IF(ispin.EQ.4) gmat%data_c(ind1,ind2) = conjg(gmat%data_c(ind1,ind2))
 
@@ -292,7 +292,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE set_gf(this,i_gf,gmat,gfinp,input,iz,l_conjg,spin)
+      SUBROUTINE set_gf(this,iz,l_conjg,gmat,spin)
 
          USE m_types_mat
 
@@ -300,34 +300,33 @@ MODULE m_types_greensf
          !equal to gmat
 
          CLASS(t_greensf),    INTENT(INOUT)  :: this
-         TYPE(t_gfinp),       INTENT(IN)     :: gfinp
-         TYPE(t_input),       INTENT(IN)     :: input
          TYPE(t_mat),         INTENT(IN)     :: gmat
-
          INTEGER,             INTENT(IN)     :: iz
-         INTEGER,             INTENT(IN)     :: i_gf
          LOGICAL,             INTENT(IN)     :: l_conjg
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,ispin_end
+         LOGICAL l_full
+
 
          this%l_calc = .TRUE. !If its set it counts as calculated
 
-         l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
-         atomType  = gfinp%elem(i_gf)%atomType
-         atomTypep = gfinp%elem(i_gf)%atomTypep
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType  = this%elem%atomType
+         atomTypep = this%elem%atomTypep
 
          IF(PRESENT(spin)) THEN
-            IF(spin.GT.4.OR.spin.LT.1) THEN
+            IF(spin.GT.4 .OR. spin.LT.1) THEN
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
             ENDIF
          ENDIF
 
+         l_full = .NOT.PRESENT(spin)
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
-         matsize1 = (2*l+1) * MERGE(1,2,PRESENT(spin))
-         matsize2 = (2*lp+1) * MERGE(1,2,PRESENT(spin))
+         matsize1 = (2*l+1) * MERGE(2,1,l_full)
+         matsize2 = (2*lp+1) * MERGE(2,1,l_full)
 
          !Check the expected matsizes against the actual
          IF(matsize1.NE.gmat%matsize1.OR.matsize2.NE.gmat%matsize2) THEN
@@ -336,12 +335,12 @@ MODULE m_types_greensf
 
          ipm = MERGE(2,1,l_conjg)
 
-         ispin_end = MERGE(3,input%jspins,gfinp%l_mperp)
+         ispin_end = SIZE(this%gmmpMat,4)
 
-         DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
+         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
-            IF(ispin.EQ.2 .AND.input%jspins.EQ.1) CYCLE
-            IF(.NOT.PRESENT(spin)) THEN
+            IF(ispin.EQ.2 .AND.SIZE(this%gmmpMat,4).EQ.1) CYCLE
+            IF(l_full) THEN
                IF(ispin < 3) THEN
                   spin1 = ispin
                   spin2 = ispin
@@ -364,7 +363,8 @@ MODULE m_types_greensf
                ind2 = ind2_start
                DO mp = -lp,lp
                   ind2 = ind2 + 1
-                  this%gmmpMat(iz,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)*MERGE(1.0,2.0/input%jspins,PRESENT(spin))
+                  this%gmmpMat(iz,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)
+                  IF(l_full) this%gmmpMat(iz,m,mp,ispin,ipm) = this%gmmpMat(iz,m,mp,ispin,ipm) * MERGE(2.0,1.0,SIZE(this%gmmpMat,4).EQ.1)
                ENDDO
             ENDDO
          ENDDO
