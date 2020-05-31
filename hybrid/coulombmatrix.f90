@@ -1274,7 +1274,7 @@ CONTAINS
       INTEGER                   ::  conv(0:2*hybinp%lexp)
       INTEGER, ALLOCATABLE     ::  pnt(:), ptsh(:, :)
 
-      REAL                      ::  rc(3), ra(3), k(3), ki(3), ka(3)
+      REAL                      ::  rc(3), ra(3), k(3), ki(3), ka(3), tmp_vec(3)
       REAL                      ::  convpar(0:2*hybinp%lexp), g(0:2*hybinp%lexp)
       REAL, ALLOCATABLE     ::  radsh(:)
 
@@ -1377,9 +1377,14 @@ CONTAINS
       DO ic2 = 1, atoms%nat
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
-            rc = MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
+            !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
+            tmp_vec = atoms%taual(:, ic2) - atoms%taual(:, ic1)
+            call dgemv("N", 3,3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, rc, 1)
             DO i = 1, nptsh
-               ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               tmp_vec = real(ptsh(:, i))
+               call dgemv("N", 3,3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
+               ra = ra + rc
                a = norm2(ra)
                radsh(i) = a
             END DO
@@ -1398,7 +1403,11 @@ CONTAINS
                IF (i /= 1) THEN
                   IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
                ENDIF
-               ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               tmp_vec = real(ptsh(:, i))
+               call dgemv("N", 3,3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
+               ra = ra + rc
+               
                a = scale*norm2(ra)
                IF (abs(a) < 1e-12) THEN
                   CYCLE
