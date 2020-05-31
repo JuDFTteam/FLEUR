@@ -334,7 +334,7 @@ contains
       real, intent(in)  :: olap(:, :)
       real, allocatable :: eig_val(:), eig_vec(:, :)
 
-      integer              :: n, size_iwork, info
+      integer              :: n, size_iwork(1), info
       real                 :: size_work(1)
       integer, allocatable :: iwork(:)
       real, allocatable    :: work(:)
@@ -359,10 +359,10 @@ contains
       if(info /= 0) call juDFT_error("diagonalization for size failed")
 
       allocate(work(int(size_work(1))))
-      allocate(iwork(size_iwork))
+      allocate(iwork(size_iwork(1)))
 
       call dsyevd('V', 'U', n, eig_vec, n, eig_val, &
-                  work, int(size_work(1)), iwork, size_iwork, info)
+                  work, int(size_work(1)), iwork, size_iwork(1), info)
       if(info /= 0) call juDFT_error("diagonalization failed")
       call timestop("diagonalize overlap")
    end subroutine mpdata_diagonialize_olap
