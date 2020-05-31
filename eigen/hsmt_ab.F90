@@ -41,7 +41,7 @@ CONTAINS
     COMPLEX :: ylm((atoms%lmaxd+1)**2)
     COMPLEX,ALLOCATABLE:: c_ph(:,:)
     REAL,ALLOCATABLE   :: gkrot(:,:)
-    LOGICAL :: l_apw
+    LOGICAL :: l_apw, l_pres_abclo
 
     ALLOCATE(c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot)))
     ALLOCATE(gkrot(3,maxval(lapw%nv)))
@@ -68,10 +68,11 @@ CONTAINS
           gkrot(:,k) = MATMUL(TRANSPOSE(bmrot),v)
        END DO
     END IF
+    l_pres_abclo = PRESENT(abclo)
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin) &
+    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,l_pres_abclo) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
 #else
     !$acc kernels present(ab)
@@ -96,7 +97,7 @@ CONTAINS
        END DO
        !$acc end loop 
        IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)
-       IF (PRESENT(abclo)) THEN
+       IF (l_pres_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
           term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
