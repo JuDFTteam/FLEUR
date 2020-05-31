@@ -32,6 +32,8 @@ set(fleur_F90 ${fleur_F90}
    hybrid/calc_mpsmat.f90
    hybrid/reorder.f90
    hybrid/spmm.f90
+   hybrid/sphbessel_integral.f90
+   hybrid/structureconstant.f90
    hybrid/util/util.f90
    hybrid/util/rorder.f90
    hybrid/util/intgrf.f90
