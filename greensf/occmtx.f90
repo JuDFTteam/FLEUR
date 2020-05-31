@@ -50,7 +50,7 @@ MODULE m_occmtx
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
          WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
-      mmpMat = cmlx_0
+      mmpMat = cmplx_0
 
       DO ispin = 1, SIZE(g%gmmpMat,4)
          DO ipm = 1, 2
