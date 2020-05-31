@@ -31,8 +31,8 @@ MODULE m_occmtx
 
 
 
-      INTEGER ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns
-      REAL    re,imag,nup,ndwn,nhi,nlow,tr
+      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns
+      REAL    :: re,imag,nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=300) :: message
       TYPE(t_contourInp) :: contourInp
@@ -50,7 +50,7 @@ MODULE m_occmtx
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
          WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
-      mmpMat = 0.0
+      mmpMat = cmlx_0
 
       DO ispin = 1, SIZE(g%gmmpMat,4)
          DO ipm = 1, 2
