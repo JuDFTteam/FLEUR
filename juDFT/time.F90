@@ -107,6 +107,7 @@ CONTAINS
 
       if(.not. found) then
          call priv_new_timer(ttimer)
+         ptr_timer => current_timer
          current_timer => current_timer%parenttimer
       endif
       call priv_debug_output(" finished ", ttimer)
