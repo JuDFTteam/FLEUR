@@ -46,6 +46,7 @@ MODULE m_tetrahedronInit
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
       REAL    :: w(1),etetra(4),fac,vol
       REAL    :: weightSum_Band
+      logical :: l_weights_pres
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
          CALL juDFT_error("No output variable provided (either weightSum or weights)",&
@@ -77,8 +78,9 @@ MODULE m_tetrahedronInit
             IF(ikpt.GT.kpts%nkpt) CYCLE
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             vol = kpts%voltet(itet)/kpts%ntet*fac
+            l_weights_pres = PRESENT(weights)
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,vol) &
+            !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,vol, l_weights_pres) &
             !$OMP SHARED(kpts,eig,weights,efermi,weightSum) &
             !$OMP PRIVATE(iband,etetra,w,weightSum_Band)
             weightSum_Band = 0.0
@@ -93,7 +95,7 @@ MODULE m_tetrahedronInit
                CALL getWeightSingleBand([efermi],etetra(:ncorn),ikpt,kpts%ntetra(:,itet),&
                                         vol,film,.FALSE.,w)
 
-               IF(PRESENT(weights)) weights(iband,ikpt) = weights(iband,ikpt) + w(1)
+               IF(l_weights_pres) weights(iband,ikpt) = weights(iband,ikpt) + w(1)
                weightSum_Band = weightSum_Band + w(1)
             ENDDO
             !$OMP END DO
@@ -124,7 +126,7 @@ MODULE m_tetrahedronInit
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
       INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
-      LOGICAL :: l_dos
+      LOGICAL :: l_dos, l_bounds_pres
       REAL    :: etetra(4),del,fac,vol
       REAL, ALLOCATABLE :: dos_weights(:)
       !Temporary Arrays to include end points
@@ -187,13 +189,13 @@ MODULE m_tetrahedronInit
          !$OMP END PARALLEL
       ENDDO
 
-
+      l_bounds_pres = PRESENT(bounds)
       !-------------------------------------
       ! PostProcess weights
       !-------------------------------------
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(neig,l_dos,ne,del) &
-      !$OMP SHARED(calc_weights,weights,bounds) &
+      !$OMP SHARED(calc_weights,weights,bounds, l_bounds_pres) &
       !$OMP PRIVATE(iband,dos_weights,ie)
       IF(l_dos) ALLOCATE(dos_weights(ne+2),source=0.0)
       !$OMP DO SCHEDULE(DYNAMIC,1)
@@ -210,7 +212,7 @@ MODULE m_tetrahedronInit
          !--------------------------------------------------------------
          ! Find the range where the weights are bigger than weightCutoff
          !--------------------------------------------------------------
-         IF(PRESENT(bounds)) THEN
+         IF(l_bounds_pres) THEN
             !--------------------
             ! Lower bound
             !--------------------
