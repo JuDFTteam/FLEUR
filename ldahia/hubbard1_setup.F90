@@ -283,8 +283,8 @@ MODULE m_hubbard1_setup
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
          CALL timestart("Hubbard 1: Add Selfenenergy")
-         CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),atoms,gfinp,input,noco,hub1inp,&
-                         results%ef,n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
+         CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),gfinp,input,noco,&
+                         n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenenergy")
 
       ENDDO
