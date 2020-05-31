@@ -163,13 +163,13 @@ MODULE m_types_greensf
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !when jr (and jrp) are given return for that radial point
 
-         CLASS(t_greensf),    INTENT(IN)  :: this
-         TYPE(t_mat),         INTENT(OUT) :: gmat !Return matrix
-         INTEGER,             INTENT(IN)  :: iz
-         LOGICAL,             INTENT(IN)  :: l_conjg
-         INTEGER, OPTIONAL,   INTENT(IN)  :: spin
-         REAL   , OPTIONAL,   INTENT(IN)  :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
-         REAL   , OPTIONAL,   INTENT(IN)  :: udot(:,:)
+         CLASS(t_greensf),    INTENT(IN)     :: this
+         INTEGER,             INTENT(IN)     :: iz
+         LOGICAL,             INTENT(IN)     :: l_conjg
+         TYPE(t_mat),         INTENT(INOUT)  :: gmat !Return matrix
+         INTEGER, OPTIONAL,   INTENT(IN)     :: spin
+         REAL   , OPTIONAL,   INTENT(IN)     :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
+         REAL   , OPTIONAL,   INTENT(IN)     :: udot(:,:)
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind,m_ind,mp_ind
@@ -300,9 +300,9 @@ MODULE m_types_greensf
          !equal to gmat
 
          CLASS(t_greensf),    INTENT(INOUT)  :: this
-         TYPE(t_mat),         INTENT(IN)     :: gmat
          INTEGER,             INTENT(IN)     :: iz
          LOGICAL,             INTENT(IN)     :: l_conjg
+         TYPE(t_mat),         INTENT(IN)     :: gmat
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
@@ -364,7 +364,8 @@ MODULE m_types_greensf
                DO mp = -lp,lp
                   ind2 = ind2 + 1
                   this%gmmpMat(iz,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)
-                  IF(l_full) this%gmmpMat(iz,m,mp,ispin,ipm) = this%gmmpMat(iz,m,mp,ispin,ipm) * MERGE(2.0,1.0,SIZE(this%gmmpMat,4).EQ.1)
+                  IF(l_full) this%gmmpMat(iz,m,mp,ispin,ipm) = this%gmmpMat(iz,m,mp,ispin,ipm) &
+                                                               * MERGE(2.0,1.0,SIZE(this%gmmpMat,4).EQ.1)
                ENDDO
             ENDDO
          ENDDO
