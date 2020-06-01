@@ -40,8 +40,8 @@ MODULE m_crystalfield
       INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour,dummy,i_elem
       REAL    tr,xiSOC,del,eb
       COMPLEX vso
-      LOGICAL, PARAMETER :: l_correctMinus = .TRUE.
-      REAL, PARAMETER :: excTolerance = 0.05/hartree_to_ev_const
+      LOGICAL, PARAMETER :: l_correctMinus = .FALSE.
+      REAL, PARAMETER :: excTolerance = 0.2/hartree_to_ev_const
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
