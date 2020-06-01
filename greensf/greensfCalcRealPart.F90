@@ -100,13 +100,13 @@ MODULE m_greensfCalcRealPart
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
 
          !Get the information of ith current element
-         l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
-         nType  = gfinp%elem(i_gf)%atomType
-         nTypep = gfinp%elem(i_gf)%atomTypep
-         contourShape     = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
-         l_fixedCutoffset = gfinp%elem(i_gf)%l_fixedCutoffset
-         fixedCutoff      = gfinp%elem(i_gf)%fixedCutoff
+         l  = g(i_gf)%elem%l
+         lp = g(i_gf)%elem%lp
+         nType  = g(i_gf)%elem%atomType
+         nTypep = g(i_gf)%elem%atomTypep
+         contourShape     = gfinp%contour(g(i_gf)%elem%iContour)%shape
+         l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
+         fixedCutoff      = g(i_gf)%elem%fixedCutoff
 
          CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
 

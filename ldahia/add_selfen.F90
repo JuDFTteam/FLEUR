@@ -4,13 +4,12 @@ MODULE m_add_selfen
    USE m_types_selfen
    USE m_constants
    USE m_juDFT
-   USE m_occmtx
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,i_hia,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
+   SUBROUTINE add_selfen(g0,i_hia,selfen,gfinp,input,noco,occDFT,g,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -26,187 +25,203 @@ MODULE m_add_selfen
       !to the right of the maximum
       !TODO: Parallelization (OMP over chemical potentials in first loop??)
 
-      TYPE(t_greensf),  INTENT(IN)     :: g
+      TYPE(t_greensf),  INTENT(IN)     :: g0
       INTEGER,          INTENT(IN)     :: i_hia
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
-      TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
-      TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_selfen),   INTENT(IN)     :: selfen
-      REAL,             INTENT(IN)     :: ef
-      REAL,             INTENT(IN)     :: n_occ(:)
-      TYPE(t_greensf),  INTENT(INOUT)  :: gp
+      REAL,             INTENT(IN)     :: occDFT(:)
+      TYPE(t_greensf),  INTENT(INOUT)  :: g
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER l,nType,ns,ispin,m,mp,iz,ipm,i_gf
-      INTEGER spin_match,matsize,start,end,i_match
+      INTEGER :: l,ispin,m,mp
+      INTEGER :: nMatch,iMatch
+      REAL    :: mu_a,mu_b,mu_step
+      REAL    :: mu,nocc,nTarget,muMax,nMax
+      LOGICAL :: l_fullMatch,l_invalidElements
       CHARACTER(len=7) filename
 
-      REAL mu_a,mu_b,mu_step,mu_max,n_max
-      REAL mu,n,n_target
-      TYPE(t_mat) :: gmat,vmat
-      LOGICAL l_match_both_spins,err
-
-      spin_match = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
+      nMatch = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
       !Not tested yet for two chemical potentials, so we just take one
-      spin_match=1
+      nMatch=1
       !Are we matching the spin polarized self-energy with one chemical potential
-      l_match_both_spins = spin_match.EQ.1!.AND.input%jspins.EQ.2
+      l_fullMatch = nMatch.EQ.1!.AND.input%jspins.EQ.2
 
-      l = atoms%lda_u(atoms%n_u+i_hia)%l
-      nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-      i_gf = gfinp%hiaElem(i_hia)
-      ns = 2*l+1
-      matsize = ns*MERGE(2,1,l_match_both_spins)
-      CALL vmat%init(.false.,matsize,matsize)
+      l = g0%elem%l
 
       !Search for the maximum of occupation
-      DO i_match = 1, spin_match
+      DO iMatch = 1, nMatch
+
          !Target occupation
-         n_target = MERGE(SUM(n_occ(:)),n_occ(i_match),l_match_both_spins)
+         nTarget = MERGE(SUM(occDFT(:)),occDFT(iMatch),l_fullMatch)
 
 #ifdef CPP_DEBUG
-         WRITE(filename,9000) i_hia,i_match
+         WRITE(filename,9000) i_hia,iMatch
 9000     FORMAT("mu_",I2.2,"_",I1)
-         OPEN(unit=1337+i_hia,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
+         OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
 #endif
 
          !Interval where we expect the correct mu
          mu_a = -2.0
          mu_b = 1.5
          mu_step = 0.01
-         mu_max = 0.0
-         n_max = 0.0
 
+         !----------------------------------------------------
+         ! Scan the given Interval for the maximum Occupation
+         !----------------------------------------------------
          mu = mu_a
-         start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
-         end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
+         muMax = 0.0
+         nMax  = 0.0
          DO WHILE(mu.LE.mu_b)
-            CALL gp%reset()
+
             mu = mu + mu_step
-            DO ipm = 1, 2
-               DO iz = 1, g%contour%nz
-                  !Read selfenergy
-                  vmat%data_c = selfen%data(start:end,start:end,iz,ipm)
-                  IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
-                     !Dismiss spin-off-diagonal elements
-                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                  ENDIF
-                  IF(l_match_both_spins) THEN
-                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                  ELSE
-                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                  ENDIF
-                  CALL add_pot(gmat,vmat,mu)
-                  IF(l_match_both_spins) THEN
-                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                  ELSE
-                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                  ENDIF
-                  CALL gmat%free()
-               ENDDO
-            ENDDO
-            CALL occmtx(gp,i_gf,gfinp,input,mmpMat,err,check=.TRUE.)
-            !Calculate the trace
-            n = 0.0
-            DO ispin = 1, input%jspins
-               DO m = -l, l
-                  n = n + REAL(mmpMat(m,m,ispin))
-               ENDDO
-            ENDDO
-#ifdef CPP_DEBUG
-            WRITE(1337+i_hia,'(2f15.8)') mu,n
-#endif
-            IF(n.GT.n_max) THEN
-               mu_max = mu
-               n_max  = n
+
+            CALL getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+                                  g,mmpMat,nocc,l_invalidElements)
+
+            IF(nocc.GT.nMax) THEN
+               muMax = mu
+               nMax  = nocc
             ENDIF
+
+#ifdef CPP_DEBUG
+            WRITE(1337,'(2f15.8)') mu,nocc
+#endif
+
          ENDDO
 #ifdef CPP_DEBUG
-         CLOSE(1337+i_hia)
+         CLOSE(1337)
 #endif
 
          !Sanity check for the maximum occupation
-         IF(n_max-2*ns.GT.1) THEN
+         IF(nMax-2*(2*l+1).GT.1.0) THEN
             !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
-            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",&
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy: nMax>>2*(2*l+1)",&
+                              calledby="add_selfen")
+         ELSE IF(nMax-nTarget.LT.0.0) THEN
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy: nMax<nTarget",&
                               calledby="add_selfen")
          ENDIF
 
-         IF(n_max-n_target.LT.0.0) THEN
-            CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",&
-                              calledby="add_selfen")
-         ENDIF
-
+         !------------------------------------------------------------------
+         ! Find the matching chemical potential on the right of the maximum
+         !------------------------------------------------------------------
          !Set up the interval for the bisection method (mu_max,mu_b)
-         mu_a = mu_max
-         DO
-            CALL gp%reset()
+         mu_a = muMax
+         DO WHILE (ABS(nocc-nTarget).GT.1e-8.AND.ABS((mu_b - mu_a)/2.0).GT.1e-8)
             mu = (mu_a + mu_b)/2.0
-            DO ipm = 1, 2
-               DO iz = 1, g%contour%nz
-                  !Read selfenergy
-                  vmat%data_c = selfen%data(start:end,start:end,iz,ipm)
-                  IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
-                     !Dismiss spin-off-diagonal elements
-                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                  ENDIF
-                  IF(l_match_both_spins) THEN
-                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                  ELSE
-                     CALL g%get(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                  ENDIF
-                  CALL add_pot(gmat,vmat,mu)
-                  IF(l_match_both_spins) THEN
-                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2)
-                  ELSE
-                     CALL gp%set(i_gf,gmat,gfinp,input,iz,ipm.EQ.2,spin=i_match)
-                  ENDIF
-                  CALL gmat%free()
-               ENDDO
-            ENDDO
-            CALL occmtx(gp,i_gf,gfinp,input,mmpMat,err,check=.TRUE.) !check makes sure that the elements are reasonable
-            !Calculate the trace
-            n = 0.0
-            DO ispin = 1, input%jspins
-               DO m = -l, l
-                  n = n + REAL(mmpMat(m,m,ispin))
-               ENDDO
-            ENDDO
-            IF(ABS(n-n_target).LT.1e-8.OR.ABS((mu_b - mu_a)/2.0).LT.1e-8) THEN
-               !We found the chemical potential to within the desired accuracy
-               WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
-               WRITE(oUnit,'(TR3,a,f8.4)') "muMatch = ", mu
-               !----------------------------------------------------
-               ! Check if the final mmpMat contains invalid elements
-               !----------------------------------------------------
-               IF(err) THEN
-                  CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
-               ENDIF
-               EXIT
-            ELSE IF((n - n_target).GT.0.0) THEN
+
+            CALL getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+                                  g,mmpMat,nocc,l_invalidElements)
+
+            IF((nocc - nTarget).GT.0.0) THEN
                !The occupation is to big --> choose the right interval
                mu_a = mu
-            ELSE IF((n - n_target).LT.0.0) THEN
+            ELSE IF((nocc - nTarget).LT.0.0) THEN
                !The occupation is to small --> choose the left interval
                mu_b = mu
             ENDIF
          ENDDO
+         !We found the chemical potential to within the desired accuracy
+         WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
+         WRITE(oUnit,'(TR3,a,f8.4)') "muMatch = ", mu
+         !----------------------------------------------------
+         ! Check if the final mmpMat contains invalid elements
+         !----------------------------------------------------
+         IF(l_invalidElements) THEN
+            CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
+         ENDIF
       ENDDO
-      CALL vmat%free()
+
       !Test throw out elements smaller than 1e-4
       DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          DO m = -l, l
-            DO mp=-l, l
-               IF(ABS(mmpMat(m,mp,ispin)).LT.1e-4) mmpMat(m,mp,ispin) = 0.0
+            DO mp =-l, l
+               IF(ABS(mmpMat(m,mp,ispin)).LT.1e-4) mmpMat(m,mp,ispin) = cmplx_0
             ENDDO
          ENDDO
       ENDDO
 
    END SUBROUTINE add_selfen
+
+   SUBROUTINE getOccupationMtx(g0,gfinp,input,selfen,mu,l_fullMatch,iMatch,&
+                               g,mmpMat,nocc,l_invalidElements)
+
+      USE m_occmtx
+
+      TYPE(t_greensf),     INTENT(IN)    :: g0           !DFT Green's Function
+      TYPE(t_gfinp),       INTENT(IN)    :: gfinp
+      TYPE(t_input),       INTENT(IN)    :: input
+      TYPE(t_selfen),      INTENT(IN)    :: selfen       !Atomic self-energy (with removed LDA+U potential)
+      REAL,                INTENT(IN)    :: mu           !chemical potential shift
+      LOGICAL,             INTENT(IN)    :: l_fullMatch  !Are spins matched individually?
+      INTEGER,             INTENT(IN)    :: iMatch       !Index for current matching
+      TYPE(t_greensf),     INTENT(INOUT) :: g            !Impurity Green's Function
+      COMPLEX,             INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:) !Occupation matrix of g
+      REAL,                INTENT(INOUT) :: nocc         !trace of the occupation matrix
+      LOGICAL,             INTENT(INOUT) :: l_invalidElements !Are there invalid elements in the resulting Occupation matrix
+
+      INTEGER :: l,ns,matsize,start,end
+      INTEGER :: ipm,iz,ispin,m
+
+      TYPE(t_mat) :: vmat,gmat
+
+      l = g0%elem%l
+      ns = 2*l+1
+      matsize = ns*MERGE(2,1,l_fullMatch)
+      CALL vmat%init(.false.,matsize,matsize)
+      CALL gmat%init(.false.,matsize,matsize)
+      CALL g%reset()
+
+      !Select the correct section from the selfenergy
+      start = MERGE(1,1+(iMatch-1)*ns,l_fullMatch)
+      end   = MERGE(2*ns,iMatch*ns,l_fullMatch)
+      DO ipm = 1, 2
+         DO iz = 1, g0%contour%nz
+            !Read selfenergy
+            vmat%data_c = selfen%data(start:end,start:end,iz,ipm)
+            IF(.NOT.gfinp%l_mperp.AND.l_fullMatch) THEN
+               !Dismiss spin-off-diagonal elements
+               vmat%data_c(1:ns,ns+1:2*ns) = cmplx_0
+               vmat%data_c(ns+1:2*ns,1:ns) = cmplx_0
+            ENDIF
+
+            !Read in the DFT-Green's Function at the energy point
+            IF(l_fullMatch) THEN
+               CALL g0%get(iz,ipm.EQ.2,gmat)
+            ELSE
+               CALL g0%get(iz,ipm.EQ.2,gmat,spin=iMatch)
+            ENDIF
+
+            !----------------------------------------------------
+            !Solve the Dyson equation at the current energy point
+            !----------------------------------------------------
+            CALL add_pot(gmat,vmat,mu)
+
+            !Set the Impurity-Green's Function at the energy point
+            IF(l_fullMatch) THEN
+               CALL g%set(iz,ipm.EQ.2,gmat)
+            ELSE
+               CALL g%set(iz,ipm.EQ.2,gmat,spin=iMatch)
+            ENDIF
+
+         ENDDO
+      ENDDO
+
+      !Get the occupation matrix
+      CALL occmtx(g,gfinp,input,mmpMat,check=.TRUE.,occError=l_invalidElements)
+
+      !Compute the trace
+      nocc = 0.0
+      DO ispin = MERGE(1,iMatch,l_fullMatch), MERGE(input%jspins,iMatch,l_fullMatch)
+         DO m = -l, l
+            nocc = nocc + REAL(mmpMat(m,m,ispin))
+         ENDDO
+      ENDDO
+
+
+   END SUBROUTINE getOccupationMtx
 
    SUBROUTINE add_pot(gmat,vmat,mu)
 
