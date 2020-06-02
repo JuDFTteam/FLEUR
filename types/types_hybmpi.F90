@@ -8,7 +8,6 @@ MODULE m_types_hybmpi
       INTEGER :: comm
       INTEGER :: rank
       INTEGER :: size
-      type(t_hybmpi), pointer :: subcomm
    contains
       procedure :: copy_mpi => t_hybmpi_copy_mpi
       procedure :: barrier => t_hybmpi_barrier
