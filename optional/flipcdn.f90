@@ -199,7 +199,7 @@ END DO
 
    ! write the spin-polarized density
    CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den)
+                     1,-1.0,0.0,.FALSE.,den)
 
    ! read enpara and  flip lines
    INQUIRE(file='enpara',exist=n_exist)
