@@ -105,12 +105,12 @@ CONTAINS
 
        CALL timestart("strgn")
        IF (input%film) THEN
-          CALL strgn1(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
           IF (oneD%odd%d1) THEN
              CALL od_strgn1(xcpot,cell,sym,oneD)
           END IF
+          CALL strgn1(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        ELSE
-          CALL strgn2(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+          CALL strgn2(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        END IF
 
        CALL lapw_fft_dim(cell,input,noco,stars)

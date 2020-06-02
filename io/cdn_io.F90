@@ -964,6 +964,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
+
     l_same=.TRUE.;l_structure_by_shift=.TRUE.
 
     CALL getIOMode(mode)
@@ -1023,9 +1024,10 @@ CONTAINS
     END IF
   END SUBROUTINE transform_by_moving_atoms
 
-  SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
+  SUBROUTINE writeStars(stars,oneD,l_xcExtended,l_ExtData)
 
     TYPE(t_stars),INTENT(IN)   :: stars
+    TYPE(t_oneD),INTENT(IN)    :: oneD
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
 
     INTEGER        :: mode, ngz, izmin, izmax
@@ -1051,7 +1053,7 @@ CONTAINS
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
        currentStarsIndex = currentStarsIndex + 1
-       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
+       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, oneD, .TRUE.)
 
        CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
@@ -1089,14 +1091,16 @@ CONTAINS
     END IF
   END SUBROUTINE writeStars
 
-  SUBROUTINE readStars(stars,l_xcExtended,l_ExtData,l_error)
+  SUBROUTINE readStars(stars,oneD,l_xcExtended,l_ExtData,l_error)
 
     TYPE(t_stars),INTENT(INOUT) :: stars
+    TYPE(t_oneD), INTENT(INOUT) :: oneD
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
     LOGICAL, INTENT(OUT)        :: l_error
 
 
     TYPE(t_stars)               :: starsTemp
+    TYPE(t_oneD)                :: oneDTemp
     INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
     LOGICAL                     :: l_exist, l_same
 
@@ -1129,11 +1133,11 @@ CONTAINS
              CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
              l_same = structureIndexTemp.EQ.currentStructureIndex
              IF(l_same) THEN
-                CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-                CALL compareStars(stars, starsTemp, l_same)
+                CALL readStarsHDF(fileID, currentStarsIndex, starsTemp, oneDTemp)
+                CALL compareStars(stars, starsTemp, oneD, oneDTemp, l_same)
              END IF
              IF(l_same) THEN
-                CALL readStarsHDF(fileID, currentStarsIndex, stars)
+                CALL readStarsHDF(fileID, currentStarsIndex, stars, oneD)
              ELSE
                 mode = CDN_DIRECT_MODE ! (no adequate stars entry found in cdn.hdf file)
              END IF

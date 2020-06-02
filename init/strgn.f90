@@ -13,7 +13,7 @@ MODULE m_strgn
   !     U.Alekseeva          Jan.2019
   !     *********************************************************
 CONTAINS
-  SUBROUTINE strgn1(l_write,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+  SUBROUTINE strgn1(l_write,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
 
     USE m_types
     USE m_constants
@@ -26,6 +26,7 @@ CONTAINS
     IMPLICIT NONE
     LOGICAL,INTENT(IN)           :: l_write
     TYPE(t_stars),INTENT(INOUT)  :: stars
+    TYPE(t_oneD), INTENT(INOUT)  :: oneD
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -66,7 +67,7 @@ CONTAINS
 
     l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
-    CALL readStars(stars,l_xcExtended,.TRUE.,l_error)
+    CALL readStars(stars,oneD,l_xcExtended,.TRUE.,l_error)
     IF(.NOT.l_error) THEN
        GOTO 270
     END IF
@@ -450,7 +451,7 @@ CONTAINS
     !stars%mx2=mxx2
 
     !--->    write /str0/ and /str1/ to file
-    if (l_write) CALL writeStars(stars,l_xcExtended,.TRUE.)
+    if (l_write) CALL writeStars(stars,oneD,l_xcExtended,.TRUE.)
 
 270 CONTINUE
     !
@@ -496,9 +497,7 @@ CONTAINS
 
   END SUBROUTINE strgn1
   !----------------------------------------------------------------
-  SUBROUTINE strgn2(&
-       &                  l_write,stars,sym,atoms,&
-       &                  vacuum,sphhar,input,cell,xcpot)
+  SUBROUTINE strgn2(l_write,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
     USE m_boxdim
     USE m_sort
     USE m_spgrot
@@ -508,6 +507,7 @@ CONTAINS
     IMPLICIT NONE
     LOGICAL,INTENT(IN)           :: l_write
     TYPE(t_stars),INTENT(INOUT)  :: stars
+    TYPE(t_oneD), INTENT(INOUT)  :: oneD
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -515,6 +515,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
+
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,s
@@ -545,7 +546,7 @@ CONTAINS
 
     l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
-    CALL readStars(stars,l_xcExtended,.FALSE.,l_error)
+    CALL readStars(stars,oneD,l_xcExtended,.FALSE.,l_error)
     IF(.NOT.l_error) THEN
        GOTO 270
     END IF
@@ -772,7 +773,7 @@ CONTAINS
 
     !--->    write /str0/ and /str1/ to file
     CALL timestart("writeStars")
-    if (l_write) CALL writeStars(stars,l_xcExtended,.FALSE.)
+    if (l_write) CALL writeStars(stars,oneD,l_xcExtended,.FALSE.)
     CALL timestop("writeStars")
 
 270 CONTINUE

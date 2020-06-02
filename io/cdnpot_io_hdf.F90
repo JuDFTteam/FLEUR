@@ -47,7 +47,7 @@ MODULE m_cdnpot_io_hdf
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_IN_const = 1
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_OUT_const = 2
 
-   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 29
+   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 32
 
    CONTAINS
 
@@ -228,11 +228,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePOTHeaderData
 
-   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, l_checkBroyd)
+   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, oneD, l_checkBroyd)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN) :: stars
+      TYPE(t_oneD),   INTENT(IN) :: oneD
       LOGICAL,        INTENT(IN) :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
@@ -257,6 +258,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: pgfft2SpaceID, pgfft2SetID
       INTEGER(HID_T)                   :: ft2_gfxSpaceID, ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySpaceID, ft2_gfySetID
+
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Writing stars, index: ', starsIndex
+#endif
 
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
@@ -296,6 +301,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'kmxxc_fft',stars%kmxxc_fft)
       CALL io_write_attint0(groupID,'nxc3_fft',stars%nxc3_fft)
       CALL io_write_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
+      CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
       dims(:2)=(/3,stars%ng3/)
       dimsInt=dims
@@ -429,13 +435,15 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writeStarsHDF
 
-   SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
+   SUBROUTINE readStarsHDF(fileID, starsIndex, stars, oneD)
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: starsIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
+      TYPE(t_oneD),   INTENT(INOUT) :: oneD
 
-      INTEGER(HID_T)            :: groupID
+      INTEGER(HID_T)            :: groupID, generalGroupID
+      INTEGER                   :: fileFormatVersion
       INTEGER                   :: hdfError, ft2_gf_dim
       INTEGER                   :: dimsInt(7)
       CHARACTER(LEN=30)         :: groupName
@@ -457,6 +465,15 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: pgfft2SetID
       INTEGER(HID_T)                   :: ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySetID
+
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Reading stars, index: ', starsIndex
+#endif
+
+      CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
+      ! read in file format version from the header '/general'
+      CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
+      CALL h5gclose_f(generalGroupID,hdfError)
 
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
@@ -488,6 +505,9 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'kmxxc_fft',stars%kmxxc_fft)
       CALL io_read_attint0(groupID,'nxc3_fft',stars%nxc3_fft)
       CALL io_read_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
+      IF(fileFormatVersion.GE.32) THEN
+         CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
+      END IF
 
       IF(ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
       IF(ALLOCATED(stars%kv2)) DEALLOCATE(stars%kv2)
@@ -650,6 +670,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Writing step function, index: ', stepfunctionIndex
+#endif
+
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -708,6 +732,10 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER(HID_T)            :: ustepSetID
       INTEGER(HID_T)            :: ufftSetID
+
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Reading step function, index: ', stepfunctionIndex
+#endif
 
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
@@ -797,6 +825,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Writing lattice harmonics, index: ', latharmsIndex
+#endif
+
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -872,6 +904,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: hdfError
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
+
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Reading lattice harmonics, index: ', latharmsIndex
+#endif
 
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
@@ -1006,6 +1042,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_JSpaceID, ldau_JSetID
       !LDA+U IDs (end)
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Writing structure, index: ', structureIndex
+#endif
+
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -1047,7 +1087,8 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attreal0(groupID,'delz',vacuum%delz)
       CALL io_write_attreal0(groupID,'dvac',vacuum%dvac)
 
-      CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
+!      IO of od_nq2 has been moved to stars IO
+!      CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
       CALL io_write_attlog0(groupID,'invs2',sym%invs2)
       CALL io_write_attlog0(groupID,'invs',sym%invs)
@@ -1307,9 +1348,14 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_JSetID
       !LDA+U IDs (end)
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Reading structure, index: ', structureIndex
+#endif
+
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
+      CALL h5gclose_f(generalGroupID,hdfError)
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1347,7 +1393,10 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'delz',vacuum%delz)
       CALL io_read_attreal0(groupID,'dvac',vacuum%dvac)
 
-      CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
+!      IO of od_nq2 has been moved to stars IO starting with fileFormatVersion 32
+      IF (fileFormatVersion.LT.32) THEN
+         CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
+      END IF
 
       CALL io_read_attlog0(groupID,'invs2',sym%invs2)
       CALL io_read_attlog0(groupID,'invs',sym%invs)
@@ -1578,6 +1627,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
+      CALL h5gclose_f(generalGroupID,hdfError)
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -1593,7 +1643,9 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupID,'nmz',nmz)
       CALL io_read_attint0(groupID,'nvac',nvac)
-      CALL io_read_attint0(groupID,'od_nq2',od_nq2)
+      IF(fileFormatVersion.LT.32) THEN
+         CALL io_read_attint0(groupID,'od_nq2',od_nq2)
+      END IF
       n_u = 0
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupID,'n_u',n_u)
@@ -1618,6 +1670,9 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
       CALL io_read_attint0(groupID,'ng3',ng3)
       CALL io_read_attint0(groupID,'ng2',ng2)
+      IF(fileFormatVersion.GE.32) THEN
+         CALL io_read_attint0(groupID,'od_nq2',od_nq2)
+      END IF
       CALL h5gclose_f(groupID, hdfError)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
@@ -2013,7 +2068,7 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, INTENT (IN)         :: fpw(:,:)
       LOGICAL, INTENT (IN)         :: l_mtNoco
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
-      INTEGER                      :: nmz, nvac, od_nq2, nmzxy
+      INTEGER                      :: nmz, nvac, nmzxy
       INTEGER                      :: hdfError
       LOGICAL                      :: l_film, l_exist, l_delete
       INTEGER(HID_T)               :: archiveID, groupID
@@ -2044,7 +2099,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupID,'nmz',nmz)
       CALL io_read_attint0(groupID,'nvac',nvac)
-      CALL io_read_attint0(groupID,'od_nq2',od_nq2)
       CALL h5gclose_f(groupID, hdfError)
 
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
@@ -2311,6 +2365,10 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
       COMPLEX, ALLOCATABLE  :: mmpMatTemp(:,:,:,:)
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) 'Reading density, archiveName: ', TRIM(ADJUSTL(archiveName))
+#endif
+
       den%pw = CMPLX(0.0,0.0)
       den%vacz = CMPLX(0.0,0.0)
       den%vacxy = CMPLX(0.0,0.0)
@@ -2369,6 +2427,14 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',den%iter)
 
+#ifdef CPP_DEBUG
+      WRITE(*,*) '   previousDensityIndex: ', previousDensityIndex
+      WRITE(*,*) '   starsIndex: ', starsIndex
+      WRITE(*,*) '   latharmsIndex: ', latharmsIndex
+      WRITE(*,*) '   structureIndex: ', structureIndex
+      WRITE(*,*) '   stepfunctionIndex: ', stepfunctionIndex
+#endif
+
       WRITE(groupBName,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupBName)))
       IF(.NOT.l_exist) THEN
@@ -2383,7 +2449,9 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupBID,'nmz',nmz)
       CALL io_read_attint0(groupBID,'nvac',nvac)
-      CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
+      IF(fileFormatVersion.LT.32) THEN
+         CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
+      END IF
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupBID,'n_u',n_u)
          IF(n_u.GT.0) THEN
@@ -2435,6 +2503,9 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupBName)), groupBID, hdfError)
       CALL io_read_attint0(groupBID,'ng3',ng3)
       CALL io_read_attint0(groupBID,'ng2',ng2)
+      IF(fileFormatVersion.GE.32) THEN
+         CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
+      END IF
       CALL h5gclose_f(groupBID, hdfError)
 
       CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
@@ -2619,7 +2690,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER              :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER              :: jspins
       INTEGER              :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
-      INTEGER              :: nmz, nvac, od_nq2, nmzxy
+      INTEGER              :: nmz, nvac, nmzxy
       LOGICAL              :: l_film, l_exist
       INTEGER(HID_T)       :: archiveID, groupID, groupBID
       INTEGER              :: hdfError
@@ -2675,7 +2746,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupBID,'nmz',nmz)
       CALL io_read_attint0(groupBID,'nvac',nvac)
-      CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
       CALL h5gclose_f(groupBID, hdfError)
 
       WRITE(groupBName,'(a,i0)') '/latharms-', latharmsIndex
