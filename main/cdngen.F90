@@ -152,7 +152,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
          CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                                 nococonv,vTot,hub1inp,hub1data,results)
+                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
       ENDIF
    ENDIF
 
