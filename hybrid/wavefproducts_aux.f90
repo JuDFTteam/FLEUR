@@ -68,6 +68,7 @@ CONTAINS
 
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
       ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$ use omp_lib
       use m_types
       use m_constants
       use m_judft
@@ -93,7 +94,7 @@ CONTAINS
       
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, gshift(3), iob
+      integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3), inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
@@ -132,21 +133,24 @@ CONTAINS
       call timestart("Big OMP loop")
 
 
-      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0
-      !!$OMP PARALLEL default(none) &
-      !!$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !!$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      !!$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned) &
-      !!$OMP reduction(+: t_2ndwavef2rs, time_fft, t_sort)
+      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
+      !$OMP PARALLEL default(none) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp) &
+      !$OMP reduction(+: t_2ndwavef2rs, time_fft, t_sort)
 
       allocate(prod(0:fftd-1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc prod")
       allocate(psi_k(0:fftd-1,1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc psi_k")
 
-      ! this one can't be SpFFT
+      !$OMP single
+      !$ n_omp = omp_get_num_threads()
+      !$OMP end single 
+
       call fft%init(length_zfft, .true.)
-      !!$OMP DO 
+      !$OMP DO 
       do iband = 1,hybdat%nbands(ik)
          t_start = cputime()
          call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
@@ -184,18 +188,17 @@ CONTAINS
             t_sort = t_sort + cputime() - t_start
          enddo 
       enddo
-      !!$OMP END DO
+      !$OMP END DO
       deallocate(prod, psi_k)
       call fft%free()
-      !!$OMP END PARALLEL 
-
+      !$OMP END PARALLEL 
+      write (*,*) "n_omp = ", n_omp
+      call addtime("2ndwave2rs", t_2ndwavef2rs/n_omp, hybdat%nbands(ik))
+      call addtime("sort wavef", t_sort/n_omp, hybdat%nbands(ik)*psize)
+      call addtime("forw_fft", time_fft/n_omp, hybdat%nbands(ik)*psize)
       call timestop("Big OMP loop")
       call psi_kqpt%free()
       call timestop("wavef_IS_FFT")
-
-      write (*,*) "t_2ndwavef2rs = " // float2str(t_2ndwavef2rs)
-      write (*,*) "t_sort =        " // float2str(t_sort)
-      write (*,*) "time_fft =         " // float2str(time_fft)
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
@@ -223,8 +226,8 @@ CONTAINS
       psi = 0.0
       n_threads = 1
       me = 1
-      ! a!$OMP PARALLEL default(none) private(nu, iv, n_threads, me, fft) &
-      ! !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      !$OMP PARALLEL default(none) private(nu, iv, n_threads, me, fft) &
+      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       
       call fft%init(length_zfft, .false.)
      
@@ -240,9 +243,9 @@ CONTAINS
          ENDDO
          call fft%exec(psi(:,nu))
       enddo
-      !!$OMP ENDDO
+      !$OMP ENDDO
       call fft%free()
-      !!$OMP END PARALLEL
+      !$OMP END PARALLEL
    end subroutine wavef2rs
 
 end module m_wavefproducts_aux
