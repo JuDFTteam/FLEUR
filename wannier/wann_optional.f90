@@ -37,7 +37,7 @@ CONTAINS
     TYPE(t_wann),      INTENT(IN)    :: wann
 
     INTEGER       :: num_wann(2)
-    LOGICAL       :: l_nocosoc,l_stopopt
+    LOGICAL       :: l_nocosoc,l_stopopt,l_file
 
     l_nocosoc=noco%l_noco.OR.noco%l_soc
     l_stopopt=wann%l_stopopt
@@ -46,9 +46,11 @@ CONTAINS
 
     !-----generate projection-definition-file
     IF(wann%l_projgen) THEN
-          if(mpi%irank==0)then
-       CALL wann_projgen(atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
-              endif
+       inquire(file='projgen_inp',exist=l_file)
+       if(.not.l_file)CALL juDFT_error ("projgen_inp", calledby="wann_optional")
+       if(mpi%irank==0)then
+        CALL wann_projgen(atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
+       endif
        l_stopopt=.TRUE.
     ENDIF
 
