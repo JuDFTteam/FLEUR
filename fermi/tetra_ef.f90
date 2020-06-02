@@ -125,7 +125,8 @@ MODULE m_tetraef
 
 
       it  = 0
-      eup = ub                                      ! determine upper bound
+      eup = ub
+      dup = 0.0 ! determine upper bound
       DO WHILE ((dup-nelec).LT.0.00001)
          dup = ncr
          DO ikpt = 1,kpts%nkpt
