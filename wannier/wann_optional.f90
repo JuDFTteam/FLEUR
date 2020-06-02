@@ -7,7 +7,7 @@
 MODULE m_wann_optional
   USE m_juDFT
 CONTAINS
-  SUBROUTINE wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
+  SUBROUTINE wann_optional(mpi,input,kpts,atoms,sym,cell,oneD,noco,wann)
     !**************************************************
     !     Make preparations for the calculation of
     !     Wannier functions.
@@ -26,7 +26,7 @@ CONTAINS
     USE m_wann_convert_fleur_w90
 
     IMPLICIT NONE
-
+    TYPE(t_mpi),       INTENT(IN)    :: mpi
     TYPE(t_input),     INTENT(IN)    :: input
     TYPE(t_kpts),      INTENT(IN)    :: kpts
     TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -127,7 +127,7 @@ CONTAINS
     ENDIF
 
 
-    IF(l_stopopt)  CALL juDFT_end("wann_optional done",1) ! The 1 is temporarily. Should be mpi%irank.
+    IF(l_stopopt)  CALL juDFT_end("wann_optional done",mpi%irank) ! The 1 is temporarily. Should be mpi%irank.
 
   END SUBROUTINE wann_optional
 END MODULE m_wann_optional
