@@ -228,6 +228,8 @@ CONTAINS
       call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
+      mat%matsize1 = -1 
+      mat%matsize2 = -1 
       call timestop("t_mat_free")
    END SUBROUTINE t_mat_free
 
