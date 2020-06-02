@@ -146,7 +146,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed line: ' // int2str(__LINE__)
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO
@@ -337,7 +337,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed line: ' // int2str(__LINE__)
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO
@@ -584,7 +584,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed line: ' // int2str(__LINE__)
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO
