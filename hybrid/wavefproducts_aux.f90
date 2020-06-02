@@ -134,7 +134,7 @@ CONTAINS
 
 
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
-      !$OMP PARALLEL & !! default(none) &
+      !$OMP PARALLEL default(private) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp) &
@@ -226,7 +226,7 @@ CONTAINS
       psi = 0.0
       n_threads = 1
       me = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, me, fft) & ! default(none)
+      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private)
       !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       
       call fft%init(length_zfft, .false.)
