@@ -226,7 +226,7 @@ CONTAINS
       psi = 0.0
       n_threads = 1
       me = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private)
+      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
       !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
       
       call fft%init(length_zfft, .false.)
