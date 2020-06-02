@@ -74,11 +74,12 @@ CONTAINS
        ENDIF
     ENDIF
 
-!    !$OMP PARALLEL DEFAULT(none) &
-!    !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
-!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_dftspinpol)&
-!    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-!    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)
+    !$OMP PARALLEL DEFAULT(none) &
+    !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
+    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
+    !$OMP PRIVATE(l_hia,vrTmp)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -88,7 +89,7 @@ CONTAINS
 
     qmtl = 0
 
-!    !$OMP DO
+    !$OMP DO
     DO itype = 1,atoms%ntype
        na = 1
        DO i = 1, itype - 1
@@ -277,9 +278,9 @@ CONTAINS
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
-!    !$OMP END DO
+    !$OMP END DO
     DEALLOCATE ( f,g)
-!    !$OMP END PARALLEL
+    !$OMP END PARALLEL
 
     WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
