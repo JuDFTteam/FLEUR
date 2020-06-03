@@ -15,6 +15,7 @@ MODULE m_types_selfen
    TYPE t_selfen
 
       INTEGER :: l = -1
+      REAL    :: muMatch = 0.0
 
       COMPLEX, ALLOCATABLE :: data(:,:,:,:)
 
@@ -49,8 +50,12 @@ MODULE m_types_selfen
 #include"cpp_double.h"
          INTEGER:: ierr,irank,n
          COMPLEX,ALLOCATABLE::ctmp(:)
+         REAL :: rtmp
 
          CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+
+         CALL MPI_REDUCE(this%muMatch,rtmp,1,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         IF(irank.EQ.0) this%muMatch = rtmp
 
          n = SIZE(this%data)
          ALLOCATE(ctmp(n))
