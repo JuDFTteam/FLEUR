@@ -12,7 +12,7 @@
      >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
