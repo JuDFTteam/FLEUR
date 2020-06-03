@@ -68,17 +68,16 @@ MODULE m_crystalfield
          CALL gfinp%eMesh(ef,del,eb)
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
-            kkcut = greensfImagPart%kkintgr_cutoff(i_gf,jspin,2)
             norm = 0.0
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
-                  DO ie = 1, kkcut
+                  DO ie = 1, gfinp%ne
                      integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
                                      * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)/(3.0-input%jspins))
                      IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin))/(3.0-input%jspins)
                   ENDDO
-                  h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),del,kkcut)
+                  h_loc(m,mp,i_hia,jspin) = trapz(integrand,del,gfinp%ne)
                ENDDO
             ENDDO
          ENDDO

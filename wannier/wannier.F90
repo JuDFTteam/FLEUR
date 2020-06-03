@@ -365,7 +365,7 @@ CONTAINS
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
             atoms%lmaxd,atoms%ntype,input%neig,atoms%nat,sym%nop,&
-            lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,&
+            lapw%dim_nvd(),input%jspins,atoms%llod,&
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -405,7 +405,7 @@ CONTAINS
             banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
-            input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
+            input%jspins,atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -540,7 +540,6 @@ CONTAINS
     IF(l_p0)THEN
        WRITE (*,*) 'fermi energy:',efermi
        WRITE (*,*) 'emin,emax=',sliceplot%e1s,sliceplot%e2s
-       WRITE (*,*) 'nbasfcn =',lapw%dim_nbasfcn()
     ENDIF
 
     IF((.NOT.wann%l_matrixmmn).AND.(.NOT.wann%l_wann_plot).AND.&

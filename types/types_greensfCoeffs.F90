@@ -118,10 +118,9 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfImagPart_init
 
-      SUBROUTINE greensfImagPart_collect(this,gfinp,spin_ind,mpi_comm)
+      SUBROUTINE greensfImagPart_collect(this,spin_ind,mpi_comm)
 
          CLASS(t_greensfImagPart),     INTENT(INOUT) :: this
-         TYPE(t_gfinp),                INTENT(IN)    :: gfinp
          INTEGER,                      INTENT(IN)    :: spin_ind
          INTEGER,                      INTENT(IN)    :: mpi_comm
 #ifdef CPP_MPI
@@ -130,7 +129,7 @@ MODULE m_types_greensfCoeffs
          INTEGER:: ierr,n
          REAL,ALLOCATABLE::rtmp(:)
 
-         IF(gfinp%l_sphavg) THEN
+         IF(ALLOCATED(this%sphavg)) THEN
             n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
             ALLOCATE(rtmp(n))
             CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)

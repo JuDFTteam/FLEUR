@@ -61,14 +61,12 @@ MODULE m_greensfPostProcess
          IF(atoms%n_hia.GT.0.AND.ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
-         CALL timestart("Green's Function: Occupation/DOS")
+         CALL timestart("Green's Function: Occupation")
          DO i_gf = 1, gfinp%n
-            !IF(l.NE.gfinp%elem(i_gf)%lp) CYCLE
-            !IF(nType.NE.gfinp%elem(i_gf)%atomTypep) CYCLE
             !Occupation matrix
             CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
          ENDDO
-         CALL timestop("Green's Function: Occupation/DOS")
+         CALL timestop("Green's Function: Occupation")
 
 
          IF(.NOT.gfinp%l_sphavg) THEN

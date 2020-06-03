@@ -182,7 +182,7 @@ MODULE m_greensfCalcRealPart
 
       !Collect all the greensFuntions
       DO i_gf = 1, gfinp%n
-         CALL g(i_gf)%collect(gfinp,mpi%mpi_comm)
+         CALL g(i_gf)%collect(mpi%mpi_comm)
       ENDDO
 
    END SUBROUTINE greensfCalcRealPart

@@ -235,7 +235,7 @@ c     ..local scalars..
       real    :: theta_i, thetab_i, phi_i, phib_i,dth,dph
       complex :: nsfactor,nsfactor_b,nsfactor_b2
       complex :: chi,chi2
-
+      integer :: nbasfcn_b,nbasfcn_b2
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
       TYPE(t_lapw)  :: lapw_b, lapw_b2, lapw
@@ -949,61 +949,15 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       call cpu_time(t0)
       ! get current bkpt vector
 
-      zzMat%l_real = l_real
-!      zzMat%nbasfcn = nbasfcn
-      zzMat%matsize1 = lapw%dim_nbasfcn()
-!      zzMat%nbands = neigd
-      zzMat%matsize2 = input%neig
 
-      IF(l_real) THEN
-!         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
-             IF(.NOT.ALLOCATED(zzMat%data_r))
-     &      ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-      ELSE
-!         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
-            IF(.NOT.ALLOCATED(zzMat%data_c))
-     &      ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-      END IF
 
-!      CALL cdn_read(
-!     >              eig_id,
-!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
-!     >              l_ss,l_noco,neigd,n_start,n_end,
-!     <              nmat,nv,ello,evdu,epar,kveclo,
-!     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
 
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
-      zMat_b%l_real = zzMat%l_real
-      zMat_b2%l_real = zzMat%l_real
 
-!      zMat_b%nbasfcn = zzMat%nbasfcn
-!      zMat_b2%nbasfcn = zzMat%nbasfcn
-       zMat_b%matsize1 = zzMat%matsize1
-       zMat_b2%matsize1 = zzMat%matsize1
 
-!      zMat_b%nbands = zzMat%nbands
-!      zMat_b2%nbands = zzMat%nbands
-      zMat_b%matsize2 = zzMat%matsize2
-      zMat_b2%matsize2 = zzMat%matsize2
 
-      IF(zzMat%l_real) THEN
-!         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-!         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
-               IF(.NOT.ALLOCATED(zMat_b%data_r))
-     &     ALLOCATE (zMat_b%data_r(zMat%matsize1,zMat%matsize2))
-         IF(.NOT.ALLOCATED(zMat_b2%data_r))
-     &    ALLOCATE (zMat_b2%data_r(zMat%matsize1,zMat%matsize2))
-      ELSE
-!         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-!         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
-               IF(.NOT.ALLOCATED(zMat_b%data_c))
-     &    ALLOCATE (zMat_b%data_c(zMat%matsize1,zMat%matsize2))
-               IF(.NOT.ALLOCATED(zMat_b2%data_c))
-     &   ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
-
-      END IF
 
       allocate (we_b(neigd), we_b2(neigd))
 
@@ -1021,18 +975,19 @@ c      if (mod(i_rec-1,isize).eq.irank) then
         eigg = 0.
         call cpu_time(t0)
 
-!      CALL cdn_read(
-!     >              eig_id,
-!     >              nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
-!     >              l_ss,l_noco,neigd,n_start,n_end,
-!     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-!     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+
 
 
         call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,
      &   cell,
      &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     
+        nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,
+     &  lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
+        CALL zMat_b%init(l_real,nbasfcn_b,input%neig)
+        CALL zzMat%init(l_real,nbasfcn_b,input%neig)
+     
         CALL cdn_read(
      &        eig_id,
      &      lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
@@ -1046,11 +1001,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
         nslibd_b = 0
 
-      IF(zzMat%l_real) THEN
-         zMat_b%data_r = 0.0
-      ELSE
-         zMat_b%data_c = CMPLX(0.0,0.0)
-      END IF
+    
 
       eig_b(:) = 0.
 
@@ -1165,7 +1116,7 @@ c***********************************************************
           eigg = 0.
           call cpu_time(t0)
 
-        WRITE(*,*) 'Do I read out the right record here? (wann_uHu_dmi)'
+!        WRITE(*,*) 'Do I read out the right record here? (wann_uHu_dmi)'
 !          CALL cdn_read(
 !     >                  innerEig_idList(iqpt_b),
 !     >                  nvd,jspd,irank,isize,kptibz,jspin_b,nbasfcn, !wannierspin instead of jspd? !kptibz_b2?
@@ -1199,6 +1150,12 @@ c***********************************************************
      &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
 
+        nbasfcn_b2 = MERGE(lapw_b2%nv(1)+lapw_b2%nv(2)+2*atoms%nlotot,
+     &  lapw_b2%nv(1)+atoms%nlotot,noco%l_noco)
+             CALL zMat_b2%init(l_real,nbasfcn_b2,input%neig)
+             CALL zzMat%init(l_real,nbasfcn_b2,input%neig)
+
+
           CALL cdn_read(
      &   eig_id,
      &   lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
@@ -1212,11 +1169,7 @@ c***********************************************************
 
         IF(ANY(bkpt_b2.ne.bkpt)) stop 'bkpt_b2.ne.bkpt'
 
-      IF(zzMat%l_real) THEN
-         zMat_b2%data_r = 0.0
-      ELSE
-         zMat_b2%data_c = CMPLX(0.0,0.0)
-      END IF
+
 
       eig_b2(:) = 0.
 
@@ -1409,7 +1362,7 @@ c**************************************c
             call cpu_time(t0)
             call wann_uHu_int(chi,nvd,k1d,k2d,k3d,n3d,
      >  lapw_b%nv(jspin),lapw_b2%nv(jspin_b),nbnd,neigd,
-     >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
+     >  nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2,addnoco,addnoco2,
      >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
      >  lapw_b2%k1(:,jspin_b),lapw_b2%k2(:,jspin_b),
