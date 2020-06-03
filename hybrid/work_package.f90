@@ -8,10 +8,11 @@ module m_work_package
       procedure :: init  => t_work_package_init 
       procedure :: print => t_work_package_print
       procedure :: owner_nk => t_work_package_owner_nk
+      procedure :: has_nk => t_work_package_has_nk
    end type t_work_package
 
    type t_k_package
-      integer :: n_k, rank, size
+      integer :: nk, rank, size
       type(t_q_package), allocatable :: q_packs(:)
    contains
       procedure :: init  => t_k_package_init 
@@ -40,15 +41,15 @@ contains
 
    end subroutine 
 
-   subroutine t_k_package_init(k_pack, fi, n_k)
+   subroutine t_k_package_init(k_pack, fi, nk)
       implicit none 
       class(t_k_package), intent(inout) :: k_pack
       type(t_fleurinput), intent(in)       :: fi
-      integer, intent(in) :: n_k
+      integer, intent(in) :: nk
       integer             :: nkpt_eibz
 
-      k_pack%n_k = n_k
-      allocate(k_pack%q_packs(fi%kpts%nkpt_EIBZ(n_k))) 
+      k_pack%nk = nk
+      allocate(k_pack%q_packs(fi%kpts%nkpt_EIBZ(nk))) 
    end subroutine 
 
    subroutine t_work_package_print(work_pack)
@@ -67,7 +68,7 @@ contains
       class(t_k_package), intent(in) :: k_pack 
 
       write (*,*) "kpoint: "
-      write (*,*) "nk = ", k_pack%n_k
+      write (*,*) "nk = ", k_pack%nk
    end subroutine t_k_package_print
 
    subroutine split_into_work_packages(work_pack, fi)
@@ -108,4 +109,20 @@ contains
 
       owner = modulo(nk-1, work_pack%size)
    end function t_work_package_owner_nk
+
+   function t_work_package_has_nk(work_pack, nk) result(has_nk) 
+      implicit none 
+      class(t_work_package), intent(in) :: work_pack
+      integer, intent(in)               :: nk
+      logical                           :: has_nk
+      integer :: i 
+
+      has_nk = .false.
+      do i = 1, work_pack%k_packs(1)%size 
+         if (work_pack%k_packs(i)%nk == nk) then
+            has_nk = .True.
+            exit
+         endif
+      enddo
+   end function t_work_package_has_nk
 end module m_work_package

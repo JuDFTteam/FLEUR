@@ -41,20 +41,18 @@ CONTAINS
       ! local variables
       type(t_hybmpi)    :: hybmpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, j, n_work_pack
+      INTEGER           :: jsp, nk, err, i, j
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
-      INTEGER, ALLOCATABLE :: my_k_list(:), k_owner(:)
 
       CALL timestart("hybrid code")
       call sync_eig(eig_id, fi, .True.)
       call hybmpi%copy_mpi(mpi)
          
       call work_pack%init(fi, hybmpi%rank, hybmpi%size)
-      call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)  
 
       INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
@@ -107,7 +105,7 @@ CONTAINS
             call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
          enddo
 
-         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
+         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
 
          do i =1,fi%kpts%nkpt
             call hybdat%coul(i)%mpi_ibc(fi, hybmpi, work_pack%owner_nk(i))
@@ -126,7 +124,7 @@ CONTAINS
 
             
             DO i = 1,work_pack%k_packs(1)%size
-               nk = work_pack%k_packs(i)%n_k
+               nk = work_pack%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, mpi)

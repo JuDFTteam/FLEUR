@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
-
+   use m_work_package
    USE m_types
    USE m_juDFT
    USE m_constants
@@ -72,6 +72,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_moments)                      :: moments
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
+   type(t_work_package)                 :: work_pack
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, ikptf, iterHF
@@ -390,9 +391,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
    END DO
 
-   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(ikpt,ikpt=1,fi%kpts%nkpt)])
-   
    CALL hybmpi%copy_mpi(mpi)
+   call work_pack%init(fi, hybmpi%rank, hybmpi%size)
+
+   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+   
+   
    DO ikpt = 1, fi%kpts%nkpt
       CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
    END DO
