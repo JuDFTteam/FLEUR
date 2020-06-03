@@ -645,13 +645,7 @@ CONTAINS
     !+gu
     kidx=0
     kidx2=0
-    DO k3 = -mxx3,mxx3
-       DO k2 = -mxx2,mxx2
-          DO k1 = -mxx1,mxx1
-             stars%ig(k1,k2,k3) = 0
-          ENDDO
-       ENDDO
-    ENDDO
+    stars%ig(:,:,:) = 0
 
     !-gu
     !
@@ -660,13 +654,11 @@ CONTAINS
     stars%rgphs(:,:,:) = cmplx(0.0,0.0)
     stars%igfft = 0
     stars%pgfft = cmplx(0.0,0.0)
-    starloop: DO k = 1,stars%ng3
 
-       CALL spgrot(&
-            &               sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-            &               stars%kv3(:,k),&
-            &               kr,phas)
-       !
+    DO k = 1,stars%ng3
+
+       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
+
        ! -->    set up the igfft(*,3) array as (1d) fft-pointer:
        !
        !        star ------------> g-vector ------------> fft-grid & phase
@@ -674,7 +666,7 @@ CONTAINS
        !
        !        size of fft-grid is chosen to be ( 3*k1d x 3*k2d x 3*k3d )
        !
-       ops: DO n = 1,sym%nop
+       DO n = 1,sym%nop
 
           NEW=.TRUE.
           DO n1 = 1,n-1
@@ -704,17 +696,13 @@ CONTAINS
           stars%rgphs(kr(1,n),kr(2,n),kr(3,n)) = &
                &      stars%rgphs(kr(1,n),kr(2,n),kr(3,n)) + phas(n)
 
-       ENDDO ops
-    ENDDO starloop
+       ENDDO !loop over symmetry operations
+    ENDDO ! loop over stars
     !
     stars%kimax=kidx-1
-    !
-    !     count number of members for each star
-    !
-    DO k = 1,stars%ng3
-       stars%nstr(k) = 0
-    ENDDO
 
+    ! count number of members for each star
+    stars%nstr(:) = 0
     DO k3 = -mxx3,mxx3
        DO k2 = -mxx2,mxx2
           DO k1 = -mxx1,mxx1
@@ -767,9 +755,7 @@ CONTAINS
          judft_error("BUG 1 in strgen")
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
-    IF (xcpot%needs_grad()) THEN
-       stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0
-    ENDIF
+    stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0
 
     !--->    write /str0/ and /str1/ to file
     CALL timestart("writeStars")
