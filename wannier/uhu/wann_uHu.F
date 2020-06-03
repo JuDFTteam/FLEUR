@@ -22,7 +22,7 @@ c*******************************************c
      >      stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
      >      banddos,oneD,noco,nococonv,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -97,7 +97,7 @@ c     ..scalar arguments..
       logical, intent (in) :: l_real,l_noco,l_ss,l_soc
       logical, intent (in) :: l_ms,l_sgwf,l_socgwf
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -230,6 +230,7 @@ c     ..local scalars..
       real    :: efermi,htr2ev
       real    :: theta_i, thetab_i, phi_i, phib_i
       complex :: nsfactor,nsfactor_b,nsfactor_b2
+      integer :: nbasfcn
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
