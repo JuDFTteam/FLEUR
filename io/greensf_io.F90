@@ -86,7 +86,7 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen, u, udot)
 
       USE m_types
       USE m_types_selfen
@@ -102,6 +102,9 @@ MODULE m_greensf_io
       COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
       TYPE(t_selfen), OPTIONAL, INTENT(IN)  :: selfen(:) !Only in IO mode for Hubbard 1
 
+      REAL, ALLOCATABLE, OPTIONAL, INTENT(IN) :: u(:,:,:,:,:,:)      !Radial Functions for IO
+      REAL, ALLOCATABLE, OPTIONAL, INTENT(IN) :: udot(:,:,:,:,:,:)
+
       INTEGER(HID_T)    :: elementsGroupID
       INTEGER(HID_T)    :: currentelementGroupID
       INTEGER(HID_T)    :: mmpmatSpaceID, mmpmatSetID
@@ -113,6 +116,8 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: selfenDataSpaceID, selfenDataSetID
       INTEGER(HID_T)    :: energyPointsSpaceID, energyPointsSetID
       INTEGER(HID_T)    :: energyWeightsSpaceID, energyWeightsSetID
+      INTEGER(HID_T)    :: uDataSpaceID,uDataSetID
+      INTEGER(HID_T)    :: udotDataSpaceID,udotDataSetID
 
 
       CHARACTER(len=30) :: elementName, groupName
@@ -260,7 +265,25 @@ MODULE m_greensf_io
             CALL io_write_complex5(ddDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%dd(:,:,:,:,:))
             CALL h5dclose_f(ddDataSetID, hdfError)
 
-            !TODO write radial functions
+            IF(PRESENT(u)) THEN
+               dims(:5)=[atoms%jmtd,2,2,2,input%jspins]
+               dimsInt=dims
+               CALL h5screate_simple_f(5,dims(:5),uDataSpaceID,hdfError)
+               CALL h5dcreate_f(currentelementGroupID, "uRadial", H5T_NATIVE_DOUBLE, uDataSpaceID, uDataSetID, hdfError)
+               CALL h5sclose_f(uDataSpaceID,hdfError)
+               CALL io_write_real5(uDataSetID,[1,1,1,1,1],dimsInt(:5),u(:,:,:,:,:,i_elem))
+               CALL h5dclose_f(uDataSetID, hdfError)
+            ENDIF
+
+            IF(PRESENT(udot)) THEN
+               dims(:5)=[atoms%jmtd,2,2,2,input%jspins]
+               dimsInt=dims
+               CALL h5screate_simple_f(5,dims(:5),udotDataSpaceID,hdfError)
+               CALL h5dcreate_f(currentelementGroupID, "udotRadial", H5T_NATIVE_DOUBLE, udotDataSpaceID, udotDataSetID, hdfError)
+               CALL h5sclose_f(udotDataSpaceID,hdfError)
+               CALL io_write_real5(udotDataSetID,[1,1,1,1,1],dimsInt(:5),udot(:,:,:,:,:,i_elem))
+               CALL h5dclose_f(udotDataSetID, hdfError)
+            ENDIF
          ENDIF
 
          IF(archiveType.EQ.GREENSF_HUBBARD_CONST.AND.PRESENT(selfen)) THEN
