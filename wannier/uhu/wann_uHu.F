@@ -1174,9 +1174,9 @@ c***********************************************************
           eigg = 0.
           call cpu_time(t0)
 
-          WRITE(*,*) 'Here probably the wrong record is read in'
-          WRITE(*,*) 'Should eig_id not be dependent on iqpt_b?'
-          WRITE(*,*) '(in wann_uHu)'
+!          WRITE(*,*) 'Here probably the wrong record is read in'
+!          WRITE(*,*) 'Should eig_id not be dependent on iqpt_b?'
+!          WRITE(*,*) '(in wann_uHu)'
 !          CALL cdn_read(
 !     >                  eig_id,
 !     >                  nvd,jspd,irank,isize,kptibz_b2,jspin,nbasfcn, !wannierspin instead of jspd?
