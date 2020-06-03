@@ -9,7 +9,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g0,i_hia,selfen,gfinp,input,noco,occDFT,g,mmpMat)
+   SUBROUTINE add_selfen(g0,selfen,gfinp,input,noco,occDFT,g,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -26,12 +26,11 @@ MODULE m_add_selfen
       !TODO: Parallelization (OMP over chemical potentials in first loop??)
 
       TYPE(t_greensf),  INTENT(IN)     :: g0
-      INTEGER,          INTENT(IN)     :: i_hia
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
-      TYPE(t_selfen),   INTENT(IN)     :: selfen
       REAL,             INTENT(IN)     :: occDFT(:)
+      TYPE(t_selfen),   INTENT(INOUT)  :: selfen
       TYPE(t_greensf),  INTENT(INOUT)  :: g
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
 
@@ -40,7 +39,6 @@ MODULE m_add_selfen
       REAL    :: mu_a,mu_b,mu_step
       REAL    :: mu,nocc,nTarget,muMax,nMax
       LOGICAL :: l_fullMatch,l_invalidElements
-      CHARACTER(len=7) filename
 
       nMatch = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
       !Not tested yet for two chemical potentials, so we just take one
@@ -55,12 +53,6 @@ MODULE m_add_selfen
 
          !Target occupation
          nTarget = MERGE(SUM(occDFT(:)),occDFT(iMatch),l_fullMatch)
-
-#ifdef CPP_DEBUG
-         WRITE(filename,9000) i_hia,iMatch
-9000     FORMAT("mu_",I2.2,"_",I1)
-         OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
-#endif
 
          !Interval where we expect the correct mu
          mu_a = -2.0
@@ -90,9 +82,6 @@ MODULE m_add_selfen
 #endif
 
          ENDDO
-#ifdef CPP_DEBUG
-         CLOSE(1337)
-#endif
 
          !Sanity check for the maximum occupation
          IF(nMax-2*(2*l+1).GT.1.0) THEN
@@ -123,9 +112,7 @@ MODULE m_add_selfen
                mu_b = mu
             ENDIF
          ENDDO
-         !We found the chemical potential to within the desired accuracy
-         WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
-         WRITE(oUnit,'(TR3,a,f8.4)') "muMatch = ", mu
+         selfen%muMatch = mu
          !----------------------------------------------------
          ! Check if the final mmpMat contains invalid elements
          !----------------------------------------------------
