@@ -230,7 +230,7 @@ c     ..local scalars..
       real    :: efermi,htr2ev
       real    :: theta_i, thetab_i, phi_i, phib_i
       complex :: nsfactor,nsfactor_b,nsfactor_b2
-      integer :: nbasfcn
+      integer :: nbasfcn,nbasfcn_b,nbasfcn_b2
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
@@ -955,75 +955,15 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       call cpu_time(t0)
       ! get current bkpt vector
 
-          zzMat%l_real = l_real
-          zzMat%matsize1 = lapw%dim_nbasfcn()
-          zzMat%matsize2 = input%neig
-          IF(l_real) THEN
-             IF(.NOT.ALLOCATED(zzMat%data_r))
-     &    ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-          ELSE
-               IF(.NOT.ALLOCATED(zzMat%data_c))
-     &    ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-          END IF
-
-
-
-
-          zMat%l_real = zzMat%l_real
-          zMat%matsize1 = zzMat%matsize1
-          zMat%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-             IF(.NOT.ALLOCATED(zMat%data_r))
-     &              ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-             zMat%data_r = 0.0
-          ELSE
-             IF(.NOT.ALLOCATED(zMat%data_c))
-     &              ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-             zMat%data_c = CMPLX(0.0,0.0)
-          END IF
-
-          zMat_b%l_real = zzMat%l_real
-          zMat_b%matsize1 = zzMat%matsize1
-          zMat_b%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-               IF(.NOT.ALLOCATED(zMat_b%data_r))
-     &    ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_r = 0.0
-          ELSE
-               IF(.NOT.ALLOCATED(zMat_b%data_c))
-     &    ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_c = CMPLX(0.0,0.0)
-          END IF
-
-
-          zMat_b2%l_real = zzMat%l_real
-          zMat_b2%matsize1 = zzMat%matsize1
-          zMat_b2%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-               IF(.NOT.ALLOCATED(zMat_b2%data_r))
-     &   ALLOCATE (zMat_b2%data_r(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b2%data_r = 0.0
-          ELSE
-               IF(.NOT.ALLOCATED(zMat_b2%data_c))
-     &   ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b2%data_c = CMPLX(0.0,0.0)
-          END IF
-
-
-
-
-!      CALL cdn_read(
-!     >              eig_id,
-!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
-!     >              l_ss,l_noco,neigd,n_start,n_end,
-!     <              nmat,nv,ello,evdu,epar,
-!     <              wk,nbands,eigg,zzMat)
-
-
-
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,
      &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &   lapw%nv(1)+atoms%nlotot,noco%l_noco)
+        CALL zzMat%init(l_real,nbasfcn,input%neig)
+        CALL zMat%init(l_real,nbasfcn,input%neig)
+
 
         CALL cdn_read(
      &      eig_id,
@@ -1101,6 +1041,14 @@ c$$$        nslibd=0
      &           cell,
      &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     
+     
+            nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,
+     &      lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
+            CALL zMat_b%init(l_real,nbasfcn_b,input%neig)
+            CALL zzMat%init(l_real,nbasfcn_b,input%neig)
+     
+     
         CALL cdn_read(
      &        eig_id,
      &      lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
@@ -1240,6 +1188,13 @@ c***********************************************************
         call lapw_b2%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b2,
      &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+        nbasfcn_b2 = MERGE(lapw_b2%nv(1)+lapw_b2%nv(2)+2*atoms%nlotot,
+     &  lapw_b2%nv(1)+atoms%nlotot,noco%l_noco)
+        CALL zMat_b2%init(l_real,nbasfcn_b2,input%neig)
+        CALL zzMat%init(l_real,nbasfcn_b2,input%neig)
+
+
 
           CALL cdn_read(
      &   eig_id,
