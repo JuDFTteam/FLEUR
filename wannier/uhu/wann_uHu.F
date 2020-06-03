@@ -1399,7 +1399,7 @@ c      endif
      >  lapw_b%nv(jspin),!nv_b(jspin),
      >  lapw_b2%nv(jspin),!nv_b2(jspin_b),
      >  nbnd,neigd,
-     >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
+     >  nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2,addnoco,addnoco2,
 !     >            k1_b(:,jspin), k2_b(:,jspin), k3_b(:,jspin),
      >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
