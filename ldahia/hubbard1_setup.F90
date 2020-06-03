@@ -286,7 +286,7 @@ MODULE m_hubbard1_setup
 
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%collect(gfinp,mpi%mpi_comm)
+         CALL gu(i_hia)%collect(mpi%mpi_comm)
          CALL selfen(i_hia)%collect(mpi%mpi_comm)
       ENDDO
 

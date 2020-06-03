@@ -122,10 +122,9 @@ MODULE m_types_greensf
 
       END SUBROUTINE mpi_bc_greensf
 
-      SUBROUTINE collect_greensf(this,gfinp,mpi_comm)
+      SUBROUTINE collect_greensf(this,mpi_comm)
 
          CLASS(t_greensf),     INTENT(INOUT) :: this
-         TYPE(t_gfinp),        INTENT(IN)    :: gfinp
          INTEGER,              INTENT(IN)    :: mpi_comm
 #ifdef CPP_MPI
          include 'mpif.h'
@@ -135,7 +134,7 @@ MODULE m_types_greensf
 
          CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 
-         IF(gfinp%l_sphavg) THEN
+         IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
             CALL MPI_REDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -269,7 +268,7 @@ MODULE m_types_greensf
                   ENDIF
                   !-------------------
                   ! Fetch the values
-                  !-------------------_ind
+                  !-------------------
                   IF(l_radial) THEN
                      gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * u(2,spin2)     + &
                                               this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * udot(2,spin2)  + &
