@@ -1487,7 +1487,7 @@ c      endif
         deallocate ( we_b,we_b2 )
       deallocate ( eigg )
 
-      END IF
+ 
 
 
 
