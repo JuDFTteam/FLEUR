@@ -81,7 +81,9 @@ CONTAINS
        ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
        ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
+       stars%kv3(:,:) = 0
        stars%sk2(:) = 0.0
+       stars%sk3(:) = 0.0
        stars%phi2(:) = 0.0
 
        ! Initialize xc fft box

@@ -797,16 +797,16 @@ c..   now we want to define the maximum number of the bands by all kpts
 
       if(l_p0)then
          call wann_maxbnd(
-     >            eig_id,l_real,
-     >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,nlotot,
-     >            l_ss,l_noco,nrec,fullnkpts,
-     >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
-     >            wann%l_byenergy,
-     >            irreduc,odi,wann%band_min(jspin),
-     >            wann%band_max(jspin),
-     >            numbands,e1s,e2s,efermi,nkpts,
-     <            nbnd,l_gwf,iqpt)
+     >   eig_id,l_real,
+     >  lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
+     >  isize,jspin,lapw%dim_nbasfcn(),nlotot,
+     >  l_ss,l_noco,nrec,fullnkpts,
+     >  wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
+     >  wann%l_byenergy,
+     >  irreduc,odi,wann%band_min(jspin),
+     >  wann%band_max(jspin),
+     >  numbands,e1s,e2s,efermi,nkpts,
+     <  nbnd,l_gwf,iqpt)
       endif!l_p0
 
 ! nbnd is calculated for process zero and is sent here to the others
