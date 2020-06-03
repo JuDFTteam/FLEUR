@@ -11,7 +11,7 @@ CONTAINS
 
    SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
-
+      use m_work_package
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -40,7 +40,8 @@ CONTAINS
 
       ! local variables
       type(t_hybmpi)    :: hybmpi
-      INTEGER           :: jsp, nk, err, i
+      type(t_work_package) :: work_pack
+      INTEGER           :: jsp, nk, err, i, j, n_work_pack
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -50,9 +51,10 @@ CONTAINS
 
       CALL timestart("hybrid code")
       call sync_eig(eig_id, fi, .True.)
-
       call hybmpi%copy_mpi(mpi)
-      call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
+         
+      call work_pack%init(fi, hybmpi%rank, hybmpi%size)
+      call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)  
 
       INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
@@ -108,7 +110,7 @@ CONTAINS
          CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, k_owner(i))
+            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, work_pack%owner_nk(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
@@ -122,8 +124,9 @@ CONTAINS
                         hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
-            DO i = 1,size(my_k_list)
-               nk = my_k_list(i)
+            
+            DO i = 1,work_pack%k_packs(1)%size
+               nk = work_pack%k_packs(i)%n_k
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, mpi)
