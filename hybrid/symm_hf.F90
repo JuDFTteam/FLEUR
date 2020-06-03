@@ -181,7 +181,7 @@ CONTAINS
       neqvkpt(1) = 1
 
       IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
-      allocate(pointer_EIBZ(fi%kpts%nkpt_EIBZ(nk)), source=0)
+      allocate(pointer_EIBZ(fi%kpts%EIBZ(nk)%nkpt), source=0)
       ic = 0
       DO ikpt = 1, fi%kpts%nkptf
          IF(parent(ikpt) == ikpt) THEN
@@ -190,14 +190,14 @@ CONTAINS
          END IF
       END DO
 
-      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%nkpt_EIBZ(nk)
+      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%EIBZ(nk)%nkpt
       call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
       call timestart("calc n_q")
       IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
-      allocate(n_q(fi%kpts%nkpt_EIBZ(nk)), source=0)
+      allocate(n_q(fi%kpts%EIBZ(nk)%nkpt), source=0)
 
       ic = 0
       n_q = 0
@@ -218,7 +218,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      IF(ic /= fi%kpts%nkpt_EIBZ(nk)) call judft_error('symm: failure EIBZ')
+      IF(ic /= fi%kpts%EIBZ(nk)%nkpt) call judft_error('symm: failure EIBZ')
       call timestop("calc n_q")
 
       ! calculate degeneracy:

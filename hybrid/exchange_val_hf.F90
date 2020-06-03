@@ -152,7 +152,7 @@ CONTAINS
 
       exch_vv = 0
 
-      DO jq = 1,fi%kpts%nkpt_EIBZ(ik)
+      DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
          iq = pointer_EIBZ(jq)
          iq_p = fi%kpts%bkp(iq)
 

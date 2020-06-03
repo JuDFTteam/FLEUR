@@ -9,6 +9,15 @@ MODULE m_types_kpts
    USE m_types_fleurinput_base
    IMPLICIT NONE
    PRIVATE
+   type t_eibz
+      integer :: nkpt
+      integer, allocatable :: pointer(:)
+   contains
+      PROCEDURE :: init => init_eibz
+      procedure :: calc_nkpt_EIBZ => calc_nkpt_EIBZ
+      ! procedure :: calc_pointer_EIBZ => calc_pointer_EIBZ
+   end type t_eibz
+
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
       CHARACTER(len=20)              :: name = "default"
       character(len=100)             :: comment = ""
@@ -30,7 +39,8 @@ MODULE m_types_kpts
       INTEGER, ALLOCATABLE           :: ntetra(:, :)
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
-      integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
+      type(t_eibz), allocatable      :: EIBZ(:)
+      !integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
    CONTAINS
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
@@ -41,8 +51,6 @@ MODULE m_types_kpts
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
       procedure :: nkpt3 => nkpt3_kpts
-      procedure :: calc_nkpt_EIBZ => calc_nkpt_EIBZ_kpts
-      ! procedure :: calc_pointer_EIBZ => calc_pointer_EIBZ_kpts
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -277,6 +285,19 @@ CONTAINS
       kpts%specialPointNames(kpts%numspecialpoints) = name
    END SUBROUTINE add_special_line
 
+   subroutine init_EIBZ(EIBZ, kpts, sym, nk)
+      USE m_types_sym
+      implicit none 
+      class(t_eibz), intent(inout)   :: EIBZ 
+      type(t_kpts), intent(in)       :: kpts 
+      type(t_sym), intent(in)        :: sym
+      integer, intent(in)            :: nk 
+
+      call eibz%calc_nkpt_EIBZ(kpts, sym, nk)
+
+
+   end subroutine init_EIBZ
+
    SUBROUTINE init_kpts(kpts, cell, sym, film)
       USE m_types_cell
       USE m_types_sym
@@ -292,9 +313,10 @@ CONTAINS
       ENDDO
       IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
-      call kpts%calc_nkpt_EIBZ(sym)
+      allocate(kpts%EIBZ(kpts%nkpt))
       do n = 1,kpts%nkpt 
-         write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
+         call kpts%EIBZ(n)%init(kpts, sym, n)
+         ! write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
       enddo
    END SUBROUTINE init_kpts
 
@@ -410,163 +432,164 @@ CONTAINS
       enddo
    end function nkpt3_kpts
 
-   subroutine calc_nkpt_EIBZ_kpts(kpts, sym)
+   subroutine calc_nkpt_EIBZ(eibz, kpts, sym, nk)
       USE m_types_sym
       USE m_juDFT
       IMPLICIT NONE
-      class(t_kpts), INTENT(INOUT)  :: kpts
+      class(t_eibz), intent(inout)  :: eibz
+      type(t_kpts),  INTENT(IN)     :: kpts
       TYPE(t_sym),   INTENT(IN)     :: sym
-
-!     - scalar input -
-      INTEGER  :: nk
-!     - array input -
+      integer, intent(in)           :: nk
 
 !     - local scalars -
       INTEGER               ::  isym, ic, iop, ikpt, ikpt1
-      INTEGER               ::  nsymop, nrkpt, nsymop2
+      INTEGER               ::  nsymop, nrkpt
 !     - local arrays -
       INTEGER               ::  rrot(3, 3, sym%nsym)
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
                                symop(kpts%nkptf)
-      INTEGER, ALLOCATABLE  ::  psym(:), psym2(:)
+      INTEGER, ALLOCATABLE  ::  psym(:)
       REAL                  ::  rotkpt(3)
 
-      allocate(kpts%nkpt_EIBZ(kpts%nkpt))
-      allocate (psym(sym%nsym), psym2(sym%nsym))
+      allocate (psym(sym%nsym))
 
-      do nk = 1, kpts%nkpt
-         ! calculate rotations in reciprocal space
-         DO isym = 1, sym%nsym
-            IF (isym <= sym%nop) THEN
-               rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
-            ELSE
-               rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
-            END IF
-         END DO
+      ! calculate rotations in reciprocal space
+      DO isym = 1, sym%nsym
+         IF (isym <= sym%nop) THEN
+            rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
+         ELSE
+            rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
+         END IF
+      END DO
 
-         ! determine little group of k., i.e. those symmetry operations
-         ! which keep bk(:,nk,nw) invariant
-         ! nsymop :: number of such symmetry-operations
-         ! psym   :: points to the symmetry-operation
-         
-         call calc_psym_nsymop(kpts, sym, nk, psym2, nsymop2)
+      ! determine little group of k., i.e. those symmetry operations
+      ! which keep bk(:,nk,nw) invariant
+      ! nsymop :: number of such symmetry-operations
+      ! psym   :: points to the symmetry-operation
+      
+      call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
 
-         if(nsymop2 /= nsymop )then
-            write (*,*) "nsymops = ", nsymop, nsymop2
-            call judft_error("fuck a")
-         endif
-         if(any(psym /= psym2)) call judft_error("fuck b")
+      ! reallocate psym
+      !       ALLOCATE(help(ic))
+      !       help = psym(1:ic)
+      !       DEALLOCATE(psym)
+      !       ALLOCATE(psym(ic))
+      !       psym = help
+      !       DEALLOCATE(help)
 
-         ! reallocate psym
-         !       ALLOCATE(help(ic))
-         !       help = psym(1:ic)
-         !       DEALLOCATE(psym)
-         !       ALLOCATE(psym(ic))
-         !       psym = help
-         !       DEALLOCATE(help)
+      ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
+      ! those k-points, which can generate the whole BZ by
+      ! applying the symmetry operations of the little group of k
 
-         ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
-         ! those k-points, which can generate the whole BZ by
-         ! applying the symmetry operations of the little group of k
+      neqvkpt = 0
 
-         neqvkpt = 0
+      !       list = [(ikpt-1, ikpt=1,nkpt) ]
+      DO ikpt = 1, kpts%nkptf
+         list(ikpt) = ikpt - 1
+      END DO
 
-         !       list = [(ikpt-1, ikpt=1,nkpt) ]
-         DO ikpt = 1, kpts%nkptf
-            list(ikpt) = ikpt - 1
-         END DO
+      DO ikpt = 2, kpts%nkptf
+         DO iop = 1, nsymop
 
-         DO ikpt = 2, kpts%nkptf
-            DO iop = 1, nsymop
+            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
-               rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
+            !transfer rotkpt into BZ
+            rotkpt = kpts%to_first_bz(rotkpt)
 
-               !transfer rotkpt into BZ
-               rotkpt = kpts%to_first_bz(rotkpt)
-
-               !determine number of rotkpt
-               nrkpt = 0
-               DO ikpt1 = 1, kpts%nkptf
-                  IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
-                     nrkpt = ikpt1
-                     EXIT
-                  END IF
-               END DO
-               IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
-               IF (list(nrkpt) /= 0) THEN
-                  list(nrkpt) = 0
-                  neqvkpt(ikpt) = neqvkpt(ikpt) + 1
-                  parent(nrkpt) = ikpt
-                  symop(nrkpt) = psym(iop)
+            !determine number of rotkpt
+            nrkpt = 0
+            DO ikpt1 = 1, kpts%nkptf
+               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
+                  nrkpt = ikpt1
+                  EXIT
                END IF
-               IF (all(list == 0)) EXIT
-
             END DO
+            IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
+
+            IF (list(nrkpt) /= 0) THEN
+               list(nrkpt) = 0
+               neqvkpt(ikpt) = neqvkpt(ikpt) + 1
+               parent(nrkpt) = ikpt
+               symop(nrkpt) = psym(iop)
+            END IF
+            IF (all(list == 0)) EXIT
+
          END DO
+      END DO
 
-         ! for the Gamma-point holds:
-         parent(1) = 1
-         neqvkpt(1) = 1
+      ! for the Gamma-point holds:
+      parent(1) = 1
+      neqvkpt(1) = 1
 
-         ! determine number of members in the EIBZ(k)
-         ic = 0
-         DO ikpt = 1, kpts%nkptf
-            IF (parent(ikpt) == ikpt) ic = ic + 1
-         END DO
-         kpts%nkpt_EIBZ(nk) = ic
-      enddo
-   END subroutine calc_nkpt_EIBZ_kpts
+      ! determine number of members in the EIBZ(k)
+      ic = 0
+      DO ikpt = 1, kpts%nkptf
+         IF (parent(ikpt) == ikpt) ic = ic + 1
+      END DO
+      EIBZ%nkpt = ic
+   END subroutine calc_nkpt_EIBZ
 
-   ! subroutine calc_pointer_EIBZ_kpts(kpts)
+   ! subroutine calc_pointer_EIBZ_kpts(kpts, sym)
+   !    USE m_types_sym
    !    implicit none 
    !    class(t_kpts), INTENT(INOUT)  :: kpts
-   !    INTEGER  :: list(kpts%nkptf), parent(kpts%nkptf)
+   !    type(t_sym), intent(in)       :: sym
 
-   !    parent = 0
+   !    INTEGER :: list(kpts%nkptf), parent(kpts%nkptf)
+   !    integer :: nk, isym, i 
+   !    INTEGER :: rrot(3, 3, sym%nsym)
 
-   !    ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
-   !    ! those k-points, which can generate the whole BZ by
-   !    ! applying the symmetry operations of the little group of k
-   !    call timestart("calc EIBZ")
-
-   !    DO i = 1, kpts%nkptf
-   !       list(i) = i - 1
-   !    END DO
-
-   !    ! calc numsymop
-
-      
-   !    DO ikpt = 2, kpts%nkptf
-   !       DO iop = 1, nsymop
-   !          rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
-
-   !          !determine number of rotkpt
-   !          nrkpt = kpts%get_nk(rotkpt)
-   !          IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
-   !          IF(list(nrkpt) /= 0) THEN
-   !             list(nrkpt) = 0
-   !             parent(nrkpt) = ikpt
+   !    do nk = 1, kpts%nkpt
+   !       parent = 0
+   !       DO isym = 1, sym%nsym
+   !          IF (isym <= sym%nop) THEN
+   !             rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
+   !          ELSE
+   !             rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
    !          END IF
-   !          IF(all(list == 0)) EXIT
-
    !       END DO
-   !    END DO
 
-   !    ! for the Gamma-point holds:
-   !    parent(1) = 1
-   !    IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
-   !    allocate(pointer_EIBZ(kpts%nkpt_EIBZ(nk)), source=0)
-   !    ic = 0
-   !    DO ikpt = 1, kpts%nkptf
-   !       IF(parent(ikpt) == ikpt) THEN
-   !          ic = ic + 1
-   !          pointer_EIBZ(ic) = ikpt
-   !       END IF
-   !    END DO
+   !       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
+   !       ! those k-points, which can generate the whole BZ by
+   !       ! applying the symmetry operations of the little group of k
+   !       call timestart("calc EIBZ")
 
+   !       DO i = 1, kpts%nkptf
+   !          list(i) = i - 1
+   !       END DO
 
+   !       ! calc numsymop
+   !       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
+         
+   !       DO ikpt = 2, kpts%nkptf
+   !          DO iop = 1, nsymop
+   !             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
+
+   !             !determine number of rotkpt
+   !             nrkpt = kpts%get_nk(rotkpt)
+   !             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
+
+   !             IF(list(nrkpt) /= 0) THEN
+   !                list(nrkpt) = 0
+   !                parent(nrkpt) = ikpt
+   !             END IF
+   !             IF(all(list == 0)) EXIT
+
+   !          END DO
+   !       END DO
+
+   !       ! for the Gamma-point holds:
+   !       parent(1) = 1
+   !       IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
+   !       allocate(pointer_EIBZ(kpts%nkpt_EIBZ(nk)), source=0)
+   !       ic = 0
+   !       DO ikpt = 1, kpts%nkptf
+   !          IF(parent(ikpt) == ikpt) THEN
+   !             ic = ic + 1
+   !             pointer_EIBZ(ic) = ikpt
+   !          END IF
+   !       END DO
+   !    enddo
    ! end subroutine calc_pointer_EIBZ_kpts
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)

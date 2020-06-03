@@ -49,7 +49,7 @@ contains
       integer             :: nkpt_eibz
 
       k_pack%nk = nk
-      allocate(k_pack%q_packs(fi%kpts%nkpt_EIBZ(nk))) 
+      allocate(k_pack%q_packs(fi%kpts%EIBZ(nk)%nkpt)) 
    end subroutine 
 
    subroutine t_work_package_print(work_pack)
