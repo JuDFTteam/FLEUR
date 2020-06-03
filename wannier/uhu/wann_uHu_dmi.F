@@ -235,7 +235,7 @@ c     ..local scalars..
       real    :: theta_i, thetab_i, phi_i, phib_i,dth,dph
       complex :: nsfactor,nsfactor_b,nsfactor_b2
       complex :: chi,chi2
-
+      integer :: nbasfcn_b,nbasfcn_b2
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
       TYPE(t_lapw)  :: lapw_b, lapw_b2, lapw
@@ -1409,7 +1409,7 @@ c**************************************c
             call cpu_time(t0)
             call wann_uHu_int(chi,nvd,k1d,k2d,k3d,n3d,
      >  lapw_b%nv(jspin),lapw_b2%nv(jspin_b),nbnd,neigd,
-     >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
+     >  nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2,addnoco,addnoco2,
      >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
      >  lapw_b2%k1(:,jspin_b),lapw_b2%k2(:,jspin_b),
