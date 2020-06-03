@@ -28,11 +28,6 @@ module m_work_package
       procedure :: owner_nk => t_work_package_owner_nk
       procedure :: has_nk => t_work_package_has_nk
    end type t_work_package
-
-
-
-
-
 contains
    subroutine t_work_package_init(work_pack, fi, rank, size) 
       implicit none 
