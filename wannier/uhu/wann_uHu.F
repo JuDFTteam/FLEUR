@@ -1206,11 +1206,6 @@ c***********************************************************
 
         nslibd_b2 = 0
 
-      IF(zzMat%l_real) THEN
-         zMat_b2%data_r = 0.0
-      ELSE
-         zMat_b2%data_c = CMPLX(0.0,0.0)
-      END IF
 
       eig_b2(:) = 0.
 
@@ -1492,22 +1487,6 @@ c      endif
         deallocate ( we_b,we_b2 )
       deallocate ( eigg )
 
-
-
-      IF(l_real) THEN
-         DEALLOCATE ( zzMat%data_r )
-      ELSE
-         DEALLOCATE ( zzMat%data_c )
-      END IF
-
-
-
-      IF(zzMat%l_real) THEN
-         DEALLOCATE (zMat_b%data_r)
-         DEALLOCATE (zMat_b2%data_r)
-      ELSE
-         DEALLOCATE (zMat_b%data_c)
-         DEALLOCATE (zMat_b2%data_c)
       END IF
 
 
