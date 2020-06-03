@@ -1,7 +1,6 @@
 set(fleur_F90 ${fleur_F90}
    mpi/mpi_bc_xcpot.F90
    mpi/setupMPI.F90
-   mpi/wrapper_sched_getcpu.c
    mpi/omp_checker.F90
 )
 
@@ -19,3 +18,7 @@ if (FLEUR_USE_MPI)
 )
 endif()
 
+if (FLEUR_USE_SCHED)
+set(fleur_F90 ${fleur_F90}
+   mpi/wrapper_sched_getcpu.c)
+endif()
