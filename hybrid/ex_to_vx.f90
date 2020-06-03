@@ -27,7 +27,7 @@ contains
       IF (fi%input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
       
       call ex%u2l()
-      if(.not. hybdat%olap(jsp, nk)%allocated()) call judft_error("well shit") 
+      if(.not. hybdat%olap(jsp, nk)%allocated()) call judft_error("olap is not on this rank. You need to add this communication pattern") 
       call hybdat%olap(jsp, nk)%multiply(z, trafo)
 
       CALL ex%multiply(trafo, res=tmp, transB="C")
