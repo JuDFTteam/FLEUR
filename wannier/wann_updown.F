@@ -94,7 +94,7 @@ c****************************************************************************
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2,eig_id
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -264,7 +264,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable :: ulobeffdg(:,:,:,:)
       complex,allocatable :: ulobeffulog(:,:,:,:,:)
       integer :: spinloop1,spinloop2,ilop
-      integer :: alerr
+      integer :: alerr,nbasfcn
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)   :: zMat(2),zzMat(2)
