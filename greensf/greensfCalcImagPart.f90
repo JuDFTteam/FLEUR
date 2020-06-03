@@ -142,7 +142,7 @@ MODULE m_greensfCalcImagPart
       ENDDO!k-point loop
 
       !Collect the results from all mpi ranks
-      CALL greensfImagPart%collect(gfinp,spin_ind,mpi%mpi_comm)
+      CALL greensfImagPart%collect(spin_ind,mpi%mpi_comm)
 
    END SUBROUTINE greensfCalcImagPart
 END MODULE m_greensfCalcImagPart
