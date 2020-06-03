@@ -1,6 +1,24 @@
 module m_work_package
    use m_types
    implicit none
+
+   type t_band_package  
+      integer :: start_idx, end_idx
+   end type t_band_package
+
+   type t_q_package 
+      integer :: n_q 
+      integer :: comm_q_group
+   end type t_q_package 
+
+   type t_k_package
+      integer :: nk, rank, size
+      type(t_q_package), allocatable :: q_packs(:)
+   contains
+      procedure :: init  => t_k_package_init 
+      procedure :: print => t_k_package_print
+   end type t_k_package 
+
    type t_work_package 
       integer :: rank, size
       type(t_k_package), allocatable :: k_packs(:)
@@ -11,22 +29,9 @@ module m_work_package
       procedure :: has_nk => t_work_package_has_nk
    end type t_work_package
 
-   type t_k_package
-      integer :: nk, rank, size
-      type(t_q_package), allocatable :: q_packs(:)
-   contains
-      procedure :: init  => t_k_package_init 
-      procedure :: print => t_k_package_print
-   end type t_k_package 
 
-   type t_q_package 
-      integer :: n_q 
-      integer :: comm_q_group
-   end type t_q_package 
 
-   type t_band_package  
-      integer :: start_idx, end_idx
-   end type t_band_package
+
 
 contains
    subroutine t_work_package_init(work_pack, fi, rank, size) 
