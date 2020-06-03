@@ -96,29 +96,12 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
       complex                  :: c_phase_k(hybdat%nbands(nk))
-
-      REAL                    ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
-
-      TYPE(t_mat)             :: olap, ex, v_x, z_k
+      REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
+      TYPE(t_mat)              :: ex, v_x, z_k
 
       CALL timestart("total time hsfock")
-
-      ! preparations
-
-      ! initialize gridf for radial integration
-      !CALL intgrf_init(fi%atoms%ntype,fi%atoms%jmtd,fi%atoms%jri,fi%atoms%dx,fi%atoms%rmsh,hybdat%gridf)
-
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
-
-      ! read in lower triangle part of overlap matrix from direct acces file olap
-      call timestart("read in olap")
-      nbasfcn = lapw%hyb_num_bas_fun(fi)
-      call olap%alloc(fi%sym%invs, nbasfcn)
-      call read_olap(olap, fi%kpts%nkpt*(jsp - 1) + nk, nbasfcn)
-      call timestop("read in olap")
-
-
       ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
       IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
       IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
@@ -128,7 +111,8 @@ CONTAINS
       IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
       parent = 0
 
-      call z_k%init(olap%l_real, nbasfcn, fi%input%neig)
+      nbasfcn = lapw%hyb_num_bas_fun(fi)
+      call z_k%init(fi%sym%invs, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)
       
@@ -167,7 +151,7 @@ CONTAINS
       deallocate(n_q)
       CALL timestop("core exchange calculation")
 
-      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, olap, ex, v_x)
+      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, v_x)
       CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
 
       CALL timestop("total time hsfock")

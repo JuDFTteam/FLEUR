@@ -106,7 +106,6 @@ CONTAINS
    end subroutine t_mat_u2l
 
    subroutine t_mat_subtract(res_mat, mat1, mat2)
-      use iso_c_binding, only: c_loc
       implicit none
       class(t_mat), intent(inout) :: res_mat
       type(t_mat), intent(in)     :: mat1, mat2

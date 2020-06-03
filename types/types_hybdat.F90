@@ -56,7 +56,7 @@ MODULE m_types_hybdat
       type(t_coul), allocatable :: coul(:)
 
       type(t_usdus)            :: usdus
-      ! type(t_mat), allocatable :: olap(:,:) ! (jsp, nkpt)
+      type(t_mat), allocatable :: olap(:,:) ! (jsp, nkpt)
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free => free_hybdat

@@ -149,12 +149,13 @@ CONTAINS
                ! Write overlap matrix smat to direct access file olap
                ! print *,"Wrong overlap matrix used, fix this later"
 
-               ! if(.not. allocated(hybdat%olap)) THEN
-               !    allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
-               ! endif
-               ! if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
-               ! call hybdat%olap(jsp,nk)%copy(smat,1,1)
-               CALL write_olap(smat,(jsp-1)*fi%kpts%nkpt+nk)
+               if(.not. allocated(hybdat%olap)) THEN
+                  allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
+               endif
+               if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
+               call hybdat%olap(jsp,nk)%copy(smat,1,1)
+               call hybdat%olap(jsp,nk)%u2l()
+               if(.not. smat%l_real) hybdat%olap(jsp,nk)%data_c = conjg(hybdat%olap(jsp,nk)%data_c)
             END IF ! fi%hybinp%l_hybrid.OR.fi%input%l_rdmft
 
             IF(fi%hybinp%l_hybrid) THEN
