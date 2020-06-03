@@ -277,17 +277,31 @@ MODULE m_hubbard1_setup
          ! We introduce an additional chemical potential mu, which is determined
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
+#ifdef CPP_DEBUG
+         OPEN(unit=1337, file=TRIM(ADJUSTL(xPath)) // 'mu',&
+              status="replace", action="write", iostat=io_error)
+#endif
+
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),gfinp,input,noco,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,noco,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
+#ifdef CPP_DEBUG
+         CLOSE(unit=1337)
+#endif
+
       ENDDO
 
+      IF(mpi%irank.EQ.0) WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%collect(mpi%mpi_comm)
          CALL selfen(i_hia)%collect(mpi%mpi_comm)
+         IF(mpi%irank.EQ.0) THEN
+            !We found the chemical potential to within the desired accuracy
+            WRITE(oUnit,'(TR3,I4.1,TR3,A,f8.4)') i_hia, "muMatch = ", selfen(i_hia)%muMatch
+         ENDIF
       ENDDO
 
 

@@ -37,14 +37,14 @@ MODULE m_hubbard1Distance
             END DO
          END DO
       ENDDO
-      results%last_occdistance = results%last_occdistance + ABS(n_out-n_in)
+      results%last_occdistance = MAX(results%last_occdistance,ABS(n_out-n_in))
       results%last_mmpMatdistance = MAX(results%last_mmpMatdistance,MAXVAL(elementDistance))
 
       !IO to out file
       WRITE(oUnit,'(A)') "Hubbard 1 Distances:"
       WRITE(oUnit,'(A)') "-------------------------------"
-      WRITE(oUnit,*) "  Occupation distance: ", results%last_occdistance
-      WRITE(oUnit,*) "  Density matrix distance: ", results%last_mmpMatdistance
+      WRITE(oUnit,*) "  Occupation distance: ", ABS(n_out-n_in)
+      WRITE(oUnit,*) "  Density matrix distance: ", MAXVAL(elementDistance)
       DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
          WRITE(oUnit,*)
          WRITE(oUnit,'(A11,I1,A2,f14.8)') "Delta Spin ", ispin, ": ", elementDistance(ispin)
