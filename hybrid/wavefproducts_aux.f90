@@ -192,7 +192,7 @@ CONTAINS
       deallocate(prod, psi_k)
       call fft%free()
       !$OMP END PARALLEL 
-      write (*,*) "n_omp = ", n_omp
+      
       call addtime("2ndwave2rs", t_2ndwavef2rs/n_omp, hybdat%nbands(ik))
       call addtime("sort wavef", t_sort/n_omp, hybdat%nbands(ik)*psize)
       call addtime("forw_fft", time_fft/n_omp, hybdat%nbands(ik)*psize)
