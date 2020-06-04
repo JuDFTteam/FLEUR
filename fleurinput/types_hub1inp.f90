@@ -13,6 +13,7 @@ MODULE m_types_hub1inp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hub1inp
       !Convergence criteria for the density matrix
+      INTEGER :: itmax = 5
       REAL    :: minoccDistance=1.0e-2
       REAL    :: minmatDistance=1.0e-3
       LOGICAL :: l_dftspinpol=.FALSE. !Determines whether the DFT part is spin-polarized in a magnetic DFT+Hubbard 1 calculation
@@ -58,6 +59,7 @@ CONTAINS
       ELSE
          rank = 0
       END IF
+      CALL mpi_bc(this%itmax,rank,mpi_comm)
       CALL mpi_bc(this%minoccDistance,rank,mpi_comm)
       CALL mpi_bc(this%minmatDistance,rank,mpi_comm)
       CALL mpi_bc(this%l_dftspinpol,rank,mpi_comm)
@@ -108,6 +110,7 @@ CONTAINS
       xPathA = '/fleurInput/calculationSetup/ldaHIA'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF(numberNodes==1) THEN
+         this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@itmax'))
          this%minoccDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minoccDistance'))
          this%minmatDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minmatDistance'))
          this%beta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))

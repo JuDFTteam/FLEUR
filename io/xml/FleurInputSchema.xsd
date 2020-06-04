@@ -687,6 +687,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
+      <xsd:attribute name="itmax" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>

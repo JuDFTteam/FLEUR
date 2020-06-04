@@ -589,22 +589,27 @@ END IF
           IF (hybdat%l_subvxc) THEN
              results%te_hfex%valence = 0
           END IF
+       ELSE IF(fi%atoms%n_hia>0) THEN
+          l_cont = l_cont.AND.(iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
+          l_cont = l_cont.AND.((fi%input%mindistance<=results%last_distance).OR.fi%input%l_f)
+          !If we have converged run hia if the density matrix has not converged
+          hub1data%l_runthisiter = .NOT.l_cont.AND.(fi%hub1inp%minoccDistance<=results%last_occdistance&
+                                                .OR.fi%hub1inp%minmatDistance<=results%last_mmpMatdistance)
+          !Run after first overall iteration to generate a starting density matrix
+          hub1data%l_runthisiter = hub1data%l_runthisiter.OR.(iter==1 .AND.(hub1data%iter == 0&
+                                   .AND.ALL(ABS(vTot%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)).LT.1e-12)))
+          hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(iter < fi%input%itmax)
+          hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(hub1data%iter < fi%hub1inp%itmax)
+          !Prevent that the scf loop terminates
+          l_cont = l_cont.OR.hub1data%l_runthisiter
+          IF(hub1data%l_runthisiter) THEN
+             CALL check_time_for_next_iteration(hub1data%iter,l_cont)
+          ENDIF
        ELSE
           l_cont = l_cont.AND.(iter < fi%input%itmax)
           ! MetaGGAs need a at least 2 iterations
           l_cont = l_cont.AND.((fi%input%mindistance<=results%last_distance).OR.fi%input%l_f &
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
-          !If we have converged run hia if the density matrix has not converged
-          IF(fi%atoms%n_hia>0) THEN
-             hub1data%l_runthisiter = .NOT.l_cont.AND.(fi%hub1inp%minoccDistance<=results%last_occdistance&
-                                  .OR.fi%hub1inp%minmatDistance<=results%last_mmpMatdistance)
-             !Run after first overall iteration to generate a starting density matrix
-             hub1data%l_runthisiter = hub1data%l_runthisiter.OR.(iter==1 .AND.(hub1data%iter == 0&
-                                      .AND.ALL(ABS(vTot%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)).LT.1e-12)))
-             hub1data%l_runthisiter = hub1data%l_runthisiter.AND.(iter < fi%input%itmax)
-             !Prevent that the scf loop terminates
-             l_cont = l_cont.OR.hub1data%l_runthisiter
-          ENDIF
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 
