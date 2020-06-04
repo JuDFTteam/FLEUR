@@ -3,6 +3,21 @@ try_compile(FLEUR_USE_LIBXC ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
+foreach (teststring "-lxcf90;-lxc")
+if (NOT FLEUR_USE_LIBXC)
+    set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${teststring}")
+    try_compile(FLEUR_USE_LIBXC ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_LibXC.f90
+    LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output
+    )
+    if ("$ENV{VERBOSE}")
+       message("LIBXC compile test: ${FLEUR_USE_LIBXC}\nLINK_LIBRARIES ${TEST_LIBRARIES}\n${compile_output}")
+    endif()
+    if (FLEUR_USE_LIBXC)
+       set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+    endif()
+endif()
+endforeach()
+
 if (DEFINED CLI_FLEUR_USE_LIBXC)
     if (CLI_FLEUR_USE_LIBXC)
        if (NOT FLEUR_USE_LIBXC)
@@ -34,7 +49,7 @@ if (DEFINED CLI_FLEUR_USE_LIBXC)
 	   set(FLEUR_USE_LIBXC FALSE)
         endif()
     endif()
-endif()	   	   	   
+endif()
 
 
 message("Libxc Library found:${FLEUR_USE_LIBXC}")
