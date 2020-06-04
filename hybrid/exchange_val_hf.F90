@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, mat_ex)
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -95,8 +95,6 @@ CONTAINS
 
       ! arrays
       INTEGER, INTENT(IN)    ::  n_q(:)
-
-      INTEGER, INTENT(IN)    ::  pointer_EIBZ(:)
       INTEGER, INTENT(IN)    ::  nsest(:)
       INTEGER, INTENT(IN)    ::  indx_sest(:, :)
 
@@ -153,7 +151,7 @@ CONTAINS
       exch_vv = 0
 
       DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
-         iq = pointer_EIBZ(jq)
+         iq = fi%kpts%EIBZ(ik)%pointer(jq)
          iq_p = fi%kpts%bkp(iq)
 
 

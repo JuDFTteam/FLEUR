@@ -14,8 +14,8 @@ MODULE m_types_kpts
       integer, allocatable :: pointer(:)
    contains
       PROCEDURE :: init => init_eibz
-      procedure :: calc_nkpt_EIBZ => calc_nkpt_EIBZ
-      ! procedure :: calc_pointer_EIBZ => calc_pointer_EIBZ
+      procedure :: calc_nkpt_EIBZ    => calc_nkpt_EIBZ
+      procedure :: calc_pointer_EIBZ => calc_pointer_EIBZ
    end type t_eibz
 
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
@@ -294,8 +294,7 @@ CONTAINS
       integer, intent(in)            :: nk 
 
       call eibz%calc_nkpt_EIBZ(kpts, sym, nk)
-
-
+      call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
    SUBROUTINE init_kpts(kpts, cell, sym, film)
@@ -529,68 +528,71 @@ CONTAINS
       EIBZ%nkpt = ic
    END subroutine calc_nkpt_EIBZ
 
-   ! subroutine calc_pointer_EIBZ_kpts(kpts, sym)
-   !    USE m_types_sym
-   !    implicit none 
-   !    class(t_kpts), INTENT(INOUT)  :: kpts
-   !    type(t_sym), intent(in)       :: sym
+   subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
+      USE m_types_sym
+      implicit none 
+      class(t_eibz), intent(inout)  :: eibz
+      type(t_kpts), INTENT(IN)      :: kpts
+      type(t_sym), intent(in)       :: sym
+      integer, intent(in)           :: nk
 
-   !    INTEGER :: list(kpts%nkptf), parent(kpts%nkptf)
-   !    integer :: nk, isym, i 
-   !    INTEGER :: rrot(3, 3, sym%nsym)
+      INTEGER               :: list(kpts%nkptf), parent(kpts%nkptf)
+      integer               :: isym, i, nsymop, ic, ikpt, iop, nrkpt
+      INTEGER               :: rrot(3, 3, sym%nsym)
+      INTEGER, ALLOCATABLE  :: psym(:)
+      REAL                  :: rotkpt(3)
 
-   !    do nk = 1, kpts%nkpt
-   !       parent = 0
-   !       DO isym = 1, sym%nsym
-   !          IF (isym <= sym%nop) THEN
-   !             rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
-   !          ELSE
-   !             rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
-   !          END IF
-   !       END DO
 
-   !       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
-   !       ! those k-points, which can generate the whole BZ by
-   !       ! applying the symmetry operations of the little group of k
-   !       call timestart("calc EIBZ")
+      allocate (psym(sym%nsym))
+      parent = 0
+      DO isym = 1, sym%nsym
+         IF (isym <= sym%nop) THEN
+            rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
+         ELSE
+            rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
+         END IF
+      END DO
 
-   !       DO i = 1, kpts%nkptf
-   !          list(i) = i - 1
-   !       END DO
+      ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
+      ! those k-points, which can generate the whole BZ by
+      ! applying the symmetry operations of the little group of k
 
-   !       ! calc numsymop
-   !       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-         
-   !       DO ikpt = 2, kpts%nkptf
-   !          DO iop = 1, nsymop
-   !             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
+      DO i = 1, kpts%nkptf
+         list(i) = i - 1
+      END DO
 
-   !             !determine number of rotkpt
-   !             nrkpt = kpts%get_nk(rotkpt)
-   !             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
+      ! calc numsymop
+      call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
+      
+      DO ikpt = 2, kpts%nkptf
+         DO iop = 1, nsymop
+            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
-   !             IF(list(nrkpt) /= 0) THEN
-   !                list(nrkpt) = 0
-   !                parent(nrkpt) = ikpt
-   !             END IF
-   !             IF(all(list == 0)) EXIT
+            !determine number of rotkpt
+            nrkpt = kpts%get_nk(rotkpt)
+            IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
-   !          END DO
-   !       END DO
+            IF(list(nrkpt) /= 0) THEN
+               list(nrkpt) = 0
+               parent(nrkpt) = ikpt
+            END IF
+            IF(all(list == 0)) EXIT
 
-   !       ! for the Gamma-point holds:
-   !       parent(1) = 1
-   !       IF(ALLOCATED(pointer_EIBZ)) DEALLOCATE(pointer_EIBZ)
-   !       allocate(pointer_EIBZ(kpts%nkpt_EIBZ(nk)), source=0)
-   !       ic = 0
-   !       DO ikpt = 1, kpts%nkptf
-   !          IF(parent(ikpt) == ikpt) THEN
-   !             ic = ic + 1
-   !             pointer_EIBZ(ic) = ikpt
-   !          END IF
-   !       END DO
-   !    enddo
-   ! end subroutine calc_pointer_EIBZ_kpts
+         END DO
+      END DO
+
+      ! for the Gamma-point holds:
+      parent(1) = 1
+      IF(ALLOCATED(eibz%pointer)) DEALLOCATE(eibz%pointer)
+      allocate(eibz%pointer(eibz%nkpt), source=0)
+      ic = 0
+      DO ikpt = 1, kpts%nkptf
+         IF(parent(ikpt) == ikpt) THEN
+            ic = ic + 1
+            eibz%pointer(ic) = ikpt
+         END IF
+      END DO
+   end subroutine calc_pointer_EIBZ
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
       USE m_types_sym

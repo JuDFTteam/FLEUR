@@ -92,7 +92,6 @@ CONTAINS
       INTEGER                 ::  psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
 
       INTEGER, ALLOCATABLE     ::  parent(:)
-      INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
       complex                  :: c_phase_k(hybdat%nbands(nk))
@@ -120,7 +119,7 @@ CONTAINS
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
       CALL symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
-                   rrot, nsymop, psym, n_q, parent, pointer_EIBZ, nsest, indx_sest)
+                   rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf
@@ -134,7 +133,7 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
 
