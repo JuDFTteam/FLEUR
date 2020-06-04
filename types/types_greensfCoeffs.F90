@@ -48,6 +48,7 @@ MODULE m_types_greensfCoeffs
          CONTAINS
             PROCEDURE, PASS :: init    =>  greensfImagPart_init
             PROCEDURE, PASS :: collect =>  greensfImagPart_collect
+            PROCEDURE, PASS :: mpi_bc  =>  greensfImagPart_mpi_bc
       END TYPE t_greensfImagPart
 
    PUBLIC t_greensfBZintCoeffs, t_greensfImagPart
@@ -150,5 +151,28 @@ MODULE m_types_greensfCoeffs
 #endif
 
       END SUBROUTINE greensfImagPart_collect
+
+      SUBROUTINE greensfImagPart_mpi_bc(this,mpi_comm,irank)
+         USE m_mpi_bc_tool
+         CLASS(t_greensfImagPart), INTENT(INOUT)::this
+         INTEGER, INTENT(IN):: mpi_comm
+         INTEGER, INTENT(IN), OPTIONAL::irank
+         INTEGER ::rank,myrank,n,ierr
+         IF (PRESENT(irank)) THEN
+            rank = irank
+         ELSE
+            rank = 0
+         END IF
+
+         CALL mpi_bc(this%l_calc,rank,mpi_comm)
+
+         IF(ALLOCATED(this%kkintgr_cutoff)) CALL mpi_bc(this%kkintgr_cutoff,rank,mpi_comm)
+         IF(ALLOCATED(this%sphavg)) CALL mpi_bc(this%sphavg,rank,mpi_comm)
+         IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)
+         IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
+         IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
+         IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
+
+      END SUBROUTINE greensfImagPart_mpi_bc
 
 END MODULE m_types_greensfCoeffs
