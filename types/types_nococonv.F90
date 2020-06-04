@@ -65,7 +65,7 @@ CONTAINS
             END DO
          END IF
       ELSE
-        IF(noco%l_alignMT.AND.(.NOT. noco%l_mtNocoPot))    CALL judft_error("l_alignMT=F and l_mtNocoPot=T is meaningless.")
+        IF(noco%l_alignMT.AND.(.NOT. noco%l_mtNocoPot))    CALL judft_error("l_alignMT=T and l_mtNocoPot=F is meaningless.")
 
          IF (noco%l_ss) THEN
             CALL judft_error("l_noco=F and l_ss=T is meaningless.")
