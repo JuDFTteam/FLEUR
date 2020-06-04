@@ -23,6 +23,10 @@ MODULE m_greensfCalcRealPart
 
    IMPLICIT NONE
 
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
+
    INTEGER, PARAMETER :: int_method(3) = [method_direct,method_direct,method_maclaurin]
 
    CONTAINS
@@ -43,10 +47,11 @@ MODULE m_greensfCalcRealPart
       INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep
       INTEGER :: spin_cut,nn,natom,contourShape,dummy
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
-      INTEGER :: n_gf_task,extra
+      INTEGER :: n_gf_task,extra,n,ierr
       LOGICAL :: l_onsite,l_fixedCutoffset,l_skip
       REAL    :: fac,del,eb,et,fixedCutoff
-      REAL, ALLOCATABLE :: eMesh(:)
+      REAL,    ALLOCATABLE :: eMesh(:)
+      INTEGER, ALLOCATABLE :: itmp(:)
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
@@ -184,6 +189,35 @@ MODULE m_greensfCalcRealPart
       DO i_gf = 1, gfinp%n
          CALL g(i_gf)%collect(mpi%mpi_comm)
       ENDDO
+
+#ifdef CPP_MPI
+      !Collect all cutoffs
+      n = SIZE(greensfImagPart%kkintgr_cutoff)
+      ALLOCATE(itmp(n))
+      CALL MPI_REDUCE(greensfImagPart%kkintgr_cutoff,itmp,n,MPI_INTEGER,MPI_SUM,0,mpi%mpi_comm,ierr)
+      if (mpi%irank==0) greensfImagPart%kkintgr_cutoff = reshape(itmp,shape(greensfImagPart%kkintgr_cutoff))
+      DEALLOCATE(itmp)
+#endif
+
+      IF(mpi%irank.EQ.0) THEN
+         DO i_gf = 1, gfinp%n
+            l  = g(i_gf)%elem%l
+            CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
+
+            DO jspin = 1, nspins
+               spin_cut = MERGE(1,jspin,jspin.GT.2)
+               kkcut = greensfImagPart%kkintgr_cutoff(i_gf,spin_cut,2)
+               !------------------------------------------------------------
+               ! Set everything above the cutoff in the imaginary part to 0
+               ! We do this explicitely because when we just use the hard cutoff index
+               ! Things might get lost when the imaginary part is smoothed explicitely
+               !------------------------------------------------------------
+               IF(kkcut.ne.SIZE(eMesh)) THEN
+                  greensfImagPart%sphavg(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+               ENDIF
+            ENDDO
+         ENDDO
+      ENDIF
 
    END SUBROUTINE greensfCalcRealPart
 END MODULE m_greensfCalcRealPart

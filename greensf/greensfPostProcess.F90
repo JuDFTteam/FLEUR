@@ -58,7 +58,7 @@ MODULE m_greensfPostProcess
          ! Calculate various properties from the greens function
          !-------------------------------------------------------------
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
-         IF(atoms%n_hia.GT.0.AND.ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
+         IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
          CALL timestart("Green's Function: Occupation")
