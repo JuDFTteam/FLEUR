@@ -452,6 +452,8 @@ CONTAINS
              this%l_lapw_kpts=.TRUE.
           ELSEIF(this%jobList(i).EQ.'updown')THEN
              this%l_updown=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'unformatted')THEN
+             this%l_unformatted=.TRUE.            
           ELSEIF(this%jobList(i).EQ.'stopopt')THEN
              this%l_stopopt=.TRUE.
           ELSEIF(this%jobList(i).EQ.'projgen')THEN
@@ -481,8 +483,14 @@ CONTAINS
           ELSEIF(this%jobList(i).EQ.'bzsym')THEN
              this%l_bzsym=.TRUE.
              !this%l_kpts_fullbz=.false.
-          ELSEIF(this%jobList(i).EQ.'mmn0')THEN
+          ELSEIF(jobname.EQ.'mmn0')THEN
              this%l_mmn0=.TRUE.
+             if(l_param)then
+             read(param,*,iostat=stat) this%mmn0fmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif           
           ELSEIF(this%jobList(i).EQ.'mmn0at')THEN
              this%l_mmn0at=.TRUE.
           ELSEIF(this%jobList(i).EQ.'manyfiles')THEN
@@ -541,6 +549,12 @@ CONTAINS
              this%l_projmethod=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
              this%l_matrixamn=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%matrixamnfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
           ELSEIF(this%jobList(i).EQ.'wannierize')THEN
              this%l_wannierize=.TRUE.
           ELSEIF(this%jobList(i).EQ.'plotw90')THEN
@@ -649,6 +663,30 @@ CONTAINS
     ENDDO
 
     DEALLOCATE(wannAtomList)
+    if(this%l_unformatted)then
+        this%socmatvecfmt=2
+        this%socmatvecrsfmt=2
+        this%anglmomrsfmt=2
+        this%anglmomfmt=2
+        this%torquefmt=2
+        this%torquersfmt=2
+        this%perpmagrsfmt=2
+        this%perpmagfmt=2
+        this%perpmagatfmt=2
+        this%perpmagatrsfmt=2
+        this%socmatrsfmt=2
+        this%socmatfmt=2
+        this%paulifmt=2
+        this%pauliatfmt=2
+        this%hoppingfmt=2
+        this%matrixmmnfmt=2
+        this%matrixamnfmt=2
+        this%mmn0fmt=2
+        this%mmn0atfmt=2
+        this%matrixuHufmt=2
+        this%matrixuHudmifmt=2
+    endif
+
 
   END SUBROUTINE read_xml_wannier
 END MODULE m_types_wannier
