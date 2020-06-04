@@ -112,7 +112,7 @@ MODULE m_types_greensf
 
          CALL mpi_bc(this%l_calc,rank,mpi_comm)
 
-         CALL this%contour%mpi_bc(mpi_comm,irank)
+         CALL this%contour%mpi_bc(mpi_comm,rank)
 
          IF(ALLOCATED(this%gmmpMat)) CALL mpi_bc(this%gmmpMat,rank,mpi_comm)
          IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)

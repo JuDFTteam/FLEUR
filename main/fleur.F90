@@ -565,20 +565,6 @@ END IF
 
 
        IF(mpi%irank == 0) THEN
-         !Write out information if a hubbard 1 Iteration was performed
-         IF(hub1data%l_runthisiter)  THEN
-            WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
-            WRITE(*,*) "Distances: "
-            WRITE(*,*) "-----------------------------------------------------"
-            WRITE(*,*) "Occupation Distance: " , results%last_occdistance
-            WRITE(*,*) "Element Distance:    " , results%last_mmpMatdistance
-            WRITE(*,*) "-----------------------------------------------------"
-            WRITE(oUnit,*) "nmmp occupation distance: ", results%last_occdistance
-            WRITE(oUnit,*) "nmmp element distance:    ", results%last_mmpMatdistance
-            WRITE(oUnit,FMT=8140) hub1data%iter
-8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
-         ENDIF
-
          WRITE (oUnit,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
@@ -587,8 +573,6 @@ END IF
 
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(results%last_occdistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(results%last_mmpMatdistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
        CALL priv_geo_end(mpi)

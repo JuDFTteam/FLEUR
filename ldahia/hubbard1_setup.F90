@@ -193,7 +193,7 @@ MODULE m_hubbard1_setup
       ALLOCATE(selfen(atoms%n_hia))
 
       !Argument order different because occDFT is not allocatable
-      CALL mpi_bc(mpi%irank,mpi%mpi_comm,occDFT)
+      CALL mpi_bc(0,mpi%mpi_comm,occDFT)
       !Broadcast important stuff
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,input,contour_in=gdft(i_hia)%contour)
@@ -353,7 +353,22 @@ MODULE m_hubbard1_setup
       ENDIF
 
       !Broadcast the density matrix
-      CALL mpi_bc(den%mmpMat,mpi%irank,mpi%mpi_comm)
+      CALL mpi_bc(den%mmpMat,0,mpi%mpi_comm)
+      CALL mpi_bc(results%last_occdistance,0,mpi%mpi_comm)
+      CALL mpi_bc(results%last_mmpMatdistance,0,mpi%mpi_comm)
+
+      IF(mpi%irank.EQ.0) THEN
+         WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
+         WRITE(*,*) "Distances: "
+         WRITE(*,*) "-----------------------------------------------------"
+         WRITE(*,*) "Occupation Distance: " , results%last_occdistance
+         WRITE(*,*) "Element Distance:    " , results%last_mmpMatdistance
+         WRITE(*,*) "-----------------------------------------------------"
+         WRITE(oUnit,*) "nmmp occupation distance: ", results%last_occdistance
+         WRITE(oUnit,*) "nmmp element distance:    ", results%last_mmpMatdistance
+         WRITE(oUnit,FMT=8140) hub1data%iter
+8140     FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
+      ENDIF
 
    END SUBROUTINE hubbard1_setup
 
