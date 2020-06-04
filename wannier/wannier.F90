@@ -2250,7 +2250,7 @@ CONTAINS
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
-                  mmn,wann%l_unformatted)
+                  mmn,wann%mmn0fmt==2)
           ENDIF !noco%l_soc and l_mmn0
 
           IF(wann%l_orbcomp)THEN
@@ -2283,7 +2283,7 @@ CONTAINS
                   'Overlaps of the wavefunct. with the trial orbitals',&
                   nbnd,fullnkpts,nwfs,&
                   mpi%irank,mpi%isize,.FALSE.,.FALSE.,&
-                  amn(:,:,:),wann%l_unformatted)
+                  amn(:,:,:),wann%matrixamnfmt==2)
           ENDIF !wann%l_matrixamn
 
           IF(wann%l_anglmom)THEN
@@ -2344,7 +2344,7 @@ CONTAINS
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
-                  mmn,wann%l_unformatted)
+                  mmn,wann%mmn0fmt==2)
           ENDIF !wann%l_mmn0
 
 
