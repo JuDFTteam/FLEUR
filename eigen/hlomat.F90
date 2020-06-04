@@ -55,22 +55,22 @@ CONTAINS
     INTEGER locol,lorow,ii,ij,n,k,ab_size,s
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: ab(:,:,:),ax(:),bx(:),cx(:)
+    COMPLEX, ALLOCATABLE :: abCoeffs(:,:,:),ax(:),bx(:),cx(:)
     COMPLEX,ALLOCATABLE  :: abclo(:,:,:,:,:)
     !     ..
 
 
     !-->              synthesize the complex conjugates of a and b
-    ALLOCATE(ab(MAXVAL(lapw%nv),0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,2))
+    ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv),2))
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
-    CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
+    CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
-       ab(:,:,2)=ab(:,:,1)
+       abCoeffs(:,:,2)=abCoeffs(:,:,1)
        abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
     ELSE
-       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,ab(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
+       CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
 
 
@@ -94,7 +94,7 @@ CONTAINS
        IF (sym%invsat(na) == 1) invsfct = 2
        !
        !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
-       !$acc &  copyin(atoms,lapw,ab(:,:,1),tlmplm%h_loc(:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc &  copyin(atoms,lapw,abCoeffs(:,:,1),tlmplm%h_loc(:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
        !$acc & create(ax,bx,cx)&
        !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp),abclo(1:3,:,:,:,1:2))&
        !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
@@ -126,12 +126,12 @@ CONTAINS
                    !--->                   conjugates of the a,b...-coefficients
                    !CPP_OMP PARALLEL DO DEFAULT(none) &
                    !CPP_OMP& SHARED(ax,bx,cx) &
-                   !CPP_OMP& SHARED(lapw,ab,ab_size,iintsp) &
+                   !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,iintsp) &
                    !CPP_OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
                    DO kp = 1,lapw%nv(iintsp)
-                      ax(kp) = ax(kp) + ab(kp,lmp,1)*utu + ab(kp,ab_size/2+lmp,1)*dtu
-                      bx(kp) = bx(kp) + ab(kp,lmp,1)*utd + ab(kp,ab_size/2+lmp,1)*dtd
-                      cx(kp) = cx(kp) + ab(kp,lmp,1)*utulo + ab(kp,ab_size/2+lmp,1)*dtulo
+                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)*utu + abCoeffs(ab_size/2+lmp,kp,1)*dtu
+                      bx(kp) = bx(kp) + abCoeffs(lmp,kp,1)*utd + abCoeffs(ab_size/2+lmp,kp,1)*dtd
+                      cx(kp) = cx(kp) + abCoeffs(lmp,kp,1)*utulo + abCoeffs(ab_size/2+lmp,kp,1)*dtulo
                    END DO
                    !CPP_OMP END PARALLEL DO
                 END DO
@@ -153,8 +153,8 @@ CONTAINS
                          IF (input%l_useapw) THEN
                             !---> APWlo
                             hmat%data_r(kp,locol) = hmat%data_r(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct * (&
-                                 (CONJG(ab(kp,lm,1))* ud%us(l,ntyp,isp)+&
-                                 CONJG(ab(kp,ab_size/2+lm,1))*ud%uds(l,ntyp,isp))*&
+                                 (CONJG(abCoeffs(lm,kp,1))* ud%us(l,ntyp,isp)+&
+                                 CONJG(abCoeffs(ab_size/2+lm,kp,1))*ud%uds(l,ntyp,isp))*&
                                  (abclo(1,m,nkvec,lo,1)*  ud%dus(l,ntyp,isp)&
                                  +abclo(2,m,nkvec,lo,1)* ud%duds(l,ntyp,isp)&
                                  +abclo(3,m,nkvec,lo,1)*ud%dulos(lo,ntyp,isp) ))
@@ -169,8 +169,8 @@ CONTAINS
                          IF (input%l_useapw) THEN
                             !---> APWlo
                             hmat%data_c(kp,locol)=hmat%data_c(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct*(&
-                                 (CONJG(ab(kp,lm,1))* ud%us(l,ntyp,isp)+&
-                                 CONJG(ab(kp,ab_size/2+lm,1))*ud%uds(l,ntyp,isp))*&
+                                 (CONJG(abCoeffs(lm,kp,1))* ud%us(l,ntyp,isp)+&
+                                 CONJG(abCoeffs(ab_size/2+lm,kp,1))*ud%uds(l,ntyp,isp))*&
                                  (abclo(1,m,nkvec,lo,2)*  ud%dus(l,ntyp,isp)&
                                  +abclo(2,m,nkvec,lo,2)* ud%duds(l,ntyp,isp)&
                                  +abclo(3,m,nkvec,lo,2)*ud%dulos(lo,ntyp,isp) ))

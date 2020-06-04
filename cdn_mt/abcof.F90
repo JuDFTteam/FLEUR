@@ -73,6 +73,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: realCoeffs(:,:), imagCoeffs(:,:), workTrans_r(:,:)
     COMPLEX, ALLOCATABLE :: work_c(:,:), workTrans_c(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
+    COMPLEX, ALLOCATABLE :: abTemp(:,:)
 
     CALL timestart("abcof")
 
@@ -84,7 +85,8 @@ CONTAINS
 
     ! Allocations
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
-    ALLOCATE(abCoeffs(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+    ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
 
     ! Initializations
     acof_size=size(acof,1)
@@ -192,23 +194,33 @@ CONTAINS
 
              ! Obtaining A, B coefficients for eigenfunctions
              CALL timestart("gemm")
-                 ! variant with zgemm
-                !$acc host_data use_device(work_c,abCoeffs,acof,bcof)
-                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,MAXVAL(lapw%nv),CMPLX(1.0,0.0),acof(1,0,iAtom),acof_size)
-                CALL zgemm("T","N",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs(1,abSize+1),MAXVAL(lapw%nv),CMPLX(1.0,0.0),bcof(1,0,iAtom),acof_size)
-                !$acc end host_data
-            !IF (zmat%l_real) THEN
+
+             ! variant with zgemm
+             abTemp = CMPLX(0.0,0.0)
+             !$acc host_data use_device(work_c,abCoeffs,abTemp)
+             CALL zgemm("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
+             !$acc end host_data
+             !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
+             DO lm = 0, SIZE(acof,2)-1
+                DO i = 1, SIZE(acof,1)
+                   acof(i,lm,iAtom) = acof(i,lm,iAtom) + abTemp(i,lm)
+                   bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,SIZE(acof,2)+lm)
+                END DO
+             END DO
+             !$CPP_OMP END PARALLEL DO
+
+             !IF (zmat%l_real) THEN
                 ! variant with dgemm
                 !ALLOCATE(realCoeffs(ne,0:abSize-1),imagCoeffs(ne,0:abSize-1))
                 !realCoeffs = 0.0
                 !imagCoeffs = 0.0
-                !CALL dgemm("T","N",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:nvmax,:abSize)),nvmax,0.0,realCoeffs,ne)
-                !CALL dgemm("T","N",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:nvmax,:abSize)),nvmax,0.0,imagCoeffs,ne)
+                !CALL dgemm("T","T",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:abSize,:nvmax)),abSize,0.0,realCoeffs,ne)
+                !CALL dgemm("T","T",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:abSize,:nvmax)),abSize,0.0,imagCoeffs,ne)
                 !acof(:ne,0:abSize-1,iAtom) = acof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
                 !realCoeffs = 0.0
                 !imagCoeffs = 0.0
-                !CALL dgemm("T","N",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,realCoeffs,ne)
-                !CALL dgemm("T","N",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:nvmax,abSize+1:2*abSize)),nvmax,0.0,imagCoeffs,ne)
+                !CALL dgemm("T","T",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(abSize+1:2*abSize,:nvmax)),abSize,0.0,realCoeffs,ne)
+                !CALL dgemm("T","T",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(abSize+1:2*abSize,:nvmax)),abSize,0.0,imagCoeffs,ne)
                 !bcof(:ne,0:abSize-1,iAtom) = bcof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
                 !DEALLOCATE(realCoeffs,imagCoeffs)
              !ENDIF
@@ -282,8 +294,8 @@ CONTAINS
                          lm = ll1 + m
                          lmp = ll1 - m
                          inv_f = (-1)**(l-m)
-                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(:,lm+1)),work_c(:,:))
-                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(:,lm+1+abSize)),work_c(:,:))
+                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(lm+1,:)),work_c(:,:))
+                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(lm+1+abSize,:)),work_c(:,:))
                          !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
@@ -314,8 +326,8 @@ CONTAINS
                       ll1 = l* (l+1)
                       DO m = -l,l
                          lm = ll1 + m
-                         c_1 = abCoeffs(iLAPW,lm+1)
-                         c_2 = abCoeffs(iLAPW,lm+1+abSize)
+                         c_1 = abCoeffs(lm+1,iLAPW)
+                         c_2 = abCoeffs(lm+1+abSize,iLAPW)
 
                          IF (zmat%l_real) THEN
                             force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * workTrans_r(:ne,iLAPW) * s2h_e(:ne)

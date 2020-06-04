@@ -91,10 +91,10 @@ CONTAINS
              !DO j2=j1,j1
                 DO kj = 1,ki
                    fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                        fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        fjgj%fj(l,ki,j1,1)*fjgj%fj(l,kj,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fjgj%fj(l,ki,j1,1)*fjgj%gj(l,kj,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        fjgj%gj(l,ki,j1,1)*fjgj%fj(l,kj,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        fjgj%gj(l,ki,j1,1)*fjgj%gj(l,kj,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                         * angso(kj,j1,j2)
                    hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct
                    hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct
@@ -221,12 +221,12 @@ CONTAINS
                   !---> update l-diagonal hamiltonian matrix with LAPW,LO contribution
                   DO kj = 1,lapw%nv(j2)
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                    alo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    alo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                    clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
+                    alo1(lo,j1)*fjgj%fj(l,kj,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                    alo1(lo,j1)*fjgj%gj(l,kj,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%fj(l,kj,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%gj(l,kj,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
+                    clo1(lo,j1)*fjgj%fj(l,kj,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
+                    clo1(lo,j1)*fjgj%gj(l,kj,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
                     hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + chi(1,1,j1,j2)*fct
                     hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + chi(1,2,j1,j2)*fct

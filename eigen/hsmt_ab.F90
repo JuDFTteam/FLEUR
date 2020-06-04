@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -30,7 +30,7 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: ab(:,:)
+    COMPLEX, INTENT (OUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
@@ -50,7 +50,7 @@ CONTAINS
 
     ab_size=lmax*(lmax+2)+1
     l_apw=ALL(fjgj%gj==0.0)
-    ab=0.0
+    abCoeffs=0.0
 
     np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
@@ -71,16 +71,16 @@ CONTAINS
     l_pres_abclo = PRESENT(abclo)
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fjgj,abclo,cell,atoms,sym) &
+    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
     !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,l_pres_abclo) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
 #else
-    !$acc kernels present(ab)
-    ab(:,:)=0.0
+    !$acc kernels present(abCoeffs)
+    abCoeffs(:,:)=0.0
     !$acc end kernels
 #endif
     
-    !$acc parallel loop present(fjgj%fj,fjgj%gj,ab) private(vmult,k,ylm,lm,invsfct,lo,nkvec) 
+    !$acc parallel loop present(fjgj%fj,fjgj%gj,abCoeffs) private(vmult,k,ylm,lm,invsfct,lo,nkvec) 
     DO k = 1,lapw%nv(iintsp)
        !-->    generate spherical harmonics
        vmult(:) =  gkrot(:,k)
@@ -91,12 +91,11 @@ CONTAINS
           ll1 = l* (l+1)
           DO m = -l,l
              term = c_ph(k,iintsp)*ylm(ll1+m+1)
-             ab(k,ll1+m+1)         = fjgj%fj(k,l,ispin,iintsp)*term
-             ab(k,ll1+m+1+ab_size) = fjgj%gj(k,l,ispin,iintsp)*term
+             abCoeffs(ll1+m+1,k)         = fjgj%fj(l,k,ispin,iintsp)*term
+             abCoeffs(ll1+m+1+ab_size,k) = fjgj%gj(l,k,ispin,iintsp)*term
           END DO
        END DO
        !$acc end loop 
-       IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)
        IF (l_pres_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -122,11 +121,6 @@ CONTAINS
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif
-    IF (size(ab,1) > lapw%nv(iintsp)) THEN
-       !$acc kernels present(ab)
-       ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
-       !$acc end kernels
-    ENDIF
     IF (.NOT.l_apw) ab_size=ab_size*2
 
   END SUBROUTINE hsmt_ab

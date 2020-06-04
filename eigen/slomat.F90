@@ -96,9 +96,9 @@ CONTAINS
                 !$acc loop gang private(fact2,dotp,kp)
                 DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
-                        fjgj%fj(kp,l,isp,iintsp)* ( alo1(lo) + &
+                        fjgj%fj(l,kp,isp,iintsp)* ( alo1(lo) + &
                         clo1(lo)*ud%uulon(lo,ntyp,isp))+&
-                        fjgj%gj(kp,l,isp,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
+                        fjgj%gj(l,kp,isp,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
