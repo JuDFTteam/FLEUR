@@ -219,7 +219,7 @@ MODULE m_greensfCalcRealPart
          ENDDO
       ENDIF
 
-      !CALL greensfImagPart%mpi_bc(mpi%mpi_comm,mpi%irank)
+      CALL greensfImagPart%mpi_bc(mpi%mpi_comm)
 
    END SUBROUTINE greensfCalcRealPart
 END MODULE m_greensfCalcRealPart
