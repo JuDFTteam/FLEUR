@@ -427,10 +427,15 @@ CONTAINS
 
       INTEGER:: k
       REAL:: th
+
+      !$OMP PARALLEL DO DEFAULT(none) &
+      !$OMP& SHARED(lapw,iintsp,tau,qss,cph)&
+      !$OMP& PRIVATE(k,th)
       DO k = 1, lapw%nv(iintsp)
          th = DOT_PRODUCT(lapw%gvec(:, k, iintsp) + (iintsp - 1.5)*qss + lapw%bkpt, tau)
          cph(k) = CMPLX(COS(tpi_const*th), -SIN(tpi_const*th))
       END DO
+      !$OMP END PARALLEL DO
    END SUBROUTINE lapw_phase_factors
 
    SUBROUTINE priv_vec_for_lo(atoms, sym, na, n, np, noco, nococonv, lapw, cell)

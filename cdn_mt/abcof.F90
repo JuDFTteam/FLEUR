@@ -186,9 +186,17 @@ CONTAINS
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
+
+             !$CPP_OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
              !$acc kernels
-             abCoeffs(:,:)=conjg(abCoeffs(:,:))
+             DO iLAPW = 1, SIZE(abCoeffs,2)
+                DO i = 1, SIZE(abCoeffs,1)
+                   abCoeffs(i,iLAPW)=conjg(abCoeffs(i,iLAPW))
+                END DO
+             END DO
              !$acc end kernels
+             !$CPP_OMP END PARALLEL DO
+
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
 
