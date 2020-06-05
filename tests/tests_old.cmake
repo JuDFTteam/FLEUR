@@ -43,7 +43,7 @@ endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (FLEUR_USE_WANN)
-   set(SerialOnlyTests ${SerialOnlyTests} CwannXML)
+   set(SerialOnlyTests ${SerialOnlyTests} CwannXML ${FFNTests})
 endif()
 
 #Tests for LibXC
