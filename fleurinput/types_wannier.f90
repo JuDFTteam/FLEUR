@@ -545,6 +545,26 @@ CONTAINS
             CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
              endif
             endif        
+          ELSEIF(jobname.EQ.'anglmom')THEN
+            this%l_anglmom=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%anglmomfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif
+          ELSEIF(jobname.EQ.'anglmomrs')THEN
+            this%l_anglmomrs=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%anglmomrsfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif                            
+            
+            
+            
+            
           ELSEIF(this%jobList(i).EQ.'projmethod')THEN
              this%l_projmethod=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
