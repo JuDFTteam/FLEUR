@@ -201,10 +201,10 @@ CONTAINS
              CALL zgemm("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
-             DO lm = 0, SIZE(acof,2)-1
-                DO i = 1, SIZE(acof,1)
+             DO lm = 0, absize-1
+                DO i = 1, ne
                    acof(i,lm,iAtom) = acof(i,lm,iAtom) + abTemp(i,lm)
-                   bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,SIZE(acof,2)+lm)
+                   bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,absize+lm)
                 END DO
              END DO
              !$CPP_OMP END PARALLEL DO
