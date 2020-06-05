@@ -25,11 +25,11 @@ set(HybridTests
    MnHybridNoinv
 )
 
-#set(FFNTests
-#   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-#   PlotDenandPot PlotOnlyMT
-#   RelaxMTFeature Fe_bcc_SF_LDA
-#)
+set(FFNTests
+   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   PlotDenandPot PlotOnlyMT
+   RelaxMTFeature Fe_bcc_SF_LDA
+)
 
 
 if (FLEUR_USE_HDF5)
