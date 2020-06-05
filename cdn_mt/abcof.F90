@@ -186,17 +186,6 @@ CONTAINS
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
-
-             !$CPP_OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-             !$acc kernels
-             DO iLAPW = 1, SIZE(abCoeffs,2)
-                DO i = 1, SIZE(abCoeffs,1)
-                   abCoeffs(i,iLAPW)=conjg(abCoeffs(i,iLAPW))
-                END DO
-             END DO
-             !$acc end kernels
-             !$CPP_OMP END PARALLEL DO
-
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
 
@@ -206,7 +195,7 @@ CONTAINS
              ! variant with zgemm
              abTemp = CMPLX(0.0,0.0)
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
+             CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
              DO lm = 0, absize-1
@@ -217,21 +206,6 @@ CONTAINS
              END DO
              !$CPP_OMP END PARALLEL DO
 
-             !IF (zmat%l_real) THEN
-                ! variant with dgemm
-                !ALLOCATE(realCoeffs(ne,0:abSize-1),imagCoeffs(ne,0:abSize-1))
-                !realCoeffs = 0.0
-                !imagCoeffs = 0.0
-                !CALL dgemm("T","T",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(:abSize,:nvmax)),abSize,0.0,realCoeffs,ne)
-                !CALL dgemm("T","T",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(:abSize,:nvmax)),abSize,0.0,imagCoeffs,ne)
-                !acof(:ne,0:abSize-1,iAtom) = acof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
-                !realCoeffs = 0.0
-                !imagCoeffs = 0.0
-                !CALL dgemm("T","T",ne,abSize,nvmax,1.0,work_r,nvmax,REAL(abCoeffs(abSize+1:2*abSize,:nvmax)),abSize,0.0,realCoeffs,ne)
-                !CALL dgemm("T","T",ne,abSize,nvmax,-1.0,work_r,nvmax,AIMAG(abCoeffs(abSize+1:2*abSize,:nvmax)),abSize,0.0,imagCoeffs,ne)
-                !bcof(:ne,0:abSize-1,iAtom) = bcof(:ne,0:abSize-1,iAtom) + CMPLX(realCoeffs(:,:),imagCoeffs(:,:))
-                !DEALLOCATE(realCoeffs,imagCoeffs)
-             !ENDIF
              CALL timestop("gemm")
 
              CALL timestart("local orbitals")
@@ -302,8 +276,8 @@ CONTAINS
                          lm = ll1 + m
                          lmp = ll1 - m
                          inv_f = (-1)**(l-m)
-                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(lm+1,:)),work_c(:,:))
-                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(conjg(abCoeffs(lm+1+abSize,:)),work_c(:,:))
+                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1,:),work_c(:,:))
+                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1+abSize,:),work_c(:,:))
                          !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
@@ -334,8 +308,8 @@ CONTAINS
                       ll1 = l* (l+1)
                       DO m = -l,l
                          lm = ll1 + m
-                         c_1 = abCoeffs(lm+1,iLAPW)
-                         c_2 = abCoeffs(lm+1+abSize,iLAPW)
+                         c_1 = CONJG(abCoeffs(lm+1,iLAPW))
+                         c_2 = CONJG(abCoeffs(lm+1+abSize,iLAPW))
 
                          IF (zmat%l_real) THEN
                             force%e1cof(:ne,lm,iAtom) = force%e1cof(:ne,lm,iAtom) + c_1 * workTrans_r(:ne,iLAPW) * s2h_e(:ne)
