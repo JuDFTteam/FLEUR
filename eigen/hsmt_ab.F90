@@ -79,7 +79,7 @@ CONTAINS
        !-->    generate spherical harmonics
        CALL ylm4(lmax,gkrot,ylm)
        !-->  synthesize the complex conjugates of a and b
-       !$acc  loop vector private(l,ll1,m,term)
+       !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
        DO l = 0,lmax
           tempA = fjgj%fj(l,k,ispin,iintsp)*c_ph(k,iintsp)
           tempB = fjgj%gj(l,k,ispin,iintsp)*c_ph(k,iintsp)
@@ -88,9 +88,9 @@ CONTAINS
           facA(lmMin:lmMax) = tempA
           facB(lmMin:lmMax) = tempB
        END DO
+       !$acc end loop
        abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
        abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       !$acc end loop
        IF (l_pres_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
