@@ -1414,7 +1414,7 @@ CONTAINS
                    noconbasfcn=nbasfcn
                    IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                       addnoco=lapw%nv(1)+atoms%nlotot
-                      noconbasfcn=nbasfcn-addnoco
+!                      noconbasfcn=nbasfcn-addnoco
                    ENDIF
 
                    !-----> interstitial contribution to mmn0-matrix
@@ -1634,8 +1634,8 @@ CONTAINS
                       IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                          addnoco  = lapw%nv(1)   + atoms%nlotot
                          addnoco2 = lapw_b%nv(1) + atoms%nlotot
-                         noconbasfcn=nbasfcn-addnoco
-                         noconbasfcn_b=nbasfcn_b-addnoco2
+!                         noconbasfcn=nbasfcn-addnoco
+!                         noconbasfcn_b=nbasfcn_b-addnoco2
                       ENDIF
 
                       CALL wann_mmkb_int(&
