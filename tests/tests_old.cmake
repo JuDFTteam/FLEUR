@@ -6,7 +6,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    CoMCDXML  Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   Fe_1l_Tria SmAtomjDOS)
+   Fe_1l_Tria SmAtomjDOS RelaxMTFeature FeFFNLOsSOC)
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -25,11 +25,11 @@ set(HybridTests
    MnHybridNoinv
 )
 
-set(FFNTests
-   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot PlotOnlyMT
-   RelaxMTFeature Fe_bcc_SF_LDA
-)
+#set(FFNTests
+#   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+#   PlotDenandPot PlotOnlyMT
+#   RelaxMTFeature Fe_bcc_SF_LDA
+#)
 
 
 if (FLEUR_USE_HDF5)
@@ -43,7 +43,7 @@ endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (FLEUR_USE_WANN)
-   set(SerialOnlyTests ${SerialOnlyTests} CwannXML ${FFNTests})
+   set(SerialOnlyTests ${SerialOnlyTests} CwannXML)
 endif()
 
 #Tests for LibXC
