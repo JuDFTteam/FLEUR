@@ -194,6 +194,8 @@ CONTAINS
     END IF
     CALL mpi_bc(this%socmatvecfmt,rank,mpi_comm)
     CALL mpi_bc(this%socmatvecrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmatvec,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmatvecrs,rank,mpi_comm)    
     CALL mpi_bc(this%anglmomrsfmt,rank,mpi_comm)
     CALL mpi_bc(this%anglmomfmt,rank,mpi_comm)
     CALL mpi_bc(this%torquefmt,rank,mpi_comm)
@@ -442,8 +444,12 @@ CONTAINS
              this%l_socmat=.TRUE.
           ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
              this%l_socmatvec=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'socmatvecrs')THEN
+             this%l_socmatvecrs=.TRUE.             
           ELSEIF(this%jobList(i).EQ.'unformatted')THEN
              this%l_unformatted=.TRUE.         
+          ELSEIF(this%jobList(i).EQ.'undegen')THEN
+             this%l_ndegen=.TRUE.              
           ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
              this%l_socmatrs=.TRUE.
           ELSEIF(this%jobList(i).EQ.'soctomom')THEN

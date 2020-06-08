@@ -9,7 +9,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g0,selfen,gfinp,input,noco,occDFT,g,mmpMat)
+   SUBROUTINE add_selfen(g0,selfen,gfinp,input,occDFT,g,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -27,29 +27,24 @@ MODULE m_add_selfen
 
       TYPE(t_greensf),  INTENT(IN)     :: g0
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
-      TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
       REAL,             INTENT(IN)     :: occDFT(:)
       TYPE(t_selfen),   INTENT(INOUT)  :: selfen
       TYPE(t_greensf),  INTENT(INOUT)  :: g
       COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER :: l,ispin,m,mp
-      INTEGER :: nMatch,iMatch
+      INTEGER :: l,ispin,m,mp,iMatch
       REAL    :: mu_a,mu_b,mu_step
       REAL    :: mu,nocc,nTarget,muMax,nMax
       LOGICAL :: l_fullMatch,l_invalidElements
 
-      nMatch = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
-      !Not tested yet for two chemical potentials, so we just take one
-      nMatch=1
       !Are we matching the spin polarized self-energy with one chemical potential
-      l_fullMatch = nMatch.EQ.1!.AND.input%jspins.EQ.2
+      l_fullMatch = SIZE(selfen%muMatch).EQ.1 .AND. input%jspins.EQ.2
 
       l = g0%elem%l
 
       !Search for the maximum of occupation
-      DO iMatch = 1, nMatch
+      DO iMatch = 1, SIZE(selfen%muMatch)
 
          !Target occupation
          nTarget = MERGE(SUM(occDFT(:)),occDFT(iMatch),l_fullMatch)
@@ -88,7 +83,7 @@ MODULE m_add_selfen
             !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
             CALL juDFT_error("Something went wrong with the addition of the selfenergy: nMax>>2*(2*l+1)",&
                               calledby="add_selfen")
-         ELSE IF(nMax-nTarget.LT.0.0) THEN
+         ELSE IF(nMax-nTarget.LT.-0.1) THEN
             CALL juDFT_error("Something went wrong with the addition of the selfenergy: nMax<nTarget",&
                               calledby="add_selfen")
          ENDIF
@@ -112,7 +107,7 @@ MODULE m_add_selfen
                mu_b = mu
             ENDIF
          ENDDO
-         selfen%muMatch = mu
+         selfen%muMatch(iMatch) = mu
          !----------------------------------------------------
          ! Check if the final mmpMat contains invalid elements
          !----------------------------------------------------
@@ -159,7 +154,7 @@ MODULE m_add_selfen
       matsize = ns*MERGE(2,1,l_fullMatch)
       CALL vmat%init(.false.,matsize,matsize)
       CALL gmat%init(.false.,matsize,matsize)
-      CALL g%reset()
+      IF(iMatch>1) CALL g%reset()
 
       !Select the correct section from the selfenergy
       start = MERGE(1,1+(iMatch-1)*ns,l_fullMatch)
@@ -197,7 +192,11 @@ MODULE m_add_selfen
       ENDDO
 
       !Get the occupation matrix
-      CALL occmtx(g,gfinp,input,mmpMat,check=.TRUE.,occError=l_invalidElements)
+      IF(l_fullMatch) THEN
+         CALL occmtx(g,gfinp,input,mmpMat,check=.TRUE.,occError=l_invalidElements)
+      ELSE
+         CALL occmtx(g,gfinp,input,mmpMat,spin=iMatch,check=.TRUE.,occError=l_invalidElements)
+      ENDIF
 
       !Compute the trace
       nocc = 0.0

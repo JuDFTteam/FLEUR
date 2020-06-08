@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,mmpMat,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -25,6 +25,7 @@ MODULE m_occmtx
       TYPE(t_gfinp),          INTENT(IN)    :: gfinp
       TYPE(t_input),          INTENT(IN)    :: input
       COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
+      INTEGER, OPTIONAL,      INTENT(IN)    :: spin
       LOGICAL, OPTIONAL,      INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
       LOGICAL, OPTIONAL,      INTENT(IN)    :: check
       LOGICAL, OPTIONAL,      INTENT(INOUT) :: occError
@@ -50,9 +51,13 @@ MODULE m_occmtx
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
          WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
-      mmpMat = cmplx_0
+      IF(PRESENT(spin)) THEN
+         mmpMat(:,:,spin) = cmplx_0
+      ELSE
+         mmpMat = cmplx_0
+      ENDIF
 
-      DO ispin = 1, SIZE(g%gmmpMat,4)
+      DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,SIZE(g%gmmpMat,4),PRESENT(spin))
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, SIZE(g%gmmpMat,1)
@@ -103,7 +108,7 @@ MODULE m_occmtx
       IF(PRESENT(check)) THEN
          IF(check) THEN
             IF(PRESENT(occError)) occError = .FALSE.
-            DO ispin = 1, input%jspins
+            DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,input%jspins,PRESENT(spin))
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)
