@@ -191,6 +191,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (sliceplot%slice) THEN
       IF (mpi%irank == 0) THEN
+         IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
@@ -248,6 +249,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then
+     IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,core_den,'cdnc')
    endif
