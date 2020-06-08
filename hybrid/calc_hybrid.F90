@@ -49,7 +49,6 @@ CONTAINS
       REAL, ALLOCATABLE :: eig_irr(:, :)
 
       CALL timestart("hybrid code")
-      call sync_eig(eig_id, fi, .True.)
       call hybmpi%copy_mpi(mpi)
          
       call work_pack%init(fi, hybmpi%rank, hybmpi%size)
@@ -138,7 +137,6 @@ CONTAINS
 #endif
 
       ENDIF
-      call sync_eig(eig_id, fi, .False.)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
