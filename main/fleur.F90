@@ -155,7 +155,7 @@ CONTAINS
     CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.FALSE.,.FALSE.,fix)
     CALL timestop("Qfix")
     IF(mpi%irank.EQ.0) THEN
-       IF(fi%noco%l_alignMT.AND.mpi%irank==0) THEN
+       IF(fi%noco%l_alignMT) THEN
          CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
          CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
        END IF
@@ -248,10 +248,10 @@ CONTAINS
 IF (fi%sliceplot%iplot.NE.0) THEN
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+   END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
-   END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
 
@@ -261,10 +261,10 @@ IF (fi%sliceplot%iplot.NE.0) THEN
 
    IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
       CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+   END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
-   END IF
 END IF
 
 
@@ -462,9 +462,11 @@ END IF
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
           
           IF (fi%sliceplot%iplot.NE.0) THEN
-   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-   !               CDN including core charge
-      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
+   IF(fi%noco%l_alignMT) THEN
+      IF (mpi%irank.EQ.0)  THEN 
+      !               CDN including core charge
+          CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
+      END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
 #endif
@@ -475,12 +477,14 @@ END IF
        IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
-
-   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
+   IF (fi%noco%l_alignMT) THEN
+      IF (mpi%irank.EQ.0)  THEN 
+         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
+      END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
 #endif
+     
    END IF
 END IF
 
@@ -530,14 +534,15 @@ END IF
              ! total energy
              
              !Rotating from local MT frame in global frame for mixing
-             IF (fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
-                CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
-             END IF
+             IF (fi%noco%l_alignMT) THEN
+                IF (mpi%irank.EQ.0) THEN
+                   CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
+                END IF
 #ifdef CPP_MPI
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
 #endif
-
+             END IF
 
              CALL timestart('determination of total energy')
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
@@ -555,14 +560,15 @@ END IF
             fi%sym,fi%cell,fi%noco,fi%oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1data%l_runthisiter,fi%sliceplot)
  
 !Rotating in local MT frame  
-       IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) THEN
-          CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
+       IF(fi%noco%l_alignMT)THEN
+          IF(mpi%irank.EQ.0) THEN
+             CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
                   ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
-       END IF
+          END IF
 #ifdef CPP_MPI
                CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
-
+          END IF
 
 
        IF(mpi%irank == 0) THEN
