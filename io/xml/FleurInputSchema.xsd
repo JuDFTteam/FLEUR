@@ -694,6 +694,7 @@
       <xsd:attribute default="2" name="n_occpm" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="dftspinpol" type="FleurBool" use="optional"/>
       <xsd:attribute default="T" name="fullMatch" type="FleurBool" use="optional"/>
+      <xsd:attribute default="T" name="l_nonsphDC" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="GFGeneralType">
