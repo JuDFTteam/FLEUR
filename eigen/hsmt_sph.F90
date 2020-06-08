@@ -97,8 +97,8 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
          xlegend =dot_product(lapw%gk(1:3,kj,iintsp),lapw%gk(1:3,ki,jintsp))
          !$acc loop seq
          DO  l = 0,atoms%lmax(n)
-            fjkiln = fjgj%fj(l,ki,isp,jintsp)
-            gjkiln = fjgj%gj(l,ki,isp,jintsp)
+            fjkiln = fjgj%fj(ki,l,isp,jintsp)
+            gjkiln = fjgj%gj(ki,l,isp,jintsp)
             IF (input%l_useapw) THEN
                w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
                apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
@@ -118,14 +118,14 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
                plegend(l3) = fleg1(l-1)*xlegend*plegend(modulo(l-1,3)) - fleg2(l-1)*plegend(modulo(l-2,3))
             END IF ! l
 
-            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(l,kj,isp,iintsp) + gjkiln*fjgj%gj(l,kj,isp,iintsp)*ddnln )
-            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(l,kj,isp,iintsp) + fjkiln*fjgj%gj(l,kj,isp,iintsp) )
+            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(l,kj,isp,iintsp)*ddnln )
+            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(l,kj,isp,iintsp) )
 
             VecHelpS = VecHelpS + fct
             VecHelpH = VecHelpH + fct*elall + fct2
 
             IF (input%l_useapw) THEN
-               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(l,kj,isp,iintsp) + apw_lo2*fjgj%gj(l,kj,isp,iintsp) )
+               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(kj,l,isp,iintsp) + apw_lo2*fjgj%gj(l,kj,isp,iintsp) )
             ENDIF ! useapw
 
             !--->          end loop over l
@@ -260,8 +260,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
          END DO ! kj
          DO  l = 0,atoms%lmax(n)
 
-            fjkiln = fjgj%fj(l,ki,isp,jintsp)
-            gjkiln = fjgj%gj(l,ki,isp,jintsp)
+            fjkiln = fjgj%fj(ki,l,isp,jintsp)
+            gjkiln = fjgj%gj(ki,l,isp,jintsp)
 
             IF (input%l_useapw) THEN
                w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
@@ -283,14 +283,14 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
                plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:NVEC_REM,modulo(l-1,3)) - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
             END IF ! l
 
-            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(l,kj_off:kj_vec,isp,iintsp) + gjkiln*fjgj%gj(l,kj_off:kj_vec,isp,iintsp)*ddnln )
-            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(l,kj_off:kj_vec,isp,iintsp) + fjkiln*fjgj%gj(l,kj_off:kj_vec,isp,iintsp) )
+            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp)*ddnln )
+            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
 
             VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
             VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
             IF (input%l_useapw) THEN
-               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(l,kj_off:kj_vec,isp,iintsp) + apw_lo2*fjgj%gj(l,kj_off:kj_vec,isp,iintsp) )
+               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
             ENDIF ! useapw
 
             !--->          end loop over l

@@ -90,10 +90,10 @@ CONTAINS
        DO  l = 0,atoms%lnonsph(n)
           DO kj = 1,ki
              fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
-                  fjgj%fj(l,ki,ispin,iintsp)*fjgj%fj(l,kj,jspin,jintsp) *td%h_off(l,l,n,ispin,jspin) + &
-                  fjgj%fj(l,ki,ispin,iintsp)*fjgj%gj(l,kj,jspin,jintsp) *td%h_off(l,l+s,n,ispin,jspin) + &
-                  fjgj%gj(l,ki,ispin,iintsp)*fjgj%fj(l,kj,jspin,jintsp) *td%h_off(l+s,l,n,ispin,jspin) + &
-                  fjgj%gj(l,ki,ispin,iintsp)*fjgj%gj(l,kj,jspin,jintsp) *td%h_off(l+s,l+s,n,ispin,jspin)* sqrt(usdus%ddn(l,n,ispin)*usdus%ddn(l,n,jspin)))
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l,l,n,ispin,jspin) + &
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,n,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,n,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,n,ispin,jspin)* sqrt(usdus%ddn(l,n,ispin)*usdus%ddn(l,n,jspin)))
              hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct
              hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct
              hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct

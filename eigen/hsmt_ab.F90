@@ -81,8 +81,8 @@ CONTAINS
        !-->  synthesize the complex conjugates of a and b
        !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
        DO l = 0,lmax
-          tempA = fjgj%fj(l,k,ispin,iintsp)*c_ph(k,iintsp)
-          tempB = fjgj%gj(l,k,ispin,iintsp)*c_ph(k,iintsp)
+          tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+          tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
           lmMin = l*(l+1) + 1 - l
           lmMax = l*(l+1) + 1 + l
           facA(lmMin:lmMax) = tempA
