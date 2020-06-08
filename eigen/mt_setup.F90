@@ -33,7 +33,7 @@ CONTAINS
     INTEGER:: jsp
 
     IF (atoms%n_u+atoms%n_hia>0) THEN
-       CALL u_setup(sym,atoms,sphhar,input,noco,hub1inp,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
+       CALL u_setup(atoms,input,noco,mpi,hub1inp,inDen,vTot,results)
     END IF
 
 
