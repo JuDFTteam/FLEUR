@@ -75,7 +75,9 @@ CONTAINS
       use m_fft_interface
       use m_io_hybinp
       use m_juDFT
+#ifdef CPP_MPI
       use mpi
+#endif
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -124,10 +126,12 @@ CONTAINS
 
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
-      
+
+#ifdef CPP_MPI
       call timestart("Post read_z Barrier")
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
       call timestop("Post read_z Barrier")
+#endif
 
       call psi_kqpt%alloc(.false., fftd, psize)
 

@@ -25,7 +25,7 @@ set(fleur_F90 ${fleur_F90}
    hybrid/olap.F90
    hybrid/wrapper.f90
    hybrid/wavefproducts.f90
-   hybrid/wavefproducts_aux.f90
+   hybrid/wavefproducts_aux.F90
    hybrid/wavefproducts_inv.f90
    hybrid/wavefproducts_noinv.f90
    hybrid/calc_l_m_from_lm.f90

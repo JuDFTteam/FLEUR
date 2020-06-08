@@ -71,7 +71,9 @@ CONTAINS
       USE m_io_hybinp
       USE m_kp_perturbation
       use m_spmm
+#ifdef CPP_MPI
       use mpi
+#endif
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -150,7 +152,9 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
+#ifdef CPP_MPI
       cnt_read_z = predict_max_read_z(fi, hybdat, jsp)
+#endif
       DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
          iq = fi%kpts%EIBZ(ik)%pointer(jq)
          iq_p = fi%kpts%bkp(iq)
@@ -283,11 +287,13 @@ CONTAINS
       END DO  !jq
 
       call timestart("dangeling MPI_barriers")
+#ifdef CPP_MPI
       do while(cnt_read_z > 0) 
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          cnt_read_z = cnt_read_z - 1
       enddo
       call timestop("dangeling MPI_barriers")
+#endif
       call dot_result%free()
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
