@@ -15,7 +15,7 @@ MODULE m_types_selfen
    TYPE t_selfen
 
       INTEGER :: l = -1
-      REAL    :: muMatch = 0.0
+      REAL,ALLOCATABLE    :: muMatch(:)
 
       COMPLEX, ALLOCATABLE :: data(:,:,:,:)
 
@@ -30,13 +30,16 @@ MODULE m_types_selfen
 
    CONTAINS
 
-      SUBROUTINE init_selfen(this,l,nz)
+      SUBROUTINE init_selfen(this,l,nz,jspins,l_fullMatch)
 
          CLASS(t_selfen), INTENT(INOUT) :: this
          INTEGER,         INTENT(IN)    :: l
          INTEGER,         INTENT(IN)    :: nz
+         INTEGER,         INTENT(IN)    :: jspins
+         LOGICAL,         INTENT(IN)    :: l_fullMatch
 
          this%l = l
+         ALLOCATE(this%muMatch(MERGE(1,jspins,l_fullMatch)),source=0.0)
          ALLOCATE(this%data(2*(2*l+1),2*(2*l+1),nz,2),source = cmplx_0)
 
       END SUBROUTINE init_selfen
@@ -50,12 +53,16 @@ MODULE m_types_selfen
 #include"cpp_double.h"
          INTEGER:: ierr,irank,n
          COMPLEX,ALLOCATABLE::ctmp(:)
-         REAL :: rtmp
+         REAL, ALLOCATABLE :: rtmp(:)
 
          CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 
-         CALL MPI_REDUCE(this%muMatch,rtmp,1,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         IF(irank.EQ.0) this%muMatch = rtmp
+
+         n = SIZE(this%muMatch)
+         ALLOCATE(rtmp(n))
+         CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         IF(irank.EQ.0) this%muMatch = reshape(rtmp,[n])
+         DEALLOCATE(rtmp)
 
          n = SIZE(this%data)
          ALLOCATE(ctmp(n))

@@ -100,20 +100,22 @@ MODULE m_crystalfield
                ENDDO
             ENDDO
          ENDDO
-         !Remove SOC potential (only spin-diagonal)
-         DO jspin = 1, 2
-            DO m = -l, l
-               DO mp = -l, l
-                  isp = 3.0-2.0*jspin !1,-1
-                  IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
-                     vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
-                  ELSE
-                     vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
-                  ENDIF
-                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
+         IF(ABS(hub1data%xi(i_hia)).GT.1e-12) THEN
+            !Remove SOC potential (only spin-diagonal)
+            DO jspin = 1, 2
+               DO m = -l, l
+                  DO mp = -l, l
+                     isp = 3.0-2.0*jspin !1,-1
+                     IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
+                        vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
+                     ELSE
+                        vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
+                     ENDIF
+                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
+                  ENDDO
                ENDDO
             ENDDO
-         ENDDO
+         ENDIF
 #ifdef CPP_DEBUG
          WRITE(*,*) "UP-REMOVED"
          WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)

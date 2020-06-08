@@ -129,6 +129,8 @@ CONTAINS
        CALL wann_optional(mpi,fi%input,fi%kpts,fi%atoms,fi%sym,fi%cell,fi%oneD,fi%noco,wann)
     END IF
 
+    IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
+
     iter     = 0
     iterHF   = 0
     hub1data%iter  = 0
@@ -179,7 +181,6 @@ CONTAINS
        ENDDO
     ENDIF
     ! Initialize Green's function (end)
-    IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
 
     ! Open/allocate eigenvector storage (start)
     l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)

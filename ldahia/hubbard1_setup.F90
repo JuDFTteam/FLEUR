@@ -119,7 +119,8 @@ MODULE m_hubbard1_setup
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
             IF(l_firstIT_HIA) THEN
                IF(hub1inp%init_occ(i_hia) > -9e98) THEN
-                  occDFT(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
+                  occDFT(i_hia,1) = MIN(2.0*l+1.0,hub1inp%init_occ(i_hia))
+                  IF(input%jspins.EQ.2) occDFT(i_hia,2) = MAX(0.0,hub1inp%init_occ(i_hia)-2.0*l-1.0)
                ELSE
                   occDFT(i_hia,:) = 0.0
                   DO ispin = 1, input%jspins
@@ -189,15 +190,16 @@ MODULE m_hubbard1_setup
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
-      ALLOCATE(gu(atoms%n_hia))
-      ALLOCATE(selfen(atoms%n_hia))
-
       !Argument order different because occDFT is not allocatable
       CALL mpi_bc(0,mpi%mpi_comm,occDFT)
-      !Broadcast important stuff
+
+      !Initializations
+      ALLOCATE(gu(atoms%n_hia))
+      ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,input,contour_in=gdft(i_hia)%contour)
-         CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz)
+         CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
+                                 noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
 
 #ifdef CPP_MPI
@@ -266,7 +268,8 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot.AND.gfinp%l_mperp,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot.AND.gfinp%l_mperp,&
+                                        pot%mmpMat(:,:,atoms%n_u+i_hia,:))
 
          !----------------------------------------------------------------------
          ! Solution of the Dyson Equation
@@ -283,7 +286,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,noco,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -300,7 +303,7 @@ MODULE m_hubbard1_setup
          CALL selfen(i_hia)%collect(mpi%mpi_comm)
          IF(mpi%irank.EQ.0) THEN
             !We found the chemical potential to within the desired accuracy
-            WRITE(oUnit,'(TR3,I4.1,TR3,A,f8.4)') i_hia, "muMatch = ", selfen(i_hia)%muMatch
+            WRITE(oUnit,*) i_hia, "muMatch = ", selfen(i_hia)%muMatch(:)
          ENDIF
       ENDDO
 

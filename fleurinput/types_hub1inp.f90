@@ -17,7 +17,7 @@ MODULE m_types_hub1inp
       REAL    :: minoccDistance=1.0e-2
       REAL    :: minmatDistance=1.0e-3
       LOGICAL :: l_dftspinpol=.FALSE. !Determines whether the DFT part is spin-polarized in a magnetic DFT+Hubbard 1 calculation
-
+      LOGICAL :: l_fullMatch=.TRUE. !Determines whether two chemical potentials are used to match (if possible)
       !Parameters for the solver
       REAL     :: beta = 100.0 !inverse temperature
       INTEGER  :: n_occpm = 2  !number of particle excitations considered in the solver
@@ -63,6 +63,7 @@ CONTAINS
       CALL mpi_bc(this%minoccDistance,rank,mpi_comm)
       CALL mpi_bc(this%minmatDistance,rank,mpi_comm)
       CALL mpi_bc(this%l_dftspinpol,rank,mpi_comm)
+      CALL mpi_bc(this%l_fullMatch,rank,mpi_comm)
       CALL mpi_bc(this%beta,rank,mpi_comm)
       CALL mpi_bc(this%n_occpm,rank,mpi_comm)
       CALL mpi_bc(this%init_occ,rank,mpi_comm)
@@ -116,6 +117,7 @@ CONTAINS
          this%beta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))
          this%n_occpm = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@n_occpm'))
          this%l_dftspinpol = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dftspinpol'))
+         this%l_fullMatch = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fullMatch'))
       ENDIF
 
       !Read in the additional information given in the ldaHIA tags (exchange splitting and additional keywords)
