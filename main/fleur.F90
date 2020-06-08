@@ -247,25 +247,28 @@ CONTAINS
 
 !Plot inden if wanted
 IF (fi%sliceplot%iplot.NE.0) THEN
-   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-      CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
-   END IF
+   IF (fi%noco%l_alignMT)THEN 
+      IF (mpi%irank.EQ.0)  THEN 
+         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+      END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
+   END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
                   fi%noco,nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
 
        IF ((mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.EQ.2)) THEN
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
-
-   IF (mpi%irank.EQ.0.AND.fi%noco%l_alignMT)  THEN 
-      CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
-   END IF
+   IF(fi%noco%l_alignMT) THEN 
+      IF (mpi%irank.EQ.0)  THEN 
+         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+      END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
 #endif
+   END IF
 END IF
 
 
@@ -484,8 +487,7 @@ END IF
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
-#endif
-     
+#endif    
    END IF
 END IF
 

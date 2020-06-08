@@ -55,7 +55,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntype)
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k
    INTEGER                   :: archiveType
-   LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype)
+   LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype),opt
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
@@ -94,12 +94,14 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
 
    IF(.NOT.PRESENT(optDen)) THEN
+      opt=.FALSE.
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       ! read the charge density
       CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                        CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
    ELSE
       den=optDen
+      opt=.TRUE.
    END IF
 
    ! flip cdn for each atom with rotation angles given
@@ -207,7 +209,7 @@ END DO
    END IF
 
    ! write the spin-polarized density
-   CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF(opt) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      1,-1.0,0.0,.FALSE.,den)
 
    ! read enpara and  flip lines
