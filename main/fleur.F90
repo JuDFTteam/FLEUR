@@ -65,6 +65,7 @@ CONTAINS
    USE m_ylm
    USE m_metagga
    USE m_plot
+   USE m_usetup
    USE m_hubbard1_setup
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -95,7 +96,7 @@ CONTAINS
     TYPE(t_hybdat)                  :: hybdat
     TYPE(t_mpdata)                  :: mpdata
 
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
     TYPE(t_hub1data)                :: hub1data
@@ -170,7 +171,6 @@ CONTAINS
     CALL vTot%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
     CALL vCoul%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTCOUL)
     CALL vx%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTCOUL)
-    CALL vTemp%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
@@ -221,21 +221,6 @@ CONTAINS
           WRITE (oUnit,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
-
-
-       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
-          DO i_gf = 1, fi%gfinp%n
-             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm)
-          ENDDO
-          IF(ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
-             hub1data%iter = hub1data%iter + 1
-             CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
-                                 greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
-          ELSE
-             IF(mpi%irank.EQ.0) WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
-             hub1data%l_runthisiter = .FALSE. !To prevent problems in mixing later on
-          ENDIF
-       ENDIF
 
 #ifdef CPP_CHASE
        CALL chase_distance(results%last_distance)
@@ -320,6 +305,23 @@ END IF
           CALL inDen%ChargeAndMagnetisationToSpins()
        END IF
 
+       IF(hub1data%l_runthisiter.AND.fi%atoms%n_hia>0) THEN
+          DO i_gf = 1, fi%gfinp%n
+             CALL greensFunction(i_gf)%mpi_bc(mpi%mpi_comm)
+          ENDDO
+          IF(ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
+             hub1data%iter = hub1data%iter + 1
+             CALL hubbard1_setup(fi%atoms,fi%gfinp,fi%hub1inp,fi%input,mpi,fi%noco,vTot,&
+                                 greensFunction(fi%gfinp%hiaElem),hub1data,results,inDen)
+          ELSE
+             IF(mpi%irank.EQ.0) WRITE(*,*) 'Not all Greens Functions available: Running additional iteration'
+             hub1data%l_runthisiter = .FALSE. !To prevent problems in mixing later on
+          ENDIF
+       ENDIF
+
+       IF (fi%atoms%n_u+fi%atoms%n_hia>0) THEN
+          CALL u_setup(fi%atoms,fi%input,fi%noco,mpi,fi%hub1inp,inDen,vTot,results)
+       END IF
 
 
 #ifdef CPP_MPI
@@ -330,18 +332,14 @@ END IF
 
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
-          vTemp = vTot
-          vTemp%mmpMat = 0.0 !To avoid errors later on (When ldaUAdjEnpara is T the density
-                             !is carried over after vgen)
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vToT,fi%hub1inp)
           CALL timestop("Updating energy parameters")
           IF(.not.fi%input%eig66(1))THEN
             CALL eigen(fi,mpi,stars,sphhar,xcpot,&
                        enpara,nococonv,mpdata,hybdat,&
-                       iter,eig_id,results,inDen,vTemp,vx,hub1data)
+                       iter,eig_id,results,inDen,vToT,vx,hub1data)
           ENDIF
-          vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
 

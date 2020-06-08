@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden !
       TYPE(t_hub1data),INTENT(INOUT):: hub1data
       TYPE(t_potden), INTENT(IN)   :: vx
-      TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
+      TYPE(t_potden),INTENT(IN) :: v
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -111,10 +111,6 @@ CONTAINS
       ! check if z-reflection trick can be used
       l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (mpi%n_size > 1) l_zref = .FALSE.
-
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,v)
-#endif
 
       !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
