@@ -442,6 +442,8 @@ CONTAINS
              this%l_socmat=.TRUE.
           ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
              this%l_socmatvec=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'unformatted')THEN
+             this%l_unformatted=.TRUE.         
           ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
              this%l_socmatrs=.TRUE.
           ELSEIF(this%jobList(i).EQ.'soctomom')THEN
