@@ -194,7 +194,7 @@ MODULE m_greensfCalcRealPart
       !Collect all cutoffs
       n = SIZE(greensfImagPart%kkintgr_cutoff)
       ALLOCATE(itmp(n))
-      CALL MPI_REDUCE(greensfImagPart%kkintgr_cutoff,itmp,n,MPI_INTEGER,MPI_SUM,0,mpi%mpi_comm,ierr)
+      CALL MPI_REDUCE(greensfImagPart%kkintgr_cutoff,itmp,n,MPI_INTEGER,MPI_MAX,0,mpi%mpi_comm,ierr)
       if (mpi%irank==0) greensfImagPart%kkintgr_cutoff = reshape(itmp,shape(greensfImagPart%kkintgr_cutoff))
       DEALLOCATE(itmp)
 #endif
