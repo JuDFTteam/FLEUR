@@ -4,7 +4,7 @@ MODULE m_hubbard1_setup
    USE m_types
    USE m_constants
    USE m_uj2f
-   USE m_mudc
+   USE m_doubleCounting
    USE m_hubbard1Distance
    USE m_occmtx
    USE m_hubbard1_io
@@ -47,8 +47,8 @@ MODULE m_hubbard1_setup
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: mu_dc
-      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist
+      REAL    :: U,J
+      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
@@ -58,6 +58,7 @@ MODULE m_hubbard1_setup
       INTEGER(HID_T)     :: greensf_fileID
 #endif
 
+      REAL    :: mu_dc(input%jspins)
       REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
@@ -99,6 +100,9 @@ MODULE m_hubbard1_setup
          DO i_hia = 1, atoms%n_hia
 
             l = atoms%lda_u(atoms%n_u+i_hia)%l
+            U = atoms%lda_u(atoms%n_u+i_hia)%U
+            J = atoms%lda_u(atoms%n_u+i_hia)%J
+            l_amf = atoms%lda_u(atoms%n_u+i_hia)%l_amf
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
             IF(ALL(ABS(gdft(i_hia)%gmmpMat).LT.1e-12)) THEN
@@ -165,7 +169,8 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            CALL mudc(atoms%lda_u(atoms%n_u+i_hia),occDFT(i_hia,:),input%jspins,mu_dc)
+            mu_dc = doubleCountingPot(U,J,l,l_amf,.NOT.hub1inp%l_dftspinpol,occDFT(i_hia,:),&
+                                      l_write=mpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files
@@ -182,7 +187,7 @@ MODULE m_hubbard1_setup
             ! Write the main config files
             !-------------------------------------------------------
             CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                      hub1inp,hub1data,mu_dc,occDFT_INT,l_bathexist,l_firstIT_HIA)
+                                      hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
       ENDIF !mpi%irank == 0
 
@@ -296,14 +301,17 @@ MODULE m_hubbard1_setup
 
       ENDDO
 
-      IF(mpi%irank.EQ.0) WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
+      IF(mpi%irank.EQ.0) THEN
+         WRITE(oUnit,*)
+         WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
+      ENDIF
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%collect(mpi%mpi_comm)
          CALL selfen(i_hia)%collect(mpi%mpi_comm)
          IF(mpi%irank.EQ.0) THEN
             !We found the chemical potential to within the desired accuracy
-            WRITE(oUnit,*) i_hia, "muMatch = ", selfen(i_hia)%muMatch(:)
+            WRITE(oUnit,*) 'i_hia: ',i_hia, "    muMatch = ", selfen(i_hia)%muMatch(:)
          ENDIF
       ENDDO
 
