@@ -286,8 +286,8 @@ CONTAINS
          enddo
       END DO  !jq
 
-      call timestart("dangeling MPI_barriers")
 #ifdef CPP_MPI
+      call timestart("dangeling MPI_barriers")
       do while(cnt_read_z > 0) 
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          cnt_read_z = cnt_read_z - 1
