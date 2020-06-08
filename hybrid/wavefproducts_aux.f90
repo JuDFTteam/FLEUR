@@ -75,6 +75,7 @@ CONTAINS
       use m_fft_interface
       use m_io_hybinp
       use m_juDFT
+      use mpi
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -95,7 +96,7 @@ CONTAINS
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
       integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp
-      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv
+      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv, ierr
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3), inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
       type(t_mat)  :: psi_kqpt
@@ -123,6 +124,10 @@ CONTAINS
 
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
+      
+      call timestart("Post read_z Barrier")
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call timestop("Post read_z Barrier")
 
       call psi_kqpt%alloc(.false., fftd, psize)
 
