@@ -82,8 +82,17 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    DO itype=1, atoms%ntype
       l_flip(itype)=MERGE(.TRUE.,.FALSE.,(rotAnglePhi(itype).NE.0.0) .OR.(rotAngleTheta(itype).NE.0.0))
    END DO
+
    !rot_den_mat(alph,beta,rho11,rho22,rho21)
-   archiveType = MERGE(CDN_ARCHIVE_TYPE_NOCO_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_noco)
+   IF (noco%l_mtNocoPot) THEN
+      archiveType=CDN_ARCHIVE_TYPE_FFN_const
+   ELSE IF (noco%l_noco) THEN
+      archiveType=CDN_ARCHIVE_TYPE_NOCO_const
+   ELSE 
+      archiveType=CDN_ARCHIVE_TYPE_CDN1_const
+   END IF
+
+
    IF(.NOT.PRESENT(optDen)) THEN
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       ! read the charge density

@@ -48,7 +48,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
-   INTEGER nw,ilo,natot,nat,archiveType
+   INTEGER nw,ilo,natot,nat
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)

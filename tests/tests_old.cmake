@@ -27,8 +27,8 @@ set(HybridTests
 
 set(FFNTests
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot PlotOnlyMT
-   RelaxMTFeature Fe_bcc_SF_LDA
+   PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
+   RelaxMTFeature Fe_bcc_SF_LDA 
 )
 
 
@@ -38,7 +38,7 @@ endif()
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
-   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML)
+   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML ${FFNTests})
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support

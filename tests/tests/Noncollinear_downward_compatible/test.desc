@@ -1,0 +1,11 @@
+$test_name="Tests downward compatibility of collinear, noncollinear and FFN calclations.";
+$test_code="Fleur";
+$test_stages=3;
+$test_desc=<<EOF
+Simple test of Fleur with three steps:
+1.Generate a starting density and run 1 iteration and check Energy of Fe in collinear steup. Run iteration with noco and check again.
+2. Run iteration with FFN and check again.
+3.Generate a starting density and run 1 iteration and check Energy of Fe in collinear setup. Run iteration with FFN and check again.
+EOF
+;
+

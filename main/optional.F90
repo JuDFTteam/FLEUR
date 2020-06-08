@@ -92,7 +92,9 @@ CONTAINS
     strho=input%strho
     IF (.NOT.(strho.OR.(sliceplot%iplot.NE.0))) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-       IF (noco%l_noco) THEN
+       IF (noco%l_mtNocoPot) THEN
+          archiveType = CDN_ARCHIVE_TYPE_FFN_const
+       ELSE IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
        IF (mpi%irank == 0) THEN
