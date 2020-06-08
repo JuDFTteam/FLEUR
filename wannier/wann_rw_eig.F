@@ -140,7 +140,8 @@ c****************************************************************
       nbnd=0
       do ikpt = 1,fullnkpts
 
-
+        kptibz=ikpt
+        if(l_bzsym) kptibz=irreduc(ikpt)
 
          CALL lapw%init(input,noco,nococonv,kpts,
      & atoms,sym,kptibz,cell,

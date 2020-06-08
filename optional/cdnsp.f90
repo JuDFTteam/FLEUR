@@ -58,14 +58,7 @@
           input_jsp=input
           input_jsp%jspins=1
           CALL readCoreDensity(input_jsp,atoms,rhoc,tec,qintc)
-          
-  !       IF(noco%l_mtNocoPot) THEN
-  !            archiveType =CDN_ARCHIVE_TYPE_FFN_const
-  !        ELSE IF (noco%l_noco) THEN
-  !           archiveType =CDN_ARCHIVE_TYPE_NOCO_const
-  !        ELSE
-  !           archiveType =CDN_ARCHIVE_TYPE_CDN1_const
-  !        END IF
+
 
 
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&

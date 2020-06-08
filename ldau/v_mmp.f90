@@ -25,9 +25,8 @@ MODULE m_vmmp
 
    CONTAINS
 
-   SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e)
+   SUBROUTINE v_mmp(atoms,u_in,n_u,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e_ldau)
 
-      TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       INTEGER,          INTENT(IN)     :: n_u
       TYPE(t_utype),    INTENT(IN)     :: u_in(:)
@@ -38,7 +37,7 @@ MODULE m_vmmp
       LOGICAL,          INTENT(IN)     :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations
                                                    !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
       COMPLEX,          INTENT(OUT)    :: vs_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
-      REAL,             INTENT(INOUT)  :: e
+      REAL,             INTENT(INOUT)  :: e_ldau
 
       ! ..  Local Variables ..
       INTEGER :: ispin,jspin,l ,mp,p,q,itype,m,i_u
@@ -49,7 +48,7 @@ MODULE m_vmmp
       ! Loop over atoms
       !
       spin_deg = 1.0 / (3 - jspins)
-      e = 0.0
+      e_ldau = 0.0
 
       DO i_u = 1, n_u
          iType = u_in(i_u)%atomType
@@ -103,17 +102,6 @@ MODULE m_vmmp
          !        p,q,s'                                                                              |
          !--------------------------------------------------------------------------------------------+
          ! initialise vs_mmp
-         !
-         !IF (sym%invs) THEN
-         !   vs_mmp(:,:,i_u,:) = ns_mmp(:,:,i_u,:)
-         !   DO ispin = 1,jspins
-         !      DO m = -l,l
-         !         DO mp = -l,l
-         !            ns_mmp(m,mp,i_u,ispin) = vs_mmp(-m,-mp,i_u,ispin)
-         !         END DO
-         !      END DO
-         !   END DO
-         !END IF
          vs_mmp(:,:,i_u,:) = cmplx_0
          !
          ! outer spin loop - set up v_mmp
@@ -192,12 +180,12 @@ MODULE m_vmmp
          !       e_ldau = e_ldau + (e_ee -  u_htr * rho_tot * ( rho_tot - 1. )
          !    +    + j_htr * ns_sum  - (u_htr - j_htr) * rho_tot) * neq(itype)
          !       write(*,*) e_ldau
-         e = e + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
+         e_ldau = e_ldau + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
          !       write(*,*) e_ldau
 
       END DO ! loop over U parameters
 
-      e = e / 2
+      e_ldau = e_ldau / 2
 
    END SUBROUTINE v_mmp
 END MODULE m_vmmp

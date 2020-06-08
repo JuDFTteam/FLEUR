@@ -1010,7 +1010,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
      >       mpi,enpara,input,noco,nococonv,atoms,
-     >       lmaxd,natd,neigd,
+     >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       jspins,irank,
      >       vTot%mt,! vr,
