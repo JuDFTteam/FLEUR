@@ -148,6 +148,7 @@ CONTAINS
 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    IF(fi%noco%l_mtNocoPot) archiveType= CDN_ARCHIVE_TYPE_FFN_const
     IF(mpi%irank.EQ.0) CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
     CALL timestart("Qfix")

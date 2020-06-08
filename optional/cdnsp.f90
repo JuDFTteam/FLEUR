@@ -40,7 +40,7 @@
           !     .. Local Scalars ..
           REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp
           INTEGER i,ivac,j,k,lh,n,na,jsp_new
-          INTEGER ios
+          INTEGER ios, archiveType
           LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
@@ -58,6 +58,16 @@
           input_jsp=input
           input_jsp%jspins=1
           CALL readCoreDensity(input_jsp,atoms,rhoc,tec,qintc)
+          
+  !       IF(noco%l_mtNocoPot) THEN
+  !            archiveType =CDN_ARCHIVE_TYPE_FFN_const
+  !        ELSE IF (noco%l_noco) THEN
+  !           archiveType =CDN_ARCHIVE_TYPE_NOCO_const
+  !        ELSE
+  !           archiveType =CDN_ARCHIVE_TYPE_CDN1_const
+  !        END IF
+
+
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 

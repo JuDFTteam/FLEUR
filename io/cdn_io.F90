@@ -38,7 +38,7 @@ MODULE m_cdn_io
   PUBLIC getIOMode
   PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
   PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
-  PUBLIC CDN_ARCHIVE_TYPE_CDN_const
+  PUBLIC CDN_ARCHIVE_TYPE_CDN_const, CDN_ARCHIVE_TYPE_FFN_const
 
   INTEGER,          PARAMETER :: CDN_INPUT_DEN_const = 1
   INTEGER,          PARAMETER :: CDN_OUTPUT_DEN_const = 2
@@ -46,6 +46,7 @@ MODULE m_cdn_io
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_CDN1_const = 1
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_NOCO_const = 2
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_CDN_const  = 3
+  INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_FFN_const = 4
 
   INTEGER,          PARAMETER :: CDN_DIRECT_MODE = 1
   INTEGER,          PARAMETER :: CDN_STREAM_MODE = 2
@@ -207,13 +208,17 @@ CONTAINS
 
           SELECT CASE (inOrOutCDN)
           CASE (CDN_INPUT_DEN_const)
-             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+                densityType = DENSITY_TYPE_FFN_IN_const
+             ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
                 densityType = DENSITY_TYPE_NOCO_IN_const
              ELSE
                 densityType = DENSITY_TYPE_IN_const
              END IF
           CASE (CDN_OUTPUT_DEN_const)
-             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+                densityType = DENSITY_TYPE_FFN_OUT_const
+             ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
                 densityType = DENSITY_TYPE_NOCO_OUT_const
              ELSE
                 densityType = DENSITY_TYPE_OUT_const
@@ -231,7 +236,7 @@ CONTAINS
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
           CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-               fermiEnergy,l_qfix,l_DimChange,den,noco%l_mtNocoPot)
+               fermiEnergy,l_qfix,l_DimChange,den)
 
           CALL closeCDNPOT_HDF(fileID)
 
@@ -463,13 +468,17 @@ CONTAINS
        densityType = 0
        SELECT CASE (inOrOutCDN)
        CASE (CDN_INPUT_DEN_const)
-          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+             densityType = DENSITY_TYPE_FFN_IN_const
+          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
              densityType = DENSITY_TYPE_NOCO_IN_const
           ELSE
              densityType = DENSITY_TYPE_IN_const
           END IF
        CASE (CDN_OUTPUT_DEN_const)
-          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+             densityType = DENSITY_TYPE_FFN_OUT_const
+          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
              densityType = DENSITY_TYPE_NOCO_OUT_const
           ELSE
              densityType = DENSITY_TYPE_OUT_const
@@ -501,7 +510,7 @@ CONTAINS
        CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,&
-            den%iter+relCdnIndex,den,noco%l_mtNocoPot)
+            den%iter+relCdnIndex,den)
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -996,7 +1005,13 @@ CONTAINS
           shifts=atomsTemp%taual-atoms%taual
 
           !Determine type of charge
-          archiveType = MERGE(CDN_ARCHIVE_TYPE_NOCO_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_noco)
+          IF(noco%l_mtNocoPot) THEN 
+          archiveType=CDN_ARCHIVE_TYPE_FFN_const
+          ELSE IF (noco%l_noco) THEN 
+          archiveType=CDN_ARCHIVE_TYPE_NOCO_const
+          ELSE 
+          archiveType=CDN_ARCHIVE_TYPE_CDN1_const
+          END IF
           !read the current density
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
@@ -1575,7 +1590,7 @@ CONTAINS
        isDensityFilePresent = l_exist
        RETURN
     END IF
-    IF (archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+    IF ((archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_FFN_const)) THEN
        CALL juDFT_error("Illegal archive type selected.",calledby ="isDensityFilePresent")
     END IF
     IF (l_exist) THEN
