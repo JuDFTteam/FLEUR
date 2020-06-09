@@ -160,22 +160,19 @@ CONTAINS
                 END IF
              ELSE
                 IF (zmat%l_real) THEN
-                   !$CPP_OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-                   !$CPP_ACC parallel loop collapse(2) copyin(zMat%data_r)
+                   !$CPP_OMP PARALLEL DO default(shared) private(i)
+                   !$CPP_ACC parallel loop copyin(zMat%data_r)
                    DO i = 1, ne
-                      DO iLAPW = 1, nvmax
-                         work_c(iLAPW,i) = zMat%data_r(iLAPW,i)
-                      END DO
+                      work_c(:nvmax,i) = 0.0
+                      CALL dcopy(nvmax,zMat%data_r(:,i),1,work_c(:,i),2)
                    END DO
                    !$CPP_ACC end parallel loop
                    !$CPP_OMP END PARALLEL DO
                 ELSE
-                   !$CPP_OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-                   !$CPP_ACC parallel loop collapse(2) copyin(zMat%data_c)
+                   !$CPP_OMP PARALLEL DO default(shared) private(i)
+                   !$CPP_ACC parallel loop copyin(zMat%data_c)
                    DO i = 1, ne
-                      DO iLAPW = 1, nvmax
-                         work_c(iLAPW,i) = zMat%data_c(iLAPW,i)
-                      END DO
+                      CALL zcopy(nvmax,zMat%data_c(:,i),1,work_c(:,i),1)
                    END DO
                    !$CPP_ACC end parallel loop
                    !$CPP_OMP END PARALLEL DO
