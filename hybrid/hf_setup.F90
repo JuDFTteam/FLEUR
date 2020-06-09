@@ -10,7 +10,7 @@ MODULE m_hf_setup
 CONTAINS
 
    SUBROUTINE hf_setup(mpdata, fi, mpi,nococonv, results, jsp, enpara, &
-                       hybdat, l_real, vr0, eig_irr)
+                       hybdat, vr0, eig_irr)
       USE m_types
       USE m_constants
       USE m_eig66_io
@@ -33,7 +33,6 @@ CONTAINS
 
       INTEGER, INTENT(IN)    :: jsp
       REAL, INTENT(IN)    :: vr0(:, :, :)
-      LOGICAL, INTENT(IN)    :: l_real
 
       REAL, ALLOCATABLE, INTENT(INOUT)   :: eig_irr(:, :)
 
@@ -53,7 +52,6 @@ CONTAINS
       REAL :: zDebug_r(lapw_dim_nbasfcn,fi%input%neig)
       COMPLEX :: zDebug_c(lapw_dim_nbasfcn,fi%input%neig)
 
-      call hybdat%set_states(fi, results, jsp)
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
