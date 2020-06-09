@@ -20,7 +20,6 @@ MODULE m_greensfCalcRealPart
    USE m_constants
    USE m_kkintgr
    USE m_kk_cutoff
-   USE m_mpi_bc_tool
 
    IMPLICIT NONE
 
@@ -42,13 +41,12 @@ MODULE m_greensfCalcRealPart
 
       INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique
       INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep
-      INTEGER :: spin_cut,nn,natom,contourShape
+      INTEGER :: spin_cut,contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
-      INTEGER :: n_gf_task,extra,n,ierr
+      INTEGER :: n_gf_task,extra
       LOGICAL :: l_onsite,l_fixedCutoffset,l_skip
       REAL    :: fac,del,eb,et,fixedCutoff
       REAL,    ALLOCATABLE :: eMesh(:)
-      INTEGER, ALLOCATABLE :: itmp(:)
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
