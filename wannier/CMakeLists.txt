@@ -92,6 +92,7 @@ wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
 wannier/wann_plot_od_vac.F
 wannier/bs_comfort.F
+wannier/wann_socmatvec_rs.F
 )
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
