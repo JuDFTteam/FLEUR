@@ -101,6 +101,11 @@ c*************************************************
       jspins=jspins_in
       if(l_soc)jspins=1
 
+      if(jspins_in==1.and..not.l_soc)then
+        jspins=2
+      endif
+
+
       write(oUnit,*)"nkpts=",nkpts
 
 c*****************************************************
