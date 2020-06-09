@@ -255,7 +255,7 @@ c****************************************************
          allocate(amn(nbnd,nwfs,fullnkpts))
          read(304)amn(1:nbnd,1:nwfs,1:fullnkpts)
          close(304)
-         deallocate(amn)
+
          do nkp=1,fullnkpts
           do i=1,num_bands
            do j=1,num_bands
@@ -269,7 +269,7 @@ c****************************************************
           paulimat(2,:,:,nkp)=paulimat(2,:,:,nkp)+
      &       transpose(conjg( paulimat(2,:,:,nkp) ))
          enddo !nkp
-
+         deallocate(amn)
       else !l_unformatted   
          open(304,file='updown.mmn0',form='formatted')
          read(304,*)
