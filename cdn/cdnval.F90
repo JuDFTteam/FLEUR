@@ -228,23 +228,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
-      CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
-
-      ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
-      IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
-         ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
-         ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
-         ! valence density in the vacuum region
-         IF (input%film) THEN
-            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
-         END IF
-      END IF
-      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
-
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS)
 
@@ -304,6 +287,23 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
+
+      CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
+
+      ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
+      IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
+         ! valence density in the interstitial region
+         CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
+                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
+         ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
+         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         ! valence density in the vacuum region
+         IF (input%film) THEN
+            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
+                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
+         END IF
+      END IF
+      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!

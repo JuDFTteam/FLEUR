@@ -105,8 +105,8 @@ CONTAINS
        force%cveccof = CMPLX(0.0,0.0)
     END IF
 
-    !$acc data create(fjgj,fjgj%fj,fjgj%gj)
-
+    ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
+    !$acc data create(fjgj,fjgj%fj,fjgj%gj,work_c)
     ! loop over atoms
     DO iAtom = 1, atoms%nat
        iType = atoms%itype(iAtom)
@@ -137,8 +137,7 @@ CONTAINS
 
           IF ((sym%invsat(iAtom).EQ.0) .OR. (sym%invsat(iAtom).EQ.1)) THEN
 
-            ALLOCATE (work_c(nvmax,ne))
-             !$acc data create(work_c,abCoeffs)
+             !$acc data create(abCoeffs)
              ! Filling of work array (modified zMat)
              CALL timestart("fill work array")
              IF (noco%l_noco) THEN
@@ -147,7 +146,7 @@ CONTAINS
                    ! the coefficients of the spin-down basis functions are
                    ! stored in the second half of the eigenvector
                    kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
-                   work_c(:,:) = ccchi(iintsp,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
+                   work_c(:nvmax,:) = ccchi(iintsp,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
                    !$acc end kernels
                 ELSE
                    ! perform sum over the two interstitial spin directions
@@ -155,7 +154,7 @@ CONTAINS
                    ! (jspin counts the local spin directions inside each MT)
                    !$acc kernels copyin(zMat%data_c)
                    kspin = lapw%nv(1)+atoms%nlotot
-                   work_c(:,:) = ccchi(1,jspin)*zMat%data_c(:nvmax,:ne) + ccchi(2,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
+                   work_c(:nvmax,:) = ccchi(1,jspin)*zMat%data_c(:nvmax,:ne) + ccchi(2,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
                    !$acc end kernels
                 END IF
              ELSE
@@ -192,7 +191,7 @@ CONTAINS
              ! variant with zgemm
              abTemp = CMPLX(0.0,0.0)
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,nvmax,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
+             CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
              DO lm = 0, absize-1
@@ -273,8 +272,8 @@ CONTAINS
                          lm = ll1 + m
                          lmp = ll1 - m
                          inv_f = (-1)**(l-m)
-                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1,:),work_c(:,:))
-                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1+abSize,:),work_c(:,:))
+                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1,:),work_c(:nvmax,:))
+                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1+abSize,:),work_c(:nvmax,:))
                          !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
@@ -350,13 +349,12 @@ CONTAINS
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
-
-             DEALLOCATE(work_c)
           !$acc end data
           END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
     !$acc end data
+    DEALLOCATE(work_c)
     ! Treatment of atoms inversion symmetric to others
     IF (noco%l_soc.AND.sym%invs) THEN
 
