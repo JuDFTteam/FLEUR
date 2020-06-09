@@ -72,7 +72,7 @@ contains
     l_densitymatrix=.FALSE.
     l_firstItU=.FALSE.
     !The density/potential matrices for DFT+U are split into two parts
-    ! 1:atoms%n_u Are the elements for normal DFT+U 
+    ! 1:atoms%n_u Are the elements for normal DFT+U
     ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
     !The latter are never mixed and held constant
     indStartHIA = atoms%n_u + 1 
