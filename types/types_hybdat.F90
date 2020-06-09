@@ -59,11 +59,44 @@ MODULE m_types_hybdat
       type(t_mat), allocatable :: olap(:,:) ! (jsp, nkpt)
    contains
       procedure :: set_stepfunction => set_stepfunction
-      procedure :: free => free_hybdat
-      procedure :: allocate => allocate_hybdat
+      procedure :: free       => free_hybdat
+      procedure :: allocate   => allocate_hybdat
+      procedure :: set_states => set_states_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine set_states_hybdat(hybdat, fi, results, jsp)
+      use m_judft
+      use m_types_misc
+      use m_types_fleurinput
+      implicit none 
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_fleurinput), intent(in) :: fi
+      type(t_results), intent(in)    :: results
+      integer, intent(in)            :: jsp
+
+      integer :: nk, i
+
+      DO nk = 1, fi%kpts%nkpt, 1
+         hybdat%ne_eig(nk) = results%neig(nk, jsp)
+         hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
+      END do
+
+      hybdat%nbands(nk) = fi%hybinp%bands1
+      DO nk = 1, fi%kpts%nkpt
+         IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
+            hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
+         END IF
+      ENDDO
+      
+      ! spread hybdat%nobd from IBZ to whole BZ
+      DO nk = 1, fi%kpts%nkptf
+         i = fi%kpts%bkp(nk)
+         hybdat%nbands(nk) = hybdat%nbands(i)
+         hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
+      END DO
+   end subroutine set_states_hybdat
+
    function t_coul_size_MB(coul) result(size_MB)
       implicit none 
       class(t_coul), intent(in) :: coul
