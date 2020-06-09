@@ -617,6 +617,7 @@ CONTAINS
          ENDIF
          !If we are here and smaller than uniqueMax the element is not unique
          IF(PRESENT(uniqueMax)) THEN
+            IF(i_gf>uniqueMax) CALL juDFT_error('i_gf>uniqueMax',calledby="find_gfelem")
             RETURN
          ENDIF
          IF(PRESENT(iContour)) THEN
