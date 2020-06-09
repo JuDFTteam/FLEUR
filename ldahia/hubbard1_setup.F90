@@ -355,7 +355,7 @@ MODULE m_hubbard1_setup
 
       IF(mpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
-            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
+            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
                den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)
             ENDDO

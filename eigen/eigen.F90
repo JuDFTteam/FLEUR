@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden !
       TYPE(t_hub1data),INTENT(INOUT):: hub1data
       TYPE(t_potden), INTENT(IN)   :: vx
-      TYPE(t_potden),INTENT(IN) :: v
+      TYPE(t_potden),INTENT(IN)    :: v
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
