@@ -44,7 +44,8 @@ MODULE m_types_mpimat
      PROCEDURE   :: init_details => mpimat_init
      PROCEDURE   :: init_template =>mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
      PROCEDURE   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
-     PROCEDURE   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
+     PROCEDURE   :: u2l => t_mpimat_u2l   ! construct full matrix if only upper triangle of hermitian matrix is given
+     PROCEDURE   :: l2u => t_mpimat_l2u
      PROCEDURE   :: print_matrix
      PROCEDURE   :: from_non_dist
      PROCEDURE   :: transpose => mpimat_transpose
@@ -185,7 +186,15 @@ CONTAINS
 #endif
   END SUBROUTINE print_matrix
 
-  SUBROUTINE generate_full_matrix(mat)
+  subroutine t_mpimat_l2u(mat)
+   implicit none
+   class(t_mpimat), intent(inout) :: mat 
+
+   call judft_error("l2u not yet implemented for t_mpimat")
+  end subroutine t_mpimat_l2u
+
+  SUBROUTINE t_mpimat_u2l(mat)
+    implicit none
     CLASS(t_mpimat),INTENT(INOUT) ::mat
 
     INTEGER :: i,j,i_glob,j_glob,myid,err,np
@@ -239,10 +248,8 @@ CONTAINS
        CALL pzgeadd('c',mat%global_size1,mat%global_size2,CMPLX(1.0,0.0),tmp_c,1,1,mat%blacsdata%blacs_desc,CMPLX(1.0,0.0),mat%data_c,1,1,mat%blacsdata%blacs_desc)
 #endif
     END IF
-
-
 #endif
-  END SUBROUTINE generate_full_matrix
+  END SUBROUTINE t_mpimat_u2l
 
 
   SUBROUTINE mpimat_add_transpose(mat,mat1)

@@ -345,8 +345,8 @@ CONTAINS
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,info)
     smat%blacsdata%blacs_desc=hmat%blacsdata%blacs_desc
 
-    call smat%generate_full_matrix()
-    call hmat%generate_full_matrix()
+    call smat%u2l()
+    call hmat%u2l()
     !Transform to standard problem using SCALAPACK
     IF (hmat%l_real) THEN
        CALL pdpotrf('U',smat%global_size1,smat%data_r,1,1,smat%blacsdata%blacs_desc,info)
@@ -377,10 +377,10 @@ CONTAINS
     nev = MIN(ne,hmat%global_size1)
     nex = min(max(nev/4, 45), hmat%global_size1-nev) !dimensioning for workspace
 
-    CALL hmat%generate_full_matrix()
+    CALL hmat%u2l()
     CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
 
-    !CALL chase_mat%generate_full_matrix()
+    !CALL chase_mat%u2l()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
     !ALLOCATE(t_mpimat::zmatTemp)

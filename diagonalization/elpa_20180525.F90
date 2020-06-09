@@ -79,8 +79,8 @@ CONTAINS
 #endif
        err = elpa_obj%setup()
 
-       CALL hmat%generate_full_matrix()
-       CALL smat%generate_full_matrix()
+       CALL hmat%u2l()
+       CALL smat%u2l()
 
        IF (hmat%l_real) THEN
           CALL elpa_obj%generalized_eigenvectors(hmat%data_r,smat%data_r,eig2, ev_dist%data_r, .FALSE.,err)

@@ -32,7 +32,6 @@ MODULE m_types_mat
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
       GENERIC          :: init => init_details, init_template
-      PROCEDURE        :: generate_full_matrix => t_mat_generate_full_matrix
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
       PROCEDURE        :: unsymmetry => t_mat_unsymmetry
@@ -159,26 +158,6 @@ CONTAINS
          var_alloc = allocated(mat%data_c)
       endif
    end function t_mat_allocated
-
-   SUBROUTINE t_mat_generate_full_matrix(mat)
-      IMPLICIT NONE
-      CLASS(t_mat), INTENT(INOUT)     :: mat
-      INTEGER ::i, j
-      IF (mat%l_real) THEN
-         DO i = 1, mat%matsize2
-            DO j = i + 1, mat%matsize1
-               mat%data_r(j, i) = mat%data_r(i, j)
-            ENDDO
-         ENDDO
-      ELSE
-         DO i = 1, mat%matsize2
-            DO j = i + 1, mat%matsize1
-               mat%data_c(j, i) = CONJG(mat%data_c(i, j))
-            ENDDO
-         ENDDO
-      ENDIF
-
-   END subroutine
 
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
