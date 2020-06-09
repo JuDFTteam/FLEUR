@@ -42,7 +42,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(fi, nk, mpdata, lapw, jsp, hybdat, &
+   SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
                      results, xcpot, mpi)
 
@@ -57,9 +57,11 @@ CONTAINS
       USE m_exchange_valence_hf
       USE m_exchange_core
       USE m_symmetrizeh
+      use m_work_package
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
+      type(t_k_package), intent(in)     :: k_pack
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -71,14 +73,13 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: nk
 
       ! arrays
       REAL, INTENT(IN)    :: eig_irr(:, :)
 
       ! local scalars
       INTEGER                 ::  i, j, l, itype
-      INTEGER                 ::  iband
+      INTEGER                 ::  iband, nk
       INTEGER                 ::  ikpt, ikpt0
       INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
@@ -87,18 +88,19 @@ CONTAINS
       REAL                    ::  a_ex
 
       ! local arrays
-      INTEGER                 ::  nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
+      INTEGER                 ::  nsest(hybdat%nbands(k_pack%nk )), indx_sest(hybdat%nbands(k_pack%nk ), hybdat%nbands(k_pack%nk ))
       INTEGER                 ::  rrot(3, 3, fi%sym%nsym)
       INTEGER                 ::  psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
 
       INTEGER, ALLOCATABLE     ::  parent(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
-      complex                  :: c_phase_k(hybdat%nbands(nk))
+      complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
       TYPE(t_mat)              :: ex, v_x, z_k
 
       CALL timestart("total time hsfock")
+      nk = k_pack%nk 
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
       ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
@@ -132,7 +134,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(nk, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
 
       CALL timestart("core exchange calculation")
