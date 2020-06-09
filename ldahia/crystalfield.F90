@@ -37,7 +37,7 @@ MODULE m_crystalfield
       TYPE(t_hub1data),          INTENT(INOUT) :: hub1data
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour,dummy,i_elem
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,i_elem
       REAL    tr,xiSOC,del,eb
       COMPLEX vso
       LOGICAL, PARAMETER :: l_correctMinus = .FALSE.
@@ -55,7 +55,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
-         CALL uniqueElements_gfinp(gfinp,dummy,i_gf,indUnique=i_elem)
+         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------

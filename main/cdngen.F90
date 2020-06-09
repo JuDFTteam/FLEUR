@@ -48,6 +48,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IMPLICIT NONE
 
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
+
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
    TYPE(t_mpi),INTENT(IN)           :: mpi
@@ -121,7 +125,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL greensFunction(i_gf)%reset()
       ENDDO
       CALL greensfImagPart%init(gfinp,input,noco,ANY(greensFunction(:)%l_calc))
-      !CALL greensFunction%reset(gfinp)
       IF(atoms%n_hia.GT.0 .AND. mpi%irank==0 .AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 

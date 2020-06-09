@@ -75,7 +75,7 @@ MODULE m_types_greensfCoeffs
          ENDIF
 
          !Determine number of unique gf elements
-         CALL uniqueElements_gfinp(gfinp,uniqueElements)
+         uniqueElements = uniqueElements_gfinp(gfinp)
 
          IF(gfinp%l_sphavg) THEN
             ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
@@ -105,7 +105,7 @@ MODULE m_types_greensfCoeffs
          this%l_calc = l_calc
 
          !Determine number of unique gf elements
-         CALL uniqueElements_gfinp(gfinp,uniqueElements)
+         uniqueElements = uniqueElements_gfinp(gfinp)
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
          IF(gfinp%l_sphavg) THEN

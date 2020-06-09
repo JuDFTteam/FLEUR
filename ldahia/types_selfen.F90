@@ -73,11 +73,10 @@ MODULE m_types_selfen
 
       END SUBROUTINE collect_selfen
 
-      SUBROUTINE postProcess_selfen(this,jspins,l_mperp,vmmp)
+      SUBROUTINE postProcess_selfen(this,jspins,vmmp)
 
          CLASS(t_selfen), INTENT(INOUT) :: this
          INTEGER,         INTENT(IN)    :: jspins
-         LOGICAL,         INTENT(IN)    :: l_mperp
          COMPLEX,         INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
 
          INTEGER :: i,j,iz,ipm,m,mp,ispin,ns
@@ -116,7 +115,7 @@ MODULE m_types_selfen
                   m  = i-1-this%l
                   DO j = 1, ns
                      mp = j-1-this%l
-                     DO ispin = 1, MERGE(3,jspins,l_mperp)
+                     DO ispin = 1, SIZE(vmmp,3)
                         IF(ispin < 3) THEN
                            this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) = this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) &
                                                                              - vmmp(m,mp,ispin)/(3.0-jspins)

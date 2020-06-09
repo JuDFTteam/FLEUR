@@ -393,19 +393,19 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   SUBROUTINE uniqueElements_gfinp(gfinp,uniqueElements,ind,indUnique)
+   FUNCTION uniqueElements_gfinp(gfinp,ind,indUnique) Result(uniqueElements)
 
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
-      INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
-      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind
+      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
+
+      INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
 
       INTEGER :: maxGF
-      INTEGER :: l,lp,atomType,atomTypep,dummyInd,iContour,i_gf
-      LOGICAL :: l_unique
+      INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
 
       uniqueElements = 0
 
@@ -420,14 +420,13 @@ CONTAINS
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
          iContour  = gfinp%elem(i_gf)%iContour
-         dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                              uniqueMax=i_gf,l_unique=l_unique)
-         IF(l_unique) THEN
-            uniqueElements = uniqueElements +1
-         ENDIF
+         iUnique   = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                                uniqueMax=i_gf)
+
+         IF(iUnique == i_gf) uniqueElements = uniqueElements +1
       ENDDO
 
-      IF(uniqueElements==0.AND.maxGF/=0) THEN
+      IF(uniqueElements==0 .AND. maxGF/=0) THEN
          CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",&
                           calledby="uniqueElements_gfinp")
       ENDIF
@@ -442,10 +441,10 @@ CONTAINS
          iContour  = gfinp%elem(ind)%iContour
 
          indUnique = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                               uniqueMax=ind,l_unique=l_unique)
+                               uniqueMax=ind)
       ENDIF
 
-   END SUBROUTINE uniqueElements_gfinp
+   END FUNCTION uniqueElements_gfinp
 
    SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter)
 
@@ -552,7 +551,7 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_unique,l_found) result(i_gf)
+   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -564,9 +563,9 @@ CONTAINS
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
 
-      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !These arguments will return whether there
-      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_unique   !is an element before uniqueMax with the same (l,lp,nType,nTypep)
-                                                       !combination but different energy contour
+      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !If uniqueMax is present it will return the
+                                                       !index of the unique element, meaning
+                                                       !the same (l,lp,type,typep) but different contours
 
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found    !If this switch is not provided the program
                                                        !will assume that the element has to be present and
@@ -577,11 +576,6 @@ CONTAINS
       LOGICAL :: search
 
       search = .TRUE.
-      IF(PRESENT(l_unique)) l_unique = .TRUE.
-      IF((PRESENT(l_unique).OR.PRESENT(uniqueMax)).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
-         CALL juDFT_error("Not provided uniqueMax AND l_unique",&
-                          hint="This is a bug in FLEUR please report",calledby="find_gfelem")
-      ENDIF
       i_gf = 0
 
       DO WHILE(search)
@@ -623,10 +617,7 @@ CONTAINS
          ENDIF
          !If we are here and smaller than uniqueMax the element is not unique
          IF(PRESENT(uniqueMax)) THEN
-            IF(i_gf<uniqueMax) THEN
-               l_unique = .FALSE.
-               RETURN !Return the unique index for the element
-            ENDIF
+            RETURN
          ENDIF
          IF(PRESENT(iContour)) THEN
             IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE

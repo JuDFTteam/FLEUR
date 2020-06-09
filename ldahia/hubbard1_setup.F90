@@ -273,8 +273,7 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot.AND.gfinp%l_mperp,&
-                                        pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+         CALL selfen(i_hia)%postProcess(input%jspins,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
 
          !----------------------------------------------------------------------
          ! Solution of the Dyson Equation
