@@ -48,17 +48,19 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, fi%kpts%nkpt)
+      INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
 
-      REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
-      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
+      REAL :: zDebug_r(lapw_dim_nbasfcn,fi%input%neig)
+      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,fi%input%neig)
+
+      call hybdat%set_states(fi, results, jsp)
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
          if(.not. allocated(eig_irr)) then 
-            allocate(eig_irr(input%neig, fi%kpts%nkpt), stat=ok)
+            allocate(eig_irr(fi%input%neig, fi%kpts%nkpt), stat=ok)
             IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          endif
          eig_irr = 0.0
@@ -73,8 +75,8 @@ CONTAINS
          call timestart("eig stuff")
          DO nk = 1, fi%kpts%nkpt
             nrec1 = fi%kpts%nkpt*(jsp - 1) + nk
-            CALL lapw%init(input, noco, nococonv,fi%kpts, fi%atoms, sym, nk, cell, sym%zrfs)
-            nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, noco%l_noco)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+            nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
@@ -149,16 +151,16 @@ CONTAINS
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(fi%kpts%nkpt, fi%kpts, sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpdata, fi%hybinp, vr0, hybdat, noco, nococonv,fi%oneD, mpi, input, jsp)
+         CALL gen_wavf(fi%kpts%nkpt, fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
+                       mpdata, fi%hybinp, vr0, hybdat, fi%noco, nococonv,fi%oneD, mpi, fi%input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
-         CALL corewf(fi%atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
+         CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  mpi, &
-                        input, sym, noco, nococonv,fi%oneD,cell, lapw, jsp)
+                        fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
 
          ! set up pointer pntgpt
 
@@ -167,7 +169,7 @@ CONTAINS
          ALLOCATE (hybdat%pntgptd(3))
          hybdat%pntgptd = 0
          DO nk = 1, fi%kpts%nkptf
-            CALL lapw%init(input, noco, nococonv,fi%kpts, atoms, sym, nk, cell, sym%zrfs)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
             do n_dim = 1,3
                hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i,jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
             end do
@@ -179,7 +181,7 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
          DO nk = 1, fi%kpts%nkptf
-            CALL lapw%init(input, noco, nococonv,fi%kpts, fi%atoms, sym, nk, cell, sym%zrfs)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
             DO i = 1, lapw%nv(jsp)
                hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO
@@ -246,7 +248,7 @@ CONTAINS
          END DO
 
          hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, fi%atoms%lmax(itype))]), itype=1, fi%atoms%ntype)])
-         hybdat%nbands = MIN(fi%hybinp%bands1, input%neig)
+         hybdat%nbands = MIN(fi%hybinp%bands1, fi%input%neig)
 
       ENDIF ! hybdat%l_calhf
 
