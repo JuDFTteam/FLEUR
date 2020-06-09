@@ -129,6 +129,7 @@ CONTAINS
                CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, mpi)
             END DO
+            call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")
 #ifdef CPP_MPI
