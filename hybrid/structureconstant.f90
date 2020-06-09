@@ -167,9 +167,7 @@ contains
                a = norm2(ra)
                radsh(i) = a
             END DO
-            call timestart("rorderpf")
             CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
-            call timestop("rorderpf")
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
             maxl = 2*hybinp%lexp
