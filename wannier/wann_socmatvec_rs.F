@@ -87,7 +87,8 @@ c      real                :: kpoints(3,nkpts)
       character(len=6)    :: filename
       integer             :: jp,mp,kk,ii,jj,rvecind
       complex,parameter   :: ci=(0.0,1.0)
-
+      integer :: spin2_dum,spin1_dum,num_bands1_dum,num_bands2_dum,
+     &               num_dims_dum, fullnkpts_dum  
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
@@ -153,6 +154,8 @@ c****************************************************
       allocate( hsomtx(2,2,num_bands2,num_bands2,3,nkpts) )
       if(l_unformatted)then
         open(304,file='WF1.hsomtxvec_unf',form='unformatted')
+        read(304)spin2_dum,spin1_dum,num_bands1_dum,num_bands2_dum,
+     &                   num_dims_dum, fullnkpts_dum           
         do nkp=1,num_kpts
           read(304)hsomtx(:,:,:,:,:,nkp) 
         enddo
