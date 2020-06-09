@@ -4,13 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
+
 MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, hybinp, input, sym, kpts,  atoms, mpi, noco,nococonv, &
-                       cell, oneD, results, jsp, enpara, &
-                       hybdat, l_real, vr0, eig_irr)
+   SUBROUTINE hf_setup(mpdata, fi, mpi,nococonv, results, jsp, enpara, &
+                       hybdat, vr0, eig_irr)
       USE m_types
       USE m_constants
       USE m_eig66_io
@@ -23,24 +23,16 @@ CONTAINS
 
       IMPLICIT NONE
 
+      type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), INTENT(inout)   :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_cell), INTENT(IN)    :: cell
-      TYPE(t_oneD), INTENT(IN)    :: oneD
-      TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
       INTEGER, INTENT(IN)    :: jsp
       REAL, INTENT(IN)    :: vr0(:, :, :)
-      LOGICAL, INTENT(IN)    :: l_real
 
       REAL, ALLOCATABLE, INTENT(INOUT)   :: eig_irr(:, :)
 
@@ -55,33 +47,34 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
+      INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
 
-      REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
-      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
+      REAL :: zDebug_r(lapw_dim_nbasfcn,fi%input%neig)
+      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,fi%input%neig)
+
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
          if(.not. allocated(eig_irr)) then 
-            allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
+            allocate(eig_irr(fi%input%neig, fi%kpts%nkpt), stat=ok)
             IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          endif
          eig_irr = 0.0
 
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
-         allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
+         allocate(hybdat%kveclo_eig(fi%atoms%nlotot, fi%kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          hybdat%kveclo_eig = 0
 
 
          ! Reading the eig file
          call timestart("eig stuff")
-         DO nk = 1, kpts%nkpt
-            nrec1 = kpts%nkpt*(jsp - 1) + nk
-            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
-            nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+         DO nk = 1, fi%kpts%nkpt
+            nrec1 = fi%kpts%nkpt*(jsp - 1) + nk
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+            nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
@@ -102,7 +95,7 @@ CONTAINS
          END IF
          degenerat = 1
          hybdat%nobd(:,jsp) = 0         
-         DO nk = 1, kpts%nkpt
+         DO nk = 1, fi%kpts%nkpt
             DO i = 1, hybdat%ne_eig(nk)
                DO j = i + 1, hybdat%ne_eig(nk)
                   IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
@@ -117,7 +110,7 @@ CONTAINS
 
             ! set the size of the exchange matrix in the space of the wavefunctions
 
-            hybdat%nbands(nk) = hybinp%bands1
+            hybdat%nbands(nk) = fi%hybinp%bands1
             IF (hybdat%nbands(nk) > hybdat%ne_eig(nk)) THEN
                IF (mpi%irank == 0) THEN
                   WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
@@ -149,23 +142,23 @@ CONTAINS
          call timestop("degenerate treatment")
 
          ! spread hybdat%nobd from IBZ to whole BZ
-         DO nk = 1, kpts%nkptf
-            i = kpts%bkp(nk)
+         DO nk = 1, fi%kpts%nkptf
+            i = fi%kpts%bkp(nk)
             hybdat%nbands(nk) = hybdat%nbands(i)
             hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpdata, hybinp, vr0, hybdat, noco, nococonv,oneD, mpi, input, jsp)
+         CALL gen_wavf(fi%kpts%nkpt, fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
+                       mpdata, fi%hybinp, vr0, hybdat, fi%noco, nococonv,fi%oneD, mpi, fi%input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
-         CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
+         CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, mpdata, hybinp, kpts%nkpt, kpts,  mpi, &
-                        input, sym, noco, nococonv,oneD,cell, lapw, jsp)
+         CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  mpi, &
+                        fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
 
          ! set up pointer pntgpt
 
@@ -173,8 +166,8 @@ CONTAINS
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE(hybdat%pntgptd) ! for spinpolarized systems
          ALLOCATE (hybdat%pntgptd(3))
          hybdat%pntgptd = 0
-         DO nk = 1, kpts%nkptf
-            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
+         DO nk = 1, fi%kpts%nkptf
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
             do n_dim = 1,3
                hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i,jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
             end do
@@ -182,36 +175,36 @@ CONTAINS
 
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE(hybdat%pntgpt) ! for spinpolarized systems
          ALLOCATE (hybdat%pntgpt(-hybdat%pntgptd(1):hybdat%pntgptd(1), -hybdat%pntgptd(2):hybdat%pntgptd(2), &
-                                 -hybdat%pntgptd(3):hybdat%pntgptd(3), kpts%nkptf), stat=ok)
+                                 -hybdat%pntgptd(3):hybdat%pntgptd(3), fi%kpts%nkptf), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
-         DO nk = 1, kpts%nkptf
-            CALL lapw%init(input, noco, nococonv,kpts, atoms, sym, nk, cell, sym%zrfs)
+         DO nk = 1, fi%kpts%nkptf
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
             DO i = 1, lapw%nv(jsp)
                hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO
          END DO
 
-         allocate(basprod(atoms%jmtd), stat=ok, source=0.0)
+         allocate(basprod(fi%atoms%jmtd), stat=ok, source=0.0)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
-         allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), mpdata%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), mpdata%max_indx_p_1, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
          hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
          mpdata%n1 = 0; mpdata%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
-         ALLOCATE (hybdat%nindxp1(0:maxval(hybinp%lcutm1), atoms%ntype))
+         ALLOCATE (hybdat%nindxp1(0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype))
          hybdat%nindxp1 = 0
 
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
          !$OMP private(itype, ng, l2, l1, n1, l, nn, n, basprod) &
-         !$OMP shared(atoms, hybinp, mpdata, hybdat)
-         DO itype = 1, atoms%ntype
-            ng = atoms%jri(itype)
-            DO l2 = 0, MIN(atoms%lmax(itype), hybinp%lcutwf(itype))
+         !$OMP shared(fi, mpdata, hybdat)
+         DO itype = 1, fi%atoms%ntype
+            ng = fi%atoms%jri(itype)
+            DO l2 = 0, MIN(fi%atoms%lmax(itype), fi%hybinp%lcutwf(itype))
                DO l1 = 0, l2
-                  IF (ABS(l1 - l2) <= hybinp%lcutm1(itype)) THEN
+                  IF (ABS(l1 - l2) <= fi%hybinp%lcutm1(itype)) THEN
                      DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
                         nn = mpdata%num_radfun_per_l(l1, itype)
                         IF (l1 == l2) nn = n2
@@ -219,8 +212,8 @@ CONTAINS
                            ! Calculate all basis-function hybdat%products to obtain
                            ! the overlaps with the hybdat%product-basis functions (hybdat%prodm)
                            basprod(:ng) = (hybdat%bas1(:ng, n1, l1, itype)*hybdat%bas1(:ng, n2, l2, itype) + &
-                                           hybdat%bas2(:ng, n1, l1, itype)*hybdat%bas2(:ng, n2, l2, itype))/atoms%rmsh(:ng, itype)
-                           DO l = ABS(l1 - l2), MIN(hybinp%lcutm1(itype), l1 + l2)
+                                           hybdat%bas2(:ng, n1, l1, itype)*hybdat%bas2(:ng, n2, l2, itype))/fi%atoms%rmsh(:ng, itype)
+                           DO l = ABS(l1 - l2), MIN(fi%hybinp%lcutm1(itype), l1 + l2)
                               IF (MOD(l1 + l2 + l, 2) == 0) THEN
                                  hybdat%nindxp1(l, itype) = hybdat%nindxp1(l, itype) + 1
                                  n = hybdat%nindxp1(l, itype)
@@ -230,7 +223,7 @@ CONTAINS
                                  mpdata%n2(n,l,itype) = n2
                                  DO i = 1, mpdata%num_radbasfn(l, itype)
                                     hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*mpdata%radbasfn_mt(:ng, i, l, itype), &
-                                                                          atoms, itype, hybdat%gridf)
+                                                                          fi%atoms, itype, hybdat%gridf)
                                  END DO
                               END IF
                            END DO
@@ -244,16 +237,16 @@ CONTAINS
          deallocate(basprod)
          CALL timestop("gen_bz and gen_wavf")
 
-      ELSE IF (hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
+      ELSE IF (fi%hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
 
-         !DO nk = n_start,kpts%nkpt,n_stride
-         DO nk = 1, kpts%nkpt, 1
+         !DO nk = n_start,fi%kpts%nkpt,n_stride
+         DO nk = 1, fi%kpts%nkpt, 1
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
             hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
-         hybdat%nbands = MIN(hybinp%bands1, input%neig)
+         hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, fi%atoms%lmax(itype))]), itype=1, fi%atoms%ntype)])
+         hybdat%nbands = MIN(fi%hybinp%bands1, fi%input%neig)
 
       ENDIF ! hybdat%l_calhf
 

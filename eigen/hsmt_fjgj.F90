@@ -23,8 +23,8 @@ CONTAINS
     INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
     TYPE(t_noco),INTENT(IN)   :: noco
 
-    ALLOCATE(fjgj%fj(0:lmaxd,nvd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
-    ALLOCATE(fjgj%gj(0:lmaxd,nvd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
+    ALLOCATE(fjgj%fj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
+    ALLOCATE(fjgj%gj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
 
     fjgj%fj = 0.0
     fjgj%gj = 0.0
@@ -40,7 +40,7 @@ CONTAINS
   LOGICAL, INTENT(IN) :: apw(0:lmaxd), l_flag
   REAL, INTENT(IN) :: rk(:),rmt,con1
   REAL, INTENT(IN) :: uds(0:lmaxd,jspins),dus(0:lmaxd,jspins),us(0:lmaxd,jspins),duds(0:lmaxd,jspins)
-  REAL,INTENT(OUT),MANAGED     :: fj(0:,:,:),gj(0:,:,:)
+  REAL,INTENT(OUT),MANAGED     :: fj(:,0:,:),gj(:,0:,:)
 
   REAL gb(0:lmaxd), fb(0:lmaxd)
   REAL ws(jspins)
@@ -67,11 +67,11 @@ CONTAINS
         gg = rk(k)*gb(l)
         DO jspin = jspinStart, jspinEnd
            IF ( apw(l) ) THEN
-              fj(l,k,jspin) = 1.0*con1 * ff / us(l,jspin)
-              gj(l,k,jspin) = 0.0
+              fj(k,l,jspin) = 1.0*con1 * ff / us(l,jspin)
+              gj(k,l,jspin) = 0.0
            ELSE
-              fj(l,k,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
-              gj(l,k,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
+              fj(k,l,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
+              gj(k,l,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
            ENDIF
         END DO
      ENDDO
@@ -96,7 +96,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n
 
-    REAL,INTENT(OUT),MANAGED     :: fj(0:,:,:,:),gj(0:,:,:,:)
+    REAL,INTENT(OUT),MANAGED     :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
     !     .. Local Scalars ..
     REAL con1
@@ -119,7 +119,7 @@ CONTAINS
 
        CALL synth_fjgj(lapw%nv(intspin),ispin,input%jspins,atoms%lmax(n),atoms%lmaxd,apw,noco%l_constr.or.l_socfirst,&
             lapw%rk(:,intspin),atoms%rmt(n),con1,usdus%uds(:,n,:),usdus%dus(:,n,:),usdus%us(:,n,:),usdus%duds(:,n,:),&
-            fj(0:,:,:,intspin),gj(:,0:,:,intspin))
+            fj(:,0:,:,intspin),gj(:,0:,:,intspin))
 
     ENDDO
     RETURN
@@ -198,11 +198,11 @@ CONTAINS
              gg = lapw%rk(k,intspin)*gb(l)
              DO jspin = jspinStart, jspinEnd
                 IF ( apw(l) ) THEN
-                   fjgj%fj(l,k,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
-                   fjgj%gj(l,k,jspin,intspin) = 0.0
+                   fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
+                   fjgj%gj(k,l,jspin,intspin) = 0.0
                 ELSE
-                   fjgj%fj(l,k,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                   fjgj%gj(l,k,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
                 ENDIF
              END DO
           ENDDO

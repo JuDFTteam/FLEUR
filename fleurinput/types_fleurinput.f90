@@ -47,7 +47,7 @@ MODULE m_types_fleurinput
     TYPE(t_kpts)::kpts
     type(t_gfinp)::gfinp
     type(t_hub1inp)::hub1inp
-  end type
+  end type t_fleurinput
 
 
 END MODULE m_types_fleurinput
