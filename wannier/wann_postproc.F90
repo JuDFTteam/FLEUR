@@ -39,6 +39,7 @@ CONTAINS
     USE m_wann_fft4
     USE m_wann_fft5
     USE m_wann_rmat
+    use m_wann_socmatvec_rs
     USE m_wann_nocoplot
 #ifdef CPP_TOPO
     USE m_wann_torque_rs
@@ -180,6 +181,7 @@ CONTAINS
     IF(wann%l_hopping.OR.wann%l_nablars.OR.&
          wann%l_nablapaulirs.OR.wann%l_pauli.OR.&
          wann%l_perpmagrs.OR.wann%l_socmatrs.OR.&
+         wann%l_socmatvecrs.OR.&
          wann%l_torquers.OR.wann%l_offdiposoprs.OR.&
          wann%l_socspicomrs.OR.wann%l_spindisprs.OR.&
          wann%l_anglmomrs .OR.wann%l_perturbrs.OR.&
@@ -390,6 +392,16 @@ CONTAINS
             noco%l_soc,wann%band_min,wann%band_max,&
             input%neig,.FALSE.,wann%wan90version)
     ENDIF
+
+      if (wann%l_socmatvecrs.and.mpi%irank==0)then
+         call wann_socmatvec_rs( &
+            rvecnum,rvec,kpoints, &
+            input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1, &
+            noco%l_soc,wann%band_min,wann%band_max, &
+            input%neig,.false.,wann%l_ndegen,ndegen,&
+            wann%wan90version,wann%l_unformatted)
+      endif
+
 
     IF(wann%l_plot_umdat)THEN
        CALL wann_plot_um_dat(&
