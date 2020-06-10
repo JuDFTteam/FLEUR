@@ -542,11 +542,18 @@ CONTAINS
    SUBROUTINE t_mat_copy(mat, mat1, n1, n2)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
-      CLASS(t_mat), INTENT(IN)   :: mat1
+      class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
 
       INTEGER:: i1, i2
       real :: norm_before, norm_after
+
+      select type (mat1)
+      type is(t_mat)
+          
+      class default
+         call judft_error("you can only copy a t_mat to a t_mat")
+      end select
 
       i1 = mat%matsize1 - n1 + 1  !space available for first dimension
       i2 = mat%matsize2 - n2 + 1
