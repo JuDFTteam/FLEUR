@@ -248,6 +248,7 @@ CONTAINS
 
       ! create lock for race-condition in coulomb
       DO ikpt = 1, nkpti
+         iatom = 0
          DO itype = 1, atoms%ntype
             DO ineq = 1, atoms%neq(itype)
                iatom = iatom + 1            
