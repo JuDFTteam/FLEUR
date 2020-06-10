@@ -17,11 +17,17 @@ CONTAINS
     !$acc parallel copyin(chi) present(mat%data_c,mat_tmp)
     DO iintsp=1,2
        DO jintsp=1,2
-	!$acc loop independent collapse(2)	
-          DO i=1,size(mat_tmp%data_c,1);do j=1,size(mat_tmp%data_c,2)	
-          mat(jintsp,iintsp)%data_c(i,j)=chi(jintsp,iintsp)*mat_tmp%data_c(i,j)+mat(jintsp,iintsp)%data_c(i,j)
-          enddo;enddo
-        !$acc end loop
+          !$acc loop independent collapse(2)	
+          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(none) &
+          !$OMP SHARED(mat_tmp,mat,chi,iintsp,jintsp) &
+          !$OMP PRIVATE(i,j)
+          DO j=1,SIZE(mat_tmp%data_c,2)
+             DO i=1,SIZE(mat_tmp%data_c,1)
+                mat(jintsp,iintsp)%data_c(i,j)=chi(jintsp,iintsp)*mat_tmp%data_c(i,j)+mat(jintsp,iintsp)%data_c(i,j)
+             ENDDO
+          ENDDO
+          !$OMP END PARALLEL DO
+          !$acc end loop
        ENDDO
     ENDDO
     !$acc end parallel

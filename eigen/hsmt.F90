@@ -70,7 +70,6 @@ CONTAINS
        !$acc enter data copyin(smat_tmp,hmat_tmp)create(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
     ENDIF
 
-
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,isp,noco)
     !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
@@ -99,8 +98,10 @@ CONTAINS
                 CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
                 CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat_tmp,smat_tmp)
                 CALL hsmt_spinor(ispin,n,nococonv,chi)
+                CALL timestart("hsmt_distspins")
                 CALL hsmt_distspins(chi,smat_tmp,smat)
                 CALL hsmt_distspins(chi,hmat_tmp,hmat)
+                CALL timestop("hsmt_distspins")
               ELSE !Add off-diagonal contributions to Hamiltonian if needed
                 IF (noco%l_mtNocoPot) CALL hsmt_mtNocoPot_offdiag(n,input,mpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
                 IF (noco%l_constr) CALL hsmt_offdiag(n,atoms,mpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
