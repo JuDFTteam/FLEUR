@@ -40,9 +40,17 @@ MODULE m_types_mat
       procedure        :: u2l => t_mat_u2l
       procedure        :: l2u => t_mat_l2u
       procedure        :: size_mb => t_mat_size_mb
+      procedure        :: print_type => t_mat_print_type
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_print_type(mat)
+      implicit none 
+      class(t_mat), intent(in) :: mat 
+
+      write (*,*) "t_mat"
+   end subroutine t_mat_print_type
+
    function t_mat_size_mb(mat) result(mb_size)
       implicit none
       class(t_mat), intent(inout) :: mat
@@ -87,7 +95,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy upper to lower matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("u2l only works for square matricies")
       if(mat%l_real) then
          do i = 1,mat%matsize1
             do j = 1,i-1
@@ -552,9 +560,9 @@ CONTAINS
       i1 = MIN(i1, mat1%matsize1)
       i2 = MIN(i2, mat1%matsize2)
       IF (mat%l_real) THEN
-         mat%data_r(n1:n1 + i1 - 1, n2:n2 + i2 - 1) = mat1%data_r(:i1, :i2)
+         call dlacpy("N", i1, i2, mat%data_r(n1,n2), size(mat%data_r,1), mat1%data_r, size(mat1%data_r,1))
       ELSE
-         mat%data_c(n1:n1 + i1 - 1, n2:n2 + i2 - 1) = mat1%data_c(:i1, :i2)
+         call zlacpy("N", i1, i2, mat%data_c(n1,n2), size(mat%data_c,1), mat1%data_c, size(mat1%data_c,1))
       END IF
 
    END SUBROUTINE t_mat_copy
