@@ -25,11 +25,9 @@ MODULE m_vmmp
 
    CONTAINS
 
-   SUBROUTINE v_mmp(atoms,u_in,n_u,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e_ldau)
+   SUBROUTINE v_mmp(atoms,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e_ldau)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
-      INTEGER,          INTENT(IN)     :: n_u
-      TYPE(t_utype),    INTENT(IN)     :: u_in(:)
       INTEGER,          INTENT(IN)     :: jspins
       REAL,             INTENT(IN)     :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(IN)     :: f0(:),f2(:)
@@ -50,11 +48,13 @@ MODULE m_vmmp
       spin_deg = 1.0 / (3 - jspins)
       e_ldau = 0.0
 
-      DO i_u = 1, n_u
-         iType = u_in(i_u)%atomType
-         l = u_in(i_u)%l
-         u_htr = u_in(i_u)%u / hartree_to_ev_const
-         j_htr = u_in(i_u)%j / hartree_to_ev_const
+      DO i_u = 1, atoms%n_u+atoms%n_hia
+
+         iType = atoms%lda_u(i_u)%atomType
+         l     = atoms%lda_u(i_u)%l
+         u_htr = atoms%lda_u(i_u)%u / hartree_to_ev_const
+         j_htr = atoms%lda_u(i_u)%j / hartree_to_ev_const
+
          u_htr = f0(i_u)/hartree_to_ev_const
          IF (l.EQ.1) THEN
             j_htr = f2(i_u)/(5*hartree_to_ev_const)
@@ -84,7 +84,7 @@ MODULE m_vmmp
             rho_sig(1)      = rho_tot/jspins
             rho_sig(jspins) = rho_tot/jspins
          ENDIF
-         IF(u_in(i_u)%l_amf) THEN
+         IF(atoms%lda_u(i_u)%l_amf) THEN
             eta(1) = rho_sig(1) / (2*l + 1) 
             eta(jspins) = rho_sig(jspins) / (2*l + 1)
             eta(0) = (eta(1) + eta(jspins) )

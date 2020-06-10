@@ -59,23 +59,24 @@ MODULE m_usetup
 
          ! set up e-e- interaction matrix
          ALLOCATE ( u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u)) )
-         ALLOCATE ( n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),input%jspins) )
-
-         n_mmp = inDen%mmpMat(:,:,:,1:input%jspins)
+                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u)), source=0.0 )
          CALL umtx(atoms%lda_u(:),n_u,f0,f2,f4,f6,u)
+
+         ALLOCATE ( n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),&
+                          input%jspins), source=cmplx_0 )
+         n_mmp = inDen%mmpMat(:,:,:,1:input%jspins)
 
          ! check for possible rotation of n_mmp
          zero = 0.0
          CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
 
          ! calculate potential matrix and total energy correction
-         CALL v_mmp(atoms,atoms%lda_u(:),n_u,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
+         CALL v_mmp(atoms,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
 
          !spin off-diagonal elements (no rotation yet)
          IF(noco%l_mtNocoPot) THEN
             IF(ANY(atoms%lda_u(:)%phi.NE.0.0).OR.ANY(atoms%lda_u(:)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
-            CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,pot%mmpMat(:,:,:,3),e_off)
+            CALL v_mmp_21(atoms,inDen%mmpMat(:,:,:,3),u,pot%mmpMat(:,:,:,3),e_off)
             results%e_ldau = results%e_ldau + e_off
          ELSE IF(noco%l_mperp.AND.mpi%irank.EQ.0) THEN
             WRITE(*,*) "Offdiagonal LDA+U ignored"
@@ -87,7 +88,8 @@ MODULE m_usetup
                WRITE (oUnit,'(a7,i3)') 'spin #',ispin
                DO i_u = 1, n_u
                   itype = atoms%lda_u(i_u)%atomType
-                  l = atoms%lda_u(i_u)%l
+                  l     = atoms%lda_u(i_u)%l
+
                   WRITE (l_type,'(i2)') 2*(2*l+1)
                   l_form = '('//l_type//'f12.7)'
                   WRITE (oUnit,'(a20,i3)') 'n-matrix for atom # ',itype
