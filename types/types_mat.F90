@@ -554,15 +554,16 @@ CONTAINS
       INTEGER, INTENT(IN)        :: n1, n2
 
       INTEGER:: i1, i2
+      real :: norm_before, norm_after
 
       i1 = mat%matsize1 - n1 + 1  !space available for first dimension
       i2 = mat%matsize2 - n2 + 1
       i1 = MIN(i1, mat1%matsize1)
       i2 = MIN(i2, mat1%matsize2)
       IF (mat%l_real) THEN
-         call dlacpy("N", i1, i2, mat%data_r(n1,n2), size(mat%data_r,1), mat1%data_r, size(mat1%data_r,1))
+         call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
       ELSE
-         call zlacpy("N", i1, i2, mat%data_c(n1,n2), size(mat%data_c,1), mat1%data_c, size(mat1%data_c,1))
+         call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
       END IF
 
    END SUBROUTINE t_mat_copy
