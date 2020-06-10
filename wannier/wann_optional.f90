@@ -51,7 +51,7 @@ CONTAINS
        if(mpi%irank==0)then
         CALL wann_projgen(atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
        endif
-       l_stopopt=.TRUE.
+!       l_stopopt=.TRUE.
     ENDIF
 
     !-----generate k-point-files
@@ -145,7 +145,7 @@ CONTAINS
     ENDIF
 
 
-    IF(l_stopopt)  CALL juDFT_end("wann_optional done",mpi%irank) ! The 1 is temporarily. Should be mpi%irank.
+    IF(l_stopopt)  CALL juDFT_end("wann_optional done",mpi%irank) 
 
   END SUBROUTINE wann_optional
 END MODULE m_wann_optional
