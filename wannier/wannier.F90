@@ -386,12 +386,13 @@ CONTAINS
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
             nococonv%theta,nococonv%phi)
-
+       if(wann%l_stopupdown)then
        DO pc = 1, wann%nparampts
           CALL close_eig(eig_idList(pc))
        END DO
 
        CALL juDFT_end("updown done",mpi%irank)
+       endif
     ENDIF
 
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -430,11 +431,15 @@ CONTAINS
             wann%param_file,wann%param_vec,wann%nparampts,&
             wann%param_alpha,wann%l_dim)
 
-       DO pc = 1, wann%nparampts
+       
+       if(wann%l_stopuhu) then
+  
+        DO pc = 1, wann%nparampts
           CALL close_eig(eig_idList(pc))
-       END DO
-
-       CALL juDFT_end("wann_uHu done",mpi%irank)
+        END DO
+        
+        CALL juDFT_end("wann_uHu done",mpi%irank)
+       endif
     ENDIF
 
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
