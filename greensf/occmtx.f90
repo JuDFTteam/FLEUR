@@ -161,15 +161,14 @@ MODULE m_occmtx
                ndwn = ndwn + gmat%data_r(i,i)
             ENDDO
             !Write to file
-            WRITE(oUnit,*)
-9000        FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
+9000        FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
             DO i = 1, 2*ns
-               WRITE(oUnit,"(14f8.4)") gmat%data_r(i,:)
+               WRITE(oUnit,'(14f8.4)') gmat%data_r(i,:)
             ENDDO
-            WRITE(oUnit,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(oUnit,"(1x,A,A,A,f8.4)") "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
             !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
             !CALL cmat%init(.TRUE.,2*ns,2*ns)

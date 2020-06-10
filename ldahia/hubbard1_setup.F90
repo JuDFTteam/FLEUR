@@ -144,12 +144,10 @@ MODULE m_hubbard1_setup
             occDFT_INT = ANINT(SUM(occDFT(i_hia,:)))
 
             !Initial Information (We are already on irank 0)
-            WRITE(oUnit,*)
             WRITE(oUnit,9010) nType
-9010        FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
+9010        FORMAT(/,"Setup for Hubbard 1 solver for atom ", I3, ": ")
             WRITE(oUnit,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
-            WRITE(oUnit,*)
-            WRITE(oUnit,"(A)") "Occupation from DFT-Green's function:"
+            WRITE(oUnit,"(/,A)") "Occupation from DFT-Green's function:"
             WRITE(oUnit,9020) 'spin-up','spin-dn'
 9020        FORMAT(TR8,A7,TR3,A7)
             WRITE(oUnit,9030) occDFT(i_hia,:)

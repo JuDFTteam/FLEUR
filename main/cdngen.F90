@@ -148,13 +148,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
-   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
-      IF(greensfImagPart%l_calc) THEN
-         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
-      ENDIF
-   ENDIF
-
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -207,6 +200,20 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !IF (sliceplot%iplot.NE.0) THEN
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
+
+   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
+      IF(greensfImagPart%l_calc) THEN
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
+      ELSE
+         IF(mpi%irank.EQ.0) THEN
+            WRITE(oUnit,'(/,A)') "Green's Functions are not calculated: "
+            WRITE(oUnit,'(A,f12.7,TR5,A,f12.7/)') "lastDistance: ", results%last_distance,&
+                                                  "minCalcDistance: ", gfinp%minCalcDistance
+         ENDIF
+      ENDIF
+   ENDIF
+
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then

@@ -312,8 +312,7 @@ CONTAINS
             natom = SUM(atoms%neq(:itype-1)) + 1
 
             WRITE(oUnit,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
-8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
-            WRITE(oUnit,*)
+8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5,/)
 
             CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 
