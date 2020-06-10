@@ -6,6 +6,7 @@ MODULE m_greensfPostProcess
    USE m_greensfCalcRealPart
    USE m_greensf_io
    USE m_occmtx
+   USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
 
@@ -61,6 +62,8 @@ MODULE m_greensfPostProcess
          IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
+
+         CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
          CALL timestart("Green's Function: Occupation")
          DO i_gf = 1, gfinp%n
             !Occupation matrix

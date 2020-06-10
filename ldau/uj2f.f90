@@ -144,7 +144,6 @@ MODULE m_uj2f
             ENDIF
 
          END DO ! n_u
-       ! 
       ENDIF
 
    END SUBROUTINE uj2f_spins
