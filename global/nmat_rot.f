@@ -19,28 +19,24 @@
      X                    n_mmp)
 
       use m_constants
-      USE m_inv3
 
       IMPLICIT NONE
 
 ! .. arguments:
-      INTEGER, INTENT(IN)  :: l_in,n_u,jspins,lty(:)
-      REAL,    INTENT(IN)  :: alpha(:),beta(:),gamma(:)
+      INTEGER, INTENT(IN)    :: l_in,n_u,jspins,lty(:)
+      REAL,    INTENT(IN)    :: alpha(:),beta(:),gamma(:)
       COMPLEX, INTENT(INOUT) :: n_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
 
 ! .. local variables:
-      INTEGER ns,signum,ispin,n
-      INTEGER i,j,k,l,m,mp,x_lo,x_up,x,e_c,e_s
+      INTEGER ispin,n
+      INTEGER l,m,mp,x_lo,x_up,x,e_c,e_s
       REAL fac_l_m,fac_l_mp,fac_lmpx,fac_lmx,fac_x,fac_xmpm
       REAL co_bh,si_bh,zaehler,nenner,cp,sp
-      REAL sina,sinb,sinc,cosa,cosb,cosc,determ,dt
-      COMPLEX phase_g,phase_a,bas,d(-l_in:l_in,-l_in:l_in)
+      COMPLEX phase_g,phase_a,bas
+      COMPLEX d(-l_in:l_in,-l_in:l_in)
       COMPLEX d_wig(-l_in:l_in,-l_in:l_in,l_in,n_u)
       COMPLEX n_tmp(-l_in:l_in,-l_in:l_in)
       COMPLEX nr_tmp(-l_in:l_in,-l_in:l_in)
-      LOGICAL, SAVE :: written = .false.
-
-      REAL dmat(3,3),dmati(3,3)
 
       IF (ALL(ABS(alpha)<1E-10).AND.ALL(ABS(beta)<1E-10)
      +     .AND.ALL(ABS(gamma)<1E-10)) RETURN
@@ -52,7 +48,7 @@
       si_bh = sin(beta(n)*0.5)
 
       DO l = 1, lty(n)
-        d = (0.0,0.0)
+        d = cmplx_0
 
         DO m = -l,l
           fac_l_m = fac(l+m) * fac(l-m)
@@ -67,7 +63,7 @@
             x_up = min(l-mp, l+m)
 
             bas = zaehler * phase_a * phase_g
-            d(m,mp) = cmplx(0.0,0.0)
+            d(m,mp) = cmplx_0
             DO x = x_lo,x_up
               fac_lmpx = fac(l-mp-x)
               fac_lmx  = fac(l+m-x)
