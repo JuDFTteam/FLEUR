@@ -271,6 +271,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
@@ -292,6 +293,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
@@ -314,6 +316,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
                           fixedCutoff=fixedCutoff)
@@ -322,7 +325,7 @@ CONTAINS
          ENDDO
       ENDDO
 
-      IF(this%n>0.AND..NOT.l_gfinfo_given) THEN
+      IF(this%n>0 .AND. .NOT.l_gfinfo_given) THEN
          CALL juDFT_error("Error reading in gf-information: No general information found for the gf-calculations",&
                            calledby="read_xml_gfinp")
       ENDIF
