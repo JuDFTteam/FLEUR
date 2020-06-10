@@ -247,12 +247,10 @@ CONTAINS
       allocate(carr3(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
 
       ! create lock for race-condition in coulomb
-      iatom = 0
-      DO itype = 1, atoms%ntype
-         DO ineq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-
-            DO ikpt = 1, nkpti
+      DO ikpt = 1, nkpti
+         DO itype = 1, atoms%ntype
+            DO ineq = 1, atoms%neq(itype)
+               iatom = iatom + 1            
                carr1 = 0; carr2 = 0; carr3 = 0
 
                ! calculate k1,k2,k3
