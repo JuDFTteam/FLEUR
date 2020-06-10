@@ -40,17 +40,9 @@ MODULE m_types_mat
       procedure        :: u2l => t_mat_u2l
       procedure        :: l2u => t_mat_l2u
       procedure        :: size_mb => t_mat_size_mb
-      procedure        :: print_type => t_mat_print_type
    END type t_mat
    PUBLIC t_mat
 CONTAINS
-   subroutine t_mat_print_type(mat)
-      implicit none 
-      class(t_mat), intent(in) :: mat 
-
-      write (*,*) "t_mat"
-   end subroutine t_mat_print_type
-
    function t_mat_size_mb(mat) result(mb_size)
       implicit none
       class(t_mat), intent(inout) :: mat
@@ -95,7 +87,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy upper to lower matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("u2l only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
       if(mat%l_real) then
          do i = 1,mat%matsize1
             do j = 1,i-1
