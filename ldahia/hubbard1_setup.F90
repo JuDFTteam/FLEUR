@@ -59,8 +59,8 @@ MODULE m_hubbard1_setup
 #endif
 
       REAL    :: mu_dc(input%jspins)
-      REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
-      REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
+      REAL    :: f0(atoms%n_hia),f2(atoms%n_hia)
+      REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX, ALLOCATABLE :: e(:)
@@ -89,13 +89,6 @@ MODULE m_hubbard1_setup
 
          ! calculate slater integrals from u and j
          CALL uj2f(input%jspins,atoms%lda_u(indStart:indEnd),atoms%n_hia,f0,f2,f4,f6)
-
-         DO ispin = 1, 1 ! input%jspins
-            f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
-            f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
-            f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
-            f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         END DO
 
          DO i_hia = 1, atoms%n_hia
 
@@ -186,7 +179,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
-            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
+            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
                                       hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
       ENDIF !mpi%irank == 0

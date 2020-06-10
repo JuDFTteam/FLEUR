@@ -7,21 +7,44 @@ MODULE m_uj2f
    !  * Extension to multiple U per atom type by G.M. 2017                *
    !  * Extension for uses beyond LDA+U by H.J 2019                       *
    !  *********************************************************************
+   USE m_types
+
+   IMPLICIT NONE
+
+   INTERFACE uj2f
+      PROCEDURE :: uj2f_simple, uj2f_spins
+   END INTERFACE
+
    CONTAINS
 
-   SUBROUTINE uj2f(jspins,u_in,n_u,f0,f2,f4,f6)
+   SUBROUTINE uj2f_simple(jspins,u_in,n_u,f0,f2,f4,f6)
 
-      USE m_types
-      IMPLICIT NONE
-      !
-      !  .. Arguments ..
+      INTEGER,          INTENT(IN)  :: jspins
+      INTEGER,          INTENT(IN)  :: n_u
+      TYPE(t_utype),    INTENT(IN)  :: u_in(:)
+      REAL,             INTENT(OUT) :: f0(:),f2(:)
+      REAL,             INTENT(OUT) :: f4(:),f6(:)
+
+      REAL :: f0Spins(n_u,jspins),f2Spins(n_u,jspins)
+      REAL :: f4Spins(n_u,jspins),f6Spins(n_u,jspins)
+
+      CALL uj2f_spins(jspins,u_in,n_u,f0Spins,f2Spins,f4Spins,f6Spins)
+
+      f0 = (f0Spins(:,1) + f0Spins(:,jspins))/ 2.0
+      f2 = (f2Spins(:,1) + f2Spins(:,jspins))/ 2.0
+      f4 = (f4Spins(:,1) + f4Spins(:,jspins))/ 2.0
+      f6 = (f6Spins(:,1) + f6Spins(:,jspins))/ 2.0
+
+   END SUBROUTINE uj2f_simple
+
+   SUBROUTINE uj2f_spins(jspins,u_in,n_u,f0,f2,f4,f6)
+
       INTEGER,          INTENT(IN)  :: jspins
       INTEGER,          INTENT(IN)  :: n_u
       TYPE(t_utype),    INTENT(IN)  :: u_in(:)
       REAL,             INTENT(OUT) :: f0(:,:),f2(:,:)
       REAL,             INTENT(OUT) :: f4(:,:),f6(:,:)
-      !
-      !  .. Local variables ..
+
       INTEGER l,itype,ltest,ispin,i_u
       REAL u,j,a,ftest(4)
       LOGICAL l_exist
@@ -69,7 +92,7 @@ MODULE m_uj2f
          ! lda_u%l: orb.mom; lda_u%u,j: in eV
          !
          DO i_u = 1, n_u
-            
+
             itype = u_in(i_u)%atomType
             l = u_in(i_u)%l
             u = u_in(i_u)%u
@@ -111,7 +134,7 @@ MODULE m_uj2f
                f4(i_u,1) = 451.0/675.0*f2(i_u,1)
                f6(i_u,1) = 1001.0/2025.0*f2(i_u,1)
             ELSE
-               PRINT*, 'lda+U is restricted to l<=3 ! You used l=', l
+               CALL juDFT_error('lda+U is restricted to l<=3 !', calledby="uj2f")
             END IF
             IF (jspins.EQ.2) THEN
                f0(i_u,jspins) = f0(i_u,1)
@@ -124,5 +147,5 @@ MODULE m_uj2f
        ! 
       ENDIF
 
-   END SUBROUTINE uj2f
+   END SUBROUTINE uj2f_spins
 END MODULE m_uj2f

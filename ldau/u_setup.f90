@@ -6,9 +6,7 @@
 
 MODULE m_usetup
    !-------------------------------------------------------------------+
-   ! Sets up the quantities needed for the LDA+U subroutines:          |
-   !     radial integrals: us,dus,uds,duds                             |
-   !     overlap of dot u: ddn                                         |
+   ! Sets up the quantities needed for the LDA+U subroutines:          |                                         |
    !     potential matrix: vs_mmp                                      |
    !     total energy contribution: e_ldau                             |
    !                                                  G.B. Oct. 2000   |
@@ -46,8 +44,8 @@ MODULE m_usetup
       CHARACTER(len=9) :: l_form
 
       REAL :: zero(atoms%n_u+atoms%n_hia)
-      REAL :: f0(atoms%n_u+atoms%n_hia,input%jspins),f2(atoms%n_u+atoms%n_hia,input%jspins)
-      REAL :: f4(atoms%n_u+atoms%n_hia,input%jspins),f6(atoms%n_u+atoms%n_hia,input%jspins)
+      REAL :: f0(atoms%n_u+atoms%n_hia),f2(atoms%n_u+atoms%n_hia)
+      REAL :: f4(atoms%n_u+atoms%n_hia),f6(atoms%n_u+atoms%n_hia)
       REAL,    ALLOCATABLE :: u(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
 
@@ -65,20 +63,14 @@ MODULE m_usetup
          ALLOCATE ( n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),input%jspins) )
 
          n_mmp = inDen%mmpMat(:,:,:,1:input%jspins)
-         DO ispin = 1, 1 ! input%jspins
-            f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
-            f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
-            f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
-            f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-            CALL umtx(atoms%lda_u(:),n_u,f0(:,ispin),f2(:,ispin),f4(:,ispin),f6(:,ispin),u)
-         END DO
+         CALL umtx(atoms%lda_u(:),n_u,f0,f2,f4,f6,u)
 
          ! check for possible rotation of n_mmp
          zero = 0.0
          CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
 
          ! calculate potential matrix and total energy correction
-         CALL v_mmp(atoms,atoms%lda_u(:),n_u,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0(:,1),f2(:,1),pot%mmpMat,results%e_ldau)
+         CALL v_mmp(atoms,atoms%lda_u(:),n_u,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
 
          !spin off-diagonal elements (no rotation yet)
          IF(noco%l_mtNocoPot) THEN
@@ -91,7 +83,7 @@ MODULE m_usetup
          ENDIF
 
          IF (mpi%irank.EQ.0) THEN
-            DO ispin = 1,MERGE(3,input%jspins,noco%l_mtNocoPot)
+            DO ispin = 1,SIZE(pot%mmpMat,4)
                WRITE (oUnit,'(a7,i3)') 'spin #',ispin
                DO i_u = 1, n_u
                   itype = atoms%lda_u(i_u)%atomType
