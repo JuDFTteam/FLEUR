@@ -109,6 +109,8 @@ MODULE m_types_wannier
      LOGICAL :: l_wann_plot=.FALSE.
      LOGICAL :: l_bynumber=.FALSE.
      LOGICAL :: l_stopopt=.FALSE.
+     LOGICAL :: l_stopuhu=.FALSE.
+     LOGICAL :: l_stopupdown=.FALSE.
      LOGICAL :: l_matrixmmn=.FALSE.
      INTEGER :: matrixmmnfmt=1
      LOGICAL :: l_matrixamn=.FALSE.
@@ -285,6 +287,8 @@ CONTAINS
     CALL mpi_bc(this%l_wann_plot,rank,mpi_comm)
     CALL mpi_bc(this%l_bynumber,rank,mpi_comm)
     CALL mpi_bc(this%l_stopopt,rank,mpi_comm)
+    CALL mpi_bc(this%l_stopupdown,rank,mpi_comm)
+    CALL mpi_bc(this%l_stopuhu,rank,mpi_comm)
     CALL mpi_bc(this%l_matrixmmn,rank,mpi_comm)
     CALL mpi_bc(this%l_matrixamn,rank,mpi_comm)
     CALL mpi_bc(this%l_projmethod,rank,mpi_comm)
@@ -464,6 +468,10 @@ CONTAINS
              this%l_unformatted=.TRUE.            
           ELSEIF(this%jobList(i).EQ.'stopopt')THEN
              this%l_stopopt=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'stopuhu')THEN
+             this%l_stopuhu=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'stopupdown')THEN
+             this%l_stopupdown=.TRUE.
           ELSEIF(this%jobList(i).EQ.'projgen')THEN
              this%l_projgen=.TRUE.
           ELSEIF(this%jobList(i).EQ.'kpointgen')THEN
