@@ -303,6 +303,14 @@ CONTAINS
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
+
+      select type (mat1)
+      type is(t_mpimat)
+          
+      class default
+         call judft_error("you can only copy a t_mpimat to a t_mpimat")
+      end select
+
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
