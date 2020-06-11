@@ -31,13 +31,14 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,j1,j2,ll
+    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
+    REAL, ALLOCATABLE :: xlegend(:)
     COMPLEX, ALLOCATABLE :: cph(:)
 
     CALL timestart("offdiagonal soc-setup")
@@ -51,8 +52,9 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(NONE)&
     !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
-    !$OMP PRIVATE(cph,nn,tnn,fct)
+    !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
+    ALLOCATE(xlegend(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     ALLOCATE(dplegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     plegend=0.0
@@ -62,14 +64,7 @@ CONTAINS
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
-       !--->       legendre polynomials
-       DO kj = 1,ki
-          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
-       END DO
-       DO l = 2,atoms%lmax(n) 
-          plegend(:ki,l) = fleg1(l-1)*plegend(:ki,1)*plegend(:ki,l-1) - fleg2(l-1)*plegend(:ki,l-2)
-          dplegend(:ki,l)=REAL(l)*plegend(:ki,l-1)+plegend(:ki,1)*dplegend(:ki,l-1)
-       END DO
+
        !--->             set up phase factors
        cph = 0.0
        ski = lapw%gvec(:,ki,1)
@@ -83,6 +78,19 @@ CONTAINS
        END DO
        !Set up spinors...
        CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
+
+       !--->       x for legendre polynomials
+       DO kj = 1,ki
+          xlegend(kj) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
+       END DO
+       !--->       legendre polynomials
+       DO kj = 1,ki
+          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
+       END DO
+       DO l = 2,atoms%lmax(n) 
+          plegend(:ki,l) = fleg1(l-1)*xlegend(:ki)*plegend(:ki,l-1) - fleg2(l-1)*plegend(:ki,l-2)
+          dplegend(:ki,l)=REAL(l)*plegend(:ki,l-1)+xlegend(:ki)*dplegend(:ki,l-1)
+       END DO
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        DO  l = 1,atoms%lmax(n)
@@ -109,7 +117,7 @@ CONTAINS
     ENDDO
     !$OMP END DO
     !--->       end loop over atom types (ntype)
-    DEALLOCATE(plegend)
+    DEALLOCATE(xlegend,plegend,dplegend)
     DEALLOCATE(cph)
     !$OMP END PARALLEL
     CALL timestop("offdiagonal soc-setup")
