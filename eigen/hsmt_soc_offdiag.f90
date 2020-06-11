@@ -55,12 +55,8 @@ CONTAINS
     !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(xlegend(MAXVAL(lapw%nv)))
-    ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
-    ALLOCATE(dplegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
-    plegend=0.0
-    plegend(:,0)=1.0
-    dplegend(:,0)=0.e0
-    dplegend(:,1)=1.e0
+    ALLOCATE(plegend(MAXVAL(lapw%nv),0:2))
+    ALLOCATE(dplegend(MAXVAL(lapw%nv),0:2))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
@@ -83,22 +79,25 @@ CONTAINS
        DO kj = 1,ki
           xlegend(kj) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
        END DO
-       !--->       legendre polynomials
-       DO kj = 1,ki
-          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
-       END DO
-       DO l = 2,atoms%lmax(n) 
-          plegend(:ki,l) = fleg1(l-1)*xlegend(:ki)*plegend(:ki,l-1) - fleg2(l-1)*plegend(:ki,l-2)
-          dplegend(:ki,l)=REAL(l)*plegend(:ki,l-1)+xlegend(:ki)*dplegend(:ki,l-1)
-       END DO
+       plegend(:ki,0) = 1.0
+       dplegend(:ki,0) = 0.0
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        DO  l = 1,atoms%lmax(n)
+          !--->       legendre polynomials
+          l3 = MODULO(l, 3)
+          IF (l == 1) THEN
+             plegend(:ki,1) = xlegend(:ki)
+             dplegend(:ki,1) = 1.0
+          ELSE
+             plegend(:ki,l3) = fleg1(l-1)*xlegend(:ki)*plegend(:ki,MODULO(l-1,3)) - fleg2(l-1)*plegend(:ki,MODULO(l-2,3))
+             dplegend(:ki,l3)=REAL(l)*plegend(:ki,MODULO(l-1,3))+xlegend(:ki)*dplegend(:ki,MODULO(l-1,3))
+          END IF ! l
           DO j1=1,2
              DO j2=1,2
              !DO j2=j1,j1
                 DO kj = 1,ki
-                   fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
+                   fct  =cph(kj) * dplegend(kj,l3)*fl2p1(l)*(&
                         fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
                         fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
                         fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
