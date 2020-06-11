@@ -66,9 +66,9 @@ CONTAINS
        DO kj = 1,ki
           plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
        END DO
-       DO l = 1,atoms%lmax(n) - 1
-          plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
-          dplegend(:ki,l+1)=REAL(l+1)*plegend(:ki,l)+plegend(:ki,1)*dplegend(:ki,l)
+       DO l = 2,atoms%lmax(n) 
+          plegend(:ki,l) = fleg1(l-1)*plegend(:ki,1)*plegend(:ki,l-1) - fleg2(l-1)*plegend(:ki,l-2)
+          dplegend(:ki,l)=REAL(l)*plegend(:ki,l-1)+plegend(:ki,1)*dplegend(:ki,l-1)
        END DO
        !--->             set up phase factors
        cph = 0.0
