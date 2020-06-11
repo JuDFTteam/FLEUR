@@ -570,11 +570,20 @@ CONTAINS
    SUBROUTINE t_mat_clear(mat)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
+      INTEGER :: i
 
       IF (mat%l_real) THEN
-         mat%data_r = 0.0
+         !$OMP PARALLEL DO DEFAULT(shared)
+         DO i = 1, SIZE(mat%data_r,2)
+            mat%data_r(:,i) = 0.0
+         ENDDO
+         !$OMP END PARALLEL DO
       ELSE
-         mat%data_c = 0.0
+         !$OMP PARALLEL DO DEFAULT(shared)
+         DO i = 1, SIZE(mat%data_c,2)
+            mat%data_c(:,i) = 0.0
+         ENDDO
+         !$OMP END PARALLEL DO
       ENDIF
    END SUBROUTINE t_mat_clear
 
