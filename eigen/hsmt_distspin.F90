@@ -8,28 +8,35 @@ MODULE m_hsmt_distspins
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt_distspins(chi,mat_tmp,mat)
+#include"cpp_double.h"
     USE m_types
     COMPLEX,INTENT(in)        :: chi(2,2)
     TYPE(t_mat),INTENT(IN)    :: mat_tmp
 !    CLASS(t_mat),INTENT(INOUT):: mat(:,:)
     TYPE(t_mat),INTENT(INOUT) ::mat(:,:)
     INTEGER:: iintsp,jintsp,i,j
+#ifdef _OPENACC
     !$acc parallel copyin(chi) present(mat%data_c,mat_tmp)
     DO iintsp=1,2
        DO jintsp=1,2
           !$acc loop independent collapse(2)	
-          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(none) &
-          !$OMP SHARED(mat_tmp,mat,chi,iintsp,jintsp) &
-          !$OMP PRIVATE(i,j)
           DO j=1,SIZE(mat_tmp%data_c,2)
              DO i=1,SIZE(mat_tmp%data_c,1)
                 mat(jintsp,iintsp)%data_c(i,j)=chi(jintsp,iintsp)*mat_tmp%data_c(i,j)+mat(jintsp,iintsp)%data_c(i,j)
              ENDDO
           ENDDO
-          !$OMP END PARALLEL DO
           !$acc end loop
        ENDDO
     ENDDO
     !$acc end parallel
+#else
+    DO iintsp=1,2
+       DO jintsp=1,2
+          DO j=1,mat_tmp%matsize2
+             call CPP_BLAS_caxpy(mat_tmp%matsize1,chi(jintsp,iintsp),mat_tmp%data_c(:,j),1,mat(jintsp,iintsp)%data_c(:,j),1)
+          ENDDO
+       ENDDO
+    ENDDO
+#endif
   END SUBROUTINE hsmt_distspins
 END MODULE m_hsmt_distspins
