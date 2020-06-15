@@ -669,7 +669,8 @@ CONTAINS
 
     !write density matrix to n_mmp_mat_out file
     IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
-         ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
+       ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).OR.&
+         (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const))) THEN
        IF(atoms%n_u+atoms%n_hia.GT.0) THEN
           filename = 'n_mmp_mat'
           IF (mode.EQ.CDN_HDF5_MODE) THEN
