@@ -1,4 +1,5 @@
 MODULE m_types_mat
+#include"cpp_double.h"
    USE m_judft
    IMPLICIT NONE
    PRIVATE
@@ -573,17 +574,9 @@ CONTAINS
       INTEGER :: i
 
       IF (mat%l_real) THEN
-         !$OMP PARALLEL DO DEFAULT(shared)
-         DO i = 1, SIZE(mat%data_r,2)
-            mat%data_r(:,i) = 0.0
-         ENDDO
-         !$OMP END PARALLEL DO
+         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ELSE
-         !$OMP PARALLEL DO DEFAULT(shared)
-         DO i = 1, SIZE(mat%data_c,2)
-            mat%data_c(:,i) = 0.0
-         ENDDO
-         !$OMP END PARALLEL DO
+         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ENDIF
    END SUBROUTINE t_mat_clear
 
