@@ -597,6 +597,8 @@ CONTAINS
              this%l_plotw90=.TRUE.
           ELSEIF(this%jobList(i).EQ.'dipole')THEN
              this%l_dipole=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'dipole2')THEN
+             this%l_dipole2=.TRUE.      
           ELSEIF(this%jobList(i).EQ.'dipole3')THEN
              this%l_dipole3=.TRUE.
           ELSEIF(this%jobList(i).EQ.'ldauwan')THEN
