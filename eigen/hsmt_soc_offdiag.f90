@@ -30,16 +30,16 @@ CONTAINS
     !     ..
     !     ..
     !     .. Local Scalars ..
-    REAL tnn(3),ski(3)
+    REAL tnn(3),ski(3), fjkiln,gjkiln
     INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3
-    COMPLEX :: fct
+    !COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     REAL, ALLOCATABLE :: xlegend(:)
-    COMPLEX, ALLOCATABLE :: cph(:)
+    COMPLEX, ALLOCATABLE :: cph(:),fct(:)
 
     CALL timestart("offdiagonal soc-setup")
 
@@ -52,11 +52,12 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(NONE)&
     !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
-    !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3)
+    !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(xlegend(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:2))
     ALLOCATE(dplegend(MAXVAL(lapw%nv),0:2))
+    ALLOCATE(fct(MAXVAL(lapw%nv)))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
@@ -77,13 +78,14 @@ CONTAINS
 
        !--->       x for legendre polynomials
        DO kj = 1,ki
-          xlegend(kj) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
+          xlegend(kj) = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
        END DO
        plegend(:ki,0) = 1.0
        dplegend(:ki,0) = 0.0
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        DO  l = 1,atoms%lmax(n)
+
           !--->       legendre polynomials
           l3 = MODULO(l, 3)
           IF (l == 1) THEN
@@ -94,20 +96,19 @@ CONTAINS
              dplegend(:ki,l3)=REAL(l)*plegend(:ki,MODULO(l-1,3))+xlegend(:ki)*dplegend(:ki,MODULO(l-1,3))
           END IF ! l
           DO j1=1,2
+             fjkiln = fjgj%fj(ki,l,j1,1)
+             gjkiln = fjgj%gj(ki,l,j1,1)
              DO j2=1,2
-             !DO j2=j1,j1
-                DO kj = 1,ki
-                   fct  =cph(kj) * dplegend(kj,l3)*fl2p1(l)*(&
-                        fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
-                        * angso(kj,j1,j2)
-                   hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct
-                   hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct
-                   hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,j1,j2)*fct
-                   hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,j1,j2)*fct
-                ENDDO
+                fct(:ki)  =cph(:ki) * dplegend(:ki,l3)*fl2p1(l)*(&
+                        fjkiln*fjgj%fj(:ki,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fjkiln*fjgj%gj(:ki,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        gjkiln*fjgj%fj(:ki,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        gjkiln*fjgj%gj(:ki,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        * angso(:ki,j1,j2)
+                hmat(1,1)%data_c(:ki,kii)=hmat(1,1)%data_c(:ki,kii) + chi(1,1,j1,j2)*fct(:ki)
+                hmat(1,2)%data_c(:ki,kii)=hmat(1,2)%data_c(:ki,kii) + chi(1,2,j1,j2)*fct(:ki)
+                hmat(2,1)%data_c(:ki,kii)=hmat(2,1)%data_c(:ki,kii) + chi(2,1,j1,j2)*fct(:ki)
+                hmat(2,2)%data_c(:ki,kii)=hmat(2,2)%data_c(:ki,kii) + chi(2,2,j1,j2)*fct(:ki)
              ENDDO
           ENDDO
           !--->          end loop over l
@@ -204,7 +205,7 @@ CONTAINS
 
               !--->       legendre polynomials
               DO kj = 1,lapw%nv(1)
-                plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
+                plegend(kj,1) = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
               END DO
               DO ll = 1,l - 1
                 plegend(:,ll+1) = fleg1(l)*plegend(:,1)*plegend(:,ll) - fleg2(l)*plegend(:,ll-1)
