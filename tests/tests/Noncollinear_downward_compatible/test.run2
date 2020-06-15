@@ -1,5 +1,5 @@
 jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
-jt::deletefile("$workdir/mixing_history");
+jt::deletefile("$workdir/mixing_history*");
 jt::testrun("$executable ",$workdir);
 
 
