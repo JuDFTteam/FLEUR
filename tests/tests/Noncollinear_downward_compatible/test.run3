@@ -7,7 +7,7 @@ jt::testrun("$executable ",$workdir);
 $result+=jt::test_fileexists("$workdir/out");
 $result+=jt::test_fileexists("$workdir/cdn.hdf");
 $result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-1270.491,0.001);
-
+jt::deletefile("$workdir/mixing_history");
 jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
 jt::testrun("$executable ",$workdir);
 
