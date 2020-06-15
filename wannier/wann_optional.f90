@@ -22,6 +22,7 @@ CONTAINS
     USE m_wann_kptsreduc2
     USE m_wann_wan90prep
     USE m_wann_dipole3
+    USE m_wann_dipole2
     USE m_wann_dipole
     USE m_wann_convert_fleur_w90
 
