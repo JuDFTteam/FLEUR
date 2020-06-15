@@ -49,6 +49,7 @@ c***************************************
       data spin12/'  ', '.1', '.2'/
       character(len=6)             :: filename
       logical                      :: l_file
+      integer                      :: polq
 
       DATA namat2/'va',' H','He','Li','Be',
      +     ' B',' C',' N',' O',' F','Ne',
@@ -217,9 +218,10 @@ c*************************************************
       do i=-5,5
          do j=-5,5
             do k=-5,5
+              do polq=1,100
                shifted_polari(:)=ioni_polari(:)+
      +                  elemchargmu/((bohrtocm)**2)/omtil *
-     *                  (amat(:,1)*k+amat(:,2)*j+amat(:,3)*i)
+     *                  (amat(:,1)*k+amat(:,2)*j+amat(:,3)*i)*polq
                size_polari=sqrt( (shifted_polari(1))**2 +
      +                           (shifted_polari(2))**2 +
      +                           (shifted_polari(3))**2 )
@@ -227,6 +229,7 @@ c*************************************************
                   final_polari=shifted_polari
                   smallest_polari=size_polari
                endif
+              enddo !polq 
             enddo
          enddo
       enddo
