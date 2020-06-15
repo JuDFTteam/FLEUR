@@ -47,6 +47,8 @@
 # define CPP_LAPACK_sgesv  dgesv
 # define CPP_LAPACK_sgesv  dgesv
 # define CPP_LAPACK_sygvd  dygvd
+# define CPP_LAPACK_claset zlaset
+# define CPP_LAPACK_slaset dlaset
 #else
 # define CPP_LAPACK_chegvd chegvd
 # define CPP_LAPACK_cheevx cheevx
@@ -84,6 +86,8 @@
 # define CPP_LAPACK_chsein chsein
 # define CPP_LAPACK_sgesv  sgesv
 # define CPP_LAPACK_sgesv  sgesv
+# define CPP_LAPACK_claset claset
+# define CPP_LAPACK_slaset slaset
 #endif
 
 #ifdef CPP_BLAS_DOUBLE
