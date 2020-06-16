@@ -297,26 +297,30 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE init_kpts(kpts, cell, sym, film)
+   SUBROUTINE init_kpts(kpts, cell, sym, film, l_eibz)
+      use m_juDFT
       USE m_types_cell
       USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)     :: sym
-      LOGICAL, INTENT(IN)         :: film
+      LOGICAL, INTENT(IN)         :: film, l_eibz
 
       INTEGER :: n
-
+      call timestart("init_kpts")
       DO n = 1, kpts%nkpt
          kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
       ENDDO
       IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
-      allocate(kpts%EIBZ(kpts%nkpt))
-      do n = 1,kpts%nkpt 
-         call kpts%EIBZ(n)%init(kpts, sym, n)
-         ! write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
-      enddo
+      if(l_eibz) then
+         allocate(kpts%EIBZ(kpts%nkpt))
+         do n = 1,kpts%nkpt 
+            call kpts%EIBZ(n)%init(kpts, sym, n)
+            ! write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
+         enddo
+      end if
+      call timestop("init_kpts")
    END SUBROUTINE init_kpts
 
    SUBROUTINE gen_bz(kpts, sym)
@@ -348,6 +352,7 @@ CONTAINS
       REAL, PARAMETER          :: eps = 1e-8
 
       INTEGER:: nsym, ID_mat(3, 3)
+      call timestart("gen_bz")
 
       nsym = sym%nop
       IF (.NOT. sym%invs) nsym = 2*sym%nop
@@ -407,7 +412,7 @@ CONTAINS
       ALLOCATE (kpts%bkf(3, kpts%nkptf))
       kpts%bkf = rarr1
       DEALLOCATE (rarr1)
-
+      call timestop("gen_bz")
    END SUBROUTINE gen_bz
 
    function nkpt3_kpts(kpts) result(nkpt3)
@@ -449,6 +454,8 @@ CONTAINS
                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)
       REAL                  ::  rotkpt(3)
+
+      call timestart("calc_nkpt_EIBZ")
 
       allocate (psym(sym%nsym))
 
@@ -526,6 +533,7 @@ CONTAINS
          IF (parent(ikpt) == ikpt) ic = ic + 1
       END DO
       EIBZ%nkpt = ic
+      call timestop("calc_nkpt_EIBZ")
    END subroutine calc_nkpt_EIBZ
 
    subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
@@ -541,7 +549,7 @@ CONTAINS
       INTEGER               :: rrot(3, 3, sym%nsym)
       INTEGER, ALLOCATABLE  :: psym(:)
       REAL                  :: rotkpt(3)
-
+      call timestart("calc_pointer_EIBZ")
 
       allocate (psym(sym%nsym))
       parent = 0
@@ -592,6 +600,8 @@ CONTAINS
             eibz%pointer(ic) = ikpt
          END IF
       END DO
+
+      call timestop("calc_pointer_EIBZ")
    end subroutine calc_pointer_EIBZ
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
