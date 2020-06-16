@@ -363,7 +363,6 @@ c**************************************************************
       if(l_p0)then
       write (*,*) 'fermi energy:',efermi
       write (*,*) 'emin,emax=',e1s,e2s
-      write (*,*) 'nbasfcn =',nbasfcn
       endif
       nlotot = 0
       do n = 1, ntype
