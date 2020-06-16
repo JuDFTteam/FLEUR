@@ -240,7 +240,9 @@ contains
 
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
+      select case(fft%backend)
 #ifdef CPP_FFTW
+      case(FFTW_const)
       !$OMP critical
       call fftw_destroy_plan(fft%plan)
       call fftw_free(fft%ptr_in)
@@ -250,7 +252,6 @@ contains
       ! if(allocated(fft%in)) deallocate(fft%in)
       ! if(allocated(fft%out)) deallocate(fft%out)       
 #endif
-      select case(fft%backend)
 #ifdef CPP_SPFFT
       case(spFFT_const)
          ok = spfft_transform_destroy(fft%transform)
