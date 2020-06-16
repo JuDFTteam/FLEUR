@@ -920,16 +920,16 @@ c              rotate the wavefunction
 c***********************************************************
       do jspin=1,wannierspin
         if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
-          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+           call wann_kptsrotate(
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,lapw%nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
+     >          tau,
+     >          lapw,    
+!     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
      x            zMat(jspin),nsfactor)
         else
           nsfactor=cmplx(1.0,0.0)
