@@ -1506,6 +1506,9 @@ CONTAINS
              END IF
           END DO
 
+          CALL deleteObsoleteDensityMetadataHDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                                currentStepfunctionIndex,lastDensityIndex)
+
           CALL closeCDNPOT_HDF(fileID)
 #endif
           WRITE(*,*) 'Please note:'

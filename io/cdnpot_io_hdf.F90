@@ -27,6 +27,7 @@ MODULE m_cdnpot_io_hdf
    PUBLIC writeCoreDensityHDF, readCoreDensityHDF
    PUBLIC writeCDNHeaderData, writePOTHeaderData
    PUBLIC isCoreDensityPresentHDF, deleteDensityEntryHDF
+   PUBLIC deleteObsoleteDensityMetadataHDF
    PUBLIC isDensityEntryPresentHDF, isPotentialEntryPresentHDF
    PUBLIC peekDensityEntryHDF
 #endif
@@ -3089,6 +3090,91 @@ MODULE m_cdnpot_io_hdf
       deleteDensityEntryHDF = .TRUE.
 
    END FUNCTION deleteDensityEntryHDF
+
+   SUBROUTINE deleteObsoleteDensityMetadataHDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                               currentStepfunctionIndex,lastDensityIndex)
+
+      INTEGER(HID_T), INTENT(IN)   :: fileID
+      INTEGER, INTENT(IN)          :: currentStarsIndex, currentLatharmsIndex
+      INTEGER, INTENT(IN)          :: currentStructureIndex, currentStepfunctionIndex
+      INTEGER, INTENT(IN)          :: lastDensityIndex
+
+      INTEGER                      :: iDen
+      INTEGER                      :: starsIndex, latharmsIndex
+      INTEGER                      :: structureIndex, stepfunctionIndex
+      INTEGER                      :: hdfError
+      LOGICAL                      :: l_exist
+      CHARACTER(LEN=30)            :: archiveName, groupname
+
+      LOGICAL                      :: neededStars(currentStarsIndex)
+      LOGICAL                      :: neededLatharms(currentLatharmsIndex)
+      LOGICAL                      :: neededStructures(currentStructureIndex)
+      LOGICAL                      :: neededStepfunctions(currentStepfunctionIndex)
+
+      neededStars(:) = .FALSE.
+      neededLatharms(:) = .FALSE.
+      neededStructures(:) = .FALSE.
+      neededStepfunctions(:) = .FALSE.
+
+      DO iDen = 1, lastDensityIndex
+         archiveName = ''
+         WRITE(archiveName,'(a,i0)') '/cdn-', iDen
+
+         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
+         IF(.NOT.l_exist) THEN
+            CYCLE
+         END IF
+
+         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+                                  starsIndex=starsIndex, latharmsIndex=latharmsIndex, &
+                                  structureIndex=structureIndex,stepfunctionIndex=stepfunctionIndex)
+         neededStars(starsIndex) = .TRUE.
+         neededLatharms(latharmsIndex) = .TRUE.
+         neededStructures(structureIndex) = .TRUE.
+         neededStepfunctions(stepfunctionIndex) = .TRUE.
+      END DO
+
+      DO starsIndex = 1, currentStarsIndex
+         IF (neededStars(starsIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/stars-', starsIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO latharmsIndex = 1, currentLatharmsIndex
+         IF (neededLatharms(latharmsIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO structureIndex = 1, currentStructureIndex
+         IF (neededStructures(structureIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/structure-', structureIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO stepfunctionIndex = 1, currentStepfunctionIndex
+         IF (neededStepfunctions(stepfunctionIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+   END SUBROUTINE deleteObsoleteDensityMetadataHDF
 
    LOGICAL FUNCTION isCoreDensityPresentHDF()
 
