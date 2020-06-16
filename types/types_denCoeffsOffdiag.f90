@@ -211,14 +211,16 @@ SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,w
    TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
    INTEGER,                   INTENT(IN)    :: noccbd
    REAL,                      INTENT(IN)    :: we(noccbd)
-
+   CALL timestart("rhomt21")
    CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,thisDenCoeffsOffdiag%uu21,thisDenCoeffsOffdiag%ud21,&
                 thisDenCoeffsOffdiag%du21,thisDenCoeffsOffdiag%dd21,thisDenCoeffsOffdiag%uulo21,&
                 thisDenCoeffsOffdiag%dulo21,thisDenCoeffsOffdiag%ulou21,thisDenCoeffsOffdiag%ulod21,&
                 thisDenCoeffsOffdiag%uloulop21)
+    CALL timestop("rhomt21")
    IF (thisDenCoeffsOffdiag%l_fmpl) THEN
+      CALL timestart("rhonmt21")
       CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,thisDenCoeffsOffdiag%uunmt21,thisDenCoeffsOffdiag%udnmt21,&
-                                                            thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
+      CALL timestop("rhonmt21")                                                            thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
    END IF
 
 END SUBROUTINE calcCoefficients
