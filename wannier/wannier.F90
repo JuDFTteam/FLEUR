@@ -1584,7 +1584,7 @@ CONTAINS
                            noco%l_noco,noco%l_soc,&
                            jspin,&
                            oper_b,sym%nop,sym%mrot,lapw_b%dim_nvd(),&
-                           shiftkpt(:,bpt(ikpt_b),ikpt),&
+                           shiftkpt(:,bpt(ikpt_b,ikpt)),&
                            sym%tau,&
                            lapw_b,&
                            zMat_b,nsfactor_b)
