@@ -584,15 +584,15 @@ c***********************************************************
 
       if (l_bzsym.and.oper.ne.1) then  !rotate bkpt
          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
+     >        tau,
+     >       lapw,    
+!     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
      x            zMat,nsfactor)
       endif
 
