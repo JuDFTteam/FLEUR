@@ -722,7 +722,7 @@ CONTAINS
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
        WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
-       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
+       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_FFN_IN_const,&
             iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
             previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
        eFermiPrev = fermiEnergy

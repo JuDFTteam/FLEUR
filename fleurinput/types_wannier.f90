@@ -452,7 +452,7 @@ CONTAINS
              this%l_socmatvecrs=.TRUE.             
           ELSEIF(this%jobList(i).EQ.'unformatted')THEN
              this%l_unformatted=.TRUE.         
-          ELSEIF(this%jobList(i).EQ.'undegen')THEN
+          ELSEIF(this%jobList(i).EQ.'ndegen')THEN
              this%l_ndegen=.TRUE.              
           ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
              this%l_socmatrs=.TRUE.

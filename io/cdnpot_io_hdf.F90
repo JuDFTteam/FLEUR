@@ -2342,7 +2342,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
-      INTEGER               :: previousDensityIndex, jspins
+      INTEGER               :: previousDensityIndex, jspins, jspinsmmp
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
@@ -2695,15 +2695,17 @@ MODULE m_cdnpot_io_hdf
             (localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
             ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,3))
             dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
+            jspinsmmp = 3
          ELSE
             ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins))
             dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,jspins/)
+            jspinsmmp = jspins
          END IF
          CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
          CALL io_read_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),mmpMatTemp)
          CALL h5dclose_f(mmpMatSetID, hdfError)
 
-         den%mmpMat = CMPLX(0.0,0.0)
+         den%mmpMat = cmplx_0
          IF(l_mmpMatDimEquals) THEN
             den%mmpMat = mmpMatTemp
          ELSE
@@ -2711,7 +2713,7 @@ MODULE m_cdnpot_io_hdf
                DO j = 1, atoms%n_u+atoms%n_hia
                   IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
                   IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
-                  den%mmpMat(:,:,j,:) = mmpMatTemp(:,:,i,:)
+                  den%mmpMat(:,:,j,1:jspinsmmp) = mmpMatTemp(:,:,i,1:jspinsmmp)
                END DO
             END DO
          END IF
@@ -2899,6 +2901,34 @@ MODULE m_cdnpot_io_hdf
             END IF
          CASE(DENSITY_TYPE_NOCO_OUT_const)
             densityTypeName = '/noco_out'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_OUT_const
+               densityTypeName = '/out'
+            END IF
+         CASE(DENSITY_TYPE_FFN_IN_const)
+            densityTypeName = '/ffn_in'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_IN_const
+               densityTypeName = '/noco_in'
+            END IF
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_IN_const
+               densityTypeName = '/in'
+            END IF
+         CASE(DENSITY_TYPE_FFN_OUT_const)
+            densityTypeName = '/ffn_out'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_OUT_const
+               densityTypeName = '/noco_out'
+            END IF
             groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
             l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
             IF(.NOT.l_exist) THEN

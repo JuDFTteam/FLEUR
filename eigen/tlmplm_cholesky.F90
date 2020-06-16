@@ -105,16 +105,16 @@ CONTAINS
                          td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
                          td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
                       ELSE IF(j1>j2) THEN
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
                       ELSE
                          !For this part of the hamiltonian we need to perform hermitian conjugation on mmpMat
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
                       ENDIF
                    ENDDO
                 ENDDO

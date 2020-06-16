@@ -355,11 +355,19 @@ c***********************************************************
 
       if(l_unformatted)then
        if(l_ndegen)then  
-         open(321,file='socmunfndegen',form='unformatted',
-     &                     convert='BIG_ENDIAN')  
+         open(321,file='socmunfndegen',form='unformatted'
+#ifdef CPP_INTEL     
+     &                     ,convert='BIG_ENDIAN')  
+#else
+     &    )
+#endif        
        else
-         open(321,file='socmunf',form='unformatted',
-     &                     convert='BIG_ENDIAN')
+         open(321,file='socmunf',form='unformatted'
+#ifdef CPP_INTEL           
+     &                     ,convert='BIG_ENDIAN')
+#else
+     &   )     
+#endif     
        endif
 
        allocate(hrealunf(2*num_wann,2*num_wann,3,rvecnum))

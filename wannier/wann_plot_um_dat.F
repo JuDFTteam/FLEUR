@@ -14,7 +14,7 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
      >          stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
+     >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
@@ -65,7 +65,7 @@ c******************************************************************
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
-      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_lapw)      :: lapw
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
@@ -584,15 +584,15 @@ c***********************************************************
 
       if (l_bzsym.and.oper.ne.1) then  !rotate bkpt
          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
+     >        tau,
+     >       lapw,    
+!     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
      x            zMat,nsfactor)
       endif
 
