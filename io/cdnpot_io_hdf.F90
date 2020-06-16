@@ -2905,6 +2905,34 @@ MODULE m_cdnpot_io_hdf
                localDensityType = DENSITY_TYPE_OUT_const
                densityTypeName = '/out'
             END IF
+         CASE(DENSITY_TYPE_FFN_IN_const)
+            densityTypeName = '/ffn_in'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_IN_const
+               densityTypeName = '/noco_in'
+            END IF
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_IN_const
+               densityTypeName = '/in'
+            END IF
+         CASE(DENSITY_TYPE_FFN_OUT_const)
+            densityTypeName = '/ffn_out'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_OUT_const
+               densityTypeName = '/noco_out'
+            END IF
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_OUT_const
+               densityTypeName = '/out'
+            END IF
          CASE(DENSITY_TYPE_PRECOND_const)
             densityTypeName = '/precond'
          CASE DEFAULT
