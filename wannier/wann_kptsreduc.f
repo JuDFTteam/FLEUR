@@ -16,7 +16,7 @@ c     Frank Freimuth
 c*****************************************************************
 
       USE m_constants
-
+      USE m_types_kpts
       implicit none
 
       integer, intent(in) :: nop
