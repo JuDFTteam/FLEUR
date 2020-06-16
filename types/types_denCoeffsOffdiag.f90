@@ -220,7 +220,8 @@ SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,w
    IF (thisDenCoeffsOffdiag%l_fmpl) THEN
       CALL timestart("rhonmt21")
       CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,thisDenCoeffsOffdiag%uunmt21,thisDenCoeffsOffdiag%udnmt21,&
-      CALL timestop("rhonmt21")                                                            thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
+      thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
+      CALL timestop("rhonmt21")                                                            
    END IF
 
 END SUBROUTINE calcCoefficients
