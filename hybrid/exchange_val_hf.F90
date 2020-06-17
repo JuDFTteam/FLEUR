@@ -164,7 +164,7 @@ CONTAINS
          
          n_parts = size(k_pack%q_packs(jq)%band_packs)
          do ipart = 1, n_parts
-            if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ")"
+            if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ") ik= " // int2str(ik) // " jq= " // int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
