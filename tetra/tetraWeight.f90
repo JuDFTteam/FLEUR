@@ -62,8 +62,12 @@ MODULE m_tetraWeight
 
          f(1:3) = ( etetra(4)-efermi )/e(4,1:3)
 
-         IF( ind==4 ) tetraWeightBulk = 1.0 - f(1) * f(2) * f(3) * ( 4.0 - f(1) - f(2) - f(3))
-         IF( ind/=4 ) tetraWeightBulk = 1.0 - f(1) * f(2) * f(3) * f(ind)
+         SELECT CASE(ind)
+         CASE(4)
+            tetraWeightBulk = 1.0 - f(1) * f(2) * f(3) * ( 4.0 - f(1) - f(2) - f(3))
+         CASE DEFAULT
+            tetraWeightBulk = 1.0 - f(1) * f(2) * f(3) * f(ind)
+         END SELECT
 
       ELSE IF( efermi>=etetra(2) ) THEN
 
@@ -73,24 +77,32 @@ MODULE m_tetraWeight
 
          C3     = ( efermi-etetra(2) )**2*( etetra(4)-efermi )/( e(3,2)*e(4,1)*e(4,2) )
 
-         IF( ind==1 ) tetraWeightBulk = C1 + (C1 + C2) * (etetra(3)-efermi)/e(3,1) + &
-                                       (C1 + C2 + C3) * (etetra(4)-efermi)/e(4,1)
-
-         IF( ind==2 ) tetraWeightBulk = C1 + C2 + C3 + (C2 + C3) * (etetra(3)-efermi)/e(3,2) + &
-                                        C3 * (etetra(4)-efermi)/e(4,2)
-
-         IF( ind==3 ) tetraWeightBulk = (C1 + C2) * (efermi-etetra(1))/e(3,1)+&
-                                        (C2 + C3) * (efermi-etetra(2))/e(3,2)
-
-         IF( ind==4 ) tetraWeightBulk = (C1 + C2 + C3) * (efermi-etetra(1))/e(4,1) +&
-                                         C3 * (efermi-etetra(2))/e(4,2)
+         SELECT CASE(ind)
+         CASE(1)
+            tetraWeightBulk = C1 + (C1 + C2) * (etetra(3)-efermi)/e(3,1) + &
+                             (C1 + C2 + C3) * (etetra(4)-efermi)/e(4,1)
+         CASE(2)
+            tetraWeightBulk = C1 + C2 + C3 + (C2 + C3) * (etetra(3)-efermi)/e(3,2) + &
+                              C3 * (etetra(4)-efermi)/e(4,2)
+         CASE(3)
+            tetraWeightBulk = (C1 + C2) * (efermi-etetra(1))/e(3,1)+&
+                              (C2 + C3) * (efermi-etetra(2))/e(3,2)
+         CASE(4)
+            tetraWeightBulk = (C1 + C2 + C3) * (efermi-etetra(1))/e(4,1) +&
+                               C3 * (efermi-etetra(2))/e(4,2)
+         CASE DEFAULT
+         END SELECT
 
       ELSE IF( efermi>=etetra(1) ) THEN
 
          f(2:4) = ( efermi-etetra(1) )/e(2:4,1)
 
-         IF( ind==1 ) tetraWeightBulk = f(2) * f(3) * f(4) * (4.0 - f(2) - f(3) - f(4))
-         IF( ind/=1 ) tetraWeightBulk = f(2) * f(3) * f(4) * f(ind)
+         SELECT CASE(ind)
+         CASE(1)
+            tetraWeightBulk = f(2) * f(3) * f(4) * (4.0 - f(2) - f(3) - f(4))
+         CASE DEFAULT
+            tetraWeightBulk = f(2) * f(3) * f(4) * f(ind)
+         END SELECT
 
       END IF
 
@@ -124,15 +136,23 @@ MODULE m_tetraWeight
 
          f(1:2) = ( etetra(3)-efermi )/( etetra(3)-etetra(1:2) )
 
-         IF( ind/=3 ) tetraWeightFilm = 1.0 - f(1) * f(2) * f(ind)
-         IF( ind==3 ) tetraWeightFilm = 1.0 - f(1) * f(2) * ( 3.0 - f(1) - f(2) )
+         SELECT CASE(ind)
+         CASE(3)
+            tetraWeightFilm = 1.0 - f(1) * f(2) * ( 3.0 - f(1) - f(2) )
+         CASE DEFAULT
+            tetraWeightFilm = 1.0 - f(1) * f(2) * f(ind)
+         END SELECT
 
       ELSE IF( efermi>=etetra(1) ) THEN
 
          f(2:3) = ( efermi-etetra(1) )/( etetra(2:3)-etetra(1) )
 
-         IF( ind==1 ) tetraWeightFilm = f(2) * f(3) * ( 3.0 - f(2) - f(3) )
-         IF( ind/=1 ) tetraWeightFilm = f(2) * f(3) * f(ind)
+         SELECT CASE(ind)
+         CASE(1)
+            tetraWeightFilm = f(2) * f(3) * ( 3.0 - f(2) - f(3) )
+         CASE DEFAULT
+            tetraWeightFilm = f(2) * f(3) * f(ind)
+         END SELECT
 
       END IF
 
