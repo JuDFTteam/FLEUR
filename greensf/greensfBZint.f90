@@ -44,14 +44,9 @@ MODULE m_greensfBZint
 
 
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
-      !!$OMP PARALLEL DEFAULT(NONE) &
-      !!$OMP SHARED(gfinp,atoms,sym,kpts,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfBZintCoeffs) &
-      !!$OMP SHARED(ikpt_i,ikpt,nBands,spin_start,spin_end) &
-      !!$OMP PRIVATE(i_gf,l,lp,atomType,atomTypep,natom,natomp,spin1,spin2,ispin,atomFactor) &
-      !!$OMP PRIVATE(natomp_start,natomp_end,phase,indUnique,i_elem,im)
+
       ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                   MERGE(1,4,gfinp%l_sphavg),spin_start:spin_end),source=cmplx_0)
-      !!$OMP DO
       DO i_gf = 1, gfinp%n
 
          !Get the information about the current element
@@ -61,7 +56,7 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          atomFactor = 1.0/atoms%neq(atomType)
 
-         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
          IF(i_gf/=indUnique) CYCLE
 
@@ -115,8 +110,6 @@ MODULE m_greensfBZint
          ENDDO !natom
 
       ENDDO !i_gf
-      !!$OMP END DO
-      !!$OMP END PARALLEL
       CALL timestop("Green's Function: Brillouin-Zone-Integration")
 
 

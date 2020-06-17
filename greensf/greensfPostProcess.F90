@@ -91,7 +91,7 @@ MODULE m_greensfPostProcess
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
 
-               i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+               i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
                IF(i_gf/=indUnique) THEN
                   u(:,:,:,:,:,i_gf) = u(:,:,:,:,:,indUnique)

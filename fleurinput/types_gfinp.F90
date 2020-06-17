@@ -71,19 +71,19 @@ MODULE m_types_gfinp
       TYPE(t_contourInp), ALLOCATABLE :: contour(:)
       INTEGER, ALLOCATABLE :: hiaElem(:)
    CONTAINS
-      PROCEDURE :: read_xml      => read_xml_gfinp
-      PROCEDURE :: mpi_bc        => mpi_bc_gfinp
-      PROCEDURE :: init          => init_gfinp
-      PROCEDURE :: find          => find_gfelem
-      PROCEDURE :: find_contour  => find_contour
-      PROCEDURE :: add           => add_gfelem
-      PROCEDURE :: eMesh         => eMesh_gfinp
+      PROCEDURE :: read_xml       => read_xml_gfinp
+      PROCEDURE :: mpi_bc         => mpi_bc_gfinp
+      PROCEDURE :: init           => init_gfinp
+      PROCEDURE :: find           => find_gfelem
+      PROCEDURE :: find_contour   => find_contour
+      PROCEDURE :: add            => add_gfelem
+      PROCEDURE :: uniqueElements => uniqueElements_gfinp
+      PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
    PUBLIC t_gfinp, t_contourInp, t_gfelementtype
    PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
-   PUBLIC uniqueElements_gfinp
 
 CONTAINS
 
@@ -396,12 +396,12 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   FUNCTION uniqueElements_gfinp(gfinp,ind,indUnique) Result(uniqueElements)
+   FUNCTION uniqueElements_gfinp(this,ind,indUnique) Result(uniqueElements)
 
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
-      TYPE(t_gfinp),    INTENT(IN)     :: gfinp
+      CLASS(t_gfinp),   INTENT(IN)     :: this
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
 
@@ -415,16 +415,16 @@ CONTAINS
       IF(PRESENT(ind)) THEN
          maxGF = ind
       ELSE
-         maxGF = gfinp%n
+         maxGF = this%n
       ENDIF
       DO i_gf = 1, maxGF
-         l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
-         atomType  = gfinp%elem(i_gf)%atomType
-         atomTypep = gfinp%elem(i_gf)%atomTypep
-         iContour  = gfinp%elem(i_gf)%iContour
-         iUnique   = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                                uniqueMax=i_gf)
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         iContour  = this%elem(i_gf)%iContour
+         iUnique   = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                               uniqueMax=i_gf)
 
          IF(iUnique == i_gf) uniqueElements = uniqueElements +1
       ENDDO
@@ -437,13 +437,13 @@ CONTAINS
       IF(PRESENT(indUnique)) THEN
          IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",&
                                                 calledby="uniqueElements_gfinp")
-         l  = gfinp%elem(ind)%l
-         lp = gfinp%elem(ind)%lp
-         atomType  = gfinp%elem(ind)%atomType
-         atomTypep = gfinp%elem(ind)%atomTypep
-         iContour  = gfinp%elem(ind)%iContour
+         l  = this%elem(ind)%l
+         lp = this%elem(ind)%lp
+         atomType  = this%elem(ind)%atomType
+         atomTypep = this%elem(ind)%atomTypep
+         iContour  = this%elem(ind)%iContour
 
-         indUnique = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+         indUnique = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
                                uniqueMax=ind)
       ENDIF
 
