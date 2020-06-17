@@ -117,7 +117,7 @@ ${FLEUR_SRC}/dos/nstm3.f90
 ${FLEUR_SRC}/cdn/int_21.f90
 ${FLEUR_SRC}/cdn/int_21lo.f90
 ${FLEUR_SRC}/cdn_mt/rhomt21.f90
-${FLEUR_SRC}/cdn_mt/rhonmt21.f90
+${FLEUR_SRC}/cdn_mt/rhonmt21.F90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 ${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f90
