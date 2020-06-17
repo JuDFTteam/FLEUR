@@ -102,7 +102,7 @@ ${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_usdus.F90
 ${FLEUR_SRC}/types/types_cdnval.f90
 ${FLEUR_SRC}/types/types_regionCharges.f90
-${FLEUR_SRC}/types/types_dos.f90
+#${FLEUR_SRC}/types/types_dos.f90
 ${FLEUR_SRC}/types/types_denCoeffsOffdiag.f90
 ${FLEUR_SRC}/types/types_gpumat.F90
 

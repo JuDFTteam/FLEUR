@@ -104,14 +104,16 @@ function get_weight_eig(this,id)
   DO ntype=1,size(this%ncore)
     DO nc=1,this%ncore(ntype)
       ind=ind+1
-      if (ind==id) THEN
-        get_weight_eig=this%mcd(ntype,nc,:,:,:)
-        RETURN
-      ELSE IF(ind>id) then
-        CALL judft_error("Types_mcd: data not found")
-      ENDIF
+      if (ind==id) get_weight_eig=this%mcd(ntype,nc,:,:,:)
+      ind=ind+1
+      if (ind==id) get_weight_eig=this%mcd(ntype+1,nc,:,:,:)
+      ind=ind+1
+      if (ind==id) get_weight_eig=this%mcd(ntype+2,nc,:,:,:)
+      IF(ind>id) return
     ENDDO
   ENDDO
+  IF(ind>id)CALL judft_error("Types_mcd: data not found")
+
 END function
 
 integer function get_num_weights(this)
@@ -123,23 +125,23 @@ end function
     class(t_mcd),intent(in):: this
     INTEGER,intent(in)         :: id
 
-    character:: c
+    character(len=3):: c
     INTEGER :: ind,ntype,nc,n
     ind=0
-    DO n=1,size(this%ncore)
+    DO n=1,size(this%mcd,1)
       ntype=n/3+1
       select case(mod(n,3))
-      case(0)
-        c="+"
       case(1)
-        c="-"
+        c="pos"
       case(2)
-        c="-"
+        c="neg"
+      case(0)
+        c="cir"
       end select
       DO nc=1,this%ncore(ntype)
         ind=ind+1
         if (ind==id) THEN
-          write(get_weight_name,"(a,i0,a,i0,a)") "At:",ntype,",NC:",nc,c
+          write(get_weight_name,"(a,i0,a,i0,a)") "At",ntype,"NC",nc,c
           RETURN
         ELSE IF(ind>id) then
           CALL judft_error("Types_mcd: data not found")
