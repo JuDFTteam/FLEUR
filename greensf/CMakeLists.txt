@@ -2,6 +2,7 @@ set(fleur_F90 ${fleur_F90}
 greensf/greensfSpinDiag.f90
 greensf/greensfSpinOffDiag.f90
 greensf/greensfBZint.f90
+greensf/greensfSym.f90
 greensf/greensfCalcImagPart.f90
 greensf/greensfCalcRealPart.F90
 greensf/greensfPostProcess.F90
