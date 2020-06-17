@@ -60,13 +60,15 @@ CONTAINS
       ! get the index of a kpoint
       implicit NONE
       class(t_kpts), intent(in)    :: kpts
-      real, intent(in)            :: kpoint(3)
-      integer                     :: idx, ret_idx
+      real, intent(in)             :: kpoint(3)
+      integer                      :: idx, ret_idx
+      real                         :: kpt_bz(3)
+
+      kpt_bz = kpts%to_first_bz(kpoint)
 
       ret_idx = 0
       DO idx = 1, kpts%nkptf
-         IF (all(abs(kpts%to_first_bz(kpoint) &
-                     - kpts%to_first_bz(kpts%bkf(:, idx))) < 1E-06)) THEN
+         IF (all(abs(kpt_bz - kpts%bkf(:, idx)) < 1E-06)) THEN
             ret_idx = idx
             exit
          END IF
@@ -317,7 +319,6 @@ CONTAINS
          allocate(kpts%EIBZ(kpts%nkpt))
          do n = 1,kpts%nkpt 
             call kpts%EIBZ(n)%init(kpts, sym, n)
-            ! write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
          enddo
       end if
       call timestop("init_kpts")
@@ -439,6 +440,7 @@ CONTAINS
    subroutine calc_nkpt_EIBZ(eibz, kpts, sym, nk)
       USE m_types_sym
       USE m_juDFT
+!$    use omp_lib
       IMPLICIT NONE
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts),  INTENT(IN)     :: kpts
@@ -449,14 +451,18 @@ CONTAINS
       INTEGER               ::  isym, ic, iop, ikpt, ikpt1
       INTEGER               ::  nsymop, nrkpt
 !     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym)
+      INTEGER               ::  rrot(3, 3, sym%nsym), i
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)
       REAL                  ::  rotkpt(3)
+!$    integer, parameter :: lock_size = 20
+!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("calc_nkpt_EIBZ")
-
+!$    do i =0,lock_size-1
+!$       call omp_init_lock(lock(i))
+!$    enddo
       allocate (psym(sym%nsym))
 
       ! calculate rotations in reciprocal space
@@ -494,6 +500,9 @@ CONTAINS
          list(ikpt) = ikpt - 1
       END DO
 
+      !$OMP parallel do default(none) collapse(2)&
+      !$OMP private(ikpt, iop, rotkpt, nrkpt) &
+      !$OMP shared(kpts, nsymop, rrot, list, neqvkpt, parent, symop, lock, psym)
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
 
@@ -505,23 +514,27 @@ CONTAINS
             !determine number of rotkpt
             nrkpt = 0
             DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
+               IF (all(abs(rotkpt - kpts%bkf(:, ikpt1)) <= 1E-06)) THEN
                   nrkpt = ikpt1
                   EXIT
                END IF
             END DO
             IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
+!$          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
                parent(nrkpt) = ikpt
                symop(nrkpt) = psym(iop)
             END IF
-            IF (all(list == 0)) EXIT
-
+!$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
          END DO
       END DO
+      !$OMP end parallel do
+
+!$    do i =0,lock_size-1
+!$       call omp_destroy_lock(lock(i))
+!$    enddo
 
       ! for the Gamma-point holds:
       parent(1) = 1
@@ -538,6 +551,7 @@ CONTAINS
 
    subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
       USE m_types_sym
+!$    use omp_lib
       implicit none 
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts), INTENT(IN)      :: kpts
@@ -549,7 +563,15 @@ CONTAINS
       INTEGER               :: rrot(3, 3, sym%nsym)
       INTEGER, ALLOCATABLE  :: psym(:)
       REAL                  :: rotkpt(3)
+!$    integer, parameter :: lock_size = 20
+!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
+
       call timestart("calc_pointer_EIBZ")
+
+      ! create lock for race-condition in list & parent
+!$    do i =0,lock_size-1
+!$       call omp_init_lock(lock(i))
+!$    enddo
 
       allocate (psym(sym%nsym))
       parent = 0
@@ -571,7 +593,9 @@ CONTAINS
 
       ! calc numsymop
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-      
+
+      !$OMP parallel do default(none) collapse(2) private(ikpt, iop, rotkpt, nrkpt) &
+      !$OMP shared(kpts, nsymop, rrot, list, parent, psym, lock)
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
@@ -580,14 +604,22 @@ CONTAINS
             nrkpt = kpts%get_nk(rotkpt)
             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
+
+!$          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
             IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                parent(nrkpt) = ikpt
             END IF
-            IF(all(list == 0)) EXIT
+!$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
+            ! IF(all(list == 0)) EXIT
 
          END DO
       END DO
+      !$OMP end parallel do 
+
+!$    do i =0,lock_size-1
+!$       call omp_destroy_lock(lock(i))
+!$    enddo
 
       ! for the Gamma-point holds:
       parent(1) = 1
