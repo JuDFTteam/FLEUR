@@ -80,7 +80,7 @@ MODULE m_greensfCalcImagPart
 
             !$OMP PARALLEL DO DEFAULT(NONE) &
             !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP SHARED(indUnique,i_elem,l,lp,ikpt_i,ikpt,ev_list,nBands)&
+            !$OMP SHARED(i_elem,l,lp,ikpt_i,nBands)&
             !$OMP SHARED(del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
             !$OMP PRIVATE(m,mp,iBand,j,eGrid_start,eGrid_end,weight,l_zero) COLLAPSE(2)
             DO m = -l, l
