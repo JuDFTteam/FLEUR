@@ -3,6 +3,7 @@ MODULE m_excSplitting
    USE m_types
    USE m_constants
    USE m_trapz
+   USE m_xmlOutput
 
    IMPLICIT NONE
 
@@ -19,6 +20,7 @@ MODULE m_excSplitting
       REAL    :: excSplit,del
       REAL, ALLOCATABLE :: eMesh(:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
+      CHARACTER(LEN=20) :: attributes(4)
 
 
       CALL gfinp%eMesh(ef,del=del,eMesh=eMesh)
@@ -27,9 +29,11 @@ MODULE m_excSplitting
       ALLOCATE(intCOM(SIZE(eMesh),input%jspins),source=0.0)
 
 
-      WRITE(oUnit,*)
-      WRITE(oUnit,'(A)') 'Onsite Exchange Splitting (from imag. part of GF)'
+      WRITE(oUnit,9000)
+9000  FORMAT(/,'Onsite Exchange Splitting (from imag. part of GF)')
       WRITE(oUnit,'(A)') '---------------------------------------------------'
+
+      CALL openXMLElementNoAttributes('onSiteExchangeSplitting')
 
       DO i_gf = 1, gfinp%n
 
@@ -69,8 +73,16 @@ MODULE m_excSplitting
          WRITE(oUnit,'(A,I4,A,I4,A,f10.4,A)') '  atom: ', atomType, '   l: ', l,&
                                             '    DeltaExc: ',excSplit * hartree_to_ev_const, ' eV'
 
+         attributes = ''
+         WRITE(attributes(1),'(i0)') atomType
+         WRITE(attributes(2),'(i0)') l
+         WRITE(attributes(3),'(f12.7)') excSplit * hartree_to_ev_const
+         WRITE(attributes(4),'(a2)') 'eV'
+         CALL writeXMLElementForm('excSplit',['atomType','l       ','Delta   ','unit    '],attributes,reshape([8,1,5,4,6,1,12,2],[4,2]))
+
       ENDDO
-      WRITE(oUnit,*)
+      WRITE(oUnit,'(/)')
+      CALL closeXMLElement('onSiteExchangeSplitting')
 
    END SUBROUTINE excSplitting
 

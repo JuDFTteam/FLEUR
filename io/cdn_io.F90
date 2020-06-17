@@ -669,7 +669,8 @@ CONTAINS
 
     !write density matrix to n_mmp_mat_out file
     IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
-         ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
+       ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).OR.&
+         (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const))) THEN
        IF(atoms%n_u+atoms%n_hia.GT.0) THEN
           filename = 'n_mmp_mat'
           IF (mode.EQ.CDN_HDF5_MODE) THEN
@@ -721,7 +722,7 @@ CONTAINS
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
        WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
-       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
+       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_FFN_IN_const,&
             iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
             previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
        eFermiPrev = fermiEnergy
@@ -1504,6 +1505,9 @@ CONTAINS
                 WRITE(*,*) 'deleted density entry ', TRIM(ADJUSTL(archiveName))
              END IF
           END DO
+
+          CALL deleteObsoleteDensityMetadataHDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                                currentStepfunctionIndex,lastDensityIndex)
 
           CALL closeCDNPOT_HDF(fileID)
 #endif

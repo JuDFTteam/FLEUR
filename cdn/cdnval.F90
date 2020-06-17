@@ -110,8 +110,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-   
-   
+
+
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
    TYPE (t_denCoeffs)         :: denCoeffs
@@ -126,7 +126,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    CALL timestart("cdnval")
 
-
+   call timestart("init")
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
    l_dosNdir = banddos%dos.AND.(banddos%ndir.EQ.-3)
 
@@ -202,6 +202,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
 
    jsp = MERGE(1,jspin,noco%l_noco)
+   call timestop("init")
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
@@ -239,7 +240,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
+            call timestart("n_mat21")
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+            call timestop("n_mat21")
+
          ENDIF
 
          IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
@@ -251,11 +255,16 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
+         call timestart("eparas")
          CALL eparas(ispin,atoms,noccbd,ev_list,mpi,ikpt,noccbd,we,eig,&
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
-         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(atoms,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
-
+         call timestop("eparas")
+         IF (noco%l_mperp.AND.(ispin==jsp_end)) then
+           call timestart("qal_21")
+           CALL qal_21(atoms,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+           call timestop("qal_21")
+         endif
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
@@ -286,8 +295,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
-      IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
-
+      IF (noco%l_mperp) then
+        call timestart("denCoeffsOffdiag%calcCoefficients")
+        CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
+        call timestop("denCoeffsOffdiag%calcCoefficients")
+      endif
       CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case

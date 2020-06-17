@@ -1,4 +1,5 @@
 MODULE m_types_mat
+#include"cpp_double.h"
    USE m_judft
    IMPLICIT NONE
    PRIVATE
@@ -570,11 +571,12 @@ CONTAINS
    SUBROUTINE t_mat_clear(mat)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
+      INTEGER :: i
 
       IF (mat%l_real) THEN
-         mat%data_r = 0.0
+         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ELSE
-         mat%data_c = 0.0
+         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ENDIF
    END SUBROUTINE t_mat_clear
 

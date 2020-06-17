@@ -452,7 +452,7 @@ CONTAINS
              this%l_socmatvecrs=.TRUE.             
           ELSEIF(this%jobList(i).EQ.'unformatted')THEN
              this%l_unformatted=.TRUE.         
-          ELSEIF(this%jobList(i).EQ.'undegen')THEN
+          ELSEIF(this%jobList(i).EQ.'ndegen')THEN
              this%l_ndegen=.TRUE.              
           ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
              this%l_socmatrs=.TRUE.
@@ -597,6 +597,8 @@ CONTAINS
              this%l_plotw90=.TRUE.
           ELSEIF(this%jobList(i).EQ.'dipole')THEN
              this%l_dipole=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'dipole2')THEN
+             this%l_dipole2=.TRUE.      
           ELSEIF(this%jobList(i).EQ.'dipole3')THEN
              this%l_dipole3=.TRUE.
           ELSEIF(this%jobList(i).EQ.'ldauwan')THEN

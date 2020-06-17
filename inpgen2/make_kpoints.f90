@@ -506,7 +506,7 @@ CONTAINS
 
     IF(bz_integration==3) THEN
        !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
-       CALL kpts%init(cell, sym, film) !To generate the full grid
+       CALL kpts%init(cell, sym, film, .false.) !To generate the full grid
        IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
                                               "needs a gamma centered kpoint grid",&
                                               calledby="init_by_grid")

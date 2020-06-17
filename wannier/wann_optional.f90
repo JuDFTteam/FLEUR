@@ -22,6 +22,7 @@ CONTAINS
     USE m_wann_kptsreduc2
     USE m_wann_wan90prep
     USE m_wann_dipole3
+    USE m_wann_dipole2
     USE m_wann_dipole
     USE m_wann_convert_fleur_w90
 
@@ -103,8 +104,15 @@ CONTAINS
        CALL wann_dipole3(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,cell%bmat,atoms%taual,&
             num_wann, atoms%ntype,atoms%neq,atoms%zatom,l_nocosoc)
                    endif
-       l_stopopt=.TRUE.
+!       l_stopopt=.TRUE.
     ENDIF
+
+    IF(wann%l_dipole2.AND..NOT.wann%l_wannierize)THEN
+      if(mpi%irank==0)then
+       CALL wann_dipole2(input%jspins,atoms%pos,cell%omtil,atoms%nat,l_nocosoc)
+      endif
+!       l_stopopt=.TRUE.
+    ENDIF!-----calculate polarization, if not wannierize
 
     !-----calculate polarization, if not wannierize
     !-----if wannierize, then calculate polarization later (after wannierize)
@@ -113,7 +121,7 @@ CONTAINS
        CALL wann_dipole(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,atoms%ntype,&
             atoms%neq,atoms%zatom)
                    endif
-       l_stopopt=.TRUE.
+!       l_stopopt=.TRUE.
     ENDIF
 
 

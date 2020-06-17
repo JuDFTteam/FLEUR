@@ -63,10 +63,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
 
-   IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
-
-
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+   !use the init_potden_simple routine to prevent extra dimensions from noco calculations
+   CALL den%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+                 atoms%n_u+atoms%n_hia,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
+                 vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 
    ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )

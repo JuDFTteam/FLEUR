@@ -1236,17 +1236,16 @@ CONTAINS
                 !              rotate the wavefunction
                 !***********************************************************
                 IF (wann%l_bzsym.AND.oper.NE.1) THEN  !rotate bkpt
-                   !         call wann_kptsrotate(
-                   !     >            atoms%nat,atoms%nlod,atoms%llod,
-                   !     >            atoms%ntype,atoms%nlo,atoms%llo,sym%invsat,
-                   !     >            noco%l_noco,noco%l_soc,
-                   !     >            atoms%ntype,atoms%neq,atoms%nlotot,
-                   !     >            kveclo,jspin,
-                   !     >            oper,sym%nop,sym%mrot,lapw%dim_nvd(),nv,
-                   !     >            shiftkpt(:,ikpt),
-                   !     >            sym%tau,
-                   !     x            lapw%bkpt,k1(:,:),k2(:,:),k3(:,:),
-                   !     x            zMat,nsfactor)
+                    call wann_kptsrotate(&
+                           atoms, &
+                           sym%invsat,&
+                           noco%l_noco,noco%l_soc,&
+                           jspin,&
+                           oper,sym%nop,sym%mrot,lapw%dim_nvd(),&
+                           shiftkpt(:,ikpt),&
+                           sym%tau,&
+                           lapw,&
+                           zMat,nsfactor)    
                 ELSE
                    nsfactor=CMPLX(1.0,0.0)
                 ENDIF
@@ -1579,19 +1578,16 @@ CONTAINS
                       !              Rotate the wavefunction of next neighbor.
                       !***********************************************************
                       IF (wann%l_bzsym .AND. (oper_b.NE.1)  ) THEN
-                         !         call wann_kptsrotate(
-                         !     >            atoms%nat,atoms%nlod,atoms%llod,
-                         !     >            atoms%ntype,atoms%nlo,atoms%llo,sym%invsat,
-                         !     >            noco%l_noco,noco%l_soc,
-                         !     >            atoms%ntype,atoms%neq,atoms%nlotot,
-                         !     >            kveclo_b,jspin,
-                         !     >            oper_b,sym%nop,sym%mrot,lapw%dim_nvd(),
-                         !     >            nv_b,
-                         !     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
-                         !     >            sym%tau,
-                         !     x            bkpt_b,k1_b(:,:),
-                         !     x            k2_b(:,:),k3_b(:,:),
-                         !     x            zMat_b,nsfactor_b)
+                     call wann_kptsrotate(&
+                           atoms, &
+                           sym%invsat,&
+                           noco%l_noco,noco%l_soc,&
+                           jspin,&
+                           oper_b,sym%nop,sym%mrot,lapw_b%dim_nvd(),&
+                           shiftkpt(:,bpt(ikpt_b,ikpt)),&
+                           sym%tau,&
+                           lapw_b,&
+                           zMat_b,nsfactor_b)
                       ELSE
                          nsfactor_b=CMPLX(1.0,0.0)
                       ENDIF

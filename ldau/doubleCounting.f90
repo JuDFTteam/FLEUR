@@ -49,7 +49,7 @@ MODULE m_doubleCounting
 
       IF(PRESENT(l_write)) THEN
          IF(l_write) THEN
-            WRITE(oUnit,"(A)") 'Double counting chemical potential:'
+            WRITE(oUnit,"(/,A)") 'Double counting chemical potential:'
             IF(l_amf) THEN
                WRITE(oUnit,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
             ELSE

@@ -406,7 +406,7 @@ CONTAINS
     IF(wann%l_plot_umdat)THEN
        CALL wann_plot_um_dat(&
             stars,vacuum,atoms,sphhar,input,sym,mpi,&
-            lapw,oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,&
+            oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,&
             mpi%mpi_comm,i,wann%band_min,wann%band_max,noco%l_soc,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
