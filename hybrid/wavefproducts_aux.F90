@@ -127,7 +127,7 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
-#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       call timestart("Post read_z Barrier")
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
       call timestop("Post read_z Barrier")

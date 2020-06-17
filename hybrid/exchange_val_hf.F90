@@ -153,7 +153,7 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
-#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       cnt_read_z = predict_max_read_z(fi, hybdat, jsp)
 #endif
       DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
@@ -280,7 +280,7 @@ CONTAINS
          enddo
       END DO  !jq
 
-#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       call timestart("dangeling MPI_barriers")
       do while(cnt_read_z > 0) 
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
