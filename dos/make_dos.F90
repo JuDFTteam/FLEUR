@@ -19,6 +19,10 @@ CONTAINS
     USE m_unfold_band_kpts
     USE m_cdninf
     USE m_types_eigdos
+#ifdef CPP_HDF
+    use m_hdf_tools
+#endif
+    use m_banddos_io
     IMPLICIT NONE
 
 
@@ -39,24 +43,23 @@ CONTAINS
     INTEGER :: ne,ikpt,kspin,j,i,n
     LOGICAL :: l_error
     real    :: eFermiPrev
-
-
+#ifdef CPP_HDF
+    INTEGER(HID_t):: banddosFile_id
+#else
+    INTEGER :: banddosFile_id
+#endif
     CALL readPrevEFermi(eFermiPrev,l_error)
     eFermiPrev=merge(results%ef,eFermiPrev,l_error)
 
-    IF (banddos%band) THEN
 #ifdef CPP_HDF
-!      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
-!      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
-!      CALL closeBandDOSFile(banddosFile_id)
-#else
-      open(888,file="eigdesc.bin")
-      write(888) eFermiPrev,4
-      DO n=1,size(eigdos)
-        CALL eigdos(n)%p%write(888)
-      ENDDO
-      close(888)
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
 #endif
+
+    IF (banddos%band) THEN
+!      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+       DO n=1,size(eigdos)
+         call eigdos(n)%p%write_band(kpts,cell,banddosFile_id)
+       enddo
       IF (banddos%unfoldband) &
         CALL write_band_sc(kpts,results,eFermiPrev)
     ENDIF
@@ -73,9 +76,12 @@ CONTAINS
          print *,"Smooth:",n
          call eigdos(n)%p%smooth(banddos)
          print *,"WriteDos:",n
-         call eigdos(n)%p%write_dos()
+         call eigdos(n)%p%write_dos(banddosFile_id)
        enddo
     endif
+#ifdef CPP_HDF
+      CALL closeBandDOSFile(banddosFile_id)
+#endif
 
     RETURN
   END SUBROUTINE make_dos

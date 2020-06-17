@@ -119,6 +119,7 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum,eig)
 
   INTEGER :: ntype,l,i,ind
   character :: spdfg(0:4)=["s","p","d","f","g"]
+  thisDOS%name_of_dos="Local"
   thisDOS%neq=atoms%neq
   thisDOS%eig=eig
   ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
@@ -153,20 +154,20 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum,eig)
   thisDOS%weight_names(ind)="VAC2"
   do i=1,vacuum%layerd
     ind=ind+1
-    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER1:",i
+    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER1-",i
     ind=ind+1
-    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER2:",i
+    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER2-",i
   end do
   DO l=1,vacuum%layerd
     do i=1,vacuum%nstars
       ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC1):",l,"-",i
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC1)-",l,"-",i
       ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC1):",l,"-",i
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC1)-",l,"-",i
       ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC2):",l,"-",i
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC2)-",l,"-",i
       ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC2):",l,"-",i
+      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC2)-",l,"-",i
     end do
   end do
 

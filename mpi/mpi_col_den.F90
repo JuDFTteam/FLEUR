@@ -258,7 +258,7 @@ CONTAINS
     ! -> Optional the LO-coefficients: aclo,bclo,enerlo,cclo,acnmt,bcnmt,ccnmt
     IF (atoms%nlod.GE.1) THEN
 
-       n=atoms%nlod*atoms%ntype 
+       n=atoms%nlod*atoms%ntype
        ALLOCATE (r_b(n))
        CALL MPI_ALLREDUCE(denCoeffs%aclo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM, MPI_COMM_WORLD,ierr)
        CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%aclo(:,:,jspin), 1)
@@ -348,7 +348,7 @@ CONTAINS
 
     ENDIF
 
-    ! -> Collect the noco staff: 
+    ! -> Collect the noco staff:
     IF ( noco%l_noco .AND. jspin.EQ.1 ) THEN
 
        n = stars%ng3

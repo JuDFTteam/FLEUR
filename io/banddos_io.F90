@@ -23,13 +23,18 @@ MODULE m_banddos_io
 
    IMPLICIT NONE
 
-   PUBLIC openBandDOSFile, closeBandDOSFile, writeBandDOSData
+   PUBLIC openBandDOSFile, closeBandDOSFile, writeBandData, writedosData
 
    CONTAINS
 
    SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, banddos)
 
-      USE m_types
+      USE m_types_input
+      USE m_types_atoms
+      USE m_types_cell
+      USE m_types_kpts
+      USE m_types_banddos
+
       USE hdf5
       USE m_cdn_io
 
@@ -81,7 +86,7 @@ MODULE m_banddos_io
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
       IF(l_exist) THEN
-         CALL system('rm '//TRIM(ADJUSTL(filename)))       
+         CALL system('rm '//TRIM(ADJUSTL(filename)))
       END IF
 
       CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
@@ -220,87 +225,38 @@ MODULE m_banddos_io
 
    END SUBROUTINE
 
-   SUBROUTINE writeBandDOSData(fileID,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+   SUBROUTINE writeBandData(fileID,name_of_dos,weight_name,eig,weight_eig,kpts)
+      USE m_types_kpts
+      character(len=*),intent(in) :: name_of_dos
+      character(len=*),intent(in) :: weight_name
+      real,intent(in)             :: eig(:,:,:),weight_eig(:,:,:)
+      type(t_kpts),intent(in)     :: kpts
 
-      USE m_types
-
-      TYPE(t_input),   INTENT(IN) :: input
-      TYPE(t_atoms),   INTENT(IN) :: atoms
-      TYPE(t_cell),    INTENT(IN) :: cell
-      TYPE(t_kpts),    INTENT(IN) :: kpts
-      TYPE(t_results), INTENT(IN) :: results
-      TYPE(t_banddos), INTENT(IN) :: banddos
-      TYPE(t_dos),     INTENT(IN) :: dos
-      TYPE(t_vacuum),  INTENT(IN) :: vacuum
-
-      INTEGER                     :: neigd
 
       INTEGER(HID_T),  INTENT(IN) :: fileID
+      INTEGER                     :: n
 
-      INTEGER(HID_T)    :: eigenvaluesGroupID
-      INTEGER(HID_T)    :: bandUnfoldingGroupID
+      INTEGER(HID_T)    :: BSGroupID,groupID
+      INTEGER           :: hdfError
 
-      INTEGER(HID_T)    :: eigenvaluesSpaceID, eigenvaluesSetID
-      INTEGER(HID_T)    :: numFoundEigsSpaceID, numFoundEigsSetID
-      INTEGER(HID_T)    :: lLikeChargeSpaceID, lLikeChargeSetID
-      INTEGER(HID_T)    :: jsymSpaceID, jsymSetID
-      INTEGER(HID_T)    :: ksymSpaceID, ksymSetID
-      INTEGER(HID_T)    :: bUWeightsSpaceID, bUWeightsSetID
-      INTEGER(HID_T)    :: supercellSpaceID, supercellSetID
+      if (io_groupexists(fileID,name_of_dos)) THEN
+        call io_gopen(fileID,name_of_dos,groupID)
+      ELSE
+        call h5gcreate_f(fileID, name_of_dos, GroupID, hdfError)
+      endif
+      if (io_groupexists(GroupID,"BS")) THEN
+        call io_gopen(GroupID,"BS",BSgroupID)
+      ELSE
+        CALL h5gcreate_f(fileID, "BS", BSGroupID, hdfError)
+      endif
+      if (.not.io_dataexists(BSGroupID,"kpts")) call io_write_var(BSGroupID,"kpts",kpts%bk)
+      if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)
+      call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
+      CALL h5gclose_f(BSGroupID, hdfError)
+      CALL h5gclose_f(GroupID, hdfError)
 
-      INTEGER           :: hdfError, dimsInt(7)
 
-      INTEGER(HSIZE_T)  :: dims(7)
-
-      neigd = MAXVAL(results%neig(:,:))
-
-      CALL h5gcreate_f(fileID, '/eigenvalues', eigenvaluesGroupID, hdfError)
-
-      CALL io_write_attint0(eigenvaluesGroupID,'neigd',neigd)
-      CALL io_write_attint0(eigenvaluesGroupID,'maxL',3)
-
-      dims(:2)=(/kpts%nkpt,input%jspins/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),numFoundEigsSpaceID,hdfError)
-      CALL h5dcreate_f(eigenvaluesGroupID, "numFoundEigenvals", H5T_NATIVE_INTEGER, numFoundEigsSpaceID, numFoundEigsSetID, hdfError)
-      CALL h5sclose_f(numFoundEigsSpaceID,hdfError)
-      CALL io_write_integer2(numFoundEigsSetID,(/1,1/),dimsInt(:2),results%neig)
-      CALL h5dclose_f(numFoundEigsSetID, hdfError)
-
-      dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
-      dimsInt = dims
-      CALL h5screate_simple_f(3,dims(:3),eigenvaluesSpaceID,hdfError)
-      CALL h5dcreate_f(eigenvaluesGroupID, "eigenvalues", H5T_NATIVE_DOUBLE, eigenvaluesSpaceID, eigenvaluesSetID, hdfError)
-      CALL h5sclose_f(eigenvaluesSpaceID,hdfError)
-      CALL io_write_real3(eigenvaluesSetID,(/1,1,1/),dimsInt(:3),results%eig(:neigd,:,:))
-      CALL h5dclose_f(eigenvaluesSetID, hdfError)
-
-      dims(:5)=(/4,atoms%ntype,neigd,kpts%nkpt,input%jspins/)
-      dimsInt = dims
-      CALL h5screate_simple_f(5,dims(:5),lLikeChargeSpaceID,hdfError)
-      CALL h5dcreate_f(eigenvaluesGroupID, "lLikeCharge", H5T_NATIVE_DOUBLE, lLikeChargeSpaceID, lLikeChargeSetID, hdfError)
-      CALL h5sclose_f(lLikeChargeSpaceID,hdfError)
-      CALL io_write_real5(lLikeChargeSetID,(/1,1,1,1,1/),dimsInt(:5),dos%qal(0:3,:,:neigd,:,:))
-      CALL h5dclose_f(lLikeChargeSetID, hdfError)
-
-      dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
-      dimsInt = dims
-      CALL h5screate_simple_f(3,dims(:3),jsymSpaceID,hdfError)
-      CALL h5dcreate_f(eigenvaluesGroupID, "jsym", H5T_NATIVE_INTEGER, jsymSpaceID, jsymSetID, hdfError)
-      CALL h5sclose_f(jsymSpaceID,hdfError)
-      CALL io_write_integer3(jsymSetID,(/1,1,1/),dimsInt(:3),dos%jsym(:neigd,:,:))
-      CALL h5dclose_f(jsymSetID, hdfError)
-
-      dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
-      dimsInt = dims
-      CALL h5screate_simple_f(3,dims(:3),ksymSpaceID,hdfError)
-      CALL h5dcreate_f(eigenvaluesGroupID, "ksym", H5T_NATIVE_INTEGER, ksymSpaceID, ksymSetID, hdfError)
-      CALL h5sclose_f(ksymSpaceID,hdfError)
-      CALL io_write_integer3(ksymSetID,(/1,1,1/),dimsInt(:3),dos%ksym(:neigd,:,:))
-      CALL h5dclose_f(ksymSetID, hdfError)
-
-      CALL h5gclose_f(eigenvaluesGroupID, hdfError)
-
+#if 1==2
       IF (banddos%unfoldband) THEN
          CALL h5gcreate_f(fileID, '/bandUnfolding', bandUnfoldingGroupID, hdfError)
 
@@ -322,6 +278,34 @@ MODULE m_banddos_io
 
          CALL h5gclose_f(bandUnfoldingGroupID, hdfError)
       END IF
+#endif
+   END SUBROUTINE
+SUBROUTINE writedosData(fileID,name_of_dos,e_grid,weight_name,dos)
+     character(len=*),intent(in) :: name_of_dos
+     character(len=*),intent(in) :: weight_name
+     real,intent(in):: e_grid(:),dos(:,:)
+      INTEGER(HID_T),  INTENT(IN) :: fileID
+
+      INTEGER                     :: n
+
+      INTEGER(HID_T)    :: DOSGroupID,groupID
+      INTEGER           :: hdfError
+
+      if (io_groupexists(fileID,name_of_dos)) THEN
+        call io_gopen(fileID,name_of_dos,groupID)
+      ELSE
+        call h5gcreate_f(fileID, name_of_dos, GroupID, hdfError)
+      endif
+      if (io_groupexists(groupID,"DOS")) then
+        call io_gopen(groupID,"DOS",DOSGroupID)
+      ELSE
+        CALL h5gcreate_f(GroupID, "DOS", DOSGroupID, hdfError)
+      endif
+      if (.not.io_dataexists(DOSGroupID,"energyGrid")) call io_write_var(DOSGroupID,"energyGrid",e_grid)
+      print *,name_of_dos,weight_name
+      call io_write_var(DOSGroupID,weight_name,dos(:,:))
+      CALL h5gclose_f(DOSGroupID, hdfError)
+      CALL h5gclose_f(GroupID, hdfError)
 
    END SUBROUTINE
 
