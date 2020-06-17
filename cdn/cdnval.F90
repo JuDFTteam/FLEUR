@@ -163,7 +163,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
-      IF(greensfImagPart%l_calc) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+      IF(greensfImagPart%l_calc) &
+         CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,&
+                                      SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
    ENDIF
 
 

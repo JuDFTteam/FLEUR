@@ -34,7 +34,7 @@ MODULE m_greensfPostProcess
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
-      INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin
+      INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
 
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
@@ -132,6 +132,10 @@ MODULE m_greensfPostProcess
 #endif
          CALL timestop("Green's Function: Postprocess")
       ENDIF
+
+#ifdef CPP_MPI
+      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
 
    END SUBROUTINE greensfPostProcess
 
