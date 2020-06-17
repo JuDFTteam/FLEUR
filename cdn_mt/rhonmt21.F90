@@ -69,6 +69,7 @@ CONTAINS
                                DO mp = -lp,lp
                                   lmp = lp*(lp+1) + mp
                                   m_loop: DO m = -l,l
+                                  IF(.NOT.(l.GE.m.AND.lp.GE.mp.AND.lv.GE.mv)) CYCLE m_loop
                                      coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                                      IF (ABS(coef) .GE. 0 ) THEN
                                         lm= l*(l+1) + m
