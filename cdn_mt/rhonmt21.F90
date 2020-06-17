@@ -66,7 +66,7 @@ CONTAINS
                             DO jmem = 1,sphhar%nmem(lh,ns)
                                mv = sphhar%mlh(jmem,lh,ns)
                                coef1 = cil * sphhar%clnu(jmem,lh,ns) 
-                               DO mp = -lp,lp
+                               mp_loop: DO mp = -lp,lp
                                   lmp = lp*(lp+1) + mp
                                   m_loop: DO m = -l,l
                                      coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
@@ -78,7 +78,7 @@ CONTAINS
                                         ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,we(:) * coef * eigVecCoeffs%bcof(:,lm,nt,1),1)
                                      ENDIF ! (coef >= 0)
                                   ENDDO m_loop ! m
-                               ENDDO  ! mp
+                               ENDDO  mp_loop
                             ENDDO ! jmem
                          ENDIF ! ( MOD(lv+l+lp),2) == 0 )
                       ENDDO ! lp
