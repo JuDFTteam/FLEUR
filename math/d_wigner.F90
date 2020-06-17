@@ -185,6 +185,7 @@ CONTAINS
       //,'   ns   alpha     beta      gamma    determ ')
 8010 FORMAT(i5,4f10.5)
 #endif
+    d_wgn = 0.0
     DO ns = 1, nop
 
        co_bh = COS(beta(ns)*0.5)
