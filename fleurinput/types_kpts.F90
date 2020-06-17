@@ -500,9 +500,9 @@ CONTAINS
          list(ikpt) = ikpt - 1
       END DO
 
-      !$OMP parallel do default(none) collapse(2)&
-      !$OMP private(ikpt, iop, rotkpt, nrkpt) &
-      !$OMP shared(kpts, nsymop, rrot, list, neqvkpt, parent, symop, lock, psym)
+      ! !$OMP parallel do default(none) collapse(2)&
+      ! !$OMP private(ikpt, iop, rotkpt, nrkpt) &
+      ! !$OMP shared(kpts, nsymop, rrot, list, neqvkpt, parent, symop, lock, psym)
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
 
@@ -520,17 +520,17 @@ CONTAINS
                END IF
             END DO
             IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
-!$          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
+!! $          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
                parent(nrkpt) = ikpt
                symop(nrkpt) = psym(iop)
             END IF
-!$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
+! !$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
          END DO
       END DO
-      !$OMP end parallel do
+      ! !$OMP end parallel do
 
 !$    do i =0,lock_size-1
 !$       call omp_destroy_lock(lock(i))
@@ -594,8 +594,8 @@ CONTAINS
       ! calc numsymop
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
 
-      !$OMP parallel do default(none) collapse(2) private(ikpt, iop, rotkpt, nrkpt) &
-      !$OMP shared(kpts, nsymop, rrot, list, parent, psym, lock)
+      ! !$OMP parallel do default(none) collapse(2) private(ikpt, iop, rotkpt, nrkpt) &
+      ! !$OMP shared(kpts, nsymop, rrot, list, parent, psym, lock)
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
@@ -605,17 +605,17 @@ CONTAINS
             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
 
-!$          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
+!!$          call omp_set_lock(lock(modulo(nrkpt,lock_size)))
             IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                parent(nrkpt) = ikpt
             END IF
-!$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
+!!$          call omp_unset_lock(lock(modulo(nrkpt,lock_size)))
             ! IF(all(list == 0)) EXIT
 
          END DO
       END DO
-      !$OMP end parallel do 
+      ! !$OMP end parallel do 
 
 !$    do i =0,lock_size-1
 !$       call omp_destroy_lock(lock(i))
