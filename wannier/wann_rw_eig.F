@@ -15,9 +15,10 @@ c      Frank Freimuth, October 2006
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_write_eig(
+     >     mpi,cell,noco,nococonv,input,kpts,sym,atoms,          
      >              eig_id,l_real,
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              isize,jspin,nbasfcn,nlotot,
+     >              ntypd,neigd,nvd,jspd,
+     >              isize,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,fullnkpts,
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
      >              irreduc,odi,band_min,band_max,numbands,
@@ -29,10 +30,17 @@ c****************************************************************
       use m_cdnread, only:cdn_read
 
       IMPLICIT NONE
-
+      TYPE(t_mpi),       INTENT(IN) :: mpi
+      TYPE(t_cell),      INTENT(IN) :: cell
+      TYPE(t_noco),      INTENT(IN) :: noco
+      TYPE(t_nococonv),  INTENT(IN) :: nococonv
+      TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_kpts),      INTENT(IN) :: kpts
+      TYPE(t_sym),       INTENT(IN) :: sym
+      TYPE(t_atoms),     INTENT(IN) :: atoms
       integer,intent(in) :: eig_id
-      integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd
-      integer,intent(in) :: isize,jspin,nbasfcn,nlotot
+      integer,intent(in) :: ntypd,neigd,nvd,jspd
+      integer,intent(in) :: isize,jspin,nbasfcn
       logical,intent(in) :: l_ss,l_noco,l_real
       integer,intent(in) :: nrec,fullnkpts
 
@@ -56,13 +64,11 @@ c****************************************************************
       real             :: wk, bkpt(3),eig(neigd),cp_time(9)
       integer          :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer          :: nkbnd,i
-      REAL             :: ello(nlod,ntypd,jspd),evdu(2,jspd)
-      REAL             :: epar(0:lmaxd,ntypd,jspd)
       integer          :: n_start,n_end,co
       integer          :: bnd1,bnd2,kpt
       complex, allocatable :: paulimat(:,:,:,:) 
       real             :: sum1,sum2,sum3
-      integer          :: num_bands,err
+      integer          :: num_bands,err,numbasfcn
       
 ! BEGIN QPOINTS
       LOGICAL, INTENT(IN) :: l_gwf
@@ -72,6 +78,8 @@ c****************************************************************
 !      real,parameter   :: hartree=27.21138505  !now in module constants
 
       TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_lapw)  :: lapw
+
 
       zMat%l_real = l_real
       zMat%matsize1 = nbasfcn
@@ -132,12 +140,26 @@ c****************************************************************
       nbnd=0
       do ikpt = 1,fullnkpts
 
+        kptibz=ikpt
+        if(l_bzsym) kptibz=irreduc(ikpt)
+
+         CALL lapw%init(input,noco,nococonv,kpts,
+     & atoms,sym,kptibz,cell,
+     & (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND.
+     & .NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+         numbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &   lapw%nv(1)+atoms%nlotot,noco%l_noco)
+
+        CALL zMat%init(l_real,numbasfcn,input%neig)
+
+
         kptibz=ikpt 
         if(l_bzsym) kptibz=irreduc(ikpt)
             call wann_read_eig(
      >              eig_id,     
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              ntypd,neigd,nvd,jspd,
+     >              0,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
@@ -183,8 +205,8 @@ c****************************************************************
             if(l_bzsym)kptibz=irreduc(ikpt)
             call wann_read_eig(     
      >              eig_id,       
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              ntypd,neigd,nvd,jspd,
+     >              0,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
@@ -208,8 +230,8 @@ c     read in eig file
 c*****************************************************************
       subroutine wann_read_eig(     
      >              eig_id,
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              ntypd,neigd,nvd,jspd,
+     >              irank,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
@@ -218,9 +240,9 @@ c*****************************************************************
       use m_cdnread, only:cdn_read
       implicit none
       integer, intent (in) :: eig_id
-      INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
+      INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd
       INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
-      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod,iqpt
+      INTEGER, INTENT (IN) :: ntypd,iqpt
       LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
 
       INTEGER, INTENT (OUT) :: nbands,nmat

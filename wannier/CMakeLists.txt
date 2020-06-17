@@ -92,6 +92,7 @@ wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
 wannier/wann_plot_od_vac.F
 wannier/bs_comfort.F
+wannier/wann_socmatvec_rs.F
 )
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
@@ -104,22 +105,22 @@ wannier/wannier.F90
 wannier/wann_orbcomp.f90
 wannier/wann_postproc.F90
 )
-if(FLEUR_USE_WANN)
+if(FLEUR_USE_WANN_EXTERNAL)
 set(fleur_F90 ${fleur_F90}
-external/wannier90/src/comms.F90      
-external/wannier90/src/disentangle.F90  
-external/wannier90/src/io.F90     
-external/wannier90/src/overlap.F90     
-external/wannier90/src/plot.F90  
-external/wannier90/src/sitesym.F90    
-external/wannier90/src/utility.F90     
-external/wannier90/src/wannierise.F90   
-external/wannier90/src/constants.F90  
-external/wannier90/src/hamiltonian.F90  
-external/wannier90/src/kmesh.F90  
-external/wannier90/src/parameters.F90  
-external/wannier90/src/transport.F90  
-external/wannier90/src/wannier_lib.F90  
+external/wannier90/src/comms.F90
+external/wannier90/src/disentangle.F90
+external/wannier90/src/io.F90
+external/wannier90/src/overlap.F90
+external/wannier90/src/plot.F90
+external/wannier90/src/sitesym.F90
+external/wannier90/src/utility.F90
+external/wannier90/src/wannierise.F90
+external/wannier90/src/constants.F90
+external/wannier90/src/hamiltonian.F90
+external/wannier90/src/kmesh.F90
+external/wannier90/src/parameters.F90
+external/wannier90/src/transport.F90
+external/wannier90/src/wannier_lib.F90
 external/wannier90/src/ws_distance.F90
 )
 endif()

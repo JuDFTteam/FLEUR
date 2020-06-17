@@ -687,11 +687,14 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
+      <xsd:attribute name="itmax" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="2" name="n_occpm" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="dftspinpol" type="FleurBool" use="optional"/>
+      <xsd:attribute default="T" name="fullMatch" type="FleurBool" use="optional"/>
+      <xsd:attribute default="T" name="l_nonsphDC" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="GFGeneralType">
@@ -707,6 +710,7 @@
       </xsd:sequence>
       <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
       <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ERealAxisType">

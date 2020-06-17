@@ -267,7 +267,7 @@ CONTAINS
             enpara%el0(4:,n,1) = enpara%el0(3,n,1)
             enpara%el0(4:,n,2) = enpara%el0(3,n,1)
           ENDIF
-          IF(irank.EQ.0) WRITE(oUnit,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
+          IF(irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
        ENDDO
     ENDIF
 
@@ -287,7 +287,7 @@ CONTAINS
                 tr = tr + REAL(v%mmpMat(i,i,j,jsp))
              ENDDO
              enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/REAL(2*l+1)
-             IF(irank.EQ.0) WRITE(oUnit,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
+             IF(irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,I1,A,f16.10)")&
                                "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
           ENDDO
        ENDDO

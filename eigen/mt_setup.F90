@@ -9,7 +9,6 @@ MODULE m_mt_setup
 CONTAINS
   SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,mpi,results,td,ud)
     USE m_types
-    USE m_usetup
     USE m_tlmplm_cholesky
     USE m_spnorb
     IMPLICIT NONE
@@ -24,17 +23,13 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: inDen
-    TYPE(t_potden),INTENT(INOUT) :: vTot
+    TYPE(t_potden),INTENT(IN)    :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
     TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
     TYPE(t_hub1data),INTENT(INOUT)::hub1data
 
     INTEGER:: jsp
-
-    IF (atoms%n_u+atoms%n_hia>0) THEN
-       CALL u_setup(sym,atoms,sphhar,input,noco,hub1inp,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
-    END IF
 
 
     CALL timestart("tlmplm")

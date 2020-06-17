@@ -1,4 +1,5 @@
 MODULE m_types_mat
+#include"cpp_double.h"
    USE m_judft
    IMPLICIT NONE
    PRIVATE
@@ -32,7 +33,6 @@ MODULE m_types_mat
       PROCEDURE        :: init_details => t_mat_init
       PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
       GENERIC          :: init => init_details, init_template
-      PROCEDURE        :: generate_full_matrix => t_mat_generate_full_matrix
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
       PROCEDURE        :: unsymmetry => t_mat_unsymmetry
@@ -106,7 +106,6 @@ CONTAINS
    end subroutine t_mat_u2l
 
    subroutine t_mat_subtract(res_mat, mat1, mat2)
-      use iso_c_binding, only: c_loc
       implicit none
       class(t_mat), intent(inout) :: res_mat
       type(t_mat), intent(in)     :: mat1, mat2
@@ -161,26 +160,6 @@ CONTAINS
       endif
    end function t_mat_allocated
 
-   SUBROUTINE t_mat_generate_full_matrix(mat)
-      IMPLICIT NONE
-      CLASS(t_mat), INTENT(INOUT)     :: mat
-      INTEGER ::i, j
-      IF (mat%l_real) THEN
-         DO i = 1, mat%matsize2
-            DO j = i + 1, mat%matsize1
-               mat%data_r(j, i) = mat%data_r(i, j)
-            ENDDO
-         ENDDO
-      ELSE
-         DO i = 1, mat%matsize2
-            DO j = i + 1, mat%matsize1
-               mat%data_c(j, i) = CONJG(mat%data_c(i, j))
-            ENDDO
-         ENDDO
-      ENDIF
-
-   END subroutine
-
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(IN)     :: mat
@@ -228,6 +207,8 @@ CONTAINS
       call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
+      mat%matsize1 = -1 
+      mat%matsize2 = -1 
       call timestop("t_mat_free")
    END SUBROUTINE t_mat_free
 
@@ -562,19 +543,27 @@ CONTAINS
    SUBROUTINE t_mat_copy(mat, mat1, n1, n2)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
-      CLASS(t_mat), INTENT(IN)   :: mat1
+      class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
 
       INTEGER:: i1, i2
+      real :: norm_before, norm_after
+
+      select type (mat1)
+      type is(t_mat)
+          
+      class default
+         call judft_error("you can only copy a t_mat to a t_mat")
+      end select
 
       i1 = mat%matsize1 - n1 + 1  !space available for first dimension
       i2 = mat%matsize2 - n2 + 1
       i1 = MIN(i1, mat1%matsize1)
       i2 = MIN(i2, mat1%matsize2)
       IF (mat%l_real) THEN
-         mat%data_r(n1:n1 + i1 - 1, n2:n2 + i2 - 1) = mat1%data_r(:i1, :i2)
+         call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
       ELSE
-         mat%data_c(n1:n1 + i1 - 1, n2:n2 + i2 - 1) = mat1%data_c(:i1, :i2)
+         call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
       END IF
 
    END SUBROUTINE t_mat_copy
@@ -582,11 +571,12 @@ CONTAINS
    SUBROUTINE t_mat_clear(mat)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
+      INTEGER :: i
 
       IF (mat%l_real) THEN
-         mat%data_r = 0.0
+         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ELSE
-         mat%data_c = 0.0
+         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ENDIF
    END SUBROUTINE t_mat_clear
 

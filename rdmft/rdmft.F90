@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
-
+   use m_work_package
    USE m_types
    USE m_juDFT
    USE m_constants
@@ -72,6 +72,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    TYPE(t_moments)                      :: moments
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
+   type(t_work_package)                 :: work_pack
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, ikptf, iterHF
@@ -390,9 +391,12 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
    END DO
 
-   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, [(ikpt,ikpt=1,fi%kpts%nkpt)])
-
    CALL hybmpi%copy_mpi(mpi)
+   call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
+
+   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+
+
    DO ikpt = 1, fi%kpts%nkpt
       CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
    END DO
@@ -450,7 +454,8 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL cdncore(mpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
-         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,fi%noco%l_noco,.TRUE.,.true.,fix)
+         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
+                   fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
@@ -517,9 +522,8 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,fi%hybinp,fi%input,fi%sym,fi%kpts,fi%atoms,mpi,fi%noco,nococonv,&
-                       fi%cell,fi%oned,results,jspin,enpara,&
-                       hybdat,fi%sym%invs,vTot%mt(:,0,:,:),eig_irr)
+         CALL HF_setup(mpdata,fi,mpi,nococonv,results,jspin,enpara,&
+                       hybdat,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
 
@@ -545,11 +549,11 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
             call symm_hf(fi,ikpt,hybdat,eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
-                         rrot,nsymop,psym,n_q,parent,pointer_EIBZ,nsest,indx_sest)
+                         rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(ikpt,fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
-                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
+            CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
+                                     eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
                                 mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&

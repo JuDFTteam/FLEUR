@@ -39,19 +39,76 @@ MODULE m_greensfCalcRealPart
       TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
 
-      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType
+      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique
       INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep
-      INTEGER :: spin_cut,nn,natom,contourShape,dummy
+      INTEGER :: spin_cut,contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
       LOGICAL :: l_onsite,l_fixedCutoffset,l_skip
       REAL    :: fac,del,eb,et,fixedCutoff
-      REAL, ALLOCATABLE :: eMesh(:)
+      REAL,    ALLOCATABLE :: eMesh(:)
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
 
       nspins = MERGE(3,input%jspins,gfinp%l_mperp)
+
+      IF(mpi%irank.EQ.0) THEN
+         CALL timestart("Green's Function: Integration Cutoff")
+         DO i_gf = 1, gfinp%n
+
+            !Get the information of ith current element
+            l  = g(i_gf)%elem%l
+            lp = g(i_gf)%elem%lp
+            nType  = g(i_gf)%elem%atomType
+            nTypep = g(i_gf)%elem%atomTypep
+            l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
+            fixedCutoff      = g(i_gf)%elem%fixedCutoff
+
+            i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+
+            IF(i_gf /= indUnique) THEN
+               !This cutoff was already calculated
+               greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
+            ELSE
+               !Is the current element suitable for automatic finding of the cutoff
+               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg
+               IF(l_onsite.AND..NOT.l_fixedCutoffset) THEN
+                  !
+                  !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
+                  !
+                  CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
+                                 eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
+               ELSE IF (l_fixedCutoffset) THEN
+                  greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
+                  greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
+               ELSE
+                  !For all other elements we just use ef+elup as a hard cutoff
+                  greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
+                  greensfImagPart%kkintgr_cutoff(i_gf,:,2) = gfinp%ne
+               ENDIF
+            ENDIF
+
+            DO jspin = 1, nspins
+               spin_cut = MERGE(1,jspin,jspin.GT.2)
+               kkcut = greensfImagPart%kkintgr_cutoff(i_gf,spin_cut,2)
+               !------------------------------------------------------------
+               ! Set everything above the cutoff in the imaginary part to 0
+               ! We do this explicitely because when we just use the hard cutoff index
+               ! Things might get lost when the imaginary part is smoothed explicitely
+               !------------------------------------------------------------
+               IF(kkcut.ne.SIZE(eMesh)) THEN
+                  greensfImagPart%sphavg(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+               ENDIF
+            ENDDO
+
+         ENDDO
+         CALL timestop("Green's Function: Integration Cutoff")
+      ENDIF
+
+      !Broadcast cutoffs and modified imaginary parts
+      CALL greensfImagPart%mpi_bc(mpi%mpi_comm)
+
 
       !Distribute the Calculations
 #ifdef CPP_MPI
@@ -100,49 +157,16 @@ MODULE m_greensfCalcRealPart
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
 
          !Get the information of ith current element
-         l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
-         nType  = gfinp%elem(i_gf)%atomType
-         nTypep = gfinp%elem(i_gf)%atomTypep
-         contourShape     = gfinp%contour(gfinp%elem(i_gf)%iContour)%shape
-         l_fixedCutoffset = gfinp%elem(i_gf)%l_fixedCutoffset
-         fixedCutoff      = gfinp%elem(i_gf)%fixedCutoff
+         l  = g(i_gf)%elem%l
+         lp = g(i_gf)%elem%lp
+         nType  = g(i_gf)%elem%atomType
+         nTypep = g(i_gf)%elem%atomTypep
+         contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
 
-         CALL uniqueElements_gfinp(gfinp,dummy,ind=i_gf,indUnique=i_elem)
+         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf)
 
-         !Is the current element suitable for automatic finding of the cutoff
-         l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg
-         IF(l_onsite.AND..NOT.l_fixedCutoffset) THEN
-            !
-            !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
-            !
-            CALL timestart("On-Site: Integration Cutoff")
-            CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
-                           eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
-            CALL timestop("On-Site: Integration Cutoff")
-         ELSE IF (l_fixedCutoffset) THEN
-            greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
-            greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
-         ELSE
-            !For all other elements we just use ef+elup as a hard cutoff
-            greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
-            greensfImagPart%kkintgr_cutoff(i_gf,:,2) = gfinp%ne
-         ENDIF
-         !
-         !Perform the Kramers-Kronig-Integration if not already calculated
-         !
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
-            spin_cut = MERGE(1,jspin,jspin.GT.2)
-            kkcut = greensfImagPart%kkintgr_cutoff(i_gf,spin_cut,2)
-            !------------------------------------------------------------
-            ! Set everything above the cutoff in the imaginary part to 0
-            ! We do this explicitely because when we just use the hard cutoff index
-            ! Things might get lost when the imaginary part is smoothed explicitely
-            !------------------------------------------------------------
-            IF(kkcut.ne.SIZE(eMesh)) THEN
-               greensfImagPart%sphavg(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
-            ENDIF
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                DO m= -l,l
                   DO mp= -lp,lp
@@ -182,7 +206,7 @@ MODULE m_greensfCalcRealPart
 
       !Collect all the greensFuntions
       DO i_gf = 1, gfinp%n
-         CALL g(i_gf)%collect(gfinp,mpi%mpi_comm)
+         CALL g(i_gf)%collect(mpi%mpi_comm)
       ENDDO
 
    END SUBROUTINE greensfCalcRealPart

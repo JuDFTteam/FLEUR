@@ -402,8 +402,7 @@ CONTAINS
     lclose=sym%closure()
 
     IF ( ( ns==1 ) .AND. ( .NOT. lclose ) ) THEN
-       WRITE (oUnit,'(/," Congratulations, you have found a system (not"," a supercell) that breaks the algorithms. Sorry...")')
-       CALL juDFT_error("Program failed :(",calledby="spg_gen")
+       CALL juDFT_error("Your system (not',' a supercell) that breaks the algorithms. Sorry...",calledby="spg_gen")
     ENDIF
 
     !---> supercells: if we have determined a (sub)group directly, great;

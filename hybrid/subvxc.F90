@@ -262,11 +262,11 @@ CONTAINS
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
             !call zgemm(transa, transb, m, n,      k,   alpha,   a,          lda,              b,                 ldb,           beta,     c,    ldc)
-            call zgemm("N", "T", nnbas, lapw%nv, nnbas, cmplx_1, vrmat(1,1), hybdat%maxlmindx, bascof(1,1,iatom), lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
+            call zgemm("N", "T", nnbas, lapw%nv(jsp), nnbas, cmplx_1, vrmat(1,1), hybdat%maxlmindx, bascof(1,1,iatom), lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
             carr = conjg(carr)
 
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
-            call zgemm("N", "N", lapw%nv, lapw%nv, nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
+            call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
             ic = 0
             DO j = 1, lapw%nv(jsp)
                DO i = 1, j

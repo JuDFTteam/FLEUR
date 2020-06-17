@@ -12,7 +12,7 @@
      >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -94,7 +94,7 @@ c****************************************************************************
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2,eig_id
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -264,7 +264,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable :: ulobeffdg(:,:,:,:)
       complex,allocatable :: ulobeffulog(:,:,:,:,:)
       integer :: spinloop1,spinloop2,ilop
-      integer :: alerr
+      integer :: alerr,nbasfcn
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)   :: zMat(2),zzMat(2)
@@ -498,9 +498,10 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
+     >           mpi,cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
-     >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,nlotot,
+     >            ntypd,neigd,nvd,wannierspin,
+     >            isize,jspin,nbasfcn,
      >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
@@ -829,27 +830,20 @@ c****************************************************************
          n_start=1
          n_end=neigd
 
-      zzMat(jspin)%l_real = l_real
-      zzMat(jspin)%matsize1 = nbasfcn
-      zzMat(jspin)%matsize2 = neigd
-      IF(l_real) THEN
-         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
-     &   ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
-     +                      zzMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 45',
-     &         calledby='wann_updown')
-      ELSE
-         IF(.NOT.ALLOCATED(zzMat(jspin)%data_c))
-     &   ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
-     +                      zzMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 46',
-     &         calledby='wann_updown')
-      END IF
+
 
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &  kptibz,cell,
      &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+
+        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &  lapw%nv(1)+atoms%nlotot,noco%l_noco)
+        
+        CALL zzMat(jspin)%init(l_real,nbasfcn,input%neig)
+        CALL zMat(jspin)%init(l_real,nbasfcn,input%neig)
+
 
         CALL cdn_read(
      & eig_id,
@@ -881,26 +875,7 @@ c****************************************************************
 
 c...we work only within the energy window
 
-      DO jspin = 1, wannierspin
-         zMat(jspin)%l_real = zzMat(jspin)%l_real
-         zMat(jspin)%matsize1 = zzMat(jspin)%matsize1
-         zMat(jspin)%matsize2 = zzMat(jspin)%matsize2
-         IF (zzMat(jspin)%l_real) THEN
-	       IF(.not.allocated(zmat(jspin)%data_r))
-     +      ALLOCATE (zMat(jspin)%data_r(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 47',
-     &         calledby='wann_updown')
-            zMat(jspin)%data_r = 0.0
-         ELSE
-	       IF(.not.allocated(zMat(jspin)%data_c))
-     +      ALLOCATE (zMat(jspin)%data_c(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 48',
-     &         calledby='wann_updown')
-            zMat(jspin)%data_c = CMPLX(0.0,0.0)
-         END IF
-      END DO
+ 
 
       eig(:) = 0.
 
@@ -1035,7 +1010,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
      >       mpi,enpara,input,noco,nococonv,atoms,
-     >       lmaxd,natd,neigd,
+     >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       jspins,irank,
      >       vTot%mt,! vr,
@@ -1187,7 +1162,7 @@ c$$$       enddo !i
      >         cmplx(1.,0.),addnoco,addnoco2,
      >         nvd,stars%mx1,stars%mx2,stars%mx3,
      > stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     > lapw%nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
+     > lapw%nv(jspin),neigd,nbasfcn,nbasfcn,zMat(1),nslibd,
      > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,

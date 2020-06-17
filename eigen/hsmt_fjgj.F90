@@ -55,26 +55,26 @@ CONTAINS
   END IF
 
   DO k = 1,nv
-          gs = rk(k)*rmt
-          CALL sphbes(lmax,gs,fb)
-          CALL dsphbs(lmax,gs,fb,gb)
-          DO l = 0,lmax
-             !---> set up wronskians for the matching conditions for each ntype
-             DO jspin = jspinStart, jspinEnd
-                ws(jspin) = con1/(uds(l,jspin)*dus(l,jspin) - us(l,jspin)*duds(l,jspin))
-             END DO
-             ff = fb(l)
-             gg = rk(k)*gb(l)
-             DO jspin = jspinStart, jspinEnd
-                IF ( apw(l) ) THEN
-                   fj(k,l,jspin) = 1.0*con1 * ff / us(l,jspin)
-                   gj(k,l,jspin) = 0.0
-                ELSE
-                   fj(k,l,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
-                   gj(k,l,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
-                ENDIF
-             END DO
-          ENDDO
+     gs = rk(k)*rmt
+     CALL sphbes(lmax,gs,fb)
+     CALL dsphbs(lmax,gs,fb,gb)
+     DO l = 0,lmax
+        !---> set up wronskians for the matching conditions for each ntype
+        DO jspin = jspinStart, jspinEnd
+           ws(jspin) = con1/(uds(l,jspin)*dus(l,jspin) - us(l,jspin)*duds(l,jspin))
+        END DO
+        ff = fb(l)
+        gg = rk(k)*gb(l)
+        DO jspin = jspinStart, jspinEnd
+           IF ( apw(l) ) THEN
+              fj(k,l,jspin) = 1.0*con1 * ff / us(l,jspin)
+              gj(k,l,jspin) = 0.0
+           ELSE
+              fj(k,l,jspin) = ws(jspin) * ( uds(l,jspin)*gg - duds(l,jspin)*ff )
+              gj(k,l,jspin) = ws(jspin) * ( dus(l,jspin)*ff - us(l,jspin)*gg )
+           ENDIF
+        END DO
+     ENDDO
   ENDDO ! k = 1, lapw%nv
 
   END SUBROUTINE synth_fjgj

@@ -4,17 +4,24 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
 #Try typical mkl string
+foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack_openmpi")
 if (NOT FLEUR_USE_SCALAPACK)
-     message("Test for SCALAPCK with mkl flags")
-     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64")
-     message("Testlibraries:${TEST_LIBRARIES}")
+     message("Test for SCALAPCK with:${test_string}")
+     set(TEST_LIBRARIES "${test_string};${FLEUR_LIBRARIES}")
      try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
-           LINK_LIBRARIES ${TEST_LIBRARIES}
+           LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output
             )
+    if ("$ENV{VERBOSE}")
+        message("Scalapack compile test: ${FLEUR_USE_SCALAPACK}\nLINK_LIBRARIES ${TEST_LIBRARIES}\n${compile_output}")
+     endif()
+
      if (FLEUR_USE_SCALAPACK)
           set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
      endif()
 endif()
+endforeach()
+
+
 
 message("SCALAPACK Library found:${FLEUR_USE_SCALAPACK}")
 if (FLEUR_USE_SCALAPACK)

@@ -59,8 +59,8 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(ik, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  pointer_EIBZ, n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, mat_ex)
+   SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi_var, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -71,13 +71,18 @@ CONTAINS
       USE m_io_hybinp
       USE m_kp_perturbation
       use m_spmm
+      use m_work_package
+#ifdef CPP_MPI
+      use mpi
+#endif
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
+      type(t_k_package), intent(in)     :: k_pack
       type(t_mat), intent(in)           :: z_k
       TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
-      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_mpi), INTENT(IN)           :: mpi_var
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       TYPE(t_lapw), INTENT(IN)          :: lapw
@@ -91,27 +96,23 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: ik
 
       ! arrays
       INTEGER, INTENT(IN)    ::  n_q(:)
-
-      INTEGER, INTENT(IN)    ::  pointer_EIBZ(:)
       INTEGER, INTENT(IN)    ::  nsest(:)
       INTEGER, INTENT(IN)    ::  indx_sest(:, :)
 
       REAL, INTENT(IN)    ::  eig_irr(:, :)
       REAL, INTENT(IN)    ::  wl_iks(:, :)
-      complex, intent(in) :: c_phase_k(hybdat%nbands(ik))
+      complex, intent(in) :: c_phase_k(hybdat%nbands(k_pack%nk))
 
       ! local scalars
       INTEGER                 ::  iband, iband1, jq, iq
-      INTEGER                 ::  i, ierr
+      INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p
-      INTEGER                 ::  n1, n2, nn2
+      INTEGER                 ::  n1, n2, nn2, cnt_read_z
       INTEGER                 ::  ikqpt, iob, m,n,k,lda,ldb,ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
-      integer, allocatable    :: start_idx(:), psizes(:)
 
       REAL, SAVE             ::  divergence
 
@@ -122,18 +123,19 @@ CONTAINS
 
       ! local arrays
       COMPLEX              :: exchcorrect(fi%kpts%nkptf)
-      COMPLEX              :: dcprod(hybdat%nbands(ik), hybdat%nbands(ik), 3)
-      COMPLEX              :: exch_vv(hybdat%nbands(ik), hybdat%nbands(ik))
+      COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk), 3)
+      COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk))
       COMPLEX              :: hessian(3, 3), ctmp
-      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik))
+      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL                 :: kqpt(3), kqpthlp(3), target_psize, rtmp
+      REAL                 :: kqpt(3), kqpthlp(3),  rtmp
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
+      ik = k_pack%nk
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
@@ -151,25 +153,20 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
-
-      DO jq = 1,fi%kpts%nkpt_EIBZ(ik)
-         iq = pointer_EIBZ(jq)
+#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+      cnt_read_z = predict_max_read_z(fi, hybdat, jsp)
+#endif
+      DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
+         iq = k_pack%q_packs(jq)%ptr
          iq_p = fi%kpts%bkp(iq)
 
-
          ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
-         ! arrays should be less than 5 gb
-         if(mat_ex%l_real) then
-            target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
-         else
-            target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
-         endif
-         n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
-         call split_iob_loop(hybdat, hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psizes)
+         
+         n_parts = size(k_pack%q_packs(jq)%band_packs)
          do ipart = 1, n_parts
             if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ")"
-            psize = psizes(ipart)
-            ibando = start_idx(ipart)
+            psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
+            ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
@@ -177,6 +174,7 @@ CONTAINS
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
+            cnt_read_z = cnt_read_z -1
 
             ! The sparse matrix technique is not feasible for the HSE
             ! functional. Thus, a dynamic adjustment is implemented
@@ -193,7 +191,7 @@ CONTAINS
                !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-               !                                  fi%sym%invsat, fi%sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+               !                                  fi%sym%invsat, fi%sym%invsatnr, mpi_var%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
             END IF
 
@@ -281,6 +279,15 @@ CONTAINS
             call carr1_v%free()
          enddo
       END DO  !jq
+
+#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+      call timestart("dangeling MPI_barriers")
+      do while(cnt_read_z > 0) 
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         cnt_read_z = cnt_read_z - 1
+      enddo
+      call timestop("dangeling MPI_barriers")
+#endif
       call dot_result%free()
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
@@ -498,36 +505,6 @@ CONTAINS
       enddo
    end function calc_divergence2
 
-   subroutine split_iob_loop(hybdat, n_total, n_parts, start_idx, psize)
-      use m_types
-      implicit none
-      type(t_hybdat), intent(inout)       :: hybdat
-      integer, intent(in)                 :: n_total, n_parts
-      integer, allocatable, intent(inout) :: start_idx(:), psize(:)
-
-      integer             :: n_loops, i, big_size, small_size, end_idx
-
-      if(allocated(start_idx)) deallocate(start_idx)
-      if(allocated(psize)) deallocate(psize)
-      allocate(start_idx(n_parts), psize(n_parts))
-
-      small_size = floor((1.0*n_total)/n_parts)
-      big_size = small_size +1
-
-      end_idx = 0
-      do i = 1,n_parts
-         psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-
-         start_idx(i) = end_idx + 1
-         end_idx = start_idx(i) + psize(i) - 1
-      enddo
-      if(hybdat%l_print_iob_splitting) then
-         write (*,*) "Split iob loop into " // int2str(n_parts) // " parts"
-         write (*,*) "sizes: ", psize(1), psize(n_parts)
-         hybdat%l_print_iob_splitting = .False.
-      endif
-   end subroutine split_iob_loop
-
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
       use m_types 
       type(t_mat), intent(in)    :: in_part
@@ -557,4 +534,36 @@ CONTAINS
          enddo
       enddo
    end subroutine recombine_parts
+
+   function predict_max_read_z(fi, hybdat, jsp) result(max_count)
+      implicit none 
+
+      type(t_fleurinput), intent(in) :: fi
+      type(t_hybdat), intent(in)     :: hybdat
+      integer, intent(in)            :: jsp
+
+      integer :: max_count
+      integer :: ik, iq, jq,ikqpt, n_parts, my_count
+      real    :: target_psize
+      max_count = 0
+      do ik = 1,fi%kpts%nkpt 
+         !my_count = 0
+         DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
+            iq = fi%kpts%EIBZ(ik)%pointer(jq)
+            ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
+            ! arrays should be less than 5 gb
+
+            if(fi%sym%invs) then
+               target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
+            else
+               target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
+            endif
+
+            n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+            max_count = max_count + n_parts
+            ! my_count = my_count + n_parts
+         enddo
+         !max_count = max(max_count, my_count)
+      enddo
+   end function predict_max_read_z
 END MODULE m_exchange_valence_hf

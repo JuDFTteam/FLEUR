@@ -4,9 +4,9 @@ MODULE m_hubbard1_setup
    USE m_types
    USE m_constants
    USE m_uj2f
-   USE m_mudc
+   USE m_doubleCounting
    USE m_hubbard1Distance
-   USE m_greensfUtils
+   USE m_occmtx
    USE m_hubbard1_io
    USE m_types_selfen
    USE m_add_selfen
@@ -23,8 +23,8 @@ MODULE m_hubbard1_setup
 #endif
 #include"cpp_double.h"
 
-   CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
-   CHARACTER(len=30), PARAMETER :: out_file    = "out"
+   CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
+   CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"
 
    CONTAINS
 
@@ -42,17 +42,15 @@ MODULE m_hubbard1_setup
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
-      INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm,n
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
       INTEGER :: io_error,ierr
-      INTEGER :: indStart,indEnd,i_gf
+      INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: mu_dc
-      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,occ_err
+      REAL    :: U,J
+      LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
-      CHARACTER(len=2)   :: l_type
-      CHARACTER(len=9)   :: l_form
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -60,9 +58,10 @@ MODULE m_hubbard1_setup
       INTEGER(HID_T)     :: greensf_fileID
 #endif
 
-      REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
-      REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
-      REAL    :: n_l(atoms%n_hia,input%jspins)
+      REAL    :: mu_dc(input%jspins)
+      REAL    :: f0(atoms%n_hia),f2(atoms%n_hia)
+      REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
+      REAL    :: occDFT(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
@@ -79,7 +78,7 @@ MODULE m_hubbard1_setup
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
-         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
+         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(hubbard1CalcFolder))
          CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
          !Remove everything from the last iteration (Good Idea??)
          CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
@@ -91,18 +90,13 @@ MODULE m_hubbard1_setup
          ! calculate slater integrals from u and j
          CALL uj2f(input%jspins,atoms%lda_u(indStart:indEnd),atoms%n_hia,f0,f2,f4,f6)
 
-         DO ispin = 1, 1 ! input%jspins
-            f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
-            f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
-            f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
-            f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         END DO
-
          DO i_hia = 1, atoms%n_hia
 
             l = atoms%lda_u(atoms%n_u+i_hia)%l
+            U = atoms%lda_u(atoms%n_u+i_hia)%U
+            J = atoms%lda_u(atoms%n_u+i_hia)%J
+            l_amf = atoms%lda_u(atoms%n_u+i_hia)%l_amf
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            i_gf = gfinp%hiaElem(i_hia)
 
             IF(ALL(ABS(gdft(i_hia)%gmmpMat).LT.1e-12)) THEN
                CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
@@ -116,18 +110,19 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),i_gf,gfinp,input,mmpMat(:,:,i_hia,:),occ_err)
+            CALL occmtx(gdft(i_hia),gfinp,input,mmpMat(:,:,i_hia,:))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
             IF(l_firstIT_HIA) THEN
                IF(hub1inp%init_occ(i_hia) > -9e98) THEN
-                  n_l(i_hia,:) = hub1inp%init_occ(i_hia)/input%jspins
+                  occDFT(i_hia,1) = MIN(2.0*l+1.0,hub1inp%init_occ(i_hia))
+                  IF(input%jspins.EQ.2) occDFT(i_hia,2) = MAX(0.0,hub1inp%init_occ(i_hia)-2.0*l-1.0)
                ELSE
-                  n_l(i_hia,:) = 0.0
+                  occDFT(i_hia,:) = 0.0
                   DO ispin = 1, input%jspins
                      DO m = -l, l
-                        n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
+                        occDFT(i_hia,ispin) = occDFT(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
                      ENDDO
                   ENDDO
                ENDIF
@@ -138,26 +133,24 @@ MODULE m_hubbard1_setup
                   ENDIF
                ENDDO
             ELSE
-               n_l(i_hia,:) = 0.0
+               occDFT(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
-                     n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
+                     occDFT(i_hia,ispin) = occDFT(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
                   ENDDO
                ENDDO
             ENDIF
             !Nearest Integer occupation
-            n_occ = ANINT(SUM(n_l(i_hia,:)))
+            occDFT_INT = ANINT(SUM(occDFT(i_hia,:)))
 
             !Initial Information (We are already on irank 0)
-            WRITE(oUnit,*)
             WRITE(oUnit,9010) nType
-9010        FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
+9010        FORMAT(/,"Setup for Hubbard 1 solver for atom ", I3, ": ")
             WRITE(oUnit,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
-            WRITE(oUnit,*)
-            WRITE(oUnit,"(A)") "Occupation from DFT-Green's function:"
+            WRITE(oUnit,"(/,A)") "Occupation from DFT-Green's function:"
             WRITE(oUnit,9020) 'spin-up','spin-dn'
 9020        FORMAT(TR8,A7,TR3,A7)
-            WRITE(oUnit,9030) n_l(i_hia,:)
+            WRITE(oUnit,9030) occDFT(i_hia,:)
 9030        FORMAT(TR7,f8.4,TR2,f8.4)
 
             !--------------------------------------------------------------------------
@@ -167,7 +160,8 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),input%jspins,mu_dc)
+            mu_dc = doubleCountingPot(U,J,l,l_amf,.NOT.hub1inp%l_dftspinpol,occDFT(i_hia,:),&
+                                      l_write=mpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files
@@ -183,8 +177,8 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
-            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                      hub1inp,hub1data,mu_dc,n_occ,l_bathexist,l_firstIT_HIA)
+            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
+                                      hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
       ENDIF !mpi%irank == 0
 
@@ -192,16 +186,16 @@ MODULE m_hubbard1_setup
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
+      !Argument order different because occDFT is not allocatable
+      CALL mpi_bc(0,mpi%mpi_comm,occDFT)
+
+      !Initializations
       ALLOCATE(gu(atoms%n_hia))
       ALLOCATE(selfen(atoms%n_hia))
-
-      !Argument order different because n_l is not allocatable
-      CALL mpi_bc(mpi%irank,mpi%mpi_comm,n_l)
-      !Broadcast important stuff
       DO i_hia = 1, atoms%n_hia
-         i_gf = gfinp%hiaElem(i_hia)
-         CALL gu(i_hia)%init(i_gf,gfinp,input,noco,contour_in=gdft(i_hia)%contour)
-         CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz)
+         CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,input,contour_in=gdft(i_hia)%contour)
+         CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
+                                 noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
 
 #ifdef CPP_MPI
@@ -234,7 +228,6 @@ MODULE m_hubbard1_setup
 
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
-         i_gf = gfinp%hiaElem(i_hia)
 
          CALL get_environment_variable('PWD',cwd)
          CALL hubbard1_path(atoms,i_hia,folder)
@@ -248,7 +241,7 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
          !Open the output file for the solver
          hubbardioUnit = 4000+i_hia
-         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(out_file)),&
+         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(hubbard1Outfile)),&
               status="replace", action="write", iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
          e = gdft(i_hia)%contour%e*hartree_to_ev_const
@@ -271,7 +264,7 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Postprocess selfenergy
          !-------------------------------------------
-         CALL selfen(i_hia)%postProcess(input%jspins,noco%l_mtNocoPot.AND.gfinp%l_mperp,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+         CALL selfen(i_hia)%postProcess(input%jspins,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
 
          !----------------------------------------------------------------------
          ! Solution of the Dyson Equation
@@ -282,17 +275,34 @@ MODULE m_hubbard1_setup
          ! We introduce an additional chemical potential mu, which is determined
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
-         CALL timestart("Hubbard 1: Add Selfenenergy")
-         CALL add_selfen(gdft(i_hia),i_hia,selfen(i_hia),atoms,gfinp,input,noco,hub1inp,&
-                         results%ef,n_l(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
-         CALL timestop("Hubbard 1: Add Selfenenergy")
+#ifdef CPP_DEBUG
+         OPEN(unit=1337, file=TRIM(ADJUSTL(xPath)) // 'mu',&
+              status="replace", action="write", iostat=io_error)
+#endif
+
+         CALL timestart("Hubbard 1: Add Selfenergy")
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,&
+                         occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
+         CALL timestop("Hubbard 1: Add Selfenergy")
+
+#ifdef CPP_DEBUG
+         CLOSE(unit=1337)
+#endif
 
       ENDDO
 
+      IF(mpi%irank.EQ.0) THEN
+         WRITE(oUnit,*)
+         WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
+      ENDIF
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%collect(gfinp,mpi%mpi_comm)
+         CALL gu(i_hia)%collect(mpi%mpi_comm)
          CALL selfen(i_hia)%collect(mpi%mpi_comm)
+         IF(mpi%irank.EQ.0) THEN
+            !We found the chemical potential to within the desired accuracy
+            WRITE(oUnit,*) 'i_hia: ',i_hia, "    muMatch = ", selfen(i_hia)%muMatch(:)
+         ENDIF
       ENDDO
 
 
@@ -336,7 +346,7 @@ MODULE m_hubbard1_setup
 
       IF(mpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
-            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,gfinp,results)
+            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
                den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)
             ENDDO
@@ -344,7 +354,22 @@ MODULE m_hubbard1_setup
       ENDIF
 
       !Broadcast the density matrix
-      CALL mpi_bc(den%mmpMat,mpi%irank,mpi%mpi_comm)
+      CALL mpi_bc(den%mmpMat,0,mpi%mpi_comm)
+      CALL mpi_bc(results%last_occdistance,0,mpi%mpi_comm)
+      CALL mpi_bc(results%last_mmpMatdistance,0,mpi%mpi_comm)
+
+      IF(mpi%irank.EQ.0) THEN
+         WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
+         WRITE(*,*) "Distances: "
+         WRITE(*,*) "-----------------------------------------------------"
+         WRITE(*,*) "Occupation Distance: " , results%last_occdistance
+         WRITE(*,*) "Element Distance:    " , results%last_mmpMatdistance
+         WRITE(*,*) "-----------------------------------------------------"
+         WRITE(oUnit,*) "nmmp occupation distance: ", results%last_occdistance
+         WRITE(oUnit,*) "nmmp element distance:    ", results%last_mmpMatdistance
+         WRITE(oUnit,FMT=8140) hub1data%iter
+8140     FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
+      ENDIF
 
    END SUBROUTINE hubbard1_setup
 
@@ -352,7 +377,7 @@ MODULE m_hubbard1_setup
 
       !Defines the folder structure
       ! The Solver is run in the subdirectories
-      ! Hubbard1/ if only one Hubbard1 prodcedure is run
+      ! Hubbard1/ if only one Hubbard1 procedure is run
       ! Hubbard1/atom_label_l if there are more
 
       TYPE(t_atoms),       INTENT(IN)  :: atoms
@@ -360,17 +385,15 @@ MODULE m_hubbard1_setup
       CHARACTER(len=300),  INTENT(OUT) :: xPath
 
       CHARACTER(len=300) :: folder,fmt
-      CHARACTER(len=1)   :: l_name(0:3)
+      CHARACTER(len=1),PARAMETER :: spdfg(0:4) = ['s','p','d','f','g']
       INTEGER nType,l
-
-      l_name(0:3) = ["s","p","d","f"]
 
       nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
       l = atoms%lda_u(atoms%n_u+i_hia)%l
-      xPath = TRIM(ADJUSTL(main_folder))
+      xPath = TRIM(ADJUSTL(hubbard1CalcFolder))
       IF(atoms%n_hia>1) THEN
          WRITE(fmt,'("(A",I2.2,",A1,A1,A1)")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-         WRITE(folder,fmt) TRIM(ADJUSTL(atoms%label(nType))),"_",l_name(l),"/"
+         WRITE(folder,fmt) TRIM(ADJUSTL(atoms%label(nType))),"_",spdfg(l),"/"
       ELSE
          folder=""
       ENDIF

@@ -38,7 +38,7 @@ MODULE m_cdn_io
   PUBLIC getIOMode
   PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
   PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
-  PUBLIC CDN_ARCHIVE_TYPE_CDN_const
+  PUBLIC CDN_ARCHIVE_TYPE_CDN_const, CDN_ARCHIVE_TYPE_FFN_const
 
   INTEGER,          PARAMETER :: CDN_INPUT_DEN_const = 1
   INTEGER,          PARAMETER :: CDN_OUTPUT_DEN_const = 2
@@ -46,6 +46,7 @@ MODULE m_cdn_io
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_CDN1_const = 1
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_NOCO_const = 2
   INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_CDN_const  = 3
+  INTEGER,          PARAMETER :: CDN_ARCHIVE_TYPE_FFN_const = 4
 
   INTEGER,          PARAMETER :: CDN_DIRECT_MODE = 1
   INTEGER,          PARAMETER :: CDN_STREAM_MODE = 2
@@ -207,13 +208,17 @@ CONTAINS
 
           SELECT CASE (inOrOutCDN)
           CASE (CDN_INPUT_DEN_const)
-             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+                densityType = DENSITY_TYPE_FFN_IN_const
+             ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
                 densityType = DENSITY_TYPE_NOCO_IN_const
              ELSE
                 densityType = DENSITY_TYPE_IN_const
              END IF
           CASE (CDN_OUTPUT_DEN_const)
-             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+                densityType = DENSITY_TYPE_FFN_OUT_const
+             ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
                 densityType = DENSITY_TYPE_NOCO_OUT_const
              ELSE
                 densityType = DENSITY_TYPE_OUT_const
@@ -231,7 +236,7 @@ CONTAINS
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
           CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-               fermiEnergy,l_qfix,l_DimChange,den,noco%l_mtNocoPot)
+               fermiEnergy,l_qfix,l_DimChange,den)
 
           CALL closeCDNPOT_HDF(fileID)
 
@@ -463,13 +468,17 @@ CONTAINS
        densityType = 0
        SELECT CASE (inOrOutCDN)
        CASE (CDN_INPUT_DEN_const)
-          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+             densityType = DENSITY_TYPE_FFN_IN_const
+          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
              densityType = DENSITY_TYPE_NOCO_IN_const
           ELSE
              densityType = DENSITY_TYPE_IN_const
           END IF
        CASE (CDN_OUTPUT_DEN_const)
-          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const) THEN
+             densityType = DENSITY_TYPE_FFN_OUT_const
+          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
              densityType = DENSITY_TYPE_NOCO_OUT_const
           ELSE
              densityType = DENSITY_TYPE_OUT_const
@@ -501,7 +510,7 @@ CONTAINS
        CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,&
-            den%iter+relCdnIndex,den,noco%l_mtNocoPot)
+            den%iter+relCdnIndex,den)
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -660,7 +669,8 @@ CONTAINS
 
     !write density matrix to n_mmp_mat_out file
     IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
-         ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
+       ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).OR.&
+         (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const))) THEN
        IF(atoms%n_u+atoms%n_hia.GT.0) THEN
           filename = 'n_mmp_mat'
           IF (mode.EQ.CDN_HDF5_MODE) THEN
@@ -964,6 +974,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
+
     l_same=.TRUE.;l_structure_by_shift=.TRUE.
 
     CALL getIOMode(mode)
@@ -995,7 +1006,13 @@ CONTAINS
           shifts=atomsTemp%taual-atoms%taual
 
           !Determine type of charge
-          archiveType = MERGE(CDN_ARCHIVE_TYPE_NOCO_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_noco)
+          IF(noco%l_mtNocoPot) THEN 
+          archiveType=CDN_ARCHIVE_TYPE_FFN_const
+          ELSE IF (noco%l_noco) THEN 
+          archiveType=CDN_ARCHIVE_TYPE_NOCO_const
+          ELSE 
+          archiveType=CDN_ARCHIVE_TYPE_CDN1_const
+          END IF
           !read the current density
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
@@ -1006,10 +1023,10 @@ CONTAINS
        CASE (0,1) !just qfix the density
           IF (mpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
           IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
+               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
           IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
+               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
           IF (mpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
        CASE default
@@ -1023,9 +1040,10 @@ CONTAINS
     END IF
   END SUBROUTINE transform_by_moving_atoms
 
-  SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
+  SUBROUTINE writeStars(stars,oneD,l_xcExtended,l_ExtData)
 
     TYPE(t_stars),INTENT(IN)   :: stars
+    TYPE(t_oneD),INTENT(IN)    :: oneD
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
 
     INTEGER        :: mode, ngz, izmin, izmax
@@ -1051,7 +1069,7 @@ CONTAINS
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
        currentStarsIndex = currentStarsIndex + 1
-       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
+       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, oneD, .TRUE.)
 
        CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
@@ -1089,14 +1107,16 @@ CONTAINS
     END IF
   END SUBROUTINE writeStars
 
-  SUBROUTINE readStars(stars,l_xcExtended,l_ExtData,l_error)
+  SUBROUTINE readStars(stars,oneD,l_xcExtended,l_ExtData,l_error)
 
     TYPE(t_stars),INTENT(INOUT) :: stars
+    TYPE(t_oneD), INTENT(INOUT) :: oneD
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
     LOGICAL, INTENT(OUT)        :: l_error
 
 
     TYPE(t_stars)               :: starsTemp
+    TYPE(t_oneD)                :: oneDTemp
     INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
     LOGICAL                     :: l_exist, l_same
 
@@ -1129,11 +1149,11 @@ CONTAINS
              CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
              l_same = structureIndexTemp.EQ.currentStructureIndex
              IF(l_same) THEN
-                CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-                CALL compareStars(stars, starsTemp, l_same)
+                CALL readStarsHDF(fileID, currentStarsIndex, starsTemp, oneDTemp)
+                CALL compareStars(stars, starsTemp, oneD, oneDTemp, l_same)
              END IF
              IF(l_same) THEN
-                CALL readStarsHDF(fileID, currentStarsIndex, stars)
+                CALL readStarsHDF(fileID, currentStarsIndex, stars, oneD)
              ELSE
                 mode = CDN_DIRECT_MODE ! (no adequate stars entry found in cdn.hdf file)
              END IF
@@ -1571,7 +1591,7 @@ CONTAINS
        isDensityFilePresent = l_exist
        RETURN
     END IF
-    IF (archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+    IF ((archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_FFN_const)) THEN
        CALL juDFT_error("Illegal archive type selected.",calledby ="isDensityFilePresent")
     END IF
     IF (l_exist) THEN

@@ -313,7 +313,7 @@ else
                   zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           else
              CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*input%neig,input%neig, CMPLX(1.0,0.0),zmat(jsp)%data_c(:,:),&
-                  zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(:,:,jsp2),zmat(1)%matsize1)
+                  zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           endif
 
        ENDDO    !isp

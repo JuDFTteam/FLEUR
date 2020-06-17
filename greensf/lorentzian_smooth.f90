@@ -48,7 +48,4 @@ MODULE m_lorentzian_smooth
 
    END SUBROUTINE lorentzian_smooth
 
-
-
-
 END MODULE m_lorentzian_smooth

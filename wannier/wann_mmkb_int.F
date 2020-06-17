@@ -9,7 +9,7 @@
       subroutine wann_mmkb_int(
      >               interchi,addnoco,addnoco2,nvd,k1d,k2d,k3d,
      >               n3d,k1,k2,k3,
-     >               nv,neigd,nbasfcn,zMat,nslibd,
+     >               nv,neigd,nbasfcn,nbasfcn_b,zMat,nslibd,
      >               k1_b,k2_b,k3_b,
      >               nv_b,zMat_b,nslibd_b,
      >               nbnd,rgphs,ustep,ig,gb,
@@ -24,7 +24,7 @@
 
       integer, intent(in) :: addnoco,addnoco2
       integer, intent(in) :: nvd,n3d,k1(nvd),k2(nvd),k3(nvd)
-      integer, intent(in) :: nv,neigd,nbasfcn,nslibd,nslibd_b
+      integer, intent(in) :: nv,neigd,nbasfcn,nbasfcn_b,nslibd,nslibd_b
       integer, intent(in) :: nv_b,k1_b(nvd),k2_b(nvd),k3_b(nvd)
       integer, intent(in) :: nbnd
       integer, intent(in) :: k1d,k2d,k3d
@@ -74,8 +74,8 @@ c-->     determine index and phase factor
       enddo
       IF(zMat%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv,nslibd_b,nv_b,real(1.0),
-     &               stepf_r,nv_b,zMat_b%data_r(1+addnoco2,1),nbasfcn,
-c     &               stepf_r,nv_b,zMat_b%data_r,nbasfcn,
+     &               stepf_r,nv_b,zMat_b%data_r(1+addnoco2,1),nbasfcn_b,
+c     &               stepf_r,nv_b,zMat_b%data_r,nbasfcn_b,
      &               real(0.0),phasusbmat_r,nv)
          call CPP_BLAS_sgemm('T','N',nslibd,nslibd_b,nv,real(1.0),
      &               zMat%data_r(1+addnoco,1),nbasfcn,phasusbmat_r,nv,
@@ -87,7 +87,7 @@ c     &               zMat%data_r,nbasfcn,phasusbmat_r,nv,
          call CPP_BLAS_cgemm('T','N',nv,nslibd_b,nv_b,cmplx(1.0),
      &               stepf_c,nv_b,zMat_b%data_c(1+addnoco2,1),
 c     &               stepf_c,nv_b,zMat_b%data_c,
-     &               nbasfcn,cmplx(0.0),
+     &               nbasfcn_b,cmplx(0.0),
      &               phasusbmat_c,nv)
          phasusbmat_c=conjg(phasusbmat_c)            
          call CPP_BLAS_cgemm('T','N',nslibd,nslibd_b,nv,interchi, 

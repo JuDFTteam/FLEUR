@@ -101,24 +101,20 @@ CONTAINS
                    lm = l* (l+1) + m
                    DO mp = -lp,lp
                       lmp = lp* (lp+1) + mp
-                      !------------------------------------------------------------------------
-                      ! For jsp >= 3 the convention is:
-                      !      -jsp=3 => real part of the off-diagonal hamiltonian
-                      !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
-                      !------------------------------------------------------------------------
-                      IF (jsp < 3) THEN
+                      IF (j1==j2) THEN
                          td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
                          td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
-                      ELSE IF(jsp.EQ.3) THEN
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                      ELSE IF(j1>j2) THEN
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
                       ELSE
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                         !For this part of the hamiltonian we need to perform hermitian conjugation on mmpMat
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
                       ENDIF
                    ENDDO
                 ENDDO

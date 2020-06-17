@@ -104,7 +104,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_corespec
+   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec, l_empty
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
@@ -141,6 +141,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       jsp_end   = jspin
    END IF
 
+   !Do we need to consider the unoccupied states
+   l_empty = banddos%dos
+   IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+      l_empty = l_empty.OR.greensfImagPart%l_calc
+   ENDIF
+
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
@@ -155,7 +161,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
    !Greens function always considers the empty states
-   IF(gfinp%n>0) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+   IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+      IF(greensfImagPart%l_calc) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+   ENDIF
+
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    !IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
@@ -198,7 +207,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.gfinp%n>0)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)
@@ -218,23 +227,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
-      CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
-
-      ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
-      IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
-         ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
-         ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (PRESENT(slab).and.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
-         ! valence density in the vacuum region
-         IF (input%film) THEN
-            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
-         END IF
-      END IF
-      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
-
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS)
 
@@ -249,8 +241,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
          ENDIF
 
-         IF(gfinp%n>0) CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
-                                         gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+         IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+            IF(greensfImagPart%l_calc) THEN
+               CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
+                                 gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+            ENDIF
+         ENDIF
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
@@ -289,7 +285,24 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
-      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
+      CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
+
+      ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
+      IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
+         ! valence density in the interstitial region
+         CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
+                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
+         ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
+         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         ! valence density in the vacuum region
+         IF (input%film) THEN
+            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
+                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
+         END IF
+      END IF
+      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
+
+      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
       END IF
@@ -297,17 +310,19 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,ispin,regCharges,dos,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
 
-   IF(gfinp%n>0) THEN
-      !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-      DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
-         CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
-                                  results,greensfBZintCoeffs,greensfImagPart)
-      ENDDO
+   IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+      IF(greensfImagPart%l_calc) THEN
+         !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
+         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
+                                     results,greensfBZintCoeffs,greensfImagPart)
+         ENDDO
+      ENDIF
    ENDIF
 
    CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&

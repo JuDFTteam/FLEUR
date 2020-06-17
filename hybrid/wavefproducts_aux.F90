@@ -68,12 +68,16 @@ CONTAINS
 
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
       ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$ use omp_lib
       use m_types
       use m_constants
       use m_judft
       use m_fft_interface
       use m_io_hybinp
       use m_juDFT
+#ifdef CPP_MPI
+      use mpi
+#endif
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -93,11 +97,12 @@ CONTAINS
       
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, gshift(3), iob
-      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob
+      integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp
+      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv, ierr
       integer, allocatable :: iob_arr(:), iband_arr(:)
-      real    :: q(3), inv_vol, t_2ndwavef2rs, t_fft, t_sort, t_start
+      real    :: q(3), inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
       type(t_mat)  :: psi_kqpt
+      type(t_fft)  :: fft
       logical :: real_warned
       real_warned = .False.
 
@@ -111,8 +116,9 @@ CONTAINS
          write (*,*) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
          !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
-      
+
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
+
       nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
       call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig)
       call z_kqpt_p%init(z_kqpt)
@@ -120,6 +126,12 @@ CONTAINS
 
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
+
+#if defined(CPP_MPI) && defined(CPP_BARRIER_FOR_RMA)
+      call timestart("Post read_z Barrier")
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call timestop("Post read_z Barrier")
+#endif
 
       call psi_kqpt%alloc(.false., fftd, psize)
 
@@ -130,18 +142,23 @@ CONTAINS
       call timestart("Big OMP loop")
 
 
-      t_2ndwavef2rs = 0.0; t_fft = 0.0; t_sort = 0.0
-      !$OMP PARALLEL default(none) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok) &
+      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
+      !$OMP PARALLEL default(private) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned) &
-      !$OMP reduction(+: t_2ndwavef2rs, t_fft, t_sort)
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp) &
+      !$OMP reduction(+: t_2ndwavef2rs, time_fft, t_sort)
 
       allocate(prod(0:fftd-1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc prod")
       allocate(psi_k(0:fftd-1,1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc psi_k")
 
+      !$OMP single
+      !$ n_omp = omp_get_num_threads()
+      !$OMP end single 
+
+      call fft%init(length_zfft, .true.)
       !$OMP DO 
       do iband = 1,hybdat%nbands(ik)
          t_start = cputime()
@@ -152,20 +169,18 @@ CONTAINS
          do iob = 1, psize
             t_start = cputime()
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
-            call fft_interface(3, length_zfft, prod, .true.)
+            call fft%exec(prod)
             if(cprod%l_real) then
                if(any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*,*) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
                                 float2str(maxval(abs(aimag(prod))))
                   real_warned = .True.
-                  ! call juDFT_error("Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = " // &
-                  !               float2str(maxval(abs(aimag(prod)))))
                endif
             endif
             
             ! we still have to devide by the number of mesh points
             prod = prod / product(length_zfft)
-            t_fft = t_fft + cputime() - t_start
+            time_fft = time_fft + cputime() - t_start
 
             t_start = cputime()
             if(cprod%l_real) then
@@ -184,17 +199,19 @@ CONTAINS
       enddo
       !$OMP END DO
       deallocate(prod, psi_k)
+      call fft%free()
       !$OMP END PARALLEL 
+      
+      call addtime("2ndwave2rs", t_2ndwavef2rs/n_omp, hybdat%nbands(ik))
+      call addtime("sort wavef", t_sort/n_omp, hybdat%nbands(ik)*psize)
+      call addtime("forw_fft", time_fft/n_omp, hybdat%nbands(ik)*psize)
       call timestop("Big OMP loop")
       call psi_kqpt%free()
       call timestop("wavef_IS_FFT")
-
-      write (*,*) "t_2ndwavef2rs = " // float2str(t_2ndwavef2rs)
-      write (*,*) "t_sort =        " // float2str(t_sort)
-      write (*,*) "t_fft =         " // float2str(t_fft)
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
+      !$ use omp_lib
       use m_types
       use m_fft_interface
       implicit none
@@ -205,16 +222,25 @@ CONTAINS
       integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
       complex, intent(inout)         :: psi(0:,bandoi:) ! (nv,ne)
 
-      integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu
+      type(t_fft) :: fft
 
+      integer :: ivmap(SIZE(lapw%gvec, 2))
+      integer :: iv, nu, n_threads, me
+
+      
       DO iv = 1, lapw%nv(jspin)
          ivmap(iv) = g2fft(length_zfft, lapw%gvec(:, iv, jspin))
       ENDDO
 
       psi = 0.0
-      !$OMP PARALLEL DO default(none) private(nu, iv) &
+      n_threads = 1
+      me = 1
+      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
       !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      
+      call fft%init(length_zfft, .false.)
+     
+      !$OMP DO
       do nu = bandoi, bandof
          !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
@@ -224,10 +250,11 @@ CONTAINS
                psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
             endif
          ENDDO
-
-         call fft_interface(3, length_zfft, psi(:,nu), .false., ivmap(1:lapw%nv(jspin)))
+         call fft%exec(psi(:,nu))
       enddo
-      !$OMP END PARALLEL DO
+      !$OMP ENDDO
+      call fft%free()
+      !$OMP END PARALLEL
    end subroutine wavef2rs
 
 end module m_wavefproducts_aux

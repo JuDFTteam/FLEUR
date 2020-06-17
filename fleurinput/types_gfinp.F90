@@ -57,10 +57,10 @@ MODULE m_types_gfinp
       !General logical switches
       LOGICAL :: l_sphavg = .TRUE.
       LOGICAL :: l_mperp = .FALSE.
-      !Number of elements !(TODO: NAME??)
+      REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
+                                      !Negative means it is evaluated at every iteration
+      !Number of elements
       INTEGER :: n = 0
-      !Number of j0 calculations
-      INTEGER :: n_j0 = 0
       !Information on the elements to be calculated
       TYPE(t_gfelementtype), ALLOCATABLE :: elem(:)
       !Parameters for the energy mesh on the real axis
@@ -81,7 +81,7 @@ MODULE m_types_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
-   PUBLIC t_gfinp, t_contourInp
+   PUBLIC t_gfinp, t_contourInp, t_gfelementtype
    PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
    PUBLIC uniqueElements_gfinp
 
@@ -100,8 +100,8 @@ CONTAINS
       END IF
       CALL mpi_bc(this%l_sphavg,rank,mpi_comm)
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
+      CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
-      CALL mpi_bc(this%n_j0,rank,mpi_comm)
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
       CALL mpi_bc(this%elup,rank,mpi_comm)
@@ -164,6 +164,7 @@ CONTAINS
       IF (l_gfinfo_given) THEN
          this%l_sphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
+         this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/realAxis'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -270,6 +271,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
@@ -291,6 +293,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
@@ -313,6 +316,7 @@ CONTAINS
                l_fixedCutoffset = .FALSE.
             ELSE
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
             ENDIF
             CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
                           fixedCutoff=fixedCutoff)
@@ -321,7 +325,7 @@ CONTAINS
          ENDDO
       ENDDO
 
-      IF(this%n>0.AND..NOT.l_gfinfo_given) THEN
+      IF(this%n>0 .AND. .NOT.l_gfinfo_given) THEN
          CALL juDFT_error("Error reading in gf-information: No general information found for the gf-calculations",&
                            calledby="read_xml_gfinp")
       ENDIF
@@ -339,16 +343,18 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,input)
 
       USE m_types_atoms
       USE m_types_sym
       USE m_types_noco
+      USE m_types_input
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
       INTEGER :: hiaElem(atoms%n_hia)
@@ -380,21 +386,29 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
+      IF(this%minCalcDistance>=0.0) THEN
+         IF(input%mindistance>this%minCalcDistance) THEN
+            CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
+                            "is smaller than the distance requirement:"//&
+                            "No Green's Functions will be calculated", calledby="init_gfinp")
+         ENDIF
+      ENDIF
+
    END SUBROUTINE init_gfinp
 
-   SUBROUTINE uniqueElements_gfinp(gfinp,uniqueElements,ind,indUnique)
+   FUNCTION uniqueElements_gfinp(gfinp,ind,indUnique) Result(uniqueElements)
 
       !Not a procedure, because gfortran+OpenMP has problems with it
       !Called inside OMP parallel region
 
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
-      INTEGER,          INTENT(INOUT)  :: uniqueElements !Number of unique elements before ind or in the whole array
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
-      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique      !Position of the corresponding unique Element for a given ind
+      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
+
+      INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
 
       INTEGER :: maxGF
-      INTEGER :: l,lp,atomType,atomTypep,dummyInd,iContour,i_gf
-      LOGICAL :: l_unique
+      INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
 
       uniqueElements = 0
 
@@ -409,14 +423,13 @@ CONTAINS
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
          iContour  = gfinp%elem(i_gf)%iContour
-         dummyInd = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                              uniqueMax=i_gf,l_unique=l_unique)
-         IF(l_unique) THEN
-            uniqueElements = uniqueElements +1
-         ENDIF
+         iUnique   = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+                                uniqueMax=i_gf)
+
+         IF(iUnique == i_gf) uniqueElements = uniqueElements +1
       ENDDO
 
-      IF(uniqueElements==0.AND.maxGF/=0) THEN
+      IF(uniqueElements==0 .AND. maxGF/=0) THEN
          CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",&
                           calledby="uniqueElements_gfinp")
       ENDIF
@@ -431,10 +444,10 @@ CONTAINS
          iContour  = gfinp%elem(ind)%iContour
 
          indUnique = gfinp%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
-                               uniqueMax=ind,l_unique=l_unique)
+                               uniqueMax=ind)
       ENDIF
 
-   END SUBROUTINE uniqueElements_gfinp
+   END FUNCTION uniqueElements_gfinp
 
    SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter)
 
@@ -541,7 +554,7 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_unique,l_found) result(i_gf)
+   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -553,9 +566,9 @@ CONTAINS
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
 
-      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !These arguments will return whether there
-      LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_unique   !is an element before uniqueMax with the same (l,lp,nType,nTypep)
-                                                       !combination but different energy contour
+      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !If uniqueMax is present it will return the
+                                                       !index of the unique element, meaning
+                                                       !the same (l,lp,type,typep) but different contours
 
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found    !If this switch is not provided the program
                                                        !will assume that the element has to be present and
@@ -566,11 +579,6 @@ CONTAINS
       LOGICAL :: search
 
       search = .TRUE.
-      IF(PRESENT(l_unique)) l_unique = .TRUE.
-      IF((PRESENT(l_unique).OR.PRESENT(uniqueMax)).AND..NOT.PRESENT(l_unique).AND.PRESENT(uniqueMax)) THEN
-         CALL juDFT_error("Not provided uniqueMax AND l_unique",&
-                          hint="This is a bug in FLEUR please report",calledby="find_gfelem")
-      ENDIF
       i_gf = 0
 
       DO WHILE(search)
@@ -612,10 +620,8 @@ CONTAINS
          ENDIF
          !If we are here and smaller than uniqueMax the element is not unique
          IF(PRESENT(uniqueMax)) THEN
-            IF(i_gf<uniqueMax) THEN
-               l_unique = .FALSE.
-               RETURN !Return the unique index for the element
-            ENDIF
+            IF(i_gf>uniqueMax) CALL juDFT_error('i_gf>uniqueMax',calledby="find_gfelem")
+            RETURN
          ENDIF
          IF(PRESENT(iContour)) THEN
             IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE

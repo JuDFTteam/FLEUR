@@ -127,13 +127,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
       DO i_gf = 1, gfinp%n
+         IF(.NOT.greensFunction(i_gf)%l_calc) CYCLE
          iContour = gfinp%elem(i_gf)%iContour
          CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,mpi%irank)
          CALL greensFunction(i_gf)%reset()
       ENDDO
-      CALL greensfImagPart%init(gfinp,input,noco)
-      !CALL greensFunction%reset(gfinp)
-      IF(atoms%n_hia.GT.0.AND.mpi%irank==0.AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
+      CALL greensfImagPart%init(gfinp,input,noco,ANY(greensFunction(:)%l_calc))
+      IF(atoms%n_hia.GT.0 .AND. mpi%irank==0 .AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 
 
@@ -150,11 +150,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
-
-   IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) &
-     CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                             nococonv,vTot,hub1inp,hub1data,results)
-
 
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
@@ -173,13 +168,17 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
      CALL juDFT_end("DOS OK",mpi%irank)
    END IF
 
+   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
+   IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
+
+   CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,mpi,.TRUE.)
    IF (mpi%irank.EQ.0) THEN
-      CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
    IF (sliceplot%slice) THEN
       IF (mpi%irank == 0) THEN
+         IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
@@ -189,6 +188,20 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !IF (sliceplot%iplot.NE.0) THEN
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
+
+   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
+      IF(greensfImagPart%l_calc) THEN
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
+      ELSE
+         IF(mpi%irank.EQ.0) THEN
+            WRITE(oUnit,'(/,A)') "Green's Functions are not calculated: "
+            WRITE(oUnit,'(A,f12.7,TR5,A,f12.7/)') "lastDistance: ", results%last_distance,&
+                                                  "minCalcDistance: ", gfinp%minCalcDistance
+         ENDIF
+      ENDIF
+   ENDIF
+
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
@@ -202,14 +215,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL timestop("cdngen: cdncore")
 
    IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
-   IF(mpi%irank.EQ.0.and..FALSE.) &
-      CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+   IF(mpi%irank.EQ.0) THEN
+      IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+   END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
+   IF (mpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
+   CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
    IF (mpi%irank == 0) THEN
-      CALL openXMLElementNoAttributes('allElectronCharges')
-      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins == 2) THEN
@@ -224,9 +238,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
       END IF
    END IF ! mpi%irank == 0
-
-   If(Allocated(Energyden%Mt).And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())) &
-   CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+   Perform_metagga = Allocated(Energyden%Mt) &
+                   .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
+   If(Perform_metagga) Then
+     IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
+     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,core_den,'cdnc')
 
 

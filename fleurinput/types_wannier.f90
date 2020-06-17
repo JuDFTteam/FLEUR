@@ -109,6 +109,8 @@ MODULE m_types_wannier
      LOGICAL :: l_wann_plot=.FALSE.
      LOGICAL :: l_bynumber=.FALSE.
      LOGICAL :: l_stopopt=.FALSE.
+     LOGICAL :: l_stopuhu=.FALSE.
+     LOGICAL :: l_stopupdown=.FALSE.
      LOGICAL :: l_matrixmmn=.FALSE.
      INTEGER :: matrixmmnfmt=1
      LOGICAL :: l_matrixamn=.FALSE.
@@ -194,6 +196,8 @@ CONTAINS
     END IF
     CALL mpi_bc(this%socmatvecfmt,rank,mpi_comm)
     CALL mpi_bc(this%socmatvecrsfmt,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmatvec,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmatvecrs,rank,mpi_comm)    
     CALL mpi_bc(this%anglmomrsfmt,rank,mpi_comm)
     CALL mpi_bc(this%anglmomfmt,rank,mpi_comm)
     CALL mpi_bc(this%torquefmt,rank,mpi_comm)
@@ -283,6 +287,8 @@ CONTAINS
     CALL mpi_bc(this%l_wann_plot,rank,mpi_comm)
     CALL mpi_bc(this%l_bynumber,rank,mpi_comm)
     CALL mpi_bc(this%l_stopopt,rank,mpi_comm)
+    CALL mpi_bc(this%l_stopupdown,rank,mpi_comm)
+    CALL mpi_bc(this%l_stopuhu,rank,mpi_comm)
     CALL mpi_bc(this%l_matrixmmn,rank,mpi_comm)
     CALL mpi_bc(this%l_matrixamn,rank,mpi_comm)
     CALL mpi_bc(this%l_projmethod,rank,mpi_comm)
@@ -442,6 +448,12 @@ CONTAINS
              this%l_socmat=.TRUE.
           ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
              this%l_socmatvec=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'socmatvecrs')THEN
+             this%l_socmatvecrs=.TRUE.             
+          ELSEIF(this%jobList(i).EQ.'unformatted')THEN
+             this%l_unformatted=.TRUE.         
+          ELSEIF(this%jobList(i).EQ.'undegen')THEN
+             this%l_ndegen=.TRUE.              
           ELSEIF(this%jobList(i).EQ.'socmatrs')THEN
              this%l_socmatrs=.TRUE.
           ELSEIF(this%jobList(i).EQ.'soctomom')THEN
@@ -452,8 +464,14 @@ CONTAINS
              this%l_lapw_kpts=.TRUE.
           ELSEIF(this%jobList(i).EQ.'updown')THEN
              this%l_updown=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'unformatted')THEN
+             this%l_unformatted=.TRUE.            
           ELSEIF(this%jobList(i).EQ.'stopopt')THEN
              this%l_stopopt=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'stopuhu')THEN
+             this%l_stopuhu=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'stopupdown')THEN
+             this%l_stopupdown=.TRUE.
           ELSEIF(this%jobList(i).EQ.'projgen')THEN
              this%l_projgen=.TRUE.
           ELSEIF(this%jobList(i).EQ.'kpointgen')THEN
@@ -481,8 +499,14 @@ CONTAINS
           ELSEIF(this%jobList(i).EQ.'bzsym')THEN
              this%l_bzsym=.TRUE.
              !this%l_kpts_fullbz=.false.
-          ELSEIF(this%jobList(i).EQ.'mmn0')THEN
+          ELSEIF(jobname.EQ.'mmn0')THEN
              this%l_mmn0=.TRUE.
+             if(l_param)then
+             read(param,*,iostat=stat) this%mmn0fmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif           
           ELSEIF(this%jobList(i).EQ.'mmn0at')THEN
              this%l_mmn0at=.TRUE.
           ELSEIF(this%jobList(i).EQ.'manyfiles')THEN
@@ -537,16 +561,44 @@ CONTAINS
             CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
              endif
             endif        
+          ELSEIF(jobname.EQ.'anglmom')THEN
+            this%l_anglmom=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%anglmomfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif
+          ELSEIF(jobname.EQ.'anglmomrs')THEN
+            this%l_anglmomrs=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%anglmomrsfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif                            
+            
+            
+            
+            
           ELSEIF(this%jobList(i).EQ.'projmethod')THEN
              this%l_projmethod=.TRUE.
           ELSEIF(this%jobList(i).EQ.'matrixamn')THEN
              this%l_matrixamn=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%matrixamnfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
           ELSEIF(this%jobList(i).EQ.'wannierize')THEN
              this%l_wannierize=.TRUE.
           ELSEIF(this%jobList(i).EQ.'plotw90')THEN
              this%l_plotw90=.TRUE.
           ELSEIF(this%jobList(i).EQ.'dipole')THEN
              this%l_dipole=.TRUE.
+          ELSEIF(this%jobList(i).EQ.'dipole2')THEN
+             this%l_dipole2=.TRUE.      
           ELSEIF(this%jobList(i).EQ.'dipole3')THEN
              this%l_dipole3=.TRUE.
           ELSEIF(this%jobList(i).EQ.'ldauwan')THEN
@@ -649,6 +701,30 @@ CONTAINS
     ENDDO
 
     DEALLOCATE(wannAtomList)
+    if(this%l_unformatted)then
+        this%socmatvecfmt=2
+        this%socmatvecrsfmt=2
+        this%anglmomrsfmt=2
+        this%anglmomfmt=2
+        this%torquefmt=2
+        this%torquersfmt=2
+        this%perpmagrsfmt=2
+        this%perpmagfmt=2
+        this%perpmagatfmt=2
+        this%perpmagatrsfmt=2
+        this%socmatrsfmt=2
+        this%socmatfmt=2
+        this%paulifmt=2
+        this%pauliatfmt=2
+        this%hoppingfmt=2
+        this%matrixmmnfmt=2
+        this%matrixamnfmt=2
+        this%mmn0fmt=2
+        this%mmn0atfmt=2
+        this%matrixuHufmt=2
+        this%matrixuHudmifmt=2
+    endif
+
 
   END SUBROUTINE read_xml_wannier
 END MODULE m_types_wannier

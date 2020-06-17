@@ -17,10 +17,9 @@ MODULE m_vmmp21
 
       CONTAINS
 
-      SUBROUTINE v_mmp_21(u_in,n_u,n_mmp21,u,v_mmp21,e_off)
+      SUBROUTINE v_mmp_21(atoms,n_mmp21,u,v_mmp21,e_off)
 
-      INTEGER,          INTENT(IN)     :: n_u
-      TYPE(t_utype),    INTENT(IN)     :: u_in(:)
+      TYPE(t_atoms),    INTENT(IN)     :: atoms
       REAL,             INTENT(IN)     :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX,          INTENT(IN)     :: n_mmp21(-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(INOUT)  :: e_off
@@ -32,9 +31,9 @@ MODULE m_vmmp21
       ! Loop over atoms
       !
       e_off = 0.0
-      DO i_u = 1, n_u
-         iType = u_in(i_u)%atomType
-         l = u_in(i_u)%l
+      DO i_u = 1, atoms%n_u+atoms%n_hia
+         iType = atoms%lda_u(i_u)%atomType
+         l     = atoms%lda_u(i_u)%l
          !
          !-------------------------------------+
          !  offd    --                    offd |

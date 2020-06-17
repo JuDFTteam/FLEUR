@@ -118,14 +118,14 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
                plegend(l3) = fleg1(l-1)*xlegend*plegend(modulo(l-1,3)) - fleg2(l-1)*plegend(modulo(l-2,3))
             END IF ! l
 
-            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(kj,l,isp,iintsp)*ddnln )
-            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(kj,l,isp,iintsp) )
+            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(l,kj,isp,iintsp)*ddnln )
+            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(l,kj,isp,iintsp) )
 
             VecHelpS = VecHelpS + fct
             VecHelpH = VecHelpH + fct*elall + fct2
 
             IF (input%l_useapw) THEN
-               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(kj,l,isp,iintsp) + apw_lo2*fjgj%gj(kj,l,isp,iintsp) )
+               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(kj,l,isp,iintsp) + apw_lo2*fjgj%gj(l,kj,isp,iintsp) )
             ENDIF ! useapw
 
             !--->          end loop over l

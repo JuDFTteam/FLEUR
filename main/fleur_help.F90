@@ -92,6 +92,9 @@ CONTAINS
     CALL new_argument(1,"-f","Obtain info on subjobs from file","") 
     CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
+#ifdef CPP_FFTW
+    //",fftw"&
+#endif
 #ifdef CPP_FFT_MKL
          //",mkl"&
 #endif

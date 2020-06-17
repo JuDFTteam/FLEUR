@@ -24,7 +24,6 @@ module m_eig66_data
    END TYPE
 
    TYPE, extends(t_data):: t_data_MPI
-      LOGICAL             :: read_epoch = .false.
       INTEGER             :: n_size = 1
       INTEGER             :: size_k, size_eig
       INTEGER             :: eig_handle, zr_handle, zc_handle, neig_handle, w_iks_handle

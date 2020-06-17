@@ -111,7 +111,7 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE endXMLOutput
 
    SUBROUTINE writeXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths,contentList)
-
+      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
@@ -146,7 +146,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed'
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO
@@ -306,7 +306,7 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE writeXMLElementMatrixPoly
 
    SUBROUTINE writeXMLElementMatrixFormPoly(elementName,attributeNames,attributeValues,lengths,matrix)
-
+      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
@@ -337,7 +337,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed'
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO
@@ -557,7 +557,7 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE openXMLElementPoly
 
    SUBROUTINE openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
-
+      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*)             :: elementName
@@ -584,7 +584,7 @@ MODULE m_judft_xmlOutput
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed'
+               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
 #endif
          END SELECT
       END DO

@@ -15,6 +15,7 @@ MODULE m_types_selfen
    TYPE t_selfen
 
       INTEGER :: l = -1
+      REAL,ALLOCATABLE    :: muMatch(:)
 
       COMPLEX, ALLOCATABLE :: data(:,:,:,:)
 
@@ -29,13 +30,16 @@ MODULE m_types_selfen
 
    CONTAINS
 
-      SUBROUTINE init_selfen(this,l,nz)
+      SUBROUTINE init_selfen(this,l,nz,jspins,l_fullMatch)
 
          CLASS(t_selfen), INTENT(INOUT) :: this
          INTEGER,         INTENT(IN)    :: l
          INTEGER,         INTENT(IN)    :: nz
+         INTEGER,         INTENT(IN)    :: jspins
+         LOGICAL,         INTENT(IN)    :: l_fullMatch
 
          this%l = l
+         ALLOCATE(this%muMatch(MERGE(1,jspins,l_fullMatch)),source=0.0)
          ALLOCATE(this%data(2*(2*l+1),2*(2*l+1),nz,2),source = cmplx_0)
 
       END SUBROUTINE init_selfen
@@ -49,8 +53,16 @@ MODULE m_types_selfen
 #include"cpp_double.h"
          INTEGER:: ierr,irank,n
          COMPLEX,ALLOCATABLE::ctmp(:)
+         REAL, ALLOCATABLE :: rtmp(:)
 
          CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+
+
+         n = SIZE(this%muMatch)
+         ALLOCATE(rtmp(n))
+         CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         IF(irank.EQ.0) this%muMatch = reshape(rtmp,[n])
+         DEALLOCATE(rtmp)
 
          n = SIZE(this%data)
          ALLOCATE(ctmp(n))
@@ -61,11 +73,10 @@ MODULE m_types_selfen
 
       END SUBROUTINE collect_selfen
 
-      SUBROUTINE postProcess_selfen(this,jspins,l_mperp,vmmp)
+      SUBROUTINE postProcess_selfen(this,jspins,vmmp)
 
          CLASS(t_selfen), INTENT(INOUT) :: this
          INTEGER,         INTENT(IN)    :: jspins
-         LOGICAL,         INTENT(IN)    :: l_mperp
          COMPLEX,         INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
 
          INTEGER :: i,j,iz,ipm,m,mp,ispin,ns
@@ -104,7 +115,7 @@ MODULE m_types_selfen
                   m  = i-1-this%l
                   DO j = 1, ns
                      mp = j-1-this%l
-                     DO ispin = 1, MERGE(3,jspins,l_mperp)
+                     DO ispin = 1, SIZE(vmmp,3)
                         IF(ispin < 3) THEN
                            this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) = this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) &
                                                                              - vmmp(m,mp,ispin)/(3.0-jspins)

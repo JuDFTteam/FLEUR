@@ -76,7 +76,7 @@ CONTAINS
           ! Remove non-spherical components for the orbitals treated with DFT+Hubbard-1
           !----------------------------------------------------------------------------
           l_remove=.FALSE.
-          IF(l.EQ.lp) THEN
+          IF(l.EQ.lp.AND.hub1inp%l_nonsphDC) THEN
              DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
                 IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
              ENDDO

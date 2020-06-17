@@ -14,7 +14,8 @@ build-gfortran-hdf5:
      expire_in: 1h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh GITLAB
+    - ./configure.sh 
+#    - ./configure.sh GITLAB
     - cd build
     - make -j 2
 #  only:
@@ -146,6 +147,10 @@ test-pgi:
     - export OMP_NUM_THREADS=2
     - cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
+  artifacts:
+    when: on_failure
+    paths:
+      - build.pgi/Testing
   only:
      - schedules
      - web
@@ -213,8 +218,8 @@ test-intel:
   artifacts:
     when: on_failure
     paths:
-      - build.intel.debug/Testing/failed
-      - build.intel.debug/Testing/test.oldlogs
+      - build.intel.debug/Testing#/failed
+#      - build.intel.debug/Testing/test.oldlogs
   only:
      - schedules
      - web

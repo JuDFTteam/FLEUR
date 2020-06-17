@@ -321,7 +321,7 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
    thisMoments%stdn = 0.0
    thisMoments%svdn = 0.0
 
-   IF(mpi%irank.EQ.0) THEN
+   IF(mpi%irank.EQ.0.and.input%lresMax>0) THEN
       ALLOCATE(thisMoments%rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(input%lResMax*(input%lResMax+1))/2+input%lResMax,atoms%ntype,4))
       thisMoments%rhoLRes = 0.0
    END IF

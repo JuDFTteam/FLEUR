@@ -44,7 +44,7 @@ CONTAINS
     INTEGER:: nn,na,ab_size,l,ll,m,size_ab_select
     INTEGER:: size_data_c,size_ab,size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
     COMPLEX,ALLOCATABLE:: ab1(:,:),ab_select(:,:)
-    COMPLEX,ALLOCATABLE:: ab(:,:),ab2(:,:),h_loc(:,:),data_c(:,:)
+    COMPLEX,ALLOCATABLE:: abCoeffs(:,:),ab2(:,:),h_loc(:,:),data_c(:,:)
     real :: rchi
     complex :: cchi
     CALL timestart("non-spherical setup")
@@ -56,7 +56,7 @@ CONTAINS
       size_ab_select=lapw%num_local_cols(iintsp)
     ENDIF
     ALLOCATE(ab_select(size_ab_select,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
-    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(size_ab,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)),ab1(size_ab,2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 
     IF (iintsp.NE.jintsp) THEN
        ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
@@ -86,7 +86,7 @@ CONTAINS
     allocate(h_loc(SIZE(td%h_loc_nonsph,1),SIZE(td%h_loc_nonsph,1)))
     h_loc=td%h_loc_nonsph(0:,0:,n,isp,jsp)
 #ifdef _OPENACC
-    !$acc enter data create(ab2,ab1,ab,data_c,ab_select)copyin(h_loc)
+    !$acc enter data create(ab2,ab1,abCoeffs,data_c,ab_select)copyin(h_loc)
     !$acc kernels present(data_c) default(none)
     data_c(:,:)=0.0
     !$acc end kernels
@@ -97,14 +97,14 @@ CONTAINS
           rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
           cchi=MERGE(chi,chi*2,(sym%invsat(na)==0))
           call timestart("hsmt_ab")
-          CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
+          CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
           call timestop("hsmt_ab")
           !!$acc update device(ab)
-          !$acc host_data use_device(ab,ab1,h_loc)
-          CALL CPP_zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),ab,size_ab,&
+          !$acc host_data use_device(abCoeffs,ab1,h_loc)
+          CALL CPP_zgemm("T","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),abCoeffs,SIZE(abCoeffs,1),&
                      h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab)
           !$acc end host_data
-          !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
+          !ab1=MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(iintsp))),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
           !$acc kernels default(none) present(ab_select,ab1)copyin(mpi)
           if (mpi%n_size>1)Then
@@ -129,23 +129,23 @@ CONTAINS
                ENDIF
              ELSE !This is the case of a local off-diagonal contribution.
                 !It is not Hermitian, so we need to USE zgemm CALL
-                CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
-                !$acc update device(ab)
-                !$acc kernels default(none) present(ab)
-                ab(:,:)=conjg(ab(:,:))
+                CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
+                !$acc update device(abCoeffs)
+                !$acc kernels default(none) present(abCoeffs)
+                abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
-                !$acc host_data use_device(ab,data_c,ab1,ab_select)
-                CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,ab,size_ab,&
+                !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
+                CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
              ENDIF
           ELSE  !here the l_ss off-diagonal part starts
-             !Second set of ab is needed
-             CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,.TRUE.)
+             !Second set of abCoeffs is needed
+             CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
              if (isp==jsp) Then
-                !$acc update device (ab)
-                !$acc host_data use_device(ab,h_loc,ab2)
-                CALL CPP_zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,size_ab,&
+                !$acc update device (abCoeffs)
+                !$acc host_data use_device(abCoeffs,h_loc,ab2)
+                CALL CPP_zgemm("T","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),abCoeffs,SIZE(abCoeffs,1),&
                      h_loc,size(td%h_loc_nonsph,1),CMPLX(0.,0.),ab2,size_ab2)
                 !$acc end host_data
                 !$acc kernels  default(none) present(ab2)
@@ -157,11 +157,11 @@ CONTAINS
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,size_data_c)
                 !$acc end host_data
              ELSE
-                !$acc kernels default(none) present(ab)
-                ab(:,:)=conjg(ab(:,:))
+                !$acc kernels default(none) present(abCoeffs)
+                abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
-                !$acc host_data use_device(ab,ab1,data_c,ab_select)
-                CALL CPP_zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,ab,size_ab,&
+                !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
+                CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
                      ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
                 !$acc end host_data
              ENDIF
@@ -184,7 +184,7 @@ CONTAINS
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
 #endif
-       !$acc exit data delete(ab2,ab1,ab,data_c,ab_select,h_loc)
+       !$acc exit data delete(ab2,ab1,abCoeffs,data_c,ab_select,h_loc)
 
     CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph

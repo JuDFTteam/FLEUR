@@ -48,7 +48,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
-   INTEGER nw,ilo,natot,nat,archiveType
+   INTEGER nw,ilo,natot,nat
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
@@ -63,9 +63,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
 
-   IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
-
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+   !use the init_potden_simple routine to prevent extra dimensions from noco calculations
+   CALL den%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+                 atoms%n_u+atoms%n_hia,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
+                 vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 
    ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )
@@ -195,10 +196,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
       !roa-
    END DO
 
-   IF (mpi%irank == 0) THEN
 
-      ! Check the normalization of total density
-      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,.true.,fix)
+   ! Check the normalization of total density
+   CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   IF (mpi%irank == 0) THEN
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN
          CALL judft_warn("Starting density not charge neutral",hint= &
@@ -317,6 +318,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
          CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
    END IF ! mpi%irank == 0
+   
    DEALLOCATE ( rat,eig )
    DEALLOCATE ( rh,rh1)
    DEALLOCATE ( vbar,sigm )

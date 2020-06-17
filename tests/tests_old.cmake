@@ -2,11 +2,11 @@ enable_testing()
 
 set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
-   PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
+   PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
    CoMCDXML  Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   Fe_1l_Tria SmAtomjDOS)
+   Fe_1l_Tria SmAtomjDOS )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -27,8 +27,8 @@ set(HybridTests
 
 set(FFNTests
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
-   PlotDenandPot PlotOnlyMT
-   RelaxMTFeature Fe_bcc_SF_LDA
+   PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
+   RelaxMTFeature Fe_bcc_SF_LDA 
 )
 
 
@@ -38,12 +38,12 @@ endif()
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
-   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML)
+   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML ${FFNTests})
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (FLEUR_USE_WANN)
-   set(SerialParallelTests ${SerialParallelTests} Cwann CwannXML)
+   set(SerialOnlyTests ${SerialOnlyTests} CwannXML)
 endif()
 
 #Tests for LibXC

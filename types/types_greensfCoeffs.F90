@@ -35,6 +35,7 @@ MODULE m_types_greensfCoeffs
 
          !Contains the imaginary part of the greens function
          INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:,:)
+         LOGICAL :: l_calc = .FALSE.
 
          REAL, ALLOCATABLE :: sphavg(:,:,:,:,:)
 
@@ -47,6 +48,7 @@ MODULE m_types_greensfCoeffs
          CONTAINS
             PROCEDURE, PASS :: init    =>  greensfImagPart_init
             PROCEDURE, PASS :: collect =>  greensfImagPart_collect
+            PROCEDURE, PASS :: mpi_bc  =>  greensfImagPart_mpi_bc
       END TYPE t_greensfImagPart
 
    PUBLIC t_greensfBZintCoeffs, t_greensfImagPart
@@ -73,7 +75,7 @@ MODULE m_types_greensfCoeffs
          ENDIF
 
          !Determine number of unique gf elements
-         CALL uniqueElements_gfinp(gfinp,uniqueElements)
+         uniqueElements = uniqueElements_gfinp(gfinp)
 
          IF(gfinp%l_sphavg) THEN
             ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
@@ -87,20 +89,23 @@ MODULE m_types_greensfCoeffs
       END SUBROUTINE greensfBZintCoeffs_init
 
 
-      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco)
+      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco,l_calc)
 
          CLASS(t_greensfImagPart),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),             INTENT(IN)     :: gfinp
          TYPE(t_input),             INTENT(IN)     :: input
          TYPE(t_noco),              INTENT(IN)     :: noco
+         LOGICAL,                   INTENT(IN)     :: l_calc
 
          INTEGER lmax,spin_dim, uniqueElements
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
+         this%l_calc = l_calc
+
          !Determine number of unique gf elements
-         CALL uniqueElements_gfinp(gfinp,uniqueElements)
+         uniqueElements = uniqueElements_gfinp(gfinp)
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
          IF(gfinp%l_sphavg) THEN
@@ -114,10 +119,9 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfImagPart_init
 
-      SUBROUTINE greensfImagPart_collect(this,gfinp,spin_ind,mpi_comm)
+      SUBROUTINE greensfImagPart_collect(this,spin_ind,mpi_comm)
 
          CLASS(t_greensfImagPart),     INTENT(INOUT) :: this
-         TYPE(t_gfinp),                INTENT(IN)    :: gfinp
          INTEGER,                      INTENT(IN)    :: spin_ind
          INTEGER,                      INTENT(IN)    :: mpi_comm
 #ifdef CPP_MPI
@@ -126,7 +130,7 @@ MODULE m_types_greensfCoeffs
          INTEGER:: ierr,n
          REAL,ALLOCATABLE::rtmp(:)
 
-         IF(gfinp%l_sphavg) THEN
+         IF(ALLOCATED(this%sphavg)) THEN
             n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
             ALLOCATE(rtmp(n))
             CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
@@ -147,5 +151,28 @@ MODULE m_types_greensfCoeffs
 #endif
 
       END SUBROUTINE greensfImagPart_collect
+
+      SUBROUTINE greensfImagPart_mpi_bc(this,mpi_comm,irank)
+         USE m_mpi_bc_tool
+         CLASS(t_greensfImagPart), INTENT(INOUT)::this
+         INTEGER, INTENT(IN):: mpi_comm
+         INTEGER, INTENT(IN), OPTIONAL::irank
+         INTEGER ::rank,myrank,n,ierr
+         IF (PRESENT(irank)) THEN
+            rank = irank
+         ELSE
+            rank = 0
+         END IF
+
+         CALL mpi_bc(this%l_calc,rank,mpi_comm)
+
+         IF(ALLOCATED(this%kkintgr_cutoff)) CALL mpi_bc(this%kkintgr_cutoff,rank,mpi_comm)
+         IF(ALLOCATED(this%sphavg)) CALL mpi_bc(this%sphavg,rank,mpi_comm)
+         IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)
+         IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
+         IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
+         IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
+
+      END SUBROUTINE greensfImagPart_mpi_bc
 
 END MODULE m_types_greensfCoeffs

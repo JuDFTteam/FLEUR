@@ -25,13 +25,16 @@ set(fleur_F90 ${fleur_F90}
    hybrid/olap.F90
    hybrid/wrapper.f90
    hybrid/wavefproducts.f90
-   hybrid/wavefproducts_aux.f90
+   hybrid/wavefproducts_aux.F90
    hybrid/wavefproducts_inv.f90
    hybrid/wavefproducts_noinv.f90
    hybrid/calc_l_m_from_lm.f90
    hybrid/calc_mpsmat.f90
    hybrid/reorder.f90
    hybrid/spmm.f90
+   hybrid/sphbessel_integral.f90
+   hybrid/structureconstant.f90
+   hybrid/work_package.f90
    hybrid/util/util.f90
    hybrid/util/rorder.f90
    hybrid/util/intgrf.f90

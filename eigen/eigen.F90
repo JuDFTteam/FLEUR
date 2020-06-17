@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden !
       TYPE(t_hub1data),INTENT(INOUT):: hub1data
       TYPE(t_potden), INTENT(IN)   :: vx
-      TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
+      TYPE(t_potden),INTENT(IN)    :: v
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -112,10 +112,6 @@ CONTAINS
       l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (mpi%n_size > 1) l_zref = .FALSE.
 
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,v)
-#endif
-
       !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -149,12 +145,13 @@ CONTAINS
                ! Write overlap matrix smat to direct access file olap
                ! print *,"Wrong overlap matrix used, fix this later"
 
-               ! if(.not. allocated(hybdat%olap)) THEN
-               !    allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
-               ! endif
-               ! if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
-               ! call hybdat%olap(jsp,nk)%copy(smat,1,1)
-               CALL write_olap(smat,(jsp-1)*fi%kpts%nkpt+nk)
+               if(.not. allocated(hybdat%olap)) THEN
+                  allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
+               endif
+               if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
+               call hybdat%olap(jsp,nk)%copy(smat,1,1)
+               call hybdat%olap(jsp,nk)%u2l()
+               if(.not. smat%l_real) hybdat%olap(jsp,nk)%data_c = conjg(hybdat%olap(jsp,nk)%data_c)
             END IF ! fi%hybinp%l_hybrid.OR.fi%input%l_rdmft
 
             IF(fi%hybinp%l_hybrid) THEN

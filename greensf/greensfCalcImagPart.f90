@@ -80,7 +80,7 @@ MODULE m_greensfCalcImagPart
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
 
-            CALL uniqueElements_gfinp(gfinp,i_elem,ind=i_gf,indUnique=indUnique)
+            i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
 
@@ -142,7 +142,7 @@ MODULE m_greensfCalcImagPart
       ENDDO!k-point loop
 
       !Collect the results from all mpi ranks
-      CALL greensfImagPart%collect(gfinp,spin_ind,mpi%mpi_comm)
+      CALL greensfImagPart%collect(spin_ind,mpi%mpi_comm)
 
    END SUBROUTINE greensfCalcImagPart
 END MODULE m_greensfCalcImagPart

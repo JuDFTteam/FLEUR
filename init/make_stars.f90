@@ -81,7 +81,9 @@ CONTAINS
        ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
        ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
+       stars%kv3(:,:) = 0
        stars%sk2(:) = 0.0
+       stars%sk3(:) = 0.0
        stars%phi2(:) = 0.0
 
        ! Initialize xc fft box
@@ -105,12 +107,12 @@ CONTAINS
 
        CALL timestart("strgn")
        IF (input%film) THEN
-          CALL strgn1(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
           IF (oneD%odd%d1) THEN
              CALL od_strgn1(xcpot,cell,sym,oneD)
           END IF
+          CALL strgn1(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        ELSE
-          CALL strgn2(mpi%irank==0,stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+          CALL strgn2(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        END IF
 
        CALL lapw_fft_dim(cell,input,noco,stars)

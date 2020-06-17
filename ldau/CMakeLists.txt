@@ -5,6 +5,7 @@ ldau/sgaunt.f90
 ldau/u_setup.f90
 ldau/uj2f.f90
 ldau/umtx.f90
-ldau/v_mmp.F90
-ldau/v_mmp21.F90
+ldau/doubleCounting.f90
+ldau/v_mmp.f90
+ldau/v_mmp21.f90
 )

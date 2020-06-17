@@ -11,7 +11,7 @@ MODULE m_mpi_col_den
   ! for some data also spread them back onto all pe's (Jan. 2019  U.Alekseeva)
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,jspin,regCharges,dos,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
 
 #include"cpp_double.h"
@@ -29,7 +29,6 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_gfinp),INTENT(IN)     :: gfinp
     TYPE(t_potden),INTENT(INOUT) :: den
     INCLUDE 'mpif.h'
     ! ..
@@ -65,8 +64,8 @@ CONTAINS
     ! -> Collect den%pw(:,jspin)
     n = stars%ng3
     ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(den%pw(:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, den%pw(:,jspin), 1)
+    CALL MPI_ALLREDUCE(den%pw(:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
+    CALL CPP_BLAS_ccopy(n, c_b, 1, den%pw(:,jspin), 1)
     DEALLOCATE (c_b)
 
     ! -> Collect den%vacxy(:,:,:,jspin)

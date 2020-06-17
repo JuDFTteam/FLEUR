@@ -13,7 +13,7 @@ try:
    copyfile(f"{test_loc}/files/inp.xml", f"{te.workdir}/inp.xml")
 
    # special for this hybrid test:
-   te.nprocs = 2
+   te.nprocs = 3
 
    if(te.parallel):
       te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", te.binary])

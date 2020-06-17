@@ -264,7 +264,7 @@ c..calculating the amn matrix
 
 c...sum by wfs, each of them is localized at a certain mt
       do nwf = 1,nwfs
-         if(l_amn2)then
+         if(l_amn2.and.present(bkpt))then
            arg=-bkpt(1)*posshifts(1,nwf)
            arg=arg-bkpt(2)*posshifts(2,nwf)
            arg=arg-bkpt(3)*posshifts(3,nwf)

@@ -19,7 +19,7 @@ MODULE m_checkMMPmat
 
       !which elements are considered to cause an error
       REAL, PARAMETER :: lowBound = -0.01
-      REAL, PARAMETER :: highBound = 1.01 !Attention keep in mind jspins=1
+      REAL, PARAMETER :: highBound = 1.05 !Attention keep in mind jspins=1
 
       LOGICAL l_err
       INTEGER i_u,l,ispin,m

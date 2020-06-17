@@ -231,7 +231,7 @@ CONTAINS
     REAL,PARAMETER :: condquant=7.7480917e-5
     INTEGER :: npotmatfile,ig3,maxvac,irec,imz,ivac,ipot
     LOGICAL :: l_orbcompinp
-    INTEGER :: num_angl
+    INTEGER :: num_angl,nbasfcn,nbasfcn_b,noconbasfcn,noconbasfcn_b
     COMPLEX,ALLOCATABLE :: vxy(:,:,:)
 
 
@@ -365,7 +365,7 @@ CONTAINS
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
             atoms%lmaxd,atoms%ntype,input%neig,atoms%nat,sym%nop,&
-            lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,&
+            lapw%dim_nvd(),input%jspins,atoms%llod,&
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -386,12 +386,13 @@ CONTAINS
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
             nococonv%theta,nococonv%phi)
-
+       if(wann%l_stopupdown)then
        DO pc = 1, wann%nparampts
           CALL close_eig(eig_idList(pc))
        END DO
 
        CALL juDFT_end("updown done",mpi%irank)
+       endif
     ENDIF
 
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -405,7 +406,7 @@ CONTAINS
             banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
-            input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
+            input%jspins,atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -430,11 +431,15 @@ CONTAINS
             wann%param_file,wann%param_vec,wann%nparampts,&
             wann%param_alpha,wann%l_dim)
 
-       DO pc = 1, wann%nparampts
+       
+       if(wann%l_stopuhu) then
+  
+        DO pc = 1, wann%nparampts
           CALL close_eig(eig_idList(pc))
-       END DO
-
-       CALL juDFT_end("wann_uHu done",mpi%irank)
+        END DO
+        
+        CALL juDFT_end("wann_uHu done",mpi%irank)
+       endif
     ENDIF
 
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -540,7 +545,6 @@ CONTAINS
     IF(l_p0)THEN
        WRITE (*,*) 'fermi energy:',efermi
        WRITE (*,*) 'emin,emax=',sliceplot%e1s,sliceplot%e2s
-       WRITE (*,*) 'nbasfcn =',lapw%dim_nbasfcn()
     ENDIF
 
     IF((.NOT.wann%l_matrixmmn).AND.(.NOT.wann%l_wann_plot).AND.&
@@ -889,10 +893,11 @@ CONTAINS
           !*************************************************************
           IF(l_p0)THEN
              CALL wann_write_eig(&
+                  mpi,cell,noco,nococonv,input,kpts,sym,atoms,  &      
                   eig_id,l_real,&
-                  atoms%lmaxd,atoms%ntype,atoms%nlod,input%neig,&
+                  atoms%ntype,input%neig,&
                   lapw%dim_nvd(),wannierspin,&
-                  mpi%isize,jspin,lapw%dim_nbasfcn(),atoms%nlotot,&
+                  mpi%isize,jspin,lapw%dim_nbasfcn(),&
                   noco%l_ss,noco%l_noco,nrec,fullnkpts,&
                   wann%l_bzsym,wann%l_byindex,wann%l_bynumber,&
                   wann%l_byenergy,&
@@ -1124,42 +1129,43 @@ CONTAINS
              ENDIF ! l_gwf
 
           ENDIF !l_matrixmmn
-          zzMat%l_real = l_real
-          zzMat%matsize1 = lapw%dim_nbasfcn()
-          zzMat%matsize2 = input%neig
-          IF(l_real) THEN
-             IF(.NOT.ALLOCATED(zzMat%data_r))&
-               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-          ELSE
-               IF(.NOT.ALLOCATED(zzMat%data_c))&
-               ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-          END IF
+! Replace the following by calls to zmat%init further below          
+!          zzMat%l_real = l_real
+!          zzMat%matsize1 = lapw%dim_nbasfcn()
+!          zzMat%matsize2 = input%neig
+!          IF(l_real) THEN
+!             IF(.NOT.ALLOCATED(zzMat%data_r))&
+!               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+!          ELSE
+!               IF(.NOT.ALLOCATED(zzMat%data_c))&
+!               ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+!          END IF
 
-          zMat%l_real = zzMat%l_real
-          zMat%matsize1 = zzMat%matsize1
-          zMat%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-             IF(.NOT.ALLOCATED(zMat%data_r))&
-                  ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-             zMat%data_r = 0.0
-          ELSE
-             IF(.NOT.ALLOCATED(zMat%data_c))&
-                  ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-             zMat%data_c = CMPLX(0.0,0.0)
-          END IF
+!          zMat%l_real = zzMat%l_real
+!          zMat%matsize1 = zzMat%matsize1
+!          zMat%matsize2 = zzMat%matsize2
+!          IF (zzMat%l_real) THEN
+!             IF(.NOT.ALLOCATED(zMat%data_r))&
+!                  ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!             zMat%data_r = 0.0
+!          ELSE
+!             IF(.NOT.ALLOCATED(zMat%data_c))&
+!                  ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!             zMat%data_c = CMPLX(0.0,0.0)
+!          END IF
 
-          zMat_b%l_real = zzMat%l_real
-          zMat_b%matsize1 = zzMat%matsize1
-          zMat_b%matsize2 = zzMat%matsize2
-          IF (zzMat%l_real) THEN
-               IF(.NOT.ALLOCATED(zMat_b%data_r))&
-               ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_r = 0.0
-          ELSE
-               IF(.NOT.ALLOCATED(zMat_b%data_c))&
-               ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
-             zMat_b%data_c = CMPLX(0.0,0.0)
-          END IF
+ !         zMat_b%l_real = zzMat%l_real
+ !         zMat_b%matsize1 = zzMat%matsize1
+ !         zMat_b%matsize2 = zzMat%matsize2
+ !         IF (zzMat%l_real) THEN
+ !              IF(.NOT.ALLOCATED(zMat_b%data_r))&
+ !              ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+ !            zMat_b%data_r = 0.0
+ !         ELSE
+ !              IF(.NOT.ALLOCATED(zMat_b%data_c))&
+ !              ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+ !            zMat_b%data_c = CMPLX(0.0,0.0)
+ !         END IF
 
           i_rec = 0 ; n_rank = 0
 
@@ -1186,6 +1192,11 @@ CONTAINS
 
                 CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
 
+          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+                  CALL zzMat%init(l_real,nbasfcn,input%neig)
+                      CALL zMat%init(l_real,nbasfcn,input%neig)
+
+
                 CALL cdn_read(&
                      eig_id,&
                      lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
@@ -1206,8 +1217,8 @@ CONTAINS
                    IF ((eigg(i).GE.sliceplot%e1s.AND.nslibd.LT.numbands.AND.&
                         wann%l_bynumber).OR.&
                         (eigg(i).GE.sliceplot%e1s.AND.eigg(i).LE.sliceplot%e2s.AND.&
-                        wann%l_byenergy).OR.(i.GE.wann%band_min(jspin).AND.&
-                        (i.LE.wann%band_max(jspin)).AND.wann%l_byindex))THEN
+                        wann%l_byenergy).OR.(i.GE.wann%band_min(jspin2).AND.&
+                        (i.LE.wann%band_max(jspin2)).AND.wann%l_byindex))THEN
 
                       !           print*,i
                       nslibd = nslibd + 1
@@ -1405,8 +1416,10 @@ CONTAINS
                 !------mmn0-matrix
                 IF(wann%l_mmn0)THEN
                    addnoco=0
+                   noconbasfcn=nbasfcn
                    IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                       addnoco=lapw%nv(1)+atoms%nlotot
+!                      noconbasfcn=nbasfcn-addnoco
                    ENDIF
 
                    !-----> interstitial contribution to mmn0-matrix
@@ -1414,10 +1427,10 @@ CONTAINS
                    CALL wann_mmkb_int(&
                         cmplx_1,addnoco,addnoco,&
                         lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
-                        stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
-                        lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),zMat,nslibd,&
+                        stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),input%neig,noconbasfcn,noconbasfcn,zMat,nslibd,&
+                        lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),zMat,nslibd,&
                         nbnd,&
                         stars%rgphs,stars%ustep,stars%ig,(/ 0,0,0 /),&
                         mmn(:,:,ikpt))
@@ -1430,7 +1443,7 @@ CONTAINS
                         atoms%nlo,atoms%llo,acof(1:noccbd,:,:),&
                         bcof(1:noccbd,:,:),ccof(:,1:noccbd,:,:),&
                         usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),&
-                        usdus%dulon(:,:,jspin),usdus%uloulopn,&
+                        usdus%dulon(:,:,jspin),usdus%uloulopn(:,:,:,jspin),&
                         mmn(:,:,ikpt))
                    !---> vacuum contribution to mmn0-matrix
 
@@ -1442,8 +1455,8 @@ CONTAINS
                            stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,&
                            stars%ig2,cell%area,cell%bmat,&
-                           cell%bbmat,enpara%evac0(:,jspin),lapw%bkpt,vz(:,:,jspin2),&
-                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
+                           cell%bbmat,enpara%evac0(:,jspin2),lapw%bkpt,vz(:,:,jspin2),&
+                           nslibd,jspin2,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
                            lapw%dim_nbasfcn(),input%neig,zMat,lapw%nv,cell%omtil,&
                            mmn(:,:,ikpt))
                    ELSEIF (oneD%odi%d1) THEN
@@ -1525,10 +1538,17 @@ CONTAINS
                       n_start=1
                       n_end=input%neig
                       call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      
+                      
+                    nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
+                              CALL zMat_b%init(l_real,nbasfcn_b,input%neig)
+                              CALL zzMat%init(l_real,nbasfcn_b,input%neig)
+                      
+                      
                       CALL cdn_read(&
                            eig_id,&
                            lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
-                           kptibz_b,jspin,lapw%dim_nbasfcn(),&
+                           kptibz_b,jspin,nbasfcn_b,&
                            noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                            nbands_b,eigg,zzMat)
 
@@ -1541,8 +1561,8 @@ CONTAINS
                          IF((eigg(i).GE.sliceplot%e1s.AND.nslibd_b.LT.numbands&
                               .AND.wann%l_bynumber).OR.&
                               (eigg(i).GE.sliceplot%e1s.AND.eigg(i).LE.sliceplot%e2s.AND.&
-                              wann%l_byenergy).OR.(i.GE.wann%band_min(jspin).AND.&
-                              (i.LE.wann%band_max(jspin)).AND.&
+                              wann%l_byenergy).OR.(i.GE.wann%band_min(jspin2).AND.&
+                              (i.LE.wann%band_max(jspin2)).AND.&
                               wann%l_byindex))THEN
                             nslibd_b = nslibd_b + 1
                             eig_b(nslibd_b) = eigg(i)
@@ -1614,18 +1634,22 @@ CONTAINS
 
                       addnoco=0
                       addnoco2=0
+                      noconbasfcn=nbasfcn
+                      noconbasfcn_b=nbasfcn_b
                       IF(noco%l_noco.AND.(jspin.EQ.2))THEN
                          addnoco  = lapw%nv(1)   + atoms%nlotot
                          addnoco2 = lapw_b%nv(1) + atoms%nlotot
+!                         noconbasfcn=nbasfcn-addnoco
+!                         noconbasfcn_b=nbasfcn_b-addnoco2
                       ENDIF
 
                       CALL wann_mmkb_int(&
                            cmplx_1,addnoco,addnoco2,&
                            lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
-                           stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                           lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
-                           lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),&
-                           lapw_b%nv(jspin),zMat_b,nslibd_b,&
+                           stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                           lapw%nv(jspin2),input%neig,noconbasfcn,noconbasfcn_b,zMat,nslibd,&
+                           lapw_b%k1(:,jspin2),lapw_b%k2(:,jspin2),lapw_b%k3(:,jspin2),&
+                           lapw_b%nv(jspin2),zMat_b,nslibd_b,&
                            nbnd,&
                            stars%rgphs,stars%ustep,stars%ig,gb(:,ikpt_b,ikpt),&
                            mmnk(:,:,ikpt_b,ikpt))
@@ -1953,7 +1977,7 @@ CONTAINS
                               interchi,addnoco,addnoco2,&
                               lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
@@ -1964,7 +1988,7 @@ CONTAINS
                               interchi,addnoco,addnoco2,&
                               lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,nbasfcn,nbasfcn_b,zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
@@ -2231,7 +2255,7 @@ CONTAINS
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
-                  mmn,wann%l_unformatted)
+                  mmn,wann%mmn0fmt==2)
           ENDIF !noco%l_soc and l_mmn0
 
           IF(wann%l_orbcomp)THEN
@@ -2264,7 +2288,7 @@ CONTAINS
                   'Overlaps of the wavefunct. with the trial orbitals',&
                   nbnd,fullnkpts,nwfs,&
                   mpi%irank,mpi%isize,.FALSE.,.FALSE.,&
-                  amn(:,:,:),wann%l_unformatted)
+                  amn(:,:,:),wann%matrixamnfmt==2)
           ENDIF !wann%l_matrixamn
 
           IF(wann%l_anglmom)THEN
@@ -2325,7 +2349,7 @@ CONTAINS
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
-                  mmn,wann%l_unformatted)
+                  mmn,wann%mmn0fmt==2)
           ENDIF !wann%l_mmn0
 
 

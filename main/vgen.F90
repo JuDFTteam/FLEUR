@@ -62,8 +62,6 @@ CONTAINS
       TYPE(t_potden)                   :: workden, denRot
 
       INTEGER :: i
-      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const, &
-                        MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
       IF (mpi%irank == 0) THEN
@@ -79,19 +77,9 @@ CONTAINS
       IF (mpi%irank==0) WRITE (oUnit,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
-      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
-         !In this case we need the last mmpmat after vgen
-         mmpmat = vTot%mmpmat
-      END IF
-
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
-
-      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
-         !In this case we need the last mmpmat after vgen
-         vTot%mmpmat = mmpmat
-      END IF
 
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0

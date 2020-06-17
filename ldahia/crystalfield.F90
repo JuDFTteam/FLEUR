@@ -37,11 +37,11 @@ MODULE m_crystalfield
       TYPE(t_hub1data),          INTENT(INOUT) :: hub1data
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,iContour,dummy,i_elem
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,i_elem
       REAL    tr,xiSOC,del,eb
       COMPLEX vso
-      LOGICAL, PARAMETER :: l_correctMinus = .TRUE.
-      REAL, PARAMETER :: excTolerance = 0.05/hartree_to_ev_const
+      LOGICAL, PARAMETER :: l_correctMinus = .FALSE.
+      REAL, PARAMETER :: excTolerance = 0.2/hartree_to_ev_const
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -55,7 +55,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
-         CALL uniqueElements_gfinp(gfinp,dummy,i_gf,indUnique=i_elem)
+         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
@@ -68,17 +68,16 @@ MODULE m_crystalfield
          CALL gfinp%eMesh(ef,del,eb)
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
-            kkcut = greensfImagPart%kkintgr_cutoff(i_gf,jspin,2)
             norm = 0.0
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
-                  DO ie = 1, kkcut
+                  DO ie = 1, gfinp%ne
                      integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
                                      * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)/(3.0-input%jspins))
                      IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin))/(3.0-input%jspins)
                   ENDDO
-                  h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),del,kkcut)
+                  h_loc(m,mp,i_hia,jspin) = trapz(integrand,del,gfinp%ne)
                ENDDO
             ENDDO
          ENDDO
@@ -101,20 +100,22 @@ MODULE m_crystalfield
                ENDDO
             ENDDO
          ENDDO
-         !Remove SOC potential (only spin-diagonal)
-         DO jspin = 1, 2
-            DO m = -l, l
-               DO mp = -l, l
-                  isp = 3.0-2.0*jspin !1,-1
-                  IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
-                     vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
-                  ELSE
-                     vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
-                  ENDIF
-                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
+         IF(ABS(hub1data%xi(i_hia)).GT.1e-12) THEN
+            !Remove SOC potential (only spin-diagonal)
+            DO jspin = 1, 2
+               DO m = -l, l
+                  DO mp = -l, l
+                     isp = 3.0-2.0*jspin !1,-1
+                     IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
+                        vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
+                     ELSE
+                        vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
+                     ENDIF
+                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
+                  ENDDO
                ENDDO
             ENDDO
-         ENDDO
+         ENDIF
 #ifdef CPP_DEBUG
          WRITE(*,*) "UP-REMOVED"
          WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)

@@ -51,7 +51,7 @@ contains
    END subroutine write_olap
 
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
-                     jsp, z_out, parent_z, c_phase)
+                     jsp, z_out, parent_z, c_phase, list)
       USE m_eig66_io
       use m_types
       use m_trafo
@@ -69,8 +69,9 @@ contains
 
       type(t_mat), intent(inout), target, optional :: parent_z
       complex, intent(inout), optional             :: c_phase(:)
+      integer, intent(in), optional                :: list(:)
 
-      INTEGER              :: ikp, iop
+      INTEGER              :: ikp, iop, i
       type(t_mat), pointer :: ptr_mat
       type(t_mat), target  :: tmp_mat
       complex              :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
@@ -80,8 +81,9 @@ contains
       cmt=0;cmthlp=0
 
       call timestart("read_z")
+
       if(ik <= kpts%nkpt) then
-         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out)
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=list)
          z_out%matsize2 = hybdat%nbands(ik)
          if(present(parent_z)) then
             call parent_z%copy(z_out,1,1)
@@ -97,7 +99,7 @@ contains
 
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
-         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat)
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=list)
          ptr_mat%matsize2 = hybdat%nbands(ik)
 
          CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)

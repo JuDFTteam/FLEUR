@@ -74,9 +74,10 @@ CONTAINS
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: it, archiveType
+    INTEGER :: it, archiveType, atomsCounter
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
+    LOGICAL :: stateCheck=.TRUE.
 #ifdef CPP_MPI
     include 'mpif.h'
     INTEGER :: ierr(2)
@@ -91,7 +92,9 @@ CONTAINS
     strho=input%strho
     IF (.NOT.(strho.OR.(sliceplot%iplot.NE.0))) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-       IF (noco%l_noco) THEN
+       IF (noco%l_mtNocoPot) THEN
+          archiveType = CDN_ARCHIVE_TYPE_FFN_const
+       ELSE IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
        IF (mpi%irank == 0) THEN
@@ -106,6 +109,12 @@ CONTAINS
        !input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
+       IF (input%jspins.EQ.2) THEN
+          DO atomsCounter=1, atoms%ntype
+             IF(.NOT.MAXVAL(ABS(atoms%econf(atomsCounter)%Occupation(:,1)-atoms%econf(atomsCounter)%Occupation(:,2))).EQ.0)stateCheck=.FALSE.
+          END DO
+       END IF
+       IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any acutal polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
        CALL stden(mpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco,oneD)
        !

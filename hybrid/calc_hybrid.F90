@@ -11,7 +11,7 @@ CONTAINS
 
    SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
-
+      use m_work_package
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -40,19 +40,15 @@ CONTAINS
 
       ! local variables
       type(t_hybmpi)    :: hybmpi
-      INTEGER           :: jsp, nk, err, i
+      type(t_work_package) :: work_pack
+      INTEGER           :: jsp, nk, err, i, j
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
-      INTEGER, ALLOCATABLE :: my_k_list(:), k_owner(:)
 
       CALL timestart("hybrid code")
-      call sync_eig(eig_id, fi, .True.)
-
-      call hybmpi%copy_mpi(mpi)
-      call split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
 
       INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
@@ -68,6 +64,7 @@ CONTAINS
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
+         call hybmpi%copy_mpi(mpi)            
          results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
@@ -78,7 +75,6 @@ CONTAINS
             call first_iteration_alloc(fi, hybdat)
             init_vex = .FALSE.
          END IF
-
          hybdat%l_subvxc = (hybdat%l_subvxc .AND. hybdat%l_addhf)
          IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
 
@@ -105,10 +101,15 @@ CONTAINS
             call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
          enddo
 
-         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, my_k_list)
+
+         ! use jsp=1 for coulomb work-planning
+         call hybdat%set_states(fi, results, 1)
+         call work_pack%init(fi, hybdat, 1, hybmpi%rank, hybmpi%size)
+         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+         call work_pack%free()
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, k_owner(i))
+            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, work_pack%owner_nk(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
@@ -117,17 +118,18 @@ CONTAINS
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpdata,fi%hybinp, fi%input, fi%sym, fi%kpts,  fi%atoms, &
-                        mpi, fi%noco, nococonv,fi%cell, fi%oneD, results, jsp, enpara, &
-                        hybdat, fi%sym%invs, v%mt(:, 0, :, :), eig_irr)
+            CALL HF_setup(mpdata,fi, mpi, nococonv, results, jsp, enpara, &
+                        hybdat, v%mt(:, 0, :, :), eig_irr)
+            call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
             call timestop("HF_setup")
-
-            DO i = 1,size(my_k_list)
-               nk = my_k_list(i)
+            
+            DO i = 1,work_pack%k_packs(1)%size
+               nk = work_pack%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
-               CALL hsfock(fi,nk, mpdata, lapw, jsp, hybdat, eig_irr, &
+               CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, mpi)
             END DO
+            call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")
 #ifdef CPP_MPI
@@ -137,7 +139,6 @@ CONTAINS
 #endif
 
       ENDIF
-      call sync_eig(eig_id, fi, .False.)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)

@@ -39,7 +39,7 @@ MODULE m_juDFT_time
    CHARACTER(LEN=256), SAVE   :: lastfile = ""
    INTEGER, SAVE   :: lastline = 0
 
-   PUBLIC timestart, timestop, writetimes, writeTimesXML, cputime
+   PUBLIC timestart, timestop, writetimes, writeTimesXML, cputime, addtime
    PUBLIC resetIterationDependentTimers, check_time_for_next_iteration
    PUBLIC juDFT_time_lastlocation !should be used for error handling only
 
@@ -87,6 +87,38 @@ CONTAINS
 
    !<-- S: timestart(timer)
 
+   subroutine addtime(ttimer, time, n_calls)
+      implicit none 
+      CHARACTER(LEN=*), INTENT(IN) :: ttimer
+      real, intent(in)             :: time
+      integer, intent(in)          :: n_calls
+      TYPE(t_timer), POINTER       :: ptr_timer
+      logical  :: found
+      integer  :: n
+
+      found = .False.
+      do n = 1,current_timer%n_subtimers 
+         if(trim(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) then 
+            ptr_timer => current_timer%subtimer(n)%p
+            found = .True.
+            exit 
+         endif
+      enddo
+
+      if(.not. found) then
+         call priv_new_timer(ttimer)
+         ptr_timer => current_timer
+         current_timer => current_timer%parenttimer
+      endif
+      call priv_debug_output(" finished ", ttimer)
+
+      ptr_timer%time = ptr_timer%time + time
+      ptr_timer%no_calls = ptr_timer%no_calls + 1
+      ptr_timer%mintime = -1
+      ptr_timer%maxtime = -1
+      ptr_timer%starttime = -1
+   end subroutine addtime
+
    SUBROUTINE timestart(ttimer, file, line)
       USE m_judft_args
       IMPLICIT NONE
@@ -128,7 +160,7 @@ CONTAINS
       REAL::time
 
          IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
-            WRITE (*, *) "Current timer:", current_timer%name, " could not stop:", ttimer
+            WRITE (*, *) "Current timer:", trim(current_timer%name), " could not stop:"
             STOP "BUG:timestop"
          ENDIF
          IF (current_timer%starttime < 0) THEN

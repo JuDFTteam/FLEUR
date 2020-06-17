@@ -1,32 +1,34 @@
 MODULE m_umtx
-   USE m_juDFT
    !*********************************************************************
    !* The calculation of the "U"-contribution to Hartree-Fock matrix.   *
    !*-------------------------------------------------------------------*
    !* Extension to multiple U per atom type by G.M. 2017                *
    !*********************************************************************
-CONTAINS
-   SUBROUTINE umtx(u_in,n_u,f0,f2,f4,f6,u)
+   USE m_juDFT
+   USE m_constants
+   USE m_sgaunt
+   USE m_types
 
-      USE m_constants
-      USE m_sgaunt
-      USE m_types
-      IMPLICIT NONE
+   IMPLICIT NONE
+
+   CONTAINS
+
+   SUBROUTINE umtx(u_in,n_u,f0,f2,f4,f6,u)
 
       INTEGER,       INTENT(IN)  :: n_u
       TYPE(t_utype), INTENT(IN)  :: u_in(:)
       REAL,          INTENT(IN)  :: f0(:),f2(:),f4(:),f6(:)
       REAL,          INTENT(OUT) :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER, PARAMETER         :: lmaxw=3,lmmaxw1=(2*lmaxw+2)**2
+      INTEGER, PARAMETER :: lmmaxw1=(2*lmaxU_const+2)**2
+      REAL,    PARAMETER :: tol=1e-14
 
-      INTEGER i,j,k,l,m,mk,nfk,itype,i_u
-      INTEGER m1,m2,m3,m4,lm1,lm2,lm3,lm4,kf
-      REAL    uk,uq,avu,avj,cgk1,cgk2,tol
-      REAL    fk(lmaxU_const+1,n_u)
+      INTEGER :: i,j,k,l,m,mk,nfk,itype,i_u
+      INTEGER :: m1,m2,m3,m4,lm1,lm2,lm3,lm4,kf
+      REAL    :: uk,uq,avu,avj,cgk1,cgk2
+      REAL    :: fk(lmaxU_const+1,n_u)
       REAL,   ALLOCATABLE :: c(:,:,:)
-      !
-      tol = 1.0e-14
+
       !
       ! transformation to Hr-units:
       !
@@ -42,19 +44,12 @@ CONTAINS
             CALL juDFT_error("LDA+U for p, d or f-states!", calledby="umtx")
          END IF
       END DO
+
       !
       ! evaluate Gaunt parameter
       !
-      ALLOCATE(c(0:2*lmaxw+1,lmmaxw1,lmmaxw1))
-      DO k = 1,lmmaxw1
-         DO j = 1,lmmaxw1
-            DO i = 0,2*lmaxw+1
-               c(i,j,k) = 0.0
-            END DO
-         END DO
-      END DO
-
-      CALL sgaunt(lmaxw,lmmaxw1,lmaxU_const,c)
+      ALLOCATE(c(0:2*lmaxU_const+1,lmmaxw1,lmmaxw1),source=0.0)
+      CALL sgaunt(lmaxU_const,c)
 
       DO i_u = 1, n_u
          l = u_in(i_u)%l

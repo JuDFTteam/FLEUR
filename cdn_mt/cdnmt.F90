@@ -74,11 +74,12 @@ CONTAINS
        ENDIF
     ENDIF
 
-!    !$OMP PARALLEL DEFAULT(none) &
-!    !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
-!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_dftspinpol)&
-!    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-!    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)
+    !$OMP PARALLEL DEFAULT(none) &
+    !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
+    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
+    !$OMP PRIVATE(l_hia,vrTmp)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -88,7 +89,7 @@ CONTAINS
 
     qmtl = 0
 
-!    !$OMP DO
+    !$OMP DO
     DO itype = 1,atoms%ntype
        na = 1
        DO i = 1, itype - 1
@@ -135,14 +136,14 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,input,atoms,sphhar,sym,&
+          CALL rhosphnlo(itype,ispin,input,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
                usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
                vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
                denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0:,:,:,itype,ispin),&
                denCoeffs%bcnmt(0:,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
-               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,0:,itype,ispin),qmtllo)
+               rho(:,0:,itype,ispin),moments,qmtllo)
 
 
           !--->       l-decomposed density for each atom type
@@ -277,9 +278,9 @@ CONTAINS
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
-!    !$OMP END DO
+    !$OMP END DO
     DEALLOCATE ( f,g)
-!    !$OMP END PARALLEL
+    !$OMP END PARALLEL
 
     WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
@@ -311,8 +312,7 @@ CONTAINS
             natom = SUM(atoms%neq(:itype-1)) + 1
 
             WRITE(oUnit,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
-8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5)
-            WRITE(oUnit,*)
+8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5,/)
 
             CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 

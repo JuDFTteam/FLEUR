@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -30,73 +30,68 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: ab(:,:)
+    COMPLEX, INTENT (INOUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
-    INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
-    COMPLEX:: term
-    REAL   :: th,v(3),bmrot(3,3),vmult(3)
-    COMPLEX :: ylm((atoms%lmaxd+1)**2)
-    COMPLEX,ALLOCATABLE:: c_ph(:,:)
-    REAL,ALLOCATABLE   :: gkrot(:,:)
-    LOGICAL :: l_apw
+    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax
+    COMPLEX :: term,tempA,tempB
+    REAL    :: v(3),bmrot(3,3),gkrot(3)
+    COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
+    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot))
+    LOGICAL :: l_apw, l_pres_abclo
 
-    ALLOCATE(c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot)))
-    ALLOCATE(gkrot(3,maxval(lapw%nv)))
+    lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
+    ab_size = lmax*(lmax+2)+1
+    ! replace APW+lo check (may actually be a broken trick) by something simpler
+!    l_apw=ALL(fjgj%gj==0.0)
+    l_apw = .FALSE.
 
-    lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
-
-    ab_size=lmax*(lmax+2)+1
-    l_apw=ALL(fjgj%gj==0.0)
-    ab=0.0
+    ! We skip the initialization for speed
+!    abCoeffs=0.0
 
     np = sym%invtab(sym%ngopr(na))
-    !--->          set up phase factors
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
+    bmrot = MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
+    l_pres_abclo = PRESENT(abclo)
 
-    IF (np==1) THEN
-       gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)
-    ELSE
-       bmrot=MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
-       DO k = 1,lapw%nv(iintsp)
-          !-->  apply the rotation that brings this atom into the
-          !-->  representative (this is the definition of ngopr(na)
-          !-->  and transform to cartesian coordinates
-          v(:) = lapw%vk(:,k,iintsp)
-          gkrot(:,k) = MATMUL(TRANSPOSE(bmrot),v)
-       END DO
-    END IF
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin) &
-    !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
+    !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
+    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,l_pres_abclo,bmrot) &
+    !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
+    !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
 #else
-    !$acc kernels present(ab)
-    ab(:,:)=0.0
+    !$acc kernels present(abCoeffs)
+    abCoeffs(:,:)=0.0
     !$acc end kernels
 #endif
     
-    !$acc parallel loop present(fjgj%fj,fjgj%gj,ab) private(vmult,k,ylm,lm,invsfct,lo,nkvec) 
+    !$acc parallel loop present(fjgj%fj,fjgj%gj,abCoeffs) private(k,ylm,lm,invsfct,lo,nkvec) 
     DO k = 1,lapw%nv(iintsp)
+       !-->  apply the rotation that brings this atom into the
+       !-->  representative (this is the definition of ngopr(na)
+       !-->  and transform to cartesian coordinates
+       v(:) = lapw%vk(:,k,iintsp)
+       gkrot(:) = MATMUL(TRANSPOSE(bmrot),v)
+
        !-->    generate spherical harmonics
-       vmult(:) =  gkrot(:,k)
-       CALL ylm4(lmax,vmult,ylm)
+       CALL ylm4(lmax,gkrot,ylm)
        !-->  synthesize the complex conjugates of a and b
-       !$acc  loop vector private(l,ll1,m,term)
-       DO l = 0,lmax 
-          ll1 = l* (l+1)
-          DO m = -l,l
-             term = c_ph(k,iintsp)*ylm(ll1+m+1)
-             ab(k,ll1+m+1)         = fjgj%fj(k,l,ispin,iintsp)*term
-             ab(k,ll1+m+1+ab_size) = fjgj%gj(k,l,ispin,iintsp)*term
-          END DO
+       !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
+       DO l = 0,lmax
+          tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+          tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+          lmMin = l*(l+1) + 1 - l
+          lmMax = l*(l+1) + 1 + l
+          facA(lmMin:lmMax) = tempA
+          facB(lmMin:lmMax) = tempB
        END DO
-       !$acc end loop 
-       IF (SIZE(ab,2) > 2*ab_size) ab(k,2*ab_size+1:) = cmplx(0.0,0.0)
-       IF (PRESENT(abclo)) THEN
+       !$acc end loop
+       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
+       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
+       IF (l_pres_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
           term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
@@ -121,12 +116,7 @@ CONTAINS
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif
-    IF (size(ab,1) > lapw%nv(iintsp)) THEN
-       !$acc kernels present(ab)
-       ab(:,lapw%nv(iintsp):) = cmplx(0.0,0.0)
-       !$acc end kernels
-    ENDIF
-    IF (.NOT.l_apw) ab_size=ab_size*2
 
+    IF (.NOT.l_apw) ab_size=ab_size*2
   END SUBROUTINE hsmt_ab
 END MODULE m_hsmt_ab
