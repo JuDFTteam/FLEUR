@@ -373,7 +373,7 @@ CONTAINS
 
       CHARACTER(len=200)::conf
       REAL :: occupation(200) !this is the tmp local variable (no 's')
-      INTEGER:: n,nn,occ
+      INTEGER:: n,nn,occ,stat
       CHARACTER:: n_ch,ch
       extended=""
 
@@ -389,7 +389,8 @@ CONTAINS
       IF (VERIFY(conf,"01234567890spdf ")>0) CALL judft_error(("Invalid econfig:"//TRIM(simple)))
       n=1
       DO WHILE (len_TRIM(conf)>1)
-         READ(conf,"(a1,a1,i2)") n_ch,ch,occ
+         READ(conf,"(a1,a1,i2)", ,IOSTAT=stat) n_ch,ch,occ
+         if(stat /= 0) call judft_error("Can't read this econfig")
          SELECT CASE (ch)
          CASE ('s')
             extended=trim(extended)//" ("//n_ch//"s1/2)"
