@@ -48,6 +48,8 @@ module m_eig66_data
       REAL, ALLOCATABLE    :: eig_eig(:, :, :)
       REAL, ALLOCATABLE    :: eig_vecr(:, :)
       COMPLEX, ALLOCATABLE :: eig_vecc(:, :)
+      REAL, ALLOCATABLE    :: olap_r(:, :)
+      COMPLEX, ALLOCATABLE :: olap_c(:, :)
    END TYPE
 
    TYPE t_list
