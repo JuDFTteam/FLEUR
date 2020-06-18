@@ -30,13 +30,15 @@ CONTAINS
     ENDDO
     !$acc end parallel
 #else
-    DO iintsp=1,2
-       DO jintsp=1,2
-          DO j=1,mat_tmp%matsize2
+    !$OMP PARALLEL DO PRIVATE(j,iintsp,jintsp) SHARED(mat_tmp,chi,mat) DEFAULT(NONE)
+    DO j=1,mat_tmp%matsize2
+      DO iintsp=1,2
+          DO jintsp=1,2
              call CPP_BLAS_caxpy(mat_tmp%matsize1,chi(jintsp,iintsp),mat_tmp%data_c(:,j),1,mat(jintsp,iintsp)%data_c(:,j),1)
           ENDDO
        ENDDO
     ENDDO
+    !$OMP END PARALLEL DO
 #endif
   END SUBROUTINE hsmt_distspins
 END MODULE m_hsmt_distspins
