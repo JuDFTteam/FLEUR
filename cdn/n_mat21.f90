@@ -9,6 +9,7 @@ MODULE m_nmat21
 
    USE m_types
    USE m_constants
+   USE m_symMMPmat
 
    IMPLICIT NONE
 
@@ -24,15 +25,11 @@ MODULE m_nmat21
       REAL,                      INTENT(IN)     :: we(:)!(input%neig)
       COMPLEX,                   INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER i,l,m,lp,mp,n,it,is,isi,natom
+      INTEGER i,l,m,lp,mp,n,natom
       INTEGER ilo,ilop,ll1,nn,lmp,lm,i_u,natomTemp
-      REAL fac
-      COMPLEX c_0,phase
+      COMPLEX c_0
 
       COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
       !
       ! calculate n_mat:
@@ -102,33 +99,7 @@ MODULE m_nmat21
                !
                !Note: This can be done only if the correct magnetic symmetries are
                !present. This is not the case at the moment (Jan 2020).
-               !Symmetries are ignored if the user forces this calculation
-               !DO it = 1, sym%invarind(natomTemp)
-
-               !   fac = 1.0  /  ( sym%invarind(natomTemp) * atoms%neq(n) )
-               !   is = sym%invarop(natomTemp,it)
-               !   isi = sym%invtab(is)
-               !   d_tmp(:,:) = cmplx_0
-               !   DO m = -l,l
-               !      DO mp = -l,l
-               !         d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-               !      ENDDO
-               !   ENDDO
-               !   nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-               !   n1_tmp =  matmul( nr_tmp, d_tmp )
-               !   phase = exp(ImagUnit*sym%phase(isi))
-               !   DO m = -l,l
-               !      DO mp = -l,l
-               !         n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac * phase
-               !      ENDDO
-               !   ENDDO
-               !ENDDO
-               DO m = -l,l
-                  DO mp = -l,l
-                     n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n_tmp(m,mp))
-                  ENDDO
-               ENDDO
-
+               n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + symMMPmat(n_tmp,sym,natomTemp,l,phase=.TRUE.) * 1.0/atoms%neq(n)
             ENDDO ! sum  over equivalent
             i_u = i_u +1
          ENDDO
