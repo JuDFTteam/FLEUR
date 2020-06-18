@@ -18,6 +18,7 @@ MODULE m_nmat
 
       USE m_types
       USE m_constants
+      USE m_symMMPmat
 
       IMPLICIT NONE
 
@@ -29,16 +30,11 @@ MODULE m_nmat
       REAL,                INTENT(IN)     :: we(:)!(input%neig)
       COMPLEX,             INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER i,l,m,lp,mp,n,it,is,isi,natom,natomTemp,i_u
+      INTEGER i,l,m,lp,mp,n,natom,natomTemp,i_u
       INTEGER ilo,ilop,ll1,nn,lmp,lm
-      REAL fac
       COMPLEX c_0
 
       COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-
       !
       ! calculate n_mat:
       !
@@ -104,24 +100,7 @@ MODULE m_nmat
                !
                !  n_mmp should be rotated by D_mm' ; compare force_a21
                !
-               DO it = 1, sym%invarind(natomTemp)
-                  fac = 1.0  /  ( sym%invarind(natomTemp) * atoms%neq(n) )
-                  is = sym%invarop(natomTemp,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx_0
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
-                  ENDDO
-                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                  n1_tmp =  matmul( nr_tmp, d_tmp )
-                  DO m = -l,l
-                     DO mp = -l,l
-                        n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac
-                     ENDDO
-                  ENDDO
-               ENDDO
+               n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + symMMPmat(n_tmp,sym,natomTemp,l) * 1.0/atoms%neq(n)
             ENDDO ! sum  over equivalent atoms
             i_u = i_u + 1
          END DO
