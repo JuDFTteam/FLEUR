@@ -60,13 +60,15 @@ CONTAINS
       ! get the index of a kpoint
       implicit NONE
       class(t_kpts), intent(in)    :: kpts
-      real, intent(in)            :: kpoint(3)
-      integer                     :: idx, ret_idx
+      real, intent(in)             :: kpoint(3)
+      integer                      :: idx, ret_idx
+      real                         :: kpt_bz(3)
+
+      kpt_bz = kpts%to_first_bz(kpoint)
 
       ret_idx = 0
       DO idx = 1, kpts%nkptf
-         IF (all(abs(kpts%to_first_bz(kpoint) &
-                     - kpts%to_first_bz(kpts%bkf(:, idx))) < 1E-06)) THEN
+         IF (all(abs(kpt_bz - kpts%bkf(:, idx)) < 1E-06)) THEN
             ret_idx = idx
             exit
          END IF
@@ -450,7 +452,7 @@ CONTAINS
       INTEGER               ::  isym, ic, iop, ikpt, ikpt1
       INTEGER               ::  nsymop, nrkpt
 !     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym)
+      INTEGER               ::  rrot(3, 3, sym%nsym), i
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)
@@ -474,14 +476,6 @@ CONTAINS
       
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
 
-      ! reallocate psym
-      !       ALLOCATE(help(ic))
-      !       help = psym(1:ic)
-      !       DEALLOCATE(psym)
-      !       ALLOCATE(psym(ic))
-      !       psym = help
-      !       DEALLOCATE(help)
-
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
       ! applying the symmetry operations of the little group of k
@@ -504,23 +498,23 @@ CONTAINS
             !determine number of rotkpt
             nrkpt = 0
             DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
+               IF (all(abs(rotkpt - kpts%bkf(:, ikpt1)) <= 1E-06)) THEN
                   nrkpt = ikpt1
                   EXIT
                END IF
             END DO
             IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
                parent(nrkpt) = ikpt
                symop(nrkpt) = psym(iop)
             END IF
-            IF (all(list == 0)) EXIT
 
+            if(all(list == 0)) exit
          END DO
       END DO
+
 
       ! for the Gamma-point holds:
       parent(1) = 1
@@ -568,7 +562,7 @@ CONTAINS
 
       ! calc numsymop
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-      
+
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
@@ -576,6 +570,7 @@ CONTAINS
             !determine number of rotkpt
             nrkpt = kpts%get_nk(rotkpt)
             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
+
 
             IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0

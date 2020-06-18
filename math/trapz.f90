@@ -7,7 +7,7 @@ MODULE m_trapz
 
    CONTAINS
 
-   REAL FUNCTION trapz(y,h,n)
+   PURE REAL FUNCTION trapz(y,h,n)
 
       REAL,          INTENT(IN)     :: y(:)
 

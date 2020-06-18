@@ -46,7 +46,7 @@ MODULE m_excSplitting
          IF(l /= lp) CYCLE
          IF(atomType /= atomTypep) CYCLE
 
-         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
          IF(i_gf /= indUnique) CYCLE
          !-------------------------------------------------

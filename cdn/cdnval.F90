@@ -163,7 +163,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
-      IF(greensfImagPart%l_calc) CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+      IF(greensfImagPart%l_calc) &
+         CALL greensfBZintCoeffs%init(gfinp,input,noco,jsp_start,jsp_end,&
+                                      SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
    ENDIF
 
 
@@ -246,13 +248,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
          ENDIF
 
-         IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
-            IF(greensfImagPart%l_calc) THEN
-               CALL greensfBZint(ikpt_i,ikpt,noccbd,ispin,gfinp%l_mperp.AND.(ispin==jsp_end),&
-                                 gfinp,sym,atoms,kpts,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
-            ENDIF
-         ENDIF
-
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          call timestart("eparas")
@@ -300,6 +295,14 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
         CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
         call timestop("denCoeffsOffdiag%calcCoefficients")
       endif
+
+      IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
+         IF(greensfImagPart%l_calc) THEN
+            CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,input,kpts,&
+                              usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+         ENDIF
+      ENDIF
+
       CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case

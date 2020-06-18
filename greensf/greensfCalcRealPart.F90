@@ -65,7 +65,7 @@ MODULE m_greensfCalcRealPart
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
 
-            i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
             IF(i_gf /= indUnique) THEN
                !This cutoff was already calculated
@@ -163,7 +163,7 @@ MODULE m_greensfCalcRealPart
          nTypep = g(i_gf)%elem%atomTypep
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
 
-         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf)
+         i_elem = gfinp%uniqueElements(ind=i_gf)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end

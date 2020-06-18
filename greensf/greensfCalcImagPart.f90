@@ -68,22 +68,21 @@ MODULE m_greensfCalcImagPart
 
          CALL timestart("Green's Function: Imaginary Part")
          !Loop over Green's Function elements
-         !$OMP PARALLEL DEFAULT(NONE) &
-         !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
-         !$OMP SHARED(ikpt_i,ikpt,ev_list,nBands,del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
-         !$OMP PRIVATE(i_gf,l,lp,m,mp,iBand,j,eGrid_start,eGrid_end,ie,weight,l_zero)&
-         !$OMP PRIVATE(indUnique,i_elem)
-         !$OMP DO
          DO i_gf = 1, gfinp%n
 
             !Get the information about the current element
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
 
-            i_elem = uniqueElements_gfinp(gfinp,ind=i_gf,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
 
+            !$OMP PARALLEL DO DEFAULT(NONE) &
+            !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
+            !$OMP SHARED(i_elem,l,lp,ikpt_i,nBands)&
+            !$OMP SHARED(del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
+            !$OMP PRIVATE(m,mp,iBand,j,eGrid_start,eGrid_end,weight,l_zero) COLLAPSE(2)
             DO m = -l, l
                DO mp = -lp, lp
                   DO iBand = 1, nBands
@@ -133,9 +132,8 @@ MODULE m_greensfCalcImagPart
                   ENDDO!ib
                ENDDO!mp
             ENDDO!m
+            !$OMP END PARALLEL DO
          ENDDO!i_gf
-         !$OMP END DO
-         !$OMP END PARALLEL
          CALL timestop("Green's Function: Imaginary Part")
 
          IF(input%bz_integration==3) DEALLOCATE(dosWeights,indBound)

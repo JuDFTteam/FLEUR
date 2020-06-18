@@ -55,7 +55,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
-         i_elem = uniqueElements_gfinp(gfinp,ind=i_gf)
+         i_elem = gfinp%uniqueElements(ind=i_gf)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
