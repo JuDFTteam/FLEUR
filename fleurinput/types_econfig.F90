@@ -389,7 +389,7 @@ CONTAINS
       IF (VERIFY(conf,"01234567890spdf ")>0) CALL judft_error(("Invalid econfig:"//TRIM(simple)))
       n=1
       DO WHILE (len_TRIM(conf)>1)
-         READ(conf,"(a1,a1,i2)", ,IOSTAT=stat) n_ch,ch,occ
+         READ(conf,"(a1,a1,i2)", IOSTAT=stat) n_ch,ch,occ
          if(stat /= 0) call judft_error("Can't read this econfig")
          SELECT CASE (ch)
          CASE ('s')
