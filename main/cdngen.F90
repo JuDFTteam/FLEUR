@@ -84,9 +84,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_regionCharges)   :: regCharges
+   TYPE(t_regionCharges)          :: regCharges
    TYPE(t_dos),TARGET             :: dos
-   TYPE(t_moments)         :: moments
+   TYPE(t_vacdos),TARGET          :: vacdos
+   TYPE(t_moments)                :: moments
    TYPE(t_mcd),TARGET             :: mcd
    TYPE(t_slab),TARGET            :: slab
    TYPE(t_orbcomp),TARGET         :: orbcomp
@@ -102,18 +103,19 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour
 
-   TYPE(t_eigdos_list) :: eigdos(5)
+   TYPE(t_eigdos_list) :: eigdos(6)
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error
+   LOGICAL               :: l_error,Perform_metagga
 
    ! Initialization section
    CALL regCharges%init(input,atoms)
    CALL moments%init(mpi,input,sphhar,atoms)
    !initalize data for DOS
-   CALL dos%init(input,atoms,kpts,vacuum,results%eig); eigdos(1)%p=>dos
+   CALL dos%init(input,atoms,kpts,banddos,results%eig); eigdos(1)%p=>dos
+   CALL vacdos%init(input,atoms,kpts,banddos,results%eig); eigdos(6)%p=>vacdos
    CALL mcd%init(banddos,input,atoms,kpts,results%eig);eigdos(2)%p=>mcd
    CALL slab%init(banddos,atoms,cell,input,kpts);eigdos(3)%p=>slab
    CALL orbcomp%init(input,banddos,atoms,kpts,results%eig);eigdos(4)%p=>orbcomp
@@ -147,7 +149,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
@@ -168,8 +170,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
      CALL juDFT_end("DOS OK",mpi%irank)
    END IF
 
-   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
-   IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
+   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",mpi%irank)
 
    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,mpi,.TRUE.)
    IF (mpi%irank.EQ.0) THEN
@@ -244,7 +245,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
      IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,core_den,'cdnc')
-
+   endif
 
 #ifdef CPP_MPI
    CALL MPI_BCAST(nococonv%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

@@ -5,16 +5,15 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_cdnval
-use m_types_jDOS
-use m_types_orbcomp
-use m_types_mcd
-use m_types_slab
+!use m_types_jDOS
+!use m_types_orbcomp
+!use m_types_mcd
+!use m_types_slab
 
 IMPLICIT NONE
 
 PRIVATE
 
-PUBLIC :: t_slab,t_orbcomp,t_mcd,t_jDOS
    TYPE t_orb
       REAL, ALLOCATABLE    :: uu(:,:,:,:)
       REAL, ALLOCATABLE    :: dd(:,:,:,:)
@@ -472,7 +471,7 @@ SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,
    thisGVacMap%gvac1d = 0
    thisGVacMap%gvac2d = 0
 
-   IF (vacuum%nstm.EQ.3.AND.input%film) THEN
+   IF (.false..AND.input%film) THEN
       CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
                  cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
    END IF

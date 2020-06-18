@@ -11,7 +11,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
+                  vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,vacdos,results,&
                   moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
    !************************************************************************************
@@ -44,8 +44,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_greensfCalcImagPart
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
-   USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
-   USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
+   USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
+   USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
    USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
    USE m_jDOS
    USE m_abcrot2
@@ -54,7 +54,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
    USE m_tlmplm_cholesky
-
+   USE m_types_mcd
+   USE m_types_slab
+   USE m_types_jDOS
+   USE m_types_vacDOS
+   USE m_types_orbcomp
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -84,6 +88,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    TYPE(t_potden),        INTENT(INOUT) :: den
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
+   TYPE(t_vacdos),        INTENT(INOUT) :: vacdos
    TYPE(t_moments),       INTENT(INOUT) :: moments
    TYPE(t_hub1data),       OPTIONAL, INTENT(INOUT) :: hub1data
    TYPE(t_coreSpecInput),  OPTIONAL, INTENT(IN)    :: coreSpecInput
@@ -104,7 +109,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec, l_empty
+   LOGICAL :: l_orbcomprot, l_real, l_corespec, l_empty
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
@@ -293,16 +298,16 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         IF (PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
+                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,vacdos)
          END IF
       END IF
-      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
+      IF (input%film) CALL regCharges%sumBandsVac(vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
+      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
       END IF
@@ -310,7 +315,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif

@@ -27,6 +27,7 @@ CONTAINS
                     usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
     use m_types_dos
+    use m_types_mcd
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
     TYPE(t_mpi),           INTENT(IN)    :: mpi

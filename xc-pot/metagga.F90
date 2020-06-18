@@ -85,6 +85,7 @@ CONTAINS
       USE m_types_misc
       USE m_types_regionCharges
       USE m_types_dos
+      USE m_types_vacdos
       USE m_types_cdnval
       USE m_cdnval
       use m_types_nococonv
@@ -117,6 +118,8 @@ CONTAINS
 
       TYPE(t_regionCharges)           :: regCharges
       TYPE(t_dos)                     :: dos
+      TYPE(t_vacdos)                  :: vacdos
+
       TYPE(t_moments)                 :: moments
       TYPE(t_results)                 :: tmp_results
       TYPE(t_cdnvalJob)               :: cdnvalJob
@@ -124,7 +127,8 @@ CONTAINS
 
 
       CALL regCharges%init(input, atoms)
-      CALL dos%init(input,        atoms, kpts, vacuum,results%eig)
+      CALL dos%init(input,        atoms, kpts, banddos,results%eig)
+      CALL vacdos%init(input,        atoms, kpts, banddos,results%eig)
 !      CALL moments%init(input,    atoms)
       CALL moments%init(mpi,input,sphhar,atoms)
       tmp_results = results
@@ -138,7 +142,7 @@ CONTAINS
 
          CALL cdnval(eig_id, mpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
             enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
-            EnergyDen, regCharges, dos, tmp_results, moments, gfinp, hub1inp)
+            EnergyDen, regCharges, dos, vacdos,tmp_results, moments, gfinp, hub1inp)
       ENDDO
 
    END SUBROUTINE calc_EnergyDen

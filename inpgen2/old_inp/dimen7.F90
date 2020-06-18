@@ -105,7 +105,7 @@
 !
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
-      CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
+      CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,banddos%layers,&
                         input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,grid,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
@@ -114,7 +114,7 @@
      & atoms%lmax(atoms%ntype),sym%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
      & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%bmu(atoms%ntype),&
-     & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
+     & noel(atoms%ntype),banddos%izlay(banddos%layers,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%alph_inp(atoms%ntype),noco%beta_inp(atoms%ntype),&
@@ -313,7 +313,7 @@
 !
       IF (.not.l_kpts) THEN
        IF (.NOT.oneD%odd%d1) THEN
-          IF(l_gamma .AND. banddos%ndir .EQ. 0) THEN
+          IF(l_gamma ) THEN
          call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
 !         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
@@ -360,7 +360,7 @@
 ! now proceed as usual
 !
       CALL inpeig_dim(input,cell,noco,oneD,kpts,stars,latnam)
-      vacuum%layerd = max(vacuum%layerd,1)
+      banddos%layers = max(banddos%layers,1)
       atoms%ntype = atoms%ntype
       IF (noco%l_noco) input%neig = 2*input%neig
 
@@ -370,7 +370,7 @@
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%bmu,noel,&
-     & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
+     & banddos%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & sphhar%llh,sphhar%nmem,sphhar%mlh,hybinp%select1,hybinp%lcutm1,&
      & hybinp%lcutwf)
 

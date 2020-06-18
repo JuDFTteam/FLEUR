@@ -16,7 +16,8 @@ dos/ptdos.f90
 dos/make_dos.F90
 dos/types_jdos.F90
 dos/types_mcd.F90
-dos/types_orbcomp.f90
+dos/types_orbcomp.F90
 dos/types_slab.F90
 dos/types_eigdos.F90
+dos/types_vacdos.f90
 )

@@ -93,7 +93,7 @@ CONTAINS
     ALLOCATE ( stars%nstr2(stars%ng2),sym%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
     ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2) )
     ALLOCATE ( atoms%econf(atoms%ntype) )
-    ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
+    ALLOCATE ( banddos%izlay(banddos%layers,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
     ALLOCATE ( sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop) )
     ALLOCATE ( sym%invsat(atoms%nat),sym%invsatnr(atoms%nat) )
@@ -160,7 +160,6 @@ CONTAINS
          enpara,latnam,namgrp)
 
     banddos%l_orb = .FALSE.
-    banddos%orbCompAtom = 0
 
     ALLOCATE(noco%socscale(atoms%ntype))
     xcpot%lda_atom(:) = .FALSE.

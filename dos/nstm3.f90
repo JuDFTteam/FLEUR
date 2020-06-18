@@ -4,7 +4,7 @@ MODULE m_nstm3
   !     included writing to vacwave!
   !     set up mapping array to general G_parallel(j)=(gvac1(j),gvac2(j))
   !             for vacuum density in order to write out information
-  !             on electronic structure for calculation of tunneling current    
+  !             on electronic structure for calculation of tunneling current
   !                            change by shz, Jan.99
   !
   !***********************************************************************
@@ -29,8 +29,8 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ikpt   
-    INTEGER, INTENT (IN) :: jspin      
+    INTEGER, INTENT (IN) :: ikpt
+    INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array  Arguments ..
     REAL,    INTENT (IN) :: evac(2)
@@ -68,9 +68,9 @@ CONTAINS
           gvac1d(j)=gvac1(gindex(j))
           gvac2d(j)=gvac2(gindex(j))
        END DO
-       ! 
+       !
        IF (jspin.EQ.1) THEN
-          WRITE (87,'(f10.6,1x,i1,1x,f10.6)') vacuum%tworkf,input%jspins,cell%area
+!          WRITE (87,'(f10.6,1x,i1,1x,f10.6)') banddos%tworkf,input%jspins,cell%area
           WRITE (87,'(2(f10.6,1x))') cell%amat(1,1), cell%amat(2,1)
           WRITE (87,'(2(f10.6,1x))') cell%amat(1,2), cell%amat(2,2)
           WRITE (87,'(2(f10.6,1x))') cell%bmat(1,1), cell%bmat(2,1)
@@ -106,7 +106,7 @@ CONTAINS
           IF (ABS(atoms%taual(3,i)).GT.dz0) dz0=ABS(atoms%taual(3,i))
        END DO
        dz0=cell%z1-dz0*cell%amat(3,3)
-       WRITE (87,'(i3,1x,f6.4,1x,f12.6)') vacuum%nmz,vacuum%delz,dz0   
+       WRITE (87,'(i3,1x,f6.4,1x,f12.6)') vacuum%nmz,vacuum%delz,dz0
        DO ivac=1,vacuum%nvac
           DO i=1, vacuum%nmz
              WRITE (87,'(e16.8)') vz(i,ivac)

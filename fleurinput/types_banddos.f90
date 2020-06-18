@@ -12,11 +12,21 @@ MODULE m_types_banddos
   PUBLIC:: t_banddos
   TYPE,EXTENDS(t_fleurinput_base):: t_banddos
      LOGICAL :: dos =.FALSE.
-     LOGICAL :: vacdos =.FALSE.
      REAL    :: e1_dos=0.5
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
      INTEGER :: ndos_points=1301
+
+
+     LOGICAL :: vacdos =.FALSE.
+     INTEGER :: layers=0
+     INTEGER :: nstars=0
+     INTEGER :: nstm=0
+     REAL    :: tworkf=0.0
+     REAL    :: locx(2)=[0.,0.]
+     REAL    :: locy(2)=[0.,0.]
+     LOGICAL :: starcoeff=.FALSE.
+     INTEGER, ALLOCATABLE :: izlay(:, :)
 
 
      LOGICAL :: band =.FALSE.
@@ -29,8 +39,10 @@ MODULE m_types_banddos
      LOGICAL :: l_mcd =.FALSE.
      REAL    :: e_mcd_lo =-10.0
      REAL    :: e_mcd_up= 0.0
+
      LOGICAL :: l_orb =.FALSE.
      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
+
      LOGICAL :: l_jDOS = .FALSE.
 
      LOGICAL :: l_slab=.false.
@@ -77,7 +89,16 @@ CONTAINS
     CALL mpi_bc(this%dos_atom,rank,mpi_comm)
     CALL mpi_bc(this%l_slab,rank,mpi_comm)
     CALL mpi_bc(this%ndos_points,rank,mpi_comm)
-
+    CALL mpi_bc(this%layers,rank,mpi_comm)
+    CALL mpi_bc(this%nstars,rank,mpi_comm)
+    CALL mpi_bc(this%nstm,rank,mpi_comm)
+    CALL mpi_bc(this%tworkf,rank,mpi_comm)
+    CALL mpi_bc(this%locx(1),rank,mpi_comm)
+    CALL mpi_bc(this%locy(1),rank,mpi_comm)
+    CALL mpi_bc(this%locx(2),rank,mpi_comm)
+    CALL mpi_bc(this%locy(2),rank,mpi_comm)
+    CALL mpi_bc(this%starcoeff,rank,mpi_comm)
+    CALL mpi_bc(this%izlay,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -85,79 +106,79 @@ CONTAINS
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 
-    CHARACTER(len=300) :: xPathA, xPathB
-    INTEGER::numberNodes,iType,i,na
-    LOGICAL::l_orbcomp,l_jDOS
+    CHARACTER(len=300) :: xPathA, xPathB,str
+    INTEGER::numberNodes,iType,i,na,n
+    LOGICAL::l_orbcomp,l_jDOS,all_atoms
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     !this%l_slab = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@slab'))
     !this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
     this%l_mcd = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@mcd'))
 
-    numberNodes = xml%GetNumberOfNodes('/fleurInput/output/densityOfStates')
-
-    IF ((this%dos).AND.(numberNodes.EQ.0)) THEN
-       CALL juDFT_error("dos is true but densityOfStates parameters are not set!")
-    END IF
-
+    numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
-       this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@minEnergy'))
-       this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@maxEnergy'))
-       this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@sigma'))
+       all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
+       this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
+       this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))
+       this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@sigma'))
+       this%ndos_points=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@numberPoints'))
     END IF
-    IF (this%band) THEN
-       this%dos=.TRUE.
-    ENDIF
 
     ! Read in optional magnetic circular dichroism parameters
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/magneticCircularDichroism')
-
-    IF ((this%l_mcd).AND.(numberNodes.EQ.0)) THEN
-       CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "read_xml_banddos")
-    END IF
-
     IF (numberNodes.EQ.1) THEN
-       this%e_mcd_lo = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyLo'))
-       this%e_mcd_up = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyUp'))
+      this%l_mcd=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output//magneticCircularDichroism/@mcd'))
+      this%e_mcd_lo = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyLo'))
+      this%e_mcd_up = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyUp'))
     END IF
+
     allocate(this%dos_atom(xml%get_nat()))
-    this%dos_atom=.false.
+    this%dos_atom=all_atoms
     na = 0
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
        DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
           na = na + 1
           WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/relPos[',i,']'
-          l_orbcomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
-          IF(l_orbcomp) THEN
-            this%l_orb=.true.
-            this%dos_atom(na)=.true.
-          ENDIF
-          l_jDOS = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@jDOS'))
-          IF(l_jDOS) THEN
-            this%l_jDOS=.true.
-            this%dos_atom(na)=.true.
-          ENDIF
-          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@DOS')==1) THEN
-    !        this%dos_atom(na)=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@DOS'))
-          endif
-       ENDDO
+          this%dos_atom(na) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@banddos'))
+        ENDDO
     ENDDO
-    !In case of dos or band mode and no single dos_atom, we assume that all should be calculated
-    if ((this%dos.or.this%band).and..not.any(this%dos_atom)) this%dos_atom=.true.
-    IF(this%l_orb.AND.this%l_jDOS) THEN
-       CALL juDFT_error("Both jDOS and orbcomp flag set", calledby="read_xml_banddos")
-    ENDIF
 
     ! Read in optional parameter for unfolding bandstructure of supercell
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand')
-
     IF (numberNodes.EQ.1) THEN
        this%unfoldband = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@unfoldBand'))
        this%s_cell_x = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellX'))
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
     END IF
+
+    xPathA = '/fleurInput/output/vacuumDOS'
+    IF (xml%GetNumberOfNodes(xpathA)==1) THEN
+       this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
+       this%starcoeff = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
+       this%nstars = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
+       this%locx(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx1'))
+       this%locx(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx2'))
+       this%locy(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy1'))
+       this%locy(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy2'))
+       this%nstm = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
+       this%tworkf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
+
+       this%layers = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/vacuumDOS/layer'))
+       ALLOCATE(this%izlay(this%layers,2))
+       DO n=1,this%layers
+         write(xPathA,'(a,i0,a)') '/fleurInput/output/vacuumDOS/layer[',n,']'
+         str=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))
+         this%izlay(n,1)=evaluateFirst(str)
+         this%izlay(n,2)=evaluateFirst(str)
+       ENDDO
+     ELSE
+       allocate(this%izlay(0,2))
+    END IF
+
+
+
   END SUBROUTINE read_xml_banddos
 
 END MODULE m_types_banddos

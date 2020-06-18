@@ -129,7 +129,7 @@ end function
     INTEGER :: ind,ntype,nc,n
     ind=0
     DO n=1,size(this%mcd,1)
-      ntype=n/3+1
+      ntype=(n-1)/3+1
       select case(mod(n,3))
       case(1)
         c="pos"

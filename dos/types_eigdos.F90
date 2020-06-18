@@ -124,7 +124,6 @@ subroutine write_dos(eigdos,hdf_id)
     use m_banddos_io
 #endif
     class(t_eigdos),INTENT(INOUT):: eigdos
-    character(len=*),OPTIONAL,intent(in)::filename
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
     integer:: n

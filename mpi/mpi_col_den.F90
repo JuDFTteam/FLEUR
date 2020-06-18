@@ -11,13 +11,18 @@ MODULE m_mpi_col_den
   ! for some data also spread them back onto all pe's (Jan. 2019  U.Alekseeva)
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,vacdos,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
 
 #include"cpp_double.h"
     USE m_types
     USE m_constants
     USE m_juDFT
+    use m_types_mcd
+    use m_types_slab
+    use m_types_orbcomp
+    use m_types_jDOS
+    use m_types_vacdos
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -42,6 +47,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag),  INTENT(INOUT) :: denCoeffsOffdiag
     TYPE (t_regionCharges),     INTENT(INOUT) :: regCharges
     TYPE (t_dos),               INTENT(INOUT) :: dos
+    TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
     TYPE (t_mcd),     OPTIONAL, INTENT(INOUT) :: mcd
     TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
@@ -163,22 +169,22 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, dos%qal(0:,:,:,:,jspin), 1)
     DEALLOCATE (r_b)
 
-    n = SIZE(dos%qvac,1)*SIZE(dos%qvac,2)*SIZE(dos%qvac,3)
+    n = SIZE(vacdos%qvac,1)*SIZE(vacdos%qvac,2)*SIZE(vacdos%qvac,3)
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(dos%qvac(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, dos%qvac(:,:,:,jspin), 1)
+    CALL MPI_REDUCE(vacdos%qvac(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, vacdos%qvac(:,:,:,jspin), 1)
     DEALLOCATE (r_b)
 
-    n = SIZE(dos%qvlay,1)*SIZE(dos%qvlay,2)*SIZE(dos%qvlay,3)*SIZE(dos%qvlay,4)
+    n = SIZE(vacdos%qvlay,1)*SIZE(vacdos%qvlay,2)*SIZE(vacdos%qvlay,3)*SIZE(vacdos%qvlay,4)
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(dos%qvlay(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, dos%qvlay(:,:,:,:,jspin), 1)
+    CALL MPI_REDUCE(vacdos%qvlay(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, vacdos%qvlay(:,:,:,:,jspin), 1)
     DEALLOCATE (r_b)
 
-    n = SIZE(dos%qstars,1)*SIZE(dos%qstars,2)*SIZE(dos%qstars,3)*SIZE(dos%qstars,4)*SIZE(dos%qstars,5)
+    n = SIZE(vacdos%qstars,1)*SIZE(vacdos%qstars,2)*SIZE(vacdos%qstars,3)*SIZE(vacdos%qstars,4)*SIZE(vacdos%qstars,5)
     ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(dos%qstars(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, dos%qstars(:,:,:,:,:,jspin), 1)
+    CALL MPI_REDUCE(vacdos%qstars(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, vacdos%qstars(:,:,:,:,:,jspin), 1)
     DEALLOCATE (c_b)
 
     ! Collect mcd%mcd

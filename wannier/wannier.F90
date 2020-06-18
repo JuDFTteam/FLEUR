@@ -775,7 +775,7 @@ CONTAINS
                 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
                 !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
                 !     +                  mpi%n_size,filename=trim(fstart)//fending,
-                !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+                !     +                  layers=banddos%layers,nstars=banddos%nstars,
                 !     +                  ncored=29,nsld=atoms%nat,
                 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
                 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
@@ -791,7 +791,7 @@ CONTAINS
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
           !     +                  mpi%n_size,filename=trim(fstart)//fending,
-          !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+          !     +                  layers=banddos%layers,nstars=banddos%nstars,
           !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
           !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
@@ -806,7 +806,7 @@ CONTAINS
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
           !     +                  mpi%n_size,filename=trim(fstart)//fending,
-          !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+          !     +                  layers=banddos%layers,nstars=banddos%nstars,
           !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
           !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)

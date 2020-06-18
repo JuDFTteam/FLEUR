@@ -15,9 +15,6 @@ MODULE m_types_dos
      INTEGER, ALLOCATABLE :: ksym(:,:,:)
      REAL,    ALLOCATABLE :: qis(:,:,:)
      REAL,    ALLOCATABLE :: qal(:,:,:,:,:)
-     REAL,    ALLOCATABLE :: qvac(:,:,:,:)
-     REAL,    ALLOCATABLE :: qvlay(:,:,:,:,:)
-     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:,:,:)
      CHARACTER(len=20),ALLOCATABLE:: weight_names(:)!This must be allocated in init of derived type
 
    CONTAINS
@@ -80,41 +77,19 @@ CONTAINS
         if (ind==id) get_weight_eig=this%qal(l,ntype,:,:,:)
       ENDDO
     ENDDO
-    do i=1,2
-      ind=ind+1
-      if (ind==id) get_weight_eig=this%qvac(:,i,:,:)
-    end do
-    do i=1,size(this%qvlay,2)
-      ind=ind+1
-      if (ind==id) get_weight_eig=this%qvlay(:,i,1,:,:)
-      ind=ind+1
-      if (ind==id) get_weight_eig=this%qvlay(:,i,2,:,:)
-    end do
-    DO l=1,size(this%qstars,3)
-      do i=1,size(this%qstars,1)
-        ind=ind+1
-        if (ind==id) get_weight_eig=real(this%qstars(i,:,l,1,:,:))
-        ind=ind+1
-        if (ind==id) get_weight_eig=aimag(this%qstars(i,:,l,1,:,:))
-        ind=ind+1
-        if (ind==id) get_weight_eig=real(this%qstars(i,:,l,2,:,:))
-        ind=ind+1
-        if (ind==id) get_weight_eig=aimag(this%qstars(i,:,l,2,:,:))
-      end do
-    end do
   end function
 
-SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum,eig)
+SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   USE m_types_input
   USE m_types_atoms
-  USE m_types_vacuum
+  USE m_types_banddos
   USE m_types_kpts
   IMPLICIT NONE
   CLASS(t_dos),           INTENT(INOUT) :: thisDOS
   TYPE(t_input),          INTENT(IN)    :: input
   TYPE(t_atoms),          INTENT(IN)    :: atoms
   TYPE(t_kpts),           INTENT(IN)    :: kpts
-  TYPE(t_vacuum),         INTENT(IN)    :: vacuum
+  TYPE(t_banddos),         INTENT(IN)    :: banddos
   real,intent(in)                       :: eig(:,:,:)
 
   INTEGER :: ntype,l,i,ind
@@ -126,19 +101,13 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum,eig)
   ALLOCATE(thisDOS%ksym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qal(0:3,atoms%ntype,input%neig,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qvac(input%neig,2,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qvlay(input%neig,vacuum%layerd,2,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qstars(vacuum%nstars,input%neig,vacuum%layerd,2,kpts%nkpt,input%jspins))
 
   thisDOS%jsym = 0
   thisDOS%ksym = 0
   thisDOS%qis = 0.0
   thisDOS%qal = 0.0
-  thisDOS%qvac = 0.0
-  thisDOS%qvlay = 0.0
-  thisDOS%qstars = CMPLX(0.0,0.0)
 
-  allocate(thisDOS%weight_names(4+4*atoms%ntype+vacuum%layerd*(vacuum%nstars+1)))
+  allocate(thisDOS%weight_names(2+4*atoms%ntype))
   thisDOS%weight_names(1)="Total"
   thisDOS%weight_names(2)="INT"
   ind=2
@@ -148,28 +117,6 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum,eig)
       write(thisDOS%weight_names(ind),"(a,i0,a)") "MT:",ntype,spdfg(l)
     ENDDO
   ENDDO
-  ind=ind+1
-  thisDOS%weight_names(ind)="VAC1"
-  ind=ind+1
-  thisDOS%weight_names(ind)="VAC2"
-  do i=1,vacuum%layerd
-    ind=ind+1
-    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER1-",i
-    ind=ind+1
-    write(thisDOS%weight_names(ind),"(a,i0)") "LAYER2-",i
-  end do
-  DO l=1,vacuum%layerd
-    do i=1,vacuum%nstars
-      ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC1)-",l,"-",i
-      ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC1)-",l,"-",i
-      ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "R(gVAC2)-",l,"-",i
-      ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a,i0)") "I(gVAC2)-",l,"-",i
-    end do
-  end do
 
 
 END SUBROUTINE dos_init

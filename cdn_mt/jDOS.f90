@@ -11,6 +11,7 @@ MODULE m_jDOS
    !--------------------------------------------------------------------
    USE m_types
    USE m_clebsch
+   use m_types_jDOS
 
    IMPLICIT NONE
 

@@ -6,11 +6,11 @@ MODULE m_vacden
   !     *************************************************************
 CONTAINS
   SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                    gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,dos)
+                    gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,vacdos)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
-    !     ****** change vacden(......,dos%qstars) for starcoefficients, shz. Jan.99
+    !     ****** change vacden(......,vacdos%qstars) for starcoefficients, shz. Jan.99
     !     ****** changed for fleur dw
     !     In non-collinear calculations the density becomes a hermitian 2x2
     !     matrix. This subroutine generates this density matrix in the
@@ -46,6 +46,7 @@ CONTAINS
     USE m_vacuz
     USE m_vacudz
     USE m_types
+    USE m_types_vacdos
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !for some reason the second spin data is reset in noco case
 
@@ -63,7 +64,7 @@ CONTAINS
     TYPE(t_mat),INTENT(IN)        :: zMat
     TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
     TYPE(t_potden),INTENT(INOUT)  :: den
-    TYPE(t_dos),   INTENT(INOUT)  :: dos
+    TYPE(t_vacdos),   INTENT(INOUT)  :: vacdos
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin
     INTEGER, INTENT (IN) :: ne
@@ -125,7 +126,7 @@ CONTAINS
     !                 to calculate derivatives
     !    tworkf: Workfunction of Tip (in hartree units) is needed for d_z^2-Orbital)
     !    starcoeff: =T: star coefficients are calculated at values of izlay for 0th (=q) to nstars-1. star
-    !                (dos%qstars(1..nstars-1))
+    !                (vacdos%qstars(1..nstars-1))
     !    nstars: number of star functions to be used (0th star is given by value of q=charge integrated in 2D)
     !
     !    further possibility: (readin of locx, locy has to be implemented in flapw7.f or they have to be set explicitly)
@@ -194,7 +195,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
     !    if tunneling current should be calculated we need to write out
     !     info on electronic structure: --> mapping from kvac to gvac by mapg2k
     !                                             shz, Jan.99
-    IF (vacuum%nstm.EQ.3) THEN
+    IF (.false.) then !vacuum%nstm.EQ.3
        DO j=1, n2max
           mapg2k(j)=j
           DO i=1, nv2(jspin)
@@ -320,7 +321,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        !   ----> calculate first and second derivative of u,ue
        !        in order to simulate p_z or d_z^2 Tip in Chen's model , shz. 97
        !
-       IF (vacuum%nstm.GT.0) THEN
+       IF (.false.) THEN !vacuum%nstm.GT.0
           DO  ik = 1,nv2(jspin)
              !               CALL rhzgrd(nmz,delz,u(1,ik,jspin),4,du,ddu(1,ik))
              !               CALL rhzgrd(nmz,delz,ue(1,ik,jspin),4,due,ddue(1,ik))
@@ -334,7 +335,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                   due,ddue(1,ik))
              DEALLOCATE ( dummy )
 
-             IF (vacuum%nstm.EQ.1) THEN
+             IF (.FALSE.) THEN !IF (vacuum%nstm.EQ.1) THEN
                 u(:vacuum%nmz,ik,jspin)=du(:vacuum%nmz)
                 ue(:vacuum%nmz,ik,jspin)=due(:vacuum%nmz)
              END IF
@@ -350,17 +351,17 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        !                           IF nstm=3
        !                              tworkf is then the fermi energy (in hartree)
        !
-       IF (vacuum%nstm.EQ.3) THEN
+       IF (.false.)then !(vacuum%nstm.EQ.3) THEN
 #ifdef CPP_MPI
           CALL judft_error("nstm==3 does not work in parallel",calledby="vacden")
 #else
           i=0
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.emax) i=i+1
+             IF (ABS(eig(n)-banddos%tworkf).LE.emax) i=i+1
           END DO
           WRITE (87,FMT=990) lapw%bkpt(1),lapw%bkpt(2), i, n2max
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.emax) THEN
+             IF (ABS(eig(n)-banddos%tworkf).LE.emax) THEN
                 WRITE (87,FMT=1000) eig(n)
                 DO j=1,n2max
                    WRITE (87,FMT=1010) ac(mapg2k(j),n,jspin),&
@@ -382,7 +383,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        !
        !---->   non-warping part of the density (g=0 star)
        !
-       IF (vacuum%nstm.EQ.2) THEN
+       IF (.false.) then !vacuum%nstm.EQ.2) THEN
           !
           !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
           !
@@ -397,16 +398,16 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                 ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                 ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                 qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
              END DO
-             aae=-aa*vacuum%tworkf*2/3
-             bbe=-bb*vacuum%tworkf*2/3
-             abe=-ab*vacuum%tworkf*2/3
-             bae=-ba*vacuum%tworkf*2/3
-             aaee=aa*vacuum%tworkf*vacuum%tworkf*4/9
-             bbee=bb*vacuum%tworkf*vacuum%tworkf*4/9
-             abee=ab*vacuum%tworkf*vacuum%tworkf*4/9
-             baee=ba*vacuum%tworkf*vacuum%tworkf*4/9
+             aae=-aa*banddos%tworkf*2/3
+             bbe=-bb*banddos%tworkf*2/3
+             abe=-ab*banddos%tworkf*2/3
+             bae=-ba*banddos%tworkf*2/3
+             aaee=aa*banddos%tworkf*banddos%tworkf*4/9
+             bbee=bb*banddos%tworkf*banddos%tworkf*4/9
+             abee=ab*banddos%tworkf*banddos%tworkf*4/9
+             baee=ba*banddos%tworkf*banddos%tworkf*4/9
              DO  jz = 1,vacuum%nmz
                 ui = u(jz,l,jspin)
                 uei = ue(jz,l,jspin)
@@ -445,7 +446,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                             qout = REAL(CONJG(ac_1(l,m,n,ispin))*ac_1(l,m,n,ispin) +&
                                  tei_1(l,m,ispin)*CONJG(bc_1(l,m,n,ispin))*&
                                  bc_1(l,m,n,ispin))
-                            dos%qvac(ev_list(n),ivac,ikpt,ispin) = dos%qvac(ev_list(n),ivac,ikpt,ispin)+qout*cell%area
+                            vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin)+qout*cell%area
                          END DO
                          DO  jz = 1,vacuum%nmz
                             ui = u_1(jz,l,m,ispin)
@@ -466,7 +467,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          ab=ab + we(n)*CONJG(ac(l,n,ispin))*bc(l,n,ispin)
                          ba=ba + we(n)*CONJG(bc(l,n,ispin))*ac(l,n,ispin)
                          qout = REAL(CONJG(ac(l,n,ispin))*ac(l,n,ispin)+tei(l,ispin)*CONJG(bc(l,n,ispin))*bc(l,n,ispin))
-                         dos%qvac(ev_list(n),ivac,ikpt,ispin) = dos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
+                         vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
                       END DO
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
@@ -491,7 +492,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          ba = ba + we(n)*CONJG(bc_1(l,m,n,jspin))*ac_1(l,m,n,jspin)
                          qout = REAL(CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)+&
                               tei_1(l,m,jspin)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin))
-                         dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin)+qout*cell%area
+                         vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin)+qout*cell%area
                       END DO
                       DO  jz = 1,vacuum%nmz
                          ui = u_1(jz,l,m,jspin)
@@ -512,7 +513,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                       ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                       ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                       qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                      dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                      vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
                    END DO
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
@@ -530,28 +531,28 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
           !
           !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
           !
-          IF (vacuum%nstm.EQ.2) THEN
+          IF (.false.) THEN !IF (vacuum%nstm.EQ.2) THEN
              DO l=1,nv2(jspin)
                 DO n = 1,ne
                    aa = CONJG(ac(l,n,jspin))*ac(l,n,jspin)
                    bb = CONJG(bc(l,n,jspin))*bc(l,n,jspin)
                    ab = CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                    ba = CONJG(bc(l,n,jspin))*ac(l,n,jspin)
-                   aae = -vacuum%tworkf*aa*2/3
-                   bbe = -vacuum%tworkf*bb*2/3
-                   abe = -vacuum%tworkf*ab*2/3
-                   bae = -vacuum%tworkf*ba*2/3
-                   aaee = aa*vacuum%tworkf*vacuum%tworkf*4/9
-                   bbee = bb*vacuum%tworkf*vacuum%tworkf*4/9
-                   abee = ab*vacuum%tworkf*vacuum%tworkf*4/9
-                   baee = ba*vacuum%tworkf*vacuum%tworkf*4/9
-                   DO jj = 1,vacuum%layers
+                   aae = -banddos%tworkf*aa*2/3
+                   bbe = -banddos%tworkf*bb*2/3
+                   abe = -banddos%tworkf*ab*2/3
+                   bae = -banddos%tworkf*ba*2/3
+                   aaee = aa*banddos%tworkf*banddos%tworkf*4/9
+                   bbee = bb*banddos%tworkf*banddos%tworkf*4/9
+                   abee = ab*banddos%tworkf*banddos%tworkf*4/9
+                   baee = ba*banddos%tworkf*banddos%tworkf*4/9
+                   DO jj = 1,banddos%layers
                       !
                       !     ----> either integrated LDOS(z1,z2) or LDOS(z1)
                       !
                       IF (input%integ) THEN
                          ll = 1
-                         DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
+                         DO ii = banddos%izlay(jj,1),banddos%izlay(jj,2)
                             ui = u(ii,l,jspin)
                             uei = ue(ii,l,jspin)
                             ddui = ddu(ii,l)
@@ -562,18 +563,18 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                             ll = ll+1
                          END DO
                          CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                         dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
+                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                       ELSE
-                         ui = u(vacuum%izlay(jj,1),l,jspin)
-                         uei = ue(vacuum%izlay(jj,1),l,jspin)
-                         ddui = ddu(vacuum%izlay(jj,1),l)
-                         dduei = ddue(vacuum%izlay(jj,1),l)
+                         ui = u(banddos%izlay(jj,1),l,jspin)
+                         uei = ue(banddos%izlay(jj,1),l,jspin)
+                         ddui = ddu(banddos%izlay(jj,1),l)
+                         dduei = ddue(banddos%izlay(jj,1),l)
                          yy(1) = REAL(aaee*ui*ui+bbee*uei*uei+&
                               (abee+baee)*ui*uei+aa*ddui*ddui+&
                               bb*dduei*dduei+(ab+ba)*ddui*dduei+&
                               2*aae*ui*ddui+2*bbe*uei*dduei+&
                               (abe+bae)*(ui*dduei+uei*ddui))
-                         dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) +yy (1)
+                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) +yy (1)
                       END IF
                    END DO
                 END DO
@@ -582,7 +583,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
              !     ----> s-Tip = calculate LDOS and(!) p_z-Tip (since u->du/dz, ue->due/dz)
              !
           ELSE
-             IF (ABS(vacuum%locx(1)-vacuum%locx(2)).LE.eps) THEN
+             IF (ABS(banddos%locx(1)-banddos%locx(2)).LE.eps) THEN
                 !
                 !     ----> integrated over 2D-unit cell
                 !
@@ -600,24 +601,24 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          bb = CONJG(bc(l,n,ispin))*bc(l,n,ispin)
                          ab = CONJG(ac(l,n,ispin))*bc(l,n,ispin)
                          ba = CONJG(bc(l,n,ispin))*ac(l,n,ispin)
-                         DO jj = 1,vacuum%layers
+                         DO jj = 1,banddos%layers
                             !
                             !     ---> either integrated (z1,z2) or slice (z1)
                             !
                             IF (input%integ) THEN
                                ll = 1
-                               DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
+                               DO ii = banddos%izlay(jj,1),banddos%izlay(jj,2)
                                   ui = u(ii,l,ispin)
                                   uei = ue(ii,l,ispin)
                                   yy(ll) = REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + RESULT(1)
+                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + RESULT(1)
                             ELSE
-                               ui = u(vacuum%izlay(jj,1),l,ispin)
-                               uei = ue(vacuum%izlay(jj,1),l,ispin)
-                               dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + REAL(&
+                               ui = u(banddos%izlay(jj,1),l,ispin)
+                               uei = ue(banddos%izlay(jj,1),l,ispin)
+                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + REAL(&
                                     aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
 
                             END IF
@@ -634,21 +635,21 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                 DO l=1, nv2(jspin)
                    DO l1=1, nv2(jspin)
                       IF (kvac1(l,jspin).EQ.kvac1(l1,jspin)) THEN
-                         factorx = CMPLX((vacuum%locx(2)-vacuum%locx(1)), 0.)
+                         factorx = CMPLX((banddos%locx(2)-banddos%locx(1)), 0.)
                       ELSE
                          k_diff=tpi_const*(kvac1(l,jspin)-kvac1(l1,jspin))
-                         k_d1 = k_diff*vacuum%locx(1)
-                         k_d2 = k_diff*vacuum%locx(2)
+                         k_d1 = k_diff*banddos%locx(1)
+                         k_d2 = k_diff*banddos%locx(2)
                          factorx=( CMPLX( COS(k_d2), SIN(k_d2)) -&
                               CMPLX( COS(k_d1), SIN(k_d1)) ) /&
                               CMPLX( 0.,k_diff )
                       END IF
                       IF (kvac2(l,jspin).EQ.kvac2(l1,jspin)) THEN
-                         factory = CMPLX((vacuum%locy(2)-vacuum%locy(1)), 0.)
+                         factory = CMPLX((banddos%locy(2)-banddos%locy(1)), 0.)
                       ELSE
                          k_diff=tpi_const*(kvac2(l,jspin)-kvac2(l1,jspin))
-                         k_d1 = k_diff*vacuum%locy(1)
-                         k_d2 = k_diff*vacuum%locy(2)
+                         k_d1 = k_diff*banddos%locy(1)
+                         k_d2 = k_diff*banddos%locy(2)
                          factory=( CMPLX( COS(k_d2), SIN(k_d2)) -&
                               CMPLX( COS(k_d1), SIN(k_d1)) ) /&
                               CMPLX( 0.,k_diff )
@@ -658,13 +659,13 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          bb = CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
                          ab = CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
                          ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
-                         DO jj = 1,vacuum%layers
+                         DO jj = 1,banddos%layers
                             !
                             !     ---> either integrated (z1,z2) or slice (z1)
                             !
                             IF (input%integ) THEN
                                ll = 1
-                               DO ii = vacuum%izlay(jj,1), vacuum%izlay(jj,2)
+                               DO ii = banddos%izlay(jj,1), banddos%izlay(jj,2)
                                   ui = u(ii,l,jspin)
                                   uei = ue(ii,l,jspin)
                                   uj = u(ii,l1,jspin)
@@ -673,13 +674,13 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
+                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                             ELSE
-                               ui = u(vacuum%izlay(jj,1),l,jspin)
-                               uei = ue(vacuum%izlay(jj,1),l,jspin)
-                               uj = u(vacuum%izlay(jj,1),l1,jspin)
-                               uej = ue(vacuum%izlay(jj,1),l1,jspin)
-                               dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                               ui = u(banddos%izlay(jj,1),l,jspin)
+                               uei = ue(banddos%izlay(jj,1),l,jspin)
+                               uj = u(banddos%izlay(jj,1),l1,jspin)
+                               uej = ue(banddos%izlay(jj,1),l1,jspin)
+                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                             END IF
                          END DO
                       END DO
@@ -696,7 +697,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        !
        !   ---> d_z^2-Tip
        !
-       IF (vacuum%nstm.EQ.2) THEN
+       if (.false.) then !IF (vacuum%nstm.EQ.2) THEN
           DO l = 1,nv2(jspin)
              DO  l1 = 1,l - 1
                 i1 = kvac1(l,jspin) - kvac1(l1,jspin)
@@ -721,14 +722,14 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                    ab = ab + we(n)*CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
                    ba = ba + we(n)*CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
                 END DO
-                aae=-aa*2/3*vacuum%tworkf
-                bbe=-bb*2/3*vacuum%tworkf
-                abe=-ab*2/3*vacuum%tworkf
-                bae=-ba*2/3*vacuum%tworkf
-                aaee=aa*4/9*vacuum%tworkf*vacuum%tworkf
-                bbee=bb*4/9*vacuum%tworkf*vacuum%tworkf
-                abee=ab*4/9*vacuum%tworkf*vacuum%tworkf
-                baee=ba*4/9*vacuum%tworkf*vacuum%tworkf
+                aae=-aa*2/3*banddos%tworkf
+                bbe=-bb*2/3*banddos%tworkf
+                abe=-ab*2/3*banddos%tworkf
+                bae=-ba*2/3*banddos%tworkf
+                aaee=aa*4/9*banddos%tworkf*banddos%tworkf
+                bbee=bb*4/9*banddos%tworkf*banddos%tworkf
+                abee=ab*4/9*banddos%tworkf*banddos%tworkf
+                baee=ba*4/9*banddos%tworkf*banddos%tworkf
                 DO  jz = 1,vacuum%nmzxy
                    ui = u(jz,l,jspin)
                    uj = u(jz,l1,jspin)
@@ -1041,9 +1042,9 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        !=============================================================
        !
        !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue
-       !           to dos%qstars(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
+       !           to vacdos%qstars(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
        !
-       IF (vacuum%starcoeff .AND. banddos%vacdos) THEN
+       IF (banddos%starcoeff .AND. banddos%vacdos) THEN
           DO  n=1,ne
              DO l = 1,nv2(jspin)
                 DO  l1 = 1,l - 1
@@ -1057,24 +1058,24 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                    ind2 = stars%ig2(ig3)
                    ig3p = stars%ig(-i1,-i2,i3)
                    ind2p = stars%ig2(ig3p)
-                   IF ((ind2.GE.2.AND.ind2.LE.vacuum%nstars).OR.&
-                        (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars)) THEN
+                   IF ((ind2.GE.2.AND.ind2.LE.banddos%nstars).OR.&
+                        (ind2p.GE.2.AND.ind2p.LE.banddos%nstars)) THEN
                       phs = stars%rgphs(i1,i2,i3)
                       phsp = stars%rgphs(-i1,-i2,i3)
                       aa = CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
                       bb = CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
                       ab = CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
                       ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
-                      DO jj = 1,vacuum%layers
-                         ui = u(vacuum%izlay(jj,1),l,jspin)
-                         uj = u(vacuum%izlay(jj,1),l1,jspin)
-                         uei = ue(vacuum%izlay(jj,1),l,jspin)
-                         uej = ue(vacuum%izlay(jj,1),l1,jspin)
+                      DO jj = 1,banddos%layers
+                         ui = u(banddos%izlay(jj,1),l,jspin)
+                         uj = u(banddos%izlay(jj,1),l1,jspin)
+                         uei = ue(banddos%izlay(jj,1),l,jspin)
+                         uej = ue(banddos%izlay(jj,1),l1,jspin)
                          t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
-                         IF (ind2.GE.2.AND.ind2.LE.vacuum%nstars) &
-                              dos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin) = dos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
-                         IF (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars) &
-                              dos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) = dos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                         IF (ind2.GE.2.AND.ind2.LE.banddos%nstars) &
+                              vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
+                         IF (ind2p.GE.2.AND.ind2p.LE.banddos%nstars) &
+                              vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
                       END DO
                    END IF
                 ENDDO

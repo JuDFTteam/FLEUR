@@ -70,10 +70,11 @@ CONTAINS
 8020 FORMAT (1x,3e20.12,i6,e20.12)
 
     DO iband = 1,count(dos%eig(:,ikpt,jspin)<1E99)
-       qvact = sum(dos%qvac(iband,:,ikpt,jspin))
-       IF (sym%invs .OR. sym%zrfs) qvact = 2.0*qvact
+       !qvact = sum(vacdos%qvac(iband,:,ikpt,jspin))
+       !IF (sym%invs .OR. sym%zrfs) qvact = 2.0*qvact
        iqvacpc = NINT(qvact*100.0)
-       qvacmt = qvact
+       !qvacmt = qvact
+       QVACMT=0.0
        iqalpc(0:3,:) = NINT(dos%qal(0:3,:,iband,ikpt,jspin)*100.0)
        DO l=0,3
          qvacmt=qvacmt+dot_product(dos%qal(l,:,iband,ikpt,jspin),atoms%neq)

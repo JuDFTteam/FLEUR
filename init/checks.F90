@@ -68,14 +68,14 @@ MODULE m_checks
         IF (.NOT.banddos%dos) THEN
            CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="postprocessInput")
         END IF
-        IF (.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1))THEN
+        IF (.NOT.banddos%starcoeff.AND.(banddos%nstars.NE.1))THEN
            CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="postprocessInput")
         END IF
-        IF (vacuum%layers.LT.1) THEN
+        IF (banddos%layers.LT.1) THEN
            CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="postprocessInput")
         END IF
-        DO i=1,vacuum%layers
-           IF (vacuum%izlay(i,1).LT.1) THEN
+        DO i=1,banddos%layers
+           IF (banddos%izlay(i,1).LT.1) THEN
               CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="postprocessInput")
            END IF
         END DO
