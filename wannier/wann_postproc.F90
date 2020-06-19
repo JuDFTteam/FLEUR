@@ -122,7 +122,7 @@ CONTAINS
          fullnkpts,kpoints,&
          num)
 
-    IF(wann%l_wannierize.AND.mpi%irank==0)THEN
+    IF(wann%l_wannierize)THEN
 #ifndef CPP_WANN
        WRITE(*,*) 'At this point a wannierization has to be performed'
        WRITE(*,*) 'but the Wannier90 library is not linked!'
@@ -405,11 +405,11 @@ CONTAINS
 
     IF(wann%l_plot_umdat)THEN
        CALL wann_plot_um_dat(&
-            stars,vacuum,atoms,sphhar,input,sym,mpi,&
+            kpts,stars,vacuum,atoms,sphhar,input,sym,mpi,&
             oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,&
             mpi%mpi_comm,i,wann%band_min,wann%band_max,noco%l_soc,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
-            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
+            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,atoms%llod,atoms%nlod,atoms%ntype,&
             cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
             sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
             nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
