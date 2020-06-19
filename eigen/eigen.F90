@@ -141,18 +141,8 @@ CONTAINS
             nvBuffer(nk,jsp) = lapw%nv(jsp)
 
             IF(fi%hybinp%l_hybrid.OR.fi%input%l_rdmft) THEN
-
-               ! Write overlap matrix smat to direct access file olap
-               ! print *,"Wrong overlap matrix used, fix this later"
-
-               if(.not. allocated(hybdat%olap)) THEN
-                  allocate(hybdat%olap(fi%input%jspins, fi%kpts%nkpt))
-               endif
-               if(.not. hybdat%olap(jsp,nk)%allocated()) call hybdat%olap(jsp,nk)%init(smat)
-               call hybdat%olap(jsp,nk)%copy(smat,1,1)
-               call hybdat%olap(jsp,nk)%u2l()
-               if(.not. smat%l_real) hybdat%olap(jsp,nk)%data_c = conjg(hybdat%olap(jsp,nk)%data_c)
-            END IF ! fi%hybinp%l_hybrid.OR.fi%input%l_rdmft
+               CALL write_eig(eig_id, nk,jsp, smat=smat)
+            END IF
 
             IF(fi%hybinp%l_hybrid) THEN
                IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,fi%atoms,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,&

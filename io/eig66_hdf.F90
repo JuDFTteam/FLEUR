@@ -57,7 +57,7 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
    !----------------------------------------------------------------------
-   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, filename)
+   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, l_olap, filename)
 
       !*****************************************************************
       !     opens hdf-file for eigenvectors+values
@@ -66,7 +66,7 @@ CONTAINS
 
       INTEGER, INTENT(IN) :: id, mpi_comm
       INTEGER, INTENT(IN) :: nmat, neig, nkpts, jspins
-      LOGICAL, INTENT(IN) :: create, readonly, l_real, l_soc
+      LOGICAL, INTENT(IN) :: create, readonly, l_real, l_soc, l_olap
       CHARACTER(LEN=*), OPTIONAL :: filename
 
 #ifdef CPP_HDF
@@ -77,6 +77,7 @@ CONTAINS
       INTEGER(HSIZE_T):: dims(7)
       TYPE(t_data_HDF), POINTER::d
       !Set creation and access properties
+
 #ifdef CPP_HDFMPI
       INCLUDE 'mpif.h'
       IF (readonly) THEN
@@ -93,6 +94,9 @@ CONTAINS
       access_prp = H5P_DEFAULT_f
       creation_prp = H5P_DEFAULT_f
 #endif
+      
+      if(l_olap) call juDFT_error("olap not implemented for hdf5")
+      
       CALL priv_find_data(id, d)
       IF (PRESENT(filename)) d%fname = filename
       CALL eig66_data_storedefault(d, jspins, nkpts, nmat, neig, l_real, l_soc)
@@ -211,7 +215,7 @@ CONTAINS
 
 #endif
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
 
       !*****************************************************************
       !     writes all eignevecs for the nk-th kpoint
@@ -222,12 +226,13 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
       REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
-      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat
+      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
 
       INTEGER i, j, k, nv_local, n1, n2, ne
       TYPE(t_data_HDF), POINTER::d
       CALL priv_find_data(id, d)
 
+      if(present(smat)) call juDFT_error("writing smat in HDF not supported yet")
 #ifdef CPP_HDF
       !
       !write enparas
@@ -324,17 +329,18 @@ CONTAINS
 
 #endif
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zMat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zMat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
       REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
-      TYPE(t_mat), OPTIONAL  :: zmat
+      TYPE(t_mat), OPTIONAL  :: zmat, smat
 
 #ifdef CPP_HDF
       INTEGER:: n1, n, k
       TYPE(t_data_HDF), POINTER::d
+      if(present(smat)) call juDFT_error("reading smat not supported for HDF")
       CALL priv_find_data(id, d)
 
       IF (PRESENT(neig)) THEN
