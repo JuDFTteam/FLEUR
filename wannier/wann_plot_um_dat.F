@@ -527,29 +527,53 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-      zzMat%l_real = l_real
-      zzMat%matsize1 = nbasfcn
-      zzMat%matsize2 = neigd
-      IF(l_real) THEN
-         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-      ELSE
-         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-      END IF
-      CALL judft_error("TODO:adjust in wann_plot_um_dat")
+!      zzMat%l_real = l_real
+!      zzMat%matsize1 = nbasfcn
+!      zzMat%matsize2 = neigd
+!      IF(l_real) THEN
+!         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+!      ELSE
+!         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+!      END IF
+!      CALL judft_error("TODO:adjust in wann_plot_um_dat")
 !      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
 !     >     irank,isize,kptibz,jspin,nbasfcn,nlotot, l_ss,l_noco,nrec,
 !     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
-      zMat%l_real = zzMat%l_real
-      zMat%matsize1 = zzMat%matsize1
-      zMat%matsize2 = zzMat%matsize2
-      IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-         zMat%data_r = 0.0
-      ELSE
-         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-         zMat%data_c = CMPLX(0.0,0.0)
-      END IF
+!      zMat%l_real = zzMat%l_real
+!      zMat%matsize1 = zzMat%matsize1
+!      zMat%matsize2 = zzMat%matsize2
+!      IF (zzMat%l_real) THEN
+!         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!         zMat%data_r = 0.0
+!      ELSE
+!         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!         zMat%data_c = CMPLX(0.0,0.0)
+!      END IF
+
+                n_start=1
+                n_end=input%neig
+
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
+     &               kptibz,cell,(sym%zrfs.AND.
+     &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &               .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+                nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
+               CALL zzMat%init(l_real,nbasfcn,input%neig)
+               CALL zMat%init(l_real,nbasfcn,input%neig)
+
+
+                CALL cdn_read(
+     &                eig_id,
+     &               lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, 
+     &                kptibz,jspin,lapw%dim_nbasfcn(),
+     &               noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
+     &                nbands,eigg,zzMat)
+
+
+
 
 
       nslibd = 0
