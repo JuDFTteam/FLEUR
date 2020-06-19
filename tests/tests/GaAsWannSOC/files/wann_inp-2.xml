@@ -77,7 +77,7 @@
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
       <wannier>
         <bandSelection minSpinUp="21" maxSpinUp="56"/>
-        <jobList> prepwan90 matrixmmn matrixamn mmn0  </jobList>
+        <jobList> prepwan90 matrixmmn matrixamn mmn0 wannierize </jobList>
       </wannier>
    </output>
   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
