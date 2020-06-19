@@ -171,7 +171,7 @@ MODULE m_types_greensf
          REAL   , OPTIONAL,   INTENT(IN)     :: udot(:,:)
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind,m_ind,mp_ind
+         INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep
          LOGICAL l_radial,l_full
 
@@ -215,9 +215,16 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = cmplx_0
-         ispin_end = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
 
-         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
+         IF(l_full) THEN
+            spin_start = 1
+            spin_end   = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
+         ELSE
+            spin_start = spin
+            spin_end   = spin
+         ENDIF
+
+         DO ispin = spin_start, spin_end
             !Find the corresponding physical spin indices
             IF(ispin < 3) THEN
                spin1 = ispin
@@ -305,7 +312,7 @@ MODULE m_types_greensf
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,ispin_end
+         INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end
          LOGICAL l_full
 
 
@@ -334,9 +341,15 @@ MODULE m_types_greensf
 
          ipm = MERGE(2,1,l_conjg)
 
-         ispin_end = SIZE(this%gmmpMat,4)
+         IF(l_full) THEN
+            spin_start = 1
+            spin_end   = SIZE(this%gmmpMat,4)
+         ELSE
+            spin_start = spin
+            spin_end   = spin
+         ENDIF
 
-         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
+         DO ispin = spin_start, spin_end
             !Find the right quadrant in gmat according to the spin index
             IF(ispin.EQ.2 .AND.SIZE(this%gmmpMat,4).EQ.1) CYCLE
             IF(l_full) THEN
