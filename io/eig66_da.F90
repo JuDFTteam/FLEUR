@@ -34,9 +34,9 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
 
-   SUBROUTINE open_eig(id, nmat, neig, nkpts, jspins, create, l_real, l_soc, filename)
+   SUBROUTINE open_eig(id, nmat, neig, nkpts, jspins, create, l_real, l_soc, l_olap, filename)
       INTEGER, INTENT(IN) :: id, nmat, neig, nkpts, jspins
-      LOGICAL, INTENT(IN) :: create, l_real, l_soc
+      LOGICAL, INTENT(IN) :: create, l_real, l_soc, l_olap
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       !locals
       LOGICAL :: l_file
@@ -44,6 +44,8 @@ CONTAINS
       REAL    :: r1, r3(3)
       COMPLEX :: c1
       TYPE(t_data_DA), POINTER:: d
+
+      if(l_olap) call judft_error("olap not implemented for DA")
 
       CALL priv_find_data(id, d)
 
@@ -115,13 +117,13 @@ CONTAINS
       d%fname = "eig"
       CALL eig66_remove_data(id)
    END SUBROUTINE close_eig
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
       REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
-      TYPE(t_mat), OPTIONAL  :: zmat
+      TYPE(t_mat), OPTIONAL  :: zmat, smat
 
       !Local variables
       INTEGER:: nv_s, nmat_s, n, nrec, neig_s
@@ -130,6 +132,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE::zc_s(:, :)
       TYPE(t_data_DA), POINTER:: d
 
+      if(present(smat)) call juDFT_error("reading smat not supported for DA")
       CALL priv_find_data(id, d)
       ! check if io is performed correctly
       IF (PRESENT(list)) THEN
@@ -174,17 +177,19 @@ CONTAINS
 
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
       REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
-      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat
+      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
 
       INTEGER:: nrec, r_len
       INTEGER:: nv_s, nmat_s
       REAL   :: bkpt(3), wtkpt
       TYPE(t_data_DA), POINTER:: d
+
+      if(present(smat)) call juDFT_error("writing smat in DA not supported yet")
 
       CALL priv_find_data(id, d)
       !This mode requires all data to be written at once!!

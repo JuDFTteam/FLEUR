@@ -43,20 +43,19 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   :: pntgptd(:)
       INTEGER, ALLOCATABLE   :: pntgpt(:, :, :, :)
       INTEGER, ALLOCATABLE   :: nindxp1(:, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:)
-      INTEGER, ALLOCATABLE   ::  nbands(:)
-      INTEGER, ALLOCATABLE   ::  nobd(:, :)
-      INTEGER                ::  maxlmindx = -1
+      INTEGER, ALLOCATABLE   :: ne_eig(:)
+      INTEGER, ALLOCATABLE   :: nbands(:)
+      INTEGER, ALLOCATABLE   :: nobd(:, :)
+      INTEGER                :: maxlmindx = -1
       COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
-      INTEGER                ::  nbasp = -1
+      INTEGER                :: nbasp = -1
       INTEGER                :: eig_id = -1
-      INTEGER, ALLOCATABLE   ::  nbasm(:)
+      INTEGER, ALLOCATABLE   :: nbasm(:)
 
       ! coulomb matrix stuff
       type(t_coul), allocatable :: coul(:)
 
       type(t_usdus)            :: usdus
-      type(t_mat), allocatable :: olap(:,:) ! (jsp, nkpt)
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free       => free_hybdat

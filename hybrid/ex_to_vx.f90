@@ -6,6 +6,7 @@ module m_ex_to_vx
 contains
    subroutine ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, ex, v_x)
       use m_juDFT
+      use m_eig66_io
       implicit none
 
       type(t_fleurinput), intent(in)    :: fi
@@ -17,8 +18,8 @@ contains
       type(t_mat), intent(inout)    :: ex
       type(t_mat), intent(inout)    :: v_x
 
-      integer     :: i, j, nbasfcn
-      type(t_mat) :: trafo, tmp
+      integer     :: nbasfcn
+      type(t_mat) :: trafo, tmp, olap
 
       CALL timestart("T^-1*mat_ex*T^-1*")
       nbasfcn = lapw%hyb_num_bas_fun(fi)
@@ -27,8 +28,13 @@ contains
       IF (fi%input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
       
       call ex%u2l()
-      if(.not. hybdat%olap(jsp, nk)%allocated()) call judft_error("olap is not on this rank. You need to add this communication pattern") 
-      call hybdat%olap(jsp, nk)%multiply(z, trafo)
+
+      call olap%init(z%l_real, z%matsize1, z%matsize1)
+      CALL read_eig(hybdat%eig_id,nk,jsp, smat=olap)
+      call olap%u2l()
+      call olap%conjg()
+
+      call olap%multiply(z, trafo)
 
       CALL ex%multiply(trafo, res=tmp, transB="C")
       CALL trafo%multiply(tmp, res=v_x)
