@@ -13,12 +13,12 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          kpts,stars,vacuum,atoms,sphhar,input,sym,mpi,
      >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
-     >          neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >          omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >          invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >          beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -35,7 +35,7 @@ c******************************************************************
       use m_wann_1dvacabcof
       use m_radfun
       use m_radflo
-      use m_cdnread, only : cdn_read0
+      use m_cdnread
       use m_types
       use m_constants
       use m_wann_real
@@ -57,7 +57,7 @@ c******************************************************************
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-
+      TYPE(t_kpts),INTENT(in) :: kpts
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -77,7 +77,7 @@ c******************************************************************
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -101,6 +101,7 @@ c******************************************************************
       logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss,l_bzsym
       logical,intent(in)::l_proj_plot
       integer,intent(in)::sortrule
+      integer :: n_start, n_end
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
       type (od_inp), intent (in) :: odi
@@ -113,7 +114,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer lmd,nlotot,n,nmat,nw,ispin,iter,ikpt,ilo
       integer noccbd,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer jsp_start,jsp_end,nrec,nrec1,nbands
-      integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum
+      integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum,nbasfcn
       integer i1,i2,i3,in,ikpt_k,lda
       integer n_bands(0:neigd),nslibd
       character*8 dop,iop
