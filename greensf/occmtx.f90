@@ -108,12 +108,12 @@ MODULE m_occmtx
          ENDDO
       ENDDO
 
-      IF(.NOT.PRESENT(spin)) spin_end = input%jspins !Only the spin-diagonal is checked
       !Sanity check are the occupations reasonable?
       IF(PRESENT(check)) THEN
          IF(check) THEN
             IF(PRESENT(occError)) occError = .FALSE.
             DO ispin = spin_start, spin_end
+               IF(ispin>input%jspins) CYCLE !Only the spin-diagonal parts
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)
