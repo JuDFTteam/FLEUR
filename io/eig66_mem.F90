@@ -55,10 +55,8 @@ CONTAINS
       !d%eig_vec
       if (l_real .and. .not. l_soc) THEN
          ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts))
-         ALLOCATE (d%olap_r(nmat**2, length*nkpts))
       else
          ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts))
-         ALLOCATE (d%olap_c(nmat**2, length*nkpts))
       endif
 
       !d%olap 
