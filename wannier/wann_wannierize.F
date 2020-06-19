@@ -199,6 +199,7 @@ c**********************************************************
 !         enddo
 !      endif
       num_kpts=fullnkpts
+      nkpts=fullnkpts
       allocate(ndimwin(num_kpts))
 c*********************************************************
 c           find out the structure of k-point set
