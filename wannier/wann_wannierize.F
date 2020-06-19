@@ -306,11 +306,11 @@ c********* read eigenvalues
          deallocate( centers ) 
          deallocate( wann_spreads )
 c********read the u_matrix and write it to a formatted file
-         call wann_read_umatrix(
-     >       num_kpts,num_wann,num_bands,
-     >       .true.,jspin,1,
-     <       have_disentangled,
-     <       lwindow,ndimwin,u_matrix_opt)
+!         call wann_read_umatrix(
+!     >       num_kpts,num_wann,num_bands,
+!     >       .true.,jspin,1,
+!     <       have_disentangled,
+!     <       lwindow,ndimwin,u_matrix_opt)
 
       enddo !jspin
 
