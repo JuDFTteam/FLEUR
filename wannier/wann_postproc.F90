@@ -130,7 +130,7 @@ CONTAINS
             calledby="wann_postproc")
 #else
        CALL wann_wannierize(&
-            input%film,wann%l_bzsym,input%jspins,&
+            input%film,wann,mpi,kpoints,fullnkpts,input%jspins,&
             atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,atoms%neq,atoms%zatom)
 #endif
     ENDIF
