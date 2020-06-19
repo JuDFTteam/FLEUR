@@ -30,8 +30,8 @@ MODULE m_rotMMPmat
 
       IF(PRESENT(dwgn)) THEN
          DO ispin = 1, SIZE(mmpmat,3)
-            mmpmatOut(:,:,ispin) = matmul(dwgn,mmpmatOut(:,:,ispin))
-            mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),conjg(transpose(dwgn)))
+            mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
+            mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
          ENDDO
       ENDIF
 
@@ -52,6 +52,8 @@ MODULE m_rotMMPmat
             ENDDO
          ENDDO
       ENDIF
+
+      mmpmatOut = conjg(mmpmatOut)
 
    END FUNCTION rotMMPmat_dwgn
 

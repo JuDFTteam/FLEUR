@@ -83,12 +83,12 @@ MODULE m_tetrahedronInit
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             vol = kpts%voltet(itet)/kpts%ntet*fac
             l_weights_pres = PRESENT(weights)
-            !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(itet,neig,ikpt,film,ncorn,k,vol, l_weights_pres) &
-            !$OMP SHARED(kpts,eig,weights,efermi,weightSum) &
-            !$OMP PRIVATE(iband,etetra,w,weightSum_Band)
+            !$OMP parallel default(none) &
+            !$OMP shared(itet,neig,ikpt,film,ncorn,k,vol, l_weights_pres) &
+            !$OMP shared(kpts,eig,weights,efermi,weightSum) &
+            !$OMP private(iband,etetra,w,weightSum_Band)
             weightSum_Band = 0.0
-            !$OMP DO SCHEDULE(DYNAMIC,1)
+            !$OMP do schedule(dynamic,1)
             DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
@@ -101,13 +101,13 @@ MODULE m_tetrahedronInit
                IF(l_weights_pres) weights(iband,ikpt) = weights(iband,ikpt) + w
                weightSum_Band = weightSum_Band + w
             ENDDO
-            !$OMP END DO
+            !$OMP end do
             IF(PRESENT(weightSum)) THEN
-               !$OMP CRITICAL
+               !$OMP critical
                weightSum = weightSum + weightSum_Band
-               !$OMP END CRITICAL
+               !$OMP end critical
             ENDIF
-            !$OMP END PARALLEL
+            !$OMP end parallel
          ENDDO
       ENDDO
 
@@ -173,11 +173,10 @@ MODULE m_tetrahedronInit
          ELSE
             k(:ncorn) = kpts%ntetra(:ncorn,itet)
          ENDIF
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(itet,neig,ikpt,film,ncorn,vol,k) &
-         !$OMP SHARED(kpts,eig,calc_weights,calc_eMesh) &
-         !$OMP PRIVATE(iband,etetra)
-         !$OMP DO SCHEDULE(DYNAMIC,1)
+         !$OMP parallel do default(none) schedule(dynamic,1) &
+         !$OMP shared(itet,neig,ikpt,film,ncorn,vol,k) &
+         !$OMP shared(kpts,eig,calc_weights,calc_eMesh) &
+         !$OMP private(iband,etetra)
          DO iband = 1, neig
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
@@ -187,8 +186,7 @@ MODULE m_tetrahedronInit
                                                                                  kpts%ntetra(:,itet),vol,film,.FALSE.)
 
          ENDDO
-         !$OMP END DO
-         !$OMP END PARALLEL
+         !$OMP end parallel do
       ENDDO
 
       weights = 0.0
@@ -196,12 +194,12 @@ MODULE m_tetrahedronInit
       !-------------------------------------
       ! PostProcess weights
       !-------------------------------------
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(neig,l_dos,ne,del) &
-      !$OMP SHARED(calc_weights,weights,bounds, l_bounds_pres) &
-      !$OMP PRIVATE(iband,dos_weights,ie)
+      !$OMP parallel default(none) &
+      !$OMP shared(neig,l_dos,ne,del) &
+      !$OMP shared(calc_weights,weights,bounds, l_bounds_pres) &
+      !$OMP private(iband,dos_weights,ie)
       IF(l_dos) ALLOCATE(dos_weights(ne+2),source=0.0)
-      !$OMP DO SCHEDULE(DYNAMIC,1)
+      !$OMP do schedule(dynamic,1)
       DO iband = 1, neig
          !---------------------------------------------------
          ! Weights for DOS -> differentiate with respect to E
@@ -255,14 +253,14 @@ MODULE m_tetrahedronInit
                bounds(iband,1) = 1
                bounds(iband,2) = 1
             ENDIF
-            IF(ANY(weights(bounds(iband,1):bounds(iband,2),iband)<0.0)) THEN
-               CALL juDFT_error("TetraWeight error: Unexpected negative weight", calledby="getWeightEnergyMesh")
-            ENDIF
          ENDIF
       ENDDO
-      !$OMP END DO
-      !$OMP END PARALLEL
+      !$OMP end do
+      !$OMP end parallel
 
+      IF(ANY(weights(:,:neig)<0.0)) THEN
+         CALL juDFT_error("TetraWeight error: Unexpected negative weight", calledby="getWeightEnergyMesh")
+      ENDIF
 
    END SUBROUTINE getWeightEnergyMesh
 

@@ -38,7 +38,7 @@ MODULE m_types_wannier
     INTEGER :: perpmagl
     LOGICAL :: l_perpmagatlres=.FALSE.
 
-    INTEGER :: wan90version =3
+    INTEGER :: wan90version =31
     INTEGER :: oc_num_orbs =0
     INTEGER, ALLOCATABLE :: oc_orbs(:)
     LOGICAL :: l_unformatted =.FALSE.
@@ -668,6 +668,10 @@ CONTAINS
                 this%wan90version=2
              ELSEIF(abs(version_real-2.0).lt.1.e-9)THEN
                 this%wan90version=3
+             ELSEIF(abs(version_real-3.0).lt.1.e-9)THEN
+                this%wan90version=30
+             ELSEIF(abs(version_real-3.1).lt.1.e-9)THEN
+                this%wan90version=31                
              ELSE
                CALL judft_error ("chosen w90 version unknown", calledby="wann_read_inp")
              endif

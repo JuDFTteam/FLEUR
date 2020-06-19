@@ -24,12 +24,12 @@ CONTAINS
                                    ! on exit: index for the first U for atom type "itype+1 or higher"
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: we(ne) 
-    COMPLEX, INTENT(IN)    :: v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
-    REAL,    INTENT(INOUT) :: a21(3,atoms%nat)
+    REAL,    INTENT(IN)    :: we(:) !(ne)
+    COMPLEX, INTENT(IN)    :: v_mmp(-lmaxU_const:,-lmaxU_const:,:) !(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+atoms%n_hia)
+    COMPLEX, INTENT(IN)    :: aveccof(:,:,0:,:) !(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: bveccof(:,:,0:,:) !(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: cveccof(:,-atoms%llod:,:,:,:) !(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    REAL,    INTENT(INOUT) :: a21(:,:) !(3,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX v_a,v_b,v_c,p1,p2,p3

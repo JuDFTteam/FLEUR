@@ -13,12 +13,12 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          kpts,stars,vacuum,atoms,sphhar,input,sym,mpi,
      >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
-     >          neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >          omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >          invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >          beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -35,7 +35,7 @@ c******************************************************************
       use m_wann_1dvacabcof
       use m_radfun
       use m_radflo
-      use m_cdnread, only : cdn_read0
+      use m_cdnread
       use m_types
       use m_constants
       use m_wann_real
@@ -57,7 +57,7 @@ c******************************************************************
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-
+      TYPE(t_kpts),INTENT(in) :: kpts
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -77,7 +77,7 @@ c******************************************************************
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -101,6 +101,7 @@ c******************************************************************
       logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss,l_bzsym
       logical,intent(in)::l_proj_plot
       integer,intent(in)::sortrule
+      integer :: n_start, n_end
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
       type (od_inp), intent (in) :: odi
@@ -114,7 +115,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer noccbd,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer jsp_start,jsp_end,nrec,nrec1,nbands
       integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum
-      integer i1,i2,i3,in,ikpt_k,lda
+      integer i1,i2,i3,in,ikpt_k,lda,nbasfcn
       integer n_bands(0:neigd),nslibd
       character*8 dop,iop
       real bkpt(3),sfp,tpi,wronk,wk,wk_b,phase
@@ -526,29 +527,53 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-      zzMat%l_real = l_real
-      zzMat%matsize1 = nbasfcn
-      zzMat%matsize2 = neigd
-      IF(l_real) THEN
-         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-      ELSE
-         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-      END IF
-      CALL judft_error("TODO:adjust in wann_plot_um_dat")
+!      zzMat%l_real = l_real
+!      zzMat%matsize1 = nbasfcn
+!      zzMat%matsize2 = neigd
+!      IF(l_real) THEN
+!         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+!      ELSE
+!         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+!      END IF
+!      CALL judft_error("TODO:adjust in wann_plot_um_dat")
 !      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
 !     >     irank,isize,kptibz,jspin,nbasfcn,nlotot, l_ss,l_noco,nrec,
 !     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
-      zMat%l_real = zzMat%l_real
-      zMat%matsize1 = zzMat%matsize1
-      zMat%matsize2 = zzMat%matsize2
-      IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-         zMat%data_r = 0.0
-      ELSE
-         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-         zMat%data_c = CMPLX(0.0,0.0)
-      END IF
+!      zMat%l_real = zzMat%l_real
+!      zMat%matsize1 = zzMat%matsize1
+!      zMat%matsize2 = zzMat%matsize2
+!      IF (zzMat%l_real) THEN
+!         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!         zMat%data_r = 0.0
+!      ELSE
+!         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!         zMat%data_c = CMPLX(0.0,0.0)
+!      END IF
+
+                n_start=1
+                n_end=input%neig
+
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
+     &               kptibz,cell,(sym%zrfs.AND.
+     &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &               .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+                nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
+               CALL zzMat%init(l_real,nbasfcn,input%neig)
+               CALL zMat%init(l_real,nbasfcn,input%neig)
+
+
+                CALL cdn_read(
+     &                eig_id,
+     &               lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, 
+     &                kptibz,jspin,lapw%dim_nbasfcn(),
+     &               noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
+     &                nbands,eigg,zzMat)
+
+
+
 
 
       nslibd = 0

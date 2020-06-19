@@ -83,7 +83,8 @@ c**************************************************************
         if (num_kpts.ne.fullnkpts) CALL 
      &     juDFT_error("num_kpts.ne.fullnkpts",calledby
      +     ="wann_read_umatrix")
-      elseif((wan90version.eq.2).or.(wan90version.eq.3)) then 
+      elseif((wan90version.eq.2).or.(wan90version.eq.3)
+     & .or.(wan90version.eq.30).or.(wan90version.eq.31) ) then 
         !wannier90 version 1.2 or wannier90 version 2.0
 
         ! Read comment line
