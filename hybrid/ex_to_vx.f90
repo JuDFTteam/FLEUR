@@ -32,7 +32,7 @@ contains
       call olap%init(z%l_real, z%matsize1, z%matsize1)
       CALL read_eig(hybdat%eig_id,nk,jsp, smat=olap)
       call olap%u2l()
-      call olap%conjg()
+      call olap%conjugate()
 
       call olap%multiply(z, trafo)
 
