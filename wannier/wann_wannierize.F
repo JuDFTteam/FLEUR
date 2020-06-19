@@ -15,14 +15,17 @@ c     Frank Freimuth
 c**************************************************** 
       CONTAINS
       SUBROUTINE wann_wannierize(
-     >          film,l_bzsym,jspins,
+     >          film,wann,mpi,kpoints,fullnkpts,jspins,
      >          natd,pos,
      >          amat,bmat,ntype,neq,zatom)
-
+      USE m_types
       use m_wann_read_umatrix
       implicit none
       logical,intent(in)  :: film
-      logical,intent(in)  :: l_bzsym
+      TYPE(t_wann), INTENT(IN) :: wann
+      TYPE(t_mpi), INTENT(IN)  :: mpi     
+      real, intent (in) :: kpoints(:,:)
+      integer, intent(in) :: fullnkpts      
       integer,intent(in)  :: jspins
       integer,intent(in)  :: natd
       real,intent(in)     :: pos(3,natd)
@@ -61,7 +64,7 @@ c****************************************************
       logical             :: l_file,l_bkpts
       integer             :: iter
       real                :: increm,compare
-      real,allocatable    :: kpoints(:,:)
+!      real,allocatable    :: kpoints(:,:)
       real,parameter      :: bohr=0.5291772108
       character(len=2)    :: namat(0:103)
       real                :: realp,imagp
@@ -160,42 +163,42 @@ c**********************************************************
 c**********************************************************
 c     read in kpoints from kpts/w90kpts file
 c**********************************************************
-      if(l_bzsym)then
-         l_file=.false.
-         inquire(file='w90kpts',exist=l_file)
-         IF(.NOT.l_file) CALL juDFT_error("where is w90kpts?",calledby
-     +        ="wann_wannierize")
-         open(987,file='w90kpts',status='old',form='formatted')
-         read(987,*)nkpts,scale
-         print*,"nkpts=",nkpts
-         allocate(kpoints(3,nkpts))
-         do iter=1,nkpts
-           read(987,*)kpoints(:,iter)
-         enddo
-         close(987)
-         do iter=1,nkpts
-           print*,kpoints(:,iter)
-         enddo
-         kpoints=kpoints/scale
-      else
-         l_file=.false.
-         inquire(file='kpts',exist=l_file)
-         IF(.NOT.l_file) CALL juDFT_error("where is kpts?",calledby
-     +        ="wann_wannierize")
-         open(987,file='kpts',status='old',form='formatted')
-         read(987,*)nkpts,scale
-         allocate(kpoints(3,nkpts))
-         do iter=1,nkpts
-            read(987,*)kpoints(:,iter)
-         enddo   
-         close(987)
-         if(film) kpoints(3,:)=0.0
-         kpoints=kpoints/scale
-         do iter=1,nkpts
-            print*,kpoints(:,iter)
-         enddo
-      endif
-      num_kpts=nkpts
+!      if(wann%l_bzsym)then
+!         l_file=.false.
+!         inquire(file='w90kpts',exist=l_file)
+!         IF(.NOT.l_file) CALL juDFT_error("where is w90kpts?",calledby
+!     +        ="wann_wannierize")
+!         open(987,file='w90kpts',status='old',form='formatted')
+!         read(987,*)nkpts,scale
+!         print*,"nkpts=",nkpts
+!         allocate(kpoints(3,nkpts))
+!         do iter=1,nkpts
+!           read(987,*)kpoints(:,iter)
+!         enddo
+!         close(987)
+!         do iter=1,nkpts
+!           print*,kpoints(:,iter)
+!         enddo
+!         kpoints=kpoints/scale
+!      else
+!         l_file=.false.
+!         inquire(file='kpts',exist=l_file)
+!         IF(.NOT.l_file) CALL juDFT_error("where is kpts?",calledby
+!     +        ="wann_wannierize")
+!         open(987,file='kpts',status='old',form='formatted')
+!         read(987,*)nkpts,scale
+!         allocate(kpoints(3,nkpts))
+!         do iter=1,nkpts
+!            read(987,*)kpoints(:,iter)
+!         enddo   
+!         close(987)
+!         if(film) kpoints(3,:)=0.0
+!         kpoints=kpoints/scale
+!         do iter=1,nkpts
+!            print*,kpoints(:,iter)
+!         enddo
+!      endif
+      num_kpts=fullnkpts
       allocate(ndimwin(num_kpts))
 c*********************************************************
 c           find out the structure of k-point set
