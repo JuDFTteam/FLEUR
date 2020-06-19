@@ -271,12 +271,14 @@ c******** read amn-matrix
          open (303,file=spin12(jspin)//'.amn',
      &             form='formatted',status='old')
          read (303,*) 
-         read (303,'(3i5)') 
+!         read (303,'(3i5)') 
+          read(303,*)        
          do ikpt = 1,num_kpts
           do nwf = 1,num_wann
            do i = 1,num_bands
 c            print*,"ikpt=",ikpt,"nwf=",nwf,"i=",i  
-            read (303,'(3i5,3x,2f18.12)') i2,nwf2,ikpt2,realp,imagp
+c            read (303,'(3i5,3x,2f18.12)') i2,nwf2,ikpt2,realp,imagp
+            read (303,*) i2,nwf2,ikpt2,realp,imagp
                a_matrix(i,nwf,ikpt)=cmplx(realp,imagp)
 c            print*,"i2=",i2,"nwf2=",nwf2,"ikpt2=2",ikpt2
            enddo
