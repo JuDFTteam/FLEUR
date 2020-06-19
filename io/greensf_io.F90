@@ -93,17 +93,16 @@ MODULE m_greensf_io
       USE m_constants
       USE m_juDFT
 
-      INTEGER(HID_T),      INTENT(IN)  :: fileID
-      TYPE(t_input),       INTENT(IN)  :: input
-      TYPE(t_gfinp),       INTENT(IN)  :: gfinp
-      TYPE(t_atoms),       INTENT(IN)  :: atoms
-      TYPE(t_greensf),     INTENT(IN)  :: greensf(:)
-      INTEGER,             INTENT(IN)  :: archiveType
-      COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
-      TYPE(t_selfen), OPTIONAL, INTENT(IN)  :: selfen(:) !Only in IO mode for Hubbard 1
-
-      REAL, ALLOCATABLE, OPTIONAL, INTENT(IN) :: u(:,:,:,:,:,:)      !Radial Functions for IO
-      REAL, ALLOCATABLE, OPTIONAL, INTENT(IN) :: udot(:,:,:,:,:,:)
+      INTEGER(HID_T),           INTENT(IN) :: fileID
+      TYPE(t_input),            INTENT(IN) :: input
+      TYPE(t_gfinp),            INTENT(IN) :: gfinp
+      TYPE(t_atoms),            INTENT(IN) :: atoms
+      TYPE(t_greensf),          INTENT(IN) :: greensf(:)
+      INTEGER,                  INTENT(IN) :: archiveType
+      COMPLEX,                  INTENT(IN) :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
+      TYPE(t_selfen), OPTIONAL, INTENT(IN) :: selfen(:) !Only in IO mode for Hubbard 1
+      REAL,           OPTIONAL, INTENT(IN) :: u(:,:,:,:,:,:)      !Radial Functions for IO
+      REAL,           OPTIONAL, INTENT(IN) :: udot(:,:,:,:,:,:)
 
       INTEGER(HID_T)    :: elementsGroupID
       INTEGER(HID_T)    :: currentelementGroupID
@@ -150,6 +149,13 @@ MODULE m_greensf_io
       IF(PRESENT(selfen)) THEN
          IF(SIZE(selfen) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: selfen", calledby="writeGreensFData")
          IF(archiveType /= GREENSF_HUBBARD_CONST) CALL juDFT_error("Wrong archiveType for selfen", calledby="writeGreensFData")
+      ENDIF
+
+      IF(PRESENT(u)) THEN
+         IF(SIZE(u,6) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: u", calledby="writeGreensFData")
+         IF(archiveType /= GREENSF_GENERAL_CONST) CALL juDFT_error("Wrong archiveType for u", calledby="writeGreensFData")
+         IF(.NOT.PRESENT(udot)) CALL juDFT_error("udot not provided (u is present)", calledby="writeGreensFData")
+         IF(SIZE(udot,6) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: udot", calledby="writeGreensFData")
       ENDIF
 
       DO i_elem = 1, SIZE(greensf)
