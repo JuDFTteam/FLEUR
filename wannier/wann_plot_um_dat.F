@@ -114,8 +114,8 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer lmd,nlotot,n,nmat,nw,ispin,iter,ikpt,ilo
       integer noccbd,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer jsp_start,jsp_end,nrec,nrec1,nbands
-      integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum,nbasfcn
-      integer i1,i2,i3,in,ikpt_k,lda
+      integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum
+      integer i1,i2,i3,in,ikpt_k,lda,nbasfcn
       integer n_bands(0:neigd),nslibd
       character*8 dop,iop
       real bkpt(3),sfp,tpi,wronk,wk,wk_b,phase
