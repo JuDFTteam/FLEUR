@@ -78,10 +78,9 @@ MODULE m_kkintgr
             sigma(nsmooth) = AIMAG(ez(iz))
          ENDDO outer
          ALLOCATE(smoothed(ne,nsmooth), source=0.0)
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(nsmooth,smoothed,sigma,ne,eMesh,im) &
-         !$OMP PRIVATE(ismooth)
-         !$OMP DO
+         !$OMP parallel do default(none) &
+         !$OMP shared(nsmooth,smoothed,sigma,ne,eMesh,im) &
+         !$OMP private(ismooth)
          DO ismooth = 1, nsmooth
             smoothed(:,ismooth) = im(:ne)
             IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
@@ -96,18 +95,16 @@ MODULE m_kkintgr
                                 calledby="kkintgr")
             END SELECT
          ENDDO
-         !$OMP END DO
-         !$OMP END PARALLEL
+         !$OMP end parallel do
          CALL timestop("kkintgr: smoothing")
       ENDIF
 
 
       CALL timestart("kkintgr: integration")
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im,smoothed,smoothInd) &
-      !$OMP PRIVATE(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
-      !$OMP DO
+      !$OMP parallel do default(none) &
+      !$OMP shared(nz,ne,method,del,eb,l_conjg) &
+      !$OMP shared(g,ez,im,smoothed,smoothInd) &
+      !$OMP private(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
       DO iz = 1, nz
          SELECT CASE(method)
 
@@ -148,8 +145,7 @@ MODULE m_kkintgr
             CALL juDFT_error("Not a valid integration method", calledby="kkintgr")
          END SELECT
       ENDDO
-      !$OMP END DO
-      !$OMP END PARALLEL
+      !$OMP end parallel do
       CALL timestop("kkintgr: integration")
 
    END SUBROUTINE kkintgr

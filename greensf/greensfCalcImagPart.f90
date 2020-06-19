@@ -78,11 +78,11 @@ MODULE m_greensfCalcImagPart
 
             IF(i_gf/=indUnique) CYCLE
 
-            !$OMP PARALLEL DO DEFAULT(NONE) &
-            !$OMP SHARED(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP SHARED(i_elem,l,lp,ikpt_i,nBands)&
-            !$OMP SHARED(del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
-            !$OMP PRIVATE(m,mp,iBand,j,eGrid_start,eGrid_end,weight,l_zero) COLLAPSE(2)
+            !$OMP parallel do default(none) &
+            !$OMP shared(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
+            !$OMP shared(i_elem,l,lp,ikpt_i,nBands)&
+            !$OMP shared(del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
+            !$OMP private(m,mp,iBand,j,eGrid_start,eGrid_end,weight,l_zero) collapse(2)
             DO m = -l, l
                DO mp = -lp, lp
                   DO iBand = 1, nBands
@@ -132,7 +132,7 @@ MODULE m_greensfCalcImagPart
                   ENDDO!ib
                ENDDO!mp
             ENDDO!m
-            !$OMP END PARALLEL DO
+            !$OMP end parallel do
          ENDDO!i_gf
          CALL timestop("Green's Function: Imaginary Part")
 
