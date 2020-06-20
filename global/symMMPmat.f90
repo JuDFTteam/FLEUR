@@ -25,13 +25,11 @@ MODULE m_symMMPmat
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase !multiply spin-offdiagonal phase
                                              !(if the full matrix is not given)
 
-      COMPLEX, ALLOCATABLE :: mmpmatSym(:,:,:)
+      COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
       REAL    :: symFac
       INTEGER :: it,is,isi
       COMPLEX :: offdPhase
 
-
-      IF(.NOT.ALLOCATED(mmpmatSym)) ALLOCATE(mmpmatSym,mold=mmpmat)
       mmpmatSym = cmplx_0
 
       symFac = 1.0/sym%invarind(natom)
@@ -60,7 +58,7 @@ MODULE m_symMMPmat
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase
 
       INTEGER :: ilow(2),iup(2)
-      COMPLEX, ALLOCATABLE :: mmpmatSym(:,:)
+      COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       COMPLEX, ALLOCATABLE :: mmpmatOut2(:,:,:),mmpmatIn(:,:,:)
 
       !Add "extra spin dimension"
@@ -72,7 +70,6 @@ MODULE m_symMMPmat
       ALLOCATE(mmpmatOut2,mold=mmpMatIn)
       mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,phase=phase)
 
-      IF(.NOT.ALLOCATED(mmpmatSym)) ALLOCATE(mmpmatSym,mold=mmpmat)
       mmpmatSym = mmpmatOut2(:,:,1)
 
    END FUNCTION symMMPmatoneSpin

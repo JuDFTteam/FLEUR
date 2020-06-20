@@ -26,10 +26,12 @@ MODULE m_greensfSym
       INTEGER imat,iBand
       COMPLEX, ALLOCATABLE :: imSym(:,:,:)
 
-      !$OMP parallel do default(none) &
+      !$OMP parallel default(none) &
       !$OMP shared(ikpt_i,i_elem,natom,l,l_onsite,l_sphavg)&
       !$OMP shared(spin_start,spin_end,sym,atomFactor,phase,im,greensfBZintCoeffs)&
-      !$OMP private(imat,iBand,imSym) collapse(2)
+      !$OMP private(imat,iBand,imSym)
+      ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_start:spin_end),source=cmplx_0)
+      !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
             IF(l_onsite) THEN !These rotations are only available for the onsite elements
@@ -55,7 +57,8 @@ MODULE m_greensfSym
             ENDIF
          ENDDO
       ENDDO
-      !$OMP end parallel do
+      !$OMP end do
+      !$OMP end parallel
 
    END SUBROUTINE greensfSym
 
