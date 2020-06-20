@@ -42,7 +42,7 @@ MODULE m_types_mat
       procedure        :: l2u => t_mat_l2u
       procedure        :: size_mb => t_mat_size_mb
       procedure        :: print_type => t_mat_print_type
-      procedure        :: conjg => t_mat_conjg
+      procedure        :: conjugate => t_mat_conjg
    END type t_mat
    PUBLIC t_mat
 CONTAINS
