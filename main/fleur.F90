@@ -154,17 +154,18 @@ CONTAINS
     IF(fi%noco%l_mtNocoPot) archiveType= CDN_ARCHIVE_TYPE_FFN_const
     IF(mpi%irank.EQ.0) CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
+    IF(fi%noco%l_alignMT.AND.mpi%irank.EQ.0)  CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
     CALL timestart("Qfix")
     CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.FALSE.,.FALSE.,fix)
     CALL timestop("Qfix")
     IF(mpi%irank.EQ.0) THEN
        IF(fi%noco%l_alignMT) THEN
-         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
          CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
        END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
+    IF(fi%noco%l_alignMT.AND.mpi%irank.EQ.0) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -196,7 +197,6 @@ CONTAINS
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),mpi%n_size)
 !Rotate cdn to local frame if specified.
-  IF(fi%noco%l_alignMT.AND.(mpi%irank.EQ.0)) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,fi%input,fi%atoms,fi%kpts,fi%noco,l_real)
@@ -228,6 +228,12 @@ CONTAINS
 
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+       IF (fi%noco%l_alignMT) THEN
+          DO n= 1,fi%atoms%ntype
+            CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+            CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          ENDDO
+       END IF
 #endif
 
 !Plot inden if wanted
@@ -238,6 +244,10 @@ IF (fi%sliceplot%iplot.NE.0) THEN
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+      DO n= 1,fi%atoms%ntype
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+      ENDDO
 #endif
    END IF
    CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, fi%cell, &
@@ -252,6 +262,10 @@ IF (fi%sliceplot%iplot.NE.0) THEN
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+      DO n= 1,fi%atoms%ntype
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+      ENDDO
 #endif
    END IF
 END IF
@@ -467,27 +481,36 @@ END IF
    IF(fi%noco%l_alignMT) THEN
       IF (mpi%irank.EQ.0)  THEN 
       !               CDN including core charge
-          CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
+         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+      DO n= 1,fi%atoms%ntype
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+      ENDDO
 #endif
-   END IF
-                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
+    END IF
+     CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, mpi,fi%oneD, fi%sym, &
                                fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
-       IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
-          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-       END IF
-   IF (fi%noco%l_alignMT) THEN
-      IF (mpi%irank.EQ.0)  THEN 
-         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
-      END IF
+     IF((fi%sliceplot%iplot.NE.0).AND.(mpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
+        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+     END IF
+     IF (fi%noco%l_alignMT) THEN
+        IF (mpi%irank.EQ.0)  THEN 
+           CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
+        END IF
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+        CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+        DO n= 1,fi%atoms%ntype
+           CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+           CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+        ENDDO
+
 #endif    
+     END IF
    END IF
-END IF
 
 
           IF (fi%input%l_rdmft) THEN
@@ -542,9 +565,12 @@ END IF
 #ifdef CPP_MPI
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+                DO n= 1,fi%atoms%ntype
+                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                ENDDO
 #endif
              END IF
-
              CALL timestart('determination of total energy')
              CALL totale(mpi,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,fi%input,fi%noco,fi%cell,fi%oneD,&
                          xcpot,hybdat,vTot,vCoul,iter,inDen,results)
@@ -567,7 +593,11 @@ END IF
                   ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
           END IF
 #ifdef CPP_MPI
-               CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+          CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
+          DO n= 1,fi%atoms%ntype
+             CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+             CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          ENDDO
 #endif
           END IF
 
