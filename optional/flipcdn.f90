@@ -106,9 +106,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! flip cdn for each atom with rotation angles given
    na = 1
-!!$OMP parallel PRIVATE(na,rhodummy,rhodumms,j,rhodummyR,lh) DEFAULT(none) &
-!!$OMP SHARED(noco,den,zeros,atoms,rotAnglePhi,rotAngleTheta,sphhar,input,sym,l_flip,scalespin) 
-!!$OMP do
+!$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
+!$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin) &
+!$OMP FIRSTPRIVATE(na,rotAngleTheta,rotAnglePhi)
+!$OMP do
    DO itype = 1, atoms%ntype
       IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
          ! spherical and non-spherical m.t. charge density
@@ -146,8 +147,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
       END IF
          na = na + atoms%neq(itype)
    END DO
-!!$OMP end do
-!!$OMP end parallel
+!$OMP end do
+!$OMP end parallel
    IF (input%l_onlyMtStDen) THEN
 !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value.
       den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value
