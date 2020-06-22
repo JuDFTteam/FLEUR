@@ -5,26 +5,49 @@ MODULE m_trapz
 
    IMPLICIT NONE
 
+   INTERFACE trapz
+      PROCEDURE :: trapzr, trapzc
+   END INTERFACE
+
    CONTAINS
 
-   PURE REAL FUNCTION trapz(y,h,n)
+   PURE REAL FUNCTION trapzr(y,h,n)
 
       REAL,          INTENT(IN)     :: y(:)
 
       INTEGER,       INTENT(IN)     :: n
       REAL,          INTENT(IN)     :: h
 
+      INTEGER i
+
+      trapzr = y(1)
+      DO i = 2, n-1
+         trapzr = trapzr + 2*y(i)
+      ENDDO
+      trapzr = trapzr + y(n)
+
+      trapzr = trapzr*h/2.0
+
+   END FUNCTION trapzr
+
+   PURE COMPLEX FUNCTION trapzc(y,h,n)
+
+      COMPLEX,       INTENT(IN)     :: y(:)
+
+      INTEGER,       INTENT(IN)     :: n
+      REAL,          INTENT(IN)     :: h
 
       INTEGER i
 
-      trapz = y(1)
+      trapzc = y(1)
       DO i = 2, n-1
-         trapz = trapz + 2*y(i)
+         trapzc = trapzc + 2*y(i)
       ENDDO
-      trapz = trapz + y(n)
+      trapzc = trapzc + y(n)
 
-      trapz = trapz*h/2.0
+      trapzc = trapzc*h/2.0
 
-   END FUNCTION trapz
+   END FUNCTION trapzc
+
 
 END MODULE m_trapz

@@ -22,10 +22,10 @@ MODULE m_greensfSpinOffDiag
       INTEGER :: m,mp,lm,lmp,ilo,ilop
 
       im = cmplx_0
-      !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP SHARED(eigVecCoeffs,im,denCoeffsOffdiag,atoms) &
-      !$OMP SHARED(l,lp,natom,natomp,nBands,atomType,atomTypep,spin1,spin2,l_sphavg) &
-      !$OMP PRIVATE(m,mp,lm,lmp,ilo,ilop) COLLAPSE(2)
+      !$OMP parallel do default(none) &
+      !$OMP shared(eigVecCoeffs,im,denCoeffsOffdiag,atoms) &
+      !$OMP shared(l,lp,natom,natomp,nBands,atomType,atomTypep,spin1,spin2,l_sphavg) &
+      !$OMP private(m,mp,lm,lmp,ilo,ilop) collapse(2)
       DO m = -l, l
          DO mp = -lp,lp
             lm = l*(l+1)+m
@@ -66,7 +66,7 @@ MODULE m_greensfSpinOffDiag
             ENDDO
          ENDDO!mp
       ENDDO !m
-      !$OMP END PARALLEL DO
+      !$OMP end parallel do
 
    END SUBROUTINE greensfSpinOffDiag
 END MODULE m_greensfSpinOffDiag

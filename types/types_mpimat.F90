@@ -48,12 +48,19 @@ MODULE m_types_mpimat
       PROCEDURE   :: print_matrix
       PROCEDURE   :: from_non_dist
       PROCEDURE   :: transpose => mpimat_transpose
+      procedure   :: print_type => mpimat_print_type
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
    PUBLIC t_mpimat
 
 CONTAINS
+   subroutine mpimat_print_type(mat)
+      implicit none 
+      CLASS(t_mpimat), INTENT(IN)     :: mat 
+
+      write (*,*) "type -> t_ mpimat"
+   end subroutine mpimat_print_type
 
    SUBROUTINE mpimat_multiply(mat1, mat2, res, transA, transB)
       use m_judft

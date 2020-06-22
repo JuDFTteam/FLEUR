@@ -32,7 +32,7 @@ MODULE m_occmtx
 
 
 
-      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns
+      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns,spin_start,spin_end
       REAL    :: re,imag,nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=300) :: message
@@ -53,11 +53,15 @@ MODULE m_occmtx
 
       IF(PRESENT(spin)) THEN
          mmpMat(:,:,spin) = cmplx_0
+         spin_start = spin
+         spin_end   = spin
       ELSE
          mmpMat = cmplx_0
+         spin_start = 1
+         spin_end   = SIZE(g%gmmpMat,4)
       ENDIF
 
-      DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,SIZE(g%gmmpMat,4),PRESENT(spin))
+      DO ispin = spin_start, spin_end
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, SIZE(g%gmmpMat,1)
@@ -108,7 +112,8 @@ MODULE m_occmtx
       IF(PRESENT(check)) THEN
          IF(check) THEN
             IF(PRESENT(occError)) occError = .FALSE.
-            DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,input%jspins,PRESENT(spin))
+            DO ispin = spin_start, spin_end
+               IF(ispin>input%jspins) CYCLE !Only the spin-diagonal parts
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)

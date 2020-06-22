@@ -64,8 +64,6 @@ CONTAINS
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
-    REAL,    ALLOCATABLE :: eig(:,:,:)
-    INTEGER ne(kpts%nkpt,SIZE(results%w_iks,3))
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -98,8 +96,6 @@ CONTAINS
     !     .. Data statements ..
     DATA del/1.0e-6/
 
-    ALLOCATE (eig(SIZE(results%w_iks,1),SIZE(results%w_iks,2),SIZE(results%w_iks,3)))
-
     ! initiliaze e
     e = 0
 
@@ -126,10 +122,9 @@ CONTAINS
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           IF (mpi%irank == 0) THEN
-             CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
              WRITE (oUnit,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
-             WRITE (oUnit,'(i5,a14)') ne(k,jsp),' eigenvalues :'
-             WRITE (oUnit,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
+             WRITE (oUnit,'(i5,a14)') results%neig(k,jsp),' eigenvalues :'
+             WRITE (oUnit,'(8f12.6)') (results%eig(i,k,jsp),i=1,results%neig(k,jsp))
              IF(.NOT.judft_was_argument("-minimalOutput")) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') jsp
@@ -137,7 +132,7 @@ CONTAINS
                 WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
                 WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
                 WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
-                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,results%eig(1:results%neig(k,jsp),k,jsp))
              END IF
           END IF
 #ifdef CPP_MPI
@@ -173,15 +168,15 @@ CONTAINS
              !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE
              !--->          CONECTION TO THE ORIGINAL ARRAYS
              !
-             DO  j = 1,ne(k,jsp)
-                e(n+j) = eig(j,k,jsp)
+             DO  j = 1,results%neig(k,jsp)
+                e(n+j) = results%eig(j,k,jsp)
                 we(n+j) = kpts%wtkpt(k)
                 idxeig(n+j) = j+n_help
                 idxkpt(n+j) = k
                 idxjsp(n+j) = jsp
              END DO
              !--->          COUNT THE NUMBER OF EIGENVALUES
-             n = n + ne(k,jsp)
+             n = n + results%neig(k,jsp)
           END DO
        END DO
 
@@ -244,14 +239,14 @@ CONTAINS
        results%bandgap = 0.0
        IF(input%bz_integration==0) THEN
           CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
-               nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
+               nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
        ELSE IF (input%bz_integration==1) THEN
-          CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+          CALL fergwt(kpts,input,mpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ELSE IF (input%bz_integration==2) THEN
-          CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),nspins,zc,eig(:,:,sslice(1):sslice(2)),spindg,&
+          CALL fertri(input,kpts,mpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
                results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
        ELSE IF (input%bz_integration==3) THEN
-          CALL fertetra(input,noco,kpts,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),&
+          CALL fertetra(input,noco,kpts,mpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ENDIF
        results%seigscv = results%seigsc + results%seigv
@@ -264,7 +259,6 @@ CONTAINS
        ENDIF
        efermi = results%ef
     enddo
-    DEALLOCATE (eig)
 
     IF (m_spins == 2) nspins = 2
 

@@ -25,9 +25,9 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
 
-   SUBROUTINE open_eig(id, nmat, neig, nkpts, jspins, l_create, l_real, l_soc, l_noco, filename)
+   SUBROUTINE open_eig(id, nmat, neig, nkpts, jspins, l_create, l_real, l_soc, l_noco, l_olap, filename)
       INTEGER, INTENT(IN) :: id, nmat, neig, nkpts, jspins
-      LOGICAL, INTENT(IN) :: l_noco, l_create, l_real, l_soc
+      LOGICAL, INTENT(IN) :: l_noco, l_create, l_real, l_soc, l_olap
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       !locals
       INTEGER:: length
@@ -58,6 +58,15 @@ CONTAINS
       else
          ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts))
       endif
+
+      !d%olap 
+      if(l_olap) then
+         if (l_real .and. .not. l_soc) THEN
+            ALLOCATE (d%olap_r(nmat**2, length*nkpts))
+         else
+            ALLOCATE (d%olap_c(nmat**2, length*nkpts))
+         endif
+      endif
       length = length*nkpts
       IF (PRESENT(filename)) CALL priv_readfromfile()
    CONTAINS
@@ -74,7 +83,7 @@ CONTAINS
          ALLOCATE (zmat%data_r(nmat, neig), zmat%data_c(nmat, neig))
 
          tmp_id = eig66_data_newid(DA_mode)
-         CALL open_eig_IO(tmp_id, nmat, neig, nkpts, jspins, .FALSE., l_real, l_soc, filename)
+         CALL open_eig_IO(tmp_id, nmat, neig, nkpts, jspins, .FALSE., l_real, l_soc, .false., filename)
          DO jspin = 1, jspins
             DO nk = 1, nkpts
                CALL read_eig_IO(tmp_id, nk, jspin, i, eig, w_iks, zmat=zmat)
@@ -97,10 +106,12 @@ CONTAINS
 
       IF (PRESENT(delete)) THEN
          IF (delete) THEN
-            IF (ALLOCATED(d%eig_int)) DEALLOCATE (d%eig_int)
-            IF (ALLOCATED(d%eig_eig)) DEALLOCATE (d%eig_eig)
+            IF (ALLOCATED(d%eig_int))  DEALLOCATE (d%eig_int)
+            IF (ALLOCATED(d%eig_eig))  DEALLOCATE (d%eig_eig)
             IF (ALLOCATED(d%eig_vecr)) DEALLOCATE (d%eig_vecr)
             IF (ALLOCATED(d%eig_vecc)) DEALLOCATE (d%eig_vecc)
+            if (allocated(d%olap_r))   deallocate (d%olap_r)
+            if (allocated(d%olap_c))   deallocate (d%olap_c)
          ENDIF
       ENDIF
    CONTAINS
@@ -117,7 +128,7 @@ CONTAINS
          zmat%matsize2 = SIZE(d%eig_eig, 1)
          ALLOCATE (zmat%data_r(d%nmat, SIZE(d%eig_eig, 1)), zmat%data_c(d%nmat, SIZE(d%eig_eig, 1)))
          tmp_id = eig66_data_newid(DA_mode)
-         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, filename)
+         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false., filename)
          DO jspin = 1, d%jspins
             DO nk = 1, d%nkpts
                !TODO this code is no longer working
@@ -131,13 +142,13 @@ CONTAINS
       END SUBROUTINE priv_writetofile
    END SUBROUTINE close_eig
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
       REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
-      TYPE(t_mat), OPTIONAL  :: zmat
+      TYPE(t_mat), OPTIONAL  :: zmat, smat
 
       INTEGER::nrec, arrayStart, arrayStop, i
       INTEGER, ALLOCATABLE :: ind(:)
@@ -193,14 +204,48 @@ CONTAINS
             END DO
          END IF
       ENDIF
+
+      !data from d%eig_vec
+
+      IF (PRESENT(smat)) THEN
+         IF (PRESENT(list)) THEN
+            ind = list
+         ELSE
+            ALLOCATE (ind(smat%matsize2))
+            ind = [(i, i=1, SIZE(ind))]
+         END IF
+         IF (smat%l_real) THEN
+            IF (.NOT. ALLOCATED(d%olap_r)) THEN
+               IF (.NOT. ALLOCATED(d%olap_c)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
+               DO i = 1, SIZE(ind)
+                  arrayStart = (ind(i) - 1)*smat%matsize1 + 1
+                  arrayStop = ind(i)*smat%matsize1
+                  smat%data_r(:, i) = REAL(d%olap_c(arrayStart:arrayStop, nrec))
+               ENDDO
+            ELSE
+               DO i = 1, SIZE(ind)
+                  arrayStart = (ind(i) - 1)*smat%matsize1 + 1
+                  arrayStop = ind(i)*smat%matsize1
+                  smat%data_r(:, i) = d%olap_r(arrayStart:arrayStop, nrec)
+               ENDDO
+            ENDIF
+         ELSE !TYPE is (COMPLEX)
+            IF (.NOT. ALLOCATED(d%olap_c)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby="eig66_mem")
+            DO i = 1, SIZE(ind)
+               arrayStart = (ind(i) - 1)*smat%matsize1 + 1
+               arrayStop = ind(i)*smat%matsize1
+               smat%data_c(:, i) = d%olap_c(arrayStart:arrayStop, nrec)
+            END DO
+         END IF
+      ENDIF
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
       REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
-      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat
+      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
       INTEGER::nrec
       TYPE(t_data_mem), POINTER:: d
       CALL priv_find_data(id, d)
@@ -228,16 +273,28 @@ CONTAINS
          IF (zmat%l_real) THEN
             IF (.NOT. ALLOCATED(d%eig_vecr)) THEN
                IF (.NOT. ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
-               d%eig_vecc(:SIZE(zmat%data_r), nrec) = RESHAPE(CMPLX(zmat%data_r), (/SIZE(zmat%data_r)/)) !Type cast here
+               d%eig_vecc(:SIZE(zmat%data_r), nrec) = RESHAPE(CMPLX(zmat%data_r), [SIZE(zmat%data_r)]) !Type cast here
             ELSE
-               d%eig_vecr(:SIZE(zmat%data_r), nrec) = RESHAPE(REAL(zmat%data_r), (/SIZE(zmat%data_r)/))
+               d%eig_vecr(:SIZE(zmat%data_r), nrec) = RESHAPE(REAL(zmat%data_r), [SIZE(zmat%data_r)])
             ENDIF
          ELSE
             IF (.NOT. ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
-            d%eig_vecc(:SIZE(zmat%data_c), nrec) = RESHAPE(zmat%data_c, (/SIZE(zmat%data_c)/))
+            d%eig_vecc(:SIZE(zmat%data_c), nrec) = RESHAPE(zmat%data_c, [SIZE(zmat%data_c)])
          END IF
       ENDIF
 
+      IF (PRESENT(smat)) THEN
+         IF (smat%l_real) THEN
+            IF (.NOT. ALLOCATED(d%olap_r)) THEN
+               IF (.NOT. ALLOCATED(d%olap_c)) CALL juDFT_error("BUG: can not write complex vectors to memory (olap)")
+               d%olap_c(:SIZE(smat%data_r), nrec) = RESHAPE(CMPLX(smat%data_r), [SIZE(smat%data_r)]) !Type cast here
+            ELSE
+               d%olap_r(:SIZE(smat%data_r), nrec) = RESHAPE(REAL(smat%data_r), [SIZE(smat%data_r)])
+            ENDIF
+         ELSE
+            IF (.NOT. ALLOCATED(d%olap_c)) CALL juDFT_error("BUG: can not write complex vectors to memory (olap)")
+            d%olap_c(:SIZE(smat%data_c), nrec) = RESHAPE(smat%data_c, [SIZE(smat%data_c)])
+         END IF
+      ENDIF
    END SUBROUTINE write_eig
-
 END MODULE m_eig66_mem

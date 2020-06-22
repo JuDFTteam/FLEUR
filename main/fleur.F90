@@ -106,7 +106,7 @@ CONTAINS
     INTEGER :: eig_id,archiveType, num_threads
     INTEGER :: iter,iterHF,i,n,i_gf
     INTEGER :: wannierspin
-    LOGICAL :: l_opti,l_cont,l_qfix,l_real
+    LOGICAL :: l_opti,l_cont,l_qfix,l_real,l_olap
     REAL    :: fix, sfscale
 
 #ifdef CPP_MPI
@@ -193,9 +193,9 @@ CONTAINS
     else
        wannierspin = fi%input%jspins
     endif
-
+    l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
     eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
-                    fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),mpi%n_size)
+                    fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),l_olap,mpi%n_size)
 !Rotate cdn to local frame if specified.
 
 #ifdef CPP_CHASE

@@ -16,7 +16,7 @@ MODULE m_eig66_io
 CONTAINS
 
    FUNCTION open_eig(mpi_comm, nmat, neig, nkpts, jspins, &
-                     l_noco, l_create, l_real, l_soc, l_readonly, n_size, mode_in, filename) &
+                     l_noco, l_create, l_real, l_soc, l_readonly, l_olap, n_size, mode_in, filename) &
       RESULT(id)
       USE m_eig66_hdf, ONLY: open_eig_hdf => open_eig
       USE m_eig66_DA, ONLY: open_eig_DA => open_eig
@@ -24,7 +24,7 @@ CONTAINS
       USE m_eig66_MPI, ONLY: open_eig_mpi => open_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN)          :: nmat, neig, nkpts, jspins, mpi_comm
-      LOGICAL, INTENT(IN)          :: l_noco, l_readonly, l_create, l_real, l_soc
+      LOGICAL, INTENT(IN)          :: l_noco, l_readonly, l_create, l_real, l_soc, l_olap
       INTEGER, INTENT(IN), OPTIONAL :: n_size, mode_in
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       INTEGER:: id, mode
@@ -75,13 +75,13 @@ CONTAINS
       CALL timestart("Open file/memory for IO of eig66")
       SELECT CASE (eig66_data_mode(id))
       CASE (DA_mode)
-         CALL open_eig_DA(id, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, filename)
+         CALL open_eig_DA(id, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_olap, filename)
       CASE (hdf_mode)
-         CALL open_eig_HDF(id, mpi_comm, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_readonly, filename)
+         CALL open_eig_HDF(id, mpi_comm, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_readonly, l_olap, filename)
       CASE (mem_mode)
-         CALL open_eig_MEM(id, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_noco, filename)
+         CALL open_eig_MEM(id, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_noco, l_olap, filename)
       CASE (mpi_mode)
-         CALL open_eig_MPI(id, mpi_comm, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_noco, n_size, filename)
+         CALL open_eig_MPI(id, mpi_comm, nmat, neig_local, nkpts, jspins, l_create, l_real, l_soc, l_noco, l_olap, n_size, filename)
       CASE DEFAULT
          CALL juDFT_error("Invalid IO-mode in eig66_io")
       END SELECT
@@ -114,7 +114,7 @@ CONTAINS
 
    END SUBROUTINE close_eig
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       USE m_eig66_hdf, ONLY: read_eig_hdf => read_eig
       USE m_eig66_DA, ONLY: read_eig_DA => read_eig
       USE m_eig66_mem, ONLY: read_eig_mem => read_eig
@@ -124,25 +124,25 @@ CONTAINS
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
       REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
-      TYPE(t_mat), INTENT(INOUT), OPTIONAL  :: zmat
+      TYPE(t_mat), INTENT(INOUT), OPTIONAL  :: zmat, smat
       INTEGER::n
       CALL timestart("IO (read)")
       SELECT CASE (eig66_data_mode(id))
       CASE (DA_mode)
-         CALL read_eig_DA(id, nk, jspin, neig, eig, w_iks, list, zmat)
+         CALL read_eig_DA(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       CASE (hdf_mode)
-         CALL read_eig_hdf(id, nk, jspin, neig, eig, w_iks, list, zmat)
+         CALL read_eig_hdf(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       CASE (mem_mode)
-         CALL read_eig_mem(id, nk, jspin, neig, eig, w_iks, list, zmat)
+         CALL read_eig_mem(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       CASE (mpi_mode)
-         CALL read_eig_mpi(id, nk, jspin, neig, eig, w_iks, list, zmat)
+         CALL read_eig_mpi(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
       CASE (-1)
          CALL juDFT_error("Could not read eig-file before opening", calledby="eig66_io")
       END SELECT
       CALL timestop("IO (read)")
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat, smat)
       USE m_eig66_hdf, ONLY: write_eig_hdf => write_eig
       USE m_eig66_DA, ONLY: write_eig_DA => write_eig
       USE m_eig66_mem, ONLY: write_eig_MEM => write_eig
@@ -151,17 +151,17 @@ CONTAINS
       INTEGER, INTENT(IN) :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total, n_start, n_end
       REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
-      TYPE(t_Mat), INTENT(IN), OPTIONAL :: zmat
+      TYPE(t_Mat), INTENT(IN), OPTIONAL :: zmat, smat
       CALL timestart("IO (write)")
       SELECT CASE (eig66_data_mode(id))
       CASE (da_mode)
-         CALL write_eig_DA(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat)
+         CALL write_eig_DA(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat, smat)
       CASE (hdf_mode)
-         CALL write_eig_HDF(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat)
+         CALL write_eig_HDF(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat, smat)
       CASE (mem_mode)
-         CALL write_eig_Mem(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat)
+         CALL write_eig_Mem(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat, smat)
       CASE (MPI_mode)
-         CALL write_eig_MPI(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat)
+         CALL write_eig_MPI(id, nk, jspin, neig, neig_total, eig, w_iks, n_start, n_end, zmat, smat)
       CASE (-1)
          CALL juDFT_error("Could not write eig-file before opening", calledby="eig66_io")
       END SELECT

@@ -129,29 +129,28 @@ MODULE m_types_greensf
 #ifdef CPP_MPI
          include 'mpif.h'
 #include"cpp_double.h"
-         INTEGER:: ierr,irank,n
+         INTEGER:: ierr,n
          COMPLEX,ALLOCATABLE::ctmp(:)
-
-         CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 
          IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
-            CALL MPI_REDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            DEALLOCATE(ctmp)
          ELSE
-            n = SIZE(this%gmmpMat)
+            n = SIZE(this%uu)
             ALLOCATE(ctmp(n))
-            CALL MPI_REDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
-            CALL MPI_REDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
-            CALL MPI_REDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
-            CALL MPI_REDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
+            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
+            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
+            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+            DEALLOCATE(ctmp)
          ENDIF
-         DEALLOCATE(ctmp)
 #endif
       END SUBROUTINE collect_greensf
 
@@ -171,7 +170,7 @@ MODULE m_types_greensf
          REAL   , OPTIONAL,   INTENT(IN)     :: udot(:,:)
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind,m_ind,mp_ind
+         INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep
          LOGICAL l_radial,l_full
 
@@ -215,9 +214,16 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = cmplx_0
-         ispin_end = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
 
-         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
+         IF(l_full) THEN
+            spin_start = 1
+            spin_end   = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
+         ELSE
+            spin_start = spin
+            spin_end   = spin
+         ENDIF
+
+         DO ispin = spin_start, spin_end
             !Find the corresponding physical spin indices
             IF(ispin < 3) THEN
                spin1 = ispin
@@ -305,7 +311,7 @@ MODULE m_types_greensf
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,ispin_end
+         INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end
          LOGICAL l_full
 
 
@@ -334,9 +340,15 @@ MODULE m_types_greensf
 
          ipm = MERGE(2,1,l_conjg)
 
-         ispin_end = SIZE(this%gmmpMat,4)
+         IF(l_full) THEN
+            spin_start = 1
+            spin_end   = SIZE(this%gmmpMat,4)
+         ELSE
+            spin_start = spin
+            spin_end   = spin
+         ENDIF
 
-         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
+         DO ispin = spin_start, spin_end
             !Find the right quadrant in gmat according to the spin index
             IF(ispin.EQ.2 .AND.SIZE(this%gmmpMat,4).EQ.1) CYCLE
             IF(l_full) THEN
