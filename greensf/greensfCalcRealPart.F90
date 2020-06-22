@@ -204,10 +204,14 @@ MODULE m_greensfCalcRealPart
          CALL timestop("Green's Function: Kramer-Kronigs-Integration")
       ENDDO
 
+#ifdef CPP_MPI
+      CALL timestart("Green's Function: Collect")
       !Collect all the greensFuntions
       DO i_gf = 1, gfinp%n
          CALL g(i_gf)%collect(mpi%mpi_comm)
       ENDDO
+      CALL timestop("Green's Function: Collect")
+#endif
 
    END SUBROUTINE greensfCalcRealPart
 END MODULE m_greensfCalcRealPart

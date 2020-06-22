@@ -129,29 +129,28 @@ MODULE m_types_greensf
 #ifdef CPP_MPI
          include 'mpif.h'
 #include"cpp_double.h"
-         INTEGER:: ierr,irank,n
+         INTEGER:: ierr,n
          COMPLEX,ALLOCATABLE::ctmp(:)
-
-         CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 
          IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
-            CALL MPI_REDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            DEALLOCATE(ctmp)
          ELSE
-            n = SIZE(this%gmmpMat)
+            n = SIZE(this%uu)
             ALLOCATE(ctmp(n))
-            CALL MPI_REDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
-            CALL MPI_REDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
-            CALL MPI_REDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
-            CALL MPI_REDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-            IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
+            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
+            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
+            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+            DEALLOCATE(ctmp)
          ENDIF
-         DEALLOCATE(ctmp)
 #endif
       END SUBROUTINE collect_greensf
 
