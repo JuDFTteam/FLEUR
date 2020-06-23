@@ -46,7 +46,13 @@ contains
       integer                        :: ierr
 
       hybmpi%comm = in_comm 
+
+#ifdef CPP_MPI
       call MPI_Comm_size(hybmpi%comm, hybmpi%size, ierr)
       call MPI_Comm_rank(hybmpi%comm, hybmpi%rank, ierr)
+#else
+      hybmpi%size = 1
+      hybmpi%rank = 0
+#endif
    end subroutine t_hybmpi_init
 END MODULE m_types_hybmpi
