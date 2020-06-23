@@ -1,6 +1,5 @@
 MODULE m_rotMMPmat
 
-   USE m_types
    USE m_constants
 
    IMPLICIT NONE
@@ -9,7 +8,7 @@ MODULE m_rotMMPmat
    PUBLIC :: rotMMPmat
 
    INTERFACE rotMMPmat
-      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_types
+      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle
    END INTERFACE
 
    CONTAINS
@@ -124,33 +123,15 @@ MODULE m_rotMMPmat
          ENDDO
       ENDDO
 
-     eia = exp( ImagUnit * alpha/2.0 )
-     su(1,1) =  conjg(eia)*co_bh
-     su(2,1) = -conjg(eia)*si_bh
-     su(1,2) = eia*si_bh
-     su(2,2) = eia*co_bh
+      eia = exp( ImagUnit * alpha/2.0 )
+      su(1,1) =  conjg(eia)*co_bh
+      su(2,1) = -conjg(eia)*si_bh
+      su(1,2) = eia*si_bh
+      su(2,2) = eia*co_bh
 
-     mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su)
+      mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su)
 
    END FUNCTION rotMMPmat_angle
-
-   PURE FUNCTION rotMMPmat_types(mmpmat,atoms) Result(mmpmatOut)
-
-      COMPLEX,        INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:,:)
-      TYPE(t_atoms),  INTENT(IN)  :: atoms
-
-      COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:,:)
-
-      INTEGER :: i_u
-
-      IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
-
-      DO i_u = 1, atoms%n_u+atoms%n_hia
-         mmpmatOut(:,:,i_u,:) = rotMMPmat_angle(mmpmat(:,:,i_u,:),atoms%lda_u(i_u)%phi,&
-                                                atoms%lda_u(i_u)%theta,0.0,atoms%lda_u(i_u)%l)
-      ENDDO
-
-   END FUNCTION  rotMMPmat_types
 
    ELEMENTAL REAL FUNCTION  fac(n)
 

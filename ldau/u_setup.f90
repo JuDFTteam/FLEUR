@@ -62,7 +62,12 @@ MODULE m_usetup
          CALL umtx(atoms%lda_u(:),n_u,f0,f2,f4,f6,u)
 
          !Rotate the density matrix if specified with phi or theta angles
-         n_mmp = rotMMPmat(inDen%mmpMat,atoms)
+         ALLOCATE(n_mmp,mold=inDen%mmpmat)
+         DO i_u = 1, n_u
+            n_mmp(:,:,i_u,:) = rotMMPmat(inDen%mmpmat(:,:,i_u,:),atoms%lda_u(i_u)%phi,&
+                                         atoms%lda_u(i_u)%theta,0.0,atoms%lda_u(i_u)%l)
+         ENDDO
+
 
          ! calculate potential matrix and total energy correction
          CALL v_mmp(atoms,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
