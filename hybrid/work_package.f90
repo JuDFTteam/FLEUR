@@ -170,11 +170,8 @@ contains
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
       integer, intent(in)                  :: jsp
-      integer :: my_num_ks, k_cnt, i
-
-      if(fi%kpts%nkpt < work_pack%size) call judft_error("not enough k-points for work_packages")
-
-
+      integer :: my_num_ks, k_cnt, i 
+      
       if(work_pack%rank < modulo(fi%kpts%nkpt, work_pack%size)) then
          my_num_ks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
       else 

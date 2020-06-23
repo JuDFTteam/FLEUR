@@ -7,10 +7,13 @@
 MODULE m_cdnval
 
 USE m_juDFT
+#ifdef CPP_MPI
+use mpi
+#endif
 
 CONTAINS
 
-SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
+SUBROUTINE cdnval(eig_id, mpi_var,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
                   moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
@@ -62,7 +65,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    IMPLICIT NONE
 
    TYPE(t_results),       INTENT(INOUT) :: results
-   TYPE(t_mpi),           INTENT(IN)    :: mpi
+   TYPE(t_mpi),           INTENT(IN)    :: mpi_var
 
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_enpara),        INTENT(IN)    :: enpara
@@ -95,10 +98,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
-
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
 
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
@@ -177,13 +176,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    l_coreSpec = .FALSE.
    IF (PRESENT(coreSpecInput)) THEN
       CALL corespec_init(input,atoms,coreSpecInput)
-      IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
+      IF(l_cs.AND.(mpi_var%isize.NE.1)) CALL juDFT_error('EELS + mpi_var not implemented', calledby = 'cdnval')
       IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
       l_coreSpec = l_cs
    END IF
    ! calculation of core spectra (EELS) initializations -end-
 
-   IF (mpi%irank==0) THEN
+   IF (mpi_var%irank==0) THEN
       WRITE (oUnit,FMT=8000) jspin
       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
    END IF
@@ -191,7 +190,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
    DO iType = 1, atoms%ntype
       DO ispin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
+         CALL genMTBasis(atoms,enpara,vTot,mpi_var,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
@@ -209,7 +208,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
 
-      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., mpi)
+      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., mpi_var)
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)
@@ -226,7 +225,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
 #ifdef CPP_MPI
-      CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
+      CALL MPI_BARRIER(mpi_var%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
 
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
@@ -251,7 +250,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          call timestart("eparas")
-         CALL eparas(ispin,atoms,noccbd,ev_list,mpi,ikpt,noccbd,we,eig,&
+         CALL eparas(ispin,atoms,noccbd,ev_list,mpi_var,ikpt,noccbd,we,eig,&
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
          call timestop("eparas")
@@ -283,7 +282,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,mpi,vTot,input,hub1inp,tlmplm,usdus)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,mpi_var,vTot,input,hub1inp,tlmplm,usdus)
            CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
          ENDIF
@@ -308,7 +307,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
+         CALL pwden(stars,kpts,banddos,oneD,input,mpi_var,noco,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
          IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
@@ -328,7 +327,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+      CALL mpi_col_den(mpi_var,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
@@ -337,16 +336,16 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,
       IF(greensfImagPart%l_calc) THEN
          !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
          DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
-            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi,&
+            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,mpi_var,&
                                      results,greensfBZintCoeffs,greensfImagPart)
          ENDDO
       ENDIF
    ENDIF
 
-   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+   CALL cdnmt(mpi_var,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
               vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,jDOS,hub1data)
 
-   IF (mpi%irank==0) THEN
+   IF (mpi_var%irank==0) THEN
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN
