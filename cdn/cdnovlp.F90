@@ -514,7 +514,6 @@
       real :: qf(stars%ng3)
       complex qpwc_at(stars%ng3)
 #ifdef CPP_MPI
-      external mpi_bcast
       complex :: qpwc_loc(stars%ng3)
       integer :: ierr
 #endif

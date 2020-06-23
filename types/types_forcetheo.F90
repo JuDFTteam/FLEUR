@@ -62,7 +62,7 @@ CONTAINS
   END FUNCTION forcetheo_next_job
 
   FUNCTION forcetheo_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types_atoms
     USE m_types_oneD
     USE m_types_input
@@ -80,7 +80,7 @@ CONTAINS
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input

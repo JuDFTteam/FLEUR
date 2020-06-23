@@ -6,7 +6,7 @@ MODULE m_alineso
   ! Eigenvalues and vectors (eig_so and zso) are returned 
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE alineso(eig_id,lapw,mpi,atoms,sym,kpts,input,noco,&
+  SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,&
                      cell,oneD, nk, usdus,rsoc,nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
@@ -16,7 +16,7 @@ CONTAINS
     USE m_hsoham
     USE m_eig66_io, ONLY : read_eig
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
     TYPE(t_lapw),INTENT(IN)        :: lapw
     
     TYPE(t_oneD),INTENT(IN)        :: oneD
@@ -115,7 +115,7 @@ CONTAINS
        nsz(jsp) = ne
     ENDDO
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%sub_comm,ierr) ! Synchronizes the RMA operations
+    CALL MPI_BARRIER(fmpi%sub_comm,ierr) ! Synchronizes the RMA operations
 #endif
     !
     ! set up size of e.v. problem in second variation: nsize
@@ -135,14 +135,14 @@ CONTAINS
 !
 ! in case of ev-parallelization, now distribute the atoms:
 !
-      IF (mpi%n_size > 1) THEN
-        nat_l = FLOOR(real(atoms%nat)/mpi%n_size)
-        extra = atoms%nat - nat_l*mpi%n_size
-        nat_start = mpi%n_rank*nat_l + 1 + extra
-        nat_stop  = (mpi%n_rank+1)*nat_l + extra
-        IF (mpi%n_rank < extra) THEN
-          nat_start = nat_start - (extra - mpi%n_rank)
-          nat_stop  = nat_stop - (extra - mpi%n_rank - 1)
+      IF (fmpi%n_size > 1) THEN
+        nat_l = FLOOR(real(atoms%nat)/fmpi%n_size)
+        extra = atoms%nat - nat_l*fmpi%n_size
+        nat_start = fmpi%n_rank*nat_l + 1 + extra
+        nat_stop  = (fmpi%n_rank+1)*nat_l + extra
+        IF (fmpi%n_rank < extra) THEN
+          nat_start = nat_start - (extra - fmpi%n_rank)
+          nat_stop  = nat_stop - (extra - fmpi%n_rank - 1)
         ENDIF
       ELSE
         nat_start = 1
@@ -162,14 +162,14 @@ CONTAINS
     ! set up hamilton matrix
     CALL timestart("alineso SOC: -ham") 
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
     ALLOCATE (hsomtx(input%neig,input%neig,2,2))
     CALL hsoham(atoms,noco,input,nsz,input%neig,chelp,rsoc,ahelp,bhelp,&
-                nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,hsomtx)
+                nat_start,nat_stop,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,hsomtx)
     DEALLOCATE (ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -ham") 
-    IF (mpi%n_rank==0) THEN
+    IF (fmpi%n_rank==0) THEN
 
     ! add e.v. on diagonal
     !      write(*,*) '!!!!!!!!!!! remove SOC !!!!!!!!!!!!!!'

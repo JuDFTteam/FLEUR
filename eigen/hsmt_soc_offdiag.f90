@@ -8,13 +8,13 @@ MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_hsmt_fjgj
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -50,7 +50,7 @@ CONTAINS
     END DO
 
     !$OMP PARALLEL DEFAULT(NONE)&
-    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
+    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
     !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
@@ -59,8 +59,8 @@ CONTAINS
     ALLOCATE(dplegend(MAXVAL(lapw%nv),0:2))
     ALLOCATE(fct(MAXVAL(lapw%nv)))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
-    DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
-       kii=(ki-1)/mpi%n_size+1
+    DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
+       kii=(ki-1)/fmpi%n_size+1
 
        !--->             set up phase factors
        cph = 0.0
@@ -122,19 +122,19 @@ CONTAINS
     !$OMP END PARALLEL
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
 
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_setabc1lo
     USE m_hsmt_fjgj
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -199,8 +199,8 @@ CONTAINS
           if (l==0) cycle !no SOC for s-states
           DO nkvec = 1,invsfct* (2*l+1)
             locol_mat= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-            IF (MOD(locol_mat-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
-              locol_loc=(locol_mat-1)/mpi%n_size+1 !this is the column in local storage
+            IF (MOD(locol_mat-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
+              locol_loc=(locol_mat-1)/fmpi%n_size+1 !this is the column in local storage
               ki=lapw%kvec(nkvec,lo,na) !this LO is attached to this k+G
 
               !--->       legendre polynomials

@@ -74,11 +74,11 @@ CONTAINS
   END SUBROUTINE jij_init
 
 
-  SUBROUTINE jij_dist(this,mpi)
+  SUBROUTINE jij_dist(this,fmpi)
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
-    TYPE(t_mpi),INTENT(in):: mpi
+    TYPE(t_mpi),INTENT(in):: fmpi
 
     INTEGER:: i,q,ierr
 #ifdef CPP_MPI
@@ -182,14 +182,14 @@ CONTAINS
 
 
   FUNCTION jij_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input

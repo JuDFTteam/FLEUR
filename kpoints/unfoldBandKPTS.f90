@@ -177,7 +177,7 @@ CONTAINS
     !write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
- SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
+ SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
@@ -194,7 +194,7 @@ CONTAINS
 	CLASS(t_mat),INTENT(INOUT)  :: smat_unfold
 	CLASS(t_mat),INTENT(IN)     :: zMat
 	TYPE(t_lapw),INTENT(IN)     :: lapw
-        TYPE(t_mpi),INTENT(IN)       :: mpi
+        TYPE(t_mpi),INTENT(IN)       :: fmpi
 	TYPE(t_cell)      :: p_cell
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
@@ -272,7 +272,7 @@ CONTAINS
 	write (*,*)results%ef
         write (*,*) i_kpt
 	IF (.not. method_rubel) THEN
-!          IF (mpi%n_size==1) THEN
+!          IF (fmpi%n_size==1) THEN
 !             call smat_unfold%multiply(zMat,zMat_s)
 !          ELSE
 !             call smat_unfold%mpimat_multiply(zMat,zMat_s)
@@ -357,7 +357,7 @@ CONTAINS
 !					END DO
 				END IF
 			END DO
-!			write(1250+mpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
+!			write(1250+fmpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
 !------------------LO's------------------------
       			na=0
       			DO n_i=1,atoms%ntype

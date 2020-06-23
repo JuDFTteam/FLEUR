@@ -29,8 +29,8 @@ CONTAINS
    REAL,    INTENT (INOUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL,    INTENT (INOUT) :: fz(vacuum%nmzd,2,input%jspins)
 
-   INTEGER :: n, ierr(3)
-
+   INTEGER :: n, ierr
+#ifdef CPP_MPI
    CALL MPI_BCAST(iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
 
     n = stars%ng3 * input%jspins
@@ -41,6 +41,6 @@ CONTAINS
     CALL MPI_BCAST(fr,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
     n = vacuum%nmzd * 2 * input%jspins
     CALL MPI_BCAST(fz,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
-
+#endif
    END SUBROUTINE mpi_bc_pot
 END MODULE m_mpi_bc_pot

@@ -12,13 +12,13 @@ MODULE m_spnorb
   !     using the functions anglso and sgml.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE spnorb(atoms,noco,nococonv,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
+  SUBROUTINE spnorb(atoms,noco,nococonv,input,fmpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
     USE m_sorad
     USE m_constants
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -62,7 +62,7 @@ CONTAINS
     !Scale SOC
     DO n= 1,atoms%ntype
        IF (ABS(noco%socscale(n)-1)>1E-5) THEN
-          IF (mpi%irank==0) WRITE(oUnit,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
+          IF (fmpi%irank==0) WRITE(oUnit,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
           rsoc%rsopp(n,:,:,:)    = rsoc%rsopp(n,:,:,:)*noco%socscale(n)
           rsoc%rsopdp(n,:,:,:)   = rsoc%rsopdp(n,:,:,:)*noco%socscale(n)
           rsoc%rsoppd(n,:,:,:)   = rsoc%rsoppd(n,:,:,:)*noco%socscale(n)
@@ -76,7 +76,7 @@ CONTAINS
     ENDDO
 
     !Read in SOC-parameter for shell with hubbard 1
-    IF(PRESENT(hub1inp).AND.mpi%irank.EQ.0) THEN
+    IF(PRESENT(hub1inp).AND.fmpi%irank.EQ.0) THEN
       DO i_hia = 1, atoms%n_hia
          IF(hub1inp%l_soc_given(i_hia)) CYCLE
          n = atoms%lda_u(atoms%n_u+i_hia)%atomType
@@ -86,7 +86,7 @@ CONTAINS
     ENDIF
 
     !DO some IO into out file
-      IF ((first_k).AND.(mpi%irank.EQ.0)) THEN
+      IF ((first_k).AND.(fmpi%irank.EQ.0)) THEN
        DO n = 1,atoms%ntype
           WRITE (oUnit,FMT=8000)
           WRITE (oUnit,FMT=9000)
@@ -106,10 +106,10 @@ CONTAINS
 
     !Calculate angular matrix elements if requested
     IF (l_angles) &
-         CALL spnorb_angles(atoms,mpi,nococonv%theta,nococonv%phi,rsoc%soangl)
+         CALL spnorb_angles(atoms,fmpi,nococonv%theta,nococonv%phi,rsoc%soangl)
   END SUBROUTINE spnorb
 
-  SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl,compo)
+  SUBROUTINE spnorb_angles(atoms,fmpi,theta,phi,soangl,compo)
     USE m_constants
     USE m_anglso
     USE m_sgml
@@ -117,7 +117,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     REAL,INTENT(IN)             :: theta,phi
     COMPLEX,INTENT(INOUT)       :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)
     INTEGER, INTENT(IN),OPTIONAL :: compo
@@ -180,7 +180,7 @@ CONTAINS
        !
     ENDIF
 
-    IF (mpi%irank.EQ.0) THEN
+    IF (fmpi%irank.EQ.0) THEN
        WRITE (oUnit,FMT=8002)
        DO jspin1 = 1,2
           DO jspin2 = 1,2

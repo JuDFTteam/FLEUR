@@ -16,7 +16,7 @@ MODULE m_gen_wavf
 CONTAINS
 
    SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
-                       hybdat, noco,nococonv, oneD, mpi, input, jsp)
+                       hybdat, noco,nococonv, oneD, fmpi, input, jsp)
 
       ! nkpt       ::     number of all k-points
       USE m_types
@@ -32,7 +32,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
@@ -112,12 +112,12 @@ CONTAINS
 
       iarr = 2
       DO itype = 1, atoms%ntype
-         IF (mpi%irank == 0) WRITE (oUnit, FMT=8000) itype
+         IF (fmpi%irank == 0) WRITE (oUnit, FMT=8000) itype
          ng = atoms%jri(itype)
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), &
                       atoms, u(:, :, l), du(:, :, l), hybdat%usdus, nodem, noded, wronk)
-            IF (mpi%irank == 0) WRITE (oUnit, FMT=8010) l, el_eig(l, itype), &
+            IF (fmpi%irank == 0) WRITE (oUnit, FMT=8010) l, el_eig(l, itype), &
                                hybdat%usdus%us(l, itype, jsp), hybdat%usdus%dus(l, itype, jsp),&
                                nodem, hybdat%usdus%uds(l, itype, jsp), hybdat%usdus%duds(l, itype, jsp),&
                                noded, hybdat%usdus%ddn(l, itype, jsp), wronk
@@ -134,7 +134,7 @@ CONTAINS
          END DO
 
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), u, du, mpi, hybdat%usdus, uuilon, duilon, ulouilopn, flo)
+            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), u, du, fmpi, hybdat%usdus, uuilon, duilon, ulouilopn, flo)
 
             DO ilo = 1, atoms%nlo(itype)
                iarr(atoms%llo(ilo, itype), itype) = iarr(atoms%llo(ilo, itype), itype) + 1

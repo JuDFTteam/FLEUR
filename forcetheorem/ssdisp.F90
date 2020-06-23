@@ -123,31 +123,33 @@ CONTAINS
     CALL judft_end("Forcetheorem:SpinSpiralDispersion")
   END SUBROUTINE ssdisp_postprocess
 
-  SUBROUTINE ssdisp_dist(this,mpi)
+  SUBROUTINE ssdisp_dist(this,fmpi)
+#ifdef CPP_MPI
+    USE mpi
+#endif
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
-    TYPE(t_mpi),INTENT(in):: mpi
+    TYPE(t_mpi),INTENT(in):: fmpi
 
     INTEGER:: q,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    IF (mpi%irank==0) q=SIZE(this%qvec,2)
-    CALL MPI_BCAST(q,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%evsum(q));this%evsum=0.0
-    CALL MPI_BCAST(this%qvec,3*q,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    IF (fmpi%irank==0) q=SIZE(this%qvec,2)
+    CALL MPI_BCAST(q,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%evsum(q));this%evsum=0.0
+    CALL MPI_BCAST(this%qvec,3*q,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
   END SUBROUTINE ssdisp_dist
 
   FUNCTION ssdisp_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input

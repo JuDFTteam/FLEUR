@@ -25,8 +25,10 @@ CONTAINS
    TYPE(t_oneD),INTENT(IN)       :: oneD
    TYPE(t_potden),INTENT(INOUT)  :: potden
 
-   INTEGER :: n, ierr(3)
+   INTEGER :: n, ierr
    LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc, l_pw_wAlloc
+
+#ifdef CPP_MPI
 
    CALL MPI_BCAST(potden%iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(potden%potdenType,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
@@ -74,6 +76,8 @@ CONTAINS
       n = SIZE(potden%mmpMat,1) * SIZE(potden%mmpMat,2) * SIZE(potden%mmpMat,3) * SIZE(potden%mmpMat,4)
       CALL MPI_BCAST(potden%mmpMat,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
    END IF
+
+#endif
 
    END SUBROUTINE mpi_bc_potden
 END MODULE m_mpi_bc_potden

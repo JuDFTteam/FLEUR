@@ -7,7 +7,7 @@
       module m_wann_socmat_vec
       contains
       subroutine wann_socmat_vec(
-     >               mpi,enpara,input,noco,nococonv,atoms,
+     >               fmpi,enpara,input,noco,nococonv,atoms,
      >               lmaxd,natd,neigd,
      >               llod,jspd,
      >               jspins,irank,
@@ -27,7 +27,7 @@ c***********************************************************************
       USE m_hsoham
       implicit none
 
-      TYPE(t_mpi),INTENT(IN)      :: mpi
+      TYPE(t_mpi),INTENT(IN)      :: fmpi
 
       TYPE(t_enpara),INTENT(IN)   :: enpara
       TYPE(t_input),INTENT(IN)    :: input
@@ -104,18 +104,18 @@ c***********************************************************************
 
 
       CALL spnorb(
-     >         atoms,noco,nococonv,input,mpi, enpara,
+     >         atoms,noco,nococonv,input,fmpi, enpara,
      >         vr,usdus,rsoc,.true.)
 
       do compo=1,3
         rsoc%soangl= cmplx(0.0,0.0)
 
 
-        CALL spnorb_angles(atoms,mpi,nococonv%theta,
+        CALL spnorb_angles(atoms,fmpi,nococonv%theta,
      >        nococonv%phi,rsoc%soangl,compo)
 
         CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
+     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
      <            hsomtx)
 
         do i1 = 1,2

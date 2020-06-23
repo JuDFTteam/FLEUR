@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_totale
 CONTAINS
-  SUBROUTINE totale(mpi,atoms,sphhar,stars,vacuum, &
+  SUBROUTINE totale(fmpi,atoms,sphhar,stars,vacuum, &
        sym,input,noco,cell,oneD, xcpot,hybdat,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
@@ -49,7 +49,7 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)          :: mpi
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_oneD),INTENT(IN)         :: oneD
@@ -82,7 +82,7 @@ CONTAINS
     CHARACTER(LEN=20) :: attributes(3)
 
     !CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        WRITE (oUnit,FMT=8000)
 8000   FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
        !
@@ -244,7 +244,7 @@ CONTAINS
             /,' ----> HF total electron energy=',t40,f20.10,' htr')
 8090   FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
     ENDIF
-    CALL force_w(mpi,input,atoms,sym,results,cell,oneD,vacuum)
+    CALL force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
 
   END SUBROUTINE totale
 END MODULE m_totale

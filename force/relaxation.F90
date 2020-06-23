@@ -25,9 +25,6 @@ CONTAINS
     USE m_mixing_history
     USE m_chkmt
     USE m_types_xml
-#ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-#endif
 
     TYPE(t_mpi),INTENT(IN)   :: fmpi
     TYPE(t_input),INTENT(IN) :: input

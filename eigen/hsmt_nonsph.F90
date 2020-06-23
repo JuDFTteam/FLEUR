@@ -10,7 +10,7 @@ MODULE m_hsmt_nonsph
   PUBLIC hsmt_nonsph
 
 CONTAINS
-  SUBROUTINE hsmt_nonsph(n,mpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,td,fjgj,hmat)
+  SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,td,fjgj,hmat)
     USE m_hsmt_fjgj
     USE m_types
     USE m_hsmt_ab
@@ -25,7 +25,7 @@ CONTAINS
 #define CPP_data_c hmat%data_c
 #endif
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -50,7 +50,7 @@ CONTAINS
     CALL timestart("non-spherical setup")
 
     size_ab=maxval(lapw%nv)
-    if (mpi%n_size==1) Then
+    if (fmpi%n_size==1) Then
        size_ab_select=size_ab
     ELSE
       size_ab_select=lapw%num_local_cols(iintsp)
@@ -106,9 +106,9 @@ CONTAINS
           !$acc end host_data
           !ab1=MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(iintsp))),td%h_loc(:ab_size,:ab_size,n,isp))
           !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
-          !$acc kernels default(none) present(ab_select,ab1)copyin(mpi)
-          if (mpi%n_size>1)Then
-            ab_select(:,:)=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
+          !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
+          if (fmpi%n_size>1)Then
+            ab_select(:,:)=ab1(fmpi%n_rank+1:lapw%nv(jintsp):fmpi%n_size,:)
           ELSE
             ab_select(:,:)=ab1(:,:) !All of ab1 needed
           ENDIF
@@ -118,7 +118,7 @@ CONTAINS
                !$acc kernels default(none) present(ab1)
                ab1(:,:)=conjg(ab1(:,:))
                !$acc end kernels
-               IF (mpi%n_size==1) THEN !use z-herk trick on single PE
+               IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
                  CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,1.0,CPP_data_c,size_data_c)
                  !$acc end host_data

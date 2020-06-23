@@ -8,7 +8,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
+SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
 
    USE m_constants
@@ -28,7 +28,7 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
    IMPLICIT NONE
 
 
-   TYPE(t_mpi),        INTENT(IN)              :: mpi
+   TYPE(t_mpi),        INTENT(IN)              :: fmpi
 
    TYPE(t_oneD),       INTENT(IN)              :: oneD
    TYPE(t_input),      INTENT(IN)              :: input
@@ -57,7 +57,7 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
 
 
    results%seigc = 0.0
-   IF (mpi%irank==0) THEN
+   IF (fmpi%irank==0) THEN
       DO jspin = 1,input%jspins
          DO n = 1,atoms%ntype
             moments%svdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
@@ -68,7 +68,7 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
    IF (input%kcrel==0) THEN
       ! Generate input file ecore for subsequent GW calculation
       ! 11.2.2004 Arno Schindlmayr
-      IF ((input%gw==1 .or. input%gw==3).AND.(mpi%irank==0)) THEN
+      IF ((input%gw==1 .or. input%gw==3).AND.(fmpi%irank==0)) THEN
          OPEN (15,file='ecore',status='unknown', action='write',form='unformatted')
       END IF
 
@@ -76,17 +76,17 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
       tec = 0.0
       qint = 0.0
       IF (input%frcor) THEN
-         IF (mpi%irank==0) THEN
+         IF (fmpi%irank==0) THEN
             CALL readCoreDensity(input,atoms,rh,tec,qint)
          END IF
 #ifdef CPP_MPI
-         CALL mpi_bc_coreDen(mpi,atoms,input,rh,tec,qint)
+         CALL mpi_bc_coreDen(fmpi,atoms,input,rh,tec,qint)
 #endif
       END IF
    END IF
 
    !add in core density
-   IF (mpi%irank==0) THEN
+   IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
             IF(PRESENT(EnergyDen)) THEN
@@ -105,12 +105,12 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
       END IF
    END IF
    DO jspin = 1,input%jspins
-      IF (mpi%irank==0) THEN
+      IF (fmpi%irank==0) THEN
          DO n = 1,atoms%ntype
             moments%stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
          END DO
       END IF
-      IF ((noco%l_noco).AND.(mpi%irank==0)) THEN
+      IF ((noco%l_noco).AND.(fmpi%irank==0)) THEN
          IF (jspin==2) THEN
 
             IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for noco")
@@ -136,10 +136,10 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
          IF (input%ctail) THEN
             IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
             !+gu hope this works as well
-            CALL cdnovlp(mpi,sphhar,stars,atoms,sym,vacuum,&
+            CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                          cell,input,oneD,l_st,jspin,rh(:,:,jspin),&
                          outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
-         ELSE IF (mpi%irank==0) THEN
+         ELSE IF (fmpi%irank==0) THEN
             DO iType = 1,atoms%ntype
                outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin) / (input%jspins * cell%volint)
             END DO
@@ -148,10 +148,10 @@ SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,nococonv,sym,&
    END DO
 
    IF (input%kcrel==0) THEN
-      IF (mpi%irank==0) THEN
+      IF (fmpi%irank==0) THEN
          CALL writeCoreDensity(input,atoms,rhTemp,tec,qint)
       END IF
-      IF ((input%gw==1 .or. input%gw==3).AND.(mpi%irank==0)) CLOSE(15)
+      IF ((input%gw==1 .or. input%gw==3).AND.(fmpi%irank==0)) CLOSE(15)
    END IF
 
 END SUBROUTINE cdncore

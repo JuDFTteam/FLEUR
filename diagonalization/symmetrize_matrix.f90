@@ -8,11 +8,11 @@ MODULE m_symmetrize_matrix
   USE m_juDFT
 
 CONTAINS
-  SUBROUTINE symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
+  SUBROUTINE symmetrize_matrix(fmpi,noco,kpts,nk,hmat,smat)
     USE m_types
     USE m_constants
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_noco),INTENT(in)    :: noco
     TYPE(t_kpts),INTENT(in)    :: kpts
     INTEGER,INTENT(in)         :: nk
@@ -30,7 +30,7 @@ CONTAINS
                 RETURN
              ENDIF
              
-             IF (mpi%irank==0) THEN
+             IF (fmpi%irank==0) THEN
                 PRINT *,"Complex matrix made real"
                 WRITE(oUnit,*) "Complex matrix made real"
              END IF

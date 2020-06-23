@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+   SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
       use m_work_package
       use m_structureconstant
       USE m_types
@@ -55,7 +55,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
-      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
@@ -122,7 +122,7 @@ CONTAINS
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
-      if (mpi%is_root()) write (*, *) "start of coulomb calculation"
+      if (fmpi%is_root()) write (*, *) "start of coulomb calculation"
 
       call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
 
@@ -142,9 +142,9 @@ CONTAINS
       CALL intgrf_init(fi%atoms%ntype, fi%atoms%jmtd, fi%atoms%jri, fi%atoms%dx, fi%atoms%rmsh, gridf)
 
       !     Calculate the structure constant
-      CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, mpi)
+      CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, fmpi)
 
-      IF (mpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
+      IF (fmpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
 
       !
       !     Matrix allocation
@@ -160,7 +160,7 @@ CONTAINS
       enddo
       call timestop("coulomb allocation")
 
-      IF (mpi%irank == 0) then
+      IF (fmpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
                             float2str(sum([(coulomb(work_pack%k_packs(i)%nk)%size_mb(), i=1,work_pack%k_packs(1)%size)])) // " MB"
       endif
@@ -314,8 +314,8 @@ CONTAINS
       ! and       sphbesmoment1(r,l) = 1/r**(l-1) * INT(0..r) r'**(l+2) * j_l(qr') dr'
       !                                + r**(l+2) * INT(r..S) r'**(1-l) * j_l(qr') dr' .
 
-      iqnrmstart = mpi%irank + 1
-      iqnrmstep = mpi%isize
+      iqnrmstart = fmpi%irank + 1
+      iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
       call timestart("Bessel calculation")
@@ -566,7 +566,7 @@ CONTAINS
          call timestart("coulomb matrix 3b")
          DO im = 1, work_pack%k_packs(1)%size
             ikpt = work_pack%k_packs(im)%nk
-            if (mpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
+            if (fmpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate (carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
