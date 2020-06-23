@@ -6,7 +6,9 @@
 
       MODULE m_cdnovlp
       USE m_juDFT
+#ifdef CPP_MPI
       use mpi
+#endif
       IMPLICIT NONE
       PRIVATE
       PUBLIC :: cdnovlp 
