@@ -106,11 +106,13 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! flip cdn for each atom with rotation angles given
    na = 1
+!$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
+!$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin) &
+!$OMP FIRSTPRIVATE(na,rotAngleTheta,rotAnglePhi)
+!$OMP do
    DO itype = 1, atoms%ntype
       IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
          ! spherical and non-spherical m.t. charge density
-!$OMP parallel private(rhodummy,j,rhodummyR)
-!$OMP do
 	DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                 IF (noco%l_mtNocoPot) THEN
@@ -132,8 +134,6 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
                 END IF
             END DO
          END DO
-!$OMP end do
-!$OMP end parallel
       ELSE IF (l_flip(itype).AND.scaleSpin(itype)) THEN
          IF((rotAngleTheta(itype).NE.(pimach()) .OR.rotAnglePhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0.",calledby="flipcdn")
          DO lh = 0,sphhar%nlh(sym%ntypsy(na))
@@ -147,7 +147,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
       END IF
          na = na + atoms%neq(itype)
    END DO
-
+!$OMP end do
+!$OMP end parallel
    IF (input%l_onlyMtStDen) THEN
 !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value.
       den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value
@@ -209,8 +210,9 @@ END DO
    END IF
 
    ! write the spin-polarized density
-    IF(opt.OR.input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF(input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      1,-1.0,0.0,.FALSE.,den)
+    IF(opt) optDen%mt=den%mt
 
    ! read enpara and  flip lines
    INQUIRE(file='enpara',exist=n_exist)

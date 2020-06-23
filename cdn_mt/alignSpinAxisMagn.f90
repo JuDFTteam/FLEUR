@@ -91,15 +91,15 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
 ,sym,oneD,cell,input,atoms,inDen, den)
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
-   TYPE(t_noco), INTENT(IN)	             :: noco
-   TYPE(t_nococonv), INTENT(INOUT)	     :: nococonv
-   TYPE(t_stars),INTENT(IN)	             :: stars
+   TYPE(t_noco), INTENT(IN)	         :: noco
+   TYPE(t_nococonv), INTENT(INOUT)       :: nococonv
+   TYPE(t_stars),INTENT(IN)              :: stars
    TYPE(t_vacuum),INTENT(IN)             :: vacuum
    TYPE(t_sphhar),INTENT(IN)             :: sphhar
    TYPE(t_sym),INTENT(IN)                :: sym
-   TYPE(t_oneD),INTENT(IN)	             :: oneD
-   TYPE(t_cell),INTENT(IN)	             :: cell
-   TYPE(t_potden), INTENT(INOUT)         ::  inDen
+   TYPE(t_oneD),INTENT(IN)               :: oneD
+   TYPE(t_cell),INTENT(IN)               :: cell
+   TYPE(t_potden), INTENT(INOUT)         :: inDen
    TYPE(t_potden), OPTIONAL,INTENT(INOUT):: den
 
    INTEGER                               :: i

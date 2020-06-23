@@ -189,7 +189,7 @@ MODULE m_kkintgr
          DO i = MERGE(1,2,MOD(ire,2)==0), ne, 2
             y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
             IF(i.EQ.1 .OR. i.EQ.2 .OR.&
-               j.EQ.ne .OR. j.EQ.ne-1) y = y/2.0
+               i.EQ.ne .OR. i.EQ.ne-1) y = y/2.0
             kk_num = kk_num + y
          ENDDO
 
