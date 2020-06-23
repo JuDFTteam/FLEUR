@@ -42,7 +42,6 @@ MODULE m_usetup
       CHARACTER(len=2) :: l_type
       CHARACTER(len=9) :: l_form
 
-      REAL :: zero(atoms%n_u+atoms%n_hia)
       REAL :: f0(atoms%n_u+atoms%n_hia),f2(atoms%n_u+atoms%n_hia)
       REAL :: f4(atoms%n_u+atoms%n_hia),f6(atoms%n_u+atoms%n_hia)
       REAL,    ALLOCATABLE :: u(:,:,:,:,:)
@@ -67,7 +66,6 @@ MODULE m_usetup
             n_mmp(:,:,i_u,:) = rotMMPmat(inDen%mmpmat(:,:,i_u,:),atoms%lda_u(i_u)%phi,&
                                          atoms%lda_u(i_u)%theta,0.0,atoms%lda_u(i_u)%l)
          ENDDO
-
 
          ! calculate potential matrix and total energy correction
          CALL v_mmp(atoms,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
