@@ -138,9 +138,8 @@
 #ifdef CPP_MPI
       !EXTERNAL MPI_BCAST
       INTEGER ierr
-#include "cpp_double.h"
-      !INCLUDE "mpif.h"
 #endif
+
           !
           !----> Abbreviation
           !
@@ -177,7 +176,7 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,CPP_MPI_REAL,0,fmpi%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
           mshc(:) = 0 ! This initialization is important because there may be atoms without core states.
           nloop: DO  n = 1 , atoms%ntype
@@ -518,10 +517,7 @@
       external mpi_bcast
       complex :: qpwc_loc(stars%ng3)
       integer :: ierr
-#include "cpp_double.h"
-      include "mpif.h"
 #endif
-
       czero = (0.0,0.0)
 #ifdef CPP_MPI
       DO k = 1 , stars%ng3
@@ -571,7 +567,7 @@
           END IF
        ENDDO
 #ifdef CPP_MPI
-       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,CPP_MPI_COMPLEX,mpi_sum, &
+       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,mpi_sum, &
                fmpi%mpi_comm,ierr)
 #endif
 

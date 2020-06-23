@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 
 module m_wann_read_inp
-
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 contains
 subroutine wann_read_inp(input,noco,mpi,wann)
 !********************************************
@@ -30,8 +32,6 @@ subroutine wann_read_inp(input,noco,mpi,wann)
    real              :: version_real
 #ifdef CPP_MPI
           integer :: ierr(3)
-          INCLUDE 'mpif.h'
-
 #endif
 
    l_p0=(mpi%irank==0)

@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_mpi_reduce_potden
-
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 CONTAINS
 
   SUBROUTINE mpi_reduce_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, potden )
@@ -27,10 +29,9 @@ CONTAINS
     TYPE(t_sphhar),  INTENT(IN)     :: sphhar
     TYPE(t_atoms),   INTENT(IN)     :: atoms
     TYPE(t_potden),  INTENT(INOUT)  :: potden
-    INCLUDE 'mpif.h'
     
     INTEGER              :: n
-    INTEGER              :: ierr(3)
+    INTEGER              :: ierr
     REAL,    ALLOCATABLE :: r_b(:)
     
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy,MPI_REDUCE

@@ -13,6 +13,9 @@ MODULE m_juDFT_time
    !     Daniel Wortmann, Fri Sep  6 11:53:08 2002
    !*****************************************************************
    USE m_judft_xmlOutput
+#ifdef CPP_MPI 
+   use mpi 
+#endif
    IMPLICIT NONE
    !     List of different timers
    PRIVATE
@@ -377,6 +380,9 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
+#ifdef CPP_MPI 
+     use mpi 
+#endif
      USE m_juDFT_internalParams
      USE m_judft_usage
      USE m_judft_args
@@ -386,7 +392,6 @@ CONTAINS
       CHARACTER(len=:), allocatable :: json_str
       CHARACTER(len=30)::filename
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err,isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -429,14 +434,15 @@ CONTAINS
 
    ! writes all times to out.xml file
    SUBROUTINE writeTimesXML()
-
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -505,6 +511,7 @@ CONTAINS
    END SUBROUTINE privWriteTimesXML
 
    SUBROUTINE check_time_for_next_iteration(it, l_cont)
+
       USE m_judft_args
       IMPLICIT NONE
       INTEGER, INTENT(IN)     :: it
@@ -514,7 +521,6 @@ CONTAINS
       INTEGER             :: irank = 0
       real                :: wtime
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -542,14 +548,15 @@ CONTAINS
    END SUBROUTINE check_time_for_next_iteration
 
    SUBROUTINE resetIterationDependentTimers()
-
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer, parenttimer
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -645,9 +652,6 @@ CONTAINS
       USE ifport
 #endif
       IMPLICIT NONE
-#ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-#endif
       REAL::cputime
 
       !TRY TO USE mpi OR openmp wall-clock functions

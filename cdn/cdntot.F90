@@ -35,10 +35,7 @@ CONTAINS
       COMPLEX,ALLOCATABLE       :: x(:) !(1:stars%ng3), may be distributed over fmpi ranks
 #ifdef CPP_MPI
       INTEGER ierr
-#include "cpp_double.h"
-      !INCLUDE "mpif.h"
 #endif
-
       IF (PRESENT(fmpi)) THEN
          irank = fmpi%irank
          nsize = fmpi%isize
@@ -103,7 +100,7 @@ CONTAINS
          DEALLOCATE(x)
 #ifdef CPP_MPI
          IF (PRESENT(fmpi)) THEN
-            CALL MPI_reduce(sum_over_ng3,qis(jsp),1,CPP_MPI_REAL,MPI_SUM,0,fmpi%mpi_comm,ierr)
+            CALL MPI_reduce(sum_over_ng3,qis(jsp),1,MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi%mpi_comm,ierr)
          ELSE
             qis(jsp) = sum_over_ng3
          ENDIF
