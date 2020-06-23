@@ -19,6 +19,8 @@ $result+=jt::test_grepnumber("$workdir/out","muMatch =","= *([^ ]*)",-0.0322,0.0
 #test density matrix
 $result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",6.99999999668645,0.0001);
 $result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",0.997538319677953,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-22560.5848351388,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","2: *([^ ]*)",25.05658,0.0001);
 
 
 jt::stageresult($workdir,$result,"1");

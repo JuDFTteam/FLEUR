@@ -224,7 +224,6 @@ MODULE m_types_greensfContourData
          WRITE(oUnit,"(A)") "---------------------------------------------"
          WRITE(oUnit,999)  TRIM(ADJUSTL(contourInp%label))
          WRITE(oUnit,1000) contourInp%shape
-         WRITE(oUnit,*)
 
          SELECT CASE(contourInp%shape)
 
@@ -256,7 +255,7 @@ MODULE m_types_greensfContourData
          ENDDO
 
 999      FORMAT("Name of the contour:", A)
-1000     FORMAT("Using energy contour mode: ", I1)
+1000     FORMAT("Using energy contour mode: ", I1,/)
 1010     FORMAT("nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
 1020     FORMAT("nz: ", I5.1," alpha: ", f8.4)
 1030     FORMAT("n: ", I5.1,"; sigma: ", f8.4)
