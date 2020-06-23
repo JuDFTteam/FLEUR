@@ -33,7 +33,9 @@ c****************************************c
       USE m_wann_uHu_radintsra5
       USE m_constants
       USE m_dujdr
-
+#if (defined(CPP_MPI) && !defined(CPP_T90))
+      use mpi 
+#endif
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
@@ -108,7 +110,6 @@ C     .. Local Arrays ..
 
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
 C     .. Intrinsic Functions ..

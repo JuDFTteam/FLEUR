@@ -29,7 +29,9 @@ c*****************************************c
       USE m_sointg
       USE m_constants
       USE m_types
-      
+#if (defined(CPP_MPI) && !defined(CPP_T90))
+      use mpi 
+#endif
 
       IMPLICIT NONE
 C     .. Intrinsic Functions ..
@@ -98,7 +100,6 @@ C     .. Local Arrays ..
       DATA ispjsp/1,-1/
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
 
