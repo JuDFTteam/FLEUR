@@ -4,6 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_jobs
+#ifdef CPP_MPI 
+    use mpi 
+#endif
     USE m_juDFT
     IMPLICIT NONE
     PRIVATE
@@ -133,13 +136,12 @@ CONTAINS
       USE m_constants
         INTEGER:: irank=0
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
         INTEGER ierr(3), i
-        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
+        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr(1))
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
-        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr(1))
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
@@ -185,7 +187,6 @@ CONTAINS
 
 #ifdef CPP_MPI
         INTEGER:: ierr
-      INCLUDE 'mpif.h'
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
         !find the number of the job for this PE
@@ -218,7 +219,6 @@ CONTAINS
         use m_types_mpi
         TYPE(t_job),INTENT(INOUT)::jobs(:)
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
         INTEGER:: i,free_pe,isize,irank,min_pe,new_comm,ierr
 
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)

@@ -4,9 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_init
+#ifdef CPP_MPI 
+   use mpi 
+#endif
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleur_init(mpi,&
+  SUBROUTINE fleur_init(fmpi,&
        input,field,atoms, sphhar,cell,stars,sym,noco,nococonv,vacuum,forcetheo,&
        sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybinp,&
        oneD,coreSpecInput,gfinp,hub1inp,wann)
@@ -53,7 +56,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
     !     Types, these variables contain a lot of data!
-    TYPE(t_mpi)    ,INTENT(INOUT):: mpi
+    TYPE(t_mpi)    ,INTENT(INOUT):: fmpi
     TYPE(t_input)    ,INTENT(OUT):: input
     TYPE(t_field),    INTENT(OUT) :: field
 
@@ -99,18 +102,17 @@ CONTAINS
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
 
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER ierr(3)
-    CALL MPI_COMM_RANK (mpi%mpi_comm,mpi%irank,ierr)
-    CALL MPI_COMM_SIZE (mpi%mpi_comm,mpi%isize,ierr)
+    CALL MPI_COMM_RANK (fmpi%mpi_comm,fmpi%irank,ierr(1))
+    CALL MPI_COMM_SIZE (fmpi%mpi_comm,fmpi%isize,ierr(1))
 #else
-    mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
+    fmpi%irank=0 ; fmpi%isize=1; fmpi%mpi_comm=1
 #endif
     CALL check_command_line()
 #ifdef CPP_HDF
     CALL hdf_init()
 #endif
-    IF (mpi%irank.EQ.0) THEN
+    IF (fmpi%irank.EQ.0) THEN
        CALL startFleur_XMLOutput()
        IF (judft_was_argument("-info")) THEN
           CLOSE(oUnit)
@@ -126,7 +128,7 @@ CONTAINS
 
     ALLOCATE(t_xcpot_inbuild::xcpot)
     !Only PE==0 reads the input and does basic postprocessing
-    IF (mpi%irank.EQ.0) THEN
+    IF (fmpi%irank.EQ.0) THEN
        CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
             sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
             wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
@@ -136,17 +138,17 @@ CONTAINS
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
          Sliceplot,Banddos,mpinp,hybinp,Oned,Corespecinput,Wann,&
-         Xcpot,Forcetheo_data,Kpts,Enparaxml,gfinp,hub1inp,Mpi%Mpi_comm)
+         Xcpot,Forcetheo_data,Kpts,Enparaxml,gfinp,hub1inp,fmpi%Mpi_comm)
     !Remaining init is done using all PE
     CALL nococonv%init(noco)
     CALL nococonv%init_ss(noco,atoms)
     CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-    CALL make_sphhar(mpi%irank==0,atoms,sphhar,sym,cell,oneD)
+    CALL make_sphhar(fmpi%irank==0,atoms,sphhar,sym,cell,oneD)
     ! Store structure data (has to be performed before calling make_stars)
-    CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
-    CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
+    CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, fmpi,sphhar,noco)
+    CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,fmpi)
     CALL make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     CALL lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
     CALL input%init(noco,hybinp%l_hybrid,lapw_dim_nbasfcn)
@@ -154,17 +156,17 @@ CONTAINS
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
     CALL kpts%init(cell, sym, input%film, hybinp%l_hybrid .or. input%l_rdmft)
     CALL gfinp%init(atoms, sym, noco, input)
-    CALL prp_xcfft(mpi,stars,input,cell,xcpot)
-    CALL convn(mpi%irank==0,atoms,stars)
-    IF (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
-    IF (mpi%isize>1) CALL field%mpi_bc(mpi%mpi_comm,0)
+    CALL prp_xcfft(fmpi,stars,input,cell,xcpot)
+    CALL convn(fmpi%irank==0,atoms,stars)
+    IF (fmpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
+    IF (fmpi%isize>1) CALL field%mpi_bc(fmpi%mpi_comm,0)
 
     !At some point this should be enabled for noco as well
     IF (.NOT.noco%l_noco) &
-         CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
+         CALL transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 #ifndef _OPENACC    
-    IF (mpi%irank.EQ.0) THEN
+    IF (fmpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
             cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
@@ -177,16 +179,16 @@ CONTAINS
 
 
 
-    IF (mpi%irank.EQ.0) THEN
-       CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
+    IF (fmpi%irank.EQ.0) THEN
+       CALL writeOutParameters(fmpi,input,sym,stars,atoms,vacuum,kpts,&
             oneD,hybinp,cell,banddos,sliceplot,xcpot,&
             noco,enpara,sphhar)
        CALL fleur_info(kpts)
        CALL deleteDensities()
     END IF
 
-    !Finalize the MPI setup
-    CALL setupMPI(kpts%nkpt,input%neig,mpi)
+    !Finalize the fmpi setup
+    CALL setupMPI(kpts%nkpt,input%neig,fmpi)
 
     !Collect some usage info
     CALL add_usage_data("A-Types",atoms%ntype)
@@ -209,20 +211,20 @@ CONTAINS
 
     CALL results%init(input,atoms,kpts,noco)
 
-    IF (mpi%irank.EQ.0) THEN
-       IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
+    IF (fmpi%irank.EQ.0) THEN
+       IF(input%gw.NE.0) CALL mixing_history_reset(fmpi)
        CALL setStartingDensity(noco%l_noco)
     END IF
 
     !new check mode will only run the init-part of FLEUR
-    IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
+    IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",fmpi%irank)
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
 #endif
   CONTAINS
     SUBROUTINE init_wannier()
       ! Initializations for Wannier functions (start)
-      IF (mpi%irank.EQ.0) THEN
+      IF (fmpi%irank.EQ.0) THEN
          wann%l_gwf = wann%l_ms.OR.wann%l_sgwf.OR.wann%l_socgwf
 
          IF(wann%l_gwf) THEN
@@ -257,7 +259,7 @@ CONTAINS
       ALLOCATE (wann%param_vec(3,wann%nparampts))
       ALLOCATE (wann%param_alpha(atoms%ntype,wann%nparampts))
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          IF(wann%l_gwf) THEN
             OPEN(113,file=wann%param_file,status='old')
             READ(113,*)!header
@@ -294,12 +296,12 @@ CONTAINS
                CALL juDFT_error("do not specify 1st component if l_socgwf",calledby="fleur_init")
             END IF
          END IF!(wann%l_gwf)
-      END IF!(mpi%irank.EQ.0)
+      END IF!(fmpi%irank.EQ.0)
 
 #ifdef CPP_MPI
-      CALL MPI_BCAST(wann%param_vec,3*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-      CALL MPI_BCAST(wann%param_alpha,atoms%ntype*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-      CALL MPI_BCAST(wann%l_dim,3,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+      CALL MPI_BCAST(wann%param_vec,3*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr(1))
+      CALL MPI_BCAST(wann%param_alpha,atoms%ntype*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr(1))
+      CALL MPI_BCAST(wann%l_dim,3,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr(1))
 #endif
 
       ! Initializations for Wannier functions (end)

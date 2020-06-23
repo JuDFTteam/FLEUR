@@ -6,12 +6,16 @@
 
       MODULE m_wann_updown
       use m_juDFT
+#ifdef CPP_MPI
+      use mpi 
+#endif
       CONTAINS
       SUBROUTINE wann_updown(
      >      wann,mpi,input,kpts,sym,atoms,stars,vacuum,
      >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
-     >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
+     >      eig_id,l_real,mpi_communicatior,l_dulo,l_noco,l_ss,lmaxd,
+     >      ntypd,
      >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
@@ -68,7 +72,6 @@ c****************************************************************************
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer ierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
@@ -93,7 +96,8 @@ c****************************************************************************
       TYPE(t_enpara),INTENT(IN) :: enpara
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
-      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
+      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
+      integer, intent (in) :: mpi_communicatior
       integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
@@ -313,7 +317,7 @@ c-----read the input file to determine what to do
       if(.not.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-         call MPI_BARRIER(mpi_comm,ierr)
+         call MPI_BARRIER(mpi_communicatior,ierr(1))
 #endif
 
 c**************************************************************
@@ -518,10 +522,12 @@ c*************************************************************
 #ifdef CPP_MPI
       if(l_p0)then
          do cpu_index=1,isize-1
-      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_comm,ierr)
+      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_communicatior,
+     & ierr(1))
          enddo
       else
-       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_comm,stt,ierr)
+       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_communicatior,stt,
+     & ierr(1))
       endif
 #endif
 
@@ -1221,7 +1227,7 @@ c     <           mmn(1:noccbd,1:noccbd,ikpt))
 10    continue ! end of cycle by the k-points
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr(1))
 #endif
 c******************************************************
 c     Write down the projections.
@@ -1233,7 +1239,7 @@ c******************************************************
         hescale=sqrt(hescale)
         nablamat=nablamat*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'nabl.updown',
+     >      mpi_communicatior,l_p0,'nabl.updown',
      >      'Matrix elements of nabla operator',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,
@@ -1242,14 +1248,14 @@ c******************************************************
 
       if(wann%l_socmat)then
 !        call wann_write_hsomtx(
-!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      mpi_communicatior,l_p0,'WF1.hsomtx',
 !     >      'Matrix elements of spin-orbit coupling',
 !     >      2,2,nbnd,nbnd,fullnkpts,
 !     >      irank,isize,
 !     <      hsomtx)
 
         call wann_write_matrix5(
-     >      mpi_comm,l_p0,'WF1.hsomtx',
+     >      mpi_communicatior,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
      >      nbnd,nbnd,2,2,fullnkpts,
      >      irank,isize,wann%l_unformatted,
@@ -1260,7 +1266,7 @@ c******************************************************
 
       if(wann%l_socmatvec)then
         call wann_write_matrix6(
-     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      mpi_communicatior,l_p0,'WF1.hsomtxvec',
      >      'Vectors for spin-orbit coupling',
      >      2,2,nbnd,nbnd,3,fullnkpts,
      >      irank,isize,wann%l_unformatted,
@@ -1269,7 +1275,7 @@ c******************************************************
 
       if(wann%l_mmn0)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.mmn0',
+     >      mpi_communicatior,l_p0,'updown.mmn0',
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.false.,.true.,
@@ -1278,7 +1284,7 @@ c******************************************************
 
       if(wann%l_perpmag)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.perpmag',
+     >      mpi_communicatior,l_p0,'updown.perpmag',
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.true.,.true.,
@@ -1291,7 +1297,7 @@ c******************************************************
         hescale=sqrt(hescale)
         surfcurr=surfcurr*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'surfcurr.updown',
+     >      mpi_communicatior,l_p0,'surfcurr.updown',
      >      'Surface currents',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,
@@ -1319,11 +1325,11 @@ c******************************************************
       write(oUnit,*)"time_film=",time_film
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr(1))
 #endif
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr(1))
 #endif
 
 

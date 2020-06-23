@@ -15,12 +15,11 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
-
+#ifdef CPP_MPI
+   use mpi
+#endif
    IMPLICIT NONE
 
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
 #include"cpp_double.h"
 
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
@@ -28,13 +27,13 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,mpi,noco,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_input),    INTENT(IN)     :: input
-      TYPE(t_mpi),      INTENT(IN)     :: mpi
+      TYPE(t_mpi),      INTENT(IN)     :: fmpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
@@ -71,7 +70,7 @@ MODULE m_hubbard1_setup
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
@@ -161,7 +160,7 @@ MODULE m_hubbard1_setup
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
             mu_dc = doubleCountingPot(U,J,l,l_amf,.NOT.hub1inp%l_dftspinpol,occDFT(i_hia,:),&
-                                      l_write=mpi%irank==0)
+                                      l_write=fmpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files
@@ -180,14 +179,14 @@ MODULE m_hubbard1_setup
             CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
                                       hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
-      ENDIF !mpi%irank == 0
+      ENDIF !fmpi%irank == 0
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
       !Argument order different because occDFT is not allocatable
-      CALL mpi_bc(0,mpi%mpi_comm,occDFT)
+      CALL mpi_bc(0,fmpi%mpi_comm,occDFT)
 
       !Initializations
       ALLOCATE(gu(atoms%n_hia))
@@ -200,13 +199,13 @@ MODULE m_hubbard1_setup
 
 #ifdef CPP_MPI
       !distribute the individual hubbard1 elements over the ranks
-      n_hia_task = FLOOR(REAL(atoms%n_hia)/(mpi%isize))
-      extra = atoms%n_hia - n_hia_task*mpi%isize
-      i_hia_start = mpi%irank*n_hia_task + 1 + extra
-      i_hia_end   =(mpi%irank+1)*n_hia_task   + extra
-      IF(mpi%irank < extra) THEN
-         i_hia_start = i_hia_start - (extra - mpi%irank)
-         i_hia_end   = i_hia_end   - (extra - mpi%irank - 1)
+      n_hia_task = FLOOR(REAL(atoms%n_hia)/(fmpi%isize))
+      extra = atoms%n_hia - n_hia_task*fmpi%isize
+      i_hia_start = fmpi%irank*n_hia_task + 1 + extra
+      i_hia_end   =(fmpi%irank+1)*n_hia_task   + extra
+      IF(fmpi%irank < extra) THEN
+         i_hia_start = i_hia_start - (extra - fmpi%irank)
+         i_hia_end   = i_hia_end   - (extra - fmpi%irank - 1)
       ENDIF
 #else
       i_hia_start = 1
@@ -215,7 +214,7 @@ MODULE m_hubbard1_setup
 
 #ifdef CPP_MPI
       !Make sure that the ranks are synchronized
-      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
 
       mmpMat = cmplx_0
@@ -291,15 +290,15 @@ MODULE m_hubbard1_setup
 
       ENDDO
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*)
          WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
       ENDIF
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%collect(mpi%mpi_comm)
-         CALL selfen(i_hia)%collect(mpi%mpi_comm)
-         IF(mpi%irank.EQ.0) THEN
+         CALL gu(i_hia)%collect(fmpi%mpi_comm)
+         CALL selfen(i_hia)%collect(fmpi%mpi_comm)
+         IF(fmpi%irank.EQ.0) THEN
             !We found the chemical potential to within the desired accuracy
             WRITE(oUnit,*) 'i_hia: ',i_hia, "    muMatch = ", selfen(i_hia)%muMatch(:)
          ENDIF
@@ -307,7 +306,7 @@ MODULE m_hubbard1_setup
 
 
 #ifdef CPP_HDF
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          !------------------------------
          !Write out DFT Green's Function
          !------------------------------
@@ -334,7 +333,7 @@ MODULE m_hubbard1_setup
       n = SIZE(mmpMat)
       ALLOCATE(ctmp(n))
       CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
 #endif
 
@@ -344,7 +343,7 @@ MODULE m_hubbard1_setup
       results%last_mmpMatdistance = 0.0
       results%last_occdistance = 0.0
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
@@ -354,11 +353,11 @@ MODULE m_hubbard1_setup
       ENDIF
 
       !Broadcast the density matrix
-      CALL mpi_bc(den%mmpMat,0,mpi%mpi_comm)
-      CALL mpi_bc(results%last_occdistance,0,mpi%mpi_comm)
-      CALL mpi_bc(results%last_mmpMatdistance,0,mpi%mpi_comm)
+      CALL mpi_bc(den%mmpMat,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_occdistance,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_mmpMatdistance,0,fmpi%mpi_comm)
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
          WRITE(*,*) "Distances: "
          WRITE(*,*) "-----------------------------------------------------"

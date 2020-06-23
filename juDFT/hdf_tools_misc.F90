@@ -26,6 +26,9 @@
 
       SUBROUTINE  io_hdfopen(filename,access_mode,fid,hdferr,access_prp)
       USE hdf5
+#ifdef CPP_HDFMPI
+      use mpi
+#endif
       IMPLICIT NONE
       character(len=*),intent(in)    :: filename
       INTEGER       ,INTENT(in)      :: access_mode
@@ -36,7 +39,6 @@
 
 #ifdef CPP_DEBUG
 #ifdef CPP_HDFMPI
-      include "mpif.h"
       integer:: irank
       call MPI_COMM_RANK (MPI_COMM_WORLD,irank,err)
       write(*,"('PE:',i3,' opened:',a20,' rw:',l1)") irank,filename,access_mode==H5F_ACC_RDWR_F
@@ -54,6 +56,9 @@
 
       subroutine io_hdfclose(fid,hdferr)
       USE hdf5
+#ifdef CPP_HDFMPI
+      use mpi 
+#endif
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       INTEGER,INTENT(OUT),optional :: hdferr
@@ -61,7 +66,6 @@
       INTEGER::err
 #ifdef CPP_DEBUG
 #ifdef CPP_HDFMPI
-      include "mpif.h"
       integer:: irank
       character(len=20)::filename
       integer(size_t)::flength

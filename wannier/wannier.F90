@@ -6,9 +6,12 @@
 
 MODULE m_wannier
   USE m_juDFT
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 CONTAINS
   SUBROUTINE wannier(&
-       mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+       fmpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
        wann,noco,nococonv,cell,enpara,banddos,sliceplot,vTot,results,&
        eig_idList,l_real,nkpt)
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -108,14 +111,13 @@ CONTAINS
     IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER ierr(3)
     INTEGER cpu_index
     INTEGER stt(MPI_STATUS_SIZE)
 #endif
 
 
-    TYPE(t_mpi),       INTENT(IN) :: mpi
+    TYPE(t_mpi),       INTENT(IN) :: fmpi
     TYPE(t_input),     INTENT(IN) :: input
     TYPE(t_kpts),      INTENT(IN) :: kpts
     TYPE(t_sym),       INTENT(IN) :: sym
@@ -312,7 +314,7 @@ CONTAINS
     CALL timestart("Wannier total")
 
     l_p0 = .FALSE.
-    IF (mpi%irank.EQ.0) l_p0 = .TRUE.
+    IF (fmpi%irank.EQ.0) l_p0 = .TRUE.
 
     lmd = atoms%lmaxd*(atoms%lmaxd+2)
 
@@ -360,10 +362,10 @@ CONTAINS
 
     IF(wann%l_updown)THEN
        CALL wann_updown(&
-            wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
+            wann,fmpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
             oneD,noco,nococonv,cell,vTot,&
             enpara,eig_idList(1),l_real,&
-            mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
+            fmpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
             atoms%lmaxd,atoms%ntype,input%neig,atoms%nat,sym%nop,&
             lapw%dim_nvd(),input%jspins,atoms%llod,&
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
@@ -371,7 +373,7 @@ CONTAINS
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
             nococonv%beta,nococonv%qss,&                    ! TODO: adapt if needed&
-            stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,&
+            stars%sk2,stars%phi2,oneD%odi,oneD%ods,fmpi%irank,fmpi%isize,&
             stars%ng3,&
             vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,sphhar%nlhd,stars%ng3,&
             vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,&
@@ -391,7 +393,7 @@ CONTAINS
           CALL close_eig(eig_idList(pc))
        END DO
 
-       CALL juDFT_end("updown done",mpi%irank)
+       CALL juDFT_end("updown done",fmpi%irank)
        endif
     ENDIF
 
@@ -402,7 +404,7 @@ CONTAINS
     IF(wann%l_matrixuHu)THEN
        wannTemp = wann
        CALL wann_uHu(&
-            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,fmpi,&
             banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
@@ -412,8 +414,8 @@ CONTAINS
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
             nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
-            mpi%irank,&
-            mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
+            fmpi%irank,&
+            fmpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
             input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,sym%ntypsy,&
             input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,&
@@ -438,7 +440,7 @@ CONTAINS
           CALL close_eig(eig_idList(pc))
         END DO
         
-        CALL juDFT_end("wann_uHu done",mpi%irank)
+        CALL juDFT_end("wann_uHu done",fmpi%irank)
        endif
     ENDIF
 
@@ -449,7 +451,7 @@ CONTAINS
     IF(wann%l_matrixuHu_dmi)THEN
        wannTemp = wann
        CALL wann_uHu_dmi(&
-            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,fmpi,&
             banddos,oneD,noco,nococonv,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
@@ -459,8 +461,8 @@ CONTAINS
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,nococonv%alph,&
             nococonv%beta,nococonv%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
-            mpi%irank,&
-            mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
+            fmpi%irank,&
+            fmpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
             input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,sym%ntypsy,&
             input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,&
@@ -482,7 +484,7 @@ CONTAINS
           CALL close_eig(eig_idList(pc))
        END DO
 
-       CALL juDFT_end("wann_uHu dmi done",mpi%irank)
+       CALL juDFT_end("wann_uHu dmi done",fmpi%irank)
     ENDIF
 
     IF(wann%l_byenergy.AND.wann%l_byindex) CALL juDFT_error&
@@ -499,7 +501,7 @@ CONTAINS
     IF(.NOT.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
 #endif
 
     !**************************************************************
@@ -769,12 +771,12 @@ CONTAINS
                 innerEig_idList(iqpt_b) = eig_idList(bpt_q(iqpt_b,iqpt))
 
                 !            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
-                !            innerEig_idList(iqpt_b)=open_eig(mpi%mpi_comm,
+                !            innerEig_idList(iqpt_b)=open_eig(fmpi%mpi_comm,
                 !     +                  lapw%dim_nbasfcn(),input%neig,
                 !     +                  nkpts,wannierspin,atoms%lmaxd,
                 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
                 !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-                !     +                  mpi%n_size,filename=trim(fstart)//fending,
+                !     +                  fmpi%n_size,filename=trim(fstart)//fending,
                 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
                 !     +                  ncored=29,nsld=atoms%nat,
                 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
@@ -786,11 +788,11 @@ CONTAINS
           eig_id = eig_idList(qptibz)
 
           !        WRITE(fending,'("_",i4.4)')qptibz
-          !        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
+          !        eig_id=open_eig(fmpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
           !     +                  nkpts,wannierspin,atoms%lmaxd,
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-          !     +                  mpi%n_size,filename=trim(fstart)//fending,
+          !     +                  fmpi%n_size,filename=trim(fstart)//fending,
           !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
           !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
@@ -801,11 +803,11 @@ CONTAINS
           eig_id = eig_idList(qptibz)
 
           !        WRITE(fending,'("_",i4.4)')qptibz
-          !        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
+          !        eig_id=open_eig(fmpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
           !     +                  nkpts,wannierspin,atoms%lmaxd,
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-          !     +                  mpi%n_size,filename=trim(fstart)//fending,
+          !     +                  fmpi%n_size,filename=trim(fstart)//fending,
           !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
           !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
@@ -878,7 +880,7 @@ CONTAINS
              nrec5=0
              IF(.NOT.noco%l_noco) nrec5 = (jspin5-1)*nkpts
 
-             CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,input%jspins, &!wannierspin instead of DIMENSION%jspd?&
+             CALL cdn_read0(eig_id,fmpi%irank,fmpi%isize,jspin5,input%jspins, &!wannierspin instead of DIMENSION%jspd?&
                   noco%l_noco, n_bands,n_size)
 
           ENDDO
@@ -893,11 +895,11 @@ CONTAINS
           !*************************************************************
           IF(l_p0)THEN
              CALL wann_write_eig(&
-                  mpi,cell,noco,nococonv,input,kpts,sym,atoms,  &      
+                  fmpi,cell,noco,nococonv,input,kpts,sym,atoms,  &      
                   eig_id,l_real,&
                   atoms%ntype,input%neig,&
                   lapw%dim_nvd(),wannierspin,&
-                  mpi%isize,jspin,lapw%dim_nbasfcn(),&
+                  fmpi%isize,jspin,lapw%dim_nbasfcn(),&
                   noco%l_ss,noco%l_noco,nrec,fullnkpts,&
                   wann%l_bzsym,wann%l_byindex,wann%l_bynumber,&
                   wann%l_byenergy,&
@@ -915,15 +917,15 @@ CONTAINS
           ! nbnd is calculated for process zero and is sent here to the others
 #ifdef CPP_MPI
           IF(l_p0)THEN
-             DO cpu_index=1,mpi%isize-1
-                CALL MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi%mpi_comm,ierr)
+             DO cpu_index=1,fmpi%isize-1
+                CALL MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,fmpi%mpi_comm,ierr(1))
              ENDDO
           ELSE
-             CALL MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi%mpi_comm,stt,ierr)
+             CALL MPI_RECV(nbnd,1,MPI_INTEGER,0,1,fmpi%mpi_comm,stt,ierr(1))
           ENDIF
 #endif
 
-          PRINT*,"process: ",mpi%irank," nbnd= ",nbnd
+          PRINT*,"process: ",fmpi%irank," nbnd= ",nbnd
           !##################################################################
           IF(wann%l_mmn0)THEN
              ALLOCATE ( mmn(nbnd,nbnd,fullnkpts) )
@@ -1024,7 +1026,7 @@ CONTAINS
 
                    CALL radflo(&
                         atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),&
-                        ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,&
+                        ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),fmpi,&
                         usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
                 ENDDO
@@ -1178,7 +1180,7 @@ CONTAINS
              IF(wann%l_bzsym) oper=mapkoper(ikpt)
 
              i_rec = i_rec + 1
-             IF (MOD(i_rec-1,mpi%isize).EQ.mpi%irank) THEN
+             IF (MOD(i_rec-1,fmpi%isize).EQ.fmpi%irank) THEN
 
                 ALLOCATE ( we(input%neig),eigg(input%neig) )
 
@@ -1190,7 +1192,7 @@ CONTAINS
                 ! stored in the eig file on unit 66. the lattice respectively
                 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
-                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
 
           nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
                   CALL zzMat%init(l_real,nbasfcn,input%neig)
@@ -1199,7 +1201,7 @@ CONTAINS
 
                 CALL cdn_read(&
                      eig_id,&
-                     lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
+                     lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, &!wannierspin instead of DIMENSION%jspd?&
                      kptibz,jspin,lapw%dim_nbasfcn(),&
                      noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                      nbands,eigg,zzMat)
@@ -1536,7 +1538,7 @@ CONTAINS
 
                       n_start=1
                       n_end=input%neig
-                      call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
                       
                       
                     nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
@@ -1546,7 +1548,7 @@ CONTAINS
                       
                       CALL cdn_read(&
                            eig_id,&
-                           lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
+                           lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, &!wannierspin instead of DIMENSION%jspd?&
                            kptibz_b,jspin,nbasfcn_b,&
                            noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                            nbands_b,eigg,zzMat)
@@ -1763,10 +1765,10 @@ CONTAINS
                       ! moreover, the plane-wave vectors G(k,q+b) are stored
                       ! in (k1_qb,k2_qb,k3_qb) for later use.
 
-                      CALL lapw_qb%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+                      CALL lapw_qb%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
                       CALL cdn_read(&
                            innerEig_idList(iqpt_b),&
-                           lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&
+                           lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&
                            kptibz,jspin_b,lapw%dim_nbasfcn(),&
                            noco%l_ss,noco%l_noco,input%neig,n_start,&
                            n_end,&
@@ -2202,7 +2204,7 @@ CONTAINS
                ulojdg_q)
 
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+          CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
 #endif
 
 
@@ -2217,40 +2219,40 @@ CONTAINS
 
              nablamat=nablamat*hescale
              CALL wann_write_nabla(&
-                  mpi%mpi_comm,l_p0,spin12(jspin)//'.nabl',&
+                  fmpi%mpi_comm,l_p0,spin12(jspin)//'.nabl',&
                   'Matrix elements of nabla operator',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,&
+                  fmpi%irank,fmpi%isize,&
                   nablamat)
           ENDIF
 
           IF(wann%l_soctomom)THEN
              soctomom=soctomom*hescale
              CALL wann_write_nabla(&
-                  mpi%mpi_comm,l_p0,spin12(jspin)//'.stm',&
+                  fmpi%mpi_comm,l_p0,spin12(jspin)//'.stm',&
                   'Matrix elements of stm operator',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,&
+                  fmpi%irank,fmpi%isize,&
                   soctomom)
           ENDIF
 
           IF(wann%l_surfcurr)THEN
              surfcurr=surfcurr*hescale
              CALL wann_write_nabla(&
-                  mpi%mpi_comm,l_p0,spin12(jspin)//'.surfcurr',&
+                  fmpi%mpi_comm,l_p0,spin12(jspin)//'.surfcurr',&
                   'Surface currents',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,&
+                  fmpi%irank,fmpi%isize,&
                   surfcurr)
           ENDIF
 
           IF((noco%l_soc.OR.noco%l_noco).AND.wann%l_mmn0)THEN
              CALL wann_write_amn(&
-                  mpi%mpi_comm,&
+                  fmpi%mpi_comm,&
                   l_p0,spin12(jspin)//'.socmmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
+                  fmpi%irank,fmpi%isize,.FALSE.,.TRUE.,&
                   mmn,wann%mmn0fmt==2)
           ENDIF !noco%l_soc and l_mmn0
 
@@ -2258,11 +2260,11 @@ CONTAINS
              num_angl=9
              IF(wann%l_oc_f)num_angl=16
              CALL wann_write_matrix5(&
-                  mpi%mpi_comm,l_p0,spin12(jspin)//'.orbcomp',&
+                  fmpi%mpi_comm,l_p0,spin12(jspin)//'.orbcomp',&
                   'angular components',&
                   nbnd,nbnd,&
                   num_angl,wann%oc_num_orbs,fullnkpts,&
-                  mpi%irank,mpi%isize,wann%l_unformatted,&
+                  fmpi%irank,fmpi%isize,wann%l_unformatted,&
                   orbcomp)
           ENDIF
 
@@ -2279,21 +2281,21 @@ CONTAINS
 
           IF (wann%l_matrixamn)THEN
              CALL wann_write_amn(&
-                  mpi%mpi_comm,&
+                  fmpi%mpi_comm,&
                   l_p0,spin12(jspin2)//'.amn',&
                   'Overlaps of the wavefunct. with the trial orbitals',&
                   nbnd,fullnkpts,nwfs,&
-                  mpi%irank,mpi%isize,.FALSE.,.FALSE.,&
+                  fmpi%irank,fmpi%isize,.FALSE.,.FALSE.,&
                   amn(:,:,:),wann%matrixamnfmt==2)
           ENDIF !wann%l_matrixamn
 
           IF(wann%l_anglmom)THEN
              CALL wann_write_matrix4(&
-                  mpi%mpi_comm,&
+                  fmpi%mpi_comm,&
                   l_p0,spin12(jspin2)//'.anglmom',&
                   'Matrix elements of angular momentum',&
                   nbnd,nbnd,3,fullnkpts,&
-                  mpi%irank,mpi%isize,&
+                  fmpi%irank,fmpi%isize,&
                   anglmom)
           ENDIF
 
@@ -2303,10 +2305,10 @@ CONTAINS
              !*************************************************************
              IF((wann%l_projmethod.OR.wann%l_bestproj))THEN
                 CALL wann_write_amn(&
-                     mpi%mpi_comm,l_p0,spin12(jspin2)//'.umn',&
+                     fmpi%mpi_comm,l_p0,spin12(jspin2)//'.umn',&
                      'transformation to first guess Wannier functions',&
                      nbnd,fullnkpts,nwfs,&
-                     mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
+                     fmpi%irank,fmpi%isize,.FALSE.,.TRUE.,&
                      psiw,.FALSE.)
 #ifdef CPP_MPI
                 ALLOCATE( hwfr2(SIZE(hwfr,1),SIZE(hwfr,2)) )
@@ -2314,7 +2316,7 @@ CONTAINS
                 CALL MPI_REDUCE(&
                      hwfr,hwfr2,length,&
                      CPP_MPI_COMPLEX,MPI_SUM,0,&
-                     mpi%mpi_comm,ierr)
+                     fmpi%mpi_comm,ierr(1))
                 hwfr=hwfr2
                 DEALLOCATE(hwfr2)
 #endif
@@ -2340,11 +2342,11 @@ CONTAINS
 
           IF(wann%l_mmn0)THEN
              CALL wann_write_amn(&
-                  mpi%mpi_comm,&
+                  fmpi%mpi_comm,&
                   l_p0,spin12(jspin2)//'.mmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
+                  fmpi%irank,fmpi%isize,.FALSE.,.TRUE.,&
                   mmn,wann%mmn0fmt==2)
           ENDIF !wann%l_mmn0
 
@@ -2356,9 +2358,9 @@ CONTAINS
           ! 912   continue
           IF(wann%l_matrixmmn.AND.(.NOT.wann%l_skipkov))THEN
              CALL wann_write_mmnk(&
-                  mpi%mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,&
+                  fmpi%mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,&
                   maptopair,pair_to_do,nbnd,bpt,gb,&
-                  mpi%isize,mpi%irank,"            ",&
+                  fmpi%isize,fmpi%irank,"            ",&
                   mmnk,wann%matrixmmnfmt==2) !    wann%l_unformatted)
           ENDIF !wann%l_matrixmmn
 
@@ -2370,7 +2372,7 @@ CONTAINS
                 WRITE(fname,'("param_",i4.4,".mmn")')iqpt
                 CALL wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,&
                      nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,&
-                     mpi%isize,mpi%irank,fname,mmnk_q,&
+                     fmpi%isize,fmpi%irank,fname,mmnk_q,&
                      wann%l_unformatted)
              ENDIF
 
@@ -2378,23 +2380,23 @@ CONTAINS
                 WRITE(fname,'("param_",i4.4,"_",i1,".mmn")')iqpt,doublespin
                 CALL wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,&
                      nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,&
-                     mpi%isize,mpi%irank,fname,&
+                     fmpi%isize,fmpi%irank,fname,&
                      m_sph+m_int+m_vac,wann%l_unformatted)
 
                 WRITE(fname,'("param_",i4.4,"_",i1,"_int.mmn")')iqpt,doublespin
                 CALL wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,&
                      nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,&
-                     mpi%isize,mpi%irank,fname,m_int,&
+                     fmpi%isize,fmpi%irank,fname,m_int,&
                      wann%l_unformatted)
                 WRITE(fname,'("param_",i4.4,"_",i1,"_sph.mmn")')iqpt,doublespin
                 CALL wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,&
                      nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,&
-                     mpi%isize,mpi%irank,fname,m_sph,&
+                     fmpi%isize,fmpi%irank,fname,m_sph,&
                      wann%l_unformatted)
                 WRITE(fname,'("param_",i4.4,"_",i1,"_vac.mmn")')iqpt,doublespin
                 CALL wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,&
                      nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,&
-                     mpi%isize,mpi%irank,fname,m_vac,&
+                     fmpi%isize,fmpi%irank,fname,m_vac,&
                      wann%l_unformatted)
              ENDIF
              !      m_int = cmplx(0.,0.)
@@ -2424,14 +2426,14 @@ CONTAINS
           IF(.NOT.noco%l_noco)nrec=nrec+nkpts
 
           !#ifdef CPP_MPI
-          !      call MPI_BARRIER(mpi%mpi_comm,ierr)
+          !      call MPI_BARRIER(fmpi%mpi_comm,ierr(1))
           !#endif
 
        ENDDO ! end of cycle by spins
 
 
 #ifdef CPP_MPI
-       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+       CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
 #endif
 
        ! close eig files
@@ -2520,12 +2522,12 @@ CONTAINS
 
        CALL timeStop("Wannier total")
        CALL wann_postproc(&
-            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,fmpi,&
             lapw,oneD,noco,nococonv,cell,vTot,enpara,sliceplot,eig_id,l_real,&                !eig_id is used here after closing the files?!&
             wann,fullnkpts,l_proj,results%ef,wann%l_sgwf,fullnqpts)
 
 #ifdef CPP_MPI
-       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+       CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
 #endif
 
        IF(.NOT.wann%l_ldauwan) THEN
@@ -2533,7 +2535,7 @@ CONTAINS
              CALL close_eig(eig_idList(pc))
           END DO
 
-          CALL juDFT_end("wannier good",mpi%irank)
+          CALL juDFT_end("wannier good",fmpi%irank)
        END IF
 
      END SUBROUTINE wannier

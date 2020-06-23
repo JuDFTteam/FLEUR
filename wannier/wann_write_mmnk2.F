@@ -1,4 +1,7 @@
       module m_wann_write_mmnk2
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       contains
       subroutine wann_write_mmnk2(
      >               l_p0,fullnkpts,nntot_q,wann,
@@ -30,7 +33,6 @@ c**********************************************************
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -50,7 +52,7 @@ c******************************************************
              call MPI_RECV(
      &               mmnk_q(1:nbnd,1:nbnd,ikpt_b,ikpt),nbnd*nbnd,
      &               CPP_MPI_COMPLEX,cpu_index,5*fullnkpts,
-     &               MPI_COMM_WORLD,stt,ierr)
+     &               MPI_COMM_WORLD,stt,ierr(1))
 
           enddo !nearest neighbors
          endif !processors
@@ -61,11 +63,11 @@ c******************************************************
             call MPI_SEND(
      &              mmnk_q(1:nbnd,1:nbnd,ikpt_b,ikpt),
      &              nbnd*nbnd,CPP_MPI_COMPLEX,0,5*fullnkpts,
-     &              MPI_COMM_WORLD,ierr)
+     &              MPI_COMM_WORLD,ierr(1))
          enddo !loop over nearest neighbors
         endif !processors
        endif ! l_p0
-       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
       enddo !ikpt
       endif !isize
 #endif

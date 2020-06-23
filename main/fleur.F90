@@ -230,8 +230,8 @@ CONTAINS
        CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
        IF (fi%noco%l_alignMT) THEN
           DO n= 1,fi%atoms%ntype
-            CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-            CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+            CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+            CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
           ENDDO
        END IF
 #endif
@@ -245,8 +245,8 @@ IF (fi%sliceplot%iplot.NE.0) THEN
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
       DO n= 1,fi%atoms%ntype
-         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
       ENDDO
 #endif
    END IF
@@ -263,8 +263,8 @@ IF (fi%sliceplot%iplot.NE.0) THEN
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
       DO n= 1,fi%atoms%ntype
-         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
       ENDDO
 #endif
    END IF
@@ -339,7 +339,7 @@ END IF
 
 
 #ifdef CPP_MPI
-       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+       CALL MPI_BARRIER(mpi%mpi_comm,ierr(1))
 #endif
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==fi%input%itmax,fi%atoms,fi%noco,nococonv))
@@ -381,7 +381,7 @@ END IF
           CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr(1))
 #endif
 
           ! fermi level and occupancies
@@ -436,8 +436,8 @@ END IF
 
           !ENDIF
 #ifdef CPP_MPI
-          CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-          CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+          CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
 #endif
 
           IF (forcetheo%eval(eig_id,fi%atoms,fi%kpts,fi%sym,fi%cell,fi%noco,nococonv,input_soc,mpi,fi%oneD,enpara,vToT,results)) THEN
@@ -486,8 +486,8 @@ END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
       DO n= 1,fi%atoms%ntype
-         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
       ENDDO
 #endif
     END IF
@@ -504,8 +504,8 @@ END IF
 #ifdef CPP_MPI
         CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
         DO n= 1,fi%atoms%ntype
-           CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-           CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+           CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+           CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
         ENDDO
 
 #endif    
@@ -524,20 +524,20 @@ END IF
 
 
 #ifdef CPP_MPI
-          CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-          CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-          CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-          CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+          CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+          CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+          CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
 
           IF (fi%noco%l_noco) THEN
              DO n= 1,fi%atoms%ntype
                 IF (fi%noco%l_relax(n)) THEN
-                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
                 ENDIF
              ENDDO
              IF (fi%noco%l_constr) THEN
-                CALL MPI_BCAST(nococonv%b_con,SIZE(nococonv%b_con),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                CALL MPI_BCAST(nococonv%b_con,SIZE(nococonv%b_con),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
              ENDIF
           ENDIF
 #endif
@@ -566,8 +566,8 @@ END IF
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
                 CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
                 DO n= 1,fi%atoms%ntype
-                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
                 ENDDO
 #endif
              END IF
@@ -595,8 +595,8 @@ END IF
 #ifdef CPP_MPI
           CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
           DO n= 1,fi%atoms%ntype
-             CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-             CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+             CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+             CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
           ENDDO
 #endif
           END IF
@@ -610,8 +610,8 @@ END IF
        CALL timestop("Iteration")
 
 #ifdef CPP_MPI
-       CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr(1))
+       CALL MPI_BARRIER(mpi%mpi_comm,ierr(1))
 #endif
        CALL priv_geo_end(mpi)
 

@@ -5,7 +5,10 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_plot_um_dat
-      use m_juDFT
+#ifdef CPP_MPI 
+            use mpi 
+#endif
+            use m_juDFT
 c******************************************************************
 c       plot wannierfunctions directly within fleur
 c       based on wann_plot
@@ -13,9 +16,9 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          kpts,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          kpts,stars,vacuum,atoms,sphhar,input,sym,fmpi,
      >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
-     >          mpi_comm,sortrule,band_min,band_max,l_soc,
+     >          mpi_communicatior,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
      >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
@@ -51,7 +54,6 @@ c******************************************************************
 
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer mpiierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
@@ -64,7 +66,7 @@ c******************************************************************
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_sym),INTENT(IN)       :: sym
-      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_lapw)      :: lapw
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
@@ -73,7 +75,8 @@ c******************************************************************
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_enpara),INTENT(IN)    :: enpara
 
-      integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
+      integer, intent (in) :: band_min(2),band_max(2),mpi_communicatior
+      integer, intent (in) :: eig_id
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
@@ -494,7 +497,7 @@ c...and the local orbital radial functions
 c       do ilo = 1, nlo(n)
          call radflo(
      >             atoms,n,jspin,enpara%ello0(:,:,jspin),vr(1,n,jspin2),
-     >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),mpi,
+     >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),fmpi,
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:))
 c       enddo
 c       na = na + neq(n)
@@ -557,7 +560,7 @@ c******************************************************************
                 CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &               kptibz,cell,(sym%zrfs.AND.
      &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &               .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     &               .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
 
                 nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
      &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
@@ -567,7 +570,7 @@ c******************************************************************
 
                 CALL cdn_read(
      &                eig_id,
-     &               lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, 
+     &               lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, 
      &                kptibz,jspin,lapw%dim_nbasfcn(),
      &               noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      &                nbands,eigg,zzMat)
@@ -811,7 +814,7 @@ c..end of the loop by the bands
       mesh=grid(1)*grid(2)*grid(3)
 
 #ifdef CPP_MPI
-c      call MPI_BARRIER(mpi_comm,ierr)
+c      call MPI_BARRIER(mpi_communicatior,ierr)
       if(l_p0)then
          if(isize.ne.1)then
        allocate(wannierfunc_temp(num_wann,mesh))
@@ -820,13 +823,13 @@ c      call MPI_BARRIER(mpi_comm,ierr)
          if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(knorm(ikpt,1:num_bands),num_bands,
      &             CPP_MPI_REAL,cpu_index,
-     &        ikpt,mpi_comm,stt,mpiierr)
+     &        ikpt,mpi_communicatior,stt,mpiierr(1))
          endif !processors
         enddo !ikpt
            call MPI_RECV(wannierfunc_temp(1:num_wann,1:mesh),
      &         num_wann*mesh,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &        cpu_index+fullnkpts,mpi_comm,stt,mpiierr)
+     &        cpu_index+fullnkpts,mpi_communicatior,stt,mpiierr(1))
            wannierfunc(:,:)=wannierfunc(:,:)+
      &                   wannierfunc_temp(:,:)
 
@@ -839,12 +842,12 @@ c      call MPI_BARRIER(mpi_comm,ierr)
        do ikpt=1,fullnkpts
         if(mod(ikpt-1,isize).eq.irank)then
              call MPI_SEND(knorm(ikpt,1:num_bands),num_bands,
-     &           CPP_MPI_REAL,0,ikpt,mpi_comm,mpiierr)
+     &           CPP_MPI_REAL,0,ikpt,mpi_communicatior,mpiierr(1))
         endif !processors
        enddo !ikpt
              call MPI_SEND(wannierfunc(1:num_wann,1:mesh),
      &        num_wann*mesh,
-     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_comm,mpiierr)
+     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicatior,mpiierr(1))
 
 
 
@@ -1039,7 +1042,7 @@ c*****************************************************************
       deallocate(u_matrix)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
 #endif
 
 110   continue ! end of cycle by spins
@@ -1049,7 +1052,7 @@ c*****************************************************************
       deallocate ( ff,gg)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
 #endif
 
       END SUBROUTINE wann_plot_um_dat

@@ -3,8 +3,11 @@
    ! This file is part of FLEUR and available as free software under the conditions
    ! of the MIT license as expressed in the LICENSE file in more detail.
    !--------------------------------------------------------------------------------
-   MODULE m_vmt_xc
-     USE m_judft
+MODULE m_vmt_xc
+#ifdef CPP_MPI 
+   use mpi 
+#endif
+   USE m_judft
       !.....------------------------------------------------------------------
       !     Calculate the GGA xc-potential in the MT-spheres
       !.....------------------------------------------------------------------
@@ -23,7 +26,7 @@
       !     *********************************************************
 
    CONTAINS
-      SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
+      SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
                         den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
@@ -35,7 +38,7 @@
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot
-         TYPE(t_mpi),INTENT(IN)         :: mpi
+         TYPE(t_mpi),INTENT(IN)         :: fmpi
          TYPE(t_input),INTENT(IN)       :: input
          TYPE(t_sym),INTENT(IN)         :: sym
          TYPE(t_sphhar),INTENT(IN)      :: sphhar
@@ -44,9 +47,6 @@
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc
          TYPE(t_kinED),INTENT(IN)       :: kinED
-#ifdef CPP_MPI
-         include "mpif.h"
-#endif
          !     ..
          !     .. Local Scalars ..
          TYPE(t_gradients)     :: grad, tmp_grad
@@ -60,7 +60,7 @@
 
          !     ..
 
-         !locals for mpi
+         !locals for fmpi
          integer :: ierr
          integer:: n_start,n_stride
          REAL,ALLOCATABLE:: xcl(:,:)
@@ -92,9 +92,9 @@
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot%needs_grad(),sym)
 
 #ifdef CPP_MPI
-         n_start=mpi%irank+1
-         n_stride=mpi%isize
-         IF (mpi%irank>0) THEN
+         n_start=fmpi%irank+1
+         n_stride=fmpi%isize
+         IF (fmpi%irank>0) THEN
             vTot%mt=0.0
             vx%mt=0.0
             exc%mt=0.0
@@ -187,9 +187,9 @@
 
          CALL finish_mt_grid()
 #ifdef CPP_MPI
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
          !
          RETURN

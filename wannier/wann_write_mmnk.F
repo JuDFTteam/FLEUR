@@ -5,9 +5,12 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_mmnk
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       contains
       subroutine wann_write_mmnk(
-     >               mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,
+     >               mpi_communicatior,jspin2,l_p0,fullnkpts,nntot,wann,
      >               maptopair,pair_to_do,nbnd,bpt,gb,
      >               isize,irank,fending,
      <               mmnk,l_unformatted)
@@ -24,7 +27,7 @@ c**********************************************************
       use m_types
       use m_juDFT
       implicit none
-      integer, intent(in)     :: jspin2,mpi_comm
+      integer, intent(in)     :: jspin2,mpi_communicatior
       logical, intent(in)     :: l_p0,l_unformatted
       integer, intent(in)     :: fullnkpts
       integer, intent(in)     :: nntot
@@ -49,7 +52,6 @@ c**********************************************************
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -70,7 +72,7 @@ c******************************************************
              call MPI_RECV(
      &               mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),nbnd*nbnd,
      &               CPP_MPI_COMPLEX,cpu_index,5*fullnkpts+
-     &               pair_to_do(ikpt,ikpt_b),mpi_comm,stt,ierr)
+     &          pair_to_do(ikpt,ikpt_b),mpi_communicatior,stt,ierr(1))
 
            endif !pairtodo
           enddo !nearest neighbors
@@ -83,12 +85,12 @@ c******************************************************
             call MPI_SEND(
      &              mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),
      &              nbnd*nbnd,CPP_MPI_COMPLEX,0,5*fullnkpts+
-     &              pair_to_do(ikpt,ikpt_b),mpi_comm,ierr)
+     &              pair_to_do(ikpt,ikpt_b),mpi_communicatior,ierr(1))
           endif !pairtodo
          enddo !loop over nearest neighbors
         endif !processors
        endif ! l_p0
-       call MPI_BARRIER(mpi_comm,ierr)
+       call MPI_BARRIER(mpi_communicatior,ierr(1))
       enddo !ikpt
       endif !isize
 #endif

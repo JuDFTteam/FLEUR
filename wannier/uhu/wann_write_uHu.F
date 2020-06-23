@@ -10,6 +10,9 @@ c**************************c
      >               l_unformatted,l_symcc,l_check)
       use m_types
       use m_wann_uHu_symcheck
+#ifdef CPP_MPI
+      use mpi 
+#endif
 
       implicit none
       integer, intent(in)     :: jspin2
@@ -38,7 +41,6 @@ c**************************c
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -52,7 +54,7 @@ c     Collect contributions to the mmnk matrix from the
 c     various processors.
 c******************************************************
       length = nbnd*nbnd*nntot2*nntot
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
       CALL MPI_GATHERV(
      >       uHu_in,length*nkpt_loc,MPI_DOUBLE_COMPLEX,
      >       uHu,length*counts,length*displs,MPI_DOUBLE_COMPLEX,
@@ -162,7 +164,7 @@ c******************************************************
       if(allocated(uHu)) deallocate( uHu )
 
 #ifdef CPP_MPI
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
 #endif
 
       end subroutine wann_write_uHu
