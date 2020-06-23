@@ -71,9 +71,7 @@ MODULE m_greensfBZint
 
                !Phase factor for intersite elements (Does nothing atm)
                IF(natom.NE.natomp) THEN
-                  IF(sym%nop>1) CALL juDFT_error("Symmetries and intersite Green's Function not implemented",calledby="greensfBZint")
-                  IF(gfinp%l_sphavg) CALL juDFT_error("Spherical average and intersite Green's Function not implemented",calledby="greensfBZint")
-                  phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),atoms%taual(:,natom)-atoms%taual(:,natomp)))
+                  phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),gfinp%elem(i_gf)%atomDiff))
                ELSE
                   phase = 1.0
                ENDIF
