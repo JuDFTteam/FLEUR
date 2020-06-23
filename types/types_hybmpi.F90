@@ -4,13 +4,17 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_hybmpi
+#ifdef CPP_MPI
+   use mpi
+#endif
    TYPE t_hybmpi
       INTEGER :: comm
       INTEGER :: rank
       INTEGER :: size
    contains
       procedure :: copy_mpi => t_hybmpi_copy_mpi
-      procedure :: barrier => t_hybmpi_barrier
+      procedure :: barrier  => t_hybmpi_barrier
+      procedure :: init     => t_hybmpi_init
    END TYPE t_hybmpi
 contains
    subroutine t_hybmpi_copy_mpi(glob_mpi, mpi)
@@ -35,4 +39,14 @@ contains
                                       int2str(glob_mpi%rank))
 #endif
    end subroutine t_hybmpi_barrier
+
+   subroutine t_hybmpi_init(hybmpi, in_comm) 
+      class(t_hybmpi), intent(inout) :: hybmpi 
+      integer, intent(in)            :: in_comm 
+      integer                        :: ierr
+
+      hybmpi%comm = in_comm 
+      call MPI_Comm_size(hybmpi%comm, hybmpi%size, ierr)
+      call MPI_Comm_rank(hybmpi%comm, hybmpi%rank, ierr)
+   end subroutine t_hybmpi_init
 END MODULE m_types_hybmpi
