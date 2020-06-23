@@ -132,7 +132,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
-   type(t_hybmpi)    :: hybmpi
+   type(t_hybmpi)    :: glob_mpi
 
    complex :: c_phase(fi%input%neig)
 
@@ -391,14 +391,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
    END DO
 
-   CALL hybmpi%copy_mpi(mpi)
-   call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
+   CALL glob_mpi%copy_mpi(mpi)
+   call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
 
    CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
    
    
    DO ikpt = 1, fi%kpts%nkpt
-      CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
+      CALL hybdat%coul(ikpt)%mpi_ibc(fi, glob_mpi, 0)
    END DO
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)

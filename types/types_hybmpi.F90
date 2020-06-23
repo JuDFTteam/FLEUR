@@ -13,26 +13,26 @@ MODULE m_types_hybmpi
       procedure :: barrier => t_hybmpi_barrier
    END TYPE t_hybmpi
 contains
-   subroutine t_hybmpi_copy_mpi(hybmpi, mpi)
+   subroutine t_hybmpi_copy_mpi(glob_mpi, mpi)
       use m_types_mpi
       implicit none
-      class(t_hybmpi), intent(inout) :: hybmpi
+      class(t_hybmpi), intent(inout) :: glob_mpi
       type(t_mpi), intent(in)        :: mpi
 
-      hybmpi%comm = mpi%mpi_comm
-      hybmpi%size = mpi%isize
-      hybmpi%rank = mpi%irank
+      glob_mpi%comm = mpi%mpi_comm
+      glob_mpi%size = mpi%isize
+      glob_mpi%rank = mpi%irank
    end subroutine
 
-   subroutine t_hybmpi_barrier(hybmpi)
+   subroutine t_hybmpi_barrier(glob_mpi)
       use m_judft
       implicit none
-      class(t_hybmpi), intent(inout) :: hybmpi
+      class(t_hybmpi), intent(inout) :: glob_mpi
       integer :: ierr
 #ifdef CPP_MPI
-      call MPI_Barrier(hybmpi%comm, ierr)
+      call MPI_Barrier(glob_mpi%comm, ierr)
       if(ierr /= 0) call juDFT_error("barrier failed on process: " // &
-                                      int2str(hybmpi%rank))
+                                      int2str(glob_mpi%rank))
 #endif
    end subroutine t_hybmpi_barrier
 END MODULE m_types_hybmpi

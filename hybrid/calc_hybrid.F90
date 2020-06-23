@@ -39,7 +39,7 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: hybmpi
+      type(t_hybmpi)    :: glob_mpi
       type(t_work_package) :: work_pack
       INTEGER           :: jsp, nk, err, i, j
       type(t_lapw)      :: lapw
@@ -64,7 +64,7 @@ CONTAINS
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
-         call hybmpi%copy_mpi(mpi)            
+         call glob_mpi%copy_mpi(mpi)            
          results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
@@ -90,7 +90,7 @@ CONTAINS
          CALL timestart("Preparation for hybrid functionals")
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         if(hybmpi%rank == 0) write (*,*) "iterHF = ", iterHF
+         if(glob_mpi%rank == 0) write (*,*) "iterHF = ", iterHF
          CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
                         enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
@@ -104,12 +104,12 @@ CONTAINS
 
          ! use jsp=1 for coulomb work-planning
          call hybdat%set_states(fi, results, 1)
-         call work_pack%init(fi, hybdat, 1, hybmpi%rank, hybmpi%size)
+         call work_pack%init(fi, hybdat, 1, glob_mpi%rank, glob_mpi%size)
          CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
          call work_pack%free()
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, work_pack%owner_nk(i))
+            call hybdat%coul(i)%mpi_ibc(fi, glob_mpi, work_pack%owner_nk(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
@@ -120,7 +120,7 @@ CONTAINS
             call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, mpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
+            call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
             call timestop("HF_setup")
             
             DO i = 1,work_pack%k_packs(1)%size
@@ -168,5 +168,10 @@ CONTAINS
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
+
+      subroutine distribute_mpis(fi, glob_mpi)
+         implicit none 
+
+      end subroutine distribute_mpis
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid
