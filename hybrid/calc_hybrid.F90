@@ -64,7 +64,7 @@ CONTAINS
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
-         call glob_mpi%copy_mpi(mpi)            
+         call glob_mpi%init(mpi%comm)
          results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
@@ -169,9 +169,27 @@ CONTAINS
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
 
-      subroutine distribute_mpis(fi, glob_mpi)
-         implicit none 
+      ! subroutine distribute_mpis(fi, glob_mpi)
+      !    use types
+      !    implicit none 
+      !    type(t_fleurinput), intent(in)    :: fi
+      !    type(t_hybmpi), intent(in)        :: glob_mpi 
 
-      end subroutine distribute_mpis
+      !    integer :: color(hybmpi%size), my_color, n_wps
+      !    integer, allocatable :: n_procs(:), weights(:)
+
+      !    n_wps = min(fi%kpts%nkpt, glob_mpi%size)
+      !    allocate(n_procs(n_wps), source=0)
+      !    allocate(weights(n_wps), source=0)
+
+
+      !    do rank = 0,n_wps-1 
+      !       do ik = rank+1, fi%kpts%nkpts, n_wps 
+      !          weights(rank+1) = weights(rank+1) + fi%kpts%eibz(ik)%nkpt
+      !       enddo 
+      !    enddo
+
+      !    call judft_error("no mas")
+      ! end subroutine distribute_mpis
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid
