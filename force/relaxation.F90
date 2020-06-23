@@ -6,12 +6,15 @@
 
 MODULE m_relaxation
   USE m_judft
+#ifdef CPP_MPI 
+   use mpi 
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC relaxation !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
 
 CONTAINS
-  SUBROUTINE relaxation(mpi,input,atoms,cell,sym,oneD,vacuum,force_new,energies_new)
+  SUBROUTINE relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,force_new,energies_new)
     !This routine uses the current force,energies and atomic positions to
     !generate a displacement in a relaxation step.
     !The history is taken into account by read_relax from m_relaxio
@@ -26,7 +29,7 @@ CONTAINS
     INCLUDE 'mpif.h'
 #endif
 
-    TYPE(t_mpi),INTENT(IN)   :: mpi
+    TYPE(t_mpi),INTENT(IN)   :: fmpi
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_atoms),INTENT(IN) :: atoms
     TYPE(t_sym),INTENT(IN)   :: sym
@@ -48,7 +51,7 @@ CONTAINS
     TYPE(t_atoms) :: atoms_non_displaced
     TYPE(t_atoms) :: tempAtoms
 
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        call xml%init()
        ALLOCATE(pos(3,atoms%ntype,1));
        DO iType = 1, atoms%ntype
@@ -144,13 +147,13 @@ CONTAINS
 
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
-       CALL judft_end("Structural relaxation: Done",mpi%irank)
+       CALL judft_end("Structural relaxation: Done",fmpi%irank)
     ELSE
-       CALL mixing_history_reset(mpi)
-       CALL judft_end("Structural relaxation: new displacements generated",mpi%irank)
+       CALL mixing_history_reset(fmpi)
+       CALL judft_end("Structural relaxation: new displacements generated",fmpi%irank)
     END IF
   END SUBROUTINE relaxation
 

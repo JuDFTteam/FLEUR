@@ -13,7 +13,7 @@
       PRIVATE
       PUBLIC :: cdnovlp 
       CONTAINS
-        SUBROUTINE cdnovlp(mpi_var,&
+        SUBROUTINE cdnovlp(fmpi,&
              &                   sphhar,stars,atoms,sym,&
              &                   vacuum,cell,&
              &                   input,oneD,l_st,&
@@ -92,7 +92,7 @@
 #endif
           !
           !     .. Parameters ..
-          TYPE(t_mpi),INTENT(IN)     :: mpi_var
+          TYPE(t_mpi),INTENT(IN)     :: fmpi
           TYPE(t_sphhar),INTENT(IN)   :: sphhar
           TYPE(t_atoms),INTENT(IN)    :: atoms
           TYPE(t_stars),INTENT(IN)    :: stars
@@ -177,7 +177,7 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,CPP_MPI_REAL,0,mpi_var%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,CPP_MPI_REAL,0,fmpi%mpi_comm,ierr)
 #endif
           mshc(:) = 0 ! This initialization is important because there may be atoms without core states.
           nloop: DO  n = 1 , atoms%ntype
@@ -236,7 +236,7 @@
               ENDIF
           ENDDO
           !
-          IF (mpi_var%irank ==0) THEN
+          IF (fmpi%irank ==0) THEN
 8000         FORMAT (/,10x,'core density and its first derivative ',&
                   &                 'at sph. bound. for atom type',&
                   &             i2,' is',3x,2e15.7)
@@ -245,14 +245,14 @@
           !
           !=====> calculate the fourier transform of the core-pseudocharge
 
-          CALL ft_of_CorePseudocharge(mpi_var,atoms,mshc,alpha,tol_14,rh, &
+          CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
                           acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
           DO k = 1 , stars%ng3    
               qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
           ENDDO
 
-          IF (mpi_var%irank ==0) THEN
+          IF (fmpi%irank ==0) THEN
              !
              !=====> calculate core-tails to the vacuum region                
              !       Coretails expanded in exponentially decaying functions.
@@ -456,20 +456,20 @@
              !           contribution) to the m.t. density, include full nonspherical 
              !           components
              !
-          ENDIF ! mpi_var%irank ==0
+          ENDIF ! fmpi%irank ==0
           l_cutoff=input%coretail_lmax
 #ifdef CPP_MPI
-          IF ( mpi_var%isize > 1 ) CALL mpi_bc_st(mpi_var,stars,qpwc)
+          IF ( fmpi%isize > 1 ) CALL mpi_bc_st(fmpi,stars,qpwc)
 #endif
 
           CALL qpw_to_nmt(&
                &                sphhar,atoms,stars,&
-               &                sym,cell,oneD,mpi_var,&
+               &                sym,cell,oneD,fmpi,&
                &                jspin,l_cutoff,qpwc,&
                &                rho)
 
 #ifdef CPP_MPI
-          IF ( mpi_var%isize > 1) CALL mpi_col_st(mpi_var,atoms,sphhar,rho(1,0,1,jspin))
+          IF ( fmpi%isize > 1) CALL mpi_col_st(fmpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
           DEALLOCATE (qpwc)
@@ -480,7 +480,7 @@
 !     INTERNAL SUBROUTINES
 !***********************************************************************
 
-      subroutine ft_of_CorePseudocharge(mpi_var,atoms,mshc,alpha,&
+      subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
             tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
@@ -492,7 +492,7 @@
 
       USE m_types
 
-      type(t_mpi)      ,intent(in) :: mpi_var
+      type(t_mpi)      ,intent(in) :: fmpi
       
       type(t_atoms)    ,intent(in) :: atoms
       integer          ,intent(in) :: mshc(atoms%ntype)
@@ -535,7 +535,7 @@
       !
       !*****> start loop over the atom type
       !
-      DO  n = 1 + mpi_var%irank, atoms%ntype, mpi_var%isize
+      DO  n = 1 + fmpi%irank, atoms%ntype, fmpi%isize
           IF ( ( mshc(n) .GT. atoms%jri(n) ).AND.&
               &        ( alpha(n) .GT. tol_14 ) )    THEN
                    
@@ -572,7 +572,7 @@
        ENDDO
 #ifdef CPP_MPI
        CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,CPP_MPI_COMPLEX,mpi_sum, &
-               mpi_var%mpi_comm,ierr)
+               fmpi%mpi_comm,ierr)
 #endif
 
       end subroutine ft_of_CorePseudocharge

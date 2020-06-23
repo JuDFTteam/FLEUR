@@ -9,14 +9,14 @@ MODULE m_mpi_bc_coreden
    use mpi
 #endif
 CONTAINS
-   SUBROUTINE mpi_bc_coreden(mpi_var,atoms,input,&
+   SUBROUTINE mpi_bc_coreden(fmpi,atoms,input,&
                              rhcs,tecs,qints)
 
    USE m_types
    IMPLICIT NONE
    !INCLUDE 'mpif.h'
 
-   TYPE(t_mpi),INTENT(IN)       :: mpi_var
+   TYPE(t_mpi),INTENT(IN)       :: fmpi
    TYPE(t_atoms),INTENT(IN)     :: atoms
    TYPE(t_input),INTENT(IN)     :: input
    
@@ -28,11 +28,11 @@ CONTAINS
    INTEGER :: n, ierr(3)
 
     n = atoms%jmtd * atoms%ntype * input%jspins
-    CALL MPI_BCAST(rhcs,n,MPI_DOUBLE,0,mpi_var%mpi_comm,ierr)
+    CALL MPI_BCAST(rhcs,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
     n = atoms%ntype * input%jspins
-    CALL MPI_BCAST(tecs,n,MPI_DOUBLE,0,mpi_var%mpi_comm,ierr)
+    CALL MPI_BCAST(tecs,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
     n = atoms%ntype * input%jspins
-    CALL MPI_BCAST(qints,n,MPI_DOUBLE,0,mpi_var%mpi_comm,ierr)
+    CALL MPI_BCAST(qints,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
 
    END SUBROUTINE mpi_bc_coreden
 END MODULE m_mpi_bc_coreden

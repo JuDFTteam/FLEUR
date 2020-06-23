@@ -7,12 +7,12 @@ MODULE m_types_mixvector
    !TODO!!!
    ! LDA+U
    ! Noco (third spin)
-
+#ifdef CPP_MPI
+   use mpi
+#endif
    USE m_types
    IMPLICIT NONE
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
+
    PRIVATE
    !Here we store the pointers used for metric
    TYPE(t_stars), POINTER  :: stars

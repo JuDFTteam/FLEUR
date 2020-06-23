@@ -19,8 +19,12 @@ MODULE m_eigenso
   !
   !**********************************************************************
   !
+
+#ifdef CPP_MPI
+    use mpi 
+#endif
 CONTAINS
-  SUBROUTINE eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
+  SUBROUTINE eigenso(eig_id,fmpi,stars,vacuum,atoms,sphhar,&
                      sym,cell,noco,nococonv,input,kpts,oneD,vTot,enpara,results,hub1inp,hub1data)
 
     USE m_types
@@ -34,7 +38,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
 
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_input),INTENT(IN)      :: input
@@ -52,10 +56,6 @@ CONTAINS
     TYPE(t_results),INTENT(INOUT) :: results
     TYPE(t_hub1inp),OPTIONAL,INTENT(IN) :: hub1inp
     TYPE(t_hub1data),OPTIONAL,INTENT(INOUT) :: hub1data
-
-#ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-#endif
 
     !     ..
     !     .. Scalar Arguments ..
@@ -111,13 +111,13 @@ CONTAINS
     !
 #if defined(CPP_MPI)
     !RMA synchronization
-    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
     CALL timestart("eigenso: spnorb")
     !  ..
 
     !Get spin-orbit coupling matrix elements
-    CALL spnorb( atoms,noco,nococonv,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
+    CALL spnorb( atoms,noco,nococonv,input,fmpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
     !
 
 
@@ -132,24 +132,24 @@ CONTAINS
     CALL timestop("eigenso: spnorb")
     !
     !--->    loop over k-points: each can be a separate task
-    DO nk_i=1,SIZE(mpi%k_list)
-        nk=mpi%k_list(nk_i)
-     !DO nk = mpi%n_start,n_end,n_stride
-       CALL lapw%init(input,noco, nococonv,kpts,atoms,sym,nk,cell,.FALSE., mpi)
+    DO nk_i=1,SIZE(fmpi%k_list)
+        nk=fmpi%k_list(nk_i)
+     !DO nk = fmpi%n_start,n_end,n_stride
+       CALL lapw%init(input,noco, nococonv,kpts,atoms,sym,nk,cell,.FALSE., fmpi)
        ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw, mpi,atoms,sym,kpts,&
+       CALL alineso(eig_id,lapw, fmpi,atoms,sym,kpts,&
             input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
-       IF (mpi%irank.EQ.0) THEN
+       IF (fmpi%irank.EQ.0) THEN
           WRITE (oUnit,FMT=8010) nk,nsz
           WRITE (oUnit,FMT=8020) (eig_so(i),i=1,nsz)
        ENDIF
 8010   FORMAT (1x,/,/,' #k=',i6,':',/,' the',i4,' SOC eigenvalues are:')
 8020   FORMAT (5x,5f12.6)
 
-       IF (mpi%n_rank==0) THEN
+       IF (fmpi%n_rank==0) THEN
           IF (input%eonly) THEN
              CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
              STOP 'jspin is undefined here (eigenso - eonly branch)'
@@ -171,10 +171,10 @@ CONTAINS
     ENDDO ! DO nk
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
     CALL MPI_ALLREDUCE(eigBuffer(:2*input%neig,:,:),results%eig(:2*input%neig,:,:),&
-                       2*input%neig*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
-    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+                       2*input%neig*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
+    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
     results%neig(:,:) = neigBuffer(:,:)
     results%eig(:2*input%neig,:,:) = eigBuffer(:2*input%neig,:,:)

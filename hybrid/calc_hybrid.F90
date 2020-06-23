@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi_var,nococonv,stars,enpara,&
+   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
       USE m_types_hybdat
@@ -29,7 +29,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-      TYPE(t_mpi), INTENT(IN)           :: mpi_var
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       type(t_stars), intent(in)         :: stars
       TYPE(t_enpara), INTENT(IN)        :: enpara
@@ -64,7 +64,7 @@ CONTAINS
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
-         call glob_mpi%init(mpi_var%mpi_comm)
+         call glob_mpi%init(fmpi%mpi_comm)
          results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
@@ -92,7 +92,7 @@ CONTAINS
          CALL timestart("generation of mixed basis")
          if(glob_mpi%rank == 0) write (*,*) "iterHF = ", iterHF
          CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
-                        enpara, mpi_var, v, iterHF)
+                        enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
 
@@ -105,7 +105,7 @@ CONTAINS
          ! use jsp=1 for coulomb work-planning
          call hybdat%set_states(fi, results, 1)
          call work_pack%init(fi, hybdat, 1, glob_mpi%rank, glob_mpi%size)
-         CALL coulombmatrix(mpi_var, fi, mpdata, hybdat, xcpot, work_pack)
+         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
          call work_pack%free()
 
          do i =1,fi%kpts%nkpt
@@ -118,7 +118,7 @@ CONTAINS
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpdata,fi, mpi_var, nococonv, results, jsp, enpara, &
+            CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
             call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
             call timestop("HF_setup")
@@ -127,14 +127,14 @@ CONTAINS
                nk = work_pack%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, stars, results, xcpot, mpi_var)
+                           nococonv, stars, results, xcpot, fmpi)
             END DO
             call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
-         call MPI_Barrier(mpi_var%mpi_comm, err)
+         call MPI_Barrier(fmpi%mpi_comm, err)
          call timestop("Hybrid imbalance")
 #endif
 
