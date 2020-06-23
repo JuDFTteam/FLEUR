@@ -124,7 +124,7 @@ MODULE m_rotMMPmat
          ENDDO
       ENDDO
 
-     eia = exp( cmplx( 0.0 , alpha ) )
+     eia = exp( ImagUnit * alpha/2.0 )
      su(1,1) =  conjg(eia)*co_bh
      su(2,1) = -conjg(eia)*si_bh
      su(1,2) = eia*si_bh
