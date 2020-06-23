@@ -816,7 +816,7 @@ c*********************************************************c
        t_gggint = t_gggint + t0-t1
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
 #endif
 
       deallocate( ulovulo_sph, ulovulo_non)
