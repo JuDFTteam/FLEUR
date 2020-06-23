@@ -75,7 +75,8 @@ c******************************************************************
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_enpara),INTENT(IN)    :: enpara
 
-      integer, intent (in) :: band_min(2),band_max(2),mpi_communicatior,eig_id
+      integer, intent (in) :: band_min(2),band_max(2),mpi_communicatior
+      integer, intent (in) :: eig_id
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
@@ -822,13 +823,13 @@ c      call MPI_BARRIER(mpi_communicatior,ierr)
          if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(knorm(ikpt,1:num_bands),num_bands,
      &             CPP_MPI_REAL,cpu_index,
-     &        ikpt,mpi_communicatior,stt,mpiierr)
+     &        ikpt,mpi_communicatior,stt,mpiierr(1))
          endif !processors
         enddo !ikpt
            call MPI_RECV(wannierfunc_temp(1:num_wann,1:mesh),
      &         num_wann*mesh,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &        cpu_index+fullnkpts,mpi_communicatior,stt,mpiierr)
+     &        cpu_index+fullnkpts,mpi_communicatior,stt,mpiierr(1))
            wannierfunc(:,:)=wannierfunc(:,:)+
      &                   wannierfunc_temp(:,:)
 
@@ -841,12 +842,12 @@ c      call MPI_BARRIER(mpi_communicatior,ierr)
        do ikpt=1,fullnkpts
         if(mod(ikpt-1,isize).eq.irank)then
              call MPI_SEND(knorm(ikpt,1:num_bands),num_bands,
-     &           CPP_MPI_REAL,0,ikpt,mpi_communicatior,mpiierr)
+     &           CPP_MPI_REAL,0,ikpt,mpi_communicatior,mpiierr(1))
         endif !processors
        enddo !ikpt
              call MPI_SEND(wannierfunc(1:num_wann,1:mesh),
      &        num_wann*mesh,
-     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicatior,mpiierr)
+     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicatior,mpiierr(1))
 
 
 
@@ -1041,7 +1042,7 @@ c*****************************************************************
       deallocate(u_matrix)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
 #endif
 
 110   continue ! end of cycle by spins
@@ -1051,7 +1052,7 @@ c*****************************************************************
       deallocate ( ff,gg)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
 #endif
 
       END SUBROUTINE wann_plot_um_dat
