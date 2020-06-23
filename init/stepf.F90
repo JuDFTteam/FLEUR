@@ -1,8 +1,11 @@
 MODULE m_stepf
    USE m_juDFT
    USE m_cdn_io
+#ifdef CPP_MPI
+   use mpi 
+#endif
 CONTAINS
-   SUBROUTINE stepf(sym, stars, atoms, oneD, input, cell, vacuum, mpi)
+   SUBROUTINE stepf(sym, stars, atoms, oneD, input, cell, vacuum, fmpi)
       !
       !*********************************************************************
       !     calculates the fourier components of the interstitial step
@@ -27,7 +30,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)      :: input
       TYPE(t_cell), INTENT(IN)       :: cell
       TYPE(t_vacuum), INTENT(IN)     :: vacuum
-      TYPE(t_mpi), INTENT(IN)        :: mpi
+      TYPE(t_mpi), INTENT(IN)        :: fmpi
       !     ..
       !     .. Local Scalars ..
       COMPLEX c_c, c_phs
@@ -44,14 +47,13 @@ CONTAINS
       INTEGER, ALLOCATABLE :: icm(:, :, :)
       INTEGER :: i3_start, i3_end, chunk_size, leftover_size
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
       INTEGER ierr
       INTEGER, ALLOCATABLE :: icm_local(:, :, :)
       REAL, ALLOCATABLE :: ufft_local(:), bfft_local(:)
 
-      CALL MPI_BCAST(stars%mx1, 1, MPI_INTEGER, 0, mpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx2, 1, MPI_INTEGER, 0, mpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx3, 1, MPI_INTEGER, 0, mpi%mpi_comm, ierr)
+      CALL MPI_BCAST(stars%mx1, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_BCAST(stars%mx2, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_BCAST(stars%mx3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 #endif
 
       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
@@ -60,15 +62,15 @@ CONTAINS
       !--->    if step function stored on disc, then just read it in
       !
       l_error = .FALSE.
-      IF (mpi%irank == 0) CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
+      IF (fmpi%irank == 0) CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
 #ifdef CPP_MPI
-      CALL MPI_BCAST(l_error, 1, MPI_LOGICAL, 0, mpi%mpi_comm, ierr)
+      CALL MPI_BCAST(l_error, 1, MPI_LOGICAL, 0, fmpi%mpi_comm, ierr)
 #endif
       IF (.NOT. l_error) THEN
          RETURN
       END IF
 
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          ALLOCATE (sf(stars%ng3))
          IF (input%film) THEN
             dd = vacuum%dvac*cell%area/cell%omtil
@@ -135,7 +137,7 @@ CONTAINS
                stars%ustep(k) = stars%ustep(k) - (c*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf(k)
             ENDDO
          ENDDO
-      ENDIF ! (mpi%irank == 0)
+      ENDIF ! (fmpi%irank == 0)
 
       !
       ! --> set up stepfunction on fft-grid:
@@ -162,7 +164,7 @@ CONTAINS
       bfft = 0.0
 
 #ifdef CPP_MPI
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          DO n = 1, atoms%ntype
             ufft_local(0) = ufft_local(0) + atoms%neq(n)*atoms%volmts(n)
          ENDDO
@@ -178,13 +180,13 @@ CONTAINS
       i3_start = 0
       i3_end = im3
 #ifdef CPP_MPI
-      chunk_size = (im3 + 1)/mpi%isize
-      leftover_size = modulo(im3 + 1, mpi%isize)
-      IF (mpi%irank < leftover_size) THEN
-         i3_start = mpi%irank*(chunk_size + 1)
-         i3_end = (mpi%irank + 1)*(chunk_size + 1) - 1
+      chunk_size = (im3 + 1)/fmpi%isize
+      leftover_size = modulo(im3 + 1, fmpi%isize)
+      IF (fmpi%irank < leftover_size) THEN
+         i3_start = fmpi%irank*(chunk_size + 1)
+         i3_end = (fmpi%irank + 1)*(chunk_size + 1) - 1
       ELSE
-         i3_start = leftover_size*(chunk_size + 1) + (mpi%irank - leftover_size)*chunk_size
+         i3_start = leftover_size*(chunk_size + 1) + (fmpi%irank - leftover_size)*chunk_size
          i3_end = (i3_start + chunk_size) - 1
       ENDIF
 #endif
@@ -269,7 +271,7 @@ CONTAINS
 #endif
                ENDIF
                !-odim
-               IF (oneD%odd%d1) THEN  !!!! MPI version is not tested yet !!!!
+               IF (oneD%odd%d1) THEN  !!!! fmpi version is not tested yet !!!!
                   IF (ic .LT. 9*stars%mx1*stars%mx2 .AND. ic .NE. 0) THEN
                      gx = (cell%bmat(1, 1)*gm(1) + cell%bmat(2, 1)*gm(2))
                      gy = (cell%bmat(1, 2)*gm(1) + cell%bmat(2, 2)*gm(2))
@@ -288,12 +290,12 @@ CONTAINS
       ENDDO
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, mpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(bfft_local, bfft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, mpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, mpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(bfft_local, bfft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, fmpi%mpi_comm, ierr)
 #endif
 
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          ic = 9*stars%mx1*stars%mx2*(im3 + 1)
          DO i3 = im3 + 1, 3*stars%mx3 - 1
             gm(3) = REAL(i3)
@@ -350,7 +352,7 @@ CONTAINS
 #endif
 
          CALL writeStepfunction(stars)
-      ENDIF ! (mpi%irank == 0)
+      ENDIF ! (fmpi%irank == 0)
 
    END SUBROUTINE stepf
 END MODULE m_stepf

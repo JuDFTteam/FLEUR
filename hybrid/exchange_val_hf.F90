@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi_var, mat_ex)
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -82,7 +82,7 @@ CONTAINS
       type(t_mat), intent(in)           :: z_k
       TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
-      TYPE(t_mpi), INTENT(IN)           :: mpi_var
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       TYPE(t_lapw), INTENT(IN)          :: lapw
@@ -191,7 +191,7 @@ CONTAINS
                !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-               !                                  fi%sym%invsat, fi%sym%invsatnr, mpi_var%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+               !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
                !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
             END IF
 
