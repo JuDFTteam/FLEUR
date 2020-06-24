@@ -68,14 +68,15 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
                                                     'spinDownCharge'/),&
                                    attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
       IF (noco%l_mtNocoPot) WRITE(oUnit,FMT=8032) iType, sz,slymom,slxmom
-   END IF
    END DO
    CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
 
    9020 FORMAT (/,/,10x,'orb. magnetic moments in the spheres:',/,10x,&
                 'type',t22,'moment',t33,'spin-up',t43,'spin-down')
    8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
-   IF(noco%l_mtNocoPot) 8032 FORMAT (2x,'--> Orbital moment of atom ',i8,': mz=',f9.5, ' my=',f9.5, ' mx=',f9.5)
+   IF (noco%l_mtNocoPot) THEN 
+      8032 FORMAT ('--> Orbital moment of atom ',i8,' mz=',f9.5, ' my=',f9.5, ' mx=',f9.5)
+   END IF
 END SUBROUTINE orbMagMoms
 
 END MODULE m_orbMagMoms
