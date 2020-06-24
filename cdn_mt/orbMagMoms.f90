@@ -25,7 +25,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
    REAL, INTENT(INOUT)           :: clmom(3,atoms%ntype,input%jspins)
 
    INTEGER                       :: iType, j
-   REAL                          :: thetai, phii, slmom, slxmom, slymom,sz
+   REAL                          :: thetai, phii, slmom, slxmom, slymom,szglobal,syglobal,sxglobal
    CHARACTER(LEN=20)             :: attributes(4)
 
 
@@ -39,6 +39,12 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
       slymom = clmom(2,iType,1)+clmom(2,iType,2)
       slmom =  clmom(3,iType,1)+clmom(3,iType,2)
 
+      IF (noco%l_mtNocoPot) THEN 
+         szglobal=clmom(3,iType,1)+clmom(3,iType,2)
+         sxglobal=clmom(1,iType,1)+clmom(1,iType,2)
+         syglobal=clmom(2,iType,1)+clmom(2,iType,2)
+      END IF
+
       IF (noco%l_noco) THEN
          thetai = nococonv%beta(iType)
          phii   = nococonv%alph(iType)
@@ -48,7 +54,6 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
          slymom=-1*slymom
          !slmom=-1*slmom
       END IF
-      IF (noco%l_mtNocoPot) sz=slmom
       ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
       slmom   = cos(thetai)*slmom + sin(thetai)*(cos(phii)*slxmom + sin(phii)*slymom)
       clmom(3,iType,1) = cos(thetai)*clmom(3,iType,1) + &
@@ -67,7 +72,9 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
       CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
                                                     'spinDownCharge'/),&
                                    attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-      IF (noco%l_mtNocoPot) WRITE(oUnit,FMT=8032) iType, sz,slymom,slxmom
+      IF (noco%l_mtNocoPot) THEN 
+         WRITE(oUnit,FMT=8032) iType, sxglobal,syglobal,szglobal,sqrt(sxglobal**2+syglobal**2+szglobal**2)
+      END IF
    END DO
    CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
 
@@ -75,7 +82,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
                 'type',t22,'moment',t33,'spin-up',t43,'spin-down')
    8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
    IF (noco%l_mtNocoPot) THEN 
-      8032 FORMAT ('--> Orbital moment of atom ',i8,' mz=',f9.5, ' my=',f9.5, ' mx=',f9.5)
+      8032 FORMAT (2x,'Atom: ',i8,' --> Orbital moment in global frame:', ' mx=',f9.5, ' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
    END IF
 END SUBROUTINE orbMagMoms
 
