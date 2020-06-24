@@ -11,7 +11,7 @@
 #endif
       CONTAINS
       SUBROUTINE wann_updown(
-     >      wann,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      wann,fmpi,input,kpts,sym,atoms,stars,vacuum,
      >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_communicatior,l_dulo,l_noco,l_ss,lmaxd,
@@ -80,7 +80,7 @@ c****************************************************************************
 
 
       TYPE(t_wann),      INTENT(INOUT) :: wann
-      TYPE(t_mpi),INTENT(IN)    :: mpi
+      TYPE(t_mpi),INTENT(IN)    :: fmpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -482,7 +482,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
 
-        CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+        CALL cdn_read0(eig_id,fmpi%irank,fmpi%isize,jspin5,
      >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
      >  noco%l_noco, n_bands,n_size)
 
@@ -501,7 +501,7 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
-     >           mpi,cell,noco,nococonv,input,kpts,sym,atoms,           
+     >           fmpi,cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
      >            ntypd,neigd,nvd,wannierspin,
      >            isize,jspin,nbasfcn,
@@ -595,7 +595,7 @@ c***********************************************************
 
              call radflo(
      > atoms,n,jspin,enpara%ello0(:,:,jspin2),vr(1,n,jspin2),
-     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),mpi,
+     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),fmpi,
      <  usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin))
 
           enddo !ilo
@@ -840,7 +840,7 @@ c****************************************************************
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &  kptibz,cell,
      &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     &  .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
 
 
         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
@@ -852,7 +852,7 @@ c****************************************************************
 
         CALL cdn_read(
      & eig_id,
-     & lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, !wannierspin instead of DIMENSION%jspd?
      & kptibz,jspin,lapw%dim_nbasfcn(),
      & noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      & nbands,eigg(:,jspin),zzMat(jspin))
@@ -994,7 +994,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmat)then
          call wann_socmat(
-     >       mpi,enpara,input,noco,nococonv,atoms,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       theta,phi,jspins,irank,
@@ -1014,7 +1014,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
-     >       mpi,enpara,input,noco,nococonv,atoms,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       jspins,irank,

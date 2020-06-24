@@ -41,7 +41,7 @@ c**************************c
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      integer :: ierr(3)
+      integer :: ierr
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
 #endif
@@ -54,7 +54,7 @@ c     Collect contributions to the mmnk matrix from the
 c     various processors.
 c******************************************************
       length = nbnd*nbnd*nntot2*nntot
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
       CALL MPI_GATHERV(
      >       uHu_in,length*nkpt_loc,MPI_DOUBLE_COMPLEX,
      >       uHu,length*counts,length*displs,MPI_DOUBLE_COMPLEX,
@@ -164,7 +164,7 @@ c******************************************************
       if(allocated(uHu)) deallocate( uHu )
 
 #ifdef CPP_MPI
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 #endif
 
       end subroutine wann_write_uHu

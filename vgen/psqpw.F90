@@ -63,7 +63,7 @@ contains
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
 #ifdef CPP_MPI
-    integer                         :: ierr(3)
+    integer                         :: ierr
     complex, allocatable            :: c_b(:)
 #endif
 

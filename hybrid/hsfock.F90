@@ -44,7 +44,7 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
-                     results, xcpot, mpi)
+                     results, xcpot, fmpi)
 
       use m_ex_to_vx
       USE m_judft
@@ -63,7 +63,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_k_package), intent(in)     :: k_pack
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)    :: lapw
       type(t_stars), intent(in)   :: stars
@@ -104,7 +104,7 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
       ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
-      IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
+      IF(nk == 1 .and. fmpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
       IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
       ! calculate all symmetrie operations, which yield k invariant
 
@@ -135,7 +135,7 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
       CALL timestart("core exchange calculation")
 
@@ -145,7 +145,7 @@ CONTAINS
       ELSE
          CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
                              mpdata, fi%hybinp, hybdat, jsp, &
-                             lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+                             lapw, nsymop, nsest, indx_sest, fmpi, a_ex, results, ex)
          CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
       END IF
 

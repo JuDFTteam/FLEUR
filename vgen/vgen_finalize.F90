@@ -12,7 +12,7 @@ MODULE m_vgen_finalize
 
 CONTAINS
 
-   SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+   SUBROUTINE vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (finalization)
       !
@@ -32,7 +32,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_mpi),      INTENT(IN)    :: mpi
+      TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_oneD),     INTENT(IN)    :: oneD
       TYPE(t_field),    INTENT(IN)    :: field
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -84,7 +84,7 @@ CONTAINS
 
       IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
 
-         IF (mpi%irank == 0) THEN
+         IF (fmpi%irank == 0) THEN
             CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
             DO i=1,atoms%ntype
                WRITE (oUnit,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
@@ -99,7 +99,7 @@ CONTAINS
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,vCorr)
+         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,vScal,vCorr)
          CALL timestop("SF subroutine")
 
          CALL timestart("Correcting vTot")
@@ -119,7 +119,7 @@ CONTAINS
 
          CALL timestop("Purging source terms in B-field")
 
-         IF (mpi%irank == 0) THEN
+         IF (fmpi%irank == 0) THEN
             CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
             DO i=1,atoms%ntype
                WRITE (oUnit,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
@@ -130,15 +130,15 @@ CONTAINS
       END IF
 
       IF (sliceplot%iplot.NE.0) THEN
-         CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, &
                         noco,nococonv, vTot, PLOT_POT_TOT, sliceplot)
-         CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, &
                         noco,nococonv, vCoul, PLOT_POT_COU, sliceplot)
          CALL vxcForPlotting%copyPotDen(vTot)
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-         CALL makeplots(stars, atoms, sphhar, vacuum, input, mpi,oneD, sym, cell, &
+         CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
-         IF ((mpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
+         IF ((fmpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
             CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
          END IF
       END IF

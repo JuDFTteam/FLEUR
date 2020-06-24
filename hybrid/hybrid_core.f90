@@ -6,7 +6,7 @@ MODULE m_hybrid_core
 
 CONTAINS
    SUBROUTINE corewf(atoms, jsp, input,&
-                      vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
+                      vr, lmaxcd, maxindxc, fmpi, lmaxc, nindxc, core1, core2, eig_c)
 
       USE m_juDFT
       USE m_types
@@ -14,7 +14,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_mpi), INTENT(IN)   :: mpi
+      TYPE(t_mpi), INTENT(IN)   :: fmpi
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -51,7 +51,7 @@ CONTAINS
       ! generate relativistic core wave functions( ->core1r,core2r )
       CALL calcorewf( input, jsp, atoms,&
                       ncstd, vr,&
-                      lmaxc, nindxcr, core1r, core2r, eig_cr, mpi)
+                      lmaxc, nindxcr, core1r, core2r, eig_cr, fmpi)
 
       nindxc = 0
 
@@ -127,7 +127,7 @@ CONTAINS
 
    SUBROUTINE calcorewf( input, jspin, atoms,&
                         ncstd, vr,&
-                        lmaxc, nindxcr, core1, core2, eig_c, mpi)
+                        lmaxc, nindxcr, core1, core2, eig_c, fmpi)
 
       USE m_intgr, ONLY: intgr3, intgr0, intgr1
       USE m_constants
@@ -135,7 +135,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_mpi), INTENT(IN)   :: mpi
+      TYPE(t_mpi), INTENT(IN)   :: fmpi
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -241,7 +241,7 @@ CONTAINS
          ncmsh = nint(log((atoms%rmt(itype) + 10.0)/rnot)/dxx + 1)
          ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
-         IF (mpi%irank == 0) THEN
+         IF (fmpi%irank == 0) THEN
             WRITE (oUnit, FMT=8000) z, rnot, dxx, atoms%jri(itype)
          END IF
          DO j = 1, atoms%jri(itype)
@@ -290,7 +290,7 @@ CONTAINS
 
                eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
 
-               IF (mpi%irank == 0) THEN
+               IF (fmpi%irank == 0) THEN
                   WRITE (oUnit, FMT=8010) fn, fl, fj, e, weight
                END IF
                IF (ierr /= 0) call judft_error('error in core-level routine')

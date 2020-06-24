@@ -25,7 +25,7 @@ CONTAINS
    REAL, INTENT(INOUT) :: tecs(atoms%ntype,input%jspins)
    REAL, INTENT(INOUT) :: qints(atoms%ntype,input%jspins)
 
-   INTEGER :: n, ierr(3)
+   INTEGER :: n, ierr
 
     n = atoms%jmtd * atoms%ntype * input%jspins
     CALL MPI_BCAST(rhcs,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)

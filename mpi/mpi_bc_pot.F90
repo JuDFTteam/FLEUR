@@ -29,7 +29,7 @@ CONTAINS
    REAL,    INTENT (INOUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL,    INTENT (INOUT) :: fz(vacuum%nmzd,2,input%jspins)
 
-   INTEGER :: n, ierr(3)
+   INTEGER :: n, ierr
 
    CALL MPI_BCAST(iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
 

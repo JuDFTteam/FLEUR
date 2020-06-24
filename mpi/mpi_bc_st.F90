@@ -24,10 +24,7 @@ CONTAINS
     !     ..
     !     ..
     !     .. Local Arrays ..
-    INTEGER ierr(3)
-    !     ..
-    !     .. External Subroutines.. 
-    EXTERNAL MPI_BCAST
+    INTEGER ierr
     !     ..
     !INCLUDE 'mpif.h'
     !
@@ -47,14 +44,12 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    !INCLUDE 'mpif.h'
-    EXTERNAL MPI_REDUCE
     !     ..
     !     .. Scalar Arguments ..
     REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
     INTEGER n
-    INTEGER ierr(3)
+    INTEGER ierr
     REAL, ALLOCATABLE :: r_b(:)
 
     n = atoms%jmtd*(sphhar%nlhd+1)*atoms%ntype

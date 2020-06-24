@@ -39,7 +39,7 @@ MODULE m_mixedbasis
 CONTAINS
 
    SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
-                         enpara, mpi, v, iterHF)
+                         enpara, fmpi, v, iterHF)
 
       USE m_judft
       USE m_types
@@ -54,7 +54,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_mpinp), intent(in)     :: mpinp
       TYPE(t_hybinp), INTENT(IN) :: hybinp
@@ -92,7 +92,7 @@ CONTAINS
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
 
 
-      IF (mpi%irank == 0) WRITE (oUnit, '(//A,I2,A)') '### subroutine: mixedbasis ###'
+      IF (fmpi%irank == 0) WRITE (oUnit, '(//A,I2,A)') '### subroutine: mixedbasis ###'
 
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
@@ -122,16 +122,16 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, gridf, input, mpdata, mpi, vr0, usdus, bas1, bas2)
+      call gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call mpdata%gen_gvec(mpinp, cell, kpts, mpi)
+      call mpdata%gen_gvec(mpinp, cell, kpts, fmpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          WRITE (oUnit, '(A)') 'MT product basis for non-local exchange potential:'
          WRITE (oUnit, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
@@ -184,7 +184,7 @@ CONTAINS
                   END IF
                END DO
             END DO
-            IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
+            IF (n_radbasfn == 0 .AND. fmpi%irank == 0) &
                WRITE (oUnit, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
             mpdata%num_radbasfn(l, itype) = n_radbasfn*input%jspins
@@ -217,7 +217,7 @@ CONTAINS
             ! allow for zero product-basis functions for
             ! current l-quantum number
             IF (n_radbasfn == 0) THEN
-               IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->   0'')') lchar(l)
+               IF (fmpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->   0'')') lchar(l)
                CYCLE
             END IF
 
@@ -261,12 +261,12 @@ CONTAINS
 
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
+         IF (fmpi%irank == 0) WRITE (oUnit, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
       END DO ! itype
 
       !normalize radbasfn_mt
       call mpdata%normalize(atoms, hybinp, gridf)
-      call mpdata%reduce_linear_dep(mpinp,atoms, mpi, hybinp, gridf, iterHF)
+      call mpdata%reduce_linear_dep(mpinp,atoms, fmpi, hybinp, gridf, iterHF)
 
       allocate(basmhlp(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype))
       basmhlp(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), 1:atoms%ntype) &
@@ -281,7 +281,7 @@ CONTAINS
       ! now we build linear combinations of the radial functions
       ! such that they possess no moment except one radial function in each l-channel
       !
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          WRITE (oUnit, '(/,A,/,A)') 'Build linear combinations of radial '// &
             'functions in each l-channel,', &
             'such that they possess no multipolmoment'// &
@@ -293,7 +293,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          n_grid_pt = atoms%jri(itype)
 
-         IF (atoms%ntype > 1 .AND. mpi%irank == 0) WRITE (oUnit, '(6X,A,I3)') 'Atom type', itype
+         IF (atoms%ntype > 1 .AND. fmpi%irank == 0) WRITE (oUnit, '(6X,A,I3)') 'Atom type', itype
 
          DO l = 0, hybinp%lcutm1(itype)
             ! determine radial function with the largest moment
@@ -320,10 +320,10 @@ CONTAINS
 
 
          DO l = 0, hybinp%lcutm1(itype)
-            IF (mpi%irank == 0) WRITE (oUnit, '(6X,A)') lchar(l)//':'
+            IF (fmpi%irank == 0) WRITE (oUnit, '(6X,A)') lchar(l)//':'
 
             IF (mpdata%num_radbasfn(l, itype) == 0) THEN
-               IF (mpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->    '')') lchar(l)
+               IF (fmpi%irank == 0) WRITE (oUnit, '(6X,A,'':   0 ->    '')') lchar(l)
                CYCLE
             END IF
 
@@ -338,7 +338,7 @@ CONTAINS
 
                bashlp(:n_grid_pt) = mpdata%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
-               IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. mpi%irank == 0) &
+               IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. fmpi%irank == 0) &
                   WRITE (oUnit, *) 'Warning: Norm is smaller than 1E-06!'
 
                ! change function n_radbasfn such that n_radbasfn is orthogonal to i
@@ -356,9 +356,9 @@ CONTAINS
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
 
-               IF (mpi%irank == 0) WRITE (oUnit, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
+               IF (fmpi%irank == 0) WRITE (oUnit, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
             END DO
-            call mpdata%check_orthonormality(atoms, mpi, l, itype, gridf)
+            call mpdata%check_orthonormality(atoms, fmpi, l, itype, gridf)
          ENDDO
 
 
@@ -385,7 +385,7 @@ CONTAINS
       enddo
    END SUBROUTINE mixedbasis
 
-   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpdata, mpi, vr0, usdus, bas1, bas2)
+   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
       use m_judft
       use m_types
       USE m_radfun, ONLY: radfun
@@ -396,7 +396,7 @@ CONTAINS
       type(t_enpara), intent(in)       :: enpara
       type(t_input), intent(in)        :: input
       TYPE(t_mpdata), intent(in)      :: mpdata
-      type(t_mpi), intent(in)          :: mpi
+      type(t_mpi), intent(in)          :: fmpi
       type(t_usdus), intent(inout)     :: usdus
 
       REAL, ALLOCATABLE, INTENT(INOUT) :: bas1(:,:,:,:,:), bas2(:,:,:,:,:)
@@ -443,7 +443,7 @@ CONTAINS
             ! generate radial functions for local orbitals
             IF (atoms%nlo(itype) >= 1) THEN
                CALL radflo(atoms, itype, jspin, enpara%ello0(1, 1, jspin), vr0(:,itype, jspin), &
-                           u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+                           u, du, fmpi, usdus, uuilon, duilon, ulouilopn, flo)
 
                l_idx = 2
                DO ilo = 1, atoms%nlo(itype)

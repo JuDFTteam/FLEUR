@@ -118,7 +118,7 @@ CONTAINS
          CALL hf_init(eig_id, mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
-         call balance_kpts(fi, glob_mpi, wp_mpi)
+         !call balance_kpts(fi, glob_mpi, wp_mpi)
 
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
@@ -204,6 +204,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybmpi), intent(in)        :: glob_mpi
       type(t_hybmpi), intent(inout)     :: wp_mpi, wp_root_comm
+      integer, intent(inout)            :: wp_rank, wp_size
 
       integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm, my_color
       integer, allocatable :: nprocs(:), weights(:), color(:)

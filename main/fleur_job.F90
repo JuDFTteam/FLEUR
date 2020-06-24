@@ -145,14 +145,14 @@ CONTAINS
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
-           !$       WRITE(*,*) "Linked MPI version does not support multithreading."
+           !$       WRITE(*,*) "Linked fmpi version does not support multithreading."
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "To solve this problem please do one of:"
-           !$       WRITE(*,*) "   1. Link an adequate MPI version."
-           !$       WRITE(*,*) "   2. Use fleur without MPI."
+           !$       WRITE(*,*) "   1. Link an adequate fmpi version."
+           !$       WRITE(*,*) "   2. Use fleur without fmpi."
            !$       WRITE(*,*) "   3. Compile and use fleur without OpenMP."
            !$       WRITE(*,*) ""
-           !$       CALL juDFT_error("MPI not usable with OpenMP")
+           !$       CALL juDFT_error("fmpi not usable with OpenMP")
            !$    END IF
            !Select the io-mode from the command-line
         END IF
@@ -171,7 +171,7 @@ CONTAINS
 
         !local variables for FLEUR
         type(t_fleurinput) :: fi
-        TYPE(t_mpi)      :: mpi
+        TYPE(t_mpi)      :: fmpi
         TYPE(t_sphhar)   :: sphhar
         TYPE(t_stars)    :: stars
         TYPE(t_enpara)   :: enpara
@@ -203,14 +203,14 @@ CONTAINS
         !change directory
         CALL chdir(jobs(njob)%directory)
         !Call FLEUR
-        mpi%mpi_comm = jobs(njob)%mpi_comm
+        fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
-        call fleur_init(mpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
+        call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
            fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
            fi%hub1inp,wann)
         CALL timestop("Initialization")
 
-        CALL fleur_execute(mpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
+        CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
                            xcpot, wann)
 
     END SUBROUTINE
@@ -260,12 +260,12 @@ CONTAINS
 
 #else
         IF (size(jobs)>1) THEN
-            PRINT*, "Cannot run multiple jobs without MPI"
-            STOP "NO MPI"
+            PRINT*, "Cannot run multiple jobs without fmpi"
+            STOP "NO fmpi"
         ENDIF
         IF (sum(jobs%pe_requested)>1) THEN
-            PRINT*, "You cannot request a multiple PE job without MPI"
-            STOP "NO MPI"
+            PRINT*, "You cannot request a multiple PE job without fmpi"
+            STOP "NO fmpi"
         ENDIF
         jobs(1)%mpi_comm=1
 #endif

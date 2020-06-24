@@ -12,7 +12,7 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       input,atoms,sym,mpi,lapw,cell,nococonv,ntyp,na,&
+       input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
        isp,ud, alo1,blo1,clo1,fjgj,&
        iintsp,jintsp,chi,smat)
     !***********************************************************************
@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_mpi),INTENT(IN)    :: mpi
+    TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_fjgj),INTENT(IN)   :: fjgj
@@ -88,8 +88,8 @@ CONTAINS
                clo1(lo)*    clo1(lo) )
           DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
-                locol=(locol-1)/mpi%n_size+1 !this is the column in local storage!
+             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN
+                locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage!
                 k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions

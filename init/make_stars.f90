@@ -10,7 +10,7 @@ MODULE m_make_stars
   PRIVATE
   PUBLIC :: make_stars
 CONTAINS
-  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
+  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,fmpi)
     USE m_od_strgn1
     USE m_strgn
     USE m_stepf
@@ -41,18 +41,18 @@ CONTAINS
     CLASS(t_xcpot),INTENT(in)::xcpot
     TYPE(t_oneD),INTENT(inout)::oneD
     TYPE(t_noco),INTENT(in)::noco
-    TYPE(t_mpi),INTENT(in)::mpi
+    TYPE(t_mpi),INTENT(in)::fmpi
     ! Generate stars
 
     ! Dimensioning of stars
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        IF (input%film) THEN
-          CALL strgn1_dim(mpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+          CALL strgn1_dim(fmpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                stars%ng3,stars%ng2,oneD%odd)
 
        ELSE
-          CALL strgn2_dim(mpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+          CALL strgn2_dim(fmpi%irank==0,input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
                stars%ng3,stars%ng2)
           oneD%odd%n2d = stars%ng2
@@ -110,9 +110,9 @@ CONTAINS
           IF (oneD%odd%d1) THEN
              CALL od_strgn1(xcpot,cell,sym,oneD)
           END IF
-          CALL strgn1(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+          CALL strgn1(fmpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        ELSE
-          CALL strgn2(mpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
+          CALL strgn2(fmpi%irank==0,stars,oneD,sym,atoms,vacuum,sphhar,input,cell,xcpot)
        END IF
 
        CALL lapw_fft_dim(cell,input,noco,stars)
@@ -123,17 +123,17 @@ CONTAINS
 
        ! Set up pointer for backtransformation from g-vector in positive
        ! domain of carge density fftibox into stars
-       CALL prp_qfft(mpi%irank==0,stars,cell,noco,input)
+       CALL prp_qfft(fmpi%irank==0,stars,cell,noco,input)
        CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
        CALL timestop("strgn")
     ENDIF
-    CALL stars%mpi_bc(mpi%mpi_comm)
+    CALL stars%mpi_bc(fmpi%mpi_comm)
 
     CALL timestart("stepf")
-    CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
-    CALL mpi_bc(stars%ustep,0,mpi%mpi_comm)
-    CALL mpi_bc(stars%ufft,0,mpi%mpi_comm)
+    CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+    CALL mpi_bc(stars%ustep,0,fmpi%mpi_comm)
+    CALL mpi_bc(stars%ufft,0,fmpi%mpi_comm)
     CALL timestop("stepf")
 
 

@@ -8,7 +8,7 @@ MODULE m_fleur_vdW
   IMPLICIT NONE
   PUBLIC fleur_vdW,priv_fleur_vdW
 CONTAINS
-  SUBROUTINE fleur_vdW(mpi,atoms,sphhar,stars,input,      &
+  SUBROUTINE fleur_vdW(fmpi,atoms,sphhar,stars,input,      &
        cell,sym,oneD,vacuum,    &
        qpw,rho,vpw_total,vr_total)
     !Interface to Juelich vdW-code
@@ -22,7 +22,7 @@ CONTAINS
 
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)       :: mpi
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_stars),INTENT(IN)     :: stars
@@ -71,7 +71,7 @@ CONTAINS
     ! Construct the pseudo charge
     atoms_tmp=atoms
     atoms_tmp%zatom=0.0
-    CALL psqpw(mpi,&
+    CALL psqpw(fmpi,&
          atoms_tmp,sphhar,stars,vacuum,&
          cell,input,sym,oneD,&
          qpw,rho,(/0.,0./),.TRUE.,2,psq)
@@ -104,7 +104,7 @@ CONTAINS
     !Calculate MT-contribution to the potential
 
     CALL qpw_to_nmt(                                                     &
-         sphhar,atoms,stars,sym,cell,oneD,mpi,  &
+         sphhar,atoms,stars,sym,cell,oneD,fmpi,  &
          1,4,vpw,vr_total)
 
     WRITE(oUnit,*) "vdW average Potential  :",vpw(1)

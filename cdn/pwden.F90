@@ -6,7 +6,7 @@
 
 MODULE m_pwden
 CONTAINS
-   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, mpi, noco, cell, atoms, sym, &
+   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, fmpi, noco, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
@@ -83,7 +83,7 @@ CONTAINS
       USE m_fft_interface
       IMPLICIT NONE
       TYPE(t_lapw), INTENT(IN)       :: lapw
-      TYPE(t_mpi), INTENT(IN)        :: mpi
+      TYPE(t_mpi), INTENT(IN)        :: fmpi
       TYPE(t_oneD), INTENT(IN)       :: oneD
       TYPE(t_banddos), INTENT(IN)    :: banddos
       TYPE(t_input), INTENT(IN)      :: input
@@ -257,7 +257,7 @@ CONTAINS
       !
       IF (noco%l_noco) THEN
          rhomat = 0.0
-         IF (ikpt .LE. mpi%isize) THEN
+         IF (ikpt .LE. fmpi%isize) THEN
             dos%qis = 0.0
          ENDIF
       ELSE

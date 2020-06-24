@@ -142,38 +142,38 @@ CONTAINS
     CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
 
-  SUBROUTINE dmi_dist(this,mpi)
+  SUBROUTINE dmi_dist(this,fmpi)
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
-    TYPE(t_mpi),INTENT(in):: mpi
+    TYPE(t_mpi),INTENT(in):: fmpi
 
     INTEGER:: i,q,ierr,n
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    IF (mpi%irank==0) i=SIZE(this%theta)
-    call MPI_BCAST(i,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank==0) q=SIZE(this%qvec,2)
-    CALL MPI_BCAST(q,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%phi(i),this%theta(i),this%evsum(0:i,q));this%evsum=0.0
-    if (mpi%irank==0) n=size(this%h_so,1)-1
-    call MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) ALLOCATE(this%h_so(0:n,0:i,q));this%h_so=0.0
-    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(this%qvec,3*q,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    IF (fmpi%irank==0) i=SIZE(this%theta)
+    call MPI_BCAST(i,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank==0) q=SIZE(this%qvec,2)
+    CALL MPI_BCAST(q,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%phi(i),this%theta(i),this%evsum(0:i,q));this%evsum=0.0
+    if (fmpi%irank==0) n=size(this%h_so,1)-1
+    call MPI_BCAST(n,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank.NE.0) ALLOCATE(this%h_so(0:n,0:i,q));this%h_so=0.0
+    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+    CALL MPI_BCAST(this%qvec,3*q,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
   END SUBROUTINE dmi_dist
 
   FUNCTION dmi_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
@@ -192,7 +192,7 @@ CONTAINS
 
     this%evsum(0,this%q_done)=results%seigv
     CALL ssomat(this%evsum(1:,this%q_done),this%h_so(:,:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)
     skip=.TRUE.
   END FUNCTION  dmi_eval
 

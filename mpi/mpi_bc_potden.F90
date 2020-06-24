@@ -25,7 +25,7 @@ CONTAINS
    TYPE(t_oneD),INTENT(IN)       :: oneD
    TYPE(t_potden),INTENT(INOUT)  :: potden
 
-   INTEGER :: n, ierr(3)
+   INTEGER :: n, ierr
    LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc, l_pw_wAlloc
 
    CALL MPI_BCAST(potden%iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)

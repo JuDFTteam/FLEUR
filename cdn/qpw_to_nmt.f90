@@ -12,7 +12,7 @@ MODULE m_qpwtonmt
   !             Stefan Bl"ugel  , IFF, Nov. 1997
   !***************************************************************
 CONTAINS
-  SUBROUTINE qpw_to_nmt(sphhar,atoms,stars,sym,cell,oneD,mpi,jspin,l_cutoff,qpwc,rho)
+  SUBROUTINE qpw_to_nmt(sphhar,atoms,stars,sym,cell,oneD,fmpi,jspin,l_cutoff,qpwc,rho)
     !
     USE m_constants
     USE m_phasy1
@@ -29,7 +29,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
 
     INTEGER, INTENT (IN) :: jspin,l_cutoff    
     !     ..
@@ -87,7 +87,7 @@ CONTAINS
     !
     ! ----> g=0 component
     CALL timestart("qpw_to_nmt")
-    IF (mpi%irank == 0) THEN
+    IF (fmpi%irank == 0) THEN
        cp = qpwc(1)*stars%nstr(1)
        DO  n = 1 , atoms%ntype
           DO j = 1,atoms%jri(n)
@@ -115,7 +115,7 @@ CONTAINS
     !$    ALLOCATE(rho_tmp(size(rho,1),0:size(rho,2)-1,size(rho,3)))
     !$    rho_tmp=0
     !$OMP DO
-    DO k = mpi%irank+2,stars%ng3,mpi%isize
+    DO k = fmpi%irank+2,stars%ng3,fmpi%isize
        cp = qpwc(k)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
           CALL phasy1(atoms,stars,sym,cell,k,pylm)

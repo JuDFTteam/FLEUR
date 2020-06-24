@@ -9,7 +9,7 @@ module m_wann_read_inp
    use mpi 
 #endif
 contains
-subroutine wann_read_inp(input,noco,mpi,wann)
+subroutine wann_read_inp(input,noco,fmpi,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
@@ -24,17 +24,17 @@ subroutine wann_read_inp(input,noco,mpi,wann)
    TYPE(t_input),intent(inout) :: input
    TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
-   TYPE(t_mpi),intent(in)          :: mpi
+   TYPE(t_mpi),intent(in)          :: fmpi
 
    logical           :: l_file,l_orbcompinp,l_p0
    integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
 #ifdef CPP_MPI
-          integer :: ierr(3)
+          integer :: ierr
 #endif
 
-   l_p0=(mpi%irank==0)
+   l_p0=(fmpi%irank==0)
 !-----some defaults
    wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
@@ -443,17 +443,17 @@ subroutine wann_read_inp(input,noco,mpi,wann)
 
 #ifdef CPP_MPI
       jobListlen=SIZE(wann%jobList)
-      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-      if(mpi%irank>0)then
+      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      if(fmpi%irank>0)then
         allocate(wann%jobList(jobListlen))
       endif
 #endif
       DO i = 1, SIZE(wann%jobList)
 #ifdef CPP_MPI
-         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,fmpi%mpi_comm,ierr)
 #endif
          task = TRIM(ADJUSTL(wann%jobList(i)))
          if(l_p0) write(oUnit,*)"task ",i,":",task
