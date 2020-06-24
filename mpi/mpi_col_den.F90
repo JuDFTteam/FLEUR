@@ -60,6 +60,7 @@ CONTAINS
     INTEGER, ALLOCATABLE :: i_b(:)
     ! ..
     ! ..  External Subroutines
+#ifdef CPP_MPI
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy
     CALL timestart("mpi_col_den")
 
