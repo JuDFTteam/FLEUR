@@ -81,7 +81,7 @@ CONTAINS
     END DO ! end-do-loop input%jspins
 
 8000 FORMAT (f20.8,' electrons lost from core.')
-8010 FORMAT (10x,'atom type',i3,'  (spin',i2,') ',/,10x,&
+8010 FORMAT (10x,'atom type',i5,'  (spin',i2,') ',/,10x,&
          &       'kinetic energy=',e20.12,5x,'sum of the eigenvalues=',&
          &       e20.12)
 
