@@ -145,14 +145,14 @@ CONTAINS
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
-           !$       WRITE(*,*) "Linked MPI version does not support multithreading."
+           !$       WRITE(*,*) "Linked fmpi version does not support multithreading."
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "To solve this problem please do one of:"
-           !$       WRITE(*,*) "   1. Link an adequate MPI version."
-           !$       WRITE(*,*) "   2. Use fleur without MPI."
+           !$       WRITE(*,*) "   1. Link an adequate fmpi version."
+           !$       WRITE(*,*) "   2. Use fleur without fmpi."
            !$       WRITE(*,*) "   3. Compile and use fleur without OpenMP."
            !$       WRITE(*,*) ""
-           !$       CALL juDFT_error("MPI not usable with OpenMP")
+           !$       CALL juDFT_error("fmpi not usable with OpenMP")
            !$    END IF
            !Select the io-mode from the command-line
         END IF
@@ -260,12 +260,12 @@ CONTAINS
 
 #else
         IF (size(jobs)>1) THEN
-            PRINT*, "Cannot run multiple jobs without MPI"
-            STOP "NO MPI"
+            PRINT*, "Cannot run multiple jobs without fmpi"
+            STOP "NO fmpi"
         ENDIF
         IF (sum(jobs%pe_requested)>1) THEN
-            PRINT*, "You cannot request a multiple PE job without MPI"
-            STOP "NO MPI"
+            PRINT*, "You cannot request a multiple PE job without fmpi"
+            STOP "NO fmpi"
         ENDIF
         jobs(1)%mpi_comm=1
 #endif

@@ -289,7 +289,7 @@ CONTAINS
                       END DO
                    END DO
                 END DO
-             ENDIF !If this lo to be calculated by mpi rank
+             ENDIF !If this lo to be calculated by fmpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels

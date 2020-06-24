@@ -47,8 +47,6 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    !INCLUDE 'mpif.h'
-
     !     ..
     !     .. Scalar Arguments ..
     REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)

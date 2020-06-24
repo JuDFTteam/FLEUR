@@ -18,7 +18,7 @@ c******************************************************************
       SUBROUTINE wann_plot_um_dat(
      >          kpts,stars,vacuum,atoms,sphhar,input,sym,fmpi,
      >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
-     >          mpi_communicatior,sortrule,band_min,band_max,l_soc,
+     >          mpi_communicator,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
      >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
@@ -75,7 +75,7 @@ c******************************************************************
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_enpara),INTENT(IN)    :: enpara
 
-      integer, intent (in) :: band_min(2),band_max(2),mpi_communicatior
+      integer, intent (in) :: band_min(2),band_max(2),mpi_communicator
       integer, intent (in) :: eig_id
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
@@ -814,7 +814,7 @@ c..end of the loop by the bands
       mesh=grid(1)*grid(2)*grid(3)
 
 #ifdef CPP_MPI
-c      call MPI_BARRIER(mpi_communicatior,ierr)
+c      call MPI_BARRIER(mpi_communicator,ierr)
       if(l_p0)then
          if(isize.ne.1)then
        allocate(wannierfunc_temp(num_wann,mesh))

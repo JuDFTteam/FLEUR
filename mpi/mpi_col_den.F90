@@ -61,9 +61,6 @@ CONTAINS
     ! ..
     ! ..  External Subroutines
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy
-
-#ifdef CPP_MPI
-
     CALL timestart("mpi_col_den")
 
     ! -> Collect den%pw(:,jspin)

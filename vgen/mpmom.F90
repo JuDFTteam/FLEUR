@@ -19,7 +19,9 @@ module m_mpmom
   !     or see the original paper for the normal Coulomb case only:
   !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
-
+#ifdef CPP_MPI
+  use mpi
+#endif
 contains
 
   subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )

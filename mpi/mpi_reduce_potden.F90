@@ -12,7 +12,7 @@ CONTAINS
 
   SUBROUTINE mpi_reduce_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, potden )
 
-    ! It is assumed that, if some quantity is allocated for some mpi rank, that it is also allocated on mpi rank 0. 
+    ! It is assumed that, if some quantity is allocated for some fmpi rank, that it is also allocated on fmpi rank 0. 
 
 #include"cpp_double.h"
     USE m_types
