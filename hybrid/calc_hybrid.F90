@@ -22,6 +22,9 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
+#ifdef CPP_MPI 
+      use mpi 
+#endif
 
       IMPLICIT NONE
 
@@ -39,7 +42,7 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
       INTEGER           :: jsp, nk, err, i, j
       type(t_lapw)      :: lapw
@@ -114,6 +117,8 @@ CONTAINS
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
+
+         call balance_kpts(fi, glob_mpi, wp_mpi)
 
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
@@ -192,4 +197,47 @@ CONTAINS
       !    call judft_error("no mas")
       ! end subroutine distribute_mpis
    END SUBROUTINE calc_hybrid
+
+   subroutine balance_kpts(fi, glob_mpi, wp_mpi, wp_root_comm, wp_rank, wp_size)
+      USE m_types
+      implicit none 
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_hybmpi), intent(in)        :: glob_mpi
+      type(t_hybmpi), intent(inout)     :: wp_mpi, wp_root_comm
+
+      integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm, my_color
+      integer, allocatable :: nprocs(:), weights(:), color(:)
+
+
+      n_wps = min(glob_mpi%size, fi%kpts%nkpt)
+      allocate(nprocs(n_wps), source=0)
+      allocate(weights(n_wps), source=0)
+      allocate(color(glob_mpi%size), source=0)
+
+      do j_wp = 1, n_wps
+         do ik = j_wp, fi%kpts%nkpt, n_wps
+            weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
+         enddo
+      enddo
+
+      do i = 1,glob_mpi%size 
+         idx = minloc(1.0*nprocs/weights)
+         nprocs(idx(1)) = nprocs(idx(1)) + 1
+      enddo
+
+      cnt = 1
+      do i = 1,n_wps 
+         do j = 1,nprocs(i)
+            color(cnt) = i 
+            cnt = cnt + 1 
+         enddo 
+      enddo
+
+      wp_rank = color(glob_mpi%rank+1) 
+      wp_size = n_wps
+      
+      call judft_comm_split(glob_mpi%comm, my_color, glob_mpi%rank, new_comm)
+
+      call wp_mpi%init(new_comm)
+   end subroutine balance_kpts
 END MODULE m_calc_hybrid
