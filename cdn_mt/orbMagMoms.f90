@@ -25,7 +25,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
    REAL, INTENT(INOUT)           :: clmom(3,atoms%ntype,input%jspins)
 
    INTEGER                       :: iType, j
-   REAL                          :: thetai, phii, slmom, slxmom, slymom
+   REAL                          :: thetai, phii, slmom, slxmom, slymom,sz
    CHARACTER(LEN=20)             :: attributes(4)
 
 
@@ -48,7 +48,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
          slymom=-1*slymom
          !slmom=-1*slmom
       END IF
-
+      IF (noco%l_mtNocoPot) sz=slmom
       ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
       slmom   = cos(thetai)*slmom + sin(thetai)*(cos(phii)*slxmom + sin(phii)*slymom)
       clmom(3,iType,1) = cos(thetai)*clmom(3,iType,1) + &
@@ -67,13 +67,15 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
       CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
                                                     'spinDownCharge'/),&
                                    attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
+      IF (noco%l_mtNocoPot) WRITE(oUnit,FMT=8032) iType, sz,slymom,slxmom
+   END IF
    END DO
    CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
 
    9020 FORMAT (/,/,10x,'orb. magnetic moments in the spheres:',/,10x,&
                 'type',t22,'moment',t33,'spin-up',t43,'spin-down')
    8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
-
+   IF(noco%l_mtNocoPot) 8032 FORMAT (2x,'--> Orbital moment of atom ',i8,': mz=',f9.5, ' my=',f9.5, ' mx=',f9.5)
 END SUBROUTINE orbMagMoms
 
 END MODULE m_orbMagMoms
