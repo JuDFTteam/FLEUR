@@ -165,6 +165,9 @@ contains
   subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
+#ifdef CPP_MPI
+    use mpi
+#endif
     use m_phasy1
     use m_sphbes
     use m_od_phasy

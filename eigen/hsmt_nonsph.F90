@@ -105,7 +105,7 @@ CONTAINS
                      h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab)
           !$acc end host_data
           !ab1=MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(iintsp))),td%h_loc(:ab_size,:ab_size,n,isp))
-          !OK now of these ab1 coeffs only a part is needed in case of fmpi parallelism
+          !OK now of these ab1 coeffs only a part is needed in case of MPI parallelism
           !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
           if (fmpi%n_size>1)Then
             ab_select(:,:)=ab1(fmpi%n_rank+1:lapw%nv(jintsp):fmpi%n_size,:)

@@ -199,7 +199,7 @@ CONTAINS
           if (l==0) cycle !no SOC for s-states
           DO nkvec = 1,invsfct* (2*l+1)
             locol_mat= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-            IF (MOD(locol_mat-1,fmpi%n_size) == fmpi%n_rank) THEN !only this fmpi rank calculates this column
+            IF (MOD(locol_mat-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
               locol_loc=(locol_mat-1)/fmpi%n_size+1 !this is the column in local storage
               ki=lapw%kvec(nkvec,lo,na) !this LO is attached to this k+G
 

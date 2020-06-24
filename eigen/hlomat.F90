@@ -139,7 +139,7 @@ CONTAINS
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                 locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this fmpi rank calculates this column
+                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
                    locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage
                    IF (hmat%l_real) THEN
                       DO kp = 1,lapw%nv(iintsp)
@@ -185,7 +185,7 @@ CONTAINS
           !--->       local orbitals at the same atom and with itself
           DO nkvec = 1,invsfct* (2*l+1)
              locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this fmpi rank calculates this column
+             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
                 locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage
                 !--->          calculate the hamiltonian matrix elements with other
                 !--->          local orbitals at the same atom, if they have the same l

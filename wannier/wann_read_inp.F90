@@ -453,7 +453,7 @@ subroutine wann_read_inp(input,noco,fmpi,wann)
 #endif
       DO i = 1, SIZE(wann%jobList)
 #ifdef CPP_MPI
-         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,fmpi%mpi_comm,ierr)
 #endif
          task = TRIM(ADJUSTL(wann%jobList(i)))
          if(l_p0) write(oUnit,*)"task ",i,":",task

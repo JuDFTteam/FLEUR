@@ -124,6 +124,9 @@ CONTAINS
   END SUBROUTINE ssdisp_postprocess
 
   SUBROUTINE ssdisp_dist(this,fmpi)
+#ifdef CPP_MPI
+    USE mpi
+#endif
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
@@ -131,7 +134,6 @@ CONTAINS
 
     INTEGER:: q,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     IF (fmpi%irank==0) q=SIZE(this%qvec,2)
     CALL MPI_BCAST(q,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
     IF (fmpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%evsum(q));this%evsum=0.0

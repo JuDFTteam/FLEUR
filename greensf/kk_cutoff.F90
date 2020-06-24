@@ -81,8 +81,8 @@ MODULE m_kk_cutoff
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
          ELSE
-            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
 
+            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
             lowerBound = eb
             upperBound = et
 

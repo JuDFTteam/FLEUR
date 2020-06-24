@@ -143,6 +143,9 @@ CONTAINS
   END SUBROUTINE dmi_postprocess
 
   SUBROUTINE dmi_dist(this,fmpi)
+#ifdef CPP_MPI
+    USE mpi
+#endif    
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
@@ -150,7 +153,6 @@ CONTAINS
 
     INTEGER:: i,q,ierr,n
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     IF (fmpi%irank==0) i=SIZE(this%theta)
     call MPI_BCAST(i,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
     IF (fmpi%irank==0) q=SIZE(this%qvec,2)

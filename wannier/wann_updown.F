@@ -72,7 +72,7 @@ c****************************************************************************
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      integer ierr(3)
+      integer ierr
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 
@@ -317,7 +317,7 @@ c-----read the input file to determine what to do
       if(.not.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-         call MPI_BARRIER(mpi_communicatior,ierr(1))
+         call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 c**************************************************************
@@ -523,11 +523,11 @@ c*************************************************************
       if(l_p0)then
          do cpu_index=1,isize-1
       call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_communicatior,
-     & ierr(1))
+     & ierr)
          enddo
       else
        call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_communicatior,stt,
-     & ierr(1))
+     & ierr)
       endif
 #endif
 
@@ -1227,7 +1227,7 @@ c     <           mmn(1:noccbd,1:noccbd,ikpt))
 10    continue ! end of cycle by the k-points
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,ierr(1))
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 c******************************************************
 c     Write down the projections.
@@ -1325,11 +1325,11 @@ c******************************************************
       write(oUnit,*)"time_film=",time_film
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,ierr(1))
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,ierr(1))
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 

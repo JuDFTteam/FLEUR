@@ -151,6 +151,9 @@ CONTAINS
   END SUBROUTINE mae_postprocess
 
   SUBROUTINE mae_dist(this,fmpi)
+#ifdef CPP_MPI
+    USE mpi
+#endif
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
@@ -158,7 +161,6 @@ CONTAINS
 
     INTEGER:: i,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     IF (fmpi%irank==0) i=SIZE(this%theta)
     call MPI_BCAST(i,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
     IF (fmpi%irank.NE.0) ALLOCATE(this%phi(i),this%theta(i),this%evsum(i));this%evsum=0.0

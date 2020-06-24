@@ -461,5 +461,7 @@ CONTAINS
 
     CALL timestop("mpi_col_den")
 
+#endif
+
   END SUBROUTINE mpi_col_den
 END MODULE m_mpi_col_den

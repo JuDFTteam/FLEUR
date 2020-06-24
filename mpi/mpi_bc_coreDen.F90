@@ -24,7 +24,7 @@ CONTAINS
    REAL, INTENT(INOUT) :: rhcs(atoms%jmtd,atoms%ntype,input%jspins)
    REAL, INTENT(INOUT) :: tecs(atoms%ntype,input%jspins)
    REAL, INTENT(INOUT) :: qints(atoms%ntype,input%jspins)
-
+#ifdef CPP_MPI
    INTEGER :: n, ierr
 
     n = atoms%jmtd * atoms%ntype * input%jspins
@@ -33,6 +33,6 @@ CONTAINS
     CALL MPI_BCAST(tecs,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
     n = atoms%ntype * input%jspins
     CALL MPI_BCAST(qints,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
-
+#endif
    END SUBROUTINE mpi_bc_coreden
 END MODULE m_mpi_bc_coreden
