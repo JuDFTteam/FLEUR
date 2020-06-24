@@ -260,11 +260,11 @@ CONTAINS
 
 #else
         IF (size(jobs)>1) THEN
-            PRINT*, "Cannot run multiple jobs without fmpi"
+            PRINT*, "Cannot run multiple jobs without mpi"
             STOP "NO fmpi"
         ENDIF
         IF (sum(jobs%pe_requested)>1) THEN
-            PRINT*, "You cannot request a multiple PE job without fmpi"
+            PRINT*, "You cannot request a multiple PE job without mpi"
             STOP "NO fmpi"
         ENDIF
         jobs(1)%mpi_comm=1
