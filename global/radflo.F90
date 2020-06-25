@@ -7,7 +7,7 @@
 MODULE m_radflo
   USE m_juDFT
 CONTAINS
-  SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,mpi, usdus,&
+  SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,fmpi, usdus,&
        uuilon,duilon,ulouilopn,flo,lout_all)
     !
     !***********************************************************************
@@ -58,7 +58,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !lo part is calculated here
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     !     .. Scalar Arguments ..
@@ -85,9 +85,9 @@ CONTAINS
     c = c_light(1.0)
     !
     IF ( PRESENT(lout_all) ) THEN
-       loutput = ( mpi%irank == 0 ) .OR. lout_all
+       loutput = ( fmpi%irank == 0 ) .OR. lout_all
     ELSE
-       loutput = ( mpi%irank == 0 )
+       loutput = ( fmpi%irank == 0 )
     END IF
     !$    loutput=.false.
     IF (loutput) THEN

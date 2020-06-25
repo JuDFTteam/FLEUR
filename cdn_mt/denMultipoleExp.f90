@@ -4,14 +4,14 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, den)
+SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, den)
 
    USE m_types
    USE m_constants
    USE m_mpmom
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_mpi),    INTENT(IN) :: mpi
+   TYPE(t_mpi),    INTENT(IN) :: fmpi
    TYPE(t_atoms),  INTENT(IN) :: atoms
    TYPE(t_sphhar), INTENT(IN) :: sphhar
    TYPE(t_stars),  INTENT(IN) :: stars
@@ -24,48 +24,48 @@ SUBROUTINE denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, de
    COMPLEX                    :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
    IF(input%jspins == 2) THEN
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) 'Multipole expansion for spin-up density:'
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
       workDen = den
-      CALL mpmom(input,mpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
-      IF(mpi%irank.EQ.0) THEN
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) 'Multipole expansion for spin-down density:'
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,mpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
-      IF(mpi%irank.EQ.0) THEN
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
    END IF
 
-   IF(mpi%irank.EQ.0) THEN
+   IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) 'Multipole expansion for charge density:'
       WRITE(oUnit,*) '======================================='
    END IF
    qlm = CMPLX(0.0,0.0)
    workDen = den
    IF(input%jspins == 2) CALL workDen%SpinsToChargeAndMagnetisation()
-   CALL mpmom(input,mpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
-   IF(mpi%irank.EQ.0) THEN
+   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
+   IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) '======================================='
    END IF
 
    IF(input%jspins == 2) THEN
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) 'Multipole expansion for magnetization density:'
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,mpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
-      IF(mpi%irank.EQ.0) THEN
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
    END IF

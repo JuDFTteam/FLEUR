@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, hybdat,&
-                     el, ello, sym, cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
+                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
 
       USE m_judft
       USE m_types
@@ -25,7 +25,7 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
@@ -122,7 +122,7 @@ CONTAINS
 
          ! Generate the extra radial basis-functions for the local orbitals, if there are any.
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello(:,:, jsp), vr0(:, itype, jsp), f, g, mpi, &
+            CALL radflo(atoms, itype, jsp, ello(:,:, jsp), vr0(:, itype, jsp), f, g, fmpi, &
                         usdus, uuilon, duilon, ulouilopn, flo, .TRUE.)
 
             DO i = 1, atoms%nlo(itype)
@@ -296,7 +296,7 @@ CONTAINS
             IF (istar /= 0) THEN
                vxc(ic) = vxc(ic) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
             ELSE
-               IF (mpi%irank == 0) THEN
+               IF (fmpi%irank == 0) THEN
                   WRITE (oUnit, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
                      lapw%gvec(:,ig1, jsp), lapw%gvec(:,ig2, jsp)
                END IF

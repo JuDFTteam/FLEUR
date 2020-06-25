@@ -8,13 +8,13 @@ MODULE m_hsmt_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,mpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
+  SUBROUTINE hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_hsmt_fjgj
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -64,8 +64,8 @@ CONTAINS
     qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
     qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
-    DO  ki =  mpi%n_rank+1, lapw%nv(iintsp), mpi%n_size
-       kii=(ki-1)/mpi%n_size+1
+    DO  ki =  fmpi%n_rank+1, lapw%nv(iintsp), fmpi%n_size
+       kii=(ki-1)/fmpi%n_size+1
        !--->       legendre polynomials
        DO kj = 1,ki
           plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,jintsp),lapw%gk(:,ki,iintsp))

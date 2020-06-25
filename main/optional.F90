@@ -82,7 +82,7 @@ CONTAINS
     LOGICAL :: strho
     LOGICAL :: stateCheck=.TRUE.
 #ifdef CPP_MPI
-    INTEGER :: ierr(2)
+    INTEGER :: ierr
 #endif
     !     ..
     it = 1

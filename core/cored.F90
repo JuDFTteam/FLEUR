@@ -244,7 +244,7 @@ CONTAINS
           &       'weight')
 8010  FORMAT (12x,2f5.0,f6.1,f10.4,f12.4)
 8020  FORMAT (f20.8,'  electrons lost from core.')
-8030  FORMAT (10x,'atom type',i3,'  (spin',i2,') ',/,10x,&
+8030  FORMAT (10x,'atom type',i5,'  (spin',i2,') ',/,10x,&
           &       'kinetic energy=',e20.12,5x,'sum of the eigenvalues=',&
           &       e20.12)
    END SUBROUTINE cored

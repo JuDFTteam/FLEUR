@@ -54,14 +54,14 @@ CONTAINS
     INTEGER :: n, i
     ! ..
     ! ..  Local Arrays ..
-    INTEGER :: ierr(3)
+    INTEGER :: ierr
     COMPLEX, ALLOCATABLE :: c_b(:)
     REAL,    ALLOCATABLE :: r_b(:)
     INTEGER, ALLOCATABLE :: i_b(:)
     ! ..
     ! ..  External Subroutines
-    EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy,MPI_REDUCE
-
+#ifdef CPP_MPI
+    EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy
     CALL timestart("mpi_col_den")
 
     ! -> Collect den%pw(:,jspin)
@@ -461,6 +461,8 @@ CONTAINS
     !-lda+U
 
     CALL timestop("mpi_col_den")
+
+#endif
 
   END SUBROUTINE mpi_col_den
 END MODULE m_mpi_col_den

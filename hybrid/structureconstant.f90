@@ -14,7 +14,7 @@ contains
    !     (The real-space function G can be calculated with gfunction.f)
    !
 
-   SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
+   SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, fmpi)
 
       USE m_juDFT
       USE m_types
@@ -23,7 +23,7 @@ contains
       use m_ylm
       IMPLICIT NONE
 
-      TYPE(t_mpi), INTENT(IN)   :: mpi
+      TYPE(t_mpi), INTENT(IN)   :: fmpi
 
       TYPE(t_hybinp), INTENT(IN) :: hybinp
 
@@ -66,7 +66,7 @@ contains
 
       call timestart("calc struc_const.")
 
-      IF (mpi%irank /= 0) first = .FALSE.
+      IF (fmpi%irank /= 0) first = .FALSE.
 
       rdum = cell%vol**(1.0/3) ! define "average lattice parameter"
 

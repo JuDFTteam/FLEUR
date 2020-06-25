@@ -9,12 +9,12 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
-       jspin,mpi,v,input,hub1inp,td,ud)
+       jspin,fmpi,v,input,hub1inp,td,ud)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_input),INTENT(IN)    :: input
@@ -75,9 +75,9 @@ CONTAINS
        !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info)&
-       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,fmpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
        DO  n = 1,atoms%ntype
-          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,mpi,v,input,hub1inp,td,ud)
+          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,input,hub1inp,td,ud)
           OK=.FALSE.
           cholesky_loop:DO WHILE(.NOT.OK)
              OK=.TRUE.

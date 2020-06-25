@@ -136,12 +136,12 @@ CONTAINS
       USE m_constants
         INTEGER:: irank=0
 #ifdef CPP_MPI
-        INTEGER ierr(3), i
-        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr(1))
+        INTEGER ierr, i
+        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
-        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr(1))
+        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
@@ -171,7 +171,7 @@ CONTAINS
 
         !local variables for FLEUR
         type(t_fleurinput) :: fi
-        TYPE(t_mpi)      :: mpi
+        TYPE(t_mpi)      :: fmpi
         TYPE(t_sphhar)   :: sphhar
         TYPE(t_stars)    :: stars
         TYPE(t_enpara)   :: enpara
@@ -203,14 +203,14 @@ CONTAINS
         !change directory
         CALL chdir(jobs(njob)%directory)
         !Call FLEUR
-        mpi%mpi_comm = jobs(njob)%mpi_comm
+        fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
-        call fleur_init(mpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
+        call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
            fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
            fi%hub1inp,wann)
         CALL timestop("Initialization")
 
-        CALL fleur_execute(mpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
+        CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
                            xcpot, wann)
 
     END SUBROUTINE

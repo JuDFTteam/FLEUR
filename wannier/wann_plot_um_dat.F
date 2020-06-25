@@ -18,7 +18,7 @@ c******************************************************************
       SUBROUTINE wann_plot_um_dat(
      >          kpts,stars,vacuum,atoms,sphhar,input,sym,fmpi,
      >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
-     >          mpi_communicatior,sortrule,band_min,band_max,l_soc,
+     >          mpi_communicator,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
      >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
@@ -54,7 +54,7 @@ c******************************************************************
 
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      integer mpiierr(3)
+      integer mpiierr
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 #endif
@@ -75,7 +75,7 @@ c******************************************************************
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_enpara),INTENT(IN)    :: enpara
 
-      integer, intent (in) :: band_min(2),band_max(2),mpi_communicatior
+      integer, intent (in) :: band_min(2),band_max(2),mpi_communicator
       integer, intent (in) :: eig_id
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
@@ -814,7 +814,7 @@ c..end of the loop by the bands
       mesh=grid(1)*grid(2)*grid(3)
 
 #ifdef CPP_MPI
-c      call MPI_BARRIER(mpi_communicatior,ierr)
+c      call MPI_BARRIER(mpi_communicator,ierr)
       if(l_p0)then
          if(isize.ne.1)then
        allocate(wannierfunc_temp(num_wann,mesh))
@@ -823,13 +823,13 @@ c      call MPI_BARRIER(mpi_communicatior,ierr)
          if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(knorm(ikpt,1:num_bands),num_bands,
      &             CPP_MPI_REAL,cpu_index,
-     &        ikpt,mpi_communicatior,stt,mpiierr(1))
+     &        ikpt,mpi_communicator,stt,mpiierr)
          endif !processors
         enddo !ikpt
            call MPI_RECV(wannierfunc_temp(1:num_wann,1:mesh),
      &         num_wann*mesh,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &        cpu_index+fullnkpts,mpi_communicatior,stt,mpiierr(1))
+     &        cpu_index+fullnkpts,mpi_communicator,stt,mpiierr)
            wannierfunc(:,:)=wannierfunc(:,:)+
      &                   wannierfunc_temp(:,:)
 
@@ -842,12 +842,12 @@ c      call MPI_BARRIER(mpi_communicatior,ierr)
        do ikpt=1,fullnkpts
         if(mod(ikpt-1,isize).eq.irank)then
              call MPI_SEND(knorm(ikpt,1:num_bands),num_bands,
-     &           CPP_MPI_REAL,0,ikpt,mpi_communicatior,mpiierr(1))
+     &           CPP_MPI_REAL,0,ikpt,mpi_communicator,mpiierr)
         endif !processors
        enddo !ikpt
              call MPI_SEND(wannierfunc(1:num_wann,1:mesh),
      &        num_wann*mesh,
-     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicatior,mpiierr(1))
+     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicator,mpiierr)
 
 
 
@@ -1042,7 +1042,7 @@ c*****************************************************************
       deallocate(u_matrix)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
+      call MPI_BARRIER(mpi_communicator,mpiierr)
 #endif
 
 110   continue ! end of cycle by spins
@@ -1052,7 +1052,7 @@ c*****************************************************************
       deallocate ( ff,gg)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
+      call MPI_BARRIER(mpi_communicator,mpiierr)
 #endif
 
       END SUBROUTINE wann_plot_um_dat

@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
+SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -27,7 +27,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 #endif
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
-   TYPE(t_mpi),INTENT(IN)        :: mpi
+   TYPE(t_mpi),INTENT(IN)        :: fmpi
    TYPE(t_nococonv),INTENT(IN)   :: nococonv
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -71,10 +71,10 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
    !$acc  data &
    !$acc&   copyin(jintsp,iintsp,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssbti,qssbtj)&
-   !$acc&   copyin(lapw,atoms,mpi,input,usdus)&
+   !$acc&   copyin(lapw,atoms,fmpi,input,usdus)&
    !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk)&
    !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
-   !$acc&   copyin(mpi%n_size,mpi%n_rank)&
+   !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
    !$acc&   copyin(input%l_useapw)&
    !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
    !$acc&   present(fjgj,fjgj%fj,fjgj%gj)&
@@ -82,11 +82,11 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 
    !$acc parallel
    !$acc loop gang
-   DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
+   DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
       !$acc loop  vector independent&
       !$acc &    PRIVATE(ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
       DO  kj = 1, min(ki,lapw%nv(iintsp))
-         kii=(ki-1)/mpi%n_size+1
+         kii=(ki-1)/fmpi%n_size+1
          ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
 
          !--->          update overlap and l-diagonal hamiltonian matrix
@@ -171,7 +171,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    RETURN
 END SUBROUTINE hsmt_sph_acc
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
+SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -180,7 +180,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
 #endif
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
-   TYPE(t_mpi),INTENT(IN)        :: mpi
+   TYPE(t_mpi),INTENT(IN)        :: fmpi
    TYPE(t_nococonv),INTENT(IN)   :: nococonv
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -223,7 +223,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
       fl2p1(l) = REAL(l+l+1)/fpi_const
    END DO ! l
   !$OMP     PARALLEL DEFAULT(NONE)&
-  !$OMP     SHARED(lapw,atoms,nococonv,mpi,input,usdus,smat,hmat)&
+  !$OMP     SHARED(lapw,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
   !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)&
   !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
   !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
@@ -237,9 +237,9 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el
    qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
    qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
    !$OMP      DO SCHEDULE(DYNAMIC,1)
-   DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
+   DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
       kj_end=min(ki,lapw%nv(iintsp))
-      kii=(ki-1)/mpi%n_size+1
+      kii=(ki-1)/fmpi%n_size+1
       ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
       DO  kj_off = 1, lapw%nv(iintsp), NVEC
          NVEC_rem = NVEC

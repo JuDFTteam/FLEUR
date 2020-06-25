@@ -7,7 +7,7 @@
       module m_wann_socmat
       contains
       subroutine wann_socmat(
-     >               mpi,enpara,input,noco,nococonv,atoms,
+     >               fmpi,enpara,input,noco,nococonv,atoms,
      >               lmaxd,natd,neigd,
      >               llod,jspd,
      >               theta_in,phi_in,jspins,irank,
@@ -27,7 +27,7 @@ c***********************************************************************
       USE m_hsoham
       implicit none
 
-      TYPE(t_mpi),INTENT(IN)      :: mpi
+      TYPE(t_mpi),INTENT(IN)      :: fmpi
 
       TYPE(t_enpara),INTENT(IN)   :: enpara
       TYPE(t_input),INTENT(IN)    :: input
@@ -130,13 +130,13 @@ c***********************************************************************
 !     +          uulon(nlod,ntypd,jspd),dulon(nlod,ntypd,jspd))
 
       CALL spnorb(
-     >         atoms,noco,nococonv,input,mpi, enpara,
+     >         atoms,noco,nococonv,input,fmpi, enpara,
      >         vr,usdus,rsoc,.true.)
 
       rsoc%soangl= conjg(rsoc%soangl)
 
       CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
+     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
      <            hsomtx)
 
       end subroutine wann_socmat

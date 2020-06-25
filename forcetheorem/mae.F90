@@ -94,13 +94,13 @@ CONTAINS
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
@@ -150,20 +150,22 @@ CONTAINS
     CALL judft_end("Forcetheorem MAE")
   END SUBROUTINE mae_postprocess
 
-  SUBROUTINE mae_dist(this,mpi)
+  SUBROUTINE mae_dist(this,fmpi)
+#ifdef CPP_MPI
+    USE mpi
+#endif
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
-    TYPE(t_mpi),INTENT(in):: mpi
+    TYPE(t_mpi),INTENT(in):: fmpi
 
     INTEGER:: i,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    IF (mpi%irank==0) i=SIZE(this%theta)
-    call MPI_BCAST(i,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) ALLOCATE(this%phi(i),this%theta(i),this%evsum(i));this%evsum=0.0
-    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    IF (fmpi%irank==0) i=SIZE(this%theta)
+    call MPI_BCAST(i,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank.NE.0) ALLOCATE(this%phi(i),this%theta(i),this%evsum(i));this%evsum=0.0
+    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
   END SUBROUTINE mae_dist
 END MODULE m_types_mae

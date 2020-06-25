@@ -69,10 +69,8 @@ contains
     
     !$ complex, allocatable :: vtl_loc(:,:)
 #ifdef CPP_MPI
-    integer                       :: ierr(3)
+    integer                       :: ierr
     complex, allocatable          :: c_b(:)
-
-    external MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 

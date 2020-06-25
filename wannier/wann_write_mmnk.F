@@ -5,13 +5,13 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_mmnk
-#ifdef CPP_MPI 
+#ifdef CPP_MPI
       use mpi 
 #endif
       contains
       subroutine wann_write_mmnk(
-     >               mpi_communicatior,jspin2,l_p0,fullnkpts,nntot,wann,
-     >               maptopair,pair_to_do,nbnd,bpt,gb,
+     >               mpi_communicatior,jspin2,l_p0,fullnkpts,nntot,
+     >               wann,maptopair,pair_to_do,nbnd,bpt,gb,
      >               isize,irank,fending,
      <               mmnk,l_unformatted)
 c**********************************************************
@@ -52,7 +52,7 @@ c**********************************************************
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      integer :: ierr(3)
+      integer :: ierr
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
 #endif
@@ -72,7 +72,7 @@ c******************************************************
              call MPI_RECV(
      &               mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),nbnd*nbnd,
      &               CPP_MPI_COMPLEX,cpu_index,5*fullnkpts+
-     &          pair_to_do(ikpt,ikpt_b),mpi_communicatior,stt,ierr(1))
+     &          pair_to_do(ikpt,ikpt_b),mpi_communicatior,stt,ierr)
 
            endif !pairtodo
           enddo !nearest neighbors
@@ -85,12 +85,12 @@ c******************************************************
             call MPI_SEND(
      &              mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),
      &              nbnd*nbnd,CPP_MPI_COMPLEX,0,5*fullnkpts+
-     &              pair_to_do(ikpt,ikpt_b),mpi_communicatior,ierr(1))
+     &              pair_to_do(ikpt,ikpt_b),mpi_communicatior,ierr)
           endif !pairtodo
          enddo !loop over nearest neighbors
         endif !processors
        endif ! l_p0
-       call MPI_BARRIER(mpi_communicatior,ierr(1))
+       call MPI_BARRIER(mpi_communicatior,ierr)
       enddo !ikpt
       endif !isize
 #endif
