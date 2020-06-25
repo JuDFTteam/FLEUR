@@ -426,9 +426,6 @@ CONTAINS
 
    FUNCTION uniqueElements_gfinp(this,ind,indUnique) Result(uniqueElements)
 
-      !Not a procedure, because gfortran+OpenMP has problems with it
-      !Called inside OMP parallel region
-
       CLASS(t_gfinp),   INTENT(IN)     :: this
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind

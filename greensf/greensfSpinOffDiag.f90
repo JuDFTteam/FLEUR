@@ -35,10 +35,11 @@ MODULE m_greensfSpinOffDiag
             !Contribution from valence states
             !-------------------------
             IF(l_sphavg) THEN
-               im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))*eigVecCoeffs%acof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%uu21n(l,atomType) &
-                                       + conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))*eigVecCoeffs%bcof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%ud21n(l,atomType) &
-                                       + conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))*eigVecCoeffs%acof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%du21n(l,atomType) &
-                                       + conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))*eigVecCoeffs%bcof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%dd21n(l,atomType)
+               im(m,mp,:,1) = im(m,mp,:,1) &
+                              + conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))*eigVecCoeffs%acof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%uu21n(l,atomType) &
+                              + conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))*eigVecCoeffs%bcof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%ud21n(l,atomType) &
+                              + conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))*eigVecCoeffs%acof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%du21n(l,atomType) &
+                              + conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))*eigVecCoeffs%bcof(:nBands,lm,natom,spin2) * denCoeffsOffdiag%dd21n(l,atomType)
             ELSE
                im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin1))*eigVecCoeffs%acof(:nBands,lm,natom,spin2)
                im(m,mp,:,2) = im(m,mp,:,2) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin1))*eigVecCoeffs%bcof(:nBands,lm,natom,spin2)
@@ -52,15 +53,17 @@ MODULE m_greensfSpinOffDiag
             DO ilo = 1, atoms%nlo(atomType)
                IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                IF(l_sphavg) THEN
-                  im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(   :nBands,lmp,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%uulo21n(ilo,atomType) &
-                                          + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))*eigVecCoeffs%acof(  :nBands,lm ,natom,spin2) * denCoeffsOffDiag%ulou21n(ilo,atomType) &
-                                          + conjg(eigVecCoeffs%bcof(   :nBands,lmp,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%dulo21n(ilo,atomType) &
-                                          + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))*eigVecCoeffs%bcof(  :nBands,lm ,natom,spin2) * denCoeffsOffDiag%ulod21n(ilo,atomType)
+                  im(m,mp,:,1) = im(m,mp,:,1) &
+                                 + conjg(eigVecCoeffs%acof(   :nBands,lmp,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%uulo21n(ilo,atomType) &
+                                 + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))*eigVecCoeffs%acof(  :nBands,lm ,natom,spin2) * denCoeffsOffDiag%ulou21n(ilo,atomType) &
+                                 + conjg(eigVecCoeffs%bcof(   :nBands,lmp,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%dulo21n(ilo,atomType) &
+                                 + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))*eigVecCoeffs%bcof(  :nBands,lm ,natom,spin2) * denCoeffsOffDiag%ulod21n(ilo,atomType)
                ENDIF
                DO ilop = 1, atoms%nlo(atomType)
                   IF (atoms%llo(ilop,atomType).NE.l) CYCLE
                   IF(l_sphavg) THEN
-                     im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%uloulop21n(ilo,ilop,atomType)
+                     im(m,mp,:,1) = im(m,mp,:,1) &
+                                    + conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natom,spin1))*eigVecCoeffs%ccof(m,:nBands,ilo,natom,spin2) * denCoeffsOffDiag%uloulop21n(ilo,ilop,atomType)
                   ENDIF
                ENDDO
             ENDDO

@@ -9,7 +9,7 @@ MODULE m_kk_cutoff
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,eMesh,cutoff)
+   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,eMesh,cutoff,scalingFactor)
 
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
@@ -22,6 +22,7 @@ MODULE m_kk_cutoff
       INTEGER,             INTENT(IN)     :: jspins
       REAL,                INTENT(IN)     :: eMesh(:)
       INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                INTENT(INOUT)  :: scalingFactor(:)
 
       INTEGER :: m,ispin,spins_cut,ne
       REAL    :: lowerBound,upperBound,integral,n_states,scale
@@ -49,6 +50,7 @@ MODULE m_kk_cutoff
 
       cutoff(:,1) = 1   !we don't modify the lower bound
       cutoff(:,2) = ne
+      scalingFactor(:) = 1.0
 
       DO ispin = 1, spins_cut
 
@@ -67,15 +69,13 @@ MODULE m_kk_cutoff
          IF(integral.LT.n_states) THEN
             !If we are calculating the greens function for a d-band this is expected to happen
             IF(l.EQ.2) THEN
-               scale = (2*l+1)/integral
+               scalingFactor(ispin) = n_states/integral
 
 #ifdef CPP_DEBUG
-               WRITE(*,9000) l,ispin,scale
+               WRITE(*,9000) l,ispin,scalingFactor(ispin)
 9000           FORMAT("Scaling the DOS for l=",I1," and spin ",I1,"   factor: ",f14.8)
 #endif
-
-               IF(scale.GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
-               im(:,-l:l,-l:l,ispin) = scale * im(:,-l:l,-l:l,ispin)
+               IF(scalingFactor(ispin).GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
             ELSE IF(integral.LT.n_states-0.1) THEN
                ! If the integral is to small we terminate here to avoid problems
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
@@ -117,4 +117,87 @@ MODULE m_kk_cutoff
       ENDDO
 
    END SUBROUTINE kk_cutoff
+
+   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,atoms,vTot,enpara,fmpi,hub1inp,&
+                              l_mperp,l,atomType,input,eMesh,cutoff,scalingFactor)
+
+      USE m_genMTBasis
+      USE m_radovlp
+
+      REAL,                INTENT(INOUT)  :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(INOUT)  :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(INOUT)  :: du(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(INOUT)  :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_noco),        INTENT(IN)     :: noco
+      TYPE(t_atoms),       INTENT(IN)     :: atoms
+      TYPE(t_potden),      INTENT(IN)     :: vTot
+      TYPE(t_enpara),      INTENT(IN)     :: enpara
+      TYPE(t_mpi),         INTENT(IN)     :: fmpi
+      TYPE(t_hub1inp),     INTENT(IN)     :: hub1inp
+      LOGICAL,             INTENT(IN)     :: l_mperp
+      INTEGER,             INTENT(IN)     :: l
+      INTEGER,             INTENT(IN)     :: atomType
+      TYPE(t_input),       INTENT(IN)     :: input
+      REAL,                INTENT(IN)     :: eMesh(:)
+      INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                INTENT(INOUT)  :: scalingFactor(:)
+
+      REAL, ALLOCATABLE :: im(:,:,:,:)
+      REAL, ALLOCATABLE :: f(:,:,:,:)
+      REAL, ALLOCATABLE :: g(:,:,:,:)
+      REAL, ALLOCATABLE :: flo(:,:,:,:)
+      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
+
+      TYPE(t_usdus)            :: usdus
+      INTEGER :: jspin,m,mp
+
+      ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
+      ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
+      ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
+
+      ! Initializations
+      CALL usdus%init(atoms,input%jspins)
+      !Generate the scalar products we need
+      DO jspin = 1, input%jspins
+         CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+      ENDDO
+      DEALLOCATE(f,g,flo)
+      !Offdiagonal scalar products
+      IF(l_mperp) THEN
+         !Calculate overlap integrals
+         ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+         ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+         ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+         ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+         CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+      ENDIF
+
+      !calculate the spherical average from the original greens function
+      ALLOCATE(im,mold=uu)
+      im = 0.0
+      DO jspin = 1, SIZE(im,4)
+         !$OMP parallel do default(none) &
+         !$OMP shared(usdus,uun21,udn21,dun21,ddn21,jspin,l,atomType,im,uu,ud,du,dd) &
+         !$OMP private(m,mp) collapse(2)
+         DO m = -l,l
+            DO mp = -l,l
+               IF(jspin < 3) THEN
+                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) &
+                                    + dd(:,m,mp,jspin) * usdus%ddn(l,atomType,jspin)
+               ELSE
+                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) * uun21(l,atomType) &
+                                    + ud(:,m,mp,jspin) * udn21(l,atomType) &
+                                    + du(:,m,mp,jspin) * dun21(l,atomType) &
+                                    + dd(:,m,mp,jspin) * ddn21(l,atomType)
+               ENDIF
+            ENDDO
+         ENDDO
+         !$OMP end parallel do
+      ENDDO
+
+      CALL kk_cutoff(im,noco,l_mperp,l,input%jspins,eMesh,cutoff,scalingFactor)
+
+
+   END SUBROUTINE kk_cutoffRadial
+
 END MODULE m_kk_cutoff

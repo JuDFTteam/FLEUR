@@ -38,6 +38,7 @@ MODULE m_greensfPostProcess
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
 
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
+      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
 
       TYPE(t_usdus) :: usdus
@@ -50,7 +51,8 @@ MODULE m_greensfPostProcess
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,mpi,results%ef,greensfImagPart,greensFunction)
+      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,vTot,enpara,mpi,hub1inp,results%ef,&
+                               greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
       IF(mpi%irank==0) THEN
@@ -65,9 +67,45 @@ MODULE m_greensfPostProcess
 
          CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
          CALL timestart("Green's Function: Occupation")
+         IF(.NOT.gfinp%l_sphavg) THEN
+
+            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
+            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
+            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
+
+            ! Initializations
+            CALL usdus%init(atoms,input%jspins)
+            !Generate the scalar products we need
+            DO jspin = 1, input%jspins
+               CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+            ENDDO
+            DEALLOCATE(f,g,flo)
+            !Offdiagonal scalar products
+            IF(l_mperp) THEN
+               !Calculate overlap integrals
+               ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+            ENDIF
+         ENDIF
          DO i_gf = 1, gfinp%n
             !Occupation matrix
-            CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+            l = g%elem%l
+            lp = g%elem%lp
+            atomType = g%elem%atomType
+            atomTypep = g%elem%atomTypep
+            IF(l.NE.lp) CYCLE
+            IF(atomType.NE.atomTypep) CYCLE
+            IF(gfinp%l_sphavg) THEN
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+            ELSE
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
+                           ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
+                           udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
+                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=.TRUE.)
+            ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
@@ -82,8 +120,6 @@ MODULE m_greensfPostProcess
             ALLOCATE(f(atoms%jmtd,2,atoms%lmaxd),source=0.0)
             ALLOCATE(g(atoms%jmtd,2,atoms%lmaxd),source=0.0)
             ALLOCATE(flo(atoms%jmtd,2,atoms%nlod),source=0.0)
-
-            CALL usdus%init(atoms,input%jspins)
 
             DO i_gf = 1, gfinp%n
                l  = gfinp%elem(i_gf)%l
