@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,ddn,uun21,udn21,dun21,ddn21,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi

@@ -9,6 +9,7 @@ MODULE m_greensfPostProcess
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
+   USE m_radovlp
 
    IMPLICIT NONE
 
@@ -39,7 +40,7 @@ MODULE m_greensfPostProcess
 
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
-      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
+      REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:), flo(:,:,:,:)
 
       TYPE(t_usdus) :: usdus
 
@@ -76,12 +77,15 @@ MODULE m_greensfPostProcess
             ! Initializations
             CALL usdus%init(atoms,input%jspins)
             !Generate the scalar products we need
-            DO jspin = 1, input%jspins
-               CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+            DO i_gf = 1, gfinp%n
+               atomType = greensFunction(i_gf)%elem%atomType
+               DO jspin = 1, input%jspins
+                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+               ENDDO
             ENDDO
             DEALLOCATE(f,g,flo)
             !Offdiagonal scalar products
-            IF(l_mperp) THEN
+            IF(gfinp%l_mperp) THEN
                !Calculate overlap integrals
                ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
                ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
@@ -92,10 +96,10 @@ MODULE m_greensfPostProcess
          ENDIF
          DO i_gf = 1, gfinp%n
             !Occupation matrix
-            l = g%elem%l
-            lp = g%elem%lp
-            atomType = g%elem%atomType
-            atomTypep = g%elem%atomTypep
+            l = greensFunction(i_gf)%elem%l
+            lp = greensFunction(i_gf)%elem%lp
+            atomType = greensFunction(i_gf)%elem%atomType
+            atomTypep = greensFunction(i_gf)%elem%atomTypep
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
             IF(gfinp%l_sphavg) THEN
@@ -117,9 +121,9 @@ MODULE m_greensfPostProcess
             ALLOCATE(u(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
             ALLOCATE(udot(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
 
-            ALLOCATE(f(atoms%jmtd,2,atoms%lmaxd),source=0.0)
-            ALLOCATE(g(atoms%jmtd,2,atoms%lmaxd),source=0.0)
-            ALLOCATE(flo(atoms%jmtd,2,atoms%nlod),source=0.0)
+            ALLOCATE(f(atoms%jmtd,2,atoms%lmaxd,input%jspins),source=0.0)
+            ALLOCATE(g(atoms%jmtd,2,atoms%lmaxd,input%jspins),source=0.0)
+            ALLOCATE(flo(atoms%jmtd,2,atoms%nlod,input%jspins),source=0.0)
 
             DO i_gf = 1, gfinp%n
                l  = gfinp%elem(i_gf)%l
@@ -134,21 +138,23 @@ MODULE m_greensfPostProcess
                   udot(:,:,:,:,:,i_gf) = udot(:,:,:,:,:,indUnique)
                ELSE
                   DO jspin = 1, input%jspins
-                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
+                                     f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
 
-                     u(:,:,1,1,jspin,i_gf) = f(:,:,l)
-                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp)
+                     u(:,:,1,1,jspin,i_gf) = f(:,:,l,jspin)
+                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp,jspin)
 
-                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l)
-                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp)
+                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l,jspin)
+                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp,jspin)
 
-                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
+                                     f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
 
-                     u(:,:,1,2,jspin,i_gf) = f(:,:,l)
-                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp)
+                     u(:,:,1,2,jspin,i_gf) = f(:,:,l,jspin)
+                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp,jspin)
 
-                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l)
-                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp)
+                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l,jspin)
+                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp,jspin)
 
                   ENDDO
                ENDIF
