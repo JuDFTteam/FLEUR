@@ -145,8 +145,7 @@ CONTAINS
             END IF
 
             IF(fi%hybinp%l_hybrid) THEN
-               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,fi%atoms,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,&
-                                                      fi%input,fi%kpts,jsp,results,xcpot,fi%noco,nococonv,hmat)
+               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,fi,hybdat,jsp,results,xcpot,nococonv,hmat)
 
                IF(hybdat%l_subvxc) THEN
                   CALL subvxc(lapw,fi%kpts%bk(:,nk),fi%input,jsp,v%mt(:,0,:,:),fi%atoms,ud,&
