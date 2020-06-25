@@ -184,7 +184,7 @@ CONTAINS
          type(t_hybmpi), intent(inout)     :: wp_mpi
          integer, intent(inout)            :: wp_rank, wp_size
    
-         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm, my_color
+         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm
          integer, allocatable :: nprocs(:), weights(:), color(:)
    
    
