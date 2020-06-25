@@ -45,6 +45,7 @@ MODULE m_excSplitting
          !Only onsite exchange splitting
          IF(l /= lp) CYCLE
          IF(atomType /= atomTypep) CYCLE
+         IF(.NOT.gfinp%l_sphavg) CYCLE
 
          i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 

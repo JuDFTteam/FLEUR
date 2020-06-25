@@ -63,13 +63,14 @@ MODULE m_occmtx
       ELSE
          mmpMat = cmplx_0
          spin_start = 1
-         spin_end   = SIZE(g%gmmpMat,4)
+         IF(ALLOCATED(g%gmmpMat)) spin_end = SIZE(g%gmmpMat,4)
+         IF(ALLOCATED(g%uu)) spin_end = SIZE(g%uu,4)
       ENDIF
 
       DO ispin = spin_start, spin_end
          DO ipm = 1, 2
             !Integrate over the contour:
-            DO iz = 1, SIZE(g%gmmpMat,1)
+            DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
                CALL g%get(iz,ipm.EQ.2,gmat,spin=ispin,ddn=ddn,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
