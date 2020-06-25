@@ -122,11 +122,13 @@ CONTAINS
 
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
-            call work_pack%init(fi, hybdat, jsp, wp_rank, wp_size)
             call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
+
+            !call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
+            call work_pack%init(fi, hybdat, jsp, wp_rank, wp_size)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk

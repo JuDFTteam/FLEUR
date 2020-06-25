@@ -230,6 +230,8 @@ contains
       if(allocated(psize)) deallocate(psize)
       allocate(start_idx(n_parts), psize(n_parts))
 
+      if(n_parts == 0) call judft_error("You need more than 0 parts")
+
       small_size = floor((1.0*n_total)/n_parts)
       big_size = small_size +1
 
