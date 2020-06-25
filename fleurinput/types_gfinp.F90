@@ -397,7 +397,7 @@ CONTAINS
             IF(sym%nop>1) THEN
                CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
                                 calledby="init_gfinp")
-            ELSE IF(gfinp%l_sphavg) THEN
+            ELSE IF(this%l_sphavg) THEN
                CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
                                 calledby="init_gfinp")
             ENDIF
@@ -407,7 +407,7 @@ CONTAINS
             IF(sym%nop>1) THEN
                CALL juDFT_error("Symmetries and l-offdiagonal Green's Function not implemented",&
                                 calledby="init_gfinp")
-            ELSE IF(gfinp%l_sphavg) THEN
+            ELSE IF(this%l_sphavg) THEN
                CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
                                 calledby="init_gfinp")
             ENDIF
