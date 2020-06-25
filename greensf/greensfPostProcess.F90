@@ -40,7 +40,7 @@ MODULE m_greensfPostProcess
 
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
-      REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:), flo(:,:,:,:)
+      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
 
       TYPE(t_usdus) :: usdus
 
@@ -67,64 +67,19 @@ MODULE m_greensfPostProcess
          ENDIF
 
          CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
-         CALL timestart("Green's Function: Occupation")
-         IF(.NOT.gfinp%l_sphavg) THEN
-
-            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
-            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
-            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
-
-            ! Initializations
-            CALL usdus%init(atoms,input%jspins)
-            !Generate the scalar products we need
-            DO i_gf = 1, gfinp%n
-               atomType = greensFunction(i_gf)%elem%atomType
-               DO jspin = 1, input%jspins
-                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
-               ENDDO
-            ENDDO
-            DEALLOCATE(f,g,flo)
-            !Offdiagonal scalar products
-            IF(gfinp%l_mperp) THEN
-               !Calculate overlap integrals
-               ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-            ENDIF
-         ENDIF
-         DO i_gf = 1, gfinp%n
-            !Occupation matrix
-            l = greensFunction(i_gf)%elem%l
-            lp = greensFunction(i_gf)%elem%lp
-            atomType = greensFunction(i_gf)%elem%atomType
-            atomTypep = greensFunction(i_gf)%elem%atomTypep
-            IF(l.NE.lp) CYCLE
-            IF(atomType.NE.atomTypep) CYCLE
-            IF(gfinp%l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
-            ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
-                           ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
-                           udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
-                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=.TRUE.)
-            ENDIF
-         ENDDO
-         CALL timestop("Green's Function: Occupation")
-
 
          IF(.NOT.gfinp%l_sphavg) THEN
             CALL timestart("Green's Function: Radial Functions")
+            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
+            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
+            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod),source=0.0)
 
-            !Intializations
+            ! Initializations
+            CALL usdus%init(atoms,input%jspins)
+
             ALLOCATE(u(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
             ALLOCATE(udot(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
-
-            ALLOCATE(f(atoms%jmtd,2,atoms%lmaxd,input%jspins),source=0.0)
-            ALLOCATE(g(atoms%jmtd,2,atoms%lmaxd,input%jspins),source=0.0)
-            ALLOCATE(flo(atoms%jmtd,2,atoms%nlod,input%jspins),source=0.0)
-
+            !Generate the scalar products we need
             DO i_gf = 1, gfinp%n
                l  = gfinp%elem(i_gf)%l
                lp = gfinp%elem(i_gf)%lp
@@ -139,29 +94,60 @@ MODULE m_greensfPostProcess
                ELSE
                   DO jspin = 1, input%jspins
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                     f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol)
 
-                     u(:,:,1,1,jspin,i_gf) = f(:,:,l,jspin)
-                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp,jspin)
+                     u(:,:,1,1,jspin,i_gf) = f(:,:,l)
+                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp)
 
-                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l,jspin)
-                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp,jspin)
+                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l)
+                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp)
 
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                     f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol)
 
-                     u(:,:,1,2,jspin,i_gf) = f(:,:,l,jspin)
-                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp,jspin)
+                     u(:,:,1,2,jspin,i_gf) = f(:,:,l)
+                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp)
 
-                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l,jspin)
-                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp,jspin)
+                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l)
+                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp)
 
                   ENDDO
                ENDIF
             ENDDO
+
+            !Offdiagonal scalar products
+            IF(gfinp%l_mperp) THEN
+               !Calculate overlap integrals
+               ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
+               CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+            ENDIF
             CALL timestop("Green's Function: Radial Functions")
          ENDIF
-
+         CALL timestart("Green's Function: Occupation")
+         DO i_gf = 1, gfinp%n
+            !Occupation matrix
+            l = greensFunction(i_gf)%elem%l
+            lp = greensFunction(i_gf)%elem%lp
+            atomType = greensFunction(i_gf)%elem%atomType
+            atomTypep = greensFunction(i_gf)%elem%atomTypep
+            IF(l.NE.lp) CYCLE
+            IF(atomType.NE.atomTypep) CYCLE
+            IF(gfinp%l_sphavg) THEN
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+            ELSE IF(.NOT.gfinp%l_mperp) THEN
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
+                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=.TRUE.)
+            ELSE
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
+                           ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
+                           udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
+                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=.TRUE.)
+            ENDIF
+         ENDDO
+         CALL timestop("Green's Function: Occupation")
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")

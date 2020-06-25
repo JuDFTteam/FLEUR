@@ -15,7 +15,7 @@ MODULE m_kk_cutoff
       !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-      REAL,                INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
       LOGICAL,             INTENT(IN)     :: l_mperp
       INTEGER,             INTENT(IN)     :: l
@@ -25,7 +25,7 @@ MODULE m_kk_cutoff
       REAL,                INTENT(INOUT)  :: scalingFactor(:)
 
       INTEGER :: m,ispin,spins_cut,ne
-      REAL    :: lowerBound,upperBound,integral,n_states,scale
+      REAL    :: lowerBound,upperBound,integral,n_states
       REAL    :: ec,del,eb,et
       REAL, ALLOCATABLE :: projDOS(:,:)
 
@@ -124,10 +124,10 @@ MODULE m_kk_cutoff
       USE m_genMTBasis
       USE m_radovlp
 
-      REAL,                INTENT(INOUT)  :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(INOUT)  :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(INOUT)  :: du(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(INOUT)  :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_potden),      INTENT(IN)     :: vTot
@@ -173,8 +173,7 @@ MODULE m_kk_cutoff
       ENDIF
 
       !calculate the spherical average from the original greens function
-      ALLOCATE(im,mold=uu)
-      im = 0.0
+      ALLOCATE(im(SIZE(uu,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(uu,4)),source=0.0)
       DO jspin = 1, SIZE(im,4)
          !$OMP parallel do default(none) &
          !$OMP shared(usdus,uun21,udn21,dun21,ddn21,jspin,l,atomType,im,uu,ud,du,dd) &
