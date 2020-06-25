@@ -119,13 +119,16 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfImagPart_init
 
-      SUBROUTINE greensfImagPart_collect(this,spin_ind,mpi_comm)
+      SUBROUTINE greensfImagPart_collect(this,spin_ind,mpi_communicator)
+
+#ifdef CPP_MPI
+         USE mpi
+#endif
 
          CLASS(t_greensfImagPart),     INTENT(INOUT) :: this
          INTEGER,                      INTENT(IN)    :: spin_ind
-         INTEGER,                      INTENT(IN)    :: mpi_comm
+         INTEGER,                      INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-         include 'mpif.h'
 #include"cpp_double.h"
          INTEGER:: ierr,n
          REAL,ALLOCATABLE::rtmp(:)
@@ -133,18 +136,18 @@ MODULE m_types_greensfCoeffs
          IF(ALLOCATED(this%sphavg)) THEN
             n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
             ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%sphavg(:,:,:,:,spin_ind),1)
          ELSE
             n = SIZE(this%uu,1)*SIZE(this%uu,2)*SIZE(this%uu,3)*SIZE(this%uu,4)
             ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%uu(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%uu(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%uu(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%ud(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%ud(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%ud(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%du(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%du(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%du(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%dd(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%dd(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%dd(:,:,:,:,spin_ind),1)
          ENDIF
          DEALLOCATE(rtmp)

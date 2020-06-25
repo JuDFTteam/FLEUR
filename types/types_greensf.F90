@@ -122,12 +122,15 @@ MODULE m_types_greensf
 
       END SUBROUTINE mpi_bc_greensf
 
-      SUBROUTINE collect_greensf(this,mpi_comm)
+      SUBROUTINE collect_greensf(this,mpi_communicator)
+
+#ifdef CPP_MPI
+         USE mpi
+#endif
 
          CLASS(t_greensf),     INTENT(INOUT) :: this
-         INTEGER,              INTENT(IN)    :: mpi_comm
+         INTEGER,              INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-         include 'mpif.h'
 #include"cpp_double.h"
          INTEGER:: ierr,n
          COMPLEX,ALLOCATABLE::ctmp(:)
@@ -135,19 +138,19 @@ MODULE m_types_greensf
          IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
             DEALLOCATE(ctmp)
          ELSE
             n = SIZE(this%uu)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
-            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
-            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
-            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
             DEALLOCATE(ctmp)
          ENDIF

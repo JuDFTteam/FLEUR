@@ -44,29 +44,29 @@ MODULE m_types_selfen
 
       END SUBROUTINE init_selfen
 
-      SUBROUTINE collect_selfen(this,mpi_comm)
+      SUBROUTINE collect_selfen(this,mpi_communicator)
+
+#ifdef CPP_MPI
+         USE mpi
+#endif
 
          CLASS(t_selfen),     INTENT(INOUT) :: this
-         INTEGER,             INTENT(IN)    :: mpi_comm
+         INTEGER,             INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-         include 'mpif.h'
 #include"cpp_double.h"
          INTEGER:: ierr,irank,n
          COMPLEX,ALLOCATABLE::ctmp(:)
          REAL, ALLOCATABLE :: rtmp(:)
 
-         CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
-
-
          n = SIZE(this%muMatch)
          ALLOCATE(rtmp(n))
-         CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,mpi_communicator,ierr)
          IF(irank.EQ.0) this%muMatch = reshape(rtmp,[n])
          DEALLOCATE(rtmp)
 
          n = SIZE(this%data)
          ALLOCATE(ctmp(n))
-         CALL MPI_REDUCE(this%data,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         CALL MPI_REDUCE(this%data,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,mpi_communicator,ierr)
          IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%data,1)
          DEALLOCATE(ctmp)
 #endif
