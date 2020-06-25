@@ -26,7 +26,7 @@ module m_work_package
    end type t_k_package 
 
    type t_work_package 
-      integer :: rank, size
+      integer :: rank, size, n_kpacks
       type(t_k_package), allocatable :: k_packs(:)
    contains
       procedure :: init  => t_work_package_init 
@@ -170,21 +170,21 @@ contains
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
       integer, intent(in)                  :: jsp
-      integer :: my_num_ks, k_cnt, i 
+      integer :: k_cnt, i 
       
       if(work_pack%rank < modulo(fi%kpts%nkpt, work_pack%size)) then
-         my_num_ks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
+         work_pack%n_kpacks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
       else 
-         my_num_ks = floor(1.0*fi%kpts%nkpt / work_pack%size)
+         work_pack%n_kpacks = floor(1.0*fi%kpts%nkpt / work_pack%size)
       endif
 
-      allocate(work_pack%k_packs(my_num_ks))
+      allocate(work_pack%k_packs(work_pack%n_kpacks))
       
       ! get my k-list
       k_cnt = 1
-      do i = work_pack%rank+1 ,fi%kpts%nkpt ,work_pack%size
+      do i = work_pack%rank+1, fi%kpts%nkpt, work_pack%size
          work_pack%k_packs(k_cnt)%rank = k_cnt -1
-         work_pack%k_packs(k_cnt)%size = my_num_ks
+         work_pack%k_packs(k_cnt)%size = work_pack%n_kpacks
 
          call work_pack%k_packs(k_cnt)%init(fi, hybdat, jsp, i)
          k_cnt = k_cnt + 1
@@ -210,7 +210,7 @@ contains
       integer :: i 
 
       has_nk = .false.
-      do i = 1, work_pack%k_packs(1)%size 
+      do i = 1, work_pack%n_kpacks 
          if (work_pack%k_packs(i)%nk == nk) then
             has_nk = .True.
             exit
