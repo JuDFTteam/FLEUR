@@ -10,6 +10,7 @@ module m_work_package
 
    type t_q_package 
       integer :: rank, size, ptr
+      type(t_hybmpi) :: submpi
       type(t_band_package), allocatable :: band_packs(:)
    contains
       procedure :: init => t_q_package_init
@@ -18,6 +19,7 @@ module m_work_package
 
    type t_k_package
       integer :: nk, rank, size
+      type(t_hybmpi) :: submpi
       type(t_q_package), allocatable :: q_packs(:)
    contains
       procedure :: init  => t_k_package_init 
@@ -28,6 +30,7 @@ module m_work_package
    type t_work_package 
       integer :: rank, size, n_kpacks
       type(t_k_package), allocatable :: k_packs(:)
+      type(t_hybmpi) :: submpi
    contains
       procedure :: init  => t_work_package_init 
       procedure :: print => t_work_package_print
@@ -70,49 +73,56 @@ contains
       if(allocated(q_pack%band_packs)) deallocate(q_pack%band_packs)
    end subroutine t_q_package_free
 
-   subroutine t_work_package_init(work_pack, fi, hybdat, jsp, rank, size) 
+   subroutine t_work_package_init(work_pack, fi, hybdat, wp_mpi, jsp, rank, size) 
       implicit none 
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat 
+      type(t_hybmpi), intent(in)           :: wp_mpi
       integer, intent(in)                  :: rank, size, jsp
 
-      work_pack%rank = rank
-      work_pack%size = size
+      work_pack%rank    = rank
+      work_pack%size    = size
+      work_pack%submpi  = wp_mpi
+
       call split_into_work_packages(work_pack, fi, hybdat, jsp)
 
-   end subroutine 
+   end subroutine t_work_package_init
 
-   subroutine t_k_package_init(k_pack, fi, hybdat, jsp, nk)
+   subroutine t_k_package_init(k_pack, fi, hybdat, k_wide_mpi, jsp, nk)
       implicit none 
       class(t_k_package), intent(inout) :: k_pack
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
+      type(t_hybmpi), intent(in)        :: k_wide_mpi
       integer, intent(in) :: nk, jsp
       integer             :: iq, jq
 
+      k_pack%submpi = k_wide_mpi
       k_pack%nk = nk
       allocate(k_pack%q_packs(fi%kpts%EIBZ(nk)%nkpt)) 
       do iq = 1,fi%kpts%EIBZ(nk)%nkpt
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
-         call k_pack%q_packs(iq)%init(fi, hybdat, jsp, nk, iq, jq)
+         call k_pack%q_packs(iq)%init(fi, hybdat, k_pack%submpi, jsp, nk, iq, jq)
       enddo
    end subroutine t_k_package_init
 
-   subroutine t_q_package_init(q_pack, fi, hybdat, jsp, nk, rank, ptr)
+   subroutine t_q_package_init(q_pack, fi, hybdat, q_wide_mpi, jsp, nk, rank, ptr)
       implicit none 
       class(t_q_package), intent(inout) :: q_pack 
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
+      type(t_hybmpi), intent(in)        :: q_wide_mpi
       integer, intent(in)               :: rank, ptr, jsp, nk
 
       real                 :: target_psize
       integer              :: n_parts, ikqpt, i
       integer, allocatable :: start_idx(:), psize(:)
 
-      q_pack%rank  = rank 
-      q_pack%size  = fi%kpts%EIBZ(nk)%nkpt
-      q_pack%ptr = ptr
+      q_pack%submpi = q_wide_mpi
+      q_pack%rank   = rank 
+      q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
+      q_pack%ptr    = ptr
 
    ! arrays should be less than 5 gb
       if(fi%sym%invs) then
@@ -124,6 +134,9 @@ contains
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
 
       n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      if(mod(n_parts, q_pack%submpi%size) /= 0) then
+         n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
+      endif
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
@@ -186,7 +199,7 @@ contains
          work_pack%k_packs(k_cnt)%rank = k_cnt -1
          work_pack%k_packs(k_cnt)%size = work_pack%n_kpacks
 
-         call work_pack%k_packs(k_cnt)%init(fi, hybdat, jsp, i)
+         call work_pack%k_packs(k_cnt)%init(fi, hybdat, work_pack%submpi, jsp, i)
          k_cnt = k_cnt + 1
       enddo
    end subroutine split_into_work_packages

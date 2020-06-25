@@ -15,17 +15,26 @@ MODULE m_types_hybmpi
       procedure :: copy_mpi => t_hybmpi_copy_mpi
       procedure :: barrier  => t_hybmpi_barrier
       procedure :: init     => t_hybmpi_init
+      procedure :: root     => t_hybmpi_root
    END TYPE t_hybmpi
 contains
-   subroutine t_hybmpi_copy_mpi(glob_mpi, mpi)
+   function t_hybmpi_root(mpi_var) result(l_root)
+      implicit none
+      class(t_hybmpi), intent(in) :: mpi_var 
+      logical :: l_root 
+
+      l_root = mpi_var%rank == 0
+   end function t_hybmpi_root
+
+   subroutine t_hybmpi_copy_mpi(glob_mpi, mpi_var)
       use m_types_mpi
       implicit none
       class(t_hybmpi), intent(inout) :: glob_mpi
-      type(t_mpi), intent(in)        :: mpi
+      type(t_mpi), intent(in)        :: mpi_var
 
-      glob_mpi%comm = mpi%mpi_comm
-      glob_mpi%size = mpi%isize
-      glob_mpi%rank = mpi%irank
+      glob_mpi%comm = mpi_var%mpi_comm
+      glob_mpi%size = mpi_var%isize
+      glob_mpi%rank = mpi_var%irank
    end subroutine
 
    subroutine t_hybmpi_barrier(glob_mpi)

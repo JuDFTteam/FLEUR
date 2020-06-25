@@ -109,7 +109,7 @@ CONTAINS
       ! local scalars
       INTEGER                 ::  iband, iband1, jq, iq
       INTEGER                 ::  i, ierr, ik
-      INTEGER                 ::  j, iq_p
+      INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, cnt_read_z
       INTEGER                 ::  ikqpt, iob, m,n,k,lda,ldb,ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
@@ -163,7 +163,9 @@ CONTAINS
          ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
          
          n_parts = size(k_pack%q_packs(jq)%band_packs)
-         do ipart = 1, n_parts
+         start   = k_pack%q_packs(jq)%submpi%rank+1
+         stride  = k_pack%q_packs(jq)%submpi%size 
+         do ipart = start, n_parts, stride
             if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ") ik= " // int2str(ik) // " jq= " // int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
@@ -418,11 +420,18 @@ CONTAINS
 !   END DO
 
       ! write exch_vv in mat_ex
-      CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
+      if(k_pack%q_packs(jq)%submpi%root()) then
+         CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
+      else
+         CALL mat_ex%alloc(matsize1=1)
+      endif
+
       IF (mat_ex%l_real) THEN
-         mat_ex%data_r = exch_vv
+         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
+         !mat_ex%data_r = exch_vv
       ELSE
-         mat_ex%data_c = exch_vv
+         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
+         !mat_ex%data_c = exch_vv
       END IF
       CALL timestop("valence exchange calculation")
 

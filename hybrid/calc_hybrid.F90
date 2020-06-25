@@ -42,9 +42,9 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi, wp_mpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -107,7 +107,9 @@ CONTAINS
 
          ! use jsp=1 for coulomb work-planning
          call hybdat%set_states(fi, results, 1)
-         call work_pack%init(fi, hybdat, 1, glob_mpi%rank, glob_mpi%size)
+         call judft_comm_split(glob_mpi%comm, glob_mpi%rank, 1, tmp_comm)
+         call tmp_mpi%init(tmp_comm)
+         call work_pack%init(fi, hybdat, tmp_mpi, 1, glob_mpi%rank, glob_mpi%size)
          CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
          call work_pack%free()
 
@@ -127,8 +129,7 @@ CONTAINS
                         hybdat, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
-            !call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
-            call work_pack%init(fi, hybdat, jsp, wp_rank, wp_size)
+            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
