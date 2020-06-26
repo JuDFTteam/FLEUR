@@ -29,7 +29,7 @@ MODULE m_greensfBZint
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
-      INTEGER :: natom,natomp,natomp_start,natomp_end
+      INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
@@ -54,14 +54,16 @@ MODULE m_greensfBZint
          lp = gfinp%elem(i_gf)%lp
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
-         atomFactor = 1.0/atoms%neq(atomType)
+         atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
 
          i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
          IF(i_gf/=indUnique) CYCLE
 
+         natom_start = SUM(atoms%neq(:atomType-1)) + 1
+         natom_end   = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType)),l.NE.lp)
          !Loop over equivalent atoms
-         DO natom = SUM(atoms%neq(:atomType-1)) + 1, SUM(atoms%neq(:atomType))
+         DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
             natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)

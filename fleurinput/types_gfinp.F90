@@ -153,7 +153,7 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf
       INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
       CHARACTER(len=100)  :: xPathA,xPathS,label,cutoffArg
@@ -252,7 +252,7 @@ CONTAINS
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       n_hia = 0
 
-      ALLOCATE(this%elem(4*ntype))
+      ALLOCATE(this%elem((lmaxU_const+1)**2*ntype))
       ALLOCATE(this%hiaElem(4*ntype))
 
       DO itype = 1, ntype
@@ -277,8 +277,8 @@ CONTAINS
             ENDIF
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                                fixedCutoff=fixedCutoff)
+                  i_gf = this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                  fixedCutoff=fixedCutoff)
                ENDDO
             ENDDO
          ENDDO
@@ -300,8 +300,8 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             DO l = lmin, lmax
                DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  CALL this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                                fixedCutoff=fixedCutoff,l_inter=.TRUE.)
+                  i_gf = this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                  fixedCutoff=fixedCutoff,l_inter=.TRUE.)
                ENDDO
             ENDDO
          ENDDO
@@ -320,10 +320,10 @@ CONTAINS
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
                l_fixedCutoffset = .TRUE.
             ENDIF
-            CALL this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                          fixedCutoff=fixedCutoff)
+            i_gf = this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                            fixedCutoff=fixedCutoff)
             n_hia = n_hia + 1
-            this%hiaElem(n_hia) = this%n
+            this%hiaElem(n_hia) = i_gf
          ENDDO
       ENDDO
 
@@ -405,7 +405,7 @@ CONTAINS
 
          IF(l.NE.lp) THEN
             IF(sym%nop>1) THEN
-               CALL juDFT_error("Symmetries and l-offdiagonal Green's Function not implemented",&
+               CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
                                 calledby="init_gfinp")
             ELSE IF(this%l_sphavg) THEN
                CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
@@ -474,7 +474,7 @@ CONTAINS
 
    END FUNCTION uniqueElements_gfinp
 
-   SUBROUTINE add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter)
+   INTEGER FUNCTION add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: nType
@@ -487,7 +487,6 @@ CONTAINS
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
 
 
-      INTEGER i_gf
       LOGICAL l_found
 
       IF(PRESENT(l_inter).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: l_inter and nTypep given",&
@@ -499,6 +498,7 @@ CONTAINS
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
+      i_gf = this%n
       this%elem(this%n)%l = l
       this%elem(this%n)%atomType = nType
       this%elem(this%n)%lp = lp
@@ -527,7 +527,7 @@ CONTAINS
          ENDIF
       ENDIF
 
-   END SUBROUTINE add_gfelem
+   END FUNCTION add_gfelem
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,atoms,sym)
 
@@ -547,7 +547,7 @@ CONTAINS
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
 
-      INTEGER :: ishell,natomp
+      INTEGER :: ishell,natomp,i_gf
       REAL :: minDist
       REAL, ALLOCATABLE :: dist(:)
 
@@ -570,8 +570,8 @@ CONTAINS
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
                this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
-               CALL this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff)
+               i_gf =  this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
+                                fixedCutoff=fixedCutoff)
                dist(natomp) = 9e99 !Eliminate from the list
             ENDIF
          ENDDO
@@ -580,7 +580,7 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_found) result(i_gf)
+   INTEGER FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -601,7 +601,6 @@ CONTAINS
                                                        !terminate with an error message if the
                                                        !element is not found (for adding elements)
 
-      INTEGER :: i_gf
       LOGICAL :: search
 
       search = .TRUE.

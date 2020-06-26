@@ -49,7 +49,7 @@ MODULE m_greensfTorgue
       TYPE(t_usdus) :: usdus
 
       IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="greensFunctionTorgue")
-      IF(sym%nop>1) CALL juDFT_error("Torgue calculation only without symmetries", calledby="greensFunctionTorgue")
+      IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="greensFunctionTorgue")
 
 
       CALL timestart("Green's Function Torgue: init")
@@ -90,6 +90,8 @@ MODULE m_greensfTorgue
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
       torgue_cmplx = cmplx_0
+      iContour = -1
+      ALLOCATE(g_ii(atoms%jmtd,greensFunction(1)%contour%nz),source=cmplx_0)
       DO i_gf = 1, SIZE(greensFunction)
 
          IF(greensFunction(i_gf)%elem%atomType.NE.atomType.OR.&
@@ -117,7 +119,6 @@ MODULE m_greensfTorgue
                         phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
                         DO ipm = 1, 2
                            CALL greensFunction(i_gf)%getRadialSpin(m,mp,ipm==2,f,g,g_iiSpin)
-                           ALLOCATE(g_ii(SIZE(g_iiSpin,1),SIZE(g_iiSpin,4)),source=cmplx_0)
                            DO iz = 1, SIZE(g_ii,2)
                               DO jr = 1, atoms%jri(atomType)
                                  g_iiSpin(jr,:,:,iz) = matmul(sigma(:,:,alpha),g_iiSpin(jr,:,:,iz))
@@ -140,6 +141,5 @@ MODULE m_greensfTorgue
       CALL timestop("Green's Function Torgue: Integration")
 
    END SUBROUTINE greensfTorgue
-
 
 END MODULE m_greensfTorgue
