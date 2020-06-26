@@ -27,14 +27,17 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,mpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,vTot,enpara,fmpi,hub1inp,ef,greensfImagPart,g)
 
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_gfinp),          INTENT(IN)     :: gfinp
       TYPE(t_sym),            INTENT(IN)     :: sym
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_input),          INTENT(IN)     :: input
-      TYPE(t_mpi),            INTENT(IN)     :: mpi
+      TYPE(t_potden),         INTENT(IN)     :: vTot
+      TYPE(t_enpara),         INTENT(IN)     :: enpara
+      TYPE(t_hub1inp),        INTENT(IN)     :: hub1inp
+      TYPE(t_mpi),            INTENT(IN)     :: fmpi
       REAL,                   INTENT(IN)     :: ef
       TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
@@ -46,6 +49,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: n_gf_task,extra
       LOGICAL :: l_onsite,l_fixedCutoffset,l_skip
       REAL    :: fac,del,eb,et,fixedCutoff
+      REAL    :: scalingFactor(input%jspins)
       REAL,    ALLOCATABLE :: eMesh(:)
 
       !Get the information on the real axis energy mesh
@@ -53,7 +57,7 @@ MODULE m_greensfCalcRealPart
 
       nspins = MERGE(3,input%jspins,gfinp%l_mperp)
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          CALL timestart("Green's Function: Integration Cutoff")
          DO i_gf = 1, gfinp%n
 
@@ -72,13 +76,21 @@ MODULE m_greensfCalcRealPart
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
-               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.gfinp%l_sphavg
+               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp
                IF(l_onsite.AND..NOT.l_fixedCutoffset) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   !
-                  CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
-                                 eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:))
+                  IF(gfinp%l_sphavg) THEN
+                     CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
+                                    eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:),scalingFactor)
+                  ELSE
+                     !Onsite element with radial dependence
+                     CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
+                                          greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
+                                          noco,atoms,vTot,enpara,fmpi,hub1inp,gfinp%l_mperp,l,nType,input,eMesh,&
+                                          greensfImagPart%kkintgr_cutoff(i_gf,:,:),scalingFactor)
+                  ENDIF
                ELSE IF (l_fixedCutoffset) THEN
                   greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
                   greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
@@ -98,7 +110,29 @@ MODULE m_greensfCalcRealPart
                ! Things might get lost when the imaginary part is smoothed explicitely
                !------------------------------------------------------------
                IF(kkcut.ne.SIZE(eMesh)) THEN
-                  greensfImagPart%sphavg(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                  IF(gfinp%l_sphavg) THEN
+                     greensfImagPart%sphavg(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                  ELSE
+                     greensfImagPart%uu(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                     greensfImagPart%ud(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                     greensfImagPart%du(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                     greensfImagPart%dd(kkcut+1:,-l:l,-l:l,i_elem,jspin) = 0.0
+                  ENDIF
+               ENDIF
+               IF(nspins == 2) THEN
+                  IF(gfinp%l_sphavg) THEN
+                     greensfImagPart%sphavg(:kkcut,-l:l,-l:l,i_elem,jspin) = greensfImagPart%sphavg(:kkcut,-l:l,-l:l,i_elem,jspin) &
+                                                                            * scalingFactor(jspin)
+                  ELSE
+                     greensfImagPart%uu(:kkcut,-l:l,-l:l,i_elem,jspin) = greensfImagPart%uu(:kkcut,-l:l,-l:l,i_elem,jspin) &
+                                                                        * scalingFactor(jspin)
+                     greensfImagPart%ud(:kkcut,-l:l,-l:l,i_elem,jspin) = greensfImagPart%ud(:kkcut,-l:l,-l:l,i_elem,jspin) &
+                                                                        * scalingFactor(jspin)
+                     greensfImagPart%du(:kkcut,-l:l,-l:l,i_elem,jspin) = greensfImagPart%du(:kkcut,-l:l,-l:l,i_elem,jspin) &
+                                                                        * scalingFactor(jspin)
+                     greensfImagPart%dd(:kkcut,-l:l,-l:l,i_elem,jspin) = greensfImagPart%dd(:kkcut,-l:l,-l:l,i_elem,jspin) &
+                                                                        * scalingFactor(jspin)
+                  ENDIF
                ENDIF
             ENDDO
 
@@ -107,36 +141,36 @@ MODULE m_greensfCalcRealPart
       ENDIF
 
       !Broadcast cutoffs and modified imaginary parts
-      CALL greensfImagPart%mpi_bc(mpi%mpi_comm)
+      CALL greensfImagPart%mpi_bc(fmpi%mpi_comm)
 
 
       !Distribute the Calculations
 #ifdef CPP_MPI
-      IF(mpi%isize>1) THEN
-         IF(gfinp%n>=mpi%isize) THEN
+      IF(fmpi%isize>1) THEN
+         IF(gfinp%n>=fmpi%isize) THEN
             !Just distribute the individual gf elements over the ranks
-            n_gf_task = FLOOR(REAL(gfinp%n)/(mpi%isize))
-            extra = gfinp%n - n_gf_task*mpi%isize
-            i_gf_start = mpi%irank*n_gf_task + 1 + extra
-            i_gf_end = (mpi%irank+1)*n_gf_task   + extra
-            IF(mpi%irank < extra) THEN
-               i_gf_start = i_gf_start - (extra - mpi%irank)
-               i_gf_end = i_gf_end - (extra - mpi%irank - 1)
+            n_gf_task = FLOOR(REAL(gfinp%n)/(fmpi%isize))
+            extra = gfinp%n - n_gf_task*fmpi%isize
+            i_gf_start = fmpi%irank*n_gf_task + 1 + extra
+            i_gf_end = (fmpi%irank+1)*n_gf_task   + extra
+            IF(fmpi%irank < extra) THEN
+               i_gf_start = i_gf_start - (extra - fmpi%irank)
+               i_gf_end = i_gf_end - (extra - fmpi%irank - 1)
             ENDIF
             spin_start = 1
             spin_end   = nspins
-         ELSE IF(gfinp%n*nspins>mpi%isize) THEN
+         ELSE IF(gfinp%n*nspins>fmpi%isize) THEN
             !Just fill up the ranks
-            i_gf_start = mpi%irank + 1
-            i_gf_end   = mpi%irank + 1
+            i_gf_start = fmpi%irank + 1
+            i_gf_end   = fmpi%irank + 1
             spin_start = 1
             spin_end   = nspins
          ELSE
             !If there are few enough gf elements then distribute the spins
-            spin_start = MOD(mpi%irank,nspins) + 1
-            spin_end   = MOD(mpi%irank,nspins) + 1
-            i_gf_start = 1 + FLOOR(REAL(mpi%irank)/nspins)
-            i_gf_end   = 1 + FLOOR(REAL(mpi%irank)/nspins)
+            spin_start = MOD(fmpi%irank,nspins) + 1
+            spin_end   = MOD(fmpi%irank,nspins) + 1
+            i_gf_start = 1 + FLOOR(REAL(fmpi%irank)/nspins)
+            i_gf_end   = 1 + FLOOR(REAL(fmpi%irank)/nspins)
          ENDIF
       ELSE
          !Distribute nothing
@@ -174,11 +208,25 @@ MODULE m_greensfCalcRealPart
                      !Don't waste time on empty elements
                      l_skip = .FALSE.
                      DO ie = 1, SIZE(eMesh)
-                        IF(ABS(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                        IF(gfinp%l_sphavg) THEN
+                           IF(ABS(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                        ELSE
+                           IF(ABS(greensfImagPart%uu(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                           IF(ABS(greensfImagPart%ud(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                           IF(ABS(greensfImagPart%du(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                           IF(ABS(greensfImagPart%dd(ie,m,mp,i_elem,jspin)).GT.1e-12) EXIT
+                        ENDIF
                         IF(ie==SIZE(eMesh)) l_skip = .TRUE.
                      ENDDO
                      IF(l_skip) THEN
-                        g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = cmplx_0
+                        IF(gfinp%l_sphavg) THEN
+                           g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = cmplx_0
+                        ELSE
+                           g(i_gf)%uu(:,m,mp,jspin,ipm) = cmplx_0
+                           g(i_gf)%ud(:,m,mp,jspin,ipm) = cmplx_0
+                           g(i_gf)%du(:,m,mp,jspin,ipm) = cmplx_0
+                           g(i_gf)%dd(:,m,mp,jspin,ipm) = cmplx_0
+                        ENDIF
                         CYCLE
                      ENDIF
 
@@ -208,7 +256,7 @@ MODULE m_greensfCalcRealPart
       CALL timestart("Green's Function: Collect")
       !Collect all the greensFuntions
       DO i_gf = 1, gfinp%n
-         CALL g(i_gf)%collect(mpi%mpi_comm)
+         CALL g(i_gf)%collect(fmpi%mpi_comm)
       ENDDO
       CALL timestop("Green's Function: Collect")
 #endif

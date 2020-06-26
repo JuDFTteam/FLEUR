@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,ddn,uun21,udn21,dun21,ddn21,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -26,6 +26,11 @@ MODULE m_occmtx
       TYPE(t_input),          INTENT(IN)    :: input
       COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER, OPTIONAL,      INTENT(IN)    :: spin
+      REAL,    OPTIONAL,      INTENT(IN)    :: ddn(:)
+      REAL,    OPTIONAL,      INTENT(IN)    :: uun21
+      REAL,    OPTIONAL,      INTENT(IN)    :: udn21
+      REAL,    OPTIONAL,      INTENT(IN)    :: dun21
+      REAL,    OPTIONAL,      INTENT(IN)    :: ddn21
       LOGICAL, OPTIONAL,      INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
       LOGICAL, OPTIONAL,      INTENT(IN)    :: check
       LOGICAL, OPTIONAL,      INTENT(INOUT) :: occError
@@ -58,15 +63,16 @@ MODULE m_occmtx
       ELSE
          mmpMat = cmplx_0
          spin_start = 1
-         spin_end   = SIZE(g%gmmpMat,4)
+         IF(ALLOCATED(g%gmmpMat)) spin_end = SIZE(g%gmmpMat,4)
+         IF(ALLOCATED(g%uu)) spin_end = SIZE(g%uu,4)
       ENDIF
 
       DO ispin = spin_start, spin_end
          DO ipm = 1, 2
             !Integrate over the contour:
-            DO iz = 1, SIZE(g%gmmpMat,1)
+            DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
-               CALL g%get(iz,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(iz,ipm.EQ.2,gmat,spin=ispin,ddn=ddn,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -81,7 +87,7 @@ MODULE m_occmtx
             !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
             IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
                !left tail
-               CALL g%get(1,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(1,ipm.EQ.2,gmat,spin=ispin,ddn=ddn,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -93,7 +99,7 @@ MODULE m_occmtx
                   ENDDO
                ENDDO
                !right tail
-               CALL g%get(g%contour%nz,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(g%contour%nz,ipm.EQ.2,gmat,spin=ispin,ddn=ddn,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1

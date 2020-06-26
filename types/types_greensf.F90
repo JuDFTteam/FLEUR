@@ -154,7 +154,7 @@ MODULE m_types_greensf
 #endif
       END SUBROUTINE collect_greensf
 
-      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,u,udot)
+      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,u,udot,ddn,uun21,udn21,dun21,ddn21)
 
          USE m_types_mat
 
@@ -168,11 +168,16 @@ MODULE m_types_greensf
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
          REAL   , OPTIONAL,   INTENT(IN)     :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
          REAL   , OPTIONAL,   INTENT(IN)     :: udot(:,:)
+         REAL   , OPTIONAL,   INTENT(IN)     :: ddn(:) !Scalar products
+         REAL   , OPTIONAL,   INTENT(IN)     :: uun21
+         REAL   , OPTIONAL,   INTENT(IN)     :: udn21
+         REAL   , OPTIONAL,   INTENT(IN)     :: dun21
+         REAL   , OPTIONAL,   INTENT(IN)     :: ddn21
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
-         INTEGER l,lp,atomType,atomTypep
-         LOGICAL l_radial,l_full
+         INTEGER l,lp,atomType,atomTypep,nspins
+         LOGICAL l_radial,l_full,l_scalar
 
          IF(.NOT.this%l_calc) THEN
             CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
@@ -193,6 +198,28 @@ MODULE m_types_greensf
          ENDIF
 
          l_radial = PRESENT(u).AND.PRESENT(udot)
+
+         IF(ALLOCATED(this%gmmpMat)) THEN
+            nspins = SIZE(this%gmmpMat,4)
+         ELSE
+            nspins = SIZE(this%uu,4)
+         ENDIF
+
+         l_scalar = PRESENT(ddn)
+         IF(l_scalar.AND.nspins==3) THEN
+            IF(.NOT.PRESENT(uun21).OR..NOT.PRESENT(udn21).OR.&
+               .NOT.PRESENT(dun21).OR..NOT.PRESENT(ddn21)) THEN
+                  CALL juDFT_error("Offdiagonal Scalar products missing", calledby="get_gf")
+            ENDIF
+         ENDIF
+
+         IF(l_scalar.AND.l_radial) THEN
+            CALL juDFT_error("Either l_scalar or l_radial", calledby="get_gf")
+         ENDIF
+
+         IF(l_radial.OR.l_scalar.AND. .NOT.ALLOCATED(this%uu)) THEN
+            CALL juDFT_error("l_scalar/l_radial only without l_sphavg", calledby="get_gf")
+         ENDIF
 
          IF(PRESENT(spin)) THEN
             IF(spin.GT.4 .OR. spin.LT.1) THEN
@@ -217,7 +244,7 @@ MODULE m_types_greensf
 
          IF(l_full) THEN
             spin_start = 1
-            spin_end   = MERGE(4,2,SIZE(this%gmmpMat,4).EQ.3)
+            spin_end   = MERGE(4,2,nspins.EQ.3)
          ELSE
             spin_start = spin
             spin_end   = spin
@@ -236,7 +263,7 @@ MODULE m_types_greensf
                spin2 = 2
             ENDIF
             !Find the correct spin index in gmmpMat arrays
-            spin_ind = MERGE(1,ispin,SIZE(this%gmmpMat,4).EQ.1)
+            spin_ind = MERGE(1,ispin,nspins.EQ.1)
             spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
             !Find the right quadrant in gmat
             IF(l_full) THEN
@@ -257,7 +284,7 @@ MODULE m_types_greensf
                   !-------------------------------------------------------------------
                   ! Check wether we need to do some operation on the indices m and mp
                   !-------------------------------------------------------------------
-                  IF(ispin.EQ.2 .AND. SIZE(this%gmmpMat,4).EQ.1) THEN
+                  IF(ispin.EQ.2 .AND. nspins.EQ.1) THEN
                      !For a non-spin-polarized calculation we might still want the full
                      !matrix. Then we need to reverse the order (SOC prop m*s_z)
                      m_ind  = -m
@@ -280,6 +307,16 @@ MODULE m_types_greensf
                                               this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * udot(2,spin2)  + &
                                               this%du(iz,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * u(2,spin2)     + &
                                               this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * udot(2,spin2)
+                  ELSE IF(l_scalar) THEN
+                     IF(spin_ind<3) THEN
+                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) + &
+                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn(spin_ind)
+                     ELSE
+                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun21 + &
+                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn21 + &
+                                                 this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun21 + &
+                                                 this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * udn21
+                     ENDIF
                   ELSE
                      gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm)
                   ENDIF
@@ -287,7 +324,7 @@ MODULE m_types_greensf
                   ! Additional operations
                   !------------------------
                   !Spin-degeneracy when using a full matrix and having input%jspins.EQ.1
-                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) * MERGE(0.5,1.0,SIZE(this%gmmpMat,4).EQ.1)
+                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) * MERGE(0.5,1.0,nspins.EQ.1)
                   !Complex conjugate for spin 4
                   IF(ispin.EQ.4) gmat%data_c(ind1,ind2) = conjg(gmat%data_c(ind1,ind2))
 
@@ -321,6 +358,11 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
+
+
+         IF(ALLOCATED(this%uu)) THEN
+            CALL juDFT_error("Can only set spherically averaged Green's Function", calledby="set_gf")
+         ENDIF
 
          IF(PRESENT(spin)) THEN
             IF(spin.GT.4 .OR. spin.LT.1) THEN

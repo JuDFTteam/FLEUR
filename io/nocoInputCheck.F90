@@ -104,6 +104,15 @@ MODULE m_nocoInputCheck
       IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.sym%nop.NE.1) THEN
          CALL juDFT_warn("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
       ENDIF
+      
+    IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.noco%l_alignMT)) THEN
+         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_alignMT=T setting to achieve reasonable results.",calledby="nocoInputCheck")
+      ENDIF
+      
+          !Warning on strange choice of switches
+    IF (noco%l_mtNocoPot.AND..NOT.noco%l_mperp) THEN
+    	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='nocoInputCheck')
+    END IF
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

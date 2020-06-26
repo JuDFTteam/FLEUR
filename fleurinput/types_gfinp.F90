@@ -27,6 +27,7 @@ MODULE m_types_gfinp
       INTEGER :: iContour = 0 !Which energy contour is used
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
+      REAL    :: atomDiff(3) = [0.0,0.0,0.0]
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -124,6 +125,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%iContour,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_fixedCutoffset,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%fixedCutoff,rank,mpi_comm)
+         CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -386,6 +388,32 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
+      DO i_gf = 1, this%n
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         IF(atomType.NE.atomTypep) THEN
+            IF(sym%nop>1) THEN
+               CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
+                                calledby="init_gfinp")
+            ELSE IF(this%l_sphavg) THEN
+               CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
+                                calledby="init_gfinp")
+            ENDIF
+         ENDIF
+
+         IF(l.NE.lp) THEN
+            IF(sym%nop>1) THEN
+               CALL juDFT_error("Symmetries and l-offdiagonal Green's Function not implemented",&
+                                calledby="init_gfinp")
+            ELSE IF(this%l_sphavg) THEN
+               CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
+                                calledby="init_gfinp")
+            ENDIF
+         ENDIF
+      ENDDO
+
       IF(this%minCalcDistance>=0.0) THEN
          IF(input%mindistance>this%minCalcDistance) THEN
             CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
@@ -397,9 +425,6 @@ CONTAINS
    END SUBROUTINE init_gfinp
 
    FUNCTION uniqueElements_gfinp(this,ind,indUnique) Result(uniqueElements)
-
-      !Not a procedure, because gfortran+OpenMP has problems with it
-      !Called inside OMP parallel region
 
       CLASS(t_gfinp),   INTENT(IN)     :: this
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
@@ -544,6 +569,7 @@ CONTAINS
          DO natomp = 1, atoms%nat
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
+               this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
                CALL this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
                dist(natomp) = 9e99 !Eliminate from the list

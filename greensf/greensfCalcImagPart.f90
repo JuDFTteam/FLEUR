@@ -120,11 +120,11 @@ MODULE m_greensfCalcImagPart
                         ELSE
                            greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
                                                                         + AIMAG(weight * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind))
-                           greensfImagPart%ud(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                           greensfImagPart%ud(ie,m,mp,i_elem,spin_ind) = greensfImagPart%ud(ie,m,mp,i_elem,spin_ind) &
                                                                         + AIMAG(weight * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind))
-                           greensfImagPart%du(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                           greensfImagPart%du(ie,m,mp,i_elem,spin_ind) = greensfImagPart%du(ie,m,mp,i_elem,spin_ind) &
                                                                         + AIMAG(weight * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind))
-                           greensfImagPart%dd(ie,m,mp,i_elem,spin_ind) = greensfImagPart%uu(ie,m,mp,i_elem,spin_ind) &
+                           greensfImagPart%dd(ie,m,mp,i_elem,spin_ind) = greensfImagPart%dd(ie,m,mp,i_elem,spin_ind) &
                                                                         + AIMAG(weight * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind))
                         ENDIF
 
