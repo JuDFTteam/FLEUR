@@ -31,9 +31,11 @@ CONTAINS
     ENDIF
     INQUIRE(file=filename,exist=l_fileexist)
     IF (.NOT.l_fileexist) RETURN !No previous data
-#ifdef __PGI
-    PRINT *,"Warning PGI compiler does not support reading of history"
-#else
+! I comment out this extra code path for the PGI compiler. It seems to be
+! not needed.
+!#ifdef __PGI
+!    PRINT *,"Warning PGI compiler does not support reading of history"
+!#else
     OPEN(888,file=filename,status='old',form='unformatted')
     READ(888) iter_stored
     IF (.NOT.ALLOCATED(sm_store)) ALLOCATE(sm_store(maxiter),fsm_store(maxiter))
@@ -42,7 +44,7 @@ CONTAINS
        call fsm_store(n)%read_unformatted(888)
     ENDDO
     CLOSE(888)
-#endif
+!#endif
   END SUBROUTINE mixing_history_open
 
   SUBROUTINE mixing_history_close(mpi)
