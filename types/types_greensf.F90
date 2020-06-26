@@ -56,13 +56,14 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
 
       CONTAINS
-         PROCEDURE, PASS :: init       => init_greensf
-         PROCEDURE       :: mpi_bc     => mpi_bc_greensf
-         PROCEDURE       :: collect    => collect_greensf
-         PROCEDURE       :: get        => get_gf
-         PROCEDURE       :: getRadial  => get_gfRadial
-         PROCEDURE       :: set        => set_gf
-         PROCEDURE       :: reset      => reset_gf
+         PROCEDURE, PASS :: init           => init_greensf
+         PROCEDURE       :: mpi_bc         => mpi_bc_greensf
+         PROCEDURE       :: collect        => collect_greensf
+         PROCEDURE       :: get            => get_gf
+         PROCEDURE       :: getRadial      => getRadial_gf
+         PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
+         PROCEDURE       :: set            => set_gf
+         PROCEDURE       :: reset          => reset_gf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -157,6 +158,20 @@ MODULE m_types_greensf
          ENDIF
 #endif
       END SUBROUTINE collect_greensf
+
+      !----------------------------------------------------------------------------------
+      ! Following this comment there are multiple definitions for functions
+      ! to access the data in the greensFunction Type:
+      !     get_gf -> Get the (m,mp) matrix of the spherically averaged GF
+      !               at a certain energy point. If the correct scalar products
+      !               are provided, the radial dependent GF can also be recombined here
+      !     getRadial_gf -> Returns the radial and energy dependent GF for a certain spin
+      !                     and m,mp pair
+      !     getRadialSpin_gf -> Returns the radial and energy dependent GF for a certain
+      !                         m,mp pair. Also returns the 2x2 spin matrix at that point
+      !     set_gf -> Set the value of the (m,mp) Matrix at a
+      !               certain energy point with an input matrix
+      !----------------------------------------------------------------------------------
 
       SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,ddn,uun21,udn21,dun21,ddn21)
 
@@ -316,7 +331,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE get_gfRadial(this,m,mp,l_conjg,spin,f,g,gmat)
+      SUBROUTINE getRadial_gf(this,m,mp,l_conjg,spin,f,g,gmat)
 
          !Returns the green's function on the radial and energy mesh
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
@@ -403,7 +418,44 @@ MODULE m_types_greensf
          !Complex conjugate for spin 4
          IF(spin.EQ.4) gmat = conjg(gmat)
 
-      END SUBROUTINE get_gfRadial
+      END SUBROUTINE getRadial_gf
+
+      SUBROUTINE getRadialSpin_gf(this,m,mp,l_conjg,f,g,gmat)
+         !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
+         !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
+
+         CLASS(t_greensf),    INTENT(IN)     :: this
+         INTEGER,             INTENT(IN)     :: m,mp
+         LOGICAL,             INTENT(IN)     :: l_conjg
+         REAL   ,             INTENT(IN)     :: f(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,:,:)
+         COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
+
+         INTEGER :: spin,spin1,spin2
+         COMPLEX,ALLOCATABLE :: temp(:,:)
+
+         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),2,2,this%contour%nz),source=cmplx_0)
+
+         DO spin = 1, 4
+            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
+               gmat(:,spin1,spin2,:) = cmplx_0
+               CYCLE
+            ENDIF
+            IF(spin < 3) THEN
+               spin1 = spin
+               spin2 = spin
+            ELSE IF(spin.EQ.3) THEN
+               spin1 = 2
+               spin2 = 1
+            ELSE
+               spin1 = 1
+               spin2 = 2
+            ENDIF
+            CALL this%getRadial(m,mp,l_conjg,spin,f,g,temp)
+            gmat(:,spin1,spin2,:) = temp(:,:)
+         ENDDO
+
+      END SUBROUTINE getRadialSpin_gf
 
       SUBROUTINE set_gf(this,iz,l_conjg,gmat,spin)
 
