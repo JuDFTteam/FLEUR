@@ -203,7 +203,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
          CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,fmpi,&
-                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
+                                 nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
       ELSE
          IF(fmpi%irank.EQ.0) THEN
             WRITE(oUnit,'(/,A)') "Green's Functions are not calculated: "

@@ -268,6 +268,25 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+   <xsd:simpleType name="FleurBoolVecType">
+      <xsd:list itemType="FleurBool"/>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FleurBool4DVecType">
+      <xsd:restriction base="FleurBoolVecType">
+         <xsd:length value="4"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:complexType name="GFElementChoiceType">
+      <xsd:sequence>
+         <xsd:element name="s" type="FleurBool4DVecType"/>
+         <xsd:element name="p" type="FleurBool4DVecType"/>
+         <xsd:element name="d" type="FleurBool4DVecType"/>
+         <xsd:element name="f" type="FleurBool4DVecType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
    <xsd:complexType name="SymOpMatrixType">
       <xsd:sequence>
          <xsd:element name="row-1" type="Double4DVecType"/>
@@ -390,6 +409,7 @@
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="intersiteGF" type="IntersiteGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
@@ -422,8 +442,10 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
+         <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="intersiteGF" type="IntersiteGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
       </xsd:sequence>
@@ -512,6 +534,14 @@
       <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_offdiag" type="FleurBool" use="required"/>
+      <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="TorgueGFType">
+      <xsd:sequence>
+         <xsd:element name="GFelements" type="GFElementChoiceType"/>
+      </xsd:sequence>
       <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>

@@ -6,6 +6,7 @@ MODULE m_greensfPostProcess
    USE m_greensfCalcRealPart
    USE m_greensf_io
    USE m_occmtx
+   USE m_greensfTorgue
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
@@ -16,7 +17,7 @@ MODULE m_greensfPostProcess
    CONTAINS
 
    SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
+                                 nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
@@ -28,6 +29,7 @@ MODULE m_greensfPostProcess
       TYPE(t_mpi),               INTENT(IN)     :: mpi
       TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_hub1inp),           INTENT(IN)     :: hub1inp
+      TYPE(t_sphhar),            INTENT(IN)     :: sphhar
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
       TYPE(t_enpara),            INTENT(IN)     :: enpara
@@ -38,6 +40,7 @@ MODULE m_greensfPostProcess
       INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
 
+      REAL :: torgue(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
@@ -149,6 +152,17 @@ MODULE m_greensfPostProcess
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
+         IF(ANY(gfinp%numTorgueElems>0)) THEN
+            CALL timestart("Green's Function: Torgue")
+            DO atomType = 1, atoms%nType
+               IF(gfinp%numTorgueElems(atomType)==0) CYCLE
+               CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),vTot,&
+                                  sphhar,atoms,sym,noco,nococonv,input,enpara,hub1inp,mpi,atomType,torgue)
+               WRITE(*,9000) atomType,torgue
+9000           FORMAT(/,'Torgue for atom: ',I5,' torgue: ',3f14.8)
+            ENDDO
+            CALL timestop("Green's Function: Torgue")
+         ENDIF
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)

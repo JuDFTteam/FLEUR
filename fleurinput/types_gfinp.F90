@@ -71,6 +71,8 @@ MODULE m_types_gfinp
       INTEGER :: numberContours = 0
       TYPE(t_contourInp), ALLOCATABLE :: contour(:)
       INTEGER, ALLOCATABLE :: hiaElem(:)
+      INTEGER, ALLOCATABLE :: torgueElem(:,:)
+      INTEGER, ALLOCATABLE :: numTorgueElems(:)
    CONTAINS
       PROCEDURE :: read_xml       => read_xml_gfinp
       PROCEDURE :: mpi_bc         => mpi_bc_gfinp
@@ -108,6 +110,8 @@ CONTAINS
       CALL mpi_bc(this%elup,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
+      CALL mpi_bc(this%torgueElem,rank,mpi_comm)
+      CALL mpi_bc(this%numTorgueElems,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -156,8 +160,10 @@ CONTAINS
       INTEGER :: numberNodes,ntype,itype,n_hia,i_gf
       INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
-      CHARACTER(len=100)  :: xPathA,xPathS,label,cutoffArg
+      CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
+      CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
       LOGICAL :: l_gfinfo_given,l_off,l_nn,l_fixedCutoffset
+      LOGICAL :: lp_calc(0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -254,6 +260,8 @@ CONTAINS
 
       ALLOCATE(this%elem((lmaxU_const+1)**2*ntype))
       ALLOCATE(this%hiaElem(4*ntype))
+      ALLOCATE(this%numTorgueElems(ntype),source=0)
+      ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -325,6 +333,33 @@ CONTAINS
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = i_gf
          ENDDO
+
+         WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation'
+         numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+         IF(numberNodes==1) THEN
+            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            iContour = this%find_contour(TRIM(ADJUSTL(label)))
+            cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
+            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+               l_fixedCutoffset = .FALSE.
+            ELSE
+               fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+               l_fixedCutoffset = .TRUE.
+            ENDIF
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/GFelements'
+            DO l = 0,lmaxU_const
+               str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
+               READ(str,'(4l2)') (lp_calc(lp),lp=0,3)
+               DO lp = 0,lmaxU_const
+                  IF(.NOT.lp_calc(lp)) CYCLE
+                  i_gf =  this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                   fixedCutoff=fixedCutoff)
+                  this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
+                  this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
+               ENDDO
+            ENDDO
+         ENDIF
+
       ENDDO
 
       IF(this%n>0 .AND. .NOT.l_gfinfo_given) THEN
