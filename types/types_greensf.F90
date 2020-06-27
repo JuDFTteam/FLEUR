@@ -434,11 +434,11 @@ MODULE m_types_greensf
          INTEGER :: spin,spin1,spin2
          COMPLEX,ALLOCATABLE :: temp(:,:)
 
-         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),2,2,this%contour%nz),source=cmplx_0)
+         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),this%contour%nz),source=cmplx_0)
 
          DO spin = 1, 4
             IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(:,spin1,spin2,:) = cmplx_0
+               gmat(spin1,spin2,:,:) = cmplx_0
                CYCLE
             ENDIF
             IF(spin < 3) THEN
@@ -452,7 +452,7 @@ MODULE m_types_greensf
                spin2 = 2
             ENDIF
             CALL this%getRadial(m,mp,l_conjg,spin,f,g,temp)
-            gmat(:,spin1,spin2,:) = temp(:,:)
+            gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
       END SUBROUTINE getRadialSpin_gf
