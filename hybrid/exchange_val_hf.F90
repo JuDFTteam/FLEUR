@@ -420,11 +420,17 @@ CONTAINS
       endif
 
       IF (mat_ex%l_real) THEN
+#ifdef CPP_MPI
          call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
-         !mat_ex%data_r = exch_vv
+#else
+         mat_ex%data_r = exch_vv
+#endif
       ELSE
+#ifdef CPP_MPI
          call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
-         !mat_ex%data_c = exch_vv
+#else
+         mat_ex%data_c = exch_vv
+#endif
       END IF
       CALL timestop("valence exchange calculation")
 
