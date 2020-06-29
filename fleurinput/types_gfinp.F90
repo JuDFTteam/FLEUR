@@ -398,6 +398,8 @@ CONTAINS
       LOGICAL :: l_inter,l_offd
       INTEGER :: hiaElem(atoms%n_hia)
 
+      IF(this%n==0) RETURN !Nothing to do here
+
       !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
          l  = this%elem(i_gf)%l

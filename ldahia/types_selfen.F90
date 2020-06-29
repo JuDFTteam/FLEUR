@@ -58,6 +58,8 @@ MODULE m_types_selfen
          COMPLEX,ALLOCATABLE::ctmp(:)
          REAL, ALLOCATABLE :: rtmp(:)
 
+         CALL MPI_COMM_RANK(mpi_communicator,irank,ierr)
+
          n = SIZE(this%muMatch)
          ALLOCATE(rtmp(n))
          CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,mpi_communicator,ierr)
