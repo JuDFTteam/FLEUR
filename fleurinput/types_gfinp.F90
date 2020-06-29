@@ -160,13 +160,13 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF
-      INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells
+      INTEGER :: i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_off,l_nn,l_fixedCutoffset
-      LOGICAL :: lp_calc(0:3)
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset
+      LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -271,52 +271,74 @@ CONTAINS
 
          !Read in all possible tags, which need a greens function calculation
 
-         !Explicit declaration of an onsite greens function element
-         DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/onsiteGF')
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/onsiteGF[',i,']'
-            lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
-            lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
-            l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
+         !Declaration of a general Green's Function Calculation
+         DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/greensfCalculation')
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/greensfCalculation[',i,']'
+
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
-            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+            nshells = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nshells'))
+
+            refL = -1
+            SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
+            CASE('calc')
+               !calculate the cutoff from the number of states
                l_fixedCutoffset = .FALSE.
-            ELSE
+            CASE('s','p','d','f')
+               !Reference cutoff given (will be processed after)
+               l_fixedCutoffset = .FALSE.
+               IF(TRIM(ADJUSTL(cutoffArg))=='s') refL = 0
+               IF(TRIM(ADJUSTL(cutoffArg))=='p') refL = 1
+               IF(TRIM(ADJUSTL(cutoffArg))=='d') refL = 2
+               IF(TRIM(ADJUSTL(cutoffArg))=='f') refL = 3
+            CASE default
+               !Fixed cutoff set
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
                l_fixedCutoffset = .TRUE.
-            ENDIF
-            DO l = lmin, lmax
-               DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  i_gf = this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                                  fixedCutoff=fixedCutoff)
-               ENDDO
-            ENDDO
-         ENDDO
+            END SELECT
 
-         !Explicit declaration of an intersite greens function element
-         DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/intersiteGF')
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/intersiteGF[',i,']'
-            lmin = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_min'))
-            lmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_max'))
-            l_off = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_offdiag'))
-            label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
-            cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
-            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
-               l_fixedCutoffset = .FALSE.
-            ELSE
-               fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
-               l_fixedCutoffset = .TRUE.
-            ENDIF
-            iContour = this%find_contour(TRIM(ADJUSTL(label)))
-            DO l = lmin, lmax
-               DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
-                  i_gf = this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                                  fixedCutoff=fixedCutoff,l_inter=.TRUE.)
+            numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/matrixElements')
+            IF(numberNodes==1) THEN
+               WRITE(xPathA,*) TRIM(ADJUSTL(xPathA))//'/matrixElements'
+               DO l = 0,lmaxU_const
+                  str = xml%GetAttributeValue(TRIM(xPathA)//'/@'//spdf(l))
+                  READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
+                  DO lp = 0,lmaxU_const
+                     IF(.NOT.lp_calc(lp,l)) CYCLE
+                     i_gf =  this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                      fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
+                  ENDDO
                ENDDO
-            ENDDO
-         ENDDO
+            ENDIF
 
+            numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/diagElements')
+            IF(numberNodes==1) THEN
+               lp_calc = .FALSE.
+               WRITE(xPathA,*) TRIM(ADJUSTL(xPathA))//'/diagElements'
+               DO l = 0,lmaxU_const
+                  lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
+                  IF(.NOT.lp_calc(l,l)) CYCLE
+                  i_gf =  this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                                   fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
+               ENDDO
+            ENDIF
+
+            !Find the reference element
+            IF(refL /= -1) THEN
+               !Find the element
+               refGF = this%find(refL,itype,iContour=iContour)
+               DO l = 0,lmaxU_const
+                  DO lp = 0,lmaxU_const
+                     IF(.NOT.lp_calc(lp,l)) CYCLE
+                     i_gf =  this%find(itype,l,lp=lp,iContour=iContour)
+                     IF(i_gf==refGF) CYCLE
+                     this%elem(i_gf)%refCutoff = refGF
+                  ENDDO
+               ENDDO
+            ENDIF
+
+         ENDDO
          !Declaration of a DFT+Hubbard 1 calculation
          DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/ldaHIA')
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
@@ -365,9 +387,9 @@ CONTAINS
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/GFelements'
             DO l = 0,lmaxU_const
                str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
-               READ(str,'(4l2)') (lp_calc(lp),lp=0,3)
+               READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                DO lp = 0,lmaxU_const
-                  IF(.NOT.lp_calc(lp)) CYCLE
+                  IF(.NOT.lp_calc(lp,l)) CYCLE
                   i_gf =  this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff)
                   this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
@@ -381,7 +403,7 @@ CONTAINS
                refGF = this%find(refL,itype,iContour=iContour)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
-                     IF(.NOT.lp_calc(lp)) CYCLE
+                     IF(.NOT.lp_calc(lp,l)) CYCLE
                      i_gf =  this%find(itype,l,lp=lp,iContour=iContour)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
@@ -443,7 +465,7 @@ CONTAINS
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,atoms,sym)
+                                           this%elem(i_gf)%fixedCutoff,this%elem(i_gf)%refCutoff,atoms,sym)
          ENDIF
       ENDDO
 
@@ -608,7 +630,7 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,atoms,sym)
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,refCutoff,atoms,sym)
 
       USE m_types_atoms
       USE m_types_sym
@@ -623,6 +645,7 @@ CONTAINS
       INTEGER,          INTENT(IN)     :: iContour
       LOGICAL,          INTENT(IN)     :: l_fixedCutoffset
       REAL,             INTENT(IN)     :: fixedCutoff
+      INTEGER,          INTENT(IN)     :: refCutoff
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
 
@@ -651,6 +674,7 @@ CONTAINS
                this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
                i_gf =  this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
                                 fixedCutoff=fixedCutoff)
+               this%elem(i_gf)%refCutoff = refCutoff
                dist(natomp) = 9e99 !Eliminate from the list
             ENDIF
          ENDDO
