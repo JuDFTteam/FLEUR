@@ -110,13 +110,13 @@ MODULE m_greensfCalcRealPart
             nTypep = g(i_gf)%elem%atomTypep
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
-            refCutoff        = g(i_gf)%elem%refCutoff
+            !refCutoff        = g(i_gf)%elem%refCutoff
             i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
-            IF(refCutoff/=-1) THEN
+            !IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
-               greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
-            ENDIF
+            !   greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
+            !ENDIF
             CALL greensfImagPart%scale(i_elem)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")

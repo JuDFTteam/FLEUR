@@ -24,7 +24,7 @@ MODULE m_greensfSym
       TYPE(t_greensfBZintCoeffs),   INTENT(INOUT)  :: greensfBZintCoeffs
 
       INTEGER imat,iBand,jspin
-      COMPLEX, ALLOCATABLE :: imSym(:,:,:)
+      COMPLEX, ALLOCATABLE :: imSym(:,:)
 
       !$OMP parallel default(none) &
       !$OMP shared(ikpt_i,i_elem,natom,l,l_onsite,l_sphavg)&
