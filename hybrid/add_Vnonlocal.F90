@@ -72,7 +72,7 @@ CONTAINS
       ! local scalars
       INTEGER                 :: n, nn, iband, nbasfcn
       REAL                    :: a_ex
-      TYPE(t_mat)             :: olap, tmp, v_x, z
+      TYPE(t_mat)             :: tmp, v_x, z
       COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
 
       call timestart("add_vnonlocal")
@@ -84,20 +84,30 @@ CONTAINS
       CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
 
       CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+
+      ! DO i = fmpi%n_rank+1,lapw%nv(ispin),fmpi%n_size
+      !             i0=(i-1)/fmpi%n_size+1
+      !             DO  j = 1,MIN(i,lapw%nv(jspin)) 
+      !                data_r(j,i0)
       ! add non-local x-potential to the hamiltonian hmat
+
+      ! write (*,*) "shape(hmat%data_r)", shape(hmat%data_r)
+      ! write (*,*) "shape(v_x%data_r)", shape(v_x%data_r)
+      ! if(any( shape(hmat%data_r) /= shape(v_x%data_r) ) ) then 
+      !    if(all(shape(v_x%data_r) /= 0)) then
+      !       call judft_error("shapes don't agree")
+      !    endif
+      ! endif
+
+      if(v_x%matsize1 > 0) then 
+         call v_x%u2l()
+      endif
       DO n = 1, v_x%matsize1
          DO nn = 1, n
             IF (hmat%l_real) THEN
-               if(any( shape(hmat%data_r) /= shape(v_x%data_r) ) ) then 
-                  write (*,*) "shape(hmat%data_r)", shape(hmat%data_r)
-                  write (*,*) "shape(v_x%data_r)", shape(v_x%data_r)
-                  call judft_error("shapes don't agree")
-               endif
                hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
-               v_x%data_r(n, nn) = v_x%data_r(nn, n)
             ELSE
                hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
-               v_x%data_c(n, nn) = CONJG(v_x%data_c(nn, n))
             ENDIF
          END DO
       END DO
