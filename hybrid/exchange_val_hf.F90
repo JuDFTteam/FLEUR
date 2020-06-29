@@ -412,13 +412,6 @@ CONTAINS
                                                                calledby='exchange_val_hf.F90')
       END IF
 
-!   WRITE(7000,'(a,i7)') 'ik: ', ik
-!   DO n1=1,hybdat%nbands(ik)
-!      DO n2=1,n1
-!         WRITE(7000,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
-!      END DO
-!   END DO
-
       ! write exch_vv in mat_ex
       if(k_pack%q_packs(jq)%submpi%root()) then
          CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
