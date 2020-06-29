@@ -42,7 +42,7 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
    SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp, results,&
-                            xcpot, nococonv, hmat)
+                            xcpot, fmpi, nococonv, hmat)
 
       USE m_types
       USE m_constants
@@ -63,6 +63,7 @@ CONTAINS
       CLASS(t_xcpot), INTENT(IN)     :: xcpot
       TYPE(t_hybdat), INTENT(INOUT)  :: hybdat
       TYPE(t_lapw), INTENT(IN)       :: lapw
+      type(t_mpi), intent(in)        :: fmpi
       type(t_nococonv),intent(in)    :: nococonv
       TYPE(t_mat), INTENT(INOUT)     :: hmat
 
@@ -70,7 +71,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: n, nn, iband, nbasfcn
+      INTEGER                 :: n, nn, iband, nbasfcn, i, i0, j
       REAL                    :: a_ex
       TYPE(t_mat)             :: tmp, v_x, z
       COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
@@ -82,13 +83,9 @@ CONTAINS
 
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
       CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
-
       CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
 
-      ! DO i = fmpi%n_rank+1,lapw%nv(ispin),fmpi%n_size
-      !             i0=(i-1)/fmpi%n_size+1
-      !             DO  j = 1,MIN(i,lapw%nv(jspin)) 
-      !                data_r(j,i0)
+      
       ! add non-local x-potential to the hamiltonian hmat
 
       ! write (*,*) "shape(hmat%data_r)", shape(hmat%data_r)
@@ -102,23 +99,22 @@ CONTAINS
       if(v_x%matsize1 > 0) then 
          call v_x%u2l()
       endif
-      DO n = 1, v_x%matsize1
-         DO nn = 1, n
-            IF (hmat%l_real) THEN
-               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
-            ELSE
-               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
-            ENDIF
-         END DO
-      END DO
-#ifdef CPP_EXPLICIT_HYB
-      ! calculate HF energy
-      IF (hybdat%l_calhf) THEN
-         WRITE (oUnit, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
-
-         WRITE (oUnit, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
-      END IF
-#endif
+      
+      IF (hmat%l_real) THEN
+         DO i = fmpi%n_rank+1,v_x%matsize1,fmpi%n_size
+            i0=(i-1)/fmpi%n_size+1
+            DO  j = 1,MIN(i,v_x%matsize1) 
+               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * v_x%data_r(j, i)
+            enddo
+         enddo
+      else         
+         DO i = fmpi%n_rank+1,v_x%matsize1,fmpi%n_size
+            i0=(i-1)/fmpi%n_size+1
+            DO  j = 1,MIN(i,v_x%matsize1) 
+               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * v_x%data_c(j, i)
+            enddo
+         enddo
+      endif
 
       CALL z%init(hmat%l_real, nbasfcn, fi%input%neig)
 
