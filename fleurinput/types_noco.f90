@@ -21,7 +21,8 @@ MODULE m_types_noco
     LOGICAL:: l_scaleMag = .FALSE.
     REAL   :: mag_scale=1.0
     REAL   :: mix_b=0.0
-    REAL   :: mix_RelaxAngle=1.0
+    REAL   :: mix_RelaxAngleAlpha=1.0
+    REAL   :: mix_RelaxAngleBeta=1.0
     REAL   :: mix_RelaxWeightOffD=1.0
     LOGICAL:: l_spav= .FALSE.
     REAL   :: theta_inp=0.0
@@ -65,7 +66,8 @@ MODULE m_types_noco
      CALL mpi_bc(this%mag_scale ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss_inp)
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
-     CALL mpi_bc(this%mix_RelaxAngle,rank,mpi_comm)
+     CALL mpi_bc(this%mix_RelaxAngleAlpha,rank,mpi_comm)
+     CALL mpi_bc(this%mix_RelaxAngleBeta,rank,mpi_comm)
      CALL mpi_bc(this%mix_RelaxWeightOffD,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta_inp,rank,mpi_comm)
@@ -117,7 +119,8 @@ MODULE m_types_noco
          this%l_scaleMag = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_scaleMag'))
          this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
          this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
-         this%mix_RelaxAngle = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxAngle'))
+         this%mix_RelaxAngleBeta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxAngleBeta'))
+         this%mix_RelaxAngleAlpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxAngleAlpha'))
          this%mix_RelaxWeightOffD = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxWeightOffD'))
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
          READ(valueString,*) this%qss_inp

@@ -186,8 +186,8 @@ CONTAINS
 
       IF (l_nocoOpt .OR. l_explicit) THEN
 160      FORMAT('      <nocoParams l_ss="', l1, '" l_mperp="', l1,'" l_mtNocoPot="', l1,'" l_alignMT="', l1, '" l_constr="', l1, '" l_sourceFree="', l1, &
-                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8, '" mix_RelaxAngle="',f0.8,'" mix_RelaxWeightOffD="',f0.8,'">')
-         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT, noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b, noco%mix_RelaxAngle,noco%mix_RelaxWeightOffD
+                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8, '" mix_RelaxAngleAlpha="',f0.8, '" mix_RelaxAngleBeta="',f0.8,'" mix_RelaxWeightOffD="',f0.8,'">')
+         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT, noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b, noco%mix_RelaxAngleAlpha,noco%mix_RelaxAngleBeta,noco%mix_RelaxWeightOffD
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
          WRITE (fileNum, 162) noco%qss_inp
          WRITE (fileNum, '(a)') '      </nocoParams>'

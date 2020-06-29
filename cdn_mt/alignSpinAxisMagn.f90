@@ -80,16 +80,16 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
       IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
    END DO
 !Mixing of angles part 
-   IF(noco%mix_RelaxAngle.NE.1.0) THEN   
+   IF(noco%mix_RelaxAngleAlpha.NE.1.0.OR.noco%mix_RelaxAngleBeta.NE.1.0) THEN   
       diffT=noco%mix_RelaxAngle*diffT
       diffP=noco%mix_RelaxAngle*diffP
    END IF
 ! Rotate cdn by direction of magnetization so it alings with spin quantization axis.
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
+   IF(noco%mix_RelaxAngleAlpha.NE.0.0) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
+   IF(noco%mix_RelaxAngleBeta.NE.0.0) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
 !Store angles in nococonv
-   nococonv%beta=nococonv%beta+diffT
-   nococonv%alph=nococonv%alph+diffP
+   IF(noco%mix_RelaxAngleBeta.NE.0.0) nococonv%beta=nococonv%beta+diffT
+   IF(noco%mix_RelaxAngleAlpha.NE.0.0) nococonv%alph=nococonv%alph+diffP
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
    DO i=1, atoms%ntype
       IF (abs(nococonv%beta(i)).LE.eps) nococonv%beta(i)=0.0
