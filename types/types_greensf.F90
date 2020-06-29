@@ -56,12 +56,14 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
 
       CONTAINS
-         PROCEDURE, PASS :: init    => init_greensf
-         PROCEDURE       :: mpi_bc  => mpi_bc_greensf
-         PROCEDURE       :: collect => collect_greensf
-         PROCEDURE       :: get     => get_gf
-         PROCEDURE       :: set     => set_gf
-         PROCEDURE       :: reset   => reset_gf
+         PROCEDURE, PASS :: init           => init_greensf
+         PROCEDURE       :: mpi_bc         => mpi_bc_greensf
+         PROCEDURE       :: collect        => collect_greensf
+         PROCEDURE       :: get            => get_gf
+         PROCEDURE       :: getRadial      => getRadial_gf
+         PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
+         PROCEDURE       :: set            => set_gf
+         PROCEDURE       :: reset          => reset_gf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -122,12 +124,15 @@ MODULE m_types_greensf
 
       END SUBROUTINE mpi_bc_greensf
 
-      SUBROUTINE collect_greensf(this,mpi_comm)
+      SUBROUTINE collect_greensf(this,mpi_communicator)
+
+#ifdef CPP_MPI
+         USE mpi
+#endif
 
          CLASS(t_greensf),     INTENT(INOUT) :: this
-         INTEGER,              INTENT(IN)    :: mpi_comm
+         INTEGER,              INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-         include 'mpif.h'
 #include"cpp_double.h"
          INTEGER:: ierr,n
          COMPLEX,ALLOCATABLE::ctmp(:)
@@ -135,39 +140,51 @@ MODULE m_types_greensf
          IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
             DEALLOCATE(ctmp)
          ELSE
             n = SIZE(this%uu)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
-            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
-            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
-            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
             DEALLOCATE(ctmp)
          ENDIF
 #endif
       END SUBROUTINE collect_greensf
 
-      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,u,udot,ddn,uun21,udn21,dun21,ddn21)
+      !----------------------------------------------------------------------------------
+      ! Following this comment there are multiple definitions for functions
+      ! to access the data in the greensFunction Type:
+      !     get_gf -> Get the (m,mp) matrix of the spherically averaged GF
+      !               at a certain energy point. If the correct scalar products
+      !               are provided, the radial dependent GF can also be recombined here
+      !     getRadial_gf -> Returns the radial and energy dependent GF for a certain spin
+      !                     and m,mp pair
+      !     getRadialSpin_gf -> Returns the radial and energy dependent GF for a certain
+      !                         m,mp pair. Also returns the 2x2 spin matrix at that point
+      !     set_gf -> Set the value of the (m,mp) Matrix at a
+      !               certain energy point with an input matrix
+      !----------------------------------------------------------------------------------
+
+      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,ddn,uun21,udn21,dun21,ddn21)
 
          USE m_types_mat
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
-         !when jr (and jrp) are given return for that radial point
+         !can also return the spherically averaged GF with the given scalar products
 
          CLASS(t_greensf),    INTENT(IN)     :: this
          INTEGER,             INTENT(IN)     :: iz
          LOGICAL,             INTENT(IN)     :: l_conjg
          TYPE(t_mat),         INTENT(INOUT)  :: gmat !Return matrix
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
-         REAL   , OPTIONAL,   INTENT(IN)     :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
-         REAL   , OPTIONAL,   INTENT(IN)     :: udot(:,:)
          REAL   , OPTIONAL,   INTENT(IN)     :: ddn(:) !Scalar products
          REAL   , OPTIONAL,   INTENT(IN)     :: uun21
          REAL   , OPTIONAL,   INTENT(IN)     :: udn21
@@ -177,7 +194,7 @@ MODULE m_types_greensf
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep,nspins
-         LOGICAL l_radial,l_full,l_scalar
+         LOGICAL l_full,l_scalar
 
          IF(.NOT.this%l_calc) THEN
             CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
@@ -187,17 +204,6 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
-
-         IF(PRESENT(u).OR.PRESENT(udot).AND.ALLOCATED(this%gmmpMat)) THEN
-            CALL juDFT_error("Green's function not calculated for radial dependence", calledby="get_gf")
-         ENDIF
-
-         IF((PRESENT(u).AND..NOT.PRESENT(udot)).OR.&
-            (PRESENT(udot).AND..NOT.PRESENT(u))) THEN
-            CALL juDFT_error("Not a valid input: Either provide both u and udot or neither of them", calledby="get_gf")
-         ENDIF
-
-         l_radial = PRESENT(u).AND.PRESENT(udot)
 
          IF(ALLOCATED(this%gmmpMat)) THEN
             nspins = SIZE(this%gmmpMat,4)
@@ -213,11 +219,7 @@ MODULE m_types_greensf
             ENDIF
          ENDIF
 
-         IF(l_scalar.AND.l_radial) THEN
-            CALL juDFT_error("Either l_scalar or l_radial", calledby="get_gf")
-         ENDIF
-
-         IF(l_radial.OR.l_scalar.AND. .NOT.ALLOCATED(this%uu)) THEN
+         IF(l_scalar.AND. .NOT.ALLOCATED(this%uu)) THEN
             CALL juDFT_error("l_scalar/l_radial only without l_sphavg", calledby="get_gf")
          ENDIF
 
@@ -302,12 +304,7 @@ MODULE m_types_greensf
                   !-------------------
                   ! Fetch the values
                   !-------------------
-                  IF(l_radial) THEN
-                     gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * u(2,spin2)     + &
-                                              this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * udot(2,spin2)  + &
-                                              this%du(iz,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * u(2,spin2)     + &
-                                              this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * udot(2,spin2)
-                  ELSE IF(l_scalar) THEN
+                  IF(l_scalar) THEN
                      IF(spin_ind<3) THEN
                         gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) + &
                                                  this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn(spin_ind)
@@ -333,6 +330,132 @@ MODULE m_types_greensf
          ENDDO!ispin
 
       END SUBROUTINE get_gf
+
+      SUBROUTINE getRadial_gf(this,m,mp,l_conjg,spin,f,g,gmat)
+
+         !Returns the green's function on the radial and energy mesh
+         !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
+
+         CLASS(t_greensf),    INTENT(IN)     :: this
+         INTEGER,             INTENT(IN)     :: m,mp
+         LOGICAL,             INTENT(IN)     :: l_conjg
+         INTEGER,             INTENT(IN)     :: spin
+         REAL   ,             INTENT(IN)     :: f(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,:,:)
+         COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:) !Return matrix
+
+         INTEGER spin1,spin2,ipm,spin_ind,m_ind,mp_ind
+         INTEGER l,lp,atomType,atomTypep,nspins,iz
+
+         IF(.NOT.this%l_calc) THEN
+            CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
+         ENDIF
+
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType  = this%elem%atomType
+         atomTypep = this%elem%atomTypep
+
+         IF(ALLOCATED(this%gmmpMat)) THEN
+            CALL juDFT_error("Green's function not calculated for radial dependence", calledby="get_gf")
+         ENDIF
+
+         nspins = SIZE(this%uu,4)
+
+         IF(spin.GT.4 .OR. spin.LT.1) THEN
+            CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+         ENDIF
+
+         ipm = MERGE(2,1,l_conjg)
+
+         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),this%contour%nz),source=cmplx_0)
+         gmat = cmplx_0
+
+         IF(spin < 3) THEN
+            spin1 = spin
+            spin2 = spin
+         ELSE IF(spin.EQ.3) THEN
+            spin1 = 2
+            spin2 = 1
+         ELSE
+            spin1 = 1
+            spin2 = 2
+         ENDIF
+         !Find the correct spin index in gmmpMat arrays
+         spin_ind = MERGE(1,spin,nspins.EQ.1)
+         spin_ind = MERGE(3,spin_ind,spin.EQ.4)
+
+         !-------------------------------------------------------------------
+         ! Check wether we need to do some operation on the indices m and mp
+         !-------------------------------------------------------------------
+         IF(spin.EQ.2 .AND. nspins.EQ.1) THEN
+            !For a non-spin-polarized calculation we might still want the full
+            !matrix. Then we need to reverse the order (SOC prop m*s_z)
+            m_ind  = -m
+            mp_ind = -mp
+         ELSE IF(spin.EQ.4) THEN
+            !We only calculate spin21. spin12 is obtained as hermitian conjugate
+            !(Complex conjugation happens afterwards)
+            m_ind  = mp
+            mp_ind = m
+         ELSE
+            !Do nothing
+            m_ind  = m
+            mp_ind = mp
+         ENDIF
+         !-------------------
+         ! Fetch the values
+         !-------------------
+         DO iz = 1, this%contour%nz
+            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * f(:,1,lp,spin1) + f(:,2,l,spin2) * f(:,2,lp,spin2)) &
+                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * g(:,1,lp,spin1) + g(:,2,l,spin2) * g(:,2,lp,spin2)) &
+                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin2)) &
+                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin2))
+         ENDDO
+         !------------------------
+         ! Additional operations
+         !------------------------
+         !Complex conjugate for spin 4
+         IF(spin.EQ.4) gmat = conjg(gmat)
+
+      END SUBROUTINE getRadial_gf
+
+      SUBROUTINE getRadialSpin_gf(this,m,mp,l_conjg,f,g,gmat)
+         !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
+         !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
+
+         CLASS(t_greensf),    INTENT(IN)     :: this
+         INTEGER,             INTENT(IN)     :: m,mp
+         LOGICAL,             INTENT(IN)     :: l_conjg
+         REAL   ,             INTENT(IN)     :: f(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,:,:)
+         COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
+
+         INTEGER :: spin,spin1,spin2
+         COMPLEX,ALLOCATABLE :: temp(:,:)
+
+         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),2,2,this%contour%nz),source=cmplx_0)
+
+         DO spin = 1, 4
+            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
+               gmat(:,spin1,spin2,:) = cmplx_0
+               CYCLE
+            ENDIF
+            IF(spin < 3) THEN
+               spin1 = spin
+               spin2 = spin
+            ELSE IF(spin.EQ.3) THEN
+               spin1 = 2
+               spin2 = 1
+            ELSE
+               spin1 = 1
+               spin2 = 2
+            ENDIF
+            CALL this%getRadial(m,mp,l_conjg,spin,f,g,temp)
+            gmat(:,spin1,spin2,:) = temp(:,:)
+         ENDDO
+
+      END SUBROUTINE getRadialSpin_gf
 
       SUBROUTINE set_gf(this,iz,l_conjg,gmat,spin)
 

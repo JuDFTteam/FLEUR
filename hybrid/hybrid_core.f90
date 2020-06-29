@@ -368,7 +368,12 @@ CONTAINS
       END DO
 
       lmaxcd = maxval(lmaxc)
-      maxindxc = maxval(nindxcr(0, :), nint((maxval(nindxcr)/2.0)))
+      ! The following commented line seems to be wrong but doesn't produce any problems.
+      ! I replace it by the two following lines. If there is a system for which the
+      ! error in corewf is thrown this has to be undone.
+!      maxindxc = maxval(nindxcr(0, :), nint((maxval(nindxcr)/2.0)))
+      maxindxc = maxval(nindxcr(0, :))
+      maxindxc = MAX(maxindxc, nint((maxval(nindxcr)/2.0)))
 
    END SUBROUTINE core_init
 
