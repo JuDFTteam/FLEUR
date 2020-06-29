@@ -204,13 +204,13 @@ MODULE m_greensfCalcRealPart
                                      g(i_gf)%uu(:,m,mp,jspin,ipm),int_method(contourShape))
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=2)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
-                                     g(i_gf)%ud(:,m,mp,jspin,ipm),int_method(contourShape))
+                                     g(i_gf)%dd(:,m,mp,jspin,ipm),int_method(contourShape))
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=3)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
-                                     g(i_gf)%du(:,m,mp,jspin,ipm),int_method(contourShape))
+                                     g(i_gf)%ud(:,m,mp,jspin,ipm),int_method(contourShape))
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=4)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
-                                     g(i_gf)%dd(:,m,mp,jspin,ipm),int_method(contourShape))
+                                     g(i_gf)%du(:,m,mp,jspin,ipm),int_method(contourShape))
                      ENDIF
                   ENDDO
                ENDDO
