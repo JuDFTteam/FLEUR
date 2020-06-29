@@ -83,9 +83,9 @@ MODULE m_greensfTorgue
       chi(2,1) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
       chi(2,2) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*COS(nococonv%beta(atomType)/2)
 
-      sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
-      sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
-      sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
+      !sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
+      !sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
+      !sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
 
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
@@ -122,13 +122,17 @@ MODULE m_greensfTorgue
                         DO iz = 1, SIZE(g_ii,2)
                            DO alpha = 1, 3 !(x,y,z)
                               DO jr = 1, atoms%jri(atomType)
-                                 g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                                 IF(ipm==1) THEN
+                                    g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                                 ELSE
+                                    g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
+                                 ENDIF
                                  g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
                               ENDDO
                               CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
                               CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * phaseFactor * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                   * MERGE(greensFunction(i_gf)%contour%de(iz),conjg(greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
+                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
+                                                   * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                            ENDDO
                         ENDDO
                      ENDDO
