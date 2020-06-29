@@ -81,8 +81,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    END DO
 !Mixing of angles part 
    IF(noco%mix_RelaxAngleAlpha.NE.1.0.OR.noco%mix_RelaxAngleBeta.NE.1.0) THEN   
-      diffT=noco%mix_RelaxAngle*diffT
-      diffP=noco%mix_RelaxAngle*diffP
+      diffT=noco%mix_RelaxAngleBeta*diffT
+      diffP=noco%mix_RelaxAngleAlpha*diffP
    END IF
 ! Rotate cdn by direction of magnetization so it alings with spin quantization axis.
    IF(noco%mix_RelaxAngleAlpha.NE.0.0) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
