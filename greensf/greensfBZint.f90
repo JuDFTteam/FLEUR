@@ -101,10 +101,9 @@ MODULE m_greensfBZint
                                              gfinp%l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
+                  CALL greensfSym(ikpt_i,i_elem,natom,l,natom.EQ.natomp.AND.l.EQ.lp,gfinp%l_sphavg,&
+                               ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                ENDDO
-
-               CALL greensfSym(ikpt_i,i_elem,natom,l,natom.EQ.natomp.AND.l.EQ.lp,gfinp%l_sphavg,&
-                               spin_start,spin_end,sym,atomFactor,phase,im,greensfBZintCoeffs)
 
             ENDDO !natomp
          ENDDO !natom

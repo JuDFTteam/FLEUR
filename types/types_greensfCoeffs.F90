@@ -112,7 +112,7 @@ MODULE m_types_greensfCoeffs
          uniqueElements = gfinp%uniqueElements()
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
-         ALLOCATE (this%scalingFactor(uniqueElements,input%jspins),source=0.0)
+         ALLOCATE (this%scalingFactor(uniqueElements,input%jspins),source=1.0)
          IF(gfinp%l_sphavg) THEN
             ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
          ELSE
