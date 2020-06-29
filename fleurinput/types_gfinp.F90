@@ -380,7 +380,7 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco,input)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,input,l_write)
 
       USE m_types_atoms
       USE m_types_sym
@@ -392,8 +392,10 @@ CONTAINS
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
+      LOGICAL,          INTENT(IN)     :: l_write
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
+      LOGICAL :: l_inter,l_offd
       INTEGER :: hiaElem(atoms%n_hia)
 
       !Find the elements for which we need to compute the nearest neighbours
@@ -418,27 +420,34 @@ CONTAINS
       ALLOCATE(this%hiaElem(atoms%n_hia))
       this%hiaElem = hiaElem
 
-      IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
-         CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
-                          calledby="init_gfinp")
-      ENDIF
+      !Input checks
+      IF(l_write) THEN
+         IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
+            CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+                             calledby="init_gfinp")
+         ENDIF
 
-      DO i_gf = 1, this%n
-         l  = this%elem(i_gf)%l
-         lp = this%elem(i_gf)%lp
-         atomType  = this%elem(i_gf)%atomType
-         atomTypep = this%elem(i_gf)%atomTypep
-         IF(atomType.NE.atomTypep) THEN
+         DO i_gf = 1, this%n
+            l  = this%elem(i_gf)%l
+            lp = this%elem(i_gf)%lp
+            atomType  = this%elem(i_gf)%atomType
+            atomTypep = this%elem(i_gf)%atomTypep
+            IF(atomType.NE.atomTypep) l_inter = .TRUE.
+            IF(l.NE.lp) l_offd = .TRUE.
+
+         ENDDO
+
+         IF(l_inter) THEN
             IF(sym%nop>1) THEN
-               CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
-                                calledby="init_gfinp")
+                  CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
+                                   calledby="init_gfinp")
             ELSE IF(this%l_sphavg) THEN
                CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
                                 calledby="init_gfinp")
             ENDIF
          ENDIF
 
-         IF(l.NE.lp) THEN
+         IF(l_offd) THEN
             IF(sym%nop>1) THEN
                CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
                                 calledby="init_gfinp")
@@ -447,13 +456,13 @@ CONTAINS
                                 calledby="init_gfinp")
             ENDIF
          ENDIF
-      ENDDO
 
-      IF(this%minCalcDistance>=0.0) THEN
-         IF(input%mindistance>this%minCalcDistance) THEN
-            CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
-                            "is smaller than the distance requirement:"//&
-                            "No Green's Functions will be calculated", calledby="init_gfinp")
+         IF(this%minCalcDistance>=0.0) THEN
+            IF(input%mindistance>this%minCalcDistance) THEN
+               CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
+                               "is smaller than the distance requirement:"//&
+                               "No Green's Functions will be calculated", calledby="init_gfinp")
+            ENDIF
          ENDIF
       ENDIF
 
@@ -529,7 +538,7 @@ CONTAINS
                                                                 calledby="add_gfelem")
 
       !Check if this job has already been added
-      i_gf = this%find(l,nType,lp,nType,iContour=iContour,l_found=l_found)
+      i_gf = this%find(l,nType,lp=lp,nTypep=nTypep,iContour=iContour,l_found=l_found)
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
