@@ -413,7 +413,7 @@ CONTAINS
       END IF
 
       ! write exch_vv in mat_ex
-      if(k_pack%q_packs(jq)%submpi%root()) then
+      if(k_pack%submpi%root()) then
          CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
       else
          CALL mat_ex%alloc(matsize1=1)
@@ -421,13 +421,13 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
 #ifdef CPP_MPI
-         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
+         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%submpi%comm, ierr)
 #else
          mat_ex%data_r = exch_vv
 #endif
       ELSE
 #ifdef CPP_MPI
-         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%q_packs(jq)%submpi%comm, ierr)
+         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%submpi%comm, ierr)
 #else
          mat_ex%data_c = exch_vv
 #endif
