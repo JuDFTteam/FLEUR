@@ -55,6 +55,7 @@ MODULE m_greensfBZint
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
          atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
+         atomFactor = MERGE(1.0,atomFactor,atomType.NE.atomTypep)
 
          i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
 
@@ -66,8 +67,12 @@ MODULE m_greensfBZint
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
+            !natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
+            !natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep)
+
+            !Deactivate this loop (notice natomp_end) (only calculate intersite between representative atoms)
             natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
-            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep)
+            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
 
             DO natomp = natomp_start, natomp_end
 
