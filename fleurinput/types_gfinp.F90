@@ -427,6 +427,8 @@ CONTAINS
                              calledby="init_gfinp")
          ENDIF
 
+         l_inter = .FALSE.
+         l_offd = .FALSE.
          DO i_gf = 1, this%n
             l  = this%elem(i_gf)%l
             lp = this%elem(i_gf)%lp
