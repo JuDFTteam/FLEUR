@@ -98,7 +98,8 @@
       <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_scaleMag" type="FleurBool" use="optional"/>
       <xsd:attribute default="1.0" name="mag_scale" type="xsd:string" use="optional"/>
-      <xsd:attribute default="1.0" name="mix_RelaxAngle" type="xsd:string" use="optional"/>
+      <xsd:attribute default="1.0" name="mix_RelaxAngleAlpha" type="xsd:string" use="optional"/>
+      <xsd:attribute default="1.0" name="mix_RelaxAngleBeta" type="xsd:string" use="optional"/>
       <xsd:attribute default="1.0" name="mix_RelaxWeightOffD" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
