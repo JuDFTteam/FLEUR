@@ -541,9 +541,9 @@
 
    <xsd:complexType name="TorgueGFType">
       <xsd:sequence>
-         <xsd:element name="GFelements" type="GFElementChoiceType"/>
+         <xsd:element name="greensfElements" type="GFElementChoiceType"/>
       </xsd:sequence>
-      <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -564,6 +564,23 @@
         <xsd:simpleType>
           <xsd:restriction base="xsd:string">
             <xsd:enumeration value="calc"/>
+          </xsd:restriction>
+        </xsd:simpleType>
+      </xsd:union>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="ManualKKintgrCutoffType">
+      <xsd:union>
+        <xsd:simpleType>
+          <xsd:restriction base="xsd:double"/>
+        </xsd:simpleType>
+        <xsd:simpleType>
+          <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="calc"/>
+            <xsd:enumeration value="s"/>
+            <xsd:enumeration value="p"/>
+            <xsd:enumeration value="d"/>
+            <xsd:enumeration value="f"/>
           </xsd:restriction>
         </xsd:simpleType>
       </xsd:union>

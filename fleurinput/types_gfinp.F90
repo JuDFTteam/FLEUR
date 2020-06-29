@@ -25,9 +25,11 @@ MODULE m_types_gfinp
       INTEGER :: atomType = 0
       INTEGER :: atomTypep = 0
       INTEGER :: iContour = 0 !Which energy contour is used
+      REAL    :: atomDiff(3) = [0.0,0.0,0.0] !Distance between atoms for intersite phase
+      !Parameters for the determination of the upper cutoff of the Kramers-Kronig Integration
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
-      REAL    :: atomDiff(3) = [0.0,0.0,0.0]
+      INTEGER :: refCutoff = -1 !Choose cutoff to be the same as another GFelement
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -129,6 +131,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%iContour,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_fixedCutoffset,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%fixedCutoff,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%refCutoff,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
       ENDDO
       DO n=1,this%numberContours
@@ -157,7 +160,7 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF
       INTEGER :: lmin,lmax,i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
@@ -340,12 +343,25 @@ CONTAINS
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
-            IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+
+            refL = -1
+            SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
+            CASE('calc')
+               !calculate the cutoff from the number of states
                l_fixedCutoffset = .FALSE.
-            ELSE
+            CASE('s','p','d','f')
+               !Reference cutoff given (will be processed after)
+               l_fixedCutoffset = .FALSE.
+               IF(TRIM(ADJUSTL(cutoffArg))=='s') refL = 0
+               IF(TRIM(ADJUSTL(cutoffArg))=='p') refL = 1
+               IF(TRIM(ADJUSTL(cutoffArg))=='d') refL = 2
+               IF(TRIM(ADJUSTL(cutoffArg))=='f') refL = 3
+            CASE default
+               !Fixed cutoff set
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
                l_fixedCutoffset = .TRUE.
-            ENDIF
+            END SELECT
+
             WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/GFelements'
             DO l = 0,lmaxU_const
                str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
@@ -358,6 +374,21 @@ CONTAINS
                   this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
                ENDDO
             ENDDO
+
+            !Find the reference element
+            IF(refL /= -1) THEN
+               !Find the element
+               refGF = this%find(refL,itype,iContour=iContour)
+               DO l = 0,lmaxU_const
+                  DO lp = 0,lmaxU_const
+                     IF(.NOT.lp_calc(lp)) CYCLE
+                     i_gf =  this%find(itype,l,lp=lp,iContour=iContour)
+                     IF(i_gf==refGF) CYCLE
+                     this%elem(i_gf)%refCutoff = refGF
+                  ENDDO
+               ENDDO
+            ENDIF
+
          ENDIF
 
       ENDDO

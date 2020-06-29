@@ -213,7 +213,6 @@ MODULE m_types_greensfCoeffs
             ENDIF
          ENDIF
 
-
       END SUBROUTINE greensfImagPart_scale
 
       PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,imat) Result(imagpartCut)
@@ -233,7 +232,7 @@ MODULE m_types_greensfCoeffs
          IF(ALLOCATED(this%sphavg)) THEN
             ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
             imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
-         ELSE
+         ELSE IF(ALLOCATED(this%uu)) THEN
             ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
             IF(PRESENT(imat)) THEN
                IF(imat.EQ.1) THEN
@@ -252,7 +251,7 @@ MODULE m_types_greensfCoeffs
          spin_ind = MERGE(1,spin,spin>2)
          kkcut = this%kkintgr_cutoff(i_gf,spin_ind,2)
 
-         imagpartCut(kkcut+1:) = 0.0
+         IF(kkcut.ne.SIZE(imagpartCut)) imagpartCut(kkcut+1:) = 0.0
 
       END FUNCTION greensfImagPart_applyCutoff
 
