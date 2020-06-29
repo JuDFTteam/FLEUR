@@ -41,20 +41,20 @@ MODULE m_greensfSym
                   imSym = im(:,:,iBand,imat,jspin)
                ENDIF
                IF(l_sphavg) THEN
-                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) = &
-                     greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) + atomFactor * phase * imSym
+                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,jspin) = &
+                     greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,jspin) + atomFactor * phase * imSym
                ELSE IF(imat.EQ.1) THEN
-                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) = &
-                     greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) + atomFactor * phase * imSym
+                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,jspin) = &
+                     greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,jspin) + atomFactor * phase * imSym
                ELSE IF(imat.EQ.2) THEN
-                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) = &
-                     greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) + atomFactor * phase * imSym
+                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,jspin) = &
+                     greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,jspin) + atomFactor * phase * imSym
                ELSE IF(imat.EQ.3) THEN
-                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) = &
-                     greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) + atomFactor * phase * imSym
+                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,jspin) = &
+                     greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,jspin) + atomFactor * phase * imSym
                ELSE IF(imat.EQ.4) THEN
-                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) = &
-                     greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,spin_start:spin_end) + atomFactor * phase * imSym
+                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,jspin) = &
+                     greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,jspin) + atomFactor * phase * imSym
                ENDIF
             ENDDO
          ENDDO
