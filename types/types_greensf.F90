@@ -64,6 +64,7 @@ MODULE m_types_greensf
          PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
          PROCEDURE       :: set            => set_gf
          PROCEDURE       :: reset          => reset_gf
+         PROCEDURE       :: resetSingleElem=> resetSingleElem_gf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -565,5 +566,27 @@ MODULE m_types_greensf
          ENDIF
 
       END SUBROUTINE reset_gf
+
+      SUBROUTINE resetSingleElem_gf(this,m,mp,spin,ipm)
+
+         !---------------------------------------------------
+         ! Sets one Element in gmmpMat arrays back to 0
+         !---------------------------------------------------
+
+         CLASS(t_greensf),       INTENT(INOUT)  :: this
+         INTEGER,                INTENT(IN)     :: m
+         INTEGER,                INTENT(IN)     :: mp
+         INTEGER,                INTENT(IN)     :: spin
+         INTEGER,                INTENT(IN)     :: ipm
+
+         IF(ALLOCATED(this%gmmpMat)) this%gmmpMat(:,m,mp,spin,ipm) = cmplx_0
+         IF(ALLOCATED(this%uu)) THEN
+            this%uu(:,m,mp,spin,ipm) = cmplx_0
+            this%ud(:,m,mp,spin,ipm) = cmplx_0
+            this%du(:,m,mp,spin,ipm) = cmplx_0
+            this%dd(:,m,mp,spin,ipm) = cmplx_0
+         ENDIF
+
+      END SUBROUTINE resetSingleElem_gf
 
 END MODULE m_types_greensf

@@ -35,6 +35,7 @@ MODULE m_types_greensfCoeffs
 
          !Contains the imaginary part of the greens function
          INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:,:)
+         REAL   , ALLOCATABLE :: scalingFactor(:,:)
          LOGICAL :: l_calc = .FALSE.
 
          REAL, ALLOCATABLE :: sphavg(:,:,:,:,:)
@@ -49,6 +50,9 @@ MODULE m_types_greensfCoeffs
             PROCEDURE, PASS :: init    =>  greensfImagPart_init
             PROCEDURE, PASS :: collect =>  greensfImagPart_collect
             PROCEDURE, PASS :: mpi_bc  =>  greensfImagPart_mpi_bc
+            PROCEDURE       :: scale   => greensfImagPart_scale
+            PROCEDURE       :: applyCutoff => greensfImagPart_applyCutoff
+            PROCEDURE       :: checkEmpty  => greensfImagPart_checkEmpty
       END TYPE t_greensfImagPart
 
    PUBLIC t_greensfBZintCoeffs, t_greensfImagPart
@@ -107,7 +111,8 @@ MODULE m_types_greensfCoeffs
          !Determine number of unique gf elements
          uniqueElements = gfinp%uniqueElements()
 
-         ALLOCATE (this%kkintgr_cutoff(gfinp%n,spin_dim,2),source=0)
+         ALLOCATE (this%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
+         ALLOCATE (this%scalingFactor(uniqueElements,input%jspins),source=0.0)
          IF(gfinp%l_sphavg) THEN
             ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElements,spin_dim),source=0.0)
          ELSE
@@ -170,6 +175,7 @@ MODULE m_types_greensfCoeffs
          CALL mpi_bc(this%l_calc,rank,mpi_comm)
 
          IF(ALLOCATED(this%kkintgr_cutoff)) CALL mpi_bc(this%kkintgr_cutoff,rank,mpi_comm)
+         IF(ALLOCATED(this%scalingFactor)) CALL mpi_bc(this%scalingFactor,rank,mpi_comm)
          IF(ALLOCATED(this%sphavg)) CALL mpi_bc(this%sphavg,rank,mpi_comm)
          IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)
          IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
@@ -177,5 +183,98 @@ MODULE m_types_greensfCoeffs
          IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
 
       END SUBROUTINE greensfImagPart_mpi_bc
+
+      SUBROUTINE greensfImagPart_scale(this,i_elem)
+
+         CLASS(t_greensfImagPart), INTENT(INOUT):: this
+         INTEGER,                  INTENT(IN)   :: i_elem
+
+         INTEGER :: jspin
+
+         IF(ALLOCATED(this%sphavg)) THEN
+            IF(SIZE(this%sphavg,5)==2) THEN
+               DO jspin = 1, SIZE(this%sphavg,5)
+                  this%sphavg(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin) = this%scalingFactor(i_elem,jspin) &
+                                                                           * this%sphavg(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin)
+               ENDDO
+            ENDIF
+         ELSE IF(ALLOCATED(this%uu)) THEN
+            IF(SIZE(this%uu,5)==2) THEN
+               DO jspin = 1, SIZE(this%uu,5)
+                  this%uu(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin) = this%scalingFactor(i_elem,jspin) &
+                                                                       * this%uu(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin)
+                  this%dd(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin) = this%scalingFactor(i_elem,jspin) &
+                                                                       * this%dd(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin)
+                  this%ud(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin) = this%scalingFactor(i_elem,jspin) &
+                                                                       * this%ud(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin)
+                  this%du(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin) = this%scalingFactor(i_elem,jspin) &
+                                                                       * this%du(:,-lmaxU_const:,-lmaxU_const:,i_elem,jspin)
+               ENDDO
+            ENDIF
+         ENDIF
+
+
+      END SUBROUTINE greensfImagPart_scale
+
+      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,imat) Result(imagpartCut)
+
+         CLASS(t_greensfImagPart), INTENT(IN)   :: this
+         INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: i_gf
+         INTEGER,                  INTENT(IN)   :: m
+         INTEGER,                  INTENT(IN)   :: mp
+         INTEGER,                  INTENT(IN)   :: spin
+         INTEGER, OPTIONAL,        INTENT(IN)   :: imat !which radial dependence array
+
+         REAL, ALLOCATABLE :: imagpartCut(:)
+
+         INTEGER :: spin_ind, kkcut
+
+         IF(ALLOCATED(this%sphavg)) THEN
+            ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
+            imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
+         ELSE
+            ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
+            IF(PRESENT(imat)) THEN
+               IF(imat.EQ.1) THEN
+                  imagpartCut = this%uu(:,m,mp,i_elem,spin)
+               ELSE IF(imat.EQ.2) THEN
+                  imagpartCut = this%dd(:,m,mp,i_elem,spin)
+               ELSE IF(imat.EQ.3) THEN
+                  imagpartCut = this%ud(:,m,mp,i_elem,spin)
+               ELSE IF(imat.EQ.4) THEN
+                  imagpartCut = this%du(:,m,mp,i_elem,spin)
+               ENDIF
+            ENDIF
+         ENDIF
+
+         !Apply Cutoff
+         spin_ind = MERGE(1,spin,spin>2)
+         kkcut = this%kkintgr_cutoff(i_gf,spin_ind,2)
+
+         imagpartCut(kkcut+1:) = 0.0
+
+      END FUNCTION greensfImagPart_applyCutoff
+
+      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,m,mp,spin) Result(l_empty)
+
+         CLASS(t_greensfImagPart), INTENT(IN)   :: this
+         INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: m
+         INTEGER,                  INTENT(IN)   :: mp
+         INTEGER,                  INTENT(IN)   :: spin
+
+         LOGICAL :: l_empty
+
+         IF(ALLOCATED(this%sphavg)) THEN
+            l_empty = ALL(ABS(this%sphavg(:,m,mp,i_elem,spin)).LT.1e-12)
+         ELSE IF(ALLOCATED(this%uu)) THEN
+            l_empty =     ALL(ABS(this%uu(:,m,mp,i_elem,spin)).LT.1e-12) &
+                     .AND.ALL(ABS(this%dd(:,m,mp,i_elem,spin)).LT.1e-12) &
+                     .AND.ALL(ABS(this%ud(:,m,mp,i_elem,spin)).LT.1e-12) &
+                     .AND.ALL(ABS(this%du(:,m,mp,i_elem,spin)).LT.1e-12)
+         ENDIF
+
+      END FUNCTION greensfImagPart_checkEmpty
 
 END MODULE m_types_greensfCoeffs
