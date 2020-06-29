@@ -384,7 +384,7 @@ CONTAINS
                l_fixedCutoffset = .TRUE.
             END SELECT
 
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/GFelements'
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/greensfElements'
             DO l = 0,lmaxU_const
                str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
                READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
