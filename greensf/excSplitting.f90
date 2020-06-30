@@ -18,10 +18,12 @@ MODULE m_excSplitting
 
       INTEGER :: i_gf,i_elem,indUnique,ispin,kkcut,m,l,lp,atomType,atomTypep,ie
       REAL    :: excSplit,del
-      REAL, ALLOCATABLE :: eMesh(:)
+      REAL, ALLOCATABLE :: eMesh(:), imag(:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
       CHARACTER(LEN=20) :: attributes(4)
 
+
+      IF(.NOT.gfinp%l_sphavg) RETURN
 
       CALL gfinp%eMesh(ef,del=del,eMesh=eMesh)
 
@@ -61,15 +63,13 @@ MODULE m_excSplitting
          DO ispin = 1, input%jspins
             intCOM = 0.0
             intNorm = 0.0
-            kkcut = greensfImagPart%kkintgr_cutoff(i_gf,ispin,2)
             DO m = -l, l
-               DO ie = 1, kkcut
-                  intCOM(ie,ispin) = intCOM(ie,ispin) + eMesh(ie)*greensfImagPart%sphavg(ie,m,m,i_elem,ispin)
-                  intNorm(ie,ispin) = intNorm(ie,ispin) + greensfImagPart%sphavg(ie,m,m,i_elem,ispin)
-               ENDDO
+               imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin)
+               intCOM(:,ispin) = intCOM(:,ispin) + eMesh*imag
+               intNorm(:,ispin) = intNorm(:,ispin) + imag
             ENDDO
-            excSplit = excSplit + (-1)**(ispin) * 1.0/(trapz(intNorm(:,ispin),del,kkcut)) &
-                                                     * trapz(intCOM(:,ispin),del,kkcut)
+            excSplit = excSplit + (-1)**(ispin) * 1.0/(trapz(intNorm(:,ispin),del,SIZE(eMesh))) &
+                                                     * trapz(intCOM(:,ispin),del,SIZE(eMesh))
          ENDDO
          WRITE(oUnit,'(A,I4,A,I4,A,f10.4,A)') '  atom: ', atomType, '   l: ', l,&
                                             '    DeltaExc: ',excSplit * hartree_to_ev_const, ' eV'
@@ -79,7 +79,8 @@ MODULE m_excSplitting
          WRITE(attributes(2),'(i0)') l
          WRITE(attributes(3),'(f12.7)') excSplit * hartree_to_ev_const
          WRITE(attributes(4),'(a2)') 'eV'
-         CALL writeXMLElementForm('excSplit',['atomType','l       ','Delta   ','unit    '],attributes,reshape([8,1,5,4,6,1,12,2],[4,2]))
+         CALL writeXMLElementForm('excSplit',['atomType','l       ','Delta   ','unit    '],&
+                                  attributes,reshape([8,1,5,4,6,1,12,2],[4,2]))
 
       ENDDO
       WRITE(oUnit,'(/)')
