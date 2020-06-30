@@ -34,6 +34,7 @@ MODULE m_greensfCalcImagPart
       INTEGER, ALLOCATABLE :: ev_list(:)
       REAL,    ALLOCATABLE :: eig(:)
       REAL,    ALLOCATABLE :: eMesh(:)
+      COMPLEX, ALLOCATABLE :: weights(:)
       REAL,    ALLOCATABLE :: dosWeights(:,:)
       INTEGER, ALLOCATABLE :: indBound(:,:)
 
@@ -41,8 +42,8 @@ MODULE m_greensfCalcImagPart
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(results%ef,del,eb,eMesh=eMesh)
 
-      !Spin degeneracy and additional factors
-      fac = -2.0/input%jspins * ImagUnit * pi_const
+      !Spin degeneracy factors
+      fac = 2.0/input%jspins
 
       DO ikpt_i = 1, SIZE(cdnvalJob%k_list)
          ikpt    = cdnvalJob%k_list(ikpt_i)
@@ -78,11 +79,13 @@ MODULE m_greensfCalcImagPart
 
             IF(i_gf/=indUnique) CYCLE
 
-            !$OMP parallel do default(none) &
+            !$OMP parallel default(none) &
             !$OMP shared(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP shared(i_elem,l,lp,ikpt_i,nBands)&
+            !$OMP shared(i_elem,l,lp,ikpt_i,nBands,eMesh)&
             !$OMP shared(del,eb,eig,dosWeights,indBound,fac,wtkpt,spin_ind) &
-            !$OMP private(m,mp,iBand,j,eGrid_start,eGrid_end,weight,l_zero) collapse(2)
+            !$OMP private(ie,m,mp,iBand,j,eGrid_start,eGrid_end,weight,weights,l_zero)
+            IF(input%bz_integration==3) ALLOCATE(weights(SIZE(eMesh)),source=cmplx_0)
+            !$OMP do collapse(2)
             DO m = -l, l
                DO mp = -lp, lp
                   DO iBand = 1, nBands
@@ -104,13 +107,14 @@ MODULE m_greensfCalcImagPart
 
                      IF(l_zero) CYCLE !No non-zero weight for this band
 
-                     DO ie = eGrid_start, eGrid_end
+                     IF(eGrid_start==eGrid_end) THEN
+                        ie = eGrid_start
 
                         SELECT CASE(input%bz_integration)
                         CASE(0) !Histogram Method
-                           weight = fac * wtkpt/del
+                           weight = -fac * ImagUnit * pi_const * wtkpt/del
                         CASE(3) !Tetrahedron method
-                           weight = fac * dosWeights(ie,iBand)
+                           weight = -fac * ImagUnit * pi_const * dosWeights(ie,iBand)
                         CASE DEFAULT
                         END SELECT
 
@@ -128,11 +132,30 @@ MODULE m_greensfCalcImagPart
                                                                         + AIMAG(weight * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind))
                         ENDIF
 
-                     ENDDO!ie
+                     ELSE !Here we always use the tetrahedron method
+
+                        weights(eGrid_start:eGrid_end) = -ImagUnit * pi_const * fac * dosWeights(eGrid_start:eGrid_end,iBand))
+
+                        IF(gfinp%l_sphavg) THEN
+                           greensfImagPart%sphavg(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%sphavg(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
+                                                               +AIMAG(weights(eGrid_start:eGrid_end) * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                        ELSE
+                           greensfImagPart%uu(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%uu(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
+                                                               +AIMAG(weights(eGrid_start:eGrid_end) * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%dd(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%dd(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
+                                                               +AIMAG(weights(eGrid_start:eGrid_end) * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%ud(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%ud(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
+                                                               +AIMAG(weights(eGrid_start:eGrid_end) * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                           greensfImagPart%du(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%du(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
+                                                               +AIMAG(weights(eGrid_start:eGrid_end) * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind))
+                        ENDIF
+
+                     ENDIF
                   ENDDO!ib
                ENDDO!mp
             ENDDO!m
-            !$OMP end parallel do
+            !$OMP end do
+            !$OMP end parallel
          ENDDO!i_gf
          CALL timestop("Green's Function: Imaginary Part")
 
