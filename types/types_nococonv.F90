@@ -13,6 +13,8 @@ MODULE m_types_nococonv
     REAL   :: qss(3)=[0.,0.,0.]
     REAL, ALLOCATABLE    :: alph(:)
     REAL, ALLOCATABLE    :: beta(:)
+    REAL, ALLOCATABLE    :: alphRlx(:)
+    REAL, ALLOCATABLE    :: betaRlx(:)
     REAL, ALLOCATABLE    :: b_con(:,:)
   CONTAINS
     procedure:: init=>t_nococonv_init
@@ -29,6 +31,10 @@ CONTAINS
     this%phi=noco%phi_inp
     this%alph=noco%alph_inp
     this%beta=noco%beta_inp
+    this%alphRlx=noco%alph_inp
+    this%betaRlx=noco%beta_inp
+    this%alphRlx=0.0
+    this%betaRlx=0.0
     this%qss=noco%qss_inp
     if (allocated(this%b_con)) deallocate(this%b_con)
     allocate(this%b_con(2,size(this%alph)))

@@ -72,7 +72,6 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta_inp,rank,mpi_comm)
      CALL mpi_bc(this%phi_inp,rank,mpi_comm)
-
      CALL mpi_bc(this%l_relax,rank,mpi_comm)
      CALL mpi_bc(this%alph_inp,rank,mpi_comm)
      CALL mpi_bc(this%beta_inp,rank,mpi_comm)
@@ -118,15 +117,11 @@ MODULE m_types_noco
          this%l_scaleMag = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_scaleMag'))
          this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
          this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
+         this%l_alignMT = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxMT'))
          this%l_RelaxBeta = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxBeta'))
          this%l_RelaxAlpha = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxAlpha'))
          this%mix_RelaxWeightOffD = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxWeightOffD'))
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
-         IF (this%l_RelaxAlpha.OR.this%l_RelaxBeta) THEN
-            this%l_alignMT=.TRUE.
-         ELSE
-            this%l_alignMT=.FALSE.
-         END IF
          READ(valueString,*) this%qss_inp
       END IF
 

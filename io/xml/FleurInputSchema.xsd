@@ -97,6 +97,7 @@
       <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_scaleMag" type="FleurBool" use="optional"/>
       <xsd:attribute default="1.0" name="mag_scale" type="xsd:string" use="optional"/>
+      <xsd:attribute default="f" name="l_RelaxMT" type="FleurBool" use="optional"/>
       <xsd:attribute default="f" name="l_RelaxAlpha" type="FleurBool" use="optional"/>
       <xsd:attribute default="f" name="l_RelaxBeta" type="FleurBool" use="optional"/>
       <xsd:attribute default="1.0" name="mix_RelaxWeightOffD" type="xsd:string" use="optional"/>
