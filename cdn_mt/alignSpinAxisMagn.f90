@@ -39,7 +39,7 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    TYPE(t_potden)                :: denTemp
    LOGICAL                       :: l_firstIt,nonZeroAngles !Switch which is handed in by function calls which determines if we have to rotate cdn initially.
-   REAL                          :: moments(3,atoms%ntype)
+   REAL                          :: moments(3,atoms%ntype),scalePhi,scaleTheta
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)
    REAL                          :: diffT(atoms%ntype),diffP(atoms%ntype),eps, zeros(atoms%ntype)
    INTEGER                       :: ierr(2)
@@ -54,8 +54,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
 
    IF(l_firstIt.AND.nonZeroAngles) THEN
 ! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+   IF (noco%l_RelaxBeta)     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
+   IF (noco%l_RelaxAlpha)     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
      !Setting angles to zero since we want our spinQ Axis to remain the same when writing out the density.
      nococonv%alph=zeros
      nococonv%beta=zeros
@@ -71,25 +71,29 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    END IF
    phiTemp(:)=(-1)*phiTemp(:)
    !Calculate angular rotation which has to be done.
-   diffT=thetaTemp-nococonv%beta
-   diffP=phiTemp-nococonv%alph
+   IF (noco%l_RelaxBeta)   diffT=thetaTemp-nococonv%beta
+   IF (noco%l_RelaxAlpha)   diffP=phiTemp-nococonv%alph
 
    DO i=1, atoms%ntype
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
       IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
       IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
    END DO
-!Mixing of angles part 
-   IF(noco%mix_RelaxAngleAlpha.NE.1.0.OR.noco%mix_RelaxAngleBeta.NE.1.0) THEN   
-      diffT=noco%mix_RelaxAngleBeta*diffT
-      diffP=noco%mix_RelaxAngleAlpha*diffP
-   END IF
+!which angles to relax?
+   IF (noco%l_RelaxBeta) scaleTheta=1.0
+   IF (noco%l_RelaxAlpha) scalePhi=1.0  
+   IF (.NOT.noco%l_RelaxBeta) scaleTheta=0.0
+   IF (.NOT.noco%l_RelaxAlpha) scalePhi=0.0  
+   !IF(noco%mix_RelaxAngleAlpha.NE.1.0.OR.noco%mix_RelaxAngleBeta.NE.1.0) THEN   
+      diffT=scaleTheta*diffT
+      diffP=scalePhi*diffP
+   !END IF
 ! Rotate cdn by direction of magnetization so it alings with spin quantization axis.
-   IF(noco%mix_RelaxAngleAlpha.NE.0.0) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
-   IF(noco%mix_RelaxAngleBeta.NE.0.0) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
+   IF (noco%l_RelaxAlpha) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
+   IF (noco%l_RelaxBeta)  CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
 !Store angles in nococonv
-   IF(noco%mix_RelaxAngleBeta.NE.0.0) nococonv%beta=nococonv%beta+diffT
-   IF(noco%mix_RelaxAngleAlpha.NE.0.0) nococonv%alph=nococonv%alph+diffP
+   IF (noco%l_RelaxBeta) nococonv%beta=nococonv%beta+diffT
+   IF (noco%l_RelaxAlpha) nococonv%alph=nococonv%alph+diffP
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
    DO i=1, atoms%ntype
       IF (abs(nococonv%beta(i)).LE.eps) nococonv%beta(i)=0.0
@@ -123,11 +127,11 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    zeros(:)=0.0
 ! Backwards rotation so SQA and magnetization don't align anymore. This is needed since you otherwise run into issues in the mixing since you mix cdn's which have been rotated
 ! in different directions.
-   CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
+   IF (noco%l_RelaxBeta)   CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
+   IF (noco%l_RelaxAlpha) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    IF (present(den)) THEN
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+      IF (noco%l_RelaxBeta) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
+      IF (noco%l_RelaxAlpha) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
    END IF
 ! Nococonv is zero now since rotation has been reverted.
    nococonv%alph=zeros
