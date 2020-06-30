@@ -81,7 +81,7 @@ CONTAINS
       ! local scalars
       INTEGER                 :: n, nn, iband, nbasfcn
       REAL                    :: a_ex
-      TYPE(t_mat)             :: olap, tmp, v_x, z
+      TYPE(t_mat)             :: tmp, v_x, z
       COMPLEX                 :: exch(input%neig, input%neig)
 
       call timestart("add_vnonlocal")
