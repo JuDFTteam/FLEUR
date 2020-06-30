@@ -424,7 +424,7 @@ CONTAINS
       IF(this%n.GT.0) THEN
          IF(this%elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
                                               "than 1htr above efermi",calledby="read_xml_gfinp")
-         IF(this%elup.LT.this%ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="read_xml_gfinp")
+         IF(this%elup.LE.this%ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="read_xml_gfinp")
          IF(ANY(this%elem(:this%n)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",&
                                                             calledby="read_xml_gfinp")
          IF(ANY(this%elem(:this%n)%l.GT.3)) CALL juDFT_error("Green's function only implemented for l<=3",&

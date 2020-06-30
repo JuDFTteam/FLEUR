@@ -148,7 +148,7 @@ MODULE m_greensfTorgue
       torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function Torgue: Integration")
 
-      WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const, ' meV'
+      WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
 
       attributes = ''
       WRITE(attributes(1),'(i0)') atomType
