@@ -208,7 +208,7 @@ CONTAINS
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourRectangle')
          DO i = 1, numberNodes
             iContour = iContour + 1
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourRectangle[',i,']'
+            WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/contourRectangle[',i,']'
             this%contour(iContour)%shape = CONTOUR_RECTANGLE_CONST
             this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
             !et cannot be varied from the fermi energy for this contour
@@ -224,7 +224,7 @@ CONTAINS
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourSemicircle')
          DO i = 1, numberNodes
             iContour = iContour + 1
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourSemicircle[',i,']'
+            WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/contourSemicircle[',i,']'
             this%contour(iContour)%shape = CONTOUR_SEMICIRCLE_CONST
             this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
             this%contour(iContour)%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
@@ -237,7 +237,7 @@ CONTAINS
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/contourDOS')
          DO i = 1, numberNodes
             iContour = iContour + 1
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/contourDOS[',i,']'
+            WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/contourDOS[',i,']'
             this%contour(iContour)%shape = CONTOUR_DOS_CONST
             this%contour(iContour)%eb = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eb'))
             this%contour(iContour)%et = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@et'))
@@ -273,7 +273,7 @@ CONTAINS
 
          !Declaration of a general Green's Function Calculation
          DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/greensfCalculation')
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/greensfCalculation[',i,']'
+            WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/greensfCalculation[',i,']'
 
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
@@ -300,7 +300,7 @@ CONTAINS
 
             numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/matrixElements')
             IF(numberNodes==1) THEN
-               WRITE(xPathA,*) TRIM(ADJUSTL(xPathA))//'/matrixElements'
+               xPathA = TRIM(ADJUSTL(xPathA))//'/matrixElements'
                DO l = 0,lmaxU_const
                   str = xml%GetAttributeValue(TRIM(xPathA)//'/@'//spdf(l))
                   READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
@@ -315,7 +315,7 @@ CONTAINS
             numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/diagElements')
             IF(numberNodes==1) THEN
                lp_calc = .FALSE.
-               WRITE(xPathA,*) TRIM(ADJUSTL(xPathA))//'/diagElements'
+               xPathA = TRIM(ADJUSTL(xPathA))//'/diagElements'
                DO l = 0,lmaxU_const
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
@@ -341,7 +341,7 @@ CONTAINS
          ENDDO
          !Declaration of a DFT+Hubbard 1 calculation
          DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/ldaHIA')
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
+            WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
             !No offdiagonal l-part (only a single element)
             l = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l'))
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))

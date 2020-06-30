@@ -47,12 +47,12 @@ MODULE m_types_greensfCoeffs
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
 
          CONTAINS
-            PROCEDURE, PASS :: init    =>  greensfImagPart_init
-            PROCEDURE, PASS :: collect =>  greensfImagPart_collect
-            PROCEDURE, PASS :: mpi_bc  =>  greensfImagPart_mpi_bc
-            PROCEDURE       :: scale   => greensfImagPart_scale
-            PROCEDURE       :: applyCutoff => greensfImagPart_applyCutoff
-            PROCEDURE       :: checkEmpty  => greensfImagPart_checkEmpty
+            PROCEDURE, PASS :: init        =>  greensfImagPart_init
+            PROCEDURE, PASS :: collect     =>  greensfImagPart_collect
+            PROCEDURE, PASS :: mpi_bc      =>  greensfImagPart_mpi_bc
+            PROCEDURE       :: scale       =>  greensfImagPart_scale
+            PROCEDURE       :: applyCutoff =>  greensfImagPart_applyCutoff
+            PROCEDURE       :: checkEmpty  =>  greensfImagPart_checkEmpty
       END TYPE t_greensfImagPart
 
    PUBLIC t_greensfBZintCoeffs, t_greensfImagPart
@@ -230,10 +230,10 @@ MODULE m_types_greensfCoeffs
          INTEGER :: spin_ind, kkcut
 
          IF(ALLOCATED(this%sphavg)) THEN
-            ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
+            IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
             imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
          ELSE IF(ALLOCATED(this%uu)) THEN
-            ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
+            IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
             IF(PRESENT(imat)) THEN
                IF(imat.EQ.1) THEN
                   imagpartCut = this%uu(:,m,mp,i_elem,spin)
