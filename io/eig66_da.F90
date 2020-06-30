@@ -117,11 +117,11 @@ CONTAINS
       d%fname = "eig"
       CALL eig66_remove_data(id)
    END SUBROUTINE close_eig
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
-      REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
+      REAL, INTENT(OUT), OPTIONAL  :: eig(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
       TYPE(t_mat), OPTIONAL  :: zmat, smat
 
@@ -141,11 +141,6 @@ CONTAINS
       ENDIF
 
       nrec = nk + (jspin - 1)*d%nkpts
-
-      IF (PRESENT(w_iks)) THEN
-         print *, "R:w_iks:", nrec
-         read (d%file_io_id_wiks, REC=nrec) w_iks
-      ENDIF
 
       IF (.NOT. (PRESENT(eig) .OR. PRESENT(neig) .OR. PRESENT(zmat))) RETURN
       READ (d%file_io_id_vec, REC=nrec) neig_s
@@ -177,11 +172,11 @@ CONTAINS
 
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_size, n_rank, zmat, smat)
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
-      REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
+      REAL, INTENT(IN), OPTIONAL :: eig(:)
       TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
 
       INTEGER:: nrec, r_len
@@ -208,9 +203,6 @@ CONTAINS
          IF (neig .NE. neig_total) THEN
             CALL juDFT_error("Neig and neig_total have to be equal in DA mode", calledby="eig66_da")
          ENDIF
-      ENDIF
-      IF (PRESENT(w_iks)) THEN
-         write (d%file_io_id_wiks, REC=nrec) w_iks
       ENDIF
 
       IF (.NOT. PRESENT(eig) .OR. .NOT. PRESENT(neig)) RETURN
