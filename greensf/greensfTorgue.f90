@@ -6,6 +6,7 @@ MODULE m_greensfTorgue
    USE m_genMTBasis
    USE m_intgr
    USE m_gaunt
+   USE m_xmlOutput
 
    IMPLICIT NONE
 
@@ -42,6 +43,8 @@ MODULE m_greensfTorgue
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
       COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
+      CHARACTER(LEN=20) :: attributes(5)
+
       REAL,    ALLOCATABLE :: bxc(:,:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
       REAL,    ALLOCATABLE :: f(:,:,:,:), g(:,:,:,:),flo(:,:,:,:)
@@ -144,6 +147,18 @@ MODULE m_greensfTorgue
       ENDDO
       torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function Torgue: Integration")
+
+      WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const, ' meV'
+
+      attributes = ''
+      WRITE(attributes(1),'(i0)') atomType
+      WRITE(attributes(2),'(f14.8)') torgue(1) * hartree_to_ev_const * 1000
+      WRITE(attributes(3),'(f14.8)') torgue(2) * hartree_to_ev_const * 1000
+      WRITE(attributes(4),'(f14.8)') torgue(3) * hartree_to_ev_const * 1000
+      WRITE(attributes(5),'(a3)') 'meV'
+      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
+                               attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+
 
    END SUBROUTINE greensfTorgue
 

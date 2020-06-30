@@ -154,13 +154,17 @@ MODULE m_greensfPostProcess
 
          IF(ANY(gfinp%numTorgueElems>0)) THEN
             CALL timestart("Green's Function: Torgue")
+            CALL openXMLElementNoAttributes('torgueCalculation')
+            WRITE(oUnit,'(/,A)') 'Torgue Calculation:'
+            WRITE(oUnit,'(/,A)') '------------------------'
             DO atomType = 1, atoms%nType
                IF(gfinp%numTorgueElems(atomType)==0) CYCLE
                CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),vTot,&
                                   sphhar,atoms,sym,noco,nococonv,input,enpara,hub1inp,mpi,atomType,torgue)
-               WRITE(*,9000) atomType,torgue
-9000           FORMAT(/,'Torgue for atom: ',I5,' torgue: ',3f14.8)
+               !WRITE(*,9000) atomType,torgue
+!9000           FORMAT(/,'Torgue for atom: ',I5,' torgue: ',3f14.8)
             ENDDO
+            CALL closeXMLElement('torgueCalculation')
             CALL timestop("Green's Function: Torgue")
          ENDIF
 #ifdef CPP_HDF
