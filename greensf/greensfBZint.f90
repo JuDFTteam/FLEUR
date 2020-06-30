@@ -80,7 +80,7 @@ MODULE m_greensfBZint
                IF(natom.NE.natomp) THEN
                   phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),gfinp%elem(i_gf)%atomDiff))
                ELSE
-                  phase = 1.0
+                  phase = cmplx_1
                ENDIF
 
                !l-offdiagonal phase
