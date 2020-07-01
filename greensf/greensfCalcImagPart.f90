@@ -134,7 +134,7 @@ MODULE m_greensfCalcImagPart
 
                      ELSE !Here we always use the tetrahedron method
 
-                        weights(eGrid_start:eGrid_end) = -ImagUnit * pi_const * fac * dosWeights(eGrid_start:eGrid_end,iBand))
+                        weights(eGrid_start:eGrid_end) = -ImagUnit * pi_const * fac * dosWeights(eGrid_start:eGrid_end,iBand)
 
                         IF(gfinp%l_sphavg) THEN
                            greensfImagPart%sphavg(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) = greensfImagPart%sphavg(eGrid_start:eGrid_end,m,mp,i_elem,spin_ind) &
