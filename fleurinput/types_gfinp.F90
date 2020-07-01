@@ -73,6 +73,8 @@ MODULE m_types_gfinp
       REAL    :: elup  =  1.0
       INTEGER :: numberContours = 0
       TYPE(t_contourInp), ALLOCATABLE :: contour(:)
+
+      !Arrays to indicate that certain Green's Functions are used for special calculations
       INTEGER, ALLOCATABLE :: hiaElem(:)
       INTEGER, ALLOCATABLE :: torgueElem(:,:)
       INTEGER, ALLOCATABLE :: numTorgueElems(:)
@@ -763,7 +765,7 @@ CONTAINS
             !The -1 will be replaced with the onsite element in init_gfinp
             IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
          ENDIF
-         IF(this%elem(i_gf)%l_sphavg /= l_sphavg) CYCLE
+         IF(this%elem(i_gf)%l_sphavg .neqv. l_sphavg) CYCLE
          !If we are here and smaller than uniqueMax the element is not unique
          !i.e they only differ in the choice of the energy contour
          IF(PRESENT(uniqueMax)) THEN
