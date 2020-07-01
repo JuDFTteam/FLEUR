@@ -126,15 +126,21 @@ MODULE m_occmtx
                   IF(REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).GT.1.05&
                      .OR.REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).LT.-0.01) THEN
 
-                     IF(PRESENT(occError)) occError = .TRUE.
-                     WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
-                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     IF(PRESENT(occError)) THEN
+                        occError = .TRUE.
+                     ELSE
+                        WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
+                        CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     ENDIF
                   ENDIF
                ENDDO
                IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
-                  IF(PRESENT(occError)) occError = .TRUE.
-                  WRITE(message,9100) ispin,tr
-                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  IF(PRESENT(occError)) THEN
+                     occError = .TRUE.
+                  ELSE
+                     WRITE(message,9100) ispin,tr
+                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  ENDIF
                ENDIF
             ENDDO
          ENDIF
