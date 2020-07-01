@@ -68,7 +68,7 @@ MODULE m_tetrahedronInit
          DO icorn = 1, ncorn
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
-            fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
+            fac = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
             vol = kpts%voltet(itet)/kpts%ntet*fac
             !$OMP parallel do default(none) &
             !$OMP shared(itet,neig,ikpt,icorn,film,ncorn,k,vol,l_weights_pres,l_weightsum_pres) &
@@ -81,7 +81,7 @@ MODULE m_tetrahedronInit
 
                IF( ALL(etetra>efermi) ) CYCLE
                IF( ALL(etetra<efermi) ) THEN
-                  w = vol/ncorn
+                  w = vol/REAL(ncorn)
                ELSE
                   w  = getWeightSingleBand([efermi],etetra,icorn,vol,film,.FALSE.)
                ENDIF
@@ -120,7 +120,7 @@ MODULE m_tetrahedronInit
       REAL, ALLOCATABLE :: calc_weights(:,:)
       REAL, ALLOCATABLE :: calc_eMesh(:)
 
-      fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
+      fac = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
 
       l_dos = PRESENT(dos)
       IF(PRESENT(dos))THEN
