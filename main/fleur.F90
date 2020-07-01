@@ -196,6 +196,7 @@ CONTAINS
     l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
     eig_id=open_eig(fmpi%mpi_comm,lapw_dim_nbasfcn,fi%input%neig,fi%kpts%nkpt,wannierspin,&
                     fi%noco%l_noco,.NOT.fi%INPUT%eig66(1),l_real,fi%noco%l_soc,fi%INPUT%eig66(1),l_olap,fmpi%n_size)
+    hybdat%eig_id = eig_id
 !Rotate cdn to local frame if specified.
 
 #ifdef CPP_CHASE
