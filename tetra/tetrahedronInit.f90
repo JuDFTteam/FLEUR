@@ -43,8 +43,8 @@ MODULE m_tetrahedronInit
       REAL, OPTIONAL,INTENT(INOUT) :: weightSum
       REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
-      REAL    :: w(1),etetra(4),fac,vol
+      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(SIZE(kpts%ntetra,1))
+      REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),fac,vol
       logical :: l_weights_pres, l_weightsum_pres
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
@@ -62,8 +62,8 @@ MODULE m_tetrahedronInit
 
       !More efficient to just loop through all tetrahedra
       DO itet = 1, kpts%ntet
-         k(:ncorn) = kpts%ntetra(:ncorn,itet)
-         where(k(:ncorn).GT.kpts%nkpt) k = kpts%bkp(k)
+         k = kpts%ntetra(:,itet)
+         where(k.GT.kpts%nkpt) k = kpts%bkp(k)
 
          DO icorn = 1, ncorn
             ikpt = kpts%ntetra(icorn,itet)
@@ -77,13 +77,13 @@ MODULE m_tetrahedronInit
             !$OMP reduction(+:weightSum) schedule(dynamic,1)
             DO iband = 1, neig
 
-               etetra(:ncorn) = eig(iband,k(:ncorn))
+               etetra = eig(iband,k)
 
-               IF( ALL(etetra(:ncorn)>efermi) ) CYCLE
-               IF( ALL(etetra(:ncorn)<efermi) ) THEN
+               IF( ALL(etetra>efermi) ) CYCLE
+               IF( ALL(etetra<efermi) ) THEN
                   w = vol/ncorn
                ELSE
-                  w  = getWeightSingleBand([efermi],etetra(:ncorn),icorn,vol,film,.FALSE.)
+                  w  = getWeightSingleBand([efermi],etetra,icorn,vol,film,.FALSE.)
                ENDIF
 
                IF(l_weights_pres)  weights(iband,ikpt) = weights(iband,ikpt) + w(1)
@@ -111,17 +111,15 @@ MODULE m_tetrahedronInit
       LOGICAL,          INTENT(IN)  :: film
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
+      INTEGER :: itet,iband,ncorn,ie,icorn,k(SIZE(kpts%ntetra,1))
       LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
-      REAL    :: etetra(4),del,fac,vol
+      REAL    :: etetra(SIZE(kpts%ntetra,1)),del,fac,vol
       REAL, ALLOCATABLE :: dos_weights(:)
       !Temporary Arrays to include end points
       !to avoid numerical trouble with differentiation
       REAL, ALLOCATABLE :: calc_weights(:,:)
       REAL, ALLOCATABLE :: calc_eMesh(:)
 
-      !Tetrahedra or Triangles?
-      ncorn = MERGE(3,4,film)
       fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
 
       l_dos = PRESENT(dos)
@@ -144,28 +142,28 @@ MODULE m_tetrahedronInit
 
       l_resWeights_pres = PRESENT(resWeights)
       DO itet = 1, kpts%ntet
-         IF(ALL(kpts%ntetra(:ncorn,itet).NE.ikpt)) CYCLE
+         IF(ALL(kpts%ntetra(:,itet).NE.ikpt)) CYCLE
          vol = kpts%voltet(itet)/kpts%ntet*fac
          !The array k is only for getting the right indices in the eigenvalues
-         k(:ncorn) = kpts%ntetra(:ncorn,itet)
-         icorn = findloc(k(:ncorn),ikpt,1)
-         where(k(:ncorn).GT.kpts%nkpt) k = kpts%bkp(k)
+         k = kpts%ntetra(:,itet)
+         icorn = findloc(k,ikpt,1)
+         where(k.GT.kpts%nkpt) k = kpts%bkp(k)
          !$OMP parallel do default(none) schedule(dynamic,1) &
-         !$OMP shared(icorn,neig,film,ncorn,vol,k,l_resWeights_pres) &
+         !$OMP shared(icorn,neig,film,vol,k,l_resWeights_pres) &
          !$OMP shared(eig,calc_weights,calc_eMesh,eMesh,resWeights) &
          !$OMP private(iband,etetra)
          DO iband = 1, neig
 
-            etetra(:ncorn) = eig(iband,k(:ncorn))
+            etetra = eig(iband,k)
 
             IF(l_resWeights_pres) THEN
-               resWeights(:,iband) = resWeights(:,iband) + getWeightSingleBand(eMesh,etetra(:ncorn),icorn,&
+               resWeights(:,iband) = resWeights(:,iband) + getWeightSingleBand(eMesh,etetra,icorn,&
                                                                                vol,film,.FALSE.,l_res=.TRUE.)
             ENDIF
 
-            IF( ALL(etetra(:ncorn)>MAXVAL(calc_eMesh)) ) CYCLE
+            IF( ALL(etetra>MAXVAL(calc_eMesh)) ) CYCLE
 
-            calc_weights(:,iband) = calc_weights(:,iband) + getWeightSingleBand(calc_eMesh,etetra(:ncorn),icorn,&
+            calc_weights(:,iband) = calc_weights(:,iband) + getWeightSingleBand(calc_eMesh,etetra,icorn,&
                                                                                 vol,film,.FALSE.)
 
          ENDDO
