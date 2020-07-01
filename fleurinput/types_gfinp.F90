@@ -527,16 +527,21 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   FUNCTION uniqueElements_gfinp(this,ind,indUnique) Result(uniqueElements)
+   FUNCTION uniqueElements_gfinp(this,ind,l_sphavg,indUnique) Result(uniqueElements)
 
       CLASS(t_gfinp),   INTENT(IN)     :: this
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
+      LOGICAL, OPTIONAL,INTENT(IN)     :: l_sphavg !uniqueElements are determined separately for radial dependence and spherically averaging
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
 
       INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
 
       INTEGER :: maxGF
       INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
+      LOGICAL :: l_sphavgArg, l_sphavgElem
+
+      l_sphavgArg = .TRUE.
+      IF(PRESENT(l_sphavg)) l_sphavgArg = l_sphavg
 
       uniqueElements = 0
 
@@ -551,7 +556,9 @@ CONTAINS
          atomType  = this%elem(i_gf)%atomType
          atomTypep = this%elem(i_gf)%atomTypep
          iContour  = this%elem(i_gf)%iContour
-         iUnique   = this%find(l,atomType,iContour,.TRUE.,lp=lp,nTypep=atomTypep,&
+         l_sphavgElem  = this%elem(i_gf)%l_sphavg
+         IF(l_sphavgElem /= l_sphavgArg) CYCLE
+         iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                uniqueMax=i_gf)
 
          IF(iUnique == i_gf) uniqueElements = uniqueElements +1
@@ -570,8 +577,9 @@ CONTAINS
          atomType  = this%elem(ind)%atomType
          atomTypep = this%elem(ind)%atomTypep
          iContour  = this%elem(ind)%iContour
+         l_sphavgElem = this%elem(ind)%l_sphavg
 
-         indUnique = this%find(l,atomType,iContour,.TRUE.,lp=lp,nTypep=atomTypep,&
+         indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                uniqueMax=ind)
       ENDIF
 
