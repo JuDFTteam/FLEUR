@@ -26,6 +26,7 @@ MODULE m_types_gfinp
       INTEGER :: atomTypep = 0
       INTEGER :: iContour = 0 !Which energy contour is used
       REAL    :: atomDiff(3) = [0.0,0.0,0.0] !Distance between atoms for intersite phase
+      LOGICAL :: l_sphavg = .TRUE. !Is this element calculated with or without radial dependence
       !Parameters for the determination of the upper cutoff of the Kramers-Kronig Integration
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
@@ -133,6 +134,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%fixedCutoff,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%refCutoff,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
+         CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -306,8 +308,8 @@ CONTAINS
                   READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf =  this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                                      fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
+                     i_gf =  this%add(l,itype,iContour,.TRUE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
+                                   fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
                   ENDDO
                ENDDO
             ENDIF
@@ -319,7 +321,7 @@ CONTAINS
                DO l = 0,lmaxU_const
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
-                  i_gf =  this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                  i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
                ENDDO
             ENDIF
@@ -327,11 +329,11 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour=iContour)
+               refGF = this%find(refL,itype,iContour,.TRUE.)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,lp=lp,iContour=iContour)
+                     i_gf = this%find(l,itype,iContour,.TRUE.,lp=lp)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -353,8 +355,8 @@ CONTAINS
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
                l_fixedCutoffset = .TRUE.
             ENDIF
-            i_gf = this%add(itype,l,l,iContour,l_fixedCutoffset=l_fixedCutoffset,&
-                            fixedCutoff=fixedCutoff)
+            i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
+                             fixedCutoff=fixedCutoff)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = i_gf
          ENDDO
@@ -390,7 +392,7 @@ CONTAINS
                READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                DO lp = 0,lmaxU_const
                   IF(.NOT.lp_calc(lp,l)) CYCLE
-                  i_gf =  this%add(itype,l,lp,iContour,l_fixedCutoffset=l_fixedCutoffset,&
+                  i_gf =  this%add(l,itype,iContour,.TRUE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff)
                   this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
                   this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
@@ -400,11 +402,11 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour=iContour)
+               refGF = this%find(refL,itype,iContour,.TRUE.)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf =  this%find(l,itype,lp=lp,iContour=iContour)
+                     i_gf =  this%find(l,itype,iContour,.TRUE.,lp=lp)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -549,7 +551,7 @@ CONTAINS
          atomType  = this%elem(i_gf)%atomType
          atomTypep = this%elem(i_gf)%atomTypep
          iContour  = this%elem(i_gf)%iContour
-         iUnique   = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+         iUnique   = this%find(l,atomType,iContour,.TRUE.,lp=lp,nTypep=atomTypep,&
                                uniqueMax=i_gf)
 
          IF(iUnique == i_gf) uniqueElements = uniqueElements +1
@@ -569,19 +571,20 @@ CONTAINS
          atomTypep = this%elem(ind)%atomTypep
          iContour  = this%elem(ind)%iContour
 
-         indUnique = this%find(l,atomType,iContour=iContour,lp=lp,nTypep=atomTypep,&
+         indUnique = this%find(l,atomType,iContour,.TRUE.,lp=lp,nTypep=atomTypep,&
                                uniqueMax=ind)
       ENDIF
 
    END FUNCTION uniqueElements_gfinp
 
-   INTEGER FUNCTION add_gfelem(this,nType,l,lp,iContour,nTypep,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
+   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
-      INTEGER,             INTENT(IN)     :: nType
       INTEGER,             INTENT(IN)     :: l
-      INTEGER,             INTENT(IN)     :: lp
+      INTEGER,             INTENT(IN)     :: nType
       INTEGER,             INTENT(IN)     :: iContour
+      LOGICAL,             INTENT(IN)     :: l_sphavg
+      INTEGER, OPTIONAL,   INTENT(IN)     :: lp
       INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep !Specify the second atom
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
@@ -595,15 +598,20 @@ CONTAINS
                                                                 calledby="add_gfelem")
 
       !Check if this job has already been added
-      i_gf = this%find(l,nType,lp=lp,nTypep=nTypep,iContour=iContour,l_found=l_found)
+      i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,l_found=l_found)
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
       i_gf = this%n
       this%elem(this%n)%l = l
       this%elem(this%n)%atomType = nType
-      this%elem(this%n)%lp = lp
       this%elem(this%n)%iContour = iContour
+      this%elem(this%n)%l_sphavg = l_sphavg
+      IF(PRESENT(lp)) THEN
+         this%elem(this%n)%lp = lp
+      ELSE
+         this%elem(this%n)%lp = l
+      ENDIF
       IF(PRESENT(l_inter)) THEN
          IF(l_inter) THEN
             !Temporary index to mark later in gfinp%init
@@ -672,7 +680,7 @@ CONTAINS
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
                this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
-               i_gf =  this%add(refAtom,l,lp,iContour,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
+               i_gf =  this%add(l,refAtom,iContour,.TRUE.,lp=lp,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
                                 fixedCutoff=fixedCutoff)
                this%elem(i_gf)%refCutoff = refCutoff
                dist(natomp) = 9e99 !Eliminate from the list
@@ -683,7 +691,7 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   INTEGER FUNCTION find_gfelem(this,l,nType,lp,nTypep,iContour,uniqueMax,l_found) result(i_gf)
+   INTEGER FUNCTION find_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,uniqueMax,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -691,7 +699,8 @@ CONTAINS
       CLASS(t_gfinp),      INTENT(IN)    :: this
       INTEGER,             INTENT(IN)    :: l
       INTEGER,             INTENT(IN)    :: nType
-      INTEGER, OPTIONAL,   INTENT(IN)    :: iContour
+      INTEGER,             INTENT(IN)    :: iContour
+      LOGICAL,             INTENT(IN)    :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
 
@@ -746,16 +755,15 @@ CONTAINS
             !The -1 will be replaced with the onsite element in init_gfinp
             IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
          ENDIF
+         IF(this%elem(i_gf)%l_sphavg /= l_sphavg) CYCLE
          !If we are here and smaller than uniqueMax the element is not unique
+         !i.e they only differ in the choice of the energy contour
          IF(PRESENT(uniqueMax)) THEN
             IF(i_gf>uniqueMax) CALL juDFT_error('i_gf>uniqueMax',calledby="find_gfelem")
             RETURN
          ENDIF
-         IF(PRESENT(iContour)) THEN
-            IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE
-         ELSE
-            IF(this%elem(i_gf)%iContour.NE.1) CYCLE
-         ENDIF
+         IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE
+
          !If we are here we found the element
          IF(PRESENT(l_found)) l_found=.TRUE.
          search = .FALSE.
