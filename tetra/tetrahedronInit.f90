@@ -29,10 +29,6 @@ MODULE m_tetrahedronInit
       PROCEDURE getWeightKpoints, getWeightEnergyMesh
    END INTERFACE
 
-   INTERFACE getWeightSingleBand
-      PROCEDURE getWeightSingleBand_Mesh, getWeightSingleBand_Point
-   END INTERFACE
-
    REAL, PARAMETER :: weightCutoff=1e-14
 
    CONTAINS
@@ -48,16 +44,16 @@ MODULE m_tetrahedronInit
       REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(4)
-      REAL    :: w,etetra(4),fac,vol
-      REAL    :: weightSum_Band
-      logical :: l_weights_pres
+      REAL    :: w(1),etetra(4),fac,vol
+      logical :: l_weights_pres, l_weightsum_pres
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
          CALL juDFT_error("No output variable provided (either weightSum or weights)",&
                            calledby="getWeightKpoints")
       ENDIF
 
-
+      l_weights_pres = PRESENT(weights)
+      l_weightsum_pres = PRESENT(weightSum)
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,film)
 
@@ -66,54 +62,40 @@ MODULE m_tetrahedronInit
 
       !More efficient to just loop through all tetrahedra
       DO itet = 1, kpts%ntet
-         IF(kpts%nkptf.NE.0) THEN
-            DO icorn = 1, ncorn
-               IF(kpts%ntetra(icorn,itet).GT.kpts%nkpt) THEN
-                  k(icorn) = kpts%bkp(kpts%ntetra(icorn,itet))
-               ELSE
-                  k(icorn) = kpts%ntetra(icorn,itet)
-               ENDIF
-            ENDDO
-         ELSE
-            k(:ncorn) = kpts%ntetra(:ncorn,itet)
-         ENDIF
+         k(:ncorn) = kpts%ntetra(:ncorn,itet)
+         where(k(:ncorn).GT.kpts%nkpt) k = kpts%bkp(k)
+
          DO icorn = 1, ncorn
             ikpt = kpts%ntetra(icorn,itet)
             IF(ikpt.GT.kpts%nkpt) CYCLE
             fac = REAL(MERGE(1,COUNT(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0))
             vol = kpts%voltet(itet)/kpts%ntet*fac
-            l_weights_pres = PRESENT(weights)
-            !$OMP parallel default(none) &
-            !$OMP shared(itet,neig,ikpt,film,ncorn,k,vol, l_weights_pres) &
-            !$OMP shared(kpts,eig,weights,efermi,weightSum) &
-            !$OMP private(iband,etetra,w,weightSum_Band)
-            weightSum_Band = 0.0
-            !$OMP do schedule(dynamic,1)
+            !$OMP parallel do default(none) &
+            !$OMP shared(itet,neig,ikpt,icorn,film,ncorn,k,vol,l_weights_pres,l_weightsum_pres) &
+            !$OMP shared(eig,weights,efermi) &
+            !$OMP private(iband,etetra,w) &
+            !$OMP reduction(+:weightSum) schedule(dynamic,1)
             DO iband = 1, neig
 
                etetra(:ncorn) = eig(iband,k(:ncorn))
 
                IF( ALL(etetra(:ncorn)>efermi) ) CYCLE
+               IF( ALL(etetra(:ncorn)<efermi) ) THEN
+                  w = vol/ncorn
+               ELSE
+                  w  = getWeightSingleBand([efermi],etetra(:ncorn),icorn,vol,film,.FALSE.)
+               ENDIF
 
-               w  = getWeightSingleBand(efermi,etetra(:ncorn),ikpt,kpts%ntetra(:,itet),&
-                                        vol,film,.FALSE.)
-
-               IF(l_weights_pres) weights(iband,ikpt) = weights(iband,ikpt) + w
-               weightSum_Band = weightSum_Band + w
+               IF(l_weights_pres)  weights(iband,ikpt) = weights(iband,ikpt) + w(1)
+               IF(l_weightsum_pres) weightSum = weightSum + w(1)
             ENDDO
-            !$OMP end do
-            IF(PRESENT(weightSum)) THEN
-               !$OMP critical
-               weightSum = weightSum + weightSum_Band
-               !$OMP end critical
-            ENDIF
-            !$OMP end parallel
+            !$OMP end parallel do
          ENDDO
       ENDDO
 
    END SUBROUTINE getWeightKpoints
 
-   SUBROUTINE getWeightEnergyMesh(kpts,ikpt,eig,neig,eMesh,ne,film,weights,bounds,dos)
+   SUBROUTINE getWeightEnergyMesh(kpts,ikpt,eig,neig,eMesh,ne,film,weights,resWeights,bounds,dos)
 
       USE m_differentiate
 
@@ -121,6 +103,7 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(IN)    :: eig(:,:)
       REAL,             INTENT(INOUT) :: weights(:,:)
       INTEGER,OPTIONAL, INTENT(INOUT) :: bounds(:,:)
+      REAL, OPTIONAL,   INTENT(INOUT) :: resWeights(:,:)
 
       INTEGER,          INTENT(IN)  :: neig
       INTEGER,          INTENT(IN)  :: ikpt,ne
@@ -129,7 +112,7 @@ MODULE m_tetrahedronInit
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
       INTEGER :: itet,iband,ncorn,ie,icorn,k(4)
-      LOGICAL :: l_dos, l_bounds_pres
+      LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(4),del,fac,vol
       REAL, ALLOCATABLE :: dos_weights(:)
       !Temporary Arrays to include end points
@@ -146,6 +129,8 @@ MODULE m_tetrahedronInit
          l_dos = dos.AND.ne>1
       ENDIF
 
+      IF(PRESENT(resWeights)) resWeights = 0.0
+
       IF(l_dos) THEN
          ALLOCATE(calc_weights(ne+2,neig),source=0.0)
          ALLOCATE(calc_eMesh(ne+2),source=0.0)
@@ -157,33 +142,31 @@ MODULE m_tetrahedronInit
          calc_eMesh = eMesh
       ENDIF
 
-
+      l_resWeights_pres = PRESENT(resWeights)
       DO itet = 1, kpts%ntet
          IF(ALL(kpts%ntetra(:ncorn,itet).NE.ikpt)) CYCLE
          vol = kpts%voltet(itet)/kpts%ntet*fac
          !The array k is only for getting the right indices in the eigenvalues
-         IF(kpts%nkptf.NE.0) THEN
-            DO icorn = 1, ncorn
-               IF(kpts%ntetra(icorn,itet).GT.kpts%nkpt) THEN
-                  k(icorn) = kpts%bkp(kpts%ntetra(icorn,itet))
-               ELSE
-                  k(icorn) = kpts%ntetra(icorn,itet)
-               ENDIF
-            ENDDO
-         ELSE
-            k(:ncorn) = kpts%ntetra(:ncorn,itet)
-         ENDIF
+         k(:ncorn) = kpts%ntetra(:ncorn,itet)
+         icorn = findloc(k(:ncorn),ikpt,1)
+         where(k(:ncorn).GT.kpts%nkpt) k = kpts%bkp(k)
          !$OMP parallel do default(none) schedule(dynamic,1) &
-         !$OMP shared(itet,neig,ikpt,film,ncorn,vol,k) &
-         !$OMP shared(kpts,eig,calc_weights,calc_eMesh) &
+         !$OMP shared(icorn,neig,film,ncorn,vol,k,l_resWeights_pres) &
+         !$OMP shared(eig,calc_weights,calc_eMesh,eMesh,resWeights) &
          !$OMP private(iband,etetra)
          DO iband = 1, neig
 
             etetra(:ncorn) = eig(iband,k(:ncorn))
+
+            IF(l_resWeights_pres) THEN
+               resWeights(:,iband) = resWeights(:,iband) + getWeightSingleBand(eMesh,etetra(:ncorn),icorn,&
+                                                                               vol,film,.FALSE.,l_res=.TRUE.)
+            ENDIF
+
             IF( ALL(etetra(:ncorn)>MAXVAL(calc_eMesh)) ) CYCLE
 
-            calc_weights(:,iband) = calc_weights(:,iband) +  getWeightSingleBand(calc_eMesh,etetra(:ncorn),ikpt,&
-                                                                                 kpts%ntetra(:,itet),vol,film,.FALSE.)
+            calc_weights(:,iband) = calc_weights(:,iband) + getWeightSingleBand(calc_eMesh,etetra(:ncorn),icorn,&
+                                                                                vol,film,.FALSE.)
 
          ENDDO
          !$OMP end parallel do
@@ -195,8 +178,8 @@ MODULE m_tetrahedronInit
       ! PostProcess weights
       !-------------------------------------
       !$OMP parallel default(none) &
-      !$OMP shared(neig,l_dos,ne,del) &
-      !$OMP shared(calc_weights,weights,bounds, l_bounds_pres) &
+      !$OMP shared(neig,l_dos,ne,del,eMesh) &
+      !$OMP shared(calc_weights,weights,bounds, l_bounds_pres,l_resWeights_pres) &
       !$OMP private(iband,dos_weights,ie)
       IF(l_dos) ALLOCATE(dos_weights(ne+2),source=0.0)
       !$OMP do schedule(dynamic,1)
@@ -213,7 +196,7 @@ MODULE m_tetrahedronInit
          !--------------------------------------------------------------
          ! Find the range where the weights are bigger than weightCutoff
          !--------------------------------------------------------------
-         IF(l_bounds_pres) THEN
+         IF(l_bounds_pres.AND..NOT.l_resWeights_pres) THEN
             !--------------------
             ! Lower bound
             !--------------------
@@ -253,6 +236,9 @@ MODULE m_tetrahedronInit
                bounds(iband,1) = 1
                bounds(iband,2) = 1
             ENDIF
+         ELSE IF(l_bounds_pres) THEN
+            bounds(iband,1) = 1
+            bounds(iband,2) = SIZE(eMesh)
          ENDIF
       ENDDO
       !$OMP end do
@@ -265,26 +251,7 @@ MODULE m_tetrahedronInit
    END SUBROUTINE getWeightEnergyMesh
 
 
-   PURE FUNCTION getWeightSingleBand_Point(e,etetra,ikpt,ntetra,vol,film,bloechl) Result(weight)
-
-      REAL,             INTENT(IN)     :: e           !Energy point, where the weights are calculated
-      REAL,             INTENT(IN)     :: etetra(:)   !Eigenvalues at the corners of the tetrahedron
-      INTEGER,          INTENT(IN)     :: ntetra(:)   !k-point indices at the corners of the tetrahedron
-      INTEGER,          INTENT(IN)     :: ikpt        !Current k-point index (We calculate the weights for this corner)
-      REAL,             INTENT(IN)     :: vol         !Volume of the tetrahedron
-      LOGICAL,          INTENT(IN)     :: film        !Switch controls wether tetrahedron/triangular method is used
-      LOGICAL,          INTENT(IN)     :: bloechl     !Controls bloechl corrections (not atm)
-
-      REAL :: weight
-      REAL :: weightTmp(1)
-
-      weightTmp = 0.0
-      weightTmp = getWeightSingleBand([e],etetra,ikpt,ntetra,vol,film,bloechl)
-      weight = weightTmp(1)
-
-   END FUNCTION getWeightSingleBand_Point
-
-   PURE FUNCTION getWeightSingleBand_Mesh(eMesh,etetra,ikpt,ntetra,vol,film,bloechl) Result(weight)
+   PURE FUNCTION getWeightSingleBand(eMesh,etetra,icorn,vol,film,bloechl,l_res) Result(weight)
 
       !--------------------------------------------------------------
       ! This is the core routine calculating the integration
@@ -299,26 +266,26 @@ MODULE m_tetrahedronInit
 
       REAL,             INTENT(IN)     :: eMesh(:)    !Energy points, where the weights are calculated
       REAL,             INTENT(IN)     :: etetra(:)   !Eigenvalues at the corners of the tetrahedron
-      INTEGER,          INTENT(IN)     :: ntetra(:)   !k-point indices at the corners of the tetrahedron
-      INTEGER,          INTENT(IN)     :: ikpt        !Current k-point index (We calculate the weights for this corner)
+      INTEGER,          INTENT(IN)     :: icorn       !Current k-point index (We calculate the weights for this corner)
       REAL,             INTENT(IN)     :: vol         !Volume of the tetrahedron
       LOGICAL,          INTENT(IN)     :: film        !Switch controls wether tetrahedron/triangular method is used
       LOGICAL,          INTENT(IN)     :: bloechl     !Controls bloechl corrections (not atm)
+      LOGICAL, OPTIONAL,INTENT(IN)     :: l_res
 
       REAL    :: weight(SIZE(eMesh))
-      INTEGER :: icorn,i,ie,nstart,nend,ind(SIZE(etetra))
+      INTEGER :: i,ie,nstart,nend,ind(SIZE(etetra))
       REAL    :: eb,et,del
+      LOGICAL :: l_calcres
+
 
       !Sort the eigenvalues at the corners (ascending order in ind)
       ind = tetsrt(etetra)
 
-      !search for the corner ikpt in the sorted array
-      DO icorn = 1, SIZE(etetra)
-         IF(ntetra(ind(icorn)).EQ.ikpt) EXIT
-      ENDDO
+      l_calcres = .FALSE.
+      IF(PRESENT(l_res)) l_calcres = l_res
 
       !Find the range in the (equidistant) energy mesh where the weights are changing
-      IF( SIZE(eMesh)>1 ) THEN
+      IF( SIZE(eMesh)>1 .AND..NOT.l_calcres) THEN
          !Extract basic parameters of the equidistant eMesh
          eb = MINVAL(eMesh)
          et = MAXVAL(eMesh)
@@ -337,10 +304,10 @@ MODULE m_tetrahedronInit
          nend   = SIZE(eMesh)
       ENDIF
 
-      weight(:nstart-1) = 0.0
+      IF(nstart /= 1) weight(:nstart-1) = 0.0
       !Calculate the weights
       DO ie = nstart, nend
-         weight(ie) = tetraWeight(eMesh(ie),etetra(ind),icorn,vol,film)
+         weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
       ENDDO
 
       !The loop terminates if the energy is larger than
@@ -348,6 +315,6 @@ MODULE m_tetrahedronInit
       !For all consecutive values the weight is constant
       IF(nend.NE.SIZE(eMesh)) weight(nend+1:) = weight(nend)
 
-   END FUNCTION getWeightSingleBand_Mesh
+   END FUNCTION getWeightSingleBand
 
 END MODULE m_tetrahedronInit
