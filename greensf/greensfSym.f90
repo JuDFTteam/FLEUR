@@ -38,7 +38,7 @@ MODULE m_greensfSym
             IF(l_onsite) THEN !These rotations are only available for the onsite elements
                imSym = symMMPmat(im(:,:,iBand,imat),sym,natom,l,phase=(ispin.EQ.3))
             ELSE
-               imSym = im(:,:,iBand,imat)
+               imSym = conjg(im(:,:,iBand,imat))
             ENDIF
             IF(l_sphavg) THEN
                greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,ispin) = &
