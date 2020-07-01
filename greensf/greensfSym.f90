@@ -41,20 +41,20 @@ MODULE m_greensfSym
                imSym = conjg(im(:,:,iBand,imat))
             ENDIF
             IF(l_sphavg) THEN
-               greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,ispin) = &
-                  greensfBZintCoeffs%sphavg(iBand,:,:,ikpt_i,i_elem,ispin) + atomFactor * addPhase * imSym
+               greensfBZintCoeffs%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) = &
+                  greensfBZintCoeffs%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) + atomFactor * addPhase * imSym
             ELSE IF(imat.EQ.1) THEN
-               greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,ispin) = &
-                  greensfBZintCoeffs%uu(iBand,:,:,ikpt_i,i_elem,ispin) + atomFactor * addPhase * imSym
+               greensfBZintCoeffs%uu(iBand,:,:,i_elem,ikpt_i,ispin) = &
+                  greensfBZintCoeffs%uu(iBand,:,:,i_elem,ikpt_i,ispin) + atomFactor * addPhase * imSym
             ELSE IF(imat.EQ.2) THEN
-               greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,ispin) = &
-                  greensfBZintCoeffs%dd(iBand,:,:,ikpt_i,i_elem,ispin) + atomFactor * addPhase * imSym
+               greensfBZintCoeffs%dd(iBand,:,:,i_elem,ikpt_i,ispin) = &
+                  greensfBZintCoeffs%dd(iBand,:,:,i_elem,ikpt_i,ispin) + atomFactor * addPhase * imSym
             ELSE IF(imat.EQ.3) THEN
-               greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,ispin) = &
-                  greensfBZintCoeffs%ud(iBand,:,:,ikpt_i,i_elem,ispin) + atomFactor * addPhase * imSym
+               greensfBZintCoeffs%ud(iBand,:,:,i_elem,ikpt_i,ispin) = &
+                  greensfBZintCoeffs%ud(iBand,:,:,i_elem,ikpt_i,ispin) + atomFactor * addPhase * imSym
             ELSE IF(imat.EQ.4) THEN
-               greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,ispin) = &
-                  greensfBZintCoeffs%du(iBand,:,:,ikpt_i,i_elem,ispin) + atomFactor * addPhase * imSym
+               greensfBZintCoeffs%du(iBand,:,:,i_elem,ikpt_i,ispin) = &
+                  greensfBZintCoeffs%du(iBand,:,:,i_elem,ikpt_i,ispin) + atomFactor * addPhase * imSym
             ENDIF
          ENDDO
       ENDDO

@@ -133,42 +133,42 @@ MODULE m_greensfCalcImagPart
                         END SELECT
 
                         IF(gfinp%l_sphavg) THEN
-                           imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                           imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ELSE
-                           imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind)
-                           imag(ie,2) = imag(ie,2) + weight * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind)
-                           imag(ie,3) = imag(ie,3) + weight * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind)
-                           imag(ie,4) = imag(ie,4) + weight * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                           imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                           imag(ie,2) = imag(ie,2) + weight * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                           imag(ie,3) = imag(ie,3) + weight * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                           imag(ie,4) = imag(ie,4) + weight * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ENDIF
 
                      ELSE IF(eGrid_start==1 .AND. eGrid_end==SIZE(eMesh)) THEN!Here we always use the tetrahedron method
                         !We can only use the BLAS routine on the full array
                         IF(gfinp%l_sphavg) THEN
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_elem,spin_ind),&
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,1),1)
                         ELSE
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind),&
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,1),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind),&
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,2),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind),&
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,3),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind),&
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,4),1)
                         ENDIF
                      ELSE
                         IF(gfinp%l_sphavg) THEN
                            imag(eGrid_start:eGrid_end,1) = imag(eGrid_start:eGrid_end,1) + weights(eGrid_start:eGrid_end,iBand)&
-                                                          * greensfBZintCoeffs%sphavg(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                                                          * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ELSE
                            imag(eGrid_start:eGrid_end,1) = imag(eGrid_start:eGrid_end,1) + weights(eGrid_start:eGrid_end,iBand)&
-                                                          * greensfBZintCoeffs%uu(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                                                          * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                            imag(eGrid_start:eGrid_end,2) = imag(eGrid_start:eGrid_end,2) + weights(eGrid_start:eGrid_end,iBand)&
-                                                          * greensfBZintCoeffs%dd(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                                                          * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                            imag(eGrid_start:eGrid_end,3) = imag(eGrid_start:eGrid_end,3) + weights(eGrid_start:eGrid_end,iBand)&
-                                                          * greensfBZintCoeffs%ud(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                                                          * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                            imag(eGrid_start:eGrid_end,4) = imag(eGrid_start:eGrid_end,4) + weights(eGrid_start:eGrid_end,iBand)&
-                                                          * greensfBZintCoeffs%du(iBand,m,mp,ikpt_i,i_elem,spin_ind)
+                                                          * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ENDIF
                      ENDIF
 

@@ -82,12 +82,12 @@ MODULE m_types_greensfCoeffs
          uniqueElements = gfinp%uniqueElements()
 
          IF(gfinp%l_sphavg) THEN
-            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,uniqueElements,nkpts,jsp_start:maxSpin),source=cmplx_0)
          ELSE
-            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,nkpts,uniqueElements,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,uniqueElements,nkpts,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,uniqueElements,nkpts,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,uniqueElements,nkpts,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,uniqueElements,nkpts,jsp_start:maxSpin),source=cmplx_0)
          ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_init
