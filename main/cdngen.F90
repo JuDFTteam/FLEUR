@@ -44,6 +44,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
+   USE m_types_greensfContourData
    USE m_angles
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -94,6 +95,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den, core_den
+   TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
 
 
    !Local Scalars
@@ -117,10 +119,17 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
+      IF(ANY(greensFunction(:)%l_calc)) THEN
+         !calculate all contours only once
+         DO iContour = 1, gfinp%numberContours
+            CALL contour(iContour)%init(gfinp%contour(iContour))
+            CALL contour(iContour)%eContour(gfinp%contour(iContour),results%ef,fmpi%irank)
+         ENDDO
+      ENDIF
       DO i_gf = 1, gfinp%n
          IF(.NOT.greensFunction(i_gf)%l_calc) CYCLE
          iContour = gfinp%elem(i_gf)%iContour
-         CALL greensFunction(i_gf)%contour%eContour(gfinp%contour(iContour),results%ef,fmpi%irank)
+         greensFunction(i_gf)%contour = contour(iContour)
          CALL greensFunction(i_gf)%reset()
       ENDDO
       CALL greensfImagPart%init(gfinp,input,noco,ANY(greensFunction(:)%l_calc))
