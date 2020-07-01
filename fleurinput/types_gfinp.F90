@@ -559,7 +559,7 @@ CONTAINS
          atomTypep = this%elem(i_gf)%atomTypep
          iContour  = this%elem(i_gf)%iContour
          l_sphavgElem  = this%elem(i_gf)%l_sphavg
-         IF(l_sphavgElem /= l_sphavgArg) CYCLE
+         IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
          iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                uniqueMax=i_gf)
 
