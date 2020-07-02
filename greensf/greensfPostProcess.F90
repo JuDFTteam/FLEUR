@@ -39,7 +39,7 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
-      LOGICAL  l_sphavg
+      LOGICAL  l_sphavg,l_check
 
       REAL :: torgue(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
@@ -142,16 +142,17 @@ MODULE m_greensfPostProcess
             l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
+            l_check = .NOT.gfinp%checkforLO(atoms,i_gf)
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
-                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=.TRUE.)
+                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=l_check)
             ELSE
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
                            ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
                            udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
-                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=.TRUE.)
+                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=l_check)
             ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")

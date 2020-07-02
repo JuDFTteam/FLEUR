@@ -88,6 +88,7 @@ MODULE m_types_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: checkRadial    => checkRadial_gfinp
       PROCEDURE :: checkSphavg    => checkSphavg_gfinp
+      PROCEDURE :: checkforLO     => checkforLO_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -874,5 +875,33 @@ CONTAINS
       ENDDO
 
    END FUNCTION checkSphavg_gfinp
+
+   PURE LOGICAL FUNCTION checkforLO_gfinp(this,atoms,i_gf)
+
+      USE m_types_atoms
+
+      CLASS(t_gfinp),   INTENT(IN)  :: this
+      TYPE(t_atoms),    INTENT(IN)  :: atoms
+      INTEGER,          INTENT(IN)  :: i_gf
+
+      INTEGER :: l,lp,atomType,atomTypep,ilo,ilop
+
+      l  = this%elem(i_gf)%l
+      lp = this%elem(i_gf)%lp
+      atomType  = this%elem(i_gf)%atomType
+      atomTypep = this%elem(i_gf)%atomTypep
+
+      checkforLO_gfinp = .FALSE.
+      DO ilo = 1, atoms%nlo(atomType)
+         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+         checkforLO_gfinp = .TRUE.
+      ENDDO
+
+      DO ilop = 1, atoms%nlo(atomTypep)
+         IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+         checkforLO_gfinp = .TRUE.
+      ENDDO
+
+   END FUNCTION checkforLO_gfinp
 
 END MODULE m_types_gfinp

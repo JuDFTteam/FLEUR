@@ -79,10 +79,11 @@ MODULE m_greensfCalcRealPart
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
                l_onsite = nType.EQ.nTypep.AND.l.EQ.lp
-               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1) THEN
+               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND..NOT.gfinp%checkforLO(atoms,i_gf)) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
-                  !
+                  ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
+                  ! the LO lies in the energy boundary and raise the expected number of states accordingly
                   IF(l_sphavg) THEN
                      CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
                                     eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorSphavg(i_elem,:))

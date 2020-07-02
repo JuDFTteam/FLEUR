@@ -184,8 +184,8 @@ MODULE m_occmtx
             DO i = 1, 2*ns
                WRITE(oUnit,'(14f8.4)') gmat%data_r(i,:)
             ENDDO
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
             !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
             !CALL cmat%init(.TRUE.,2*ns,2*ns)
