@@ -555,7 +555,7 @@ CONTAINS
 
       INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
 
-      INTEGER :: maxGF
+      INTEGER :: maxGF,nLO
       INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
       LOGICAL :: l_sphavgArg, l_sphavgElem,loArg
 
@@ -924,6 +924,6 @@ CONTAINS
          ENDDO
       ENDIF
 
-   END FUNCTION checkforLO_gfinp
+   END FUNCTION countLOs_gfinp
 
 END MODULE m_types_gfinp
