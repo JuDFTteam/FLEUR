@@ -19,8 +19,8 @@ MODULE m_types_noco
     LOGICAL:: l_alignMT = .FALSE.
     LOGICAL:: l_sourceFree = .FALSE.
     LOGICAL:: l_scaleMag = .FALSE.
-    LOGICAL   :: l_RelaxAlpha=.FALSE.
-    LOGICAL   :: l_RelaxBeta=.FALSE.
+    LOGICAL:: l_RelaxAlpha=.FALSE.
+    LOGICAL:: l_RelaxBeta=.FALSE.
     REAL   :: mag_scale=1.0
     REAL   :: mix_b=0.0
     REAL   :: mix_RelaxWeightOffD=1.0
