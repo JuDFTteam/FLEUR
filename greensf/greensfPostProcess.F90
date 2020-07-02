@@ -39,6 +39,7 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
+      LOGICAL  l_sphavg
 
       REAL :: torgue(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
@@ -71,7 +72,7 @@ MODULE m_greensfPostProcess
 
          CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
 
-         IF(.NOT.gfinp%l_sphavg) THEN
+         IF(gfinp%checkRadial()) THEN
             CALL timestart("Green's Function: Radial Functions")
             ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
             ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
@@ -88,8 +89,10 @@ MODULE m_greensfPostProcess
                lp = gfinp%elem(i_gf)%lp
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
+               l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+               IF(l_sphavg) CYCLE
 
-               i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+               i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
                IF(i_gf/=indUnique) THEN
                   u(:,:,:,:,:,i_gf) = u(:,:,:,:,:,indUnique)
@@ -136,9 +139,10 @@ MODULE m_greensfPostProcess
             lp = greensFunction(i_gf)%elem%lp
             atomType = greensFunction(i_gf)%elem%atomType
             atomTypep = greensFunction(i_gf)%elem%atomTypep
+            l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
-            IF(gfinp%l_sphavg) THEN
+            IF(l_sphavg) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&

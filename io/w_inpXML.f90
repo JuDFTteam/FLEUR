@@ -234,8 +234,8 @@ CONTAINS
       WRITE (fileNum, 195) input%ldauLinMix, input%ldauMixParam, input%ldauSpinf
 
       IF(l_gfOpt) THEN
-205      FORMAT('      <greensFunction l_sphavg="', l1, '" l_mperp="', l1'">')
-         WRITE(fileNum, 205) gfinp%l_sphavg, gfinp%l_mperp
+205      FORMAT('      <greensFunction l_mperp="', l1'">')
+         WRITE(fileNum, 205) gfinp%l_mperp
 206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" elup="', f0.8, '"/>')
          WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
          IF(gfinp%numberContours>0) THEN

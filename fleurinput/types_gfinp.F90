@@ -59,7 +59,6 @@ MODULE m_types_gfinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
       !General logical switches
-      LOGICAL :: l_sphavg = .TRUE.
       LOGICAL :: l_mperp = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
@@ -87,6 +86,8 @@ MODULE m_types_gfinp
       PROCEDURE :: add            => add_gfelem
       PROCEDURE :: uniqueElements => uniqueElements_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
+      PROCEDURE :: checkRadial    => checkRadial_gfinp
+      PROCEDURE :: checkSphavg    => checkSphavg_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -106,7 +107,6 @@ CONTAINS
       ELSE
          rank = 0
       END IF
-      CALL mpi_bc(this%l_sphavg,rank,mpi_comm)
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
@@ -169,7 +169,7 @@ CONTAINS
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_fixedCutoffset
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg
       LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -177,7 +177,6 @@ CONTAINS
       l_gfinfo_given = numberNodes.EQ.1
 
       IF (l_gfinfo_given) THEN
-         this%l_sphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
 
@@ -280,6 +279,7 @@ CONTAINS
             WRITE(xPathA,'(a,i0,a)') TRIM(ADJUSTL(xPathS))//'/greensfCalculation[',i,']'
 
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
+            l_sphavg = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
             nshells = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nshells'))
@@ -310,7 +310,7 @@ CONTAINS
                   READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf =  this%add(l,itype,iContour,.TRUE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
+                     i_gf =  this%add(l,itype,iContour,l_sphavg,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
                   ENDDO
                ENDDO
@@ -323,7 +323,7 @@ CONTAINS
                DO l = 0,lmaxU_const
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
-                  i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
+                  i_gf =  this%add(l,itype,iContour,l_sphavg,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
                ENDDO
             ENDIF
@@ -331,11 +331,11 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,.TRUE.)
+               refGF = this%find(refL,itype,iContour,l_sphavg)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,.TRUE.,lp=lp)
+                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -357,6 +357,7 @@ CONTAINS
                fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
                l_fixedCutoffset = .TRUE.
             ENDIF
+            !Hubbard 1 GF has to be spherically averaged
             i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
             n_hia = n_hia + 1
@@ -394,7 +395,8 @@ CONTAINS
                READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                DO lp = 0,lmaxU_const
                   IF(.NOT.lp_calc(lp,l)) CYCLE
-                  i_gf =  this%add(l,itype,iContour,.TRUE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
+                  !Torgue GF has to have radial dependence
+                  i_gf =  this%add(l,itype,iContour,.FALSE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff)
                   this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
                   this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
@@ -404,11 +406,11 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,.TRUE.)
+               refGF = this%find(refL,itype,iContour,.FALSE.)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf =  this%find(l,itype,iContour,.TRUE.,lp=lp)
+                     i_gf =  this%find(l,itype,iContour,.FALSE.,lp=lp)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -452,7 +454,7 @@ CONTAINS
       LOGICAL,          INTENT(IN)     :: l_write
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
-      LOGICAL :: l_inter,l_offd
+      LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
 
       IF(this%n==0) RETURN !Nothing to do here
@@ -488,13 +490,22 @@ CONTAINS
 
          l_inter = .FALSE.
          l_offd = .FALSE.
+         l_interAvg = .FALSE.
+         l_offdAvg = .FALSE.
          DO i_gf = 1, this%n
             l  = this%elem(i_gf)%l
             lp = this%elem(i_gf)%lp
             atomType  = this%elem(i_gf)%atomType
             atomTypep = this%elem(i_gf)%atomTypep
-            IF(atomType.NE.atomTypep) l_inter = .TRUE.
-            IF(l.NE.lp) l_offd = .TRUE.
+            l_sphavg  = this%elem(i_gf)%l_sphavg
+            IF(atomType.NE.atomTypep) THEN
+               l_inter = .TRUE.
+               IF(l_sphavg) l_interAvg = .TRUE.
+            ENDIF
+            IF(l.NE.lp) THEN
+               l_offd = .TRUE.
+               IF(l_sphavg) l_offdAvg = .TRUE.
+            ENDIF
 
          ENDDO
 
@@ -502,7 +513,7 @@ CONTAINS
             IF(sym%nop>1) THEN
                   CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
                                    calledby="init_gfinp")
-            ELSE IF(this%l_sphavg) THEN
+            ELSE IF(l_interAvg) THEN
                CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
                                 calledby="init_gfinp")
             ENDIF
@@ -512,7 +523,7 @@ CONTAINS
             IF(sym%nop>1) THEN
                CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
                                 calledby="init_gfinp")
-            ELSE IF(this%l_sphavg) THEN
+            ELSE IF(l_offdAvg) THEN
                CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
                                 calledby="init_gfinp")
             ENDIF
@@ -565,11 +576,6 @@ CONTAINS
 
          IF(iUnique == i_gf) uniqueElements = uniqueElements +1
       ENDDO
-
-      IF(uniqueElements==0 .AND. maxGF/=0) THEN
-         CALL juDFT_error("No unique GF elements",hint="This is a bug in FLEUR please report",&
-                          calledby="uniqueElements_gfinp")
-      ENDIF
 
       IF(PRESENT(indUnique)) THEN
          IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",&
@@ -690,7 +696,8 @@ CONTAINS
             IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
                !Add the element to the gfinp%elem array
                this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
-               i_gf =  this%add(l,refAtom,iContour,.TRUE.,lp=lp,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
+               !cannot be spherically averaged
+               i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
                                 fixedCutoff=fixedCutoff)
                this%elem(i_gf)%refCutoff = refCutoff
                dist(natomp) = 9e99 !Eliminate from the list
@@ -839,5 +846,33 @@ CONTAINS
       ENDIF
 
    END SUBROUTINE eMesh_gfinp
+
+   PURE LOGICAL FUNCTION checkRadial_gfinp(this)
+
+      !Check if there are any elements with radial dependence
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkRadial_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(.NOT.this%elem(i_gf)%l_sphavg) checkRadial_gfinp = .TRUE.
+      ENDDO
+
+   END FUNCTION checkRadial_gfinp
+
+   PURE LOGICAL FUNCTION checkSphavg_gfinp(this)
+
+      !Check if there are any elements with  spherical averaging
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkSphavg_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%l_sphavg) checkSphavg_gfinp = .TRUE.
+      ENDDO
+
+   END FUNCTION checkSphavg_gfinp
 
 END MODULE m_types_gfinp

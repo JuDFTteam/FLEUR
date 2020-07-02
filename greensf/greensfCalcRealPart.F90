@@ -47,7 +47,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: spin_cut,contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
-      LOGICAL :: l_onsite,l_fixedCutoffset
+      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg
       REAL    :: fac,del,eb,et,fixedCutoff
       REAL,    ALLOCATABLE :: eMesh(:),imag(:)
 
@@ -65,11 +65,12 @@ MODULE m_greensfCalcRealPart
             lp = g(i_gf)%elem%lp
             nType  = g(i_gf)%elem%atomType
             nTypep = g(i_gf)%elem%atomTypep
+            l_sphavg = g(i_gf)%elem%l_sphavg
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
 
-            i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(i_gf /= indUnique.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1&
                .AND..NOT.g(indUnique)%elem%l_fixedCutoffset.AND.g(indUnique)%elem%refCutoff==-1) THEN
@@ -82,15 +83,15 @@ MODULE m_greensfCalcRealPart
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   !
-                  IF(gfinp%l_sphavg) THEN
+                  IF(l_sphavg) THEN
                      CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
-                                    eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactor(i_elem,:))
+                                    eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorSphavg(i_elem,:))
                   ELSE
                      !Onsite element with radial dependence
                      CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
                                           greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
                                           noco,atoms,vTot,enpara,fmpi,hub1inp,gfinp%l_mperp,l,nType,input,eMesh,&
-                                          greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactor(i_elem,:))
+                                          greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
                ELSE IF (l_fixedCutoffset) THEN
                   greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
@@ -113,13 +114,14 @@ MODULE m_greensfCalcRealPart
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
-            i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+            l_sphavg = g(i_gf)%elem%l_sphavg
+            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
             ENDIF
-            CALL greensfImagPart%scale(i_elem)
+            CALL greensfImagPart%scale(i_elem,l_sphavg)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")
       ENDIF
@@ -179,9 +181,10 @@ MODULE m_greensfCalcRealPart
          lp = g(i_gf)%elem%lp
          nType  = g(i_gf)%elem%atomType
          nTypep = g(i_gf)%elem%atomTypep
+         l_sphavg = g(i_gf)%elem%l_sphavg
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
 
-         i_elem = gfinp%uniqueElements(ind=i_gf)
+         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
@@ -189,28 +192,28 @@ MODULE m_greensfCalcRealPart
                DO m= -l,l
                   DO mp= -lp,lp
 
-                     IF(greensfImagPart%checkEmpty(i_elem,m,mp,jspin)) THEN
+                     IF(greensfImagPart%checkEmpty(i_elem,m,mp,jspin,l_sphavg)) THEN
                         CALL g(i_gf)%resetSingleElem(m,mp,jspin,ipm)
                         CYCLE
                      ENDIF
 
-                     IF(gfinp%l_sphavg) THEN
-                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin)
+                     IF(l_sphavg) THEN
+                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%gmmpMat(:,m,mp,jspin,ipm),int_method(contourShape))
                      ELSE
                         ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                         ! We can do this because the radial functions are independent of E
-                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=1)
+                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg,imat=1)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%uu(:,m,mp,jspin,ipm),int_method(contourShape))
-                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=2)
+                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg,imat=2)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%dd(:,m,mp,jspin,ipm),int_method(contourShape))
-                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=3)
+                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg,imat=3)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%ud(:,m,mp,jspin,ipm),int_method(contourShape))
-                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,imat=4)
+                        imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg,imat=4)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%du(:,m,mp,jspin,ipm),int_method(contourShape))
                      ENDIF

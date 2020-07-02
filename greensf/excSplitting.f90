@@ -17,13 +17,13 @@ MODULE m_excSplitting
       REAL,                      INTENT(IN)  :: ef
 
       INTEGER :: i_gf,i_elem,indUnique,ispin,kkcut,m,l,lp,atomType,atomTypep,ie
+      LOGICAL :: l_sphavg
       REAL    :: excSplit,del
       REAL, ALLOCATABLE :: eMesh(:), imag(:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
       CHARACTER(LEN=20) :: attributes(4)
 
-
-      IF(.NOT.gfinp%l_sphavg) RETURN
+      IF(.NOT.gfinp%checkSphavg()) RETURN
 
       CALL gfinp%eMesh(ef,del=del,eMesh=eMesh)
 
@@ -43,13 +43,14 @@ MODULE m_excSplitting
          lp = gfinp%elem(i_gf)%lp
          atomType = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
+         l_sphavg = gfinp%elem(i_gf)%l_sphavg
 
          !Only onsite exchange splitting
          IF(l /= lp) CYCLE
          IF(atomType /= atomTypep) CYCLE
-         IF(.NOT.gfinp%l_sphavg) CYCLE
+         IF(.NOT.l_sphavg) CYCLE
 
-         i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
          IF(i_gf /= indUnique) CYCLE
          !-------------------------------------------------
@@ -64,7 +65,7 @@ MODULE m_excSplitting
             intCOM = 0.0
             intNorm = 0.0
             DO m = -l, l
-               imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin)
+               imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg)
                intCOM(:,ispin) = intCOM(:,ispin) + eMesh*imag
                intNorm(:,ispin) = intNorm(:,ispin) + imag
             ENDDO

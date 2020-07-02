@@ -29,7 +29,7 @@ MODULE m_greensfCalcImagPart
       INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
       INTEGER  :: indUnique,i_elem
-      LOGICAL  :: l_zero
+      LOGICAL  :: l_zero,l_sphavg
       REAL     :: del,eb,wtkpt
       COMPLEX  :: fac,weight
       INTEGER, ALLOCATABLE :: ev_list(:)
@@ -86,18 +86,19 @@ MODULE m_greensfCalcImagPart
             !Get the information about the current element
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
+            l_sphavg = gfinp%elem(i_gf)%l_sphavg
 
-            i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
 
             !$OMP parallel default(none) &
-            !$OMP shared(gfinp,input,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP shared(i_elem,l,lp,ikpt_i,nBands,eMesh)&
+            !$OMP shared(input,greensfBZintCoeffs,greensfImagPart) &
+            !$OMP shared(i_elem,l,lp,ikpt_i,nBands,eMesh,l_sphavg)&
             !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind) &
             !$OMP private(ie,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,imagReal,l_zero)
-            ALLOCATE(imag(SIZE(eMesh),MERGE(1,4,gfinp%l_sphavg)),source=cmplx_0)
-            ALLOCATE(imagReal(SIZE(eMesh),MERGE(1,4,gfinp%l_sphavg)),source=0.0)
+            ALLOCATE(imag(SIZE(eMesh),MERGE(1,4,l_sphavg)),source=cmplx_0)
+            ALLOCATE(imagReal(SIZE(eMesh),MERGE(1,4,l_sphavg)),source=0.0)
             !$OMP do collapse(2)
             DO mp = -lp, lp
                DO m = -l, l
@@ -132,7 +133,7 @@ MODULE m_greensfCalcImagPart
                         CASE DEFAULT
                         END SELECT
 
-                        IF(gfinp%l_sphavg) THEN
+                        IF(l_sphavg) THEN
                            imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ELSE
                            imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind)
@@ -143,7 +144,7 @@ MODULE m_greensfCalcImagPart
 
                      ELSE IF(eGrid_start==1 .AND. eGrid_end==SIZE(eMesh)) THEN!Here we always use the tetrahedron method
                         !We can only use the BLAS routine on the full array
-                        IF(gfinp%l_sphavg) THEN
+                        IF(l_sphavg) THEN
                            CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind),&
                                                weights(:,iBand),1,imag(:,1),1)
                         ELSE
@@ -157,7 +158,7 @@ MODULE m_greensfCalcImagPart
                                                weights(:,iBand),1,imag(:,4),1)
                         ENDIF
                      ELSE
-                        IF(gfinp%l_sphavg) THEN
+                        IF(l_sphavg) THEN
                            imag(eGrid_start:eGrid_end,1) = imag(eGrid_start:eGrid_end,1) + weights(eGrid_start:eGrid_end,iBand)&
                                                           * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                         ELSE
@@ -174,7 +175,7 @@ MODULE m_greensfCalcImagPart
 
                   ENDDO!ib
                   imagReal = AIMAG(imag)
-                  IF(gfinp%l_sphavg) THEN
+                  IF(l_sphavg) THEN
                      CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem,spin_ind),1)
                   ELSE
                      CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%uu(:,m,mp,i_elem,spin_ind),1)

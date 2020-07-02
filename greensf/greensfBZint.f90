@@ -34,6 +34,7 @@ MODULE m_greensfBZint
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor
+      LOGICAL :: l_sphavg
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
@@ -44,9 +45,6 @@ MODULE m_greensfBZint
 
 
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
-
-      ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
-                  MERGE(1,4,gfinp%l_sphavg),spin_start:spin_end),source=cmplx_0)
       DO i_gf = 1, gfinp%n
 
          !Get the information about the current element
@@ -54,12 +52,16 @@ MODULE m_greensfBZint
          lp = gfinp%elem(i_gf)%lp
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
+         l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
          atomFactor = MERGE(1.0,atomFactor,atomType.NE.atomTypep)
 
-         i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
          IF(i_gf/=indUnique) CYCLE
+
+         ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
+                     MERGE(1,4,l_sphavg),spin_start:spin_end),source=cmplx_0)
 
          natom_start = SUM(atoms%neq(:atomType-1)) + 1
          natom_end   = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType)),l.NE.lp)
@@ -99,20 +101,20 @@ MODULE m_greensfBZint
                   !Spin diagonal elements
                   IF(spin1==spin2) THEN
                      CALL greensfSpinDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,&
-                                          gfinp%l_sphavg,atoms,usdus,eigVecCoeffs,im(:,:,:,:,ispin))
+                                          l_sphavg,atoms,usdus,eigVecCoeffs,im(:,:,:,:,ispin))
                   ELSE
                      !Spin offdiagonal elements
                      CALL greensfSpinOffDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                             gfinp%l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
+                                             l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
-                  CALL greensfSym(ikpt_i,i_elem,natom,l,natom.EQ.natomp.AND.l.EQ.lp,gfinp%l_sphavg,&
+                  CALL greensfSym(ikpt_i,i_elem,natom,l,natom.EQ.natomp.AND.l.EQ.lp,l_sphavg,&
                                ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                ENDDO
 
             ENDDO !natomp
          ENDDO !natom
-
+         DEALLOCATE(im)
       ENDDO !i_gf
       CALL timestop("Green's Function: Brillouin-Zone-Integration")
 

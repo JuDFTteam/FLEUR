@@ -541,6 +541,7 @@
          <xsd:element name="matrixElements" type="GFElementChoiceType"/>
          <xsd:element name="diagElements" type="GFElementChoiceDiagType"/>
       </xsd:choice>
+      <xsd:attribute default="T"       name="l_sphavg" type="FleurBool"/>
       <xsd:attribute default="0"       name="nshells" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
@@ -756,8 +757,8 @@
             </xsd:choice>
          </xsd:sequence>
       </xsd:sequence>
-      <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
       <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="F" name="l_resolvent" type="FleurBool" use="optional"/>
       <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
    </xsd:complexType>
 
