@@ -50,14 +50,10 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
       ALLOCATE(nococonv%betaRlx(atoms%ntype))
       nococonv%betaRlx=noco%beta_inp
    END IF
-   
-   
-   ! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,noco%beta_inp,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,noco%alph_inp,zeros,den)
-     !Setting angles to zero since we want our spinQ Axis to remain the same when writing out the density.
-     nococonv%alph=zeros
-     nococonv%beta=zeros
+    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,noco%beta_inp,den)
+    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,noco%alph_inp,zeros,den)
+    nococonv%alph=zeros
+    nococonv%beta=zeros
    
    
 
@@ -268,8 +264,6 @@ SUBROUTINE toGlobalRelax(noco,nococonv,vacuum,sphhar,stars&
 
 
    zeros(:)=0.0
-! Backwards rotation so SQA and magnetization don't align anymore. This is needed since you otherwise run into issues in the mixing since you mix cdn's which have been rotated
-! in different directions.
    CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    IF (present(den)) THEN
@@ -277,10 +271,10 @@ SUBROUTINE toGlobalRelax(noco,nococonv,vacuum,sphhar,stars&
       CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
    END IF
 ! Nococonv is zero now since rotation has been reverted.
-      nococonv%alphPrev=nococonv%alph
-      nococonv%betaPrev=nococonv%beta
-      nococonv%alph=zeros
-      nococonv%beta=zeros
+   nococonv%alphPrev=nococonv%alph
+   nococonv%betaPrev=nococonv%beta
+   nococonv%alph=zeros
+   nococonv%beta=zeros
 
 
 END SUBROUTINE toGlobalRelax
