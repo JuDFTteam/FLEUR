@@ -60,10 +60,11 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,input,noco,jsp_start,jsp_end,nkpts,nbands)
+      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,atoms,input,noco,jsp_start,jsp_end,nkpts,nbands)
 
          CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),                INTENT(IN)     :: gfinp
+         TYPE(t_atoms),                INTENT(IN)     :: atoms
          TYPE(t_input),                INTENT(IN)     :: input
          TYPE(t_noco),                 INTENT(IN)     :: noco
          INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
@@ -80,8 +81,8 @@ MODULE m_types_greensfCoeffs
          ENDIF
 
          !Determine number of unique gf elements
-         uniqueElementsSphavg  = gfinp%uniqueElements(l_sphavg=.TRUE.) !How many spherically averaged elements
-         uniqueElementsRadial = gfinp%uniqueElements(l_sphavg=.FALSE.) !How many elements with radial dependence
+         uniqueElementsSphavg  = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.) !How many spherically averaged elements
+         uniqueElementsRadial  = gfinp%uniqueElements(atoms,l_sphavg=.FALSE.) !How many elements with radial dependence
 
          IF(uniqueElementsSphavg>0) THEN
             ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg,nkpts,jsp_start:maxSpin),source=cmplx_0)
@@ -96,10 +97,11 @@ MODULE m_types_greensfCoeffs
       END SUBROUTINE greensfBZintCoeffs_init
 
 
-      SUBROUTINE greensfImagPart_init(this,gfinp,input,noco,l_calc)
+      SUBROUTINE greensfImagPart_init(this,gfinp,atoms,input,noco,l_calc)
 
          CLASS(t_greensfImagPart),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),             INTENT(IN)     :: gfinp
+         TYPE(t_atoms),             INTENT(IN)     :: atoms
          TYPE(t_input),             INTENT(IN)     :: input
          TYPE(t_noco),              INTENT(IN)     :: noco
          LOGICAL,                   INTENT(IN)     :: l_calc
@@ -112,8 +114,8 @@ MODULE m_types_greensfCoeffs
          this%l_calc = l_calc
 
           !Determine number of unique gf elements
-         uniqueElementsSphavg  = gfinp%uniqueElements(l_sphavg=.TRUE.) !How many spherically averaged elements
-         uniqueElementsRadial  = gfinp%uniqueElements(l_sphavg=.FALSE.) !How many elements with radial dependence
+         uniqueElementsSphavg  = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.) !How many spherically averaged elements
+         uniqueElementsRadial  = gfinp%uniqueElements(atoms,l_sphavg=.FALSE.) !How many elements with radial dependence
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
          IF(uniqueElementsSphavg>0) THEN

@@ -88,7 +88,7 @@ MODULE m_types_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: checkRadial    => checkRadial_gfinp
       PROCEDURE :: checkSphavg    => checkSphavg_gfinp
-      PROCEDURE :: checkforLO     => checkforLO_gfinp
+      PROCEDURE :: countLOs       => countLOs_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -541,29 +541,38 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   FUNCTION uniqueElements_gfinp(this,ind,l_sphavg,indUnique) Result(uniqueElements)
+   FUNCTION uniqueElements_gfinp(this,atoms,ind,l_sphavg,lo,indUnique,maxLO) Result(uniqueElements)
+
+      USE m_types_atoms
 
       CLASS(t_gfinp),   INTENT(IN)     :: this
+      TYPE(t_atoms),    INTENT(IN)     :: atoms
       INTEGER, OPTIONAL,INTENT(IN)     :: ind
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_sphavg !uniqueElements are determined separately for radial dependence and spherically averaging
+      LOGICAL, OPTIONAL,INTENT(IN)     :: lo       !We are interested in unique LO elems (radial dependence)
       INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
+      INTEGER, OPTIONAL,INTENT(INOUT)  :: maxLO    !Maximum number of Elements associated with a GF element
 
       INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
 
       INTEGER :: maxGF
       INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
-      LOGICAL :: l_sphavgArg, l_sphavgElem
+      LOGICAL :: l_sphavgArg, l_sphavgElem,loArg
 
       l_sphavgArg = .TRUE.
       IF(PRESENT(l_sphavg)) l_sphavgArg = l_sphavg
+      loArg = .FALSE.
+      IF(PRESENT(lo)) loArg = lo
 
       uniqueElements = 0
+      IF(PRESENT(maxLO)) maxLO = 0
 
       IF(PRESENT(ind)) THEN
          maxGF = ind
       ELSE
          maxGF = this%n
       ENDIF
+
       DO i_gf = 1, maxGF
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
@@ -575,7 +584,17 @@ CONTAINS
          iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                uniqueMax=i_gf)
 
-         IF(iUnique == i_gf) uniqueElements = uniqueElements +1
+         IF(iUnique == i_gf) THEN
+            IF(loArg.AND..NOT.l_sphavgElem) THEN
+               nLO = this%countLOs(atoms,i_gf)
+               IF(nLO/=0) uniqueElements = uniqueElements +1
+               IF(PRESENT(maxLO)) THEN
+                  IF(nLO>maxLO) maxLO = nLO
+               ENDIF
+            ELSE
+               uniqueElements = uniqueElements +1
+            ENDIF
+         ENDIF
       ENDDO
 
       IF(PRESENT(indUnique)) THEN
@@ -876,8 +895,9 @@ CONTAINS
 
    END FUNCTION checkSphavg_gfinp
 
-   PURE LOGICAL FUNCTION checkforLO_gfinp(this,atoms,i_gf)
+   PURE INTEGER FUNCTION countLOs_gfinp(this,atoms,i_gf)
 
+      !Counts the number of LOs associated with this green's function element
       USE m_types_atoms
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
@@ -891,16 +911,18 @@ CONTAINS
       atomType  = this%elem(i_gf)%atomType
       atomTypep = this%elem(i_gf)%atomTypep
 
-      checkforLO_gfinp = .FALSE.
+      countLOs_gfinp = 0
       DO ilo = 1, atoms%nlo(atomType)
          IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-         checkforLO_gfinp = .TRUE.
+         countLOs_gfinp = countLOs_gfinp + 1
       ENDDO
 
-      DO ilop = 1, atoms%nlo(atomTypep)
-         IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
-         checkforLO_gfinp = .TRUE.
-      ENDDO
+      IF(l.NE.lp.OR.atomType.NE.atomTypep) THEN
+         DO ilop = 1, atoms%nlo(atomTypep)
+            IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+            countLOs_gfinp = countLOs_gfinp + 1
+         ENDDO
+      ENDIF
 
    END FUNCTION checkforLO_gfinp
 

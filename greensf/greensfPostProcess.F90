@@ -70,7 +70,7 @@ MODULE m_greensfPostProcess
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
-         CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
+         CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
 
          IF(gfinp%checkRadial()) THEN
             CALL timestart("Green's Function: Radial Functions")
@@ -92,7 +92,7 @@ MODULE m_greensfPostProcess
                l_sphavg  = gfinp%elem(i_gf)%l_sphavg
                IF(l_sphavg) CYCLE
 
-               i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+               i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
                IF(i_gf/=indUnique) THEN
                   u(:,:,:,:,:,i_gf) = u(:,:,:,:,:,indUnique)
@@ -142,7 +142,7 @@ MODULE m_greensfPostProcess
             l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
-            l_check = .NOT.gfinp%checkforLO(atoms,i_gf)
+            l_check = gfinp%countLOs(atoms,i_gf)==0 !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN

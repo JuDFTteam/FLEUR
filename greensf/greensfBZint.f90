@@ -56,7 +56,7 @@ MODULE m_greensfBZint
          atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
          atomFactor = MERGE(1.0,atomFactor,atomType.NE.atomTypep)
 
-         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
          IF(i_gf/=indUnique) CYCLE
 

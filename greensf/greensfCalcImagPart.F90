@@ -88,7 +88,7 @@ MODULE m_greensfCalcImagPart
             lp = gfinp%elem(i_gf)%lp
             l_sphavg = gfinp%elem(i_gf)%l_sphavg
 
-            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(i_gf/=indUnique) CYCLE
 

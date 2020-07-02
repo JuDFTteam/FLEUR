@@ -9,9 +9,10 @@ MODULE m_excSplitting
 
    CONTAINS
 
-   SUBROUTINE excSplitting(gfinp,input,greensfImagPart,ef)
+   SUBROUTINE excSplitting(gfinp,atoms,input,greensfImagPart,ef)
 
       TYPE(t_gfinp),             INTENT(IN)  :: gfinp
+      TYPE(t_atoms),             INTENT(IN)  :: atoms
       TYPE(t_input),             INTENT(IN)  :: input
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
@@ -50,7 +51,7 @@ MODULE m_excSplitting
          IF(atomType /= atomTypep) CYCLE
          IF(.NOT.l_sphavg) CYCLE
 
-         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
          IF(i_gf /= indUnique) CYCLE
          !-------------------------------------------------

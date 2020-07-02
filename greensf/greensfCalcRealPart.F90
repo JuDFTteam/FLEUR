@@ -70,7 +70,7 @@ MODULE m_greensfCalcRealPart
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
 
-            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(i_gf /= indUnique.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1&
                .AND..NOT.g(indUnique)%elem%l_fixedCutoffset.AND.g(indUnique)%elem%refCutoff==-1) THEN
@@ -79,7 +79,7 @@ MODULE m_greensfCalcRealPart
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
                l_onsite = nType.EQ.nTypep.AND.l.EQ.lp
-               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND..NOT.gfinp%checkforLO(atoms,i_gf)) THEN
+               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND.gfinp%countLOs(atoms,i_gf)==0) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
@@ -116,7 +116,7 @@ MODULE m_greensfCalcRealPart
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
             l_sphavg = g(i_gf)%elem%l_sphavg
-            i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
@@ -185,7 +185,7 @@ MODULE m_greensfCalcRealPart
          l_sphavg = g(i_gf)%elem%l_sphavg
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
 
-         i_elem = gfinp%uniqueElements(ind=i_gf,l_sphavg=l_sphavg)
+         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
