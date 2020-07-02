@@ -13,8 +13,8 @@
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <greensFunction l_mperp="F">
-         <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
-         <contourSemicircle n="128" eb="-0.99" et="0.0" alpha="0.25"/>
+         <realAxis ne="5400" ellow="-2.0" elup="1.0"/>
+         <contourSemicircle n="128" eb="-1.99" et="0.0" alpha="0.25"/>
       </greensFunction>
       <bzIntegration valenceElectrons="16.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
          <kPointList name="default" count="10">
@@ -464,6 +464,9 @@
          <energyParameters s="4" p="4" d="3" f="4"/>
          <greensfCalculation l_sphavg="F" >
             <diagElements s="F" p="F" d="T" f="F"/>
+         </greensfCalculation>
+         <greensfCalculation l_sphavg="T" >
+            <diagElements s="F" p="T" d="F" f="F"/>
          </greensfCalculation>
          <lo type="SCLO" l="0" n="3" eDeriv="0"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
