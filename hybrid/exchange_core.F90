@@ -235,10 +235,6 @@ CONTAINS
       ic = 0
       sum_offdia = 0
       IF (mat_ex%l_real) THEN
-         write (*,*) "shape(exchange)", shape(exchange)
-         write (*,*) "nk", nk 
-         write (*,*) "hybdat%nbands(nk)", hybdat%nbands(nk)
-         write (*,*) "mat_ex%data_r", shape(mat_ex%data_r)
          mat_ex%data_r = mat_ex%data_r + real(exchange/nsymop)
       ELSE
          mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
