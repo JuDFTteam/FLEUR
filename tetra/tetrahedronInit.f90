@@ -111,7 +111,7 @@ MODULE m_tetrahedronInit
       LOGICAL,          INTENT(IN)  :: film
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,k(SIZE(kpts%ntetra,1))
+      INTEGER :: itet,iband,ncorn,ie,icorn,i,k(SIZE(kpts%ntetra,1))
       LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(SIZE(kpts%ntetra,1)),del,fac,vol
       REAL, ALLOCATABLE :: dos_weights(:)
@@ -146,7 +146,9 @@ MODULE m_tetrahedronInit
          vol = kpts%voltet(itet)/kpts%ntet*fac
          !The array k is only for getting the right indices in the eigenvalues
          k = kpts%ntetra(:,itet)
-         icorn = findloc(k,ikpt,1)
+         DO i = 1, SIZE(k)
+            IF(i==ikpt) icorn = i
+         ENDDO
          where(k.GT.kpts%nkpt) k = kpts%bkp(k)
          !$OMP parallel do default(none) schedule(dynamic,1) &
          !$OMP shared(icorn,neig,film,vol,k,l_resWeights_pres) &
