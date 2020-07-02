@@ -78,7 +78,7 @@ CONTAINS
       REAL, INTENT(IN)    :: eig_irr(:, :)
 
       ! local scalars
-      INTEGER                 ::  i, j, l, itype
+      INTEGER                 ::  l, itype
       INTEGER                 ::  iband, nk
       INTEGER                 ::  ikpt, ikpt0
       INTEGER                 ::  nbasfcn
@@ -137,23 +137,23 @@ CONTAINS
       CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
-      CALL timestart("core exchange calculation")
+      if(k_pack%submpi%root()) then
+         ! calculate contribution from the core states to the HF exchange
+         CALL timestart("core exchange calculation")
+         IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+            call judft_error('HSE not implemented in hsfock')
+         ELSE
+            CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
+                              mpdata, fi%hybinp, hybdat, jsp, &
+                              lapw, nsymop, nsest, indx_sest, fmpi, a_ex, results, ex)
+            CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
+         END IF
 
-      ! calculate contribution from the core states to the HF exchange
-      IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-         call judft_error('HSE not implemented in hsfock')
-      ELSE
-         CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
-                             mpdata, fi%hybinp, hybdat, jsp, &
-                             lapw, nsymop, nsest, indx_sest, fmpi, a_ex, results, ex)
-         CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
-      END IF
+         CALL timestop("core exchange calculation")
 
-      deallocate(n_q)
-      CALL timestop("core exchange calculation")
-
-      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, v_x)
-      CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, v_x)
+         CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+      endif
 
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock

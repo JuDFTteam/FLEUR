@@ -28,7 +28,6 @@ CONTAINS
       call hybdat%free()
       call hybdat%allocate(fi, mpdata%num_radfun_per_l)
 
-      hybdat%eig_id = eig_id
       ! pre-calculate gaunt coefficients
       hybdat%fac(0) = 1
       hybdat%sfac(0) = 1

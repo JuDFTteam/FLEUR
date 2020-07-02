@@ -42,9 +42,9 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi, wp_mpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, j
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -107,7 +107,9 @@ CONTAINS
 
          ! use jsp=1 for coulomb work-planning
          call hybdat%set_states(fi, results, 1)
-         call work_pack%init(fi, hybdat, 1, glob_mpi%rank, glob_mpi%size)
+         call judft_comm_split(glob_mpi%comm, glob_mpi%rank, 1, tmp_comm)
+         call tmp_mpi%init(tmp_comm)
+         call work_pack%init(fi, hybdat, tmp_mpi, 1, glob_mpi%rank, glob_mpi%size)
          CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
          call work_pack%free()
 
@@ -118,15 +120,16 @@ CONTAINS
          CALL hf_init(eig_id, mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
-         !call balance_kpts(fi, glob_mpi, wp_mpi)
+         call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
 
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            call work_pack%init(fi, hybdat, jsp, glob_mpi%rank, glob_mpi%size)
             call timestop("HF_setup")
+
+            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
@@ -174,71 +177,48 @@ CONTAINS
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
 
-      ! subroutine distribute_mpis(fi, glob_mpi)
-      !    use types
-      !    implicit none 
-      !    type(t_fleurinput), intent(in)    :: fi
-      !    type(t_hybmpi), intent(in)        :: glob_mpi 
-
-      !    integer :: color(hybmpi%size), my_color, n_wps
-      !    integer, allocatable :: n_procs(:), weights(:)
-
-      !    n_wps = min(fi%kpts%nkpt, glob_mpi%size)
-      !    allocate(n_procs(n_wps), source=0)
-      !    allocate(weights(n_wps), source=0)
-
-
-      !    do rank = 0,n_wps-1 
-      !       do ik = rank+1, fi%kpts%nkpts, n_wps 
-      !          weights(rank+1) = weights(rank+1) + fi%kpts%eibz(ik)%nkpt
-      !       enddo 
-      !    enddo
-
-      !    call judft_error("no mas")
-      ! end subroutine distribute_mpis
-   END SUBROUTINE calc_hybrid
-
-   subroutine balance_kpts(fi, glob_mpi, wp_mpi, wp_root_comm, wp_rank, wp_size)
-      USE m_types
-      implicit none 
-      type(t_fleurinput), intent(in)    :: fi
-      type(t_hybmpi), intent(in)        :: glob_mpi
-      type(t_hybmpi), intent(inout)     :: wp_mpi, wp_root_comm
-      integer, intent(inout)            :: wp_rank, wp_size
-
-      integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm, my_color
-      integer, allocatable :: nprocs(:), weights(:), color(:)
-
-
-      n_wps = min(glob_mpi%size, fi%kpts%nkpt)
-      allocate(nprocs(n_wps), source=0)
-      allocate(weights(n_wps), source=0)
-      allocate(color(glob_mpi%size), source=0)
-
-      do j_wp = 1, n_wps
-         do ik = j_wp, fi%kpts%nkpt, n_wps
-            weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
+      subroutine distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
+         USE m_types
+         implicit none 
+         type(t_fleurinput), intent(in)    :: fi
+         type(t_hybmpi), intent(in)        :: glob_mpi
+         type(t_hybmpi), intent(inout)     :: wp_mpi
+         integer, intent(inout)            :: wp_rank, wp_size
+   
+         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm
+         integer, allocatable :: nprocs(:), weights(:), color(:)
+   
+   
+         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
+         allocate(nprocs(n_wps), source=0)
+         allocate(weights(n_wps), source=0)
+         allocate(color(glob_mpi%size), source=0)
+   
+         do j_wp = 1, n_wps
+            do ik = j_wp, fi%kpts%nkpt, n_wps
+               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
+            enddo
          enddo
-      enddo
-
-      do i = 1,glob_mpi%size 
-         idx = minloc(1.0*nprocs/weights)
-         nprocs(idx(1)) = nprocs(idx(1)) + 1
-      enddo
-
-      cnt = 1
-      do i = 1,n_wps 
-         do j = 1,nprocs(i)
-            color(cnt) = i 
-            cnt = cnt + 1 
-         enddo 
-      enddo
-
-      wp_rank = color(glob_mpi%rank+1) 
-      wp_size = n_wps
-      
-      call judft_comm_split(glob_mpi%comm, my_color, glob_mpi%rank, new_comm)
-
-      call wp_mpi%init(new_comm)
-   end subroutine balance_kpts
+   
+         do i = 1,glob_mpi%size 
+            idx = minloc(1.0*nprocs/weights)
+            nprocs(idx(1)) = nprocs(idx(1)) + 1
+         enddo
+   
+         cnt = 1
+         do i = 1,n_wps 
+            do j = 1,nprocs(i)
+               color(cnt) = i - 1
+               cnt = cnt + 1 
+            enddo 
+         enddo
+   
+         wp_rank = color(glob_mpi%rank+1) 
+         wp_size = n_wps
+         
+         call judft_comm_split(glob_mpi%comm, wp_rank, glob_mpi%rank, new_comm)
+   
+         call wp_mpi%init(new_comm)
+      end subroutine distrib_mpis
+   END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

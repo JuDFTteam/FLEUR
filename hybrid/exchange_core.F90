@@ -77,7 +77,7 @@ CONTAINS
 
       COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
-      complex                 :: c_phase(hybdat%nbands(nk)), cdum
+      complex                 :: c_phase(hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
       type(t_mat)             :: zmat, integral, carr, tmp, dot_result
 
@@ -235,7 +235,7 @@ CONTAINS
       ic = 0
       sum_offdia = 0
       IF (mat_ex%l_real) THEN
-         mat_ex%data_r = real(mat_ex%data_r + exchange/nsymop)
+         mat_ex%data_r = mat_ex%data_r + real(exchange/nsymop)
       ELSE
          mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
       END IF

@@ -8,7 +8,7 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, hybdat,&
+   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybdat,&
                      el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
 
       USE m_judft
@@ -28,7 +28,6 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(IN) :: hybdat
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -66,7 +65,7 @@ CONTAINS
       COMPLEX               ::  rc, rr
 
       ! Local Arrays
-      INTEGER               ::  gg(3)
+      INTEGER               ::  gg(3), x,y
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
       REAL                  ::  integ(0:sphhar%nlhd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd)
@@ -81,21 +80,20 @@ CONTAINS
       REAL                  ::  bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
-      COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
       COMPLEX               ::  vrmat(hybdat%maxlmindx, hybdat%maxlmindx)
       COMPLEX               ::  carr(hybdat%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
       COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
-#ifndef CPP_OLDINTEL
+      type(t_mat)           ::  vxc
       COMPLEX               ::  bascof_lo(3, -atoms%llod:atoms%llod, 4*atoms%llod + 2, atoms%nlod, atoms%nat)
-#endif
 
       CALL timestart("subvxc")
       integ = 0.0
       bas1 = 0.0
       bas2 = 0.0
 
-      vxc = 0
+      call vxc%init(hmat)
+      call vxc%reset(cmplx_0)
 
       ! Calculate radial functions
       call timestart("Calculate radial functions")
@@ -267,13 +265,19 @@ CONTAINS
 
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
             call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
-            ic = 0
-            DO j = 1, lapw%nv(jsp)
-               DO i = 1, j
-                  ic = ic + 1
-                  vxc(ic) = vxc(ic) + carr1(i, j)
+            if(vxc%l_real) then 
+               DO j = 1, lapw%nv(jsp)
+                  DO i = 1, j
+                     vxc%data_r(i,j) = vxc%data_r(i,j) + real(carr1(i, j))
+                  END DO
                END DO
-            END DO
+            else
+               DO j = 1, lapw%nv(jsp)
+                  DO i = 1, j
+                     vxc%data_c(i,j) = vxc%data_c(i,j) + carr1(i, j)
+                  END DO
+               END DO
+            endif
          END DO
          call timestop("Project on bascof")
       END DO ! End loop over atom types
@@ -286,15 +290,17 @@ CONTAINS
 
       ! Calculate vxc-matrix,  left basis function (ig1)
       !                        right basis function (ig2)
-      ic = 0
       call timestart("Calculate vxc-matrix")
       DO ig1 = 1, lapw%nv(jsp)
          DO ig2 = 1, ig1
-            ic = ic + 1
             gg = lapw%gvec(:,ig1,jsp) - lapw%gvec(:,ig2,jsp)
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
-               vxc(ic) = vxc(ic) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+               if(vxc%l_real) then 
+                  vxc%data_r(ig2,ig1) = vxc%data_r(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+               else
+                  vxc%data_c(ig2,ig1) = vxc%data_c(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+               endif
             ELSE
                IF (fmpi%irank == 0) THEN
                   WRITE (oUnit, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
@@ -399,17 +405,17 @@ CONTAINS
                                        END DO
 
                                        rc = CMPLX(0.0, 1.0)**(l2 - l1) ! adjusts to a/b/ccof-scaling
-
                                        ! ic counts the entry in vxc
                                        ic = icentry
                                        DO i = 1, lapw%nv(jsp)
                                           ic = ic + 1
+                                          call packed_to_cart(ic, x,y)
                                           IF (hmat%l_real) THEN
-                                             vxc(ic) = vxc(ic) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
-                                                                              CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                             vxc%data_r(y,x) = vxc%data_r(y,x) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
+                                                                                         CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                           ELSE
-                                             vxc(ic) = vxc(ic) + rr*rc*bascof(i, lm, iatom)* &
-                                                       CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                             vxc%data_c(y,x) = vxc%data_c(y,x) + rr*rc*bascof(i, lm, iatom)* &
+                                                                                         CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                           END IF
                                        END DO
                                     END DO  !p2
@@ -425,6 +431,7 @@ CONTAINS
                                  lp = atoms%llo(ilop, itype)
                                  DO ikvecp = 1, invsfct*(2*lp + 1)
                                     ic = ic + 1
+                                    call packed_to_cart(ic, x,y)
                                     DO mp = -lp, lp
                                        DO pp = 1, 3
                                           IF (pp == 3) THEN
@@ -446,11 +453,13 @@ CONTAINS
                                           rc = CMPLX(0.0, 1.0)**(lp - l1) ! adjusts to a/b/ccof-scaling
 
                                           IF (hmat%l_real) THEN
-                                             vxc(ic) = vxc(ic) + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                                              CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                             vxc%data_r(y,x) = vxc%data_r(y,x) &
+                                                + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                           ELSE
-                                             vxc(ic) = vxc(ic) + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                       CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                             vxc%data_c(y,x) = vxc%data_c(y,x)&
+                                                + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                           END IF
                                        END DO ! pp
                                     END DO ! mp
@@ -461,7 +470,7 @@ CONTAINS
                               ! calculate matrix-elements of one local orbital with itself
                               DO ikvecp = 1, ikvec
                                  ic = ic + 1
-
+                                 call packed_to_cart(ic, x,y)
                                  lp = l1
                                  ilop = ilo
                                  DO mp = -lp, lp
@@ -485,11 +494,13 @@ CONTAINS
                                        rc = CMPLX(0.0, 1.0)**(lp - l1) ! adjusts to a/b/ccof-scaling
 
                                        IF (hmat%l_real) THEN
-                                          vxc(ic) = vxc(ic) + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                           vxc%data_r(y,x) = vxc%data_r(y,x) &
+                                                                  + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                                     CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                        ELSE
-                                          vxc(ic) = vxc(ic) + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                    CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                          vxc%data_c(y,x) = vxc%data_c(y,x)&
+                                                               + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                               CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                        END IF
                                     END DO ! pp
                                  END DO ! mp
@@ -512,15 +523,13 @@ CONTAINS
       !initialize weighting factor
       a_ex = xcpot%get_exchange_weight()
 
-      i = 0
       call timestart("apply to hmat")
       DO n = 1, hmat%matsize1
          DO nn = 1, n
-            i = i + 1
             IF (hmat%l_real) THEN
-               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*REAL(vxc(i))
+               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*REAL(vxc%data_r(nn,n))
             ELSE
-               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*vxc(i)
+               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*vxc%data_c(nn,n)
             ENDIF
          END DO
       END DO
@@ -529,6 +538,15 @@ CONTAINS
       CALL timestop("subvxc")
 
       deallocate(bascof)
+   
+   contains
+      subroutine packed_to_cart(p_idx, x, y)
+         implicit none
+         integer, intent(in)    :: p_idx 
+         integer, intent(inout) :: x, y 
 
+         x = ceiling(-0.5 + sqrt(0.25 + 2*p_idx)  )
+         y = p_idx - ((x - 1)*x)/2
+      end subroutine packed_to_cart
    END SUBROUTINE subvxc
 END MODULE m_subvxc

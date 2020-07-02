@@ -43,9 +43,22 @@ MODULE m_types_mat
       procedure        :: size_mb => t_mat_size_mb
       procedure        :: print_type => t_mat_print_type
       procedure        :: conjugate => t_mat_conjg
+      procedure        :: reset => t_mat_reset
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_reset(mat, val)
+      implicit none  
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      complex, intent(in)           :: val
+
+      if(mat%l_real) then 
+         mat%data_r = real(val)
+      else 
+         mat%data_c = val
+      endif
+   end subroutine t_mat_reset
+
    subroutine t_mat_conjg(mat)
       implicit none 
       CLASS(t_mat), INTENT(INOUT) :: mat

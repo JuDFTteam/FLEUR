@@ -30,12 +30,9 @@ CONTAINS
       USE m_eigen_hssetup
       USE m_pot_io
       USE m_eigen_diag
-      USE m_add_vnonlocal
-      USE m_subvxc
       !USE m_hsefunctional
       USE m_mt_setup
       USE m_util
-      USE m_io_hybinp
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
       USE m_xmlOutput
@@ -134,26 +131,10 @@ CONTAINS
             ! Set up lapw list
             CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts,fi%atoms,fi%sym,nk,fi%cell,l_zref, fmpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi%hybinp,enpara,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
-                               stars,fi%cell,sphhar,fi%atoms,ud,td,v,lapw,l_real,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,l_real,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
-
-            IF(fi%hybinp%l_hybrid.OR.fi%input%l_rdmft) THEN
-               CALL write_eig(eig_id, nk,jsp, smat=smat)
-            END IF
-
-            IF(fi%hybinp%l_hybrid) THEN
-               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,fi%atoms,fi%cell,fi%sym,mpdata,fi%hybinp,hybdat,&
-                                                      fi%input,fi%kpts,jsp,results,xcpot,fi%noco,nococonv,hmat)
-
-               IF(hybdat%l_subvxc) THEN
-                  CALL subvxc(lapw,fi%kpts%bk(:,nk),fi%input,jsp,v%mt(:,0,:,:),fi%atoms,ud,&
-                              mpdata,fi%hybinp,hybdat,enpara%el0,enpara%ello0,fi%sym,&
-                              fi%cell,sphhar,stars,xcpot,fmpi,fi%oneD,hmat,vx)
-               END IF
-            END IF ! fi%hybinp%l_hybrid
 
             l_wu=.FALSE.
             ne_all=fi%input%neig
