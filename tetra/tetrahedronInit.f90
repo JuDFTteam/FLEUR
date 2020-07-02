@@ -147,7 +147,7 @@ MODULE m_tetrahedronInit
          !The array k is only for getting the right indices in the eigenvalues
          k = kpts%ntetra(:,itet)
          DO i = 1, SIZE(k)
-            IF(i==ikpt) icorn = i
+            IF(k(i)==ikpt) icorn = i
          ENDDO
          where(k.GT.kpts%nkpt) k = kpts%bkp(k)
          !$OMP parallel do default(none) schedule(dynamic,1) &
