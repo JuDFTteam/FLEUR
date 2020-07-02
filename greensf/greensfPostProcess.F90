@@ -100,7 +100,7 @@ MODULE m_greensfPostProcess
                ELSE
                   DO jspin = 1, input%jspins
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
                      u(:,:,1,1,jspin,i_gf) = f(:,:,l)
                      u(:,:,2,1,jspin,i_gf) = f(:,:,lp)
@@ -109,7 +109,7 @@ MODULE m_greensfPostProcess
                      udot(:,:,2,1,jspin,i_gf) = g(:,:,lp)
 
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
                      u(:,:,1,2,jspin,i_gf) = f(:,:,l)
                      u(:,:,2,2,jspin,i_gf) = f(:,:,lp)
@@ -166,8 +166,6 @@ MODULE m_greensfPostProcess
                IF(gfinp%numTorgueElems(atomType)==0) CYCLE
                CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),vTot,&
                                   sphhar,atoms,sym,noco,nococonv,input,enpara,hub1inp,mpi,atomType,torgue)
-               !WRITE(*,9000) atomType,torgue
-!9000           FORMAT(/,'Torgue for atom: ',I5,' torgue: ',3f14.8)
             ENDDO
             CALL closeXMLElement('torgueCalculation')
             CALL timestop("Green's Function: Torgue")

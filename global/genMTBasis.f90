@@ -7,7 +7,7 @@ MODULE m_genMTBasis
 
 CONTAINS
 
-  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,l_dftspinpol)
+  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,l_dftspinpol,l_writeArg)
     USE m_types
     USE m_constants
     USE m_radfun
@@ -30,6 +30,7 @@ CONTAINS
     REAL,           INTENT(INOUT) :: f(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: g(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: flo(atoms%jmtd,2,atoms%nlod)
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_writeArg
 
 
     INTEGER                       :: l,nodeu,noded
@@ -39,7 +40,14 @@ CONTAINS
     LOGICAL    :: l_write,l_hia
     REAL       :: vrTmp(atoms%jmtd)
     INTEGER    :: i
-    l_write=fmpi%irank==0 
+
+    IF(PRESENT(l_writeArg)) THEN
+      l_write = l_writeArg
+    ELSE
+      l_write = .TRUE.
+    ENDIF
+
+    l_write=l_write .and. fmpi%irank==0
     !$ l_write = l_write .and. omp_get_num_threads()==1
 
 

@@ -159,7 +159,8 @@ MODULE m_kk_cutoff
       CALL usdus%init(atoms,input%jspins)
       !Generate the scalar products we need
       DO jspin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,hub1inp%l_dftspinpol)
+         CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,&
+                         hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
       ENDDO
       DEALLOCATE(f,g,flo)
       !Offdiagonal scalar products

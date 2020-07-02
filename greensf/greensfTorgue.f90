@@ -66,7 +66,7 @@ MODULE m_greensfTorgue
       CALL usdus%init(atoms,input%jspins)
       DO jspin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,&
-                         f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
+                         f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
       ENDDO
       na=SUM(atoms%neq(:atomType-1))+1
       nsym = sym%ntypsy(na)
