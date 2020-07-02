@@ -47,6 +47,8 @@ MODULE m_crystalfield
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: shift(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: integrand(gfinp%ne), norm(gfinp%ne)
+      REAL, ALLOCATABLE :: imag(:)
+
 
       h_loc = 0.0
       DO i_hia = 1, atoms%n_hia
@@ -55,7 +57,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
-         i_elem = gfinp%uniqueElements(ind=i_gf)
+         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=.TRUE.)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
@@ -71,11 +73,11 @@ MODULE m_crystalfield
             norm = 0.0
             DO m = -l, l
                DO mp = -l, l
+                  imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,.TRUE.)/(3.0-input%jspins)
                   integrand = 0.0
                   DO ie = 1, gfinp%ne
-                     integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
-                                     * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin)/(3.0-input%jspins))
-                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfImagPart%sphavg(ie,m,mp,i_elem,jspin))/(3.0-input%jspins)
+                     integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) * imag(ie)
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * imag(ie)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand,del,gfinp%ne)
                ENDDO

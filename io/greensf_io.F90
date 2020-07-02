@@ -70,7 +70,6 @@ MODULE m_greensf_io
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'FermiEnergy',eFermiPrev)
-      CALL io_write_attlog0(generalGroupID,'sphavg',gfinp%l_sphavg)
       CALL io_write_attlog0(generalGroupID,'mperp',gfinp%l_mperp)
       CALL h5gclose_f(generalGroupID, hdfError)
 
@@ -126,6 +125,7 @@ MODULE m_greensf_io
       INTEGER           :: i_elem,n_elem
       INTEGER(HSIZE_T)  :: dims(7)
       REAL              :: trc(MERGE(3,input%jspins,gfinp%l_mperp))
+      LOGICAL           :: l_sphavg
 
 
       SELECT CASE(archiveType)
@@ -168,6 +168,7 @@ MODULE m_greensf_io
          lp = greensf(i_elem)%elem%lp
          atomType  = greensf(i_elem)%elem%atomType
          atomTypep = greensf(i_elem)%elem%atomTypep
+         l_sphavg  = greensf(i_elem)%elem%l_sphavg
          iContour  = greensf(i_elem)%elem%iContour
 
          CALL h5gcreate_f(elementsGroupID, elementName, currentelementGroupID, hdfError)
@@ -175,6 +176,7 @@ MODULE m_greensf_io
          CALL io_write_attint0(currentelementGroupID,"lp",lp)
          CALL io_write_attint0(currentelementGroupID,"atomType",atomType)
          CALL io_write_attint0(currentelementGroupID,"atomTypep",atomTypep)
+         CALL io_write_attlog0(currentelementGroupID,'l_sphavg',l_sphavg)
 
          CALL io_write_attint0(currentelementGroupID,'nz',greensf(i_elem)%contour%nz)
 
@@ -233,7 +235,7 @@ MODULE m_greensf_io
          CALL h5dclose_f(mmpmatSetID, hdfError)
 
          !Spherically averaged greensfData
-         IF(gfinp%l_sphavg) THEN
+         IF(l_sphavg) THEN
 
             dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
             dimsInt=dims
@@ -243,7 +245,7 @@ MODULE m_greensf_io
             CALL io_write_complex5(sphavgDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%gmmpmat)
             CALL h5dclose_f(sphavgDataSetID, hdfError)
 
-         ELSE IF(.NOT.gfinp%l_sphavg.AND.archiveType.NE.GREENSF_HUBBARD_CONST) THEN
+         ELSE IF(.NOT.l_sphavg.AND.archiveType.NE.GREENSF_HUBBARD_CONST) THEN
 
             !uu
             dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]

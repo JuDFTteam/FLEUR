@@ -78,7 +78,6 @@ MODULE m_fertetra
       !Now that the fermi energy is guaranteed to be in the interval [lowBound,upperBound]
       !We use the bisection method to find it
       !-----------------------------------------------------------------------------------
-
       DO WHILE(upperBound-lowBound.GT.1e-10)
 
          ef = (lowBound+upperBound)/2.0
@@ -105,6 +104,7 @@ MODULE m_fertetra
       !---------------------------------------------------------------------
       !Calculate final occupation and weights for individual kpts and bands
       !---------------------------------------------------------------------
+      ef = (lowBound+upperBound)/2.0
       dfermi = 0.0
       DO jspin = 1, jspins
          !-------------------------------------------------------

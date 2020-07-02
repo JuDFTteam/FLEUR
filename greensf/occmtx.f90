@@ -126,15 +126,21 @@ MODULE m_occmtx
                   IF(REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).GT.1.05&
                      .OR.REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).LT.-0.01) THEN
 
-                     IF(PRESENT(occError)) occError = .TRUE.
-                     WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
-                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     IF(PRESENT(occError)) THEN
+                        occError = .TRUE.
+                     ELSE
+                        WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
+                        CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     ENDIF
                   ENDIF
                ENDDO
                IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
-                  IF(PRESENT(occError)) occError = .TRUE.
-                  WRITE(message,9100) ispin,tr
-                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  IF(PRESENT(occError)) THEN
+                     occError = .TRUE.
+                  ELSE
+                     WRITE(message,9100) ispin,tr
+                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  ENDIF
                ENDIF
             ENDDO
          ENDIF
@@ -178,8 +184,8 @@ MODULE m_occmtx
             DO i = 1, 2*ns
                WRITE(oUnit,'(14f8.4)') gmat%data_r(i,:)
             ENDDO
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
             !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
             !CALL cmat%init(.TRUE.,2*ns,2*ns)

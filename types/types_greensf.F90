@@ -64,6 +64,7 @@ MODULE m_types_greensf
          PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
          PROCEDURE       :: set            => set_gf
          PROCEDURE       :: reset          => reset_gf
+         PROCEDURE       :: resetSingleElem=> resetSingleElem_gf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -89,7 +90,7 @@ MODULE m_types_greensf
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
-         IF(gfinp%l_sphavg) THEN
+         IF(this%elem%l_sphavg) THEN
             ALLOCATE(this%gmmpMat(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
          ELSE
             ALLOCATE(this%uu(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
@@ -434,11 +435,11 @@ MODULE m_types_greensf
          INTEGER :: spin,spin1,spin2
          COMPLEX,ALLOCATABLE :: temp(:,:)
 
-         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),2,2,this%contour%nz),source=cmplx_0)
+         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),this%contour%nz),source=cmplx_0)
 
          DO spin = 1, 4
             IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(:,spin1,spin2,:) = cmplx_0
+               gmat(spin1,spin2,:,:) = cmplx_0
                CYCLE
             ENDIF
             IF(spin < 3) THEN
@@ -452,7 +453,7 @@ MODULE m_types_greensf
                spin2 = 2
             ENDIF
             CALL this%getRadial(m,mp,l_conjg,spin,f,g,temp)
-            gmat(:,spin1,spin2,:) = temp(:,:)
+            gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
       END SUBROUTINE getRadialSpin_gf
@@ -565,5 +566,27 @@ MODULE m_types_greensf
          ENDIF
 
       END SUBROUTINE reset_gf
+
+      SUBROUTINE resetSingleElem_gf(this,m,mp,spin,ipm)
+
+         !---------------------------------------------------
+         ! Sets one Element in gmmpMat arrays back to 0
+         !---------------------------------------------------
+
+         CLASS(t_greensf),       INTENT(INOUT)  :: this
+         INTEGER,                INTENT(IN)     :: m
+         INTEGER,                INTENT(IN)     :: mp
+         INTEGER,                INTENT(IN)     :: spin
+         INTEGER,                INTENT(IN)     :: ipm
+
+         IF(ALLOCATED(this%gmmpMat)) this%gmmpMat(:,m,mp,spin,ipm) = cmplx_0
+         IF(ALLOCATED(this%uu)) THEN
+            this%uu(:,m,mp,spin,ipm) = cmplx_0
+            this%ud(:,m,mp,spin,ipm) = cmplx_0
+            this%du(:,m,mp,spin,ipm) = cmplx_0
+            this%dd(:,m,mp,spin,ipm) = cmplx_0
+         ENDIF
+
+      END SUBROUTINE resetSingleElem_gf
 
 END MODULE m_types_greensf

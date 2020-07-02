@@ -6,6 +6,7 @@ MODULE m_greensfTorgue
    USE m_genMTBasis
    USE m_intgr
    USE m_gaunt
+   USE m_xmlOutput
 
    IMPLICIT NONE
 
@@ -41,7 +42,9 @@ MODULE m_greensfTorgue
       INTEGER :: lh,mems,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3)
+      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
+      CHARACTER(LEN=20) :: attributes(5)
+
       REAL,    ALLOCATABLE :: bxc(:,:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
       REAL,    ALLOCATABLE :: f(:,:,:,:), g(:,:,:,:),flo(:,:,:,:)
@@ -55,7 +58,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
       ALLOCATE(bxc(SIZE(vTot%mt,1),0:SIZE(vTot%mt,2)-1))
-      bxc = (vTot%mt(:,:,atomType,2) - vTot%mt(:,:,atomType,1))/2.0
+      bxc = (vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2))/2.0
 
       ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins),source=0.0)
       ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins),source=0.0)
@@ -63,7 +66,7 @@ MODULE m_greensfTorgue
       CALL usdus%init(atoms,input%jspins)
       DO jspin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,&
-                         f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol)
+                         f(:,:,:,jspin),g(:,:,:,jspin),flo(:,:,:,jspin),hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
       ENDDO
       na=SUM(atoms%neq(:atomType-1))+1
       nsym = sym%ntypsy(na)
@@ -83,9 +86,9 @@ MODULE m_greensfTorgue
       chi(2,1) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
       chi(2,2) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*COS(nococonv%beta(atomType)/2)
 
-      sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
-      sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
-      sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
+      !sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
+      !sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
+      !sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
 
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
@@ -108,26 +111,31 @@ MODULE m_greensfTorgue
             CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
          ENDIF
 
-         DO alpha = 1, 3 !(x,y,z)
-            DO lh = 0, nh
-               lamda = sphhar%llh(lh,nsym)
-               mems = sphhar%nmem(lh,nsym)
-               DO mem = 1,mems
-                  mu = sphhar%mlh(mem,lh,nsym)
-                  DO m = -l, l
-                     DO mp = -lp, lp
-                        phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
-                        DO ipm = 1, 2
-                           CALL greensFunction(i_gf)%getRadialSpin(m,mp,ipm==2,f,g,g_iiSpin)
-                           DO iz = 1, SIZE(g_ii,2)
+         DO lh = 0, nh
+            lamda = sphhar%llh(lh,nsym)
+            mems = sphhar%nmem(lh,nsym)
+            DO mem = 1,mems
+               mu = sphhar%mlh(mem,lh,nsym)
+               DO m = -l, l
+                  DO mp = -lp, lp
+                     phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
+                     IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
+                     DO ipm = 1, 2
+                        CALL greensFunction(i_gf)%getRadialSpin(m,mp,ipm==2,f,g,g_iiSpin)
+                        DO iz = 1, SIZE(g_ii,2)
+                           DO alpha = 1, 3 !(x,y,z)
                               DO jr = 1, atoms%jri(atomType)
-                                 g_iiSpin(jr,:,:,iz) = matmul(sigma(:,:,alpha),g_iiSpin(jr,:,:,iz))
-                                 g_ii(jr,iz) = g_iiSpin(jr,1,1,iz) + g_iiSpin(jr,2,2,iz)
+                                 IF(ipm==1) THEN
+                                    g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                                 ELSE
+                                    g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
+                                 ENDIF
+                                 g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
                               ENDDO
                               CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
                               CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * phaseFactor * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                   * MERGE(greensFunction(i_gf)%contour%de(iz),conjg(greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
+                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
+                                                   * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                            ENDDO
                         ENDDO
                      ENDDO
@@ -139,6 +147,18 @@ MODULE m_greensfTorgue
       ENDDO
       torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function Torgue: Integration")
+
+      WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
+
+      attributes = ''
+      WRITE(attributes(1),'(i0)') atomType
+      WRITE(attributes(2),'(f14.8)') torgue(1) * hartree_to_ev_const * 1000
+      WRITE(attributes(3),'(f14.8)') torgue(2) * hartree_to_ev_const * 1000
+      WRITE(attributes(4),'(f14.8)') torgue(3) * hartree_to_ev_const * 1000
+      WRITE(attributes(5),'(a3)') 'meV'
+      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
+                               attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+
 
    END SUBROUTINE greensfTorgue
 

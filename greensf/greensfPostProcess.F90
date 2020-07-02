@@ -6,6 +6,7 @@ MODULE m_greensfPostProcess
    USE m_greensfCalcRealPart
    USE m_greensf_io
    USE m_occmtx
+   USE m_greensfTorgue
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
@@ -16,7 +17,7 @@ MODULE m_greensfPostProcess
    CONTAINS
 
    SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
-                                 nococonv,vTot,enpara,hub1inp,hub1data,results)
+                                 nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
@@ -28,6 +29,7 @@ MODULE m_greensfPostProcess
       TYPE(t_mpi),               INTENT(IN)     :: mpi
       TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_hub1inp),           INTENT(IN)     :: hub1inp
+      TYPE(t_sphhar),            INTENT(IN)     :: sphhar
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
       TYPE(t_enpara),            INTENT(IN)     :: enpara
@@ -37,7 +39,9 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
+      LOGICAL  l_sphavg,l_check
 
+      REAL :: torgue(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
@@ -66,9 +70,9 @@ MODULE m_greensfPostProcess
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
-         CALL excSplitting(gfinp,input,greensfImagPart,results%ef)
+         CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
 
-         IF(.NOT.gfinp%l_sphavg) THEN
+         IF(gfinp%checkRadial()) THEN
             CALL timestart("Green's Function: Radial Functions")
             ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
             ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
@@ -85,8 +89,10 @@ MODULE m_greensfPostProcess
                lp = gfinp%elem(i_gf)%lp
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
+               l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+               IF(l_sphavg) CYCLE
 
-               i_elem = gfinp%uniqueElements(ind=i_gf,indUnique=indUnique)
+               i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
                IF(i_gf/=indUnique) THEN
                   u(:,:,:,:,:,i_gf) = u(:,:,:,:,:,indUnique)
@@ -94,7 +100,7 @@ MODULE m_greensfPostProcess
                ELSE
                   DO jspin = 1, input%jspins
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
                      u(:,:,1,1,jspin,i_gf) = f(:,:,l)
                      u(:,:,2,1,jspin,i_gf) = f(:,:,lp)
@@ -103,7 +109,7 @@ MODULE m_greensfPostProcess
                      udot(:,:,2,1,jspin,i_gf) = g(:,:,lp)
 
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol)
+                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
                      u(:,:,1,2,jspin,i_gf) = f(:,:,l)
                      u(:,:,2,2,jspin,i_gf) = f(:,:,lp)
@@ -133,22 +139,37 @@ MODULE m_greensfPostProcess
             lp = greensFunction(i_gf)%elem%lp
             atomType = greensFunction(i_gf)%elem%atomType
             atomTypep = greensFunction(i_gf)%elem%atomTypep
+            l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
-            IF(gfinp%l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+            l_check = gfinp%countLOs(atoms,i_gf)==0 !If there are SCLOs present the occupations can get bigger than 1
+            IF(l_sphavg) THEN
+               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
-                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=.TRUE.)
+                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=l_check)
             ELSE
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
                            ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
                            udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
-                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=.TRUE.)
+                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=l_check)
             ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
+         IF(ANY(gfinp%numTorgueElems>0)) THEN
+            CALL timestart("Green's Function: Torgue")
+            CALL openXMLElementNoAttributes('torgueCalculation')
+            WRITE(oUnit,'(/,A)') 'Torgue Calculation:'
+            WRITE(oUnit,'(/,A)') '------------------------'
+            DO atomType = 1, atoms%nType
+               IF(gfinp%numTorgueElems(atomType)==0) CYCLE
+               CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),vTot,&
+                                  sphhar,atoms,sym,noco,nococonv,input,enpara,hub1inp,mpi,atomType,torgue)
+            ENDDO
+            CALL closeXMLElement('torgueCalculation')
+            CALL timestop("Green's Function: Torgue")
+         ENDIF
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)

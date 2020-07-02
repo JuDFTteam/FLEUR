@@ -123,11 +123,6 @@ CONTAINS
          CALL h5screate_simple_f(3, dims(:3), spaceid, hdferr)
          CALL h5dcreate_f(d%fid, "energy", H5T_NATIVE_DOUBLE, spaceid, d%energysetid, hdferr)
          CALL h5sclose_f(spaceid, hdferr)
-         !     w_iks
-         dims(:3) = (/neig, nkpts, jspins/)
-         CALL h5screate_simple_f(3, dims(:3), spaceid, hdferr)
-         CALL h5dcreate_f(d%fid, "w_iks", H5T_NATIVE_DOUBLE, spaceid, d%wikssetid, hdferr)
-         CALL h5sclose_f(spaceid, hdferr)
          !     ev
          if (l_real .and. .not. l_soc) THEN
             dims(:5) = (/one, nmat, neig, nkpts, jspins/)
@@ -141,7 +136,6 @@ CONTAINS
          CALL h5fopen_f(TRIM(d%fname)//'.hdf', access_Mode, d%fid, hdferr, access_prp)
          !get dataset-ids
          CALL h5dopen_f(d%fid, 'energy', d%energysetid, hdferr)
-         CALL h5dopen_f(d%fid, 'w_iks', d%wikssetid, hdferr)
          CALL h5dopen_f(d%fid, 'neig', d%neigsetid, hdferr)
          CALL h5dopen_f(d%fid, 'ev', d%evsetid, hdferr)
       endif
@@ -215,7 +209,7 @@ CONTAINS
 
 #endif
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_size, n_rank, zmat, smat)
 
       !*****************************************************************
       !     writes all eignevecs for the nk-th kpoint
@@ -225,7 +219,7 @@ CONTAINS
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
-      REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
+      REAL, INTENT(IN), OPTIONAL :: eig(:)
       TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
 
       INTEGER i, j, k, nv_local, n1, n2, ne
@@ -242,9 +236,6 @@ CONTAINS
       !
       !write eigenvalues
       !
-      IF (PRESENT(w_iks)) THEN
-         CALL io_write_real1s(d%wikssetid, (/1, nk, jspin/), (/size(w_iks), 1, 1/), w_iks, (/1, 1, 1/))
-      ENDIF
 
       IF (PRESENT(neig_total)) THEN
          CALL io_write_integer0(d%neigsetid, (/nk, jspin/), (/1, 1/), neig_total)
@@ -329,11 +320,11 @@ CONTAINS
 
 #endif
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zMat, smat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zMat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
-      REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
+      REAL, INTENT(OUT), OPTIONAL  :: eig(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
       TYPE(t_mat), OPTIONAL  :: zmat, smat
 
@@ -353,9 +344,6 @@ CONTAINS
             ENDIF
             CALL io_read_real1(d%energysetid, (/1, nk, jspin/), (/neig, 1, 1/),&
                  &                      eig(:neig))
-         ENDIF
-         IF (PRESENT(w_iks)) THEN
-            CALL io_read_real1(d%wikssetid, (/1, nk, jspin/), (/size(w_iks), 1, 1/), w_iks)
          ENDIF
       ENDIF
 

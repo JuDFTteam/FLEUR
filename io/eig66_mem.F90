@@ -51,7 +51,7 @@ CONTAINS
       !d%eig_eig
       length = jspins
       IF (l_noco) length = 1
-      ALLOCATE (d%eig_eig(neig, 2, jspins*nkpts)) !additional dimension for w_iks
+      ALLOCATE (d%eig_eig(neig, jspins*nkpts))
       !d%eig_vec
       if (l_real .and. .not. l_soc) THEN
          ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts))
@@ -74,7 +74,7 @@ CONTAINS
          USE m_eig66_da, ONLY: open_eig_IO => open_eig, read_eig_IO => read_eig, close_eig_IO => close_eig
          INTEGER:: jspin, nk, i, ii, iii, nv, tmp_id
          REAL   :: wk, bk3(3), evac(2)
-         REAL    :: eig(neig), w_iks(neig)
+         REAL    :: eig(neig)
          TYPE(t_mat):: zmat
 
          zmat%l_real = l_real
@@ -86,8 +86,8 @@ CONTAINS
          CALL open_eig_IO(tmp_id, nmat, neig, nkpts, jspins, .FALSE., l_real, l_soc, .false., filename)
          DO jspin = 1, jspins
             DO nk = 1, nkpts
-               CALL read_eig_IO(tmp_id, nk, jspin, i, eig, w_iks, zmat=zmat)
-               !CALL write_eig(id,nk,jspin,i,i,eig,w_iks,zmat=zmat)
+               CALL read_eig_IO(tmp_id, nk, jspin, i, eig, zmat=zmat)
+               !CALL write_eig(id,nk,jspin,i,i,eig,zmat=zmat)
             ENDDO
          ENDDO
          CALL close_eig_IO(tmp_id)
@@ -121,7 +121,7 @@ CONTAINS
 
          INTEGER:: nk, jspin, nv, i, ii, tmp_id
          REAL   :: wk, bk3(3), evac(2)
-         REAL    :: eig(SIZE(d%eig_eig, 1)), w_iks(SIZE(d%eig_eig, 1))
+         REAL    :: eig(SIZE(d%eig_eig, 1))
          TYPE(t_mat)::zmat
          zmat%l_real = d%l_real
          zmat%matsize1 = d%nmat
@@ -133,8 +133,8 @@ CONTAINS
             DO nk = 1, d%nkpts
                !TODO this code is no longer working
                STOP "BUG"
-               !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-               !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
+               !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,el,ello,evac,zmat=zmat)
+               !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,el,ello,evac,nlotot,zmat=zmat)
             ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -142,11 +142,11 @@ CONTAINS
       END SUBROUTINE priv_writetofile
    END SUBROUTINE close_eig
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat, smat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
-      REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
+      REAL, INTENT(OUT), OPTIONAL  :: eig(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
       TYPE(t_mat), OPTIONAL  :: zmat, smat
 
@@ -164,11 +164,7 @@ CONTAINS
       !data from d%eig_eig
       IF (PRESENT(eig)) THEN
          eig = 0.0
-         eig = d%eig_eig(:SIZE(eig), 1, nrec)
-      ENDIF
-      IF (PRESENT(w_iks)) THEN
-         w_iks = 0.0
-         w_iks = d%eig_eig(:SIZE(w_iks), 2, nrec)
+         eig = d%eig_eig(:SIZE(eig), nrec)
       ENDIF
 
       !data from d%eig_vec
@@ -240,11 +236,11 @@ CONTAINS
       ENDIF
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat, smat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_size, n_rank, zmat, smat)
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
-      REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
+      REAL, INTENT(IN), OPTIONAL :: eig(:)
       TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
       INTEGER::nrec
       TYPE(t_data_mem), POINTER:: d
@@ -263,10 +259,7 @@ CONTAINS
 
       !data from d%eig_eig
       IF (PRESENT(eig)) THEN
-         d%eig_eig(:SIZE(eig), 1, nrec) = eig
-      ENDIF
-      IF (PRESENT(w_iks)) THEN
-         d%eig_eig(:SIZE(w_iks), 2, nrec) = w_iks
+         d%eig_eig(:SIZE(eig), nrec) = eig
       ENDIF
       !data from d%eig_vec
       IF (PRESENT(zmat)) THEN

@@ -106,13 +106,17 @@ MODULE m_nocoInputCheck
       ENDIF
       
     IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.noco%l_alignMT)) THEN
-         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_alignMT=T setting to achieve reasonable results.",calledby="nocoInputCheck")
+         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxAlpha/Beta=T setting to achieve reasonable results.",calledby="nocoInputCheck")
       ENDIF
       
           !Warning on strange choice of switches
     IF (noco%l_mtNocoPot.AND..NOT.noco%l_mperp) THEN
     	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='nocoInputCheck')
     END IF
+  
+    IF(noco%l_alignmt.AND..NOT.(noco%l_RelaxAlpha.OR.noco%l_RelaxBeta)) CALL juDFT_warn("No relaxation is performed if neither l_RelaxBeta nor l_RelaxAlpha is true.",calledby="nocoInputCheck")
+    IF(.NOT.noco%l_alignmt.AND.(noco%l_RelaxAlpha.OR.noco%l_RelaxBeta)) CALL juDFT_warn("No relaxation is performed with l_RelaxMT=F even if either l_RelaxBeta or l_RelaxAlpha is True.",calledby="nocoInputCheck")
+
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

@@ -312,6 +312,7 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpath=''
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/force')==1) xpath=xpathg
+    this%relax(:,n) = 0
     IF (xpath.NE.'') THEN
        this%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@calculate'))
        valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@relaxXYZ')
@@ -321,7 +322,6 @@ SUBROUTINE read_xml_atoms(this,xml)
        IF (relaxZ) this%relax(3,n) = 1
     ELSE
        this%l_geo(n) = .FALSE.
-       this%relax(:,n) = 0
     END IF
     !LO stuff
     this%nlo(n) = 0

@@ -51,11 +51,11 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
      IF(noco%alph_inp(i).NE.0.0) nonZeroAngles=.TRUE.
      IF(noco%beta_inp(i).NE.0.0) nonZeroAngles=.TRUE.
    END DO
-
+   
    IF(l_firstIt.AND.nonZeroAngles) THEN
 ! Rotates cdn by given noco angles in first iteration. WARNING: If you want to continue/restart a calculation with MT relaxation set noco angles to 0!
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,noco%beta_inp,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,noco%alph_inp,zeros,den)
      !Setting angles to zero since we want our spinQ Axis to remain the same when writing out the density.
      nococonv%alph=zeros
      nococonv%beta=zeros
@@ -79,17 +79,33 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
       IF (abs(diffT(i)).LE.eps) diffT(i)=0.0
       IF (abs(diffP(i)).LE.eps) diffP(i)=0.0
    END DO
-!Mixing of angles part 
-   IF(noco%mix_RelaxAngle.NE.1.0) THEN   
-      diffT=noco%mix_RelaxAngle*diffT
-      diffP=noco%mix_RelaxAngle*diffP
+
+!Which angles to keep constant from input den
+   IF (.NOT.noco%l_RelaxAlpha) THEN  
+      IF(l_firstIT) THEN 
+         nococonv%alphRlx=diffP
+         CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
+      END IF
    END IF
+
+
 ! Rotate cdn by direction of magnetization so it alings with spin quantization axis.
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
+   IF (noco%l_RelaxAlpha.OR..NOT.l_firstIT) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP,zeros,den)
+!Which angles to keep constant from input den
+   IF (.NOT.noco%l_RelaxBeta) THEN
+      IF(l_firstIT) THEN 
+         nococonv%betaRlx=diffT
+         CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
+         END IF
+   END IF
+
+
+   IF (noco%l_RelaxBeta.OR..NOT.l_firstIT) CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT,den)
 !Store angles in nococonv
-   nococonv%beta=nococonv%beta+diffT
-   nococonv%alph=nococonv%alph+diffP
+    IF (noco%l_RelaxBeta) nococonv%beta=nococonv%beta+diffT
+    IF (.NOT.noco%l_RelaxBeta)  nococonv%beta=nococonv%betaRlx
+    IF (noco%l_RelaxAlpha) nococonv%alph=nococonv%alph+diffP
+    IF(.NOT.noco%l_RelaxAlpha) nococonv%alph=nococonv%alphRlx
 ! Set angles to zero if too low. (Prevent numerical rubbish to appear)
    DO i=1, atoms%ntype
       IF (abs(nococonv%beta(i)).LE.eps) nococonv%beta(i)=0.0
@@ -126,12 +142,12 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,nococonv,vacuum,sphhar,stars&
    CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
    IF (present(den)) THEN
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
+      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,den)
+      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,den)
    END IF
 ! Nococonv is zero now since rotation has been reverted.
-   nococonv%alph=zeros
-   nococonv%beta=zeros
+      nococonv%alph=zeros
+      nococonv%beta=zeros
 
 
 END SUBROUTINE rotateMagnetFromSpinAxis

@@ -12,7 +12,7 @@
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
-      <greensFunction l_sphavg="T" l_mperp="F">
+      <greensFunction l_mperp="F">
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" et="0.0" alpha="1.0"/>
       </greensFunction>
@@ -582,7 +582,9 @@
          <ldaHIA l="3" U="6.7" J="0.7" l_amf="F" init_occ="7.0">
             <exc l="2" J="0.0952" init_mom="0.5"/>
          </ldaHIA>
-         <onsiteGF l_min="2" l_max="2" l_offdiag="F"/>
+         <greensfCalculation l_sphavg="T" >
+            <diagElements s="F" p="F" d="T" f="F"/>
+         </greensfCalculation>
          <lo type="SCLO" l="0" n="5" eDeriv="0"/>
          <lo type="SCLO" l="1" n="5" eDeriv="0"/>
       </species>
