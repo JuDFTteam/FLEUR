@@ -10,7 +10,7 @@
 ! Robin Hilgers, Nov  '19 Adaption to new nococonv type in Feb '20, Added RelaxMixing parameter + Allow Relaxation of alpha and Beta individually Jul '20'
 MODULE m_RelaxSpinAxisMagn
 
-USE m_juDFT
+
 USE m_magnMomFromDen
 USE m_types
 USE m_types_fleurinput
@@ -21,6 +21,8 @@ USE m_polangle
 IMPLICIT NONE
 
 CONTAINS
+
+!Rotates cdn to global frame at initialization before the scf loop.
 SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell,den)
    TYPE(t_input),     INTENT(IN)    :: input
    TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -61,6 +63,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
 
    END SUBROUTINE initRelax
    
+ !Decides which relaxation routine will be executed based on which angles should be relaxed. 
    SUBROUTINE doRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
         
@@ -86,6 +89,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
 
 END SUBROUTINE doRelax
 
+!Relaxation routine for only relaxing alpha. How it works: See two routines below.
 SUBROUTINE alphaRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
@@ -117,6 +121,7 @@ SUBROUTINE alphaRelax(vacuum,sphhar,stars&
    CALL cureTooSmallAngles(atoms,nococonv%alph)
 END SUBROUTINE alphaRelax
 
+!Relaxation routine for only relaxing beta. How it works: See one routine below.
 SUBROUTINE betaRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
@@ -148,6 +153,10 @@ SUBROUTINE betaRelax(vacuum,sphhar,stars&
    CALL cureTooSmallAngles(atoms,nococonv%beta)
 END SUBROUTINE betaRelax
 
+!Relaxation routine for both angles at the same time. Calculates the angles by which the magnetization direction changed
+!based on the angle nococonv%*Prev which store the angles from the previous iteration. The resulting angular difference is then weighted (mix_RelaxWeightOffD)
+!and the cdn will be manipulated so that the magnetization direction is rotated towards the new magnetization direction by AngularDifference*Weight.
+!If weight=1 direction of magnetization is || to SQA after relaxation. 
 SUBROUTINE bothRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
@@ -182,7 +191,7 @@ SUBROUTINE bothRelax(vacuum,sphhar,stars&
    CALL cureTooSmallAngles(atoms,nococonv%beta,nococonv%alph)
 END SUBROUTINE bothRelax
 
-
+!Purges to small  angles below 10^-4 rad to 0. => Stabilizes convergence.
 SUBROUTINE cureTooSmallAngles(atoms,angleA,angleB)
    TYPE(t_atoms),INTENT(IN)               :: atoms
    REAL         ,INTENT(INOUT)            :: angleA(:)
@@ -197,6 +206,7 @@ SUBROUTINE cureTooSmallAngles(atoms,angleA,angleB)
    END DO
 END SUBROUTINE cureTooSmallAngles
 
+!Calculates angles from magnetization and assigns correct sign to be used in the rotation (flipcdn) routine properly.
 SUBROUTINE gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,den,phiTemp,thetaTemp)
    TYPE(t_input) ,INTENT(IN)     :: input
    TYPE(t_atoms) ,INTENT(IN)     :: atoms
@@ -214,6 +224,7 @@ SUBROUTINE gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,den,phiTemp,thetaTem
 
 END SUBROUTINE gimmeAngles
 
+!Rotates from global frame into that frame which has been determined by the latest relaxation process.
 SUBROUTINE fromGlobalRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
 
@@ -237,6 +248,7 @@ SUBROUTINE fromGlobalRelax(vacuum,sphhar,stars&
    
 END SUBROUTINE fromGlobalRelax
 
+!Rotates into the global frame so mixing can be performed without any restrictions. => Compatible with anderson mixing scheme.
 SUBROUTINE toGlobalRelax(noco,nococonv,vacuum,sphhar,stars&
 ,sym,oneD,cell,input,atoms,inDen, den)
    TYPE(t_input), INTENT(IN)             :: input
