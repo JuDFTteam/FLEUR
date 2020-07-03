@@ -192,7 +192,7 @@ MODULE m_hubbard1_setup
       ALLOCATE(gu(atoms%n_hia))
       ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,input,contour_in=gdft(i_hia)%contour)
+         CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
          CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
                                  noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO

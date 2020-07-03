@@ -79,18 +79,21 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE init_greensf(this,gfelem,gfinp,input,contour_in)
+      SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in)
 
          CLASS(t_greensf),             INTENT(INOUT)  :: this
          TYPE(t_gfelementtype), TARGET,INTENT(IN)     :: gfelem
          TYPE(t_gfinp),                INTENT(IN)     :: gfinp
+         TYPE(t_atoms),                INTENT(IN)     :: atoms
          TYPE(t_input),                INTENT(IN)     :: input
          !Pass a already calculated energy contour to the type
          TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)   :: contour_in
 
-         INTEGER spin_dim,lmax
+         INTEGER spin_dim,lmax,nLO
 
          this%elem => gfelem
+
+         nLO = this%elem%countLOs(atoms)
 
          !Initialize the contour
          CALL this%contour%init(gfinp%contour(this%elem%iContour),contour_in=contour_in)
@@ -105,6 +108,15 @@ MODULE m_types_greensf
             ALLOCATE(this%dd(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
             ALLOCATE(this%du(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
             ALLOCATE(this%ud(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
+
+            IF(nLO>0) THEN
+               ALLOCATE(this%uulo(this%contour%nz,-lmax:lmax,-lmax:lmax,nLO,spin_dim,2),source=cmplx_0)
+               ALLOCATE(this%ulou(this%contour%nz,-lmax:lmax,-lmax:lmax,nLO,spin_dim,2),source=cmplx_0)
+               ALLOCATE(this%dulo(this%contour%nz,-lmax:lmax,-lmax:lmax,nLO,spin_dim,2),source=cmplx_0)
+               ALLOCATE(this%ulod(this%contour%nz,-lmax:lmax,-lmax:lmax,nLO,spin_dim,2),source=cmplx_0)
+
+               ALLOCATE(this%uloulop(this%contour%nz,-lmax:lmax,-lmax:lmax,nLO,nLO,spin_dim,2),source=cmplx_0)
+            ENDIF
          ENDIF
 
       END SUBROUTINE init_greensf
@@ -130,6 +142,11 @@ MODULE m_types_greensf
          IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
          IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
          IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
+         IF(ALLOCATED(this%uulo)) CALL mpi_bc(this%uulo,rank,mpi_comm)
+         IF(ALLOCATED(this%ulou)) CALL mpi_bc(this%ulou,rank,mpi_comm)
+         IF(ALLOCATED(this%dulo)) CALL mpi_bc(this%dulo,rank,mpi_comm)
+         IF(ALLOCATED(this%ulod)) CALL mpi_bc(this%ulod,rank,mpi_comm)
+         IF(ALLOCATED(this%uloulop)) CALL mpi_bc(this%uloulop,rank,mpi_comm)
 
       END SUBROUTINE mpi_bc_greensf
 
@@ -164,6 +181,26 @@ MODULE m_types_greensf
             CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
             DEALLOCATE(ctmp)
+
+            IF(ALLOCATED(this%uulo)) THEN
+               n = SIZE(this%uulo)
+               ALLOCATE(ctmp(n))
+               CALL MPI_ALLREDUCE(this%uulo,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL CPP_BLAS_ccopy(n,ctmp,1,this%uulo,1)
+               CALL MPI_ALLREDUCE(this%ulou,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulou,1)
+               CALL MPI_ALLREDUCE(this%dulo,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL CPP_BLAS_ccopy(n,ctmp,1,this%dulo,1)
+               CALL MPI_ALLREDUCE(this%ulod,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulod,1)
+               DEALLOCATE(ctmp)
+
+               n = SIZE(this%uloulop)
+               ALLOCATE(ctmp(n))
+               CALL MPI_ALLREDUCE(this%uloulop,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL CPP_BLAS_ccopy(n,ctmp,1,this%uloulop,1)
+               DEALLOCATE(ctmp)
+            ENDIF
          ENDIF
 #endif
       END SUBROUTINE collect_greensf
