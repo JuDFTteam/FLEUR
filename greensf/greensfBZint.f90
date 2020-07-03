@@ -30,7 +30,7 @@ MODULE m_greensfBZint
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor
@@ -56,12 +56,22 @@ MODULE m_greensfBZint
          atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
          atomFactor = MERGE(1.0,atomFactor,atomType.NE.atomTypep)
 
-         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+         i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
 
          IF(i_gf/=indUnique) CYCLE
 
+         nLO = 0
+         imatSize = 1
+         IF(.NOT.l_sphavg) THEN
+            imatSize = 4
+            nLO = gfinp%elem(i_gf)%countLOs(atoms)
+            IF(nLO/=0) THEN
+               imatSize = 4+4*nLO+nLO**2
+            ENDIF
+         ENDIF
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
-                     MERGE(1,4,l_sphavg),spin_start:spin_end),source=cmplx_0)
+                     imatSize,spin_start:spin_end),source=cmplx_0)
 
          natom_start = SUM(atoms%neq(:atomType-1)) + 1
          natom_end   = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType)),l.NE.lp)
@@ -108,7 +118,7 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
-                  CALL greensfSym(ikpt_i,i_elem,natom,l,natom.EQ.natomp.AND.l.EQ.lp,l_sphavg,&
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp,l_sphavg,&
                                ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                ENDDO
 
