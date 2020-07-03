@@ -147,10 +147,10 @@ MODULE m_greensfPostProcess
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
-                           ddn=usdus%ddn(l,atomType,:),l_write=.TRUE.,check=l_check)
+                           usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
-                           ddn=usdus%ddn(l,atomType,:),uun21=uun21(l,atomType),&
+                           usdus=usdus,uun21=uun21(l,atomType),&
                            udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
                            ddn21=ddn21(l,atomType),l_write=.TRUE.,check=l_check)
             ENDIF
