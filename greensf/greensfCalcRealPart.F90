@@ -79,7 +79,7 @@ MODULE m_greensfCalcRealPart
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
                l_onsite = nType.EQ.nTypep.AND.l.EQ.lp
-               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND.gfinp%countLOs(atoms,i_gf)==0) THEN
+               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND. g(i_gf)%elem%countLOs(atoms)==0) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether

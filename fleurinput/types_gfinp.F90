@@ -17,7 +17,6 @@ MODULE m_types_gfinp
    INTEGER, PARAMETER :: CONTOUR_DOS_CONST        = 3
 
    TYPE t_gfelementtype
-      SEQUENCE
       !defines the l and atomType elements for given greens function element
       !(used for mapping index in types_greensf)
       INTEGER :: l = -1
@@ -30,7 +29,9 @@ MODULE m_types_gfinp
       !Parameters for the determination of the upper cutoff of the Kramers-Kronig Integration
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
-      INTEGER :: refCutoff = -1 !Choose cutoff to be the same as another GFelement
+      INTEGER :: refCutoff = -1 !Choose cutoff to be the same as another
+   CONTAINS
+      PROCEDURE :: countLOs => countLOs_gfelem
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -88,7 +89,6 @@ MODULE m_types_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: checkRadial    => checkRadial_gfinp
       PROCEDURE :: checkSphavg    => checkSphavg_gfinp
-      PROCEDURE :: countLOs       => countLOs_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -585,11 +585,13 @@ CONTAINS
                                uniqueMax=i_gf)
 
          IF(iUnique == i_gf) THEN
-            IF(loArg.AND..NOT.l_sphavgElem) THEN
-               nLO = this%countLOs(atoms,i_gf)
-               IF(nLO/=0) uniqueElements = uniqueElements +1
-               IF(PRESENT(maxLO)) THEN
-                  IF(nLO>maxLO) maxLO = nLO
+            IF(loArg) THEN
+               IF(.NOT.l_sphavgElem) THEN
+                  nLO = this%elem(i_gf)%countLOs(atoms)
+                  IF(nLO/=0) uniqueElements = uniqueElements +1
+                  IF(PRESENT(maxLO)) THEN
+                     IF(nLO>maxLO) maxLO = nLO
+                  ENDIF
                ENDIF
             ELSE
                uniqueElements = uniqueElements +1
@@ -895,35 +897,33 @@ CONTAINS
 
    END FUNCTION checkSphavg_gfinp
 
-   PURE INTEGER FUNCTION countLOs_gfinp(this,atoms,i_gf)
+   PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
       !Counts the number of LOs associated with this green's function element
       USE m_types_atoms
 
-      CLASS(t_gfinp),   INTENT(IN)  :: this
-      TYPE(t_atoms),    INTENT(IN)  :: atoms
-      INTEGER,          INTENT(IN)  :: i_gf
+      CLASS(t_gfelementtype),   INTENT(IN)  :: this
+      TYPE(t_atoms),            INTENT(IN)  :: atoms
 
       INTEGER :: l,lp,atomType,atomTypep,ilo,ilop
 
-      l  = this%elem(i_gf)%l
-      lp = this%elem(i_gf)%lp
-      atomType  = this%elem(i_gf)%atomType
-      atomTypep = this%elem(i_gf)%atomTypep
+      l  = this%l
+      lp = this%lp
+      atomType  = this%atomType
+      atomTypep = this%atomTypep
 
-      countLOs_gfinp = 0
+      countLOs_gfelem = 0
       DO ilo = 1, atoms%nlo(atomType)
          IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-         countLOs_gfinp = countLOs_gfinp + 1
+         countLOs_gfelem = countLOs_gfelem + 1
       ENDDO
 
       IF(l.NE.lp.OR.atomType.NE.atomTypep) THEN
          DO ilop = 1, atoms%nlo(atomTypep)
             IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
-            countLOs_gfinp = countLOs_gfinp + 1
+            countLOs_gfelem = countLOs_gfelem + 1
          ENDDO
       ENDIF
 
-   END FUNCTION countLOs_gfinp
-
+   END FUNCTION countLOs_gfelem
 END MODULE m_types_gfinp

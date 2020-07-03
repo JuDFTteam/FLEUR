@@ -142,7 +142,7 @@ MODULE m_greensfPostProcess
             l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
-            l_check = gfinp%countLOs(atoms,i_gf)==0 !If there are SCLOs present the occupations can get bigger than 1
+            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
