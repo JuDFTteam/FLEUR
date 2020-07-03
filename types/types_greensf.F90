@@ -617,6 +617,14 @@ MODULE m_types_greensf
             this%du = cmplx_0
             this%dd = cmplx_0
          ENDIF
+         IF(ALLOCATED(this%uulo)) THEN
+            this%uulo = cmplx_0
+            this%ulou = cmplx_0
+            this%dulo = cmplx_0
+            this%ulod = cmplx_0
+
+            this%uloulop = cmplx_0
+         ENDIF
 
       END SUBROUTINE reset_gf
 
@@ -638,6 +646,14 @@ MODULE m_types_greensf
             this%ud(:,m,mp,spin,ipm) = cmplx_0
             this%du(:,m,mp,spin,ipm) = cmplx_0
             this%dd(:,m,mp,spin,ipm) = cmplx_0
+         ENDIF
+         IF(ALLOCATED(this%uulo)) THEN
+            this%uulo(:,m,mp,:,spin,ipm) = cmplx_0
+            this%ulou(:,m,mp,:,spin,ipm) = cmplx_0
+            this%dulo(:,m,mp,:,spin,ipm) = cmplx_0
+            this%ulod(:,m,mp,:,spin,ipm) = cmplx_0
+
+            this%uloulop(:,m,mp,:,:,spin,ipm) = cmplx_0
          ENDIF
 
       END SUBROUTINE resetSingleElem_gf
