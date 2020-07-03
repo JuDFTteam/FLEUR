@@ -133,6 +133,7 @@ MODULE m_greensfPostProcess
             CALL timestop("Green's Function: Radial Functions")
          ENDIF
          CALL timestart("Green's Function: Occupation")
+         mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
             !Occupation matrix
             l = greensFunction(i_gf)%elem%l
@@ -144,12 +145,12 @@ MODULE m_greensfPostProcess
             IF(atomType.NE.atomTypep) CYCLE
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,uun21=uun21(l,atomType),&
                            udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
                            ddn21=ddn21(l,atomType),l_write=.TRUE.,check=l_check)

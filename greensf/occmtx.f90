@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,usdus,uun21,udn21,dun21,ddn21,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,atoms,mmpMat,spin,usdus,uun21,udn21,dun21,ddn21,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -24,6 +24,7 @@ MODULE m_occmtx
       TYPE(t_greensf),        INTENT(IN)    :: g
       TYPE(t_gfinp),          INTENT(IN)    :: gfinp
       TYPE(t_input),          INTENT(IN)    :: input
+      TYPE(t_atoms),          INTENT(IN)    :: atoms
       COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER,       OPTIONAL,INTENT(IN)    :: spin
       TYPE(t_usdus), OPTIONAL,INTENT(IN)    :: usdus
@@ -72,7 +73,7 @@ MODULE m_occmtx
             !Integrate over the contour:
             DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
-               CALL g%get(iz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
+               CALL g%get(atoms,iz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -87,7 +88,7 @@ MODULE m_occmtx
             !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
             IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
                !left tail
-               CALL g%get(1,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
+               CALL g%get(atoms,1,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -99,7 +100,7 @@ MODULE m_occmtx
                   ENDDO
                ENDDO
                !right tail
-               CALL g%get(g%contour%nz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
+               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,uun21=uun21,udn21=udn21,dun21=dun21,ddn21=ddn21)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1

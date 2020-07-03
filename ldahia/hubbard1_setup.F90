@@ -280,7 +280,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 

@@ -174,15 +174,17 @@ MODULE m_types_greensf
       !               certain energy point with an input matrix
       !----------------------------------------------------------------------------------
 
-      SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,ddn,uun21,udn21,dun21,ddn21)
+      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,uun21,udn21,dun21,ddn21)
 
          USE m_types_mat
          USE m_types_usdus
+         USE m_types_atoms
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
 
          CLASS(t_greensf),        INTENT(IN)     :: this
+         TYPE(t_atoms),           INTENT(IN)     :: atoms
          INTEGER,                 INTENT(IN)     :: iz
          LOGICAL,                 INTENT(IN)     :: l_conjg
          TYPE(t_mat),             INTENT(INOUT)  :: gmat !Return matrix
@@ -333,12 +335,14 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE getRadial_gf(this,m,mp,l_conjg,spin,f,g,gmat)
+      SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,gmat)
 
+         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
          CLASS(t_greensf),    INTENT(IN)     :: this
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
          INTEGER,             INTENT(IN)     :: spin
@@ -422,11 +426,14 @@ MODULE m_types_greensf
 
       END SUBROUTINE getRadial_gf
 
-      SUBROUTINE getRadialSpin_gf(this,m,mp,l_conjg,f,g,gmat)
+      SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,gmat)
+
+         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
          CLASS(t_greensf),    INTENT(IN)     :: this
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
          REAL   ,             INTENT(IN)     :: f(:,:,:,:)
@@ -453,7 +460,7 @@ MODULE m_types_greensf
                spin1 = 1
                spin2 = 2
             ENDIF
-            CALL this%getRadial(m,mp,l_conjg,spin,f,g,temp)
+            CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,temp)
             gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
