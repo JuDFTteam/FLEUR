@@ -34,6 +34,7 @@ MODULE m_greensfSpinDiag
             nLOp_ind = 0
             lm = l*(l+1)+m
             lmp = lp*(lp+1)+mp
+
             !-------------------------
             !Contribution from valence states
             !-------------------------
