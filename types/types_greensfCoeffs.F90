@@ -216,7 +216,7 @@ MODULE m_types_greensfCoeffs
             CALL CPP_BLAS_scopy(n,rtmp,1,this%ulou(:,:,:,:,:,spin_ind),1)
             CALL MPI_ALLREDUCE(this%dulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%dulo(:,:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%dulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL MPI_ALLREDUCE(this%ulod(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_scopy(n,rtmp,1,this%ulod(:,:,:,:,:,spin_ind),1)
             DEALLOCATE(rtmp)
          ENDIF
