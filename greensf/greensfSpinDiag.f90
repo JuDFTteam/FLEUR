@@ -19,7 +19,7 @@ MODULE m_greensfSpinDiag
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       COMPLEX,                   INTENT(INOUT)  :: im(-lmaxU_const:,-lmaxU_const:,:,:)
 
-      INTEGER :: m,mp,lm,lmp,ilo,ilop,nLO_ind,nLOp_ind
+      INTEGER :: m,mp,lm,lmp,ilo,ilop,nLO_ind,nLOp_ind,imat
 
       im = cmplx_0
       IF(l_sphavg.AND.(l.NE.lp.OR.atomType.NE.atomTypep)) RETURN
@@ -27,7 +27,7 @@ MODULE m_greensfSpinDiag
       !$OMP parallel do default(none) collapse(2) &
       !$OMP shared(eigVecCoeffs,im,usdus,atoms) &
       !$OMP shared(l,lp,natom,natomp,nBands,atomType,atomTypep,spin,l_sphavg) &
-      !$OMP private(m,mp,lm,lmp,ilo,ilop,nLO_ind,nLOp_ind)
+      !$OMP private(m,mp,lm,lmp,ilo,ilop,nLO_ind,nLOp_ind,imat)
       DO m = -l, l
          DO mp = -lp,lp
             nLO_ind  = 0
@@ -66,20 +66,22 @@ MODULE m_greensfSpinDiag
                                                                     *      eigVecCoeffs%bcof(   :nBands,lm ,natom,spin))
                ELSE
                   nLO_ind = nLO_ind + 1
-                  im(m,mp,:,4+(nLO_ind-1)*2+1) = im(m,mp,:,4+(nLO_ind-1)*2+1) + conjg(eigVecCoeffs%acof(   :nBands,lmp,natomp,spin))&
-                                                                                    * eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin)
-                  im(m,mp,:,4+(nLO_ind-1)*2+2) = im(m,mp,:,4+(nLO_ind-1)*2+2) + conjg(eigVecCoeffs%bcof(   :nBands,lmp,natomp,spin))&
-                                                                                    * eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin)
+                  imat    = 4+(nLO_ind-1)*2
+                  im(m,mp,:,imat+1) = im(m,mp,:,imat+1) + conjg(eigVecCoeffs%acof(   :nBands,lmp,natomp,spin))&
+                                                              * eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin)
+                  im(m,mp,:,imat+2) = im(m,mp,:,imat+2) + conjg(eigVecCoeffs%bcof(   :nBands,lmp,natomp,spin))&
+                                                              * eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin)
                ENDIF
             ENDDO
             IF(.NOT.l_sphavg) THEN
                DO ilo = 1, atoms%nlo(atomTypep)
                   IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
                   nLO_ind = nLO_ind + 1
-                  im(m,mp,:,4+(nLO_ind-1)*2+1) = im(m,mp,:,4+(nLO_ind-1)*2+1) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin))&
-                                                                                    * eigVecCoeffs%acof(   :nBands,lm ,natom ,spin)
-                  im(m,mp,:,4+(nLO_ind-1)*2+2) = im(m,mp,:,4+(nLO_ind-1)*2+2) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin))&
-                                                                                    * eigVecCoeffs%bcof(   :nBands,lm ,natom ,spin)
+                  imat    = 4+(nLO_ind-1)*2
+                  im(m,mp,:,imat+1) = im(m,mp,:,imat+1) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin))&
+                                                              * eigVecCoeffs%acof(   :nBands,lm ,natom ,spin)
+                  im(m,mp,:,imat+2) = im(m,mp,:,imat+2) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin))&
+                                                              * eigVecCoeffs%bcof(   :nBands,lm ,natom ,spin)
                ENDDO
             ENDIF
             DO ilo = 1, atoms%nlo(atomType)
@@ -92,8 +94,9 @@ MODULE m_greensfSpinDiag
                                                                             *       eigVecCoeffs%ccof(m ,:nBands,ilo ,natom,spin)
                   ELSE
                      nLOp_ind = nLOp_ind + 1
-                     im(m,mp,:,4+nLO_ind*2+nLOp_ind) = im(m,mp,:,4+nLO_ind*2+nLOp_ind) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natomp,spin))&
-                                                                                             * eigVecCoeffs%ccof(m ,:nBands,ilo ,natom ,spin)
+                     imat = 4+nLO_ind*2+nLOp_ind
+                     im(m,mp,:,imat) = im(m,mp,:,imat) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natomp,spin))&
+                                                             * eigVecCoeffs%ccof(m ,:nBands,ilo ,natom ,spin)
                   ENDIF
                ENDDO
             ENDDO
