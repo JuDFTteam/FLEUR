@@ -26,6 +26,16 @@ MODULE m_types_greensfCoeffs
          COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
          COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
+         !LO-Valence Contribution
+         COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:,:)
+
+         !LO-LO contribution
+         !Here we need to compress the (lo,lop) index pair into one index because PGI allows a max of 7 indices
+         COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
+
          CONTAINS
             PROCEDURE, PASS :: init    =>  greensfBZintCoeffs_init
       END TYPE t_greensfBZintCoeffs
@@ -46,6 +56,16 @@ MODULE m_types_greensfCoeffs
          REAL, ALLOCATABLE :: dd(:,:,:,:,:)
          REAL, ALLOCATABLE :: du(:,:,:,:,:)
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
+
+         !LO-Valence Contribution
+         REAL, ALLOCATABLE :: uulo(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ulou(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: dulo(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ulod(:,:,:,:,:,:)
+
+         !LO-LO contribution
+         !Here the (lo,lop) index pair is explicit again
+         REAL, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init        =>  greensfImagPart_init

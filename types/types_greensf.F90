@@ -55,6 +55,13 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: du(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
 
+      COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:)
+
+      COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
+
       CONTAINS
          PROCEDURE, PASS :: init           => init_greensf
          PROCEDURE       :: mpi_bc         => mpi_bc_greensf
@@ -62,6 +69,7 @@ MODULE m_types_greensf
          PROCEDURE       :: get            => get_gf
          PROCEDURE       :: getRadial      => getRadial_gf
          PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
+         !PROCEDURE      :: getRadialRadialSpin => getRadialRadialSpin_gf !(Full Radial dependence for intersite)
          PROCEDURE       :: set            => set_gf
          PROCEDURE       :: reset          => reset_gf
          PROCEDURE       :: resetSingleElem=> resetSingleElem_gf
