@@ -152,7 +152,7 @@ END SUBROUTINE betaRelax
 !Relaxation routine for both angles at the same time. Calculates the angles by which the magnetization direction changed
 !based on the angle nococonv%*Prev which store the angles from the previous iteration. The resulting angular difference is then weighted (mix_RelaxWeightOffD)
 !and the cdn will be manipulated so that the magnetization direction is rotated towards the new magnetization direction by AngularDifference*Weight.
-!If weight=1 direction of magnetization is || to SQA after relaxation. 
+!If both angles are relaxed: weight=1 direction of magnetization is || to SQA after relaxation. 
 SUBROUTINE bothRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
