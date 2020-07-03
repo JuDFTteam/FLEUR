@@ -177,20 +177,21 @@ MODULE m_types_greensf
       SUBROUTINE get_gf(this,iz,l_conjg,gmat,spin,ddn,uun21,udn21,dun21,ddn21)
 
          USE m_types_mat
+         USE m_types_usdus
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
 
-         CLASS(t_greensf),    INTENT(IN)     :: this
-         INTEGER,             INTENT(IN)     :: iz
-         LOGICAL,             INTENT(IN)     :: l_conjg
-         TYPE(t_mat),         INTENT(INOUT)  :: gmat !Return matrix
-         INTEGER, OPTIONAL,   INTENT(IN)     :: spin
-         REAL   , OPTIONAL,   INTENT(IN)     :: ddn(:) !Scalar products
-         REAL   , OPTIONAL,   INTENT(IN)     :: uun21
-         REAL   , OPTIONAL,   INTENT(IN)     :: udn21
-         REAL   , OPTIONAL,   INTENT(IN)     :: dun21
-         REAL   , OPTIONAL,   INTENT(IN)     :: ddn21
+         CLASS(t_greensf),        INTENT(IN)     :: this
+         INTEGER,                 INTENT(IN)     :: iz
+         LOGICAL,                 INTENT(IN)     :: l_conjg
+         TYPE(t_mat),             INTENT(INOUT)  :: gmat !Return matrix
+         INTEGER,       OPTIONAL, INTENT(IN)     :: spin
+         TYPE(t_usdus), OPTIONAL, INTENT(IN)     :: usdus
+         REAL,          OPTIONAL, INTENT(IN)     :: uun21
+         REAL,          OPTIONAL, INTENT(IN)     :: udn21
+         REAL,          OPTIONAL, INTENT(IN)     :: dun21
+         REAL,          OPTIONAL, INTENT(IN)     :: ddn21
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
@@ -212,7 +213,7 @@ MODULE m_types_greensf
             nspins = SIZE(this%uu,4)
          ENDIF
 
-         l_scalar = PRESENT(ddn)
+         l_scalar = PRESENT(usdus)
          IF(l_scalar.AND.nspins==3) THEN
             IF(.NOT.PRESENT(uun21).OR..NOT.PRESENT(udn21).OR.&
                .NOT.PRESENT(dun21).OR..NOT.PRESENT(ddn21)) THEN
@@ -308,7 +309,7 @@ MODULE m_types_greensf
                   IF(l_scalar) THEN
                      IF(spin_ind<3) THEN
                         gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) + &
-                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn(spin_ind)
+                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * usdus%ddn(l,atomType,spin_ind)
                      ELSE
                         gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun21 + &
                                                  this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn21 + &
