@@ -1,6 +1,6 @@
 #juDFT Testscript
 
-jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/inp-1.xml","$workdir/inp.xml");
 jt::copyfile("files/JUDFT_WARN_ONLY",$workdir);
 
 

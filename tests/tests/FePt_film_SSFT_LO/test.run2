@@ -3,6 +3,8 @@
 
 jt::copyfile("files/inp2.xml","$workdir/inp.xml");
 jt::copyfile("files/JUDFT_WARN_ONLY", "$workdir");
+jt::deletefile("$workdir/cdn*");
+jt::deletefile("$workdir/mixing_history*");
 
 jt::testrun("rm mixing_histor*",$workdir);
 jt::testrun($executable,$workdir);
