@@ -22,6 +22,8 @@ MODULE m_greensfSpinDiag
       INTEGER :: m,mp,lm,lmp,ilo,ilop,nLO,nLOp
 
       im = cmplx_0
+      IF(l_sphavg.AND.(l.NE.lp.OR.atomType.NE.atomTypep)) RETURN
+
       !$OMP parallel do default(none) collapse(2) &
       !$OMP shared(eigVecCoeffs,im,usdus,atoms) &
       !$OMP shared(l,lp,natom,natomp,nBands,atomType,atomTypep,spin,l_sphavg) &
@@ -32,7 +34,6 @@ MODULE m_greensfSpinDiag
             nLOp = 0
             lm = l*(l+1)+m
             lmp = lp*(lp+1)+mp
-
             !-------------------------
             !Contribution from valence states
             !-------------------------
