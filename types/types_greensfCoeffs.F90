@@ -26,6 +26,16 @@ MODULE m_types_greensfCoeffs
          COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
          COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
+         !LO-Valence Contribution
+         COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:,:)
+
+         !LO-LO contribution
+         !Here we need to compress the (lo,lop) index pair into one index because PGI allows a max of 7 indices
+         COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
+
          CONTAINS
             PROCEDURE, PASS :: init    =>  greensfBZintCoeffs_init
       END TYPE t_greensfBZintCoeffs
@@ -46,6 +56,16 @@ MODULE m_types_greensfCoeffs
          REAL, ALLOCATABLE :: dd(:,:,:,:,:)
          REAL, ALLOCATABLE :: du(:,:,:,:,:)
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
+
+         !LO-Valence Contribution
+         REAL, ALLOCATABLE :: uulo(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ulou(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: dulo(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ulod(:,:,:,:,:,:)
+
+         !LO-LO contribution
+         !Here the (lo,lop) index pair is explicit again
+         REAL, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init        =>  greensfImagPart_init
@@ -70,7 +90,7 @@ MODULE m_types_greensfCoeffs
          INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
          INTEGER,                      INTENT(IN)     :: nkpts,nbands !number of kpts and bands handled by this rank
 
-         INTEGER lmax, uniqueElementsSphavg,uniqueElementsRadial, maxSpin
+         INTEGER lmax, uniqueElementsSphavg,uniqueElementsRadial, maxSpin,uniqueElementsLO,maxLO
 
          lmax = lmaxU_const
 
@@ -92,6 +112,17 @@ MODULE m_types_greensfCoeffs
             ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,nkpts,jsp_start:maxSpin),source=cmplx_0)
             ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,nkpts,jsp_start:maxSpin),source=cmplx_0)
             ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,nkpts,jsp_start:maxSpin),source=cmplx_0)
+
+            uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO)
+
+            IF(uniqueElementsLO>0) THEN
+               ALLOCATE (this%uulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,nkpts,jsp_start:maxSpin),source=cmplx_0)
+               ALLOCATE (this%ulou(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,nkpts,jsp_start:maxSpin),source=cmplx_0)
+               ALLOCATE (this%dulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,nkpts,jsp_start:maxSpin),source=cmplx_0)
+               ALLOCATE (this%ulod(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,nkpts,jsp_start:maxSpin),source=cmplx_0)
+
+               ALLOCATE (this%uloulop(nbands,-lmax:lmax,-lmax:lmax,maxLO**2,uniqueElementsLO,nkpts,jsp_start:maxSpin),source=cmplx_0)
+            ENDIF
          ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_init
@@ -106,7 +137,7 @@ MODULE m_types_greensfCoeffs
          TYPE(t_noco),              INTENT(IN)     :: noco
          LOGICAL,                   INTENT(IN)     :: l_calc
 
-         INTEGER lmax,spin_dim,uniqueElementsSphavg,uniqueElementsRadial
+         INTEGER lmax,spin_dim,uniqueElementsSphavg,uniqueElementsRadial,uniqueElementsLO,maxLO
 
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
@@ -128,6 +159,16 @@ MODULE m_types_greensfCoeffs
             ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
             ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
             ALLOCATE (this%scalingFactorRadial(uniqueElementsRadial,input%jspins),source=1.0)
+
+            uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO)
+            IF(uniqueElementsLO>0) THEN
+               ALLOCATE (this%uulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+               ALLOCATE (this%ulou(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+               ALLOCATE (this%dulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+               ALLOCATE (this%ulod(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+
+               ALLOCATE (this%uloulop(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+            ENDIF
          ENDIF
 
       END SUBROUTINE greensfImagPart_init
@@ -166,6 +207,27 @@ MODULE m_types_greensfCoeffs
             CALL CPP_BLAS_scopy(n,rtmp,1,this%dd(:,:,:,:,spin_ind),1)
             DEALLOCATE(rtmp)
          ENDIF
+         IF(ALLOCATED(this%uulo)) THEN
+            n = SIZE(this%uulo,1)*SIZE(this%uulo,2)*SIZE(this%uulo,3)*SIZE(this%uulo,4)*SIZE(this%uulo,5)
+            ALLOCATE(rtmp(n))
+            CALL MPI_ALLREDUCE(this%uulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_scopy(n,rtmp,1,this%uulo(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%ulou(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_scopy(n,rtmp,1,this%ulou(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%dulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_scopy(n,rtmp,1,this%dulo(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%ulod(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_scopy(n,rtmp,1,this%ulod(:,:,:,:,:,spin_ind),1)
+            DEALLOCATE(rtmp)
+         ENDIF
+         IF(ALLOCATED(this%uloulop)) THEN
+            n = SIZE(this%uloulop,1)*SIZE(this%uloulop,2)*SIZE(this%uloulop,3)*SIZE(this%uloulop,4)&
+               *SIZE(this%uloulop,5)*SIZE(this%uloulop,6)
+            ALLOCATE(rtmp(n))
+            CALL MPI_ALLREDUCE(this%uloulop(:,:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_scopy(n,rtmp,1,this%uloulop(:,:,:,:,:,:,spin_ind),1)
+            DEALLOCATE(rtmp)
+         ENDIF
 #endif
 
       END SUBROUTINE greensfImagPart_collect
@@ -192,14 +254,21 @@ MODULE m_types_greensfCoeffs
          IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
          IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
          IF(ALLOCATED(this%dd)) CALL mpi_bc(this%dd,rank,mpi_comm)
+         IF(ALLOCATED(this%uulo)) CALL mpi_bc(this%uulo,rank,mpi_comm)
+         IF(ALLOCATED(this%ulou)) CALL mpi_bc(this%ulou,rank,mpi_comm)
+         IF(ALLOCATED(this%dulo)) CALL mpi_bc(this%dulo,rank,mpi_comm)
+         IF(ALLOCATED(this%ulod)) CALL mpi_bc(this%ulod,rank,mpi_comm)
+         IF(ALLOCATED(this%uloulop)) CALL mpi_bc(this%uloulop,rank,mpi_comm)
 
       END SUBROUTINE greensfImagPart_mpi_bc
 
-      SUBROUTINE greensfImagPart_scale(this,i_elem,l_sphavg)
+      SUBROUTINE greensfImagPart_scale(this,i_elem,i_elemLO,l_sphavg,nLO)
 
          CLASS(t_greensfImagPart), INTENT(INOUT):: this
          INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: i_elemLO
          LOGICAL,                  INTENT(IN)   :: l_sphavg
+         INTEGER,                  INTENT(IN)   :: nLO
 
          INTEGER :: jspin
 
@@ -227,11 +296,30 @@ MODULE m_types_greensfCoeffs
                   ENDDO
                ENDIF
             ENDIF
+            IF(ALLOCATED(this%uulo)) THEN
+               IF(nLO>0) THEN
+                  IF(SIZE(this%uulo,6)==2) THEN
+                     DO jspin = 1, SIZE(this%uulo,5)
+                        this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%ulou(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%ulou(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%dulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%dulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%ulod(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%ulod(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+
+                        this%uloulop(:,-lmaxU_const:,-lmaxU_const:,:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                        * this%uloulop(:,-lmaxU_const:,-lmaxU_const:,:,:,i_elemLO,jspin)
+                     ENDDO
+                  ENDIF
+               ENDIF
+            ENDIF
          ENDIF
 
       END SUBROUTINE greensfImagPart_scale
 
-      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,l_sphavg,imat) Result(imagpartCut)
+      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,l_sphavg,imat,iLO,iLOp) Result(imagpartCut)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
@@ -241,6 +329,7 @@ MODULE m_types_greensfCoeffs
          INTEGER,                  INTENT(IN)   :: spin
          LOGICAL,                  INTENT(IN)   :: l_sphavg
          INTEGER, OPTIONAL,        INTENT(IN)   :: imat !which radial dependence array
+         INTEGER, OPTIONAL,        INTENT(IN)   :: iLO,iLOp !which local orbitals
 
          REAL, ALLOCATABLE :: imagpartCut(:)
 
@@ -251,7 +340,8 @@ MODULE m_types_greensfCoeffs
                IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
                imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
             ENDIF
-         ELSE
+         ELSE IF(.NOT.PRESENT(iLO).AND..NOT.PRESENT(iLOp)) THEN
+            !Valence-Valence arrays
             IF(ALLOCATED(this%uu)) THEN
                IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
                IF(PRESENT(imat)) THEN
@@ -266,6 +356,28 @@ MODULE m_types_greensfCoeffs
                   ENDIF
                ENDIF
             ENDIF
+         ELSE IF(.NOT.PRESENT(iLOp)) THEN
+            !LO-Valence arrays
+            IF(ALLOCATED(this%uulo)) THEN
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uulo,1)),source=0.0)
+               IF(PRESENT(imat)) THEN
+                  IF(imat.EQ.1) THEN
+                     imagpartCut = this%uulo(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.2) THEN
+                     imagpartCut = this%ulou(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.3) THEN
+                     imagpartCut = this%dulo(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.4) THEN
+                     imagpartCut = this%ulod(:,m,mp,iLO,i_elem,spin)
+                  ENDIF
+               ENDIF
+            ENDIF
+         ELSE
+            !LO-LO arrays
+            IF(ALLOCATED(this%uloulop)) THEN
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uloulop,1)),source=0.0)
+               imagpartCut = this%uloulop(:,m,mp,iLO,iLOp,i_elem,spin)
+            ENDIF
          ENDIF
 
          IF(ALLOCATED(imagpartCut)) THEN
@@ -278,10 +390,12 @@ MODULE m_types_greensfCoeffs
 
       END FUNCTION greensfImagPart_applyCutoff
 
-      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,m,mp,spin,l_sphavg) Result(l_empty)
+      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,i_elemLO,nLO,m,mp,spin,l_sphavg) Result(l_empty)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: i_elemLO
+         INTEGER,                  INTENT(IN)   :: nLO
          INTEGER,                  INTENT(IN)   :: m
          INTEGER,                  INTENT(IN)   :: mp
          INTEGER,                  INTENT(IN)   :: spin
@@ -299,6 +413,13 @@ MODULE m_types_greensfCoeffs
                         .AND.ALL(ABS(this%dd(:,m,mp,i_elem,spin)).LT.1e-12) &
                         .AND.ALL(ABS(this%ud(:,m,mp,i_elem,spin)).LT.1e-12) &
                         .AND.ALL(ABS(this%du(:,m,mp,i_elem,spin)).LT.1e-12)
+               IF(ALLOCATED(this%uulo).AND.nLO>0) THEN
+                  l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%ulou(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%uloulop(:,m,mp,:nLO,:nLO,i_elemLO,spin)).LT.1e-12)
+               ENDIF
             ENDIF
          ENDIF
 

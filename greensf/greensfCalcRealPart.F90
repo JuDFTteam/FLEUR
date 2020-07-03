@@ -42,7 +42,7 @@ MODULE m_greensfCalcRealPart
       TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
 
-      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique
+      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique,nLO,iLO,iLOp,i_elemLO
       INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep,refCutoff
       INTEGER :: spin_cut,contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
@@ -117,12 +117,14 @@ MODULE m_greensfCalcRealPart
             refCutoff        = g(i_gf)%elem%refCutoff
             l_sphavg = g(i_gf)%elem%l_sphavg
             i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+            i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique,lo=.TRUE.)
+            nLO = g(i_gf)%elem%countLOs(atoms)
 
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
             ENDIF
-            CALL greensfImagPart%scale(i_elem,l_sphavg)
+            CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")
       ENDIF
@@ -184,8 +186,10 @@ MODULE m_greensfCalcRealPart
          nTypep = g(i_gf)%elem%atomTypep
          l_sphavg = g(i_gf)%elem%l_sphavg
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
+         nLO = g(i_gf)%elem%countLOs(atoms)
 
          i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg)
+         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
@@ -193,7 +197,7 @@ MODULE m_greensfCalcRealPart
                DO m= -l,l
                   DO mp= -lp,lp
 
-                     IF(greensfImagPart%checkEmpty(i_elem,m,mp,jspin,l_sphavg)) THEN
+                     IF(greensfImagPart%checkEmpty(i_elem,i_elemLO,nLO,m,mp,jspin,l_sphavg)) THEN
                         CALL g(i_gf)%resetSingleElem(m,mp,jspin,ipm)
                         CYCLE
                      ENDIF
@@ -217,6 +221,30 @@ MODULE m_greensfCalcRealPart
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg,imat=4)
                         CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
                                      g(i_gf)%du(:,m,mp,jspin,ipm),int_method(contourShape))
+
+                        !KKT for LOs
+                        IF(nLO>0) THEN
+                           DO iLO = 1, nLO
+                              imag = greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=1,iLO=iLO)
+                              CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                           g(i_gf)%uulo(:,m,mp,iLO,jspin,ipm),int_method(contourShape))
+                              imag = greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=2,iLO=iLO)
+                              CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                           g(i_gf)%ulou(:,m,mp,iLO,jspin,ipm),int_method(contourShape))
+                              imag = greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=3,iLO=iLO)
+                              CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                           g(i_gf)%dulo(:,m,mp,iLO,jspin,ipm),int_method(contourShape))
+                              imag = greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=4,iLO=iLO)
+                              CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                           g(i_gf)%ulod(:,m,mp,iLO,jspin,ipm),int_method(contourShape))
+
+                              DO iLOp = 1, nLO
+                                 imag = greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,iLO=iLO,iLOp=iLop)
+                                 CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                              g(i_gf)%uloulop(:,m,mp,iLO,iLOp,jspin,ipm),int_method(contourShape))
+                              ENDDO
+                           ENDDO
+                        ENDIF
                      ENDIF
                   ENDDO
                ENDDO
