@@ -409,7 +409,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,gmat)
+      SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,flo,gmat)
 
          USE m_types_atoms
          !Returns the green's function on the radial and energy mesh
@@ -420,11 +420,12 @@ MODULE m_types_greensf
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
          INTEGER,             INTENT(IN)     :: spin
-         REAL   ,             INTENT(IN)     :: f(:,:,:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: f(:,:,0:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,0:,:)
+         REAL   ,             INTENT(IN)     :: flo(:,:,:,:)
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:) !Return matrix
 
-         INTEGER spin1,spin2,ipm,spin_ind,m_ind,mp_ind
+         INTEGER spin1,spin2,ipm,spin_ind,m_ind,mp_ind,ilo,ilop,iLO_ind,iLOp_ind
          INTEGER l,lp,atomType,atomTypep,nspins,iz
 
          IF(.NOT.this%l_calc) THEN
@@ -487,10 +488,29 @@ MODULE m_types_greensf
          ! Fetch the values
          !-------------------
          DO iz = 1, this%contour%nz
-            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * f(:,1,lp,spin1) + f(:,2,l,spin2) * f(:,2,lp,spin2)) &
-                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * g(:,1,lp,spin1) + g(:,2,l,spin2) * g(:,2,lp,spin2)) &
-                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin2)) &
-                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin2))
+            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * f(:,1,lp,spin2) + f(:,2,l,spin1) * f(:,2,lp,spin2)) &
+                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * g(:,1,lp,spin2) + g(:,2,l,spin1) * g(:,2,lp,spin2)) &
+                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * f(:,1,lp,spin2) + g(:,2,l,spin1) * f(:,2,lp,spin2)) &
+                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * g(:,1,lp,spin2) + f(:,2,l,spin1) * g(:,2,lp,spin2))
+
+            IF(ALLOCATED(this%uulo)) THEN
+               iLO_ind = 0
+               DO ilo = 1, atoms%nlo(atomType)
+                  IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                  iLO_ind = iLO_ind + 1
+                  gmat(:,iz) = gmat(:,iz) + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (f(:,1,l,spin1) *flo(:,1,ilo,spin2) + f(:,2,l,spin1) *flo(:,2,ilo,spin2)) &
+                                          + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (flo(:,1,ilo,spin1)*f(:,1,lp,spin2) + flo(:,2,ilo,spin1)*f(:,2,lp,spin2)) &
+                                          + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (g(:,1,l,spin1) *flo(:,1,ilo,spin2) + g(:,2,l,spin1) *flo(:,2,ilo,spin2)) &
+                                          + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (flo(:,1,ilo,spin1)*f(:,1,lp,spin2) + flo(:,2,ilo,spin1)*f(:,2,lp,spin2))
+                  iLOp_ind = 0
+                  DO ilop = 1, atoms%nlo(atomType)
+                     IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                     iLOp_ind = iLOp_ind + 1
+                     gmat(:,iz) = gmat(:,iz) + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
+                                              * (flo(:,1,ilo,spin1)*flo(:,1,ilop,spin2) + flo(:,2,ilo,spin1)*flo(:,2,ilop,spin2))
+                  ENDDO
+               ENDDO
+            ENDIF
          ENDDO
          !------------------------
          ! Additional operations
@@ -500,7 +520,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE getRadial_gf
 
-      SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,gmat)
+      SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,flo,gmat)
 
          USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
@@ -510,8 +530,9 @@ MODULE m_types_greensf
          TYPE(t_atoms),       INTENT(IN)     :: atoms
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
-         REAL   ,             INTENT(IN)     :: f(:,:,:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: f(:,:,0:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,0:,:)
+         REAL   ,             INTENT(IN)     :: flo(:,:,:,:)
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
 
          INTEGER :: spin,spin1,spin2
@@ -534,7 +555,7 @@ MODULE m_types_greensf
                spin1 = 1
                spin2 = 2
             ENDIF
-            CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,temp)
+            CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
             gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
