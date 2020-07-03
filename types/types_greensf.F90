@@ -17,14 +17,6 @@ MODULE m_types_greensf
    !>  Contains a type for onsite and intersite green's functions in the mt-sphere
    !>  It stores the energy contour in the complex plane and the corresponding
    !>  matrix elements of the green's function
-   !>  We have the following cases
-   !>    -onsite
-   !>       -we look at l=l' but m\=m'
-   !>       -we treat non-magnetic/collinear and noco (not tested)
-   !>       -we look at r=r' and spherically averaged gf
-   !>    -intersite
-   !>       -l\=l' and m\=m'
-   !>       -r\=r' (not stored we calculate the gf by calling calc_intersite in m_intersite for specific r and r')
    !------------------------------------------------------------------------------
 
    USE m_juDFT
