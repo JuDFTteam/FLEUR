@@ -48,9 +48,9 @@ MODULE m_greensfSpinDiag
                im(m,mp,:,4) = im(m,mp,:,4) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin))*eigVecCoeffs%acof(:nBands,lm,natom,spin)
             END IF
 
-            !------------------------------------------------------------------------------------------------------
-            ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
-            !------------------------------------------------------------------------------------------------------
+            !-------------------------------
+            ! add local orbital contribution
+            !-------------------------------
             DO ilo = 1, atoms%nlo(atomType)
                IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                IF(l_sphavg) THEN
