@@ -39,14 +39,20 @@ MODULE m_greensfSpinDiag
             !Contribution from valence states
             !-------------------------
             IF(l_sphavg) THEN
-               im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin))*eigVecCoeffs%acof(:nBands,lm,natom,spin) &
-                                           + conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin))*eigVecCoeffs%bcof(:nBands,lm,natom,spin) &
-                                            * usdus%ddn(l,atomType,spin)
+               im(m,mp,:,1) = im(m,mp,:,1) &
+                             +                              conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin))&
+                                                          *       eigVecCoeffs%acof(:nBands,lm ,natom,spin) &
+                             + usdus%ddn(l,atomType,spin) * conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin))&
+                                                          *       eigVecCoeffs%bcof(:nBands,lm ,natom,spin)
             ELSE
-               im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin))*eigVecCoeffs%acof(:nBands,lm,natom,spin)
-               im(m,mp,:,2) = im(m,mp,:,2) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin))*eigVecCoeffs%bcof(:nBands,lm,natom,spin)
-               im(m,mp,:,3) = im(m,mp,:,3) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin))*eigVecCoeffs%bcof(:nBands,lm,natom,spin)
-               im(m,mp,:,4) = im(m,mp,:,4) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin))*eigVecCoeffs%acof(:nBands,lm,natom,spin)
+               im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin))&
+                                                 * eigVecCoeffs%acof(:nBands,lm ,natom ,spin)
+               im(m,mp,:,2) = im(m,mp,:,2) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin))&
+                                                 * eigVecCoeffs%bcof(:nBands,lm ,natom ,spin)
+               im(m,mp,:,3) = im(m,mp,:,3) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin))&
+                                                 * eigVecCoeffs%bcof(:nBands,lm ,natom ,spin)
+               im(m,mp,:,4) = im(m,mp,:,4) + conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin))&
+                                                 * eigVecCoeffs%acof(:nBands,lm ,natom ,spin)
             END IF
 
             !-------------------------------
