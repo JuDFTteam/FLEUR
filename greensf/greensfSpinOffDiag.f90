@@ -24,7 +24,7 @@ MODULE m_greensfSpinOffDiag
       im = cmplx_0
       IF(l_sphavg.AND.(l.NE.lp.OR.atomType.NE.atomTypep)) RETURN
 
-      !$OMP parallel do default(none) collapse(2)&
+      !$OMP parallel do default(none) collapse(2) &
       !$OMP shared(eigVecCoeffs,im,denCoeffsOffdiag,atoms) &
       !$OMP shared(l,lp,natom,natomp,nBands,atomType,atomTypep,spin1,spin2,l_sphavg) &
       !$OMP private(m,mp,lm,lmp,ilo,ilop,nLO_ind,nLOp_ind,imat)
