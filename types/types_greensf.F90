@@ -242,7 +242,7 @@ MODULE m_types_greensf
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
-         INTEGER l,lp,atomType,atomTypep,nspins
+         INTEGER l,lp,atomType,atomTypep,nspins,ilo,ilop,iLO_ind,iLOp_ind
          LOGICAL l_full,l_scalar
 
          IF(.NOT.this%l_calc) THEN
@@ -357,6 +357,26 @@ MODULE m_types_greensf
                      IF(spin_ind<3) THEN
                         gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) + &
                                                  this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * usdus%ddn(l,atomType,spin_ind)
+                        IF(ALLOCATED(this%uulo)) THEN
+                           iLO_ind = 0
+                           DO ilo = 1, atoms%nlo(atomType)
+                              IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                              iLO_ind = iLO_ind + 1
+                              gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
+                                                       (this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) &
+                                                       +this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm))*usdus%uulon(ilo,atomType,spin_ind) &
+                                                      +(this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) &
+                                                       +this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm))*usdus%dulon(ilo,atomType,spin_ind)
+                              iLOp_ind = 0
+                              DO ilop = 1, atoms%nlo(atomType)
+                                 IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                                 iLOp_ind = iLOp_ind + 1
+                                 gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
+                                                          this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
+                                                        * usdus%uloulopn(ilo,ilop,atomType,spin_ind)
+                              ENDDO
+                           ENDDO
+                        ENDIF
                      ELSE
                         gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun21 + &
                                                  this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn21 + &
