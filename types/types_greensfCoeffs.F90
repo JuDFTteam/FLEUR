@@ -262,11 +262,13 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfImagPart_mpi_bc
 
-      SUBROUTINE greensfImagPart_scale(this,i_elem,l_sphavg)
+      SUBROUTINE greensfImagPart_scale(this,i_elem,i_elemLO,l_sphavg,nLO)
 
          CLASS(t_greensfImagPart), INTENT(INOUT):: this
          INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: i_elemLO
          LOGICAL,                  INTENT(IN)   :: l_sphavg
+         INTEGER,                  INTENT(IN)   :: nLO
 
          INTEGER :: jspin
 
@@ -294,11 +296,30 @@ MODULE m_types_greensfCoeffs
                   ENDDO
                ENDIF
             ENDIF
+            IF(ALLOCATED(this%uulo)) THEN
+               IF(nLO>0) THEN
+                  IF(SIZE(this%uulo,6)==2) THEN
+                     DO jspin = 1, SIZE(this%uulo,5)
+                        this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%ulou(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%ulou(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%dulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%dulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+                        this%ulod(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                   * this%ulod(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
+
+                        this%uloulop(:,-lmaxU_const:,-lmaxU_const:,:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
+                                                                                        * this%uloulop(:,-lmaxU_const:,-lmaxU_const:,:,:,i_elemLO,jspin)
+                     ENDDO
+                  ENDIF
+               ENDIF
+            ENDIF
          ENDIF
 
       END SUBROUTINE greensfImagPart_scale
 
-      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,l_sphavg,imat) Result(imagpartCut)
+      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,l_sphavg,imat,iLO,iLOp) Result(imagpartCut)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
@@ -308,6 +329,7 @@ MODULE m_types_greensfCoeffs
          INTEGER,                  INTENT(IN)   :: spin
          LOGICAL,                  INTENT(IN)   :: l_sphavg
          INTEGER, OPTIONAL,        INTENT(IN)   :: imat !which radial dependence array
+         INTEGER, OPTIONAL,        INTENT(IN)   :: iLO,iLOp !which local orbitals
 
          REAL, ALLOCATABLE :: imagpartCut(:)
 
@@ -318,7 +340,8 @@ MODULE m_types_greensfCoeffs
                IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
                imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
             ENDIF
-         ELSE
+         ELSE IF(.NOT.PRESENT(iLO).AND..NOT.PRESENT(iLOp)) THEN
+            !Valence-Valence arrays
             IF(ALLOCATED(this%uu)) THEN
                IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
                IF(PRESENT(imat)) THEN
@@ -333,6 +356,28 @@ MODULE m_types_greensfCoeffs
                   ENDIF
                ENDIF
             ENDIF
+         ELSE IF(.NOT.PRESENT(iLOp)) THEN
+            !LO-Valence arrays
+            IF(ALLOCATED(this%uulo)) THEN
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uulo,1)),source=0.0)
+               IF(PRESENT(imat)) THEN
+                  IF(imat.EQ.1) THEN
+                     imagpartCut = this%uulo(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.2) THEN
+                     imagpartCut = this%ulou(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.3) THEN
+                     imagpartCut = this%dulo(:,m,mp,iLO,i_elem,spin)
+                  ELSE IF(imat.EQ.4) THEN
+                     imagpartCut = this%ulod(:,m,mp,iLO,i_elem,spin)
+                  ENDIF
+               ENDIF
+            ENDIF
+         ELSE
+            !LO-LO arrays
+            IF(ALLOCATED(this%uloulop)) THEN
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uloulop,1)),source=0.0)
+               imagpartCut = this%uloulop(:,m,mp,iLO,iLOp,i_elem,spin)
+            ENDIF
          ENDIF
 
          IF(ALLOCATED(imagpartCut)) THEN
@@ -345,10 +390,12 @@ MODULE m_types_greensfCoeffs
 
       END FUNCTION greensfImagPart_applyCutoff
 
-      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,m,mp,spin,l_sphavg) Result(l_empty)
+      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,i_elemLO,nLO,m,mp,spin,l_sphavg) Result(l_empty)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
+         INTEGER,                  INTENT(IN)   :: i_elemLO
+         INTEGER,                  INTENT(IN)   :: nLO
          INTEGER,                  INTENT(IN)   :: m
          INTEGER,                  INTENT(IN)   :: mp
          INTEGER,                  INTENT(IN)   :: spin
@@ -366,6 +413,13 @@ MODULE m_types_greensfCoeffs
                         .AND.ALL(ABS(this%dd(:,m,mp,i_elem,spin)).LT.1e-12) &
                         .AND.ALL(ABS(this%ud(:,m,mp,i_elem,spin)).LT.1e-12) &
                         .AND.ALL(ABS(this%du(:,m,mp,i_elem,spin)).LT.1e-12)
+               IF(ALLOCATED(this%uulo).AND.nLO>0) THEN
+                  l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%ulou(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%uloulop(:,m,mp,:nLO,:nLO,i_elemLO,spin)).LT.1e-12)
+               ENDIF
             ENDIF
          ENDIF
 
