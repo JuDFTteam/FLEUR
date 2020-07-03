@@ -211,10 +211,11 @@ MODULE m_types_greensf
       !               certain energy point with an input matrix
       !----------------------------------------------------------------------------------
 
-      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,uun21,udn21,dun21,ddn21)
+      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,denCoeffsOffDiag)
 
          USE m_types_mat
          USE m_types_usdus
+         USE m_types_denCoeffsOffDiag
          USE m_types_atoms
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
@@ -227,10 +228,7 @@ MODULE m_types_greensf
          TYPE(t_mat),             INTENT(INOUT)  :: gmat !Return matrix
          INTEGER,       OPTIONAL, INTENT(IN)     :: spin
          TYPE(t_usdus), OPTIONAL, INTENT(IN)     :: usdus
-         REAL,          OPTIONAL, INTENT(IN)     :: uun21
-         REAL,          OPTIONAL, INTENT(IN)     :: udn21
-         REAL,          OPTIONAL, INTENT(IN)     :: dun21
-         REAL,          OPTIONAL, INTENT(IN)     :: ddn21
+         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
 
          INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
@@ -254,8 +252,7 @@ MODULE m_types_greensf
 
          l_scalar = PRESENT(usdus)
          IF(l_scalar.AND.nspins==3) THEN
-            IF(.NOT.PRESENT(uun21).OR..NOT.PRESENT(udn21).OR.&
-               .NOT.PRESENT(dun21).OR..NOT.PRESENT(ddn21)) THEN
+            IF(.NOT.PRESENT(denCoeffsOffDiag)) THEN
                   CALL juDFT_error("Offdiagonal Scalar products missing", calledby="get_gf")
             ENDIF
          ENDIF
@@ -370,10 +367,30 @@ MODULE m_types_greensf
                            ENDDO
                         ENDIF
                      ELSE
-                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun21 + &
-                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn21 + &
-                                                 this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun21 + &
-                                                 this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * udn21
+                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%uu21n(l,atomType) + &
+                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%dd21n(l,atomType) + &
+                                                 this%du(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%du21n(l,atomType) + &
+                                                 this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%ud21n(l,atomType)
+                        IF(ALLOCATED(this%uulo)) THEN
+                           iLO_ind = 0
+                           DO ilo = 1, atoms%nlo(atomType)
+                              IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                              iLO_ind = iLO_ind + 1
+                              gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) &
+                                                       + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%uulo21n(ilo,atomType) &
+                                                       + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%ulou21n(ilo,atomType) &
+                                                       + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%dulo21n(ilo,atomType) &
+                                                       + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%ulod21n(ilo,atomType)
+                              iLOp_ind = 0
+                              DO ilop = 1, atoms%nlo(atomType)
+                                 IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                                 iLOp_ind = iLOp_ind + 1
+                                 gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
+                                                          this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
+                                                        * denCoeffsOffDiag%uloulop21n(ilo,ilop,atomType)
+                              ENDDO
+                           ENDDO
+                        ENDIF
                      ENDIF
                   ELSE
                      gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm)

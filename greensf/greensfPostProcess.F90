@@ -43,11 +43,10 @@ MODULE m_greensfPostProcess
 
       REAL :: torgue(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
-      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
-      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:), flo(:,:,:)
+      REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
-      TYPE(t_usdus) :: usdus
-
+      TYPE(t_usdus)            :: usdus
+      TYPE(t_denCoeffsOffDiag) :: denCoeffsOffDiag
 #ifdef CPP_HDF
       INTEGER(HID_T) :: greensf_fileID
 #endif
@@ -74,12 +73,14 @@ MODULE m_greensfPostProcess
 
          IF(gfinp%checkRadial()) THEN
             CALL timestart("Green's Function: Radial Functions")
-            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
-            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
-            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod),source=0.0)
+            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
+            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
+            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins,atoms%nType),source=0.0)
 
             ! Initializations
             CALL usdus%init(atoms,input%jspins)
+            CALL denCoeffsOffDiag%init(atoms,noco,sphhar,.FALSE.,.FALSE.)
+
 
             ALLOCATE(u(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
             ALLOCATE(udot(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
@@ -100,36 +101,35 @@ MODULE m_greensfPostProcess
                ELSE
                   DO jspin = 1, input%jspins
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
+                                     f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
+                                     hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
-                     u(:,:,1,1,jspin,i_gf) = f(:,:,l)
-                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp)
+                     u(:,:,1,1,jspin,i_gf) = f(:,:,l,jspin,atomType)
+                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp,jspin,atomType)
 
-                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l)
-                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp)
+                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l,jspin,atomType)
+                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp,jspin,atomType)
 
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                     f,g,flo,hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
+                                     f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
+                                     hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
 
-                     u(:,:,1,2,jspin,i_gf) = f(:,:,l)
-                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp)
+                     u(:,:,1,2,jspin,i_gf) = f(:,:,l,jspin,atomTypep)
+                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp,jspin,atomTypep)
 
-                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l)
-                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp)
-
+                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l,jspin,atomTypep)
+                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp,jspin,atomTypep)
                   ENDDO
+                  IF(gfinp%l_mperp) THEN
+                     CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
+                                                                   flo(:,:,:,:,atomType),atomType)
+                     IF(atomType/=atomTypep) THEN
+                        CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
+                                                                      flo(:,:,:,:,atomTypep),atomTypep)
+                     ENDIF
+                  ENDIF
                ENDIF
             ENDDO
-
-            !Offdiagonal scalar products
-            IF(gfinp%l_mperp) THEN
-               !Calculate overlap integrals
-               ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-               CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-            ENDIF
             CALL timestop("Green's Function: Radial Functions")
          ENDIF
          CALL timestart("Green's Function: Occupation")
@@ -151,9 +151,8 @@ MODULE m_greensfPostProcess
                            usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
                CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
-                           usdus=usdus,uun21=uun21(l,atomType),&
-                           udn21=udn21(l,atomType),dun21=dun21(l,atomType),&
-                           ddn21=ddn21(l,atomType),l_write=.TRUE.,check=l_check)
+                           usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
+                           l_write=.TRUE.,check=l_check)
             ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")
