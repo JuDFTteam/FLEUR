@@ -10,7 +10,6 @@
 ! Robin Hilgers, Nov  '19 Adaption to new nococonv type in Feb '20, Added RelaxMixing parameter + Allow Relaxation of alpha and Beta individually Jul '20'
 MODULE m_RelaxSpinAxisMagn
 
-
 USE m_magnMomFromDen
 USE m_types
 USE m_types_fleurinput
@@ -54,8 +53,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,noco%alph_inp,zeros,den)
     nococonv%alph=zeros
     nococonv%beta=zeros
-   
-   
 
    END SUBROUTINE initRelax
    
@@ -81,7 +78,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
    IF (.NOT.noco%l_RelaxAlpha.AND.noco%l_RelaxBeta) CALL betaRelax(vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,den)
-
 
 END SUBROUTINE doRelax
 
@@ -115,6 +111,7 @@ SUBROUTINE alphaRelax(vacuum,sphhar,stars&
    nococonv%alph=nococonv%alphPrev+diffP
    nococonv%alphPrev=nococonv%alph
    CALL cureTooSmallAngles(atoms,nococonv%alph)
+   
 END SUBROUTINE alphaRelax
 
 !Relaxation routine for only relaxing beta. How it works: See one routine below.
@@ -147,6 +144,7 @@ SUBROUTINE betaRelax(vacuum,sphhar,stars&
    nococonv%betaPrev=nococonv%beta
    nococonv%alph=nococonv%alphRlx
    CALL cureTooSmallAngles(atoms,nococonv%beta)
+   
 END SUBROUTINE betaRelax
 
 !Relaxation routine for both angles at the same time. Calculates the angles by which the magnetization direction changed
@@ -185,6 +183,7 @@ SUBROUTINE bothRelax(vacuum,sphhar,stars&
    nococonv%alph=nococonv%alphPrev+diffP
    nococonv%alphPrev=nococonv%alph
    CALL cureTooSmallAngles(atoms,nococonv%beta,nococonv%alph)
+   
 END SUBROUTINE bothRelax
 
 !Purges to small  angles below 10^-4 rad to 0. => Stabilizes convergence.
@@ -200,6 +199,7 @@ SUBROUTINE cureTooSmallAngles(atoms,angleA,angleB)
       IF (abs(angleA(i)).LE.eps) angleA(i)=0.0
       IF(PRESENT(angleB).AND.abs(angleB(i)).LE.eps) angleB(i)=0.0
    END DO
+   
 END SUBROUTINE cureTooSmallAngles
 
 !Calculates angles from magnetization and assigns correct sign to be used in the rotation (flipcdn) routine properly.
@@ -262,7 +262,6 @@ SUBROUTINE toGlobalRelax(noco,nococonv,vacuum,sphhar,stars&
 
    REAL                                  :: zeros(atoms%ntype)
 
-
    zeros(:)=0.0
    CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,inDen)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,inDen)
@@ -276,8 +275,6 @@ SUBROUTINE toGlobalRelax(noco,nococonv,vacuum,sphhar,stars&
    nococonv%alph=zeros
    nococonv%beta=zeros
 
-
 END SUBROUTINE toGlobalRelax
-
 
 END MODULE m_RelaxSpinAxisMagn
