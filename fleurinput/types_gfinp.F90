@@ -312,7 +312,7 @@ CONTAINS
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
                      i_gf =  this%add(l,itype,iContour,l_sphavg,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
+                                   fixedCutoff=fixedCutoff,nshells=nshells)
                   ENDDO
                ENDDO
             ENDIF
@@ -325,7 +325,7 @@ CONTAINS
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
                   i_gf =  this%add(l,itype,iContour,l_sphavg,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff,l_inter=(nshells/=0))
+                                   fixedCutoff=fixedCutoff,nshells=nshells)
                ENDDO
             ENDIF
 
@@ -478,10 +478,10 @@ CONTAINS
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
 
-         IF(atomTypep==-1) THEN
+         IF(atomTypep<0) THEN !This indicates that the nshells argument was written here
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,&
                                            atoms,cell,l_write.AND..NOT.written(atomType))
             written(atomType) = .TRUE.
@@ -650,7 +650,7 @@ CONTAINS
 
    END FUNCTION uniqueElements_gfinp
 
-   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
+   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,l_fixedCutoffset,fixedCutoff,nshells) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: l
@@ -662,12 +662,12 @@ CONTAINS
       REAL,    OPTIONAL,   INTENT(IN)     :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
-      LOGICAL, OPTIONAL,   INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
+      INTEGER, OPTIONAL,   INTENT(IN)     :: nshells
 
 
       LOGICAL l_found
 
-      IF(PRESENT(l_inter).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: l_inter and nTypep given",&
+      IF(PRESENT(nshells).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: nshells and nTypep given",&
                                                                 hint="This is a bug in FLEUR, please report",&
                                                                 calledby="add_gfelem")
 
@@ -686,10 +686,10 @@ CONTAINS
       ELSE
          this%elem(this%n)%lp = l
       ENDIF
-      IF(PRESENT(l_inter)) THEN
-         IF(l_inter) THEN
+      IF(PRESENT(nshells)) THEN
+         IF(nshells/=0) THEN
             !Temporary index to mark later in gfinp%init
-            this%elem(this%n)%atomTypep = -1
+            this%elem(this%n)%atomTypep = -nshells
          ELSE
             this%elem(this%n)%atomTypep = nType
          ENDIF
