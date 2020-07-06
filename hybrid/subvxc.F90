@@ -303,7 +303,7 @@ CONTAINS
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
                if(vxc%l_real) then 
-                  vxc%data_r(ig2,ig1_loc) = vxc%data_r(ig2,ig1_loc) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+                  vxc%data_r(ig2,ig1_loc) = vxc%data_r(ig2,ig1_loc) + real(stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar))
                else
                   vxc%data_c(ig2,ig1_loc) = vxc%data_c(ig2,ig1_loc) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
                endif
@@ -538,7 +538,10 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       call timestart("apply to hmat")
-      ! DO n = 1, hmat%matsize1
+      ! call vxc%save_npy("vxc_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+      ! call hmat%save_npy("hmat_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+      ! call MPI_Barrier(MPI_COMM_WORLD, n)
+      ! call judft_error("stopit")
       do n = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
          n_loc = (n-1) / fmpi%n_size + 1
          DO nn = 1,MIN(n,hmat%matsize1)  
@@ -549,6 +552,7 @@ CONTAINS
             ENDIF
          END DO
       END DO
+
       call timestop("apply to hmat")
 
       CALL timestop("subvxc")
