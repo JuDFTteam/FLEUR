@@ -3,7 +3,6 @@ MODULE m_greensfTorgue
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_genMTBasis
    USE m_intgr
    USE m_gaunt
    USE m_xmlOutput

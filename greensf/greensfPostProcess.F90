@@ -10,7 +10,6 @@ MODULE m_greensfPostProcess
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
-   USE m_radovlp
 
    IMPLICIT NONE
 
@@ -52,6 +51,9 @@ MODULE m_greensfPostProcess
 
       IF(mpi%irank==0) THEN
          IF(gfinp%checkRadial()) THEN
+            !-----------------------------------------------------------
+            ! Calculate the needed radial functions and scalar products
+            !-----------------------------------------------------------
             CALL timestart("Green's Function: Radial Functions")
             ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
             ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
@@ -114,12 +116,15 @@ MODULE m_greensfPostProcess
            CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
+         !Onsite exchange Splitting from difference of center of mass of the bands
          CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
 
+         !-------------------------------------------------------
+         ! Occupation matrix (only for diagonal onsite elements)
+         !-------------------------------------------------------
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
-            !Occupation matrix
             l = greensFunction(i_gf)%elem%l
             lp = greensFunction(i_gf)%elem%lp
             atomType = greensFunction(i_gf)%elem%atomType
@@ -143,6 +148,9 @@ MODULE m_greensfPostProcess
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
+         !----------------------------------------------
+         ! Torgue Calculations
+         !----------------------------------------------
          IF(ANY(gfinp%numTorgueElems>0)) THEN
             CALL timestart("Green's Function: Torgue")
             CALL openXMLElementNoAttributes('noncollinearTorgue')
@@ -167,6 +175,7 @@ MODULE m_greensfPostProcess
             ENDIF
             CALL timestop("Green's Function: Torgue")
          ENDIF
+
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
