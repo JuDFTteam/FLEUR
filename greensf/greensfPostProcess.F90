@@ -42,7 +42,6 @@ MODULE m_greensfPostProcess
       LOGICAL  l_sphavg,l_check
 
       REAL :: torgue(3),atomDiff(3)
-      REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
       TYPE(t_usdus)            :: usdus
@@ -81,9 +80,6 @@ MODULE m_greensfPostProcess
             CALL usdus%init(atoms,input%jspins)
             CALL denCoeffsOffDiag%init(atoms,noco,sphhar,.FALSE.,.FALSE.)
 
-
-            ALLOCATE(u(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
-            ALLOCATE(udot(atoms%jmtd,2,2,2,input%jspins,gfinp%n),source=0.0)
             !Generate the scalar products we need
             DO i_gf = 1, gfinp%n
                l  = gfinp%elem(i_gf)%l
@@ -96,38 +92,23 @@ MODULE m_greensfPostProcess
 
                i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
-               IF(i_gf/=indUnique) THEN
-                  u(:,:,:,:,:,i_gf) = u(:,:,:,:,:,indUnique)
-                  udot(:,:,:,:,:,i_gf) = udot(:,:,:,:,:,indUnique)
-               ELSE
-                  DO jspin = 1, input%jspins
-                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                     f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
-                                     hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
-
-                     u(:,:,1,1,jspin,i_gf) = f(:,:,l,jspin,atomType)
-                     u(:,:,2,1,jspin,i_gf) = f(:,:,lp,jspin,atomType)
-
-                     udot(:,:,1,1,jspin,i_gf) = g(:,:,l,jspin,atomType)
-                     udot(:,:,2,1,jspin,i_gf) = g(:,:,lp,jspin,atomType)
-
+               IF(i_gf/=indUnique) CYCLE
+               DO jspin = 1, input%jspins
+                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
+                                  f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
+                                  hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
+                  IF(atomType/=atomTypep) THEN
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
                                      f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
                                      hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
-
-                     u(:,:,1,2,jspin,i_gf) = f(:,:,l,jspin,atomTypep)
-                     u(:,:,2,2,jspin,i_gf) = f(:,:,lp,jspin,atomTypep)
-
-                     udot(:,:,1,2,jspin,i_gf) = g(:,:,l,jspin,atomTypep)
-                     udot(:,:,2,2,jspin,i_gf) = g(:,:,lp,jspin,atomTypep)
-                  ENDDO
-                  IF(gfinp%l_mperp) THEN
-                     CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                                   flo(:,:,:,:,atomType),atomType)
-                     IF(atomType/=atomTypep) THEN
-                        CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
-                                                                      flo(:,:,:,:,atomTypep),atomTypep)
-                     ENDIF
+                  ENDIF
+               ENDDO
+               IF(gfinp%l_mperp) THEN
+                  CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
+                                                                flo(:,:,:,:,atomType),atomType)
+                  IF(atomType/=atomTypep) THEN
+                     CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
+                                                                   flo(:,:,:,:,atomTypep),atomTypep)
                   ENDIF
                ENDIF
             ENDDO
@@ -178,7 +159,7 @@ MODULE m_greensfPostProcess
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
-                               u=u,udot=udot)
+                               u=f,udot=g,ulo=flo)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Green's Function: IO/Write")
 #endif

@@ -85,7 +85,7 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen, u, udot)
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen, u, udot, ulo)
 
       USE m_types
       USE m_types_selfen
@@ -100,10 +100,11 @@ MODULE m_greensf_io
       INTEGER,                  INTENT(IN) :: archiveType
       COMPLEX,                  INTENT(IN) :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
       TYPE(t_selfen), OPTIONAL, INTENT(IN) :: selfen(:) !Only in IO mode for Hubbard 1
-      REAL,           OPTIONAL, INTENT(IN) :: u(:,:,:,:,:,:)      !Radial Functions for IO
-      REAL,           OPTIONAL, INTENT(IN) :: udot(:,:,:,:,:,:)
+      REAL,           OPTIONAL, INTENT(IN) :: u(:,:,0:,:,:)      !Radial Functions for IO
+      REAL,           OPTIONAL, INTENT(IN) :: udot(:,:,0:,:,:)
+      REAL,           OPTIONAL, INTENT(IN) :: ulo(:,:,:,:,:)
 
-      INTEGER(HID_T)    :: elementsGroupID,contoursGroupID
+      INTEGER(HID_T)    :: elementsGroupID,contoursGroupID,radialGroupID
       INTEGER(HID_T)    :: currentelementGroupID,currentcontourGroupID
       INTEGER(HID_T)    :: mmpmatSpaceID, mmpmatSetID
       INTEGER(HID_T)    :: sphavgDataSpaceID, sphavgDataSetID
@@ -116,6 +117,7 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: energyWeightsSpaceID, energyWeightsSetID
       INTEGER(HID_T)    :: uDataSpaceID,uDataSetID
       INTEGER(HID_T)    :: udotDataSpaceID,udotDataSetID
+      INTEGER(HID_T)    :: uloDataSpaceID,uloDataSetID
       INTEGER(HID_T)    :: loGroupID,currentloGroupID
       INTEGER(HID_T)    :: uuloDataSpaceID,uuloDataSetID
       INTEGER(HID_T)    :: ulouDataSpaceID,ulouDataSetID
@@ -144,10 +146,8 @@ MODULE m_greensf_io
       ENDIF
 
       IF(PRESENT(u)) THEN
-         IF(SIZE(u,6) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: u", calledby="writeGreensFData")
          IF(archiveType /= GREENSF_GENERAL_CONST) CALL juDFT_error("Wrong archiveType for u", calledby="writeGreensFData")
          IF(.NOT.PRESENT(udot)) CALL juDFT_error("udot not provided (u is present)", calledby="writeGreensFData")
-         IF(SIZE(udot,6) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: udot", calledby="writeGreensFData")
       ENDIF
 
       !--> Start: Energy Contour Output
@@ -250,6 +250,9 @@ MODULE m_greensf_io
          CALL io_write_attlog0(currentelementGroupID,'l_onsite',l_onsite)
          CALL io_write_attlog0(currentelementGroupID,'l_sphavg',l_sphavg)
          nLO = greensf(i_elem)%elem%countLOs(atoms)
+         IF(nLO>0 .AND..NOT.l_sphavg.AND.PRESENT(u).AND..NOT.PRESENT(ulo)) THEN
+            CALL juDFT_error("LO Radial Functions needed, but not present", calledby="writeGreensFData")
+         ENDIF
          CALL io_write_attint0(currentelementGroupID,'numLOs',nLO)
 
          IF(l_onsite) THEN !Was only calculated for onsite elements
@@ -389,25 +392,6 @@ MODULE m_greensf_io
             ENDIF
             !--> End: LO contributions
 
-            IF(PRESENT(u)) THEN
-               dims(:5)=[atoms%jmtd,2,2,2,input%jspins]
-               dimsInt=dims
-               CALL h5screate_simple_f(5,dims(:5),uDataSpaceID,hdfError)
-               CALL h5dcreate_f(currentelementGroupID, "uRadial", H5T_NATIVE_DOUBLE, uDataSpaceID, uDataSetID, hdfError)
-               CALL h5sclose_f(uDataSpaceID,hdfError)
-               CALL io_write_real5(uDataSetID,[1,1,1,1,1],dimsInt(:5),u(:,:,:,:,:,i_elem))
-               CALL h5dclose_f(uDataSetID, hdfError)
-            ENDIF
-
-            IF(PRESENT(udot)) THEN
-               dims(:5)=[atoms%jmtd,2,2,2,input%jspins]
-               dimsInt=dims
-               CALL h5screate_simple_f(5,dims(:5),udotDataSpaceID,hdfError)
-               CALL h5dcreate_f(currentelementGroupID, "udotRadial", H5T_NATIVE_DOUBLE, udotDataSpaceID, udotDataSetID, hdfError)
-               CALL h5sclose_f(udotDataSpaceID,hdfError)
-               CALL io_write_real5(udotDataSetID,[1,1,1,1,1],dimsInt(:5),udot(:,:,:,:,:,i_elem))
-               CALL h5dclose_f(udotDataSetID, hdfError)
-            ENDIF
          ENDIF
 
          IF(archiveType.EQ.GREENSF_HUBBARD_CONST.AND.PRESENT(selfen)) THEN
@@ -425,6 +409,40 @@ MODULE m_greensf_io
 
       CALL h5gclose_f(elementsGroupID, hdfError)
       !--> End: GF data output
+
+      !--> Start: Radial Function output
+      IF(PRESENT(u)) THEN
+         CALL h5gcreate_f(fileID, 'RadialFunctions', radialGroupID, hdfError)
+
+         dims(:5)=[atoms%jmtd,2,lmaxU_Const+1,input%jspins,atoms%ntype]
+         dimsInt=dims
+         CALL h5screate_simple_f(5,dims(:5),uDataSpaceID,hdfError)
+         CALL h5dcreate_f(radialGroupID, "U", H5T_NATIVE_DOUBLE, uDataSpaceID, uDataSetID, hdfError)
+         CALL h5sclose_f(uDataSpaceID,hdfError)
+         CALL io_write_real5(uDataSetID,[1,1,1,1,1],dimsInt(:5),u(:,:,0:lmaxU_Const,:,:))
+         CALL h5dclose_f(uDataSetID, hdfError)
+
+         dims(:5)=[atoms%jmtd,2,lmaxU_Const+1,input%jspins,atoms%ntype]
+         dimsInt=dims
+         CALL h5screate_simple_f(5,dims(:5),udotDataSpaceID,hdfError)
+         CALL h5dcreate_f(radialGroupID, "UDOT", H5T_NATIVE_DOUBLE, udotDataSpaceID, udotDataSetID, hdfError)
+         CALL h5sclose_f(udotDataSpaceID,hdfError)
+         CALL io_write_real5(udotDataSetID,[1,1,1,1,1],dimsInt(:5),udot(:,:,0:lmaxU_Const,:,:))
+         CALL h5dclose_f(udotDataSetID, hdfError)
+
+         IF(PRESENT(ulo)) THEN
+            dims(:5)=[atoms%jmtd,2,atoms%nlod,input%jspins,atoms%ntype]
+            dimsInt=dims
+            CALL h5screate_simple_f(5,dims(:5),uloDataSpaceID,hdfError)
+            CALL h5dcreate_f(radialGroupID, "ULO", H5T_NATIVE_DOUBLE, uloDataSpaceID, uloDataSetID, hdfError)
+            CALL h5sclose_f(uloDataSpaceID,hdfError)
+            CALL io_write_real5(uloDataSetID,[1,1,1,1,1],dimsInt(:5),ulo)
+            CALL h5dclose_f(uloDataSetID, hdfError)
+         ENDIF
+
+         CALL h5gclose_f(radialGroupID, hdfError)
+      ENDIF
+
 
    END SUBROUTINE writeGreensFData
 
