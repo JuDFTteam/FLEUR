@@ -615,7 +615,7 @@ CONTAINS
 
    END FUNCTION uniqueElements_gfinp
 
-   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
+   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,l_fixedCutoffset,fixedCutoff,l_inter) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: l
@@ -624,6 +624,7 @@ CONTAINS
       LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)     :: lp
       INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep !Specify the second atom
+      REAL,    OPTIONAL,   INTENT(IN)     :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_inter!To be used in init when atoms is not available and nTypep was not specified
@@ -636,7 +637,7 @@ CONTAINS
                                                                 calledby="add_gfelem")
 
       !Check if this job has already been added
-      i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,l_found=l_found)
+      i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
@@ -663,6 +664,11 @@ CONTAINS
       ELSE
          !No intersite element
          this%elem(this%n)%atomTypep = nType
+      ENDIF
+      IF(PRESENT(atomDiff)) THEN
+         this%elem(this%n)%atomDiff(:) = atomDiff(:)
+      ELSE
+         this%elem(this%n)%atomDiff(:) = 0.0
       ENDIF
       IF(PRESENT(l_fixedCutoffset)) THEN
          IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
@@ -730,7 +736,7 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   INTEGER FUNCTION find_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,uniqueMax,l_found) result(i_gf)
+   INTEGER FUNCTION find_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,uniqueMax,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -742,7 +748,7 @@ CONTAINS
       LOGICAL,             INTENT(IN)    :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
-
+      REAL,    OPTIONAL,   INTENT(IN)    :: atomDiff(:)
       INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !If uniqueMax is present it will return the
                                                        !index of the unique element, meaning
                                                        !the same (l,lp,type,typep) but different contours
@@ -795,6 +801,16 @@ CONTAINS
             IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
          ENDIF
          IF(this%elem(i_gf)%l_sphavg .neqv. l_sphavg) CYCLE
+         !Check the phasefactor
+         IF(PRESENT(atomDiff)) THEN
+            IF((this%elem(i_gf)%atomDiff(1)-atomDiff(1)).GT.1e-12.OR.&
+               (this%elem(i_gf)%atomDiff(2)-atomDiff(2)).GT.1e-12.OR.&
+               (this%elem(i_gf)%atomDiff(3)-atomDiff(3)).GT.1e-12) CYCLE
+         ELSE
+            IF((this%elem(i_gf)%atomDiff(1)).GT.1e-12.OR.&
+               (this%elem(i_gf)%atomDiff(2)).GT.1e-12.OR.&
+               (this%elem(i_gf)%atomDiff(3)).GT.1e-12) CYCLE
+         ENDIF
          !If we are here and smaller than uniqueMax the element is not unique
          !i.e they only differ in the choice of the energy contour
          IF(PRESENT(uniqueMax)) THEN
