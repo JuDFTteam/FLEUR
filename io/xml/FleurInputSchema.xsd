@@ -437,6 +437,7 @@
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
             <xsd:attribute default="F" name="orbcomp" type="FleurBool" use="optional"/>
             <xsd:attribute default="F" name="jDOS"    type="FleurBool" use="optional"/>
+            <xsd:attribute default="F" name="banddos"    type="FleurBool" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>
@@ -626,16 +627,19 @@
    </xsd:complexType>
 
    <xsd:complexType name="VacDOSType">
-      <xsd:attribute name="layers" type="xsd:integer" use="required"/>
-      <xsd:attribute name="integ" type="FleurBool" use="required"/>
-      <xsd:attribute name="star" type="FleurBool" use="required"/>
-      <xsd:attribute name="nstars" type="xsd:integer" use="required"/>
-      <xsd:attribute name="locx1" type="xsd:string" use="required"/>
-      <xsd:attribute name="locy1" type="xsd:string" use="required"/>
-      <xsd:attribute name="locx2" type="xsd:string" use="required"/>
-      <xsd:attribute name="locy2" type="xsd:string" use="required"/>
-      <xsd:attribute name="nstm" type="xsd:integer" use="required"/>
-      <xsd:attribute name="tworkf" type="xsd:string" use="required"/>
+       <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="layer" type="xsd:string"/>
+      </xsd:sequence>
+      <xsd:attribute name="vacdos" type="FleurBool" use="required"/>
+      <xsd:attribute name="integ" type="FleurBool" use="optional" default="F"/>
+      <xsd:attribute name="star" type="FleurBool" use="optional" default="F"/>
+      <xsd:attribute name="nstars" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="locx1" type="xsd:string" use="optional" default="0.0"/>
+      <xsd:attribute name="locy1" type="xsd:string" use="optional" default="0.0"/>
+      <xsd:attribute name="locx2" type="xsd:string" use="optional" default="1.0"/>
+      <xsd:attribute name="locy2" type="xsd:string" use="optional" default="1.0"/>
+      <xsd:attribute name="nstm" type="xsd:integer" use="optional" default="0"/>
+      <xsd:attribute name="tworkf" type="xsd:string" use="optional" default="0.0"/>
    </xsd:complexType>
 
    <xsd:complexType name="PlottingType">
@@ -756,15 +760,15 @@
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">
-      <xsd:attribute name="ndir" type="xsd:integer" use="required"/>
-      <xsd:attribute name="minEnergy" type="xsd:string" use="required"/>
-      <xsd:attribute name="maxEnergy" type="xsd:string" use="required"/>
-      <xsd:attribute name="sigma" type="xsd:string" use="required"/>
-      <xsd:attribute default="0" name="projdos" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
+      <xsd:attribute name="minEnergy" type="xsd:string" use="optional" default="-0.5"/>
+      <xsd:attribute name="maxEnergy" type="xsd:string" use="optional" default="0.5"/>
+      <xsd:attribute name="sigma" type="xsd:string" use="optional" default="0.01"/>
+      <xsd:attribute name="numberPoints" type="xsd:positiveInteger" use="optional" default="1321"/>
    </xsd:complexType>
 
 
-  
+
 
    <xsd:complexType name="KPointListType">
       <xsd:sequence>
@@ -807,7 +811,7 @@
       </xsd:simpleContent>
    </xsd:complexType>
 
-  
+
    <xsd:complexType name="SpecialPointType">
       <xsd:simpleContent>
          <xsd:extension base="String3DVecType">
@@ -872,6 +876,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="MagneticCircularDichroismType">
+      <xsd:attribute name="mcd" type="FleurBool" use="required"/>
       <xsd:attribute name="energyLo" type="xsd:double" use="required"/>
       <xsd:attribute name="energyUp" type="xsd:double" use="required"/>
    </xsd:complexType>
@@ -976,7 +981,7 @@
    <xsd:complexType name="OutputType">
       <xsd:all>
          <xsd:element maxOccurs="1" minOccurs="0" name="checks" type="ChecksType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="densityOfStates" type="DOSOutputType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="bandDOS" type="DOSOutputType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="vacuumDOS" type="VacDOSType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="plotting" type="PlottingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="chargeDensitySlicing" type="ChargeDensitySlicingType"/>
@@ -988,12 +993,10 @@
       </xsd:all>
       <xsd:attribute default="F" name="dos" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="band" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="vacdos" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="slice" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="mcd" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ElectronConfigType">
@@ -1094,7 +1097,7 @@
       </xsd:restriction>
    </xsd:simpleType>
 
- 
+
 
    <xsd:simpleType name="RDMFTFunctionalEnum">
       <xsd:restriction base="xsd:string">

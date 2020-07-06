@@ -112,9 +112,7 @@ CONTAINS
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     !this%l_slab = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@slab'))
-    !this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
-    this%l_mcd = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@mcd'))
-
+    all_atoms=.true.
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
@@ -165,7 +163,7 @@ CONTAINS
        this%nstm = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
        this%tworkf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
 
-       this%layers = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/vacuumDOS/layer'))
+       this%layers = xml%GetNumberOfNodes('/fleurInput/output/vacuumDOS/layer')
        ALLOCATE(this%izlay(this%layers,2))
        DO n=1,this%layers
          write(xPathA,'(a,i0,a)') '/fleurInput/output/vacuumDOS/layer[',n,']'

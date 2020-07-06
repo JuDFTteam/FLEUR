@@ -103,7 +103,11 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   thisDOS%qvlay = 0.0
   thisDOS%qstars = CMPLX(0.0,0.0)
 
-  allocate(thisDOS%weight_names(2+banddos%layers*(banddos%nstars+1)))
+  if (.not.banddos%vacdos) THEN
+    allocate(thisDOS%weight_names(0))
+    RETURN
+  endif
+  allocate(thisDOS%weight_names(2+banddos%layers*(4*banddos%nstars+2)))
   ind=1
   thisDOS%weight_names(ind)="VAC1"
   ind=ind+1

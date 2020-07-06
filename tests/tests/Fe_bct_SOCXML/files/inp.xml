@@ -152,15 +152,9 @@
          <nocoParams l_relax="F" alpha=".00000000" beta="3.14159265" b_cons_x=".00000000" b_cons_y=".00000000"/>
       </atomGroup>
    </atomGroups>
-   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
+   <output dos="F" band="F" >
       <checks vchk="F" cdinf="F"/>
-      <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
-      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000000" locy1=".00000000" locx2=".00000000" locy2=".00000000" nstm="0" tworkf=".00000000"/>
-      <plotting iplot="0"/>
-      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
-      <specialOutput eonly="F" bmt="F"/>
-      <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
-   </output>
+      </output>
   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
 </fleurInput>
