@@ -33,7 +33,7 @@ MODULE m_greensfBZint
       INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
-      REAL    :: atomFactor
+      REAL    :: atomFactor,atomDiff(3)
       LOGICAL :: l_sphavg
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
@@ -53,6 +53,7 @@ MODULE m_greensfBZint
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+         atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
          atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
          atomFactor = MERGE(1.0,atomFactor,atomType.NE.atomTypep)
 
@@ -89,8 +90,8 @@ MODULE m_greensfBZint
             DO natomp = natomp_start, natomp_end
 
                !Phase factor for intersite elements (Does nothing atm)
-               IF(natom.NE.natomp) THEN
-                  phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),gfinp%elem(i_gf)%atomDiff))
+               IF(ANY(atomDiff.GT.1e-12)) THEN
+                  phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),atomDiff(:)))
                ELSE
                   phase = cmplx_1
                ENDIF
@@ -118,8 +119,8 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp,l_sphavg,&
-                               ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp.AND.ALL(atomDiff.LT.1e-12),&
+                                  l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                ENDDO
 
             ENDDO !natomp

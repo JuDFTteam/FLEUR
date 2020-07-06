@@ -41,7 +41,7 @@ MODULE m_greensfPostProcess
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
-      REAL :: torgue(3)
+      REAL :: torgue(3),atomDiff(3)
       REAL, ALLOCATABLE :: u(:,:,:,:,:,:),udot(:,:,:,:,:,:)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
@@ -90,6 +90,7 @@ MODULE m_greensfPostProcess
                lp = gfinp%elem(i_gf)%lp
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
+
                l_sphavg  = gfinp%elem(i_gf)%l_sphavg
                IF(l_sphavg) CYCLE
 
@@ -140,9 +141,11 @@ MODULE m_greensfPostProcess
             lp = greensFunction(i_gf)%elem%lp
             atomType = greensFunction(i_gf)%elem%atomType
             atomTypep = greensFunction(i_gf)%elem%atomTypep
+            atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
             l_sphavg  = gfinp%elem(i_gf)%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
+            IF(ANY(atomDiff(:).GT.1e-12)) CYCLE
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)

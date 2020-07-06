@@ -48,7 +48,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
       LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg
-      REAL    :: fac,del,eb,et,fixedCutoff
+      REAL    :: fac,del,eb,et,fixedCutoff,atomDiff(3)
       REAL,    ALLOCATABLE :: eMesh(:),imag(:)
 
       !Get the information on the real axis energy mesh
@@ -69,6 +69,7 @@ MODULE m_greensfCalcRealPart
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
+            atomDiff(:) = g(i_gf)%elem%atomDiff(:)
 
             i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
@@ -78,7 +79,7 @@ MODULE m_greensfCalcRealPart
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
-               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp
+               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.ALL(atomDiff(:).LT.1e-12)
                IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND. g(i_gf)%elem%countLOs(atoms)==0) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration

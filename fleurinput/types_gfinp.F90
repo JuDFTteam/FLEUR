@@ -457,6 +457,7 @@ CONTAINS
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
+      REAL    :: atomDiff(3)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -499,7 +500,8 @@ CONTAINS
             atomType  = this%elem(i_gf)%atomType
             atomTypep = this%elem(i_gf)%atomTypep
             l_sphavg  = this%elem(i_gf)%l_sphavg
-            IF(atomType.NE.atomTypep) THEN
+            atomDiff  = this%elem(i_gf)%atomDiff
+            IF(atomType.NE.atomTypep.OR.ANY(atomDiff.GT.1e-12)) THEN
                l_inter = .TRUE.
                IF(l_sphavg) l_interAvg = .TRUE.
             ENDIF
@@ -558,6 +560,7 @@ CONTAINS
       INTEGER :: maxGF,nLO
       INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
       LOGICAL :: l_sphavgArg, l_sphavgElem,loArg
+      REAL    :: atomDiff(3)
 
       l_sphavgArg = .TRUE.
       IF(PRESENT(l_sphavg)) l_sphavgArg = l_sphavg
@@ -580,9 +583,11 @@ CONTAINS
          atomTypep = this%elem(i_gf)%atomTypep
          iContour  = this%elem(i_gf)%iContour
          l_sphavgElem  = this%elem(i_gf)%l_sphavg
+         atomDiff(:) = this%elem(i_gf)%atomDiff(:)
+
          IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
          iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                               uniqueMax=i_gf)
+                               atomDiff=atomDiff,uniqueMax=i_gf)
 
          IF(iUnique == i_gf) THEN
             IF(loArg) THEN
@@ -608,9 +613,10 @@ CONTAINS
          atomTypep = this%elem(ind)%atomTypep
          iContour  = this%elem(ind)%iContour
          l_sphavgElem = this%elem(ind)%l_sphavg
+         atomDiff(:) = this%elem(ind)%atomDiff(:)
 
          indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                               uniqueMax=ind)
+                               atomDiff=atomDiff,uniqueMax=ind)
       ENDIF
 
    END FUNCTION uniqueElements_gfinp
@@ -803,13 +809,13 @@ CONTAINS
          IF(this%elem(i_gf)%l_sphavg .neqv. l_sphavg) CYCLE
          !Check the phasefactor
          IF(PRESENT(atomDiff)) THEN
-            IF((this%elem(i_gf)%atomDiff(1)-atomDiff(1)).GT.1e-12.OR.&
-               (this%elem(i_gf)%atomDiff(2)-atomDiff(2)).GT.1e-12.OR.&
-               (this%elem(i_gf)%atomDiff(3)-atomDiff(3)).GT.1e-12) CYCLE
+            IF(ABS(this%elem(i_gf)%atomDiff(1)-atomDiff(1)).GT.1e-12.OR.&
+               ABS(this%elem(i_gf)%atomDiff(2)-atomDiff(2)).GT.1e-12.OR.&
+               ABS(this%elem(i_gf)%atomDiff(3)-atomDiff(3)).GT.1e-12) CYCLE
          ELSE
-            IF((this%elem(i_gf)%atomDiff(1)).GT.1e-12.OR.&
-               (this%elem(i_gf)%atomDiff(2)).GT.1e-12.OR.&
-               (this%elem(i_gf)%atomDiff(3)).GT.1e-12) CYCLE
+            IF(ABS(this%elem(i_gf)%atomDiff(1)).GT.1e-12.OR.&
+               ABS(this%elem(i_gf)%atomDiff(2)).GT.1e-12.OR.&
+               ABS(this%elem(i_gf)%atomDiff(3)).GT.1e-12) CYCLE
          ENDIF
          !If we are here and smaller than uniqueMax the element is not unique
          !i.e they only differ in the choice of the energy contour
