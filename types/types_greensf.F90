@@ -488,26 +488,42 @@ MODULE m_types_greensf
          ! Fetch the values
          !-------------------
          DO iz = 1, this%contour%nz
-            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * f(:,1,lp,spin2) + f(:,2,l,spin1) * f(:,2,lp,spin2)) &
-                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * g(:,1,lp,spin2) + g(:,2,l,spin1) * g(:,2,lp,spin2)) &
-                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin1) * f(:,1,lp,spin2) + g(:,2,l,spin1) * f(:,2,lp,spin2)) &
-                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin1) * g(:,1,lp,spin2) + f(:,2,l,spin1) * g(:,2,lp,spin2))
+            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * f(:,1,lp,spin1) + f(:,2,l,spin2) * f(:,2,lp,spin1)) &
+                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * g(:,1,lp,spin1) + g(:,2,l,spin2) * g(:,2,lp,spin1)) &
+                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin1)) &
+                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin1))
 
             IF(ALLOCATED(this%uulo)) THEN
                iLO_ind = 0
                DO ilo = 1, atoms%nlo(atomType)
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLO_ind = iLO_ind + 1
-                  gmat(:,iz) = gmat(:,iz) + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (f(:,1,l,spin1) *flo(:,1,ilo,spin2) + f(:,2,l,spin1) *flo(:,2,ilo,spin2)) &
-                                          + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (flo(:,1,ilo,spin1)*f(:,1,lp,spin2) + flo(:,2,ilo,spin1)*f(:,2,lp,spin2)) &
-                                          + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (g(:,1,l,spin1) *flo(:,1,ilo,spin2) + g(:,2,l,spin1) *flo(:,2,ilo,spin2)) &
-                                          + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * (flo(:,1,ilo,spin1)*f(:,1,lp,spin2) + flo(:,2,ilo,spin1)*f(:,2,lp,spin2))
+                  gmat(:,iz) = gmat(:,iz) &
+                              + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( f(:,1,lp,spin1) *flo(:,1,ilo,spin2) &
+                                                                                   +f(:,2,lp,spin1) *flo(:,2,ilo,spin2))&
+                              + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( g(:,1,lp,spin1) *flo(:,1,ilo,spin2) &
+                                                                                   +g(:,2,lp,spin1) *flo(:,2,ilo,spin2))
+               ENDDO
+               iLO_ind = 0
+               DO ilo = 1, atoms%nlo(atomTypep)
+                  IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                  iLO_ind = iLO_ind + 1
+                  gmat(:,iz) = gmat(:,iz) &
+                              + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1)*f(:,1,l,spin2) &
+                                                                                   +flo(:,2,ilo,spin1)*f(:,2,l,spin2))&
+                              + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1)*g(:,1,l,spin2) &
+                                                                                   +flo(:,2,ilo,spin1)*g(:,2,l,spin2))
+               ENDDO
+               iLO_ind = 0
+               DO ilo = 1, atoms%nlo(atomType)
+                  IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLOp_ind = 0
-                  DO ilop = 1, atoms%nlo(atomType)
-                     IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                  DO ilop = 1, atoms%nlo(atomTypep)
+                     IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
                      iLOp_ind = iLOp_ind + 1
-                     gmat(:,iz) = gmat(:,iz) + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
-                                              * (flo(:,1,ilo,spin1)*flo(:,1,ilop,spin2) + flo(:,2,ilo,spin1)*flo(:,2,ilop,spin2))
+                     gmat(:,iz) = gmat(:,iz) &
+                                 + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) *( flo(:,1,ilo,spin2)*flo(:,1,ilop,spin1) &
+                                                                                                 +flo(:,2,ilo,spin2)*flo(:,2,ilop,spin1))
                   ENDDO
                ENDDO
             ENDIF
