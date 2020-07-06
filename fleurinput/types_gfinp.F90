@@ -307,7 +307,7 @@ CONTAINS
             IF(numberNodes==1) THEN
                xPathA = TRIM(ADJUSTL(xPathA))//'/matrixElements'
                DO l = 0,lmaxU_const
-                  str = xml%GetAttributeValue(TRIM(xPathA)//'/@'//spdf(l))
+                  str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
                   READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
