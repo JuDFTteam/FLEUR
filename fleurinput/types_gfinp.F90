@@ -461,6 +461,8 @@ CONTAINS
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
+      TYPE(t_gfelementtype) :: gfelem(this%n)
+
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -485,12 +487,18 @@ CONTAINS
             written(atomType) = .TRUE.
          ENDIF
       ENDDO
+      !After this point there are no new green's function elements to be added
 
       !Reallocate with correct size
       hiaElem = this%hiaElem(:atoms%n_hia)
       IF(ALLOCATED(this%hiaElem)) DEALLOCATE(this%hiaElem)
       ALLOCATE(this%hiaElem(atoms%n_hia))
       this%hiaElem = hiaElem
+
+      gfelem = this%elem(:this%n)
+      IF(ALLOCATED(this%elem)) DEALLOCATE(this%elem)
+      ALLOCATE(this%elem(this%n))
+      this%elem = gfelem
 
       !Input checks
       IF(l_write) THEN
@@ -839,13 +847,11 @@ CONTAINS
          DO i = lastIndex, numNearestNeighbors
             lastIndex = i
             IF(ABS(nearestNeighborDists(i)-minDist).GT.1e-12) EXIT !Because the list is sorted
-            WRITE(*,*) nearestNeighborDiffs(:,i)
             !l_sphavg has to be false
             i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=nearestNeighbors(i),&
                              atomDiff=nearestNeighborDiffs(:,i),l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
 
-            IF(i_gf==4) CALL juDFT_error("??")
             this%elem(i_gf)%refCutoff = refCutoff
 
             IF(l_write) THEN
