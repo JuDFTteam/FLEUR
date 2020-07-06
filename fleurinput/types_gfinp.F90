@@ -265,7 +265,7 @@ CONTAINS
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       n_hia = 0
 
-      ALLOCATE(this%elem((lmaxU_const+1)**2*ntype))
+      ALLOCATE(this%elem((lmaxU_const+1)**2*27*ntype)) !27 because of intersite
       ALLOCATE(this%hiaElem(4*ntype))
       ALLOCATE(this%numTorgueElems(ntype),source=0)
       ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
@@ -440,27 +440,31 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco,input,l_write)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input,l_write)
 
       USE m_types_atoms
       USE m_types_sym
       USE m_types_noco
       USE m_types_input
+      USE m_types_cell
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_input),    INTENT(IN)     :: input
       LOGICAL,          INTENT(IN)     :: l_write
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour
+      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
+      LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
 
       IF(this%n==0) RETURN !Nothing to do here
 
+      written = .FALSE.
       !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
          l  = this%elem(i_gf)%l
@@ -468,12 +472,17 @@ CONTAINS
          atomType  = this%elem(i_gf)%atomType
          atomTypep = this%elem(i_gf)%atomTypep
          iContour = this%elem(i_gf)%iContour
+         refCutoff = this%elem(i_gf)%refCutoff
+         refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
+                                                         !we take the onsite element as reference
 
          IF(atomTypep==-1) THEN
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(1,l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,this%elem(i_gf)%refCutoff,atoms,sym)
+                                           this%elem(i_gf)%fixedCutoff,refCutoff,&
+                                           atoms,cell,l_write.AND..NOT.written(atomType))
+            written(atomType) = .TRUE.
          ENDIF
       ENDDO
 
@@ -540,6 +549,18 @@ CONTAINS
             ENDIF
          ENDIF
       ENDIF
+
+#ifdef CPP_DEBUG
+      IF(l_write) THEN
+         WRITE(*,*) "Green's Function Elements: "
+         WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
+         DO i_gf = 1, this%n
+            WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+                                             this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
+                                             this%elem(i_gf)%atomDiff(:)
+         ENDDO
+      ENDIF
+#endif
 
    END SUBROUTINE init_gfinp
 
@@ -688,12 +709,15 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,refCutoff,atoms,sym)
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
+                                          refCutoff,atoms,cell,l_write)
 
       USE m_types_atoms
-      USE m_types_sym
+      USE m_types_cell
+      USE m_sort
 
-      !TODO: atoms outside the unit cell
+      !This is essentially a simplified version of chkmt, because we have a given
+      !reference atom and do not need to consider all distances between all atoms
 
       CLASS(t_gfinp),   INTENT(INOUT)  :: this
       INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
@@ -705,38 +729,131 @@ CONTAINS
       REAL,             INTENT(IN)     :: fixedCutoff
       INTEGER,          INTENT(IN)     :: refCutoff
       TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_sym),      INTENT(IN)     :: sym
+      TYPE(t_cell),     INTENT(IN)     :: cell
+      LOGICAL,          INTENT(IN)     :: l_write
 
-      INTEGER :: ishell,natomp,i_gf
-      REAL :: minDist
-      REAL, ALLOCATABLE :: dist(:)
+      INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
+      INTEGER :: numNearestNeighbors,ishell,lastIndex
+      REAL :: currentDist,iNeighborAtom,minDist,i_gf
+      REAL :: amatAux(3,3), invAmatAux(3,3)
+      REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
+      REAL :: refPos(3),point(3),pos(3)
+      REAL :: currentDiff(3),offsetPos(3)
 
-      IF(sym%nop>1) CALL juDFT_error("nearest neighbour GF + symmetries not implemented",&
-                                     calledby="addNearestNeighbours_gfelem")
+      INTEGER, ALLOCATABLE :: nearestNeighbors(:)
+      INTEGER, ALLOCATABLE :: neighborAtoms(:)
+      INTEGER, ALLOCATABLE :: distIndexList(:)
+      REAL,    ALLOCATABLE :: nearestNeighborDists(:)
+      REAL,    ALLOCATABLE :: nearestNeighborDiffs(:,:)
+      REAL,    ALLOCATABLE :: neighborAtomsDiff(:,:)
+      REAL,    ALLOCATABLE :: sqrDistances(:)
 
-      ALLOCATE(dist(atoms%nat),source=0.0)
-      DO natomp = 1, atoms%nat
-         dist(natomp) = SQRT((atoms%taual(1,natomp) - atoms%taual(1,refAtom))**2 + &
-                             (atoms%taual(2,natomp) - atoms%taual(2,refAtom))**2 + &
-                             (atoms%taual(3,natomp) - atoms%taual(3,refAtom))**2)
-         IF(ABS(dist(natomp)).LT.1e-12) dist(natomp) = 9e99 !The atom itself was already added
-      ENDDO
 
-      ishell = 0
-      DO WHILE(ishell<=nshells)
-         !search for the atoms with the current minimal distance
-         minDist = MINVAL(dist)
-         DO natomp = 1, atoms%nat
-            IF(ABS(dist(natomp)-minDist).LT.1e-12) THEN
-               !Add the element to the gfinp%elem array
-               this%elem(this%n)%atomDiff = atoms%taual(:,natomp) - atoms%taual(:,refAtom)
-               !cannot be spherically averaged
-               i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=natomp,l_fixedCutoffset=l_fixedCutoffset,&
-                                fixedCutoff=fixedCutoff)
-               this%elem(i_gf)%refCutoff = refCutoff
-               dist(natomp) = 9e99 !Eliminate from the list
+!     1. For the 1st version the auxiliary unit cell is just a copy of the original unit cell with
+!        all atoms within the cell.
+
+      DO i = 1, 3
+         DO j = 1, 3
+            amatAux(i,j) = cell%amat(i,j)
+         END DO
+      END DO
+
+      DO i = 1, atoms%nat
+         taualAux(1,i) = atoms%taual(1,i) - FLOOR(atoms%taual(1,i))
+         taualAux(2,i) = atoms%taual(2,i) - FLOOR(atoms%taual(2,i))
+         taualAux(3,i) = atoms%taual(3,i) - FLOOR(atoms%taual(3,i))
+         posAux(:,i) = MATMUL(amatAux,taualAux(:,i))
+      END DO
+
+
+
+!     5. For the reference atom in auxiliary unit cell collect shortest distances
+!        to other atoms in neighborhood
+
+      ALLOCATE(sqrDistances(27*atoms%nat)) ! Formally 27, but 8 should be enough due to maxSqrDist
+      ALLOCATE(neighborAtoms(27*atoms%nat))
+      ALLOCATE(neighborAtomsDiff(3,27*atoms%nat))
+      ALLOCATE(distIndexList(27*atoms%nat))
+      ALLOCATE (nearestNeighbors(27*atoms%nat))
+      ALLOCATE (nearestNeighborDists(27*atoms%nat))
+      ALLOCATE (nearestNeighborDiffs(3,27*atoms%nat))
+      iAtom = 0
+      DO n = 1, atoms%ntype
+         DO na = 1, atoms%neq(n)
+            iAtom = iAtom + 1
+            IF((n.EQ.refAtom).AND.na.EQ.1) THEN
+               refPos(:) = posAux(:,iAtom)
             ENDIF
          ENDDO
+      ENDDO
+      neighborAtoms = 0
+      iNeighborAtom = 0
+      identicalAtoms = 0
+      DO i = -1, 1
+         DO j = -1, 1
+            DO k = -1, 1
+               DO m = 1, 3
+                  offsetPos(m) = i*amatAux(m,1) + j*amatAux(m,2) + k*amatAux(m,3)
+               END DO
+               iAtom = 0
+               DO n = 1, atoms%ntype
+                  DO na = 1, atoms%neq(n)
+                     iAtom = iAtom + 1
+                     pos(:) = posAux(:,iAtom) + offsetPos(:)
+                     currentDist = (refPos(1) - pos(1))**2 + &
+                                   (refPos(2) - pos(2))**2 + &
+                                   (refPos(3) - pos(3))**2
+                     currentDiff = refPos(:) - pos(:)
+                     IF (currentDist.LT.0.000001) THEN
+                        identicalAtoms = identicalAtoms + 1
+                     ELSE
+                        iNeighborAtom = iNeighborAtom + 1
+                        neighborAtoms(iNeighborAtom) = n
+                        neighborAtomsDiff(:,iNeighborAtom) = currentDiff(:)
+                        sqrDistances(iNeighborAtom) = currentDist
+                     END IF
+                  ENDDO
+               END DO
+            END DO
+         END DO
+      END DO
+      IF (identicalAtoms.GT.1) THEN
+         WRITE(*,*) 'Position: ', refPos(:)
+         CALL juDFT_error("Too many atoms at same position.",calledby ="addNearestNeighbours_gfelem")
+      END IF
+      numNearestNeighbors = iNeighborAtom
+      CALL sort(distIndexList(:iNeighborAtom),sqrDistances(:iNeighborAtom))
+      DO i = 1, numNearestNeighbors
+         nearestNeighbors(i) = neighborAtoms(distIndexList(i))
+         nearestNeighborDists(i) = SQRT(sqrDistances(distIndexList(i)))
+         nearestNeighborDiffs(:,i) = neighborAtomsDiff(:,distIndexList(i))
+      END DO
+      ishell = 0
+      lastIndex = 1
+      DO WHILE(ishell<=nshells)
+         !search for the atoms with the current minimal distance
+         minDist = MINVAL(nearestNeighborDists(:numNearestNeighbors))
+         IF(l_write) THEN
+            WRITE(oUnit,'(/,A,f14.8)') 'Adding shell with distance: ', minDist
+         ENDIF
+         DO i = lastIndex, numNearestNeighbors
+            lastIndex = i
+            IF(ABS(nearestNeighborDists(i)-minDist).GT.1e-12) EXIT !Because the list is sorted
+            WRITE(*,*) nearestNeighborDiffs(:,i)
+            !l_sphavg has to be false
+            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=nearestNeighbors(i),&
+                             atomDiff=nearestNeighborDiffs(:,i),l_fixedCutoffset=l_fixedCutoffset,&
+                             fixedCutoff=fixedCutoff)
+
+            IF(i_gf==4) CALL juDFT_error("??")
+            this%elem(i_gf)%refCutoff = refCutoff
+
+            IF(l_write) THEN
+               WRITE(oUnit,'(A,I6,I6,3f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i)
+            ENDIF
+
+         ENDDO
+
          ishell = ishell + 1
       ENDDO
 
