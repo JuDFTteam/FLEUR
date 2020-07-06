@@ -514,7 +514,7 @@ CONTAINS
 
          IF(l_inter) THEN
             IF(sym%nop>1) THEN
-                  CALL juDFT_error("Symmetries and intersite Green's Function not implemented",&
+                  CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
                                    calledby="init_gfinp")
             ELSE IF(l_interAvg) THEN
                CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
