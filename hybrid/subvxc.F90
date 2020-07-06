@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybdat,&
-                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
+                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx, nk)
 
       USE m_judft
       USE m_types
@@ -41,7 +41,7 @@ CONTAINS
       TYPE(t_mat), INTENT(INOUT) :: hmat
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN) :: jsp
+      INTEGER, INTENT(IN) :: jsp, nk
 
       ! Array Arguments
       REAL, INTENT(IN) :: vr0(:,:,:)               ! just for radial functions
@@ -54,7 +54,7 @@ CONTAINS
       INTEGER               ::  nlharm, nnbas, typsym, lm
       INTEGER               ::  noded, nodeu
       INTEGER               ::  nbasf0
-      INTEGER               ::  i, j, l, ll, l1, l2, m1, m2, j1, j2
+      INTEGER               ::  i, j, j0, l, ll, l1, l2, m1, m2, j1, j2
       INTEGER               ::  ok, p1, p2, lh, mh, pp1, pp2
       INTEGER               ::  igrid, itype, ilharm, istar
       INTEGER               ::  ineq, iatom, ilo, ilop, ieq, icentry
@@ -265,16 +265,18 @@ CONTAINS
 
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
             call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
-            if(vxc%l_real) then 
-               DO j = 1, lapw%nv(jsp)
-                  DO i = 1, j
-                     vxc%data_r(i,j) = vxc%data_r(i,j) + real(carr1(i, j))
+            if(vxc%l_real) then
+               do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+                  j0=(j-1)/fmpi%n_size+1
+                  do i = 1,MIN(j,lapw%nv(jsp))  
+                     vxc%data_r(i,j0) = vxc%data_r(i,j0) + real(carr1(i, j))
                   END DO
                END DO
             else
-               DO j = 1, lapw%nv(jsp)
-                  DO i = 1, j
-                     vxc%data_c(i,j) = vxc%data_c(i,j) + carr1(i, j)
+               do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+                  j0=(j-1)/fmpi%n_size+1
+                  do i = 1,MIN(j,lapw%nv(jsp))
+                     vxc%data_c(i,j0) = vxc%data_c(i,j0) + carr1(i, j)
                   END DO
                END DO
             endif
