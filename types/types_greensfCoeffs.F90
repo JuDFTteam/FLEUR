@@ -299,7 +299,7 @@ MODULE m_types_greensfCoeffs
             IF(ALLOCATED(this%uulo)) THEN
                IF(nLO>0) THEN
                   IF(SIZE(this%uulo,6)==2) THEN
-                     DO jspin = 1, SIZE(this%uulo,5)
+                     DO jspin = 1, SIZE(this%uulo,6)
                         this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
                                                                                    * this%uulo(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin)
                         this%ulou(:,-lmaxU_const:,-lmaxU_const:,:,i_elemLO,jspin) = this%scalingFactorRadial(i_elem,jspin) &
