@@ -50,7 +50,7 @@ CONTAINS
       REAL, INTENT(IN) :: bk(:)
 
       ! Local Scalars
-      INTEGER               ::  ic, indx, m, ig1, ig1_loc, ig2, n, nn
+      INTEGER               ::  ic, indx, m, ig1, ig1_loc, ig2, n, n_loc, nn
       INTEGER               ::  nlharm, nnbas, typsym, lm
       INTEGER               ::  noded, nodeu
       INTEGER               ::  nbasf0
@@ -538,12 +538,14 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       call timestart("apply to hmat")
-      DO n = 1, hmat%matsize1
-         DO nn = 1, n
+      ! DO n = 1, hmat%matsize1
+      do n = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
+         n_loc = (n-1) / fmpi%n_size + 1
+         DO nn = 1,MIN(n,hmat%matsize1)  
             IF (hmat%l_real) THEN
-               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*REAL(vxc%data_r(nn,n))
+               hmat%data_r(nn, n_loc) = hmat%data_r(nn, n_loc) - a_ex * REAL(vxc%data_r(nn,n_loc))
             ELSE
-               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*vxc%data_c(nn,n)
+               hmat%data_c(nn, n_loc) = hmat%data_c(nn, n_loc) - a_ex *      vxc%data_c(nn,n_loc)
             ENDIF
          END DO
       END DO
