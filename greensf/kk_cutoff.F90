@@ -118,66 +118,33 @@ MODULE m_kk_cutoff
 
    END SUBROUTINE kk_cutoff
 
-   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,atoms,vTot,enpara,fmpi,hub1inp,&
-                              l_mperp,l,atomType,input,eMesh,cutoff,scalingFactor)
+   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,usdus,denCoeffsOffDiag,l_mperp,&
+                              l,atomType,input,eMesh,cutoff,scalingFactor)
 
-      USE m_genMTBasis
-      USE m_radovlp
-
-      REAL,                INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
-      REAL,                INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
-      TYPE(t_noco),        INTENT(IN)     :: noco
-      TYPE(t_atoms),       INTENT(IN)     :: atoms
-      TYPE(t_potden),      INTENT(IN)     :: vTot
-      TYPE(t_enpara),      INTENT(IN)     :: enpara
-      TYPE(t_mpi),         INTENT(IN)     :: fmpi
-      TYPE(t_hub1inp),     INTENT(IN)     :: hub1inp
-      LOGICAL,             INTENT(IN)     :: l_mperp
-      INTEGER,             INTENT(IN)     :: l
-      INTEGER,             INTENT(IN)     :: atomType
-      TYPE(t_input),       INTENT(IN)     :: input
-      REAL,                INTENT(IN)     :: eMesh(:)
-      INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
-      REAL,                INTENT(INOUT)  :: scalingFactor(:)
+      REAL,                      INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_usdus),             INTENT(IN)     :: usdus
+      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
+      LOGICAL,                   INTENT(IN)     :: l_mperp
+      INTEGER,                   INTENT(IN)     :: l
+      INTEGER,                   INTENT(IN)     :: atomType
+      TYPE(t_input),             INTENT(IN)     :: input
+      REAL,                      INTENT(IN)     :: eMesh(:)
+      INTEGER,                   INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                      INTENT(INOUT)  :: scalingFactor(:)
 
       REAL, ALLOCATABLE :: im(:,:,:,:)
-      REAL, ALLOCATABLE :: f(:,:,:,:)
-      REAL, ALLOCATABLE :: g(:,:,:,:)
-      REAL, ALLOCATABLE :: flo(:,:,:,:)
-      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
 
-      TYPE(t_usdus)            :: usdus
       INTEGER :: jspin,m,mp
-
-      ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
-      ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
-      ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
-
-      ! Initializations
-      CALL usdus%init(atoms,input%jspins)
-      !Generate the scalar products we need
-      DO jspin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,fmpi,atomType,jspin,usdus,f,g,flo,&
-                         hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
-      ENDDO
-      DEALLOCATE(f,g,flo)
-      !Offdiagonal scalar products
-      IF(l_mperp) THEN
-         !Calculate overlap integrals
-         ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         CALL rad_ovlp(atoms,usdus,input,hub1inp,vTot%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-      ENDIF
 
       !calculate the spherical average from the original greens function
       ALLOCATE(im(SIZE(uu,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(uu,4)),source=0.0)
       DO jspin = 1, SIZE(im,4)
          !$OMP parallel do default(none) &
-         !$OMP shared(usdus,uun21,udn21,dun21,ddn21,jspin,l,atomType,im,uu,ud,du,dd) &
+         !$OMP shared(usdus,denCoeffsOffDiag,jspin,l,atomType,im,uu,ud,du,dd) &
          !$OMP private(m,mp) collapse(2)
          DO m = -l,l
             DO mp = -l,l
@@ -185,10 +152,10 @@ MODULE m_kk_cutoff
                   im(:,m,mp,jspin) =  uu(:,m,mp,jspin) &
                                     + dd(:,m,mp,jspin) * usdus%ddn(l,atomType,jspin)
                ELSE
-                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) * uun21(l,atomType) &
-                                    + ud(:,m,mp,jspin) * udn21(l,atomType) &
-                                    + du(:,m,mp,jspin) * dun21(l,atomType) &
-                                    + dd(:,m,mp,jspin) * ddn21(l,atomType)
+                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) * denCoeffsOffDiag%uu21n(l,atomType) &
+                                    + ud(:,m,mp,jspin) * denCoeffsOffDiag%ud21n(l,atomType) &
+                                    + du(:,m,mp,jspin) * denCoeffsOffDiag%du21n(l,atomType) &
+                                    + dd(:,m,mp,jspin) * denCoeffsOffDiag%dd21n(l,atomType)
                ENDIF
             ENDDO
          ENDDO

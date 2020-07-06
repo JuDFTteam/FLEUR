@@ -27,20 +27,19 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,vTot,enpara,fmpi,hub1inp,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
 
-      TYPE(t_atoms),          INTENT(IN)     :: atoms
-      TYPE(t_gfinp),          INTENT(IN)     :: gfinp
-      TYPE(t_sym),            INTENT(IN)     :: sym
-      TYPE(t_noco),           INTENT(IN)     :: noco
-      TYPE(t_input),          INTENT(IN)     :: input
-      TYPE(t_potden),         INTENT(IN)     :: vTot
-      TYPE(t_enpara),         INTENT(IN)     :: enpara
-      TYPE(t_hub1inp),        INTENT(IN)     :: hub1inp
-      TYPE(t_mpi),            INTENT(IN)     :: fmpi
-      REAL,                   INTENT(IN)     :: ef
-      TYPE(t_greensfImagPart),INTENT(INOUT)  :: greensfImagPart
-      TYPE(t_greensf),        INTENT(INOUT)  :: g(:)
+      TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_gfinp),             INTENT(IN)     :: gfinp
+      TYPE(t_sym),               INTENT(IN)     :: sym
+      TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_usdus),             INTENT(IN)     :: usdus
+      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
+      TYPE(t_input),             INTENT(IN)     :: input
+      TYPE(t_mpi),               INTENT(IN)     :: fmpi
+      REAL,                      INTENT(IN)     :: ef
+      TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
+      TYPE(t_greensf),           INTENT(INOUT)  :: g(:)
 
       INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique,nLO,iLO,iLOp,i_elemLO
       INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep,refCutoff
@@ -92,7 +91,7 @@ MODULE m_greensfCalcRealPart
                      !Onsite element with radial dependence
                      CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
                                           greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
-                                          noco,atoms,vTot,enpara,fmpi,hub1inp,gfinp%l_mperp,l,nType,input,eMesh,&
+                                          noco,usdus,denCoeffsOffDiag,gfinp%l_mperp,l,nType,input,eMesh,&
                                           greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
                ELSE IF (l_fixedCutoffset) THEN

@@ -50,26 +50,7 @@ MODULE m_greensfPostProcess
       INTEGER(HID_T) :: greensf_fileID
 #endif
 
-      !--------------------------------------------------------------------------------
-      ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
-      !--------------------------------------------------------------------------------
-      CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,vTot,enpara,mpi,hub1inp,results%ef,&
-                               greensfImagPart,greensFunction)
-      CALL timestop("Green's Function: Real Part")
-
       IF(mpi%irank==0) THEN
-         CALL timestart("Green's Function: Postprocess")
-         !-------------------------------------------------------------
-         ! Calculate various properties from the greens function
-         !-------------------------------------------------------------
-         !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
-         IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-           CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
-         ENDIF
-
-         CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
-
          IF(gfinp%checkRadial()) THEN
             CALL timestart("Green's Function: Radial Functions")
             ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
@@ -114,6 +95,27 @@ MODULE m_greensfPostProcess
             ENDDO
             CALL timestop("Green's Function: Radial Functions")
          ENDIF
+      ENDIF
+      !--------------------------------------------------------------------------------
+      ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
+      !--------------------------------------------------------------------------------
+      CALL timestart("Green's Function: Real Part")
+      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
+                               greensfImagPart,greensFunction)
+      CALL timestop("Green's Function: Real Part")
+
+      IF(mpi%irank==0) THEN
+         CALL timestart("Green's Function: Postprocess")
+         !-------------------------------------------------------------
+         ! Calculate various properties from the greens function
+         !-------------------------------------------------------------
+         !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
+         IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
+           CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
+         ENDIF
+
+         CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
+
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
