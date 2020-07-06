@@ -50,11 +50,11 @@ CONTAINS
       REAL, INTENT(IN) :: bk(:)
 
       ! Local Scalars
-      INTEGER               ::  ic, indx, m, ig1, ig2, n, nn
+      INTEGER               ::  ic, indx, m, ig1, ig1_loc, ig2, n, nn
       INTEGER               ::  nlharm, nnbas, typsym, lm
       INTEGER               ::  noded, nodeu
       INTEGER               ::  nbasf0
-      INTEGER               ::  i, j, j0, l, ll, l1, l2, m1, m2, j1, j2
+      INTEGER               ::  i, j, j_loc, l, ll, l1, l2, m1, m2, j1, j2
       INTEGER               ::  ok, p1, p2, lh, mh, pp1, pp2
       INTEGER               ::  igrid, itype, ilharm, istar
       INTEGER               ::  ineq, iatom, ilo, ilop, ieq, icentry
@@ -267,16 +267,16 @@ CONTAINS
             call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
             if(vxc%l_real) then
                do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
-                  j0=(j-1)/fmpi%n_size+1
+                  j_loc=(j-1)/fmpi%n_size+1
                   do i = 1,MIN(j,lapw%nv(jsp))  
-                     vxc%data_r(i,j0) = vxc%data_r(i,j0) + real(carr1(i, j))
+                     vxc%data_r(i,j_loc) = vxc%data_r(i,j_loc) + real(carr1(i, j))
                   END DO
                END DO
             else
                do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
-                  j0=(j-1)/fmpi%n_size+1
+                  j_loc=(j-1)/fmpi%n_size+1
                   do i = 1,MIN(j,lapw%nv(jsp))
-                     vxc%data_c(i,j0) = vxc%data_c(i,j0) + carr1(i, j)
+                     vxc%data_c(i,j_loc) = vxc%data_c(i,j_loc) + carr1(i, j)
                   END DO
                END DO
             endif
@@ -293,15 +293,19 @@ CONTAINS
       ! Calculate vxc-matrix,  left basis function (ig1)
       !                        right basis function (ig2)
       call timestart("Calculate vxc-matrix")
-      DO ig1 = 1, lapw%nv(jsp)
-         DO ig2 = 1, ig1
+      ! DO ig1 = 1, lapw%nv(jsp)
+      !    DO ig2 = 1, ig1
+
+      do ig1 = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+         ig1_loc = (ig1-1)/fmpi%n_size+1
+         do ig2 = 1,min(ig1, lapw%nv(jsp))
             gg = lapw%gvec(:,ig1,jsp) - lapw%gvec(:,ig2,jsp)
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
                if(vxc%l_real) then 
-                  vxc%data_r(ig2,ig1) = vxc%data_r(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+                  vxc%data_r(ig2,ig1_loc) = vxc%data_r(ig2,ig1_loc) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
                else
-                  vxc%data_c(ig2,ig1) = vxc%data_c(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+                  vxc%data_c(ig2,ig1_loc) = vxc%data_c(ig2,ig1_loc) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
                endif
             ELSE
                IF (fmpi%irank == 0) THEN
