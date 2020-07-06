@@ -116,13 +116,19 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: energyWeightsSpaceID, energyWeightsSetID
       INTEGER(HID_T)    :: uDataSpaceID,uDataSetID
       INTEGER(HID_T)    :: udotDataSpaceID,udotDataSetID
+      INTEGER(HID_T)    :: loGroupID,currentloGroupID
+      INTEGER(HID_T)    :: uuloDataSpaceID,uuloDataSetID
+      INTEGER(HID_T)    :: ulouDataSpaceID,ulouDataSetID
+      INTEGER(HID_T)    :: duloDataSpaceID,duloDataSetID
+      INTEGER(HID_T)    :: ulodDataSpaceID,ulodDataSetID
+      INTEGER(HID_T)    :: uloulopDataSpaceID,uloulopDataSetID
 
 
       CHARACTER(len=30) :: elementName, groupName, shapeStr
       INTEGER           :: hdfError
       INTEGER           :: dimsInt(7)
       INTEGER           :: ispin,m,l,lp,atomType,atomTypep,jspinsOut,iContour
-      INTEGER           :: i_elem,n_elem,i,iContourOut
+      INTEGER           :: i_elem,n_elem,i,iContourOut,nLO,iLo,iLOp
       INTEGER(HSIZE_T)  :: dims(7)
       REAL              :: trc(MERGE(3,input%jspins,gfinp%l_mperp)),atomDiff(3)
       LOGICAL           :: l_sphavg,l_onsite
@@ -243,6 +249,8 @@ MODULE m_greensf_io
          CALL io_write_attint0(currentelementGroupID,'iContour',iContour)
          CALL io_write_attlog0(currentelementGroupID,'l_onsite',l_onsite)
          CALL io_write_attlog0(currentelementGroupID,'l_sphavg',l_sphavg)
+         nLO = greensf(i_elem)%elem%countLOs(atoms)
+         CALL io_write_attint0(currentelementGroupID,'numLOs',nLO)
 
          IF(l_onsite) THEN !Was only calculated for onsite elements
             !Trace of occupation matrix
@@ -318,6 +326,68 @@ MODULE m_greensf_io
             CALL h5sclose_f(ddDataSpaceID,hdfError)
             CALL io_write_complex5(ddDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%dd)
             CALL h5dclose_f(ddDataSetID, hdfError)
+
+            !--> Start: LO contributions
+            IF(nLO>0) THEN
+               CALL h5gcreate_f(currentelementGroupID, 'LOcontribution', loGroupID, hdfError)
+               DO iLO = 1, nLO
+                  WRITE(elementName,300) iLO
+300               FORMAT('LO-',i0)
+                  CALL h5gcreate_f(loGroupID, elementName, currentloGroupID, hdfError)
+
+                  !uulo
+                  dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
+                  dimsInt=dims
+                  CALL h5screate_simple_f(6,dims(:6),uuloDataSpaceID,hdfError)
+                  CALL h5dcreate_f(currentloGroupID, "UULO", H5T_NATIVE_DOUBLE, uuloDataSpaceID, uuloDataSetID, hdfError)
+                  CALL h5sclose_f(uuloDataSpaceID,hdfError)
+                  CALL io_write_complex5(uuloDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%uulo(:,:,:,iLO,:,:))
+                  CALL h5dclose_f(uuloDataSetID, hdfError)
+
+                  !ulou
+                  dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
+                  dimsInt=dims
+                  CALL h5screate_simple_f(6,dims(:6),ulouDataSpaceID,hdfError)
+                  CALL h5dcreate_f(currentloGroupID, "ULOU", H5T_NATIVE_DOUBLE, ulouDataSpaceID, ulouDataSetID, hdfError)
+                  CALL h5sclose_f(ulouDataSpaceID,hdfError)
+                  CALL io_write_complex5(ulouDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%ulou(:,:,:,iLO,:,:))
+                  CALL h5dclose_f(ulouDataSetID, hdfError)
+
+                  !uulo
+                  dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
+                  dimsInt=dims
+                  CALL h5screate_simple_f(6,dims(:6),duloDataSpaceID,hdfError)
+                  CALL h5dcreate_f(currentloGroupID, "DULO", H5T_NATIVE_DOUBLE, duloDataSpaceID, duloDataSetID, hdfError)
+                  CALL h5sclose_f(duloDataSpaceID,hdfError)
+                  CALL io_write_complex5(duloDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%dulo(:,:,:,iLO,:,:))
+                  CALL h5dclose_f(duloDataSetID, hdfError)
+
+                  !ulou
+                  dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
+                  dimsInt=dims
+                  CALL h5screate_simple_f(6,dims(:6),ulodDataSpaceID,hdfError)
+                  CALL h5dcreate_f(currentloGroupID, "ULOD", H5T_NATIVE_DOUBLE, ulodDataSpaceID, ulodDataSetID, hdfError)
+                  CALL h5sclose_f(ulodDataSpaceID,hdfError)
+                  CALL io_write_complex5(ulodDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%ulod(:,:,:,iLO,:,:))
+                  CALL h5dclose_f(ulodDataSetID, hdfError)
+
+                  DO iLop = 1, nLO
+                     WRITE(elementName,400) iLop
+400                  FORMAT('ULOULOP-',i0)
+                     !uloulop
+                     dims(:6)=[2,greensf(i_elem)%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut,2]
+                     dimsInt=dims
+                     CALL h5screate_simple_f(6,dims(:6),uloulopDataSpaceID,hdfError)
+                     CALL h5dcreate_f(currentloGroupID, elementName, H5T_NATIVE_DOUBLE, uloulopDataSpaceID, uloulopDataSetID, hdfError)
+                     CALL h5sclose_f(uloulopDataSpaceID,hdfError)
+                     CALL io_write_complex5(uloulopDataSetID,[-1,1,1,1,1,1],dimsInt(:6),greensf(i_elem)%uloulop(:,:,:,iLO,iLOp,:,:))
+                     CALL h5dclose_f(uloulopDataSetID, hdfError)
+                  ENDDO
+                  CALL h5gclose_f(currentloGroupID, hdfError)
+               ENDDO
+               CALL h5gclose_f(loGroupID, hdfError)
+            ENDIF
+            !--> End: LO contributions
 
             IF(PRESENT(u)) THEN
                dims(:5)=[atoms%jmtd,2,2,2,input%jspins]
