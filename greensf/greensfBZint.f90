@@ -90,7 +90,7 @@ MODULE m_greensfBZint
             DO natomp = natomp_start, natomp_end
 
                !Phase factor for intersite elements (Does nothing atm)
-               IF(ANY(atomDiff.GT.1e-12)) THEN
+               IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
                   phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),atomDiff(:)))
                ELSE
                   phase = cmplx_1
@@ -119,7 +119,7 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp.AND.ALL(atomDiff.LT.1e-12),&
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp.AND.ALL(ABS(atomDiff).LT.1e-12),&
                                   l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                ENDDO
 

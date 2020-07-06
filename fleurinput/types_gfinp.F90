@@ -501,7 +501,7 @@ CONTAINS
             atomTypep = this%elem(i_gf)%atomTypep
             l_sphavg  = this%elem(i_gf)%l_sphavg
             atomDiff  = this%elem(i_gf)%atomDiff
-            IF(atomType.NE.atomTypep.OR.ANY(atomDiff.GT.1e-12)) THEN
+            IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
                l_inter = .TRUE.
                IF(l_sphavg) l_interAvg = .TRUE.
             ENDIF

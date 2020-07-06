@@ -79,7 +79,7 @@ MODULE m_greensfCalcRealPart
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
                !Is the current element suitable for automatic finding of the cutoff
-               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.ALL(atomDiff(:).LT.1e-12)
+               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.ALL(ABS(atomDiff(:)).LT.1e-12)
                IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND. g(i_gf)%elem%countLOs(atoms)==0) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
