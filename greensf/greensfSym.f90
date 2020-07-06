@@ -88,6 +88,7 @@ MODULE m_greensfSym
          ENDDO
       ENDDO
       !$OMP end do
+      DEALLOCATE(imSym)
       !$OMP end parallel
 
    END SUBROUTINE greensfSym
