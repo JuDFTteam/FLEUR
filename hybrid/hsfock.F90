@@ -157,6 +157,7 @@ CONTAINS
          ! call judft_error("stopit: add_Vnonl")
 
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
+         call hybdat%v_x(nk, jsp)%u2l()
          hybdat%l_addhf = .True.
       endif
       call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
