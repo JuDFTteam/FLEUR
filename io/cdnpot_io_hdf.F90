@@ -263,10 +263,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ft2_gfxSpaceID, ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySpaceID, ft2_gfySetID
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing stars, index: ', starsIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -470,10 +466,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySetID
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading stars, index: ', starsIndex
-#endif
-
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
@@ -674,10 +666,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing step function, index: ', stepfunctionIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -736,10 +724,6 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER(HID_T)            :: ustepSetID
       INTEGER(HID_T)            :: ufftSetID
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading step function, index: ', stepfunctionIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
@@ -829,10 +813,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing lattice harmonics, index: ', latharmsIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -908,10 +888,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: hdfError
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading lattice harmonics, index: ', latharmsIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
@@ -1045,10 +1021,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_USpaceID, ldau_USetID
       INTEGER(HID_T)                   :: ldau_JSpaceID, ldau_JSetID
       !LDA+U IDs (end)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing structure, index: ', structureIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1351,10 +1323,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_USetID
       INTEGER(HID_T)                   :: ldau_JSetID
       !LDA+U IDs (end)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading structure, index: ', structureIndex
-#endif
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
@@ -2377,10 +2345,6 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
       COMPLEX, ALLOCATABLE  :: mmpMatTemp(:,:,:,:)
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading density, archiveName: ', TRIM(ADJUSTL(archiveName))
-#endif
-
       den%pw = CMPLX(0.0,0.0)
       den%vacz = CMPLX(0.0,0.0)
       den%vacxy = CMPLX(0.0,0.0)
@@ -2466,14 +2430,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',den%iter)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) '   previousDensityIndex: ', previousDensityIndex
-      WRITE(*,*) '   starsIndex: ', starsIndex
-      WRITE(*,*) '   latharmsIndex: ', latharmsIndex
-      WRITE(*,*) '   structureIndex: ', structureIndex
-      WRITE(*,*) '   stepfunctionIndex: ', stepfunctionIndex
-#endif
 
       WRITE(groupBName,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupBName)))

@@ -71,9 +71,9 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: n, nn, iband, nbasfcn, i, i0, j
+      INTEGER                 :: iband, nbasfcn, i, i0, j
       REAL                    :: a_ex
-      TYPE(t_mat)             :: tmp, v_x, z
+      TYPE(t_mat)             :: tmp, z
       COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
 
       call timestart("add_vnonlocal")
@@ -81,52 +81,38 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
-      CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
-      CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
-
-      
-      ! add non-local x-potential to the hamiltonian hmat
-
-      ! write (*,*) "shape(hmat%data_r)", shape(hmat%data_r)
-      ! write (*,*) "shape(v_x%data_r)", shape(v_x%data_r)
-      ! if(any( shape(hmat%data_r) /= shape(v_x%data_r) ) ) then 
-      !    if(all(shape(v_x%data_r) /= 0)) then
-      !       call judft_error("shapes don't agree")
-      !    endif
-      ! endif
-
-      if(v_x%matsize1 > 0) then 
-         call v_x%u2l()
-      endif
+      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)      
       
       IF (hmat%l_real) THEN
-         DO i = fmpi%n_rank+1,v_x%matsize1,fmpi%n_size
+         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,v_x%matsize1) 
-               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * v_x%data_r(j, i)
+            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
+               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_r(j, i)
             enddo
          enddo
       else         
-         DO i = fmpi%n_rank+1,v_x%matsize1,fmpi%n_size
+         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,v_x%matsize1) 
-               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * v_x%data_c(j, i)
+            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
+               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_c(j, i)
             enddo
          enddo
       endif
 
       CALL z%init(hmat%l_real, nbasfcn, fi%input%neig)
-
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90
-      IF (.NOT. v_x%l_real) v_x%data_c = conjg(v_x%data_c)
+      
       exch = 0
-      z%matsize1 = MIN(z%matsize1, v_x%matsize2)
-
-      CALL v_x%multiply(z, tmp)
+      z%matsize1 = MIN(z%matsize1, hybdat%v_x(nk, jsp)%matsize2)
+      IF (hybdat%v_x(nk, jsp)%l_real) then
+         CALL hybdat%v_x(nk, jsp)%multiply(z, tmp)
+      else
+         ! used to be v_x%data_c = conjg(v_x%data_c)
+         CALL hybdat%v_x(nk, jsp)%multiply(z, tmp, transA="T")
+      endif
 
       DO iband = 1, hybdat%nbands(nk)
          IF (z%l_real) THEN

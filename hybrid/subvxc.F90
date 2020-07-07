@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybdat,&
-                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
+                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx, nk)
 
       USE m_judft
       USE m_types
@@ -41,7 +41,7 @@ CONTAINS
       TYPE(t_mat), INTENT(INOUT) :: hmat
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN) :: jsp
+      INTEGER, INTENT(IN) :: jsp, nk
 
       ! Array Arguments
       REAL, INTENT(IN) :: vr0(:,:,:)               ! just for radial functions
@@ -50,11 +50,11 @@ CONTAINS
       REAL, INTENT(IN) :: bk(:)
 
       ! Local Scalars
-      INTEGER               ::  ic, indx, m, ig1, ig2, n, nn
+      INTEGER               ::  ic, indx, m, ig1, ig1_loc, ig2, n, n_loc, nn
       INTEGER               ::  nlharm, nnbas, typsym, lm
       INTEGER               ::  noded, nodeu
       INTEGER               ::  nbasf0
-      INTEGER               ::  i, j, l, ll, l1, l2, m1, m2, j1, j2
+      INTEGER               ::  i, j, j_loc, l, ll, l1, l2, m1, m2, j1, j2
       INTEGER               ::  ok, p1, p2, lh, mh, pp1, pp2
       INTEGER               ::  igrid, itype, ilharm, istar
       INTEGER               ::  ineq, iatom, ilo, ilop, ieq, icentry
@@ -65,7 +65,7 @@ CONTAINS
       COMPLEX               ::  rc, rr
 
       ! Local Arrays
-      INTEGER               ::  gg(3), x,y
+      INTEGER               ::  gg(3), x, x_loc, y
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
       REAL                  ::  integ(0:sphhar%nlhd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd)
@@ -265,16 +265,18 @@ CONTAINS
 
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
             call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
-            if(vxc%l_real) then 
-               DO j = 1, lapw%nv(jsp)
-                  DO i = 1, j
-                     vxc%data_r(i,j) = vxc%data_r(i,j) + real(carr1(i, j))
+            if(vxc%l_real) then
+               do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+                  j_loc=(j-1)/fmpi%n_size+1
+                  do i = 1,MIN(j,lapw%nv(jsp))  
+                     vxc%data_r(i,j_loc) = vxc%data_r(i,j_loc) + real(carr1(i, j))
                   END DO
                END DO
             else
-               DO j = 1, lapw%nv(jsp)
-                  DO i = 1, j
-                     vxc%data_c(i,j) = vxc%data_c(i,j) + carr1(i, j)
+               do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+                  j_loc=(j-1)/fmpi%n_size+1
+                  do i = 1,MIN(j,lapw%nv(jsp))
+                     vxc%data_c(i,j_loc) = vxc%data_c(i,j_loc) + carr1(i, j)
                   END DO
                END DO
             endif
@@ -291,15 +293,19 @@ CONTAINS
       ! Calculate vxc-matrix,  left basis function (ig1)
       !                        right basis function (ig2)
       call timestart("Calculate vxc-matrix")
-      DO ig1 = 1, lapw%nv(jsp)
-         DO ig2 = 1, ig1
+      ! DO ig1 = 1, lapw%nv(jsp)
+      !    DO ig2 = 1, ig1
+
+      do ig1 = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
+         ig1_loc = (ig1-1)/fmpi%n_size+1
+         do ig2 = 1,min(ig1, lapw%nv(jsp))
             gg = lapw%gvec(:,ig1,jsp) - lapw%gvec(:,ig2,jsp)
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
                if(vxc%l_real) then 
-                  vxc%data_r(ig2,ig1) = vxc%data_r(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+                  vxc%data_r(ig2,ig1_loc) = vxc%data_r(ig2,ig1_loc) + real(stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar))
                else
-                  vxc%data_c(ig2,ig1) = vxc%data_c(ig2,ig1) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
+                  vxc%data_c(ig2,ig1_loc) = vxc%data_c(ig2,ig1_loc) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
                endif
             ELSE
                IF (fmpi%irank == 0) THEN
@@ -410,13 +416,16 @@ CONTAINS
                                        DO i = 1, lapw%nv(jsp)
                                           ic = ic + 1
                                           call packed_to_cart(ic, x,y)
-                                          IF (hmat%l_real) THEN
-                                             vxc%data_r(y,x) = vxc%data_r(y,x) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
-                                                                                         CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
-                                          ELSE
-                                             vxc%data_c(y,x) = vxc%data_c(y,x) + rr*rc*bascof(i, lm, iatom)* &
-                                                                                         CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
-                                          END IF
+                                          if(mod(x-(fmpi%n_rank+1),fmpi%n_size) == 0) then
+                                             x_loc = (x-1) / fmpi%n_size+1
+                                             IF (hmat%l_real) THEN
+                                                vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
+                                                                                          CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                             ELSE
+                                                vxc%data_c(y,x) = vxc%data_c(y,x) + rr*rc*bascof(i, lm, iatom)* &
+                                                                                          CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                             END IF
+                                          endif
                                        END DO
                                     END DO  !p2
                                  END DO  ! m2
@@ -432,6 +441,51 @@ CONTAINS
                                  DO ikvecp = 1, invsfct*(2*lp + 1)
                                     ic = ic + 1
                                     call packed_to_cart(ic, x,y)
+                                    if(mod(x-(fmpi%n_rank+1),fmpi%n_size) == 0) then
+                                       x_loc = (x-1) / fmpi%n_size+1
+                                       DO mp = -lp, lp
+                                          DO pp = 1, 3
+                                             IF (pp == 3) THEN
+                                                pp2 = pointer_lo(ilop, itype)
+                                             ELSE
+                                                pp2 = pp
+                                             END IF
+
+                                             rr = 0
+                                             DO ilharm = 0, nlharm
+                                                lh = sphhar%llh(ilharm, typsym)
+                                                DO i = 1, sphhar%nmem(ilharm, typsym)
+                                                   mh = sphhar%mlh(i, ilharm, typsym)
+                                                   rc = sphhar%clnu(i, ilharm, typsym)*gaunt1(l1, lh, lp, m1, mh, mp, atoms%lmaxd)
+                                                   rr = rr + integ(ilharm, pp2, lp, pp1, l1)*rc
+                                                END DO
+                                             END DO
+
+                                             rc = CMPLX(0.0, 1.0)**(lp - l1) ! adjusts to a/b/ccof-scaling
+
+                                             IF (hmat%l_real) THEN
+                                                vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) &
+                                                   + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                   CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                             ELSE
+                                                vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc)&
+                                                   + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                   CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                             END IF
+                                          END DO ! pp
+                                       END DO ! mp
+                                    endif
+                                 END DO !ikvecp
+                              END DO ! ilop
+
+                              ! calculate matrix-elements of one local orbital with itself
+                              DO ikvecp = 1, ikvec
+                                 ic = ic + 1
+                                 call packed_to_cart(ic, x,y)
+                                 if(mod(x-(fmpi%n_rank+1),fmpi%n_size) == 0) then
+                                    x_loc = (x-1) / fmpi%n_size+1
+                                    lp = l1
+                                    ilop = ilo
                                     DO mp = -lp, lp
                                        DO pp = 1, 3
                                           IF (pp == 3) THEN
@@ -453,57 +507,17 @@ CONTAINS
                                           rc = CMPLX(0.0, 1.0)**(lp - l1) ! adjusts to a/b/ccof-scaling
 
                                           IF (hmat%l_real) THEN
-                                             vxc%data_r(y,x) = vxc%data_r(y,x) &
-                                                + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
+                                             vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) &
+                                                                     + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                                        CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                           ELSE
-                                             vxc%data_c(y,x) = vxc%data_c(y,x)&
-                                                + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
+                                             vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc)&
+                                                                  + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
+                                                                  CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                           END IF
                                        END DO ! pp
                                     END DO ! mp
-
-                                 END DO !ikvecp
-                              END DO ! ilop
-
-                              ! calculate matrix-elements of one local orbital with itself
-                              DO ikvecp = 1, ikvec
-                                 ic = ic + 1
-                                 call packed_to_cart(ic, x,y)
-                                 lp = l1
-                                 ilop = ilo
-                                 DO mp = -lp, lp
-                                    DO pp = 1, 3
-                                       IF (pp == 3) THEN
-                                          pp2 = pointer_lo(ilop, itype)
-                                       ELSE
-                                          pp2 = pp
-                                       END IF
-
-                                       rr = 0
-                                       DO ilharm = 0, nlharm
-                                          lh = sphhar%llh(ilharm, typsym)
-                                          DO i = 1, sphhar%nmem(ilharm, typsym)
-                                             mh = sphhar%mlh(i, ilharm, typsym)
-                                             rc = sphhar%clnu(i, ilharm, typsym)*gaunt1(l1, lh, lp, m1, mh, mp, atoms%lmaxd)
-                                             rr = rr + integ(ilharm, pp2, lp, pp1, l1)*rc
-                                          END DO
-                                       END DO
-
-                                       rc = CMPLX(0.0, 1.0)**(lp - l1) ! adjusts to a/b/ccof-scaling
-
-                                       IF (hmat%l_real) THEN
-                                           vxc%data_r(y,x) = vxc%data_r(y,x) &
-                                                                  + invsfct*REAL(rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                                     CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
-                                       ELSE
-                                          vxc%data_c(y,x) = vxc%data_c(y,x)&
-                                                               + rr*rc*bascof_lo(pp, mp, ikvecp, ilop, iatom)* &
-                                                               CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
-                                       END IF
-                                    END DO ! pp
-                                 END DO ! mp
+                                 endif
                               END DO ! ikvecp
                            END DO  ! p1
                         END DO  ! m1
@@ -524,15 +538,21 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       call timestart("apply to hmat")
-      DO n = 1, hmat%matsize1
-         DO nn = 1, n
+      ! call vxc%save_npy("vxc_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+      ! call hmat%save_npy("hmat_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+      ! call MPI_Barrier(MPI_COMM_WORLD, n)
+      ! call judft_error("stopit")
+      do n = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
+         n_loc = (n-1) / fmpi%n_size + 1
+         DO nn = 1,MIN(n,hmat%matsize1)  
             IF (hmat%l_real) THEN
-               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*REAL(vxc%data_r(nn,n))
+               hmat%data_r(nn, n_loc) = hmat%data_r(nn, n_loc) - a_ex * REAL(vxc%data_r(nn,n_loc))
             ELSE
-               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*vxc%data_c(nn,n)
+               hmat%data_c(nn, n_loc) = hmat%data_c(nn, n_loc) - a_ex *      vxc%data_c(nn,n_loc)
             ENDIF
          END DO
       END DO
+
       call timestop("apply to hmat")
 
       CALL timestop("subvxc")

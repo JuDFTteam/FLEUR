@@ -97,7 +97,7 @@ CONTAINS
 
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
-      TYPE(t_mat)              :: ex, v_x, z_k
+      TYPE(t_mat)              :: ex, z_k
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -137,6 +137,7 @@ CONTAINS
       CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
+      if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
       if(k_pack%submpi%root()) then
          ! calculate contribution from the core states to the HF exchange
          CALL timestart("core exchange calculation")
@@ -151,10 +152,15 @@ CONTAINS
 
          CALL timestop("core exchange calculation")
 
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, v_x)
-         CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
-      endif
+         call ex%save_npy("ex_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+         ! call MPI_Barrier(MPI_COMM_WORLD, ok)
+         ! call judft_error("stopit: add_Vnonl")
 
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
+         call hybdat%v_x(nk, jsp)%u2l()
+      endif
+      call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
+      hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
 END MODULE m_hsfock
