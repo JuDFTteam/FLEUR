@@ -279,7 +279,9 @@ END IF
              CALL calc_hybrid(eig_id,fi,mpdata,hybdat,fmpi,nococonv, stars,enpara,&
                               results,xcpot,vTot,iterHF)
           END SELECT
+#ifdef CPP_MPI
           call MPI_Barrier(fmpi%mpi_comm, ierr)
+#endif
           IF(hybdat%l_calhf) THEN
              call mixing_history_reset(fmpi)
              iter = 0
