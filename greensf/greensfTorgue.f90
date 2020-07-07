@@ -180,7 +180,7 @@ MODULE m_greensfTorgue
       INTEGER :: lh,mems,mem,mh,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
+      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3,2),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
       COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
@@ -242,7 +242,7 @@ MODULE m_greensfTorgue
                               ENDDO
                               CALL intgr3(REAL(g_ii(:,iz)*vso(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
                               CALL intgr3(AIMAG(g_ii(:,iz)*vso(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
+                              torgue_cmplx(alpha,ipm) = torgue_cmplx(alpha,ipm) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
                                                    * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                            ENDDO
                         ENDDO
@@ -253,7 +253,9 @@ MODULE m_greensfTorgue
          ENDDO
 
       ENDDO
-      torgue = REAL(torgue_cmplx)
+      WRITE(*,*) torgue_cmplx(:,1) * hartree_to_ev_const * 1000
+      WRITE(*,*) torgue_cmplx(:,2) * hartree_to_ev_const * 1000
+      torgue = REAL(torgue_cmplx(:,1)+torgue_cmplx(:,2))
       CALL timestop("Green's Function SOTorgue: Integration")
 
       WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
