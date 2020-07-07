@@ -49,7 +49,9 @@ MODULE m_types_mat
    PUBLIC t_mat
 CONTAINS
    subroutine t_mat_bcast(mat, root, comm)
+#ifdef CPP_MPI
       use mpi
+#endif
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
       integer, intent(in)           :: root, comm 
