@@ -44,9 +44,44 @@ MODULE m_types_mat
       procedure        :: print_type => t_mat_print_type
       procedure        :: conjugate => t_mat_conjg
       procedure        :: reset => t_mat_reset
+      procedure        :: bcast => t_mat_bcast
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_bcast(mat, root, comm)
+      use mpi
+      implicit none 
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      integer, intent(in)           :: root, comm 
+      
+      integer :: ierr, full_shape(2), me
+
+#ifdef CPP_MPI 
+      call MPI_Comm_rank(comm, me, ierr)
+      call MPI_Bcast(mat%l_real, 1, MPI_LOGICAL, root, comm, ierr)
+      !alloc mat same as root
+      if(me == root) then
+         full_shape = merge(shape(mat%data_r), shape(mat%data_c), mat%l_real)
+         call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
+      else 
+         call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
+         call mat%alloc(mat%l_real, full_shape(1), full_shape(2))         
+      endif
+
+      ! overwrite matsize as needed
+      call MPI_Bcast(mat%matsize1, 1, MPI_INTEGER, root, comm, ierr)
+      call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
+
+
+
+      if(mat%l_real) then
+         call MPI_Bcast(mat%data_r, product(full_shape), MPI_REAL8, root, comm, ierr)
+      else 
+         call MPI_Bcast(mat%data_c, product(full_shape), MPI_COMPLEX8, root, comm, ierr)
+      endif
+#endif
+   end subroutine t_mat_bcast
+
    subroutine t_mat_reset(mat, val)
       implicit none  
       CLASS(t_mat), INTENT(INOUT)   :: mat
