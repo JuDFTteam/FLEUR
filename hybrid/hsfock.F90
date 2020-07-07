@@ -157,7 +157,7 @@ CONTAINS
          ! call judft_error("stopit: add_Vnonl")
 
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
-         CALL write_v_x(hybdat%v_x(nk, jsp), fi%kpts%nkpt*(jsp - 1) + nk)
+         hybdat%l_addhf = .True.
       endif
       call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
       CALL timestop("total time hsfock")

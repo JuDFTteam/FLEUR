@@ -81,10 +81,7 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
-      ! CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
-      ! CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
-      
+      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)      
       call v_x%init(hybdat%v_x(nk, jsp))
       call v_x%copy(hybdat%v_x(nk, jsp),1,1)
 

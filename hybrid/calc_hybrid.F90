@@ -53,8 +53,6 @@ CONTAINS
 
       CALL timestart("hybrid code")
 
-      INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
-
       IF (fi%kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
                           hint="to generate fi%kpts in the full BZ you should specify a k-mesh in inp.xml")
