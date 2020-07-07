@@ -53,14 +53,17 @@ CONTAINS
     !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
     !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln)
-    ALLOCATE(cph(MAXVAL(lapw%nv)))
-    ALLOCATE(xlegend(MAXVAL(lapw%nv)))
-    ALLOCATE(plegend(MAXVAL(lapw%nv),0:2))
-    ALLOCATE(dplegend(MAXVAL(lapw%nv),0:2))
-    ALLOCATE(fct(MAXVAL(lapw%nv)))
+    ALLOCATE(cph(lapw%nv(1)))
+    ALLOCATE(xlegend(lapw%nv(1)))
+    ALLOCATE(plegend(lapw%nv(1),0:2))
+    ALLOCATE(dplegend(lapw%nv(1),0:2))
+    ALLOCATE(fct(lapw%nv(1)))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
+
+       !Set up spinors...
+       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
 
        !--->             set up phase factors
        cph = 0.0
@@ -73,8 +76,6 @@ CONTAINS
                   SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
           END DO
        END DO
-       !Set up spinors...
-       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
 
        !--->       x for legendre polynomials
        DO kj = 1,ki
