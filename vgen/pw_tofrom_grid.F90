@@ -115,11 +115,15 @@ CONTAINS
         IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
     IF (l_noco)  THEN
+       IF (l_rdm) THEN
+          ALLOCATE (rhodiag(0:SIZE(rho,1)-1,jspins))
+          ALLOCATE (sinsqu(0:SIZE(rho,1)-1),cossqu(0:SIZE(rho,1)-1),sincos(0:SIZE(rho,1)-1),exi(0:SIZE(rho,1)-1))
+       END IF
        IF (dograds) THEN
           ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
           IF (l_rdm) THEN
-           ALLOCATE( rhodiag(0:ifftxc3-1,jspins),der(0:ifftxc3-1,3,4),dder(0:ifftxc3-1,3,3,4),rhdd(0:ifftxc3-1,2,3,3) )
-           ALLOCATE( sinsqu(0:ifftxc3-1),cossqu(0:ifftxc3-1),sincos(0:ifftxc3-1),exi(0:ifftxc3-1) )
+           ALLOCATE( der(0:ifftxc3-1,3,4),dder(0:ifftxc3-1,3,3,4),rhdd(0:ifftxc3-1,2,3,3) )
+           
           ELSE
             ALLOCATE( dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
           ENDIF
