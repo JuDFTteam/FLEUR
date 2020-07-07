@@ -133,7 +133,7 @@ MODULE m_greensf_io
       INTEGER           :: i_elem,n_elem,i,iContourOut,nLO,iLo,iLOp
       INTEGER(HSIZE_T)  :: dims(7)
       REAL              :: trc(MERGE(3,input%jspins,gfinp%l_mperp)),atomDiff(3)
-      LOGICAL           :: l_sphavg,l_onsite
+      LOGICAL           :: l_sphavg,l_onsite,l_anyradial
 
 
       jspinsOut = MERGE(3,input%jspins,gfinp%l_mperp)
@@ -204,7 +204,7 @@ MODULE m_greensf_io
          CALL io_write_complex1(energyWeightsSetID,[-1,1],dimsInt(:2),greensf(i_elem)%contour%de)
          CALL h5dclose_f(energyWeightsSetID, hdfError)
 
-         CALL h5gclose_f(currentelementGroupID, hdfError)
+         CALL h5gclose_f(currentcontourGroupID, hdfError)
       ENDDO
       CALL io_write_attint0(contoursGroupID,'NumContours',iContourOut)
       CALL h5gclose_f(contoursGroupID, hdfError)
@@ -226,6 +226,8 @@ MODULE m_greensf_io
       CALL io_write_attint0(elementsGroupID,'NumElements',SIZE(greensf))
       CALL io_write_attint0(elementsGroupID,'maxl',lmaxU_Const)
 
+
+      l_anyradial = .FALSE.
       DO i_elem = 1, SIZE(greensf)
 
          WRITE(elementName,200) i_elem
@@ -254,6 +256,8 @@ MODULE m_greensf_io
             CALL juDFT_error("LO Radial Functions needed, but not present", calledby="writeGreensFData")
          ENDIF
          CALL io_write_attint0(currentelementGroupID,'numLOs',nLO)
+
+         IF(.NOT.l_sphavg) l_anyradial = .TRUE.
 
          IF(l_onsite) THEN !Was only calculated for onsite elements
             !Trace of occupation matrix
@@ -411,7 +415,7 @@ MODULE m_greensf_io
       !--> End: GF data output
 
       !--> Start: Radial Function output
-      IF(PRESENT(u)) THEN
+      IF(PRESENT(u).AND.l_anyradial) THEN
          CALL h5gcreate_f(fileID, 'RadialFunctions', radialGroupID, hdfError)
 
          dims(:5)=[atoms%jmtd,2,lmaxU_Const+1,input%jspins,atoms%ntype]
