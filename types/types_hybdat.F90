@@ -55,7 +55,8 @@ MODULE m_types_hybdat
       ! coulomb matrix stuff
       type(t_coul), allocatable :: coul(:)
 
-      type(t_usdus)            :: usdus
+      type(t_usdus)             :: usdus
+      type(t_mat), allocatable  :: v_x(:,:) ! nkpt, jsp
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free       => free_hybdat
@@ -205,7 +206,7 @@ contains
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
-      integer :: idum, info, isize, l, itype
+      integer :: info, isize, l, itype
 
       isize = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)),&
                                                     itype=1, fi%atoms%ntype)]) &

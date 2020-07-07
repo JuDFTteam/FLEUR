@@ -71,9 +71,9 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: n, nn, iband, nbasfcn, i, i0, j
+      INTEGER                 :: iband, nbasfcn, i, i0, j
       REAL                    :: a_ex
-      TYPE(t_mat)             :: tmp, v_x, z
+      TYPE(t_mat)             :: tmp, v_x, z, diff
       COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
 
       call timestart("add_vnonlocal")
@@ -82,8 +82,11 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
-      CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
-      CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+      ! CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
+      ! CALL read_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
+      
+      call v_x%init(hybdat%v_x(nk, jsp))
+      call v_x%copy(hybdat%v_x(nk, jsp),1,1)
 
       
       ! add non-local x-potential to the hamiltonian hmat
