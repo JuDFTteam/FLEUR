@@ -4,6 +4,11 @@ if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
 endif()
 
+if(${CMAKE_VERSION} VERSION_LESS "3.10.0") 
+    message("Your cmake Version is rather old. Please consider to update cmake")
+    message("More modern cmake versions might be needed to make sure your compiler settings are detected correctly")
+endif()
+
 # sometimes cmake clears CMAKE_Fortran_FLAGS during project()
 set(CMAKE_Fortran_FLAGS_backup ${CMAKE_Fortran_FLAGS})
 set(CMAKE_Fortran_FLAGS "")

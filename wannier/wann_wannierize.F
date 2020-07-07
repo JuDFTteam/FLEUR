@@ -15,7 +15,7 @@ c     Frank Freimuth
 c**************************************************** 
       CONTAINS
       SUBROUTINE wann_wannierize(
-     >          film,wann,mpi,kpoints,fullnkpts,jspins,
+     >          film,wann,fmpi,kpoints,fullnkpts,jspins,
      >          natd,pos,
      >          amat,bmat,ntype,neq,zatom)
       USE m_types
@@ -23,7 +23,7 @@ c****************************************************
       implicit none
       logical,intent(in)  :: film
       TYPE(t_wann), INTENT(IN) :: wann
-      TYPE(t_mpi), INTENT(IN)  :: mpi     
+      TYPE(t_mpi), INTENT(IN)  :: fmpi     
       real, intent (in) :: kpoints(:,:)
       integer, intent(in) :: fullnkpts      
       integer,intent(in)  :: jspins

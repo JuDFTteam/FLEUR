@@ -155,7 +155,7 @@ CONTAINS
     CALL oned%init(atoms) !call again, because make_stars modified it :-)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
     CALL kpts%init(cell, sym, input%film, hybinp%l_hybrid .or. input%l_rdmft)
-    CALL gfinp%init(atoms, sym, noco, input,fmpi%irank==0)
+    CALL gfinp%init(atoms, sym, noco, cell, input,fmpi%irank==0)
     CALL prp_xcfft(fmpi,stars,input,cell,xcpot)
     CALL convn(fmpi%irank==0,atoms,stars)
     IF (fmpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)

@@ -73,8 +73,8 @@ CONTAINS
    USE m_eig66_io
    USE m_chase_diag
    USE m_writeBasis
+   USE m_RelaxSpinAxisMagn
 
-   USE m_alignSpinAxisMagn
    !$ USE omp_lib
    IMPLICIT NONE
 
@@ -154,18 +154,21 @@ CONTAINS
     IF(fi%noco%l_mtNocoPot) archiveType= CDN_ARCHIVE_TYPE_FFN_const
     IF(fmpi%irank.EQ.0) CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
-    IF(fi%noco%l_alignMT.AND.fmpi%irank.EQ.0)  CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.TRUE.)
+    IF(fi%noco%l_alignMT.AND.fmpi%irank.EQ.0)  THEN 
+       CALL initRelax(fi%noco,nococonv,fi%atoms,fi%input,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,inDen)
+       CALL doRelax(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
+    END IF
     CALL timestart("Qfix")
     CALL qfix(fmpi,stars,fi%atoms,fi%sym,fi%vacuum, sphhar,fi%input,fi%cell,fi%oneD,inDen,fi%noco%l_noco,.FALSE.,.FALSE.,.FALSE.,fix)
     CALL timestop("Qfix")
     IF(fmpi%irank.EQ.0) THEN
        IF(fi%noco%l_alignMT) THEN
-         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+         CALL toGlobalRelax(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
        END IF
        CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
-    IF(fi%noco%l_alignMT.AND.fmpi%irank.EQ.0) CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+    IF(fi%noco%l_alignMT.AND.fmpi%irank.EQ.0) CALL fromGlobalRelax(fi%vacuum,sphhar,stars ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -178,7 +181,7 @@ CONTAINS
     ALLOCATE(greensFunction(MAX(1,fi%gfinp%n)))
     IF(fi%gfinp%n>0) THEN
        DO i_gf = 1, fi%gfinp%n
-          CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf),fi%gfinp,fi%input)
+          CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf),fi%gfinp,fi%atoms,fi%input)
        ENDDO
     ENDIF
     ! Initialize Green's function (end)
@@ -241,7 +244,7 @@ CONTAINS
 IF (fi%sliceplot%iplot.NE.0) THEN
    IF (fi%noco%l_alignMT)THEN 
       IF (fmpi%irank.EQ.0)  THEN 
-         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
+         CALL toGlobalRelax(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
@@ -259,7 +262,7 @@ IF (fi%sliceplot%iplot.NE.0) THEN
        END IF
    IF(fi%noco%l_alignMT) THEN 
       IF (fmpi%irank.EQ.0)  THEN 
-         CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+         CALL fromGlobalRelax(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
@@ -482,39 +485,39 @@ END IF
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
           
           IF (fi%sliceplot%iplot.NE.0) THEN
-   IF(fi%noco%l_alignMT) THEN
-      IF (fmpi%irank.EQ.0)  THEN 
-      !               CDN including core charge
-         CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
-      END IF
+          !               CDN including core charge
+             IF(fi%noco%l_alignMT) THEN
+                IF (fmpi%irank.EQ.0)  THEN 
+                   CALL toGlobalRelax(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,outDen)
+                END IF
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
-      DO n= 1,fi%atoms%ntype
-         CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-         CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-      ENDDO
+               CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+               DO n= 1,fi%atoms%ntype
+                  CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+                  CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+              ENDDO
 #endif
-    END IF
-     CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,fi%oneD, fi%sym, &
+            END IF
+            CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,fi%oneD, fi%sym, &
                                fi%cell, fi%noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
-     IF((fi%sliceplot%iplot.NE.0).AND.(fmpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
-        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-     END IF
-     IF (fi%noco%l_alignMT) THEN
-        IF (fmpi%irank.EQ.0)  THEN 
-           CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen,.FALSE.)
-        END IF
+            IF((fi%sliceplot%iplot.NE.0).AND.(fmpi%irank.EQ.0).AND.(fi%sliceplot%iplot.LT.64).AND.(MODULO(fi%sliceplot%iplot,2).NE.1)) THEN
+                CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+            END IF
+            IF (fi%noco%l_alignMT) THEN
+                IF (fmpi%irank.EQ.0)  THEN 
+                    CALL fromGlobalRelax(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,outDen)
+                END IF
 #ifdef CPP_MPI
-        CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
-        DO n= 1,fi%atoms%ntype
-           CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-           CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-        ENDDO
+                CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,outDen)
+                DO n= 1,fi%atoms%ntype
+                   CALL MPI_BCAST(nococonv%alph(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+                   CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+                ENDDO
 
 #endif    
-     END IF
-   END IF
+            END IF
+        END IF
 
 
           IF (fi%input%l_rdmft) THEN
@@ -564,7 +567,7 @@ END IF
              !Rotating from local MT frame in global frame for mixing
              IF (fi%noco%l_alignMT) THEN
                 IF (fmpi%irank.EQ.0) THEN
-                   CALL rotateMagnetFromSpinAxis(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
+                   CALL toGlobalRelax(fi%noco,nococonv,fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%input,fi%atoms,inDen,outDen)
                 END IF
 #ifdef CPP_MPI
                 CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
@@ -593,8 +596,9 @@ END IF
 !Rotating in local MT frame  
        IF(fi%noco%l_alignMT)THEN
           IF(fmpi%irank.EQ.0) THEN
-             CALL rotateMagnetToSpinAxis(fi%vacuum,sphhar,stars&
-                  ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen,.FALSE.)
+             !CALL fromGlobalRelax(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
+             CALL doRelax(fi%vacuum,sphhar,stars&
+                  ,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
           END IF
 #ifdef CPP_MPI
           CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oneD,fi%noco,inDen)
