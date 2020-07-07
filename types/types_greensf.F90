@@ -491,8 +491,8 @@ MODULE m_types_greensf
          DO iz = 1, this%contour%nz
             gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * f(:,1,lp,spin1) + f(:,2,l,spin2) * f(:,2,lp,spin1)) &
                          + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * g(:,1,lp,spin1) + g(:,2,l,spin2) * g(:,2,lp,spin1)) &
-                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin1)) &
-                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin1))
+                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin1)) &
+                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin1))
 
             IF(ALLOCATED(this%uulo)) THEN
                iLO_ind = 0
@@ -622,9 +622,9 @@ MODULE m_types_greensf
                                                                               +f(jr,2,l,spin2,atomType) * f(jrp,2,lp,spin1,atomTypep))&
                                    + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ( g(jr,1,l,spin2,atomType) * g(jrp,1,lp,spin1,atomTypep) &
                                                                               +g(jr,2,l,spin2,atomType) * g(jrp,2,lp,spin1,atomTypep))&
-                                   + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * ( g(jr,1,l,spin2,atomType) * f(jrp,1,lp,spin1,atomTypep) &
+                                   + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * ( g(jr,1,l,spin2,atomType) * f(jrp,1,lp,spin1,atomTypep) &
                                                                               +g(jr,2,l,spin2,atomType) * f(jrp,2,lp,spin1,atomTypep))&
-                                   + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(jr,1,l,spin2,atomType) * g(jrp,1,lp,spin1,atomTypep) &
+                                   + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(jr,1,l,spin2,atomType) * g(jrp,1,lp,spin1,atomTypep) &
                                                                               +f(jr,2,l,spin2,atomType) * g(jrp,2,lp,spin1,atomTypep))
 
                   IF(ALLOCATED(this%uulo)) THEN
