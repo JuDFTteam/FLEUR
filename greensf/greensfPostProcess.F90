@@ -10,6 +10,7 @@ MODULE m_greensfPostProcess
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
+   USE m_sointg
 
    IMPLICIT NONE
 
@@ -36,11 +37,12 @@ MODULE m_greensfPostProcess
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
-      INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr
+      INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
-      REAL :: torgue(3),atomDiff(3)
+      REAL :: torgue(3),atomDiff(3),e
+      REAL :: v0(atoms%jmtd),vso(atoms%jmtd,2),vso_l(atoms%jmtd,0:atoms%lmaxd)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
       TYPE(t_usdus)            :: usdus
@@ -162,14 +164,33 @@ MODULE m_greensfPostProcess
                                   sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vTot)
             ENDDO
             CALL closeXMLElement('noncollinearTorgue')
-            IF(noco%l_soc.AND..FALSE.) THEN
+            IF(noco%l_soc) THEN
                CALL openXMLElementNoAttributes('spinorbitTorgue')
                WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
                WRITE(oUnit,'(/,A)') '---------------------------------'
                DO atomType = 1, atoms%nType
                   IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-                  !CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-                  !                     sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vso)
+                  !
+                  !---> common spin-orbit integrant V   (average spin directions)
+                  !                                  SO
+                  DO l = 0, atoms%lmaxd
+                     v0(:) = 0.0
+                     DO i = 1,atoms%jri(atomType)
+                        v0(i) = (vtot%mt(i,0,atomType,1)+vtot%mt(i,0,atomType,input%jspins))/2.
+                     END DO
+                     e = (enpara%el0(l,atomType,1)+enpara%el0(l,atomType,input%jspins))/2.
+
+                     CALL sointg(atomType,e,vtot%mt(:,0,atomType,:),v0,atoms,input,vso)
+                     IF (.TRUE.) THEN
+                        DO i= 1,atoms%jmtd
+                           vso(i,1)= (vso(i,1)+vso(i,2))/2.
+                           vso(i,2)= vso(i,1)
+                        ENDDO
+                     ENDIF
+                     vso_l(:,l) = vso(:,1)
+                  ENDDO
+                  CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
+                                       sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vso_l)
                ENDDO
                CALL closeXMLElement('spinorbitTorgue')
             ENDIF
