@@ -237,6 +237,7 @@ SUBROUTINE fromGlobalRelax(vacuum,sphhar,stars&
    TYPE(t_potden), OPTIONAL,INTENT(INOUT):: den
    REAL                                  :: zeros(atoms%ntype)
 
+   zeros(:) = 0.0
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-nococonv%alphPrev,zeros,den)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-nococonv%betaPrev,den)
    nococonv%alph=nococonv%alphPrev
