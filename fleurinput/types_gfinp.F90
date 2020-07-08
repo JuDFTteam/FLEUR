@@ -741,8 +741,8 @@ CONTAINS
       LOGICAL,          INTENT(IN)     :: l_write
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
-      INTEGER :: numNearestNeighbors,ishell,lastIndex
-      REAL :: currentDist,iNeighborAtom,minDist,i_gf
+      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
+      REAL :: currentDist,minDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
       REAL :: refPos(3),point(3),pos(3)
