@@ -52,7 +52,8 @@ MODULE m_rhonmt21
 
       DO ns=1,sym%nsymt
          !$OMP parallel do default(none) &
-         !$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp,na,nt,nn,natom,llpmax,lphi,lplow) &
+         !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
+         !$OMP private(cil,jmem,coef1,coef,temp,na,nt,nn,natom) &
          !$OMP shared(sym,we,ne,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
          !$OMP collapse(2)
          DO lh = 1,sphhar%nlh(ns)
@@ -79,8 +80,7 @@ MODULE m_rhonmt21
 
                      IF (lplow.GT.lphi) CYCLE m_loop
 
-                     DO lp = 0, atoms%lmaxd
-                        IF(ABS(mp).GT.lp) CYCLE
+                     DO lp = lplow, lphi,2
                         IF ( MOD(lv+l+lp,2) .NE. 0 ) CYCLE
                         cil = mi**(l-lp)
                         coef1 = cil * sphhar%clnu(jmem,lh,ns)
