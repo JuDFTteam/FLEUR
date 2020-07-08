@@ -34,10 +34,10 @@ MODULE m_rhonmt21
 
       !     .. Array Arguments ..
       REAL,                 INTENT(IN)    :: we(:)!(nobd)
-      COMPLEX,              INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-      COMPLEX,              INTENT(INOUT) :: udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-      COMPLEX,              INTENT(INOUT) :: dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-      COMPLEX,              INTENT(INOUT) :: ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: uunmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: udnmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: dunmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: ddnmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
 
       !     .. Local Scalars ..
       COMPLEX coef, cil, coef1
@@ -57,10 +57,10 @@ MODULE m_rhonmt21
             DO na= 1,atoms%neq(nn)
                nt= nt+1
                IF (sym%ntypsy(nt)==ns) THEN
-                  !!$OMP parallel do default(none) &
-                  !!$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp) &
-                  !!$OMP shared(we,ne,na,nt,nn,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
-                  !!$OMP collapse(3)
+                  !$OMP parallel do default(none) &
+                  !$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp) &
+                  !$OMP shared(we,ne,na,nt,nn,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
+                  !$OMP collapse(3)
                   DO lh = 1,sphhar%nlh(ns)
                      DO lp = 0,atoms%lmax(nn)
                         DO l = 0,atoms%lmax(nn)
@@ -91,7 +91,7 @@ MODULE m_rhonmt21
                         ENDDO ! lp
                      ENDDO ! l
                   ENDDO ! lh
-                  !!$OMP end parallel do
+                  !$OMP end parallel do
                ENDIF ! (sym%ntypsy(nt)==ns)
             ENDDO ! na
             natom= natom + atoms%neq(nn)
