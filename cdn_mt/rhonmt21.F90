@@ -54,20 +54,22 @@ MODULE m_rhonmt21
          !$OMP parallel do default(none) &
          !$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp,na,nt,nn,natom,llpmax) &
          !$OMP shared(sym,we,ne,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
-         !$OMP collapse(3)
+         !$OMP collapse(2)
          DO lh = 1,sphhar%nlh(ns)
-            DO lp = 0,atoms%lmaxd
-               DO l = 0,atoms%lmaxd
-                  lv = sphhar%llh(lh,ns)
-                  IF ( MOD(lv+l+lp,2) .NE. 0 ) CYCLE
-                  cil = mi**(l-lp)
-                  DO jmem = 1,sphhar%nmem(lh,ns)
-                     mv = sphhar%mlh(jmem,lh,ns)
+            DO l = 0,atoms%lmaxd
+               lv = sphhar%llh(lh,ns)
+               DO jmem = 1,sphhar%nmem(lh,ns)
+                  mv = sphhar%mlh(jmem,lh,ns)
+                  m_loop: DO m = -l,l
                      mp = m - mv
-                     IF(ABS(mp).GT.lp) CYCLE
-                     coef1 = cil * sphhar%clnu(jmem,lh,ns)
-                     lmp = lp*(lp+1) + mp
-                     m_loop: DO m = -l,l
+
+                     DO lp = 0, atoms%lmaxd
+                        IF(ABS(mp).GT.lp) CYCLE
+                        IF ( MOD(lv+l+lp,2) .NE. 0 ) CYCLE
+                        cil = mi**(l-lp)
+                        coef1 = cil * sphhar%clnu(jmem,lh,ns)
+                        lmp = lp*(lp+1) + mp
+
                         coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                         IF (ABS(coef) .LT. 1e-12 ) CYCLE
                         lm= l*(l+1) + m
@@ -90,9 +92,9 @@ MODULE m_rhonmt21
                            ENDDO ! na
                            natom= natom + atoms%neq(nn)
                         ENDDO ! nn
-                     ENDDO m_loop ! m
-                  ENDDO ! jmem
-               ENDDO ! lp
+                     ENDDO
+                  ENDDO m_loop ! m
+               ENDDO ! jmem
             ENDDO ! l
          ENDDO ! lh
          !$OMP end parallel do
