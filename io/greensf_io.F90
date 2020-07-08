@@ -130,7 +130,7 @@ MODULE m_greensf_io
       INTEGER           :: hdfError
       INTEGER           :: dimsInt(7)
       INTEGER           :: ispin,m,l,lp,atomType,atomTypep,jspinsOut,iContour
-      INTEGER           :: i_elem,n_elem,i,iContourOut,nLO,iLo,iLOp
+      INTEGER           :: i_elem,i,iContourOut,nLO,iLo,iLOp
       INTEGER(HSIZE_T)  :: dims(7)
       REAL              :: trc(MERGE(3,input%jspins,gfinp%l_mperp)),atomDiff(3)
       LOGICAL           :: l_sphavg,l_onsite,l_anyradial

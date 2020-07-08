@@ -37,7 +37,7 @@ MODULE m_greensfPostProcess
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
-      INTEGER  i_gf,nType,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
+      INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
@@ -104,7 +104,7 @@ MODULE m_greensfPostProcess
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,input,sym,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
+      CALL greensfCalcRealPart(atoms,gfinp,input,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
@@ -115,7 +115,7 @@ MODULE m_greensfPostProcess
          !-------------------------------------------------------------
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
          IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-           CALL crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
+           CALL crystal_field(atoms,gfinp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands

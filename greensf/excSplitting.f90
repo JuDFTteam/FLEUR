@@ -17,7 +17,7 @@ MODULE m_excSplitting
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
 
-      INTEGER :: i_gf,i_elem,indUnique,ispin,kkcut,m,l,lp,atomType,atomTypep,ie
+      INTEGER :: i_gf,i_elem,indUnique,ispin,m,l,lp,atomType,atomTypep
       LOGICAL :: l_sphavg
       REAL    :: excSplit,del
       REAL, ALLOCATABLE :: eMesh(:), imag(:)

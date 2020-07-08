@@ -27,11 +27,10 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,sym,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
-      TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_noco),              INTENT(IN)     :: noco
       TYPE(t_usdus),             INTENT(IN)     :: usdus
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
@@ -41,13 +40,13 @@ MODULE m_greensfCalcRealPart
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: g(:)
 
-      INTEGER :: i_gf,i_elem,ie,l,m,mp,nType,indUnique,nLO,iLO,iLOp,i_elemLO
-      INTEGER :: jspin,nspins,ipm,kkcut,lp,nTypep,refCutoff
-      INTEGER :: spin_cut,contourShape
+      INTEGER :: i_gf,i_elem,l,m,mp,nType,indUnique,nLO,iLO,iLOp,i_elemLO
+      INTEGER :: jspin,nspins,ipm,lp,nTypep,refCutoff
+      INTEGER :: contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
       LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg
-      REAL    :: fac,del,eb,et,fixedCutoff,atomDiff(3)
+      REAL    :: del,eb,fixedCutoff,atomDiff(3)
       REAL,    ALLOCATABLE :: eMesh(:),imag(:)
 
       !Get the information on the real axis energy mesh

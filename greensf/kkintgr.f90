@@ -45,7 +45,7 @@ MODULE m_kkintgr
       COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      INTEGER  :: iz,izp,n1,n2,i,ne,nz
+      INTEGER  :: iz,izp,n1,n2,ne,nz
       INTEGER  :: ismooth,nsmooth
       REAL     :: eb,del
       REAL     :: re_n1,re_n2,im_n1,im_n2

@@ -119,7 +119,7 @@ MODULE m_types_greensf
          CLASS(t_greensf), INTENT(INOUT)::this
          INTEGER, INTENT(IN):: mpi_comm
          INTEGER, INTENT(IN), OPTIONAL::irank
-         INTEGER ::rank,myrank,n,ierr
+         INTEGER ::rank
          IF (PRESENT(irank)) THEN
             rank = irank
          ELSE
@@ -231,7 +231,7 @@ MODULE m_types_greensf
          TYPE(t_usdus), OPTIONAL, INTENT(IN)     :: usdus
          TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
 
-         INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
+         INTEGER matsize1,matsize2,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep,nspins,ilo,ilop,iLO_ind,iLOp_ind
          LOGICAL l_full,l_scalar
@@ -768,7 +768,7 @@ MODULE m_types_greensf
          TYPE(t_mat),         INTENT(IN)     :: gmat
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
 
-         INTEGER matsize1,matsize2,i,j,ind1,ind2,ind1_start,ind2_start
+         INTEGER matsize1,matsize2,ind1,ind2,ind1_start,ind2_start
          INTEGER l,lp,atomType,atomTypep,m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end
          LOGICAL l_full
 
