@@ -8,20 +8,20 @@ jt::testrun("$executable ",$workdir);
 $result=jt::test_fileexists("$workdir/out");
 
 #Test the charges for the decomposition
-$result+=jt::test_grepexists("$workdir/out","0.2074");
+$result+=jt::test_grepexists("$workdir/out","0.2073");
 $result+=jt::test_grepexists("$workdir/out","5.835");
 $result+=jt::test_grepexists("$workdir/out","0.020");
 
 $result+=jt::test_fileexists("$workdir/DOS.1");
 
 #5/2 peak line 365
-$result+=jt::test_grepexists("$workdir/DOS.1","0.0004");
+$result+=jt::test_grepexists("$workdir/DOS.1","0.0003");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.848E+02");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.845E+02");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.297E+00");
 
 #7/2 peak line 875
-$result+=jt::test_grepexists("$workdir/DOS.1","0.5341");
+$result+=jt::test_grepexists("$workdir/DOS.1","0.5340");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.988E+02");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.264E+00");
 $result+=jt::test_grepexists("$workdir/DOS.1","0.986E+02");
