@@ -40,7 +40,7 @@ MODULE m_greensfTorgue
       INTEGER :: lh,mems,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
+      COMPLEX :: sigma(2,2,3),torgue_cmplx(3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
       REAL,    ALLOCATABLE :: bxc(:,:)
@@ -54,7 +54,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
       ALLOCATE(bxc(SIZE(vTot%mt,1),0:SIZE(vTot%mt,2)-1))
-      bxc = (vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2))/2.0
+      bxc = vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2)
 
       na=SUM(atoms%neq(:atomType-1))+1
       nsym = sym%ntypsy(na)
@@ -68,15 +68,6 @@ MODULE m_greensfTorgue
       sigma(2,1,2)=CMPLX(0.0,1.0)
       sigma(1,1,3)=CMPLX(1.0,0.0)
       sigma(2,2,3)=CMPLX(-1.0,0.0)
-
-      chi(1,1) =  exp(ImagUnit*nococonv%alph(atomType)/2)*cos(nococonv%beta(atomType)/2)
-      chi(1,2) = -EXP(ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
-      chi(2,1) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
-      chi(2,2) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*COS(nococonv%beta(atomType)/2)
-
-      !sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
-      !sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
-      !sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
 
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")

@@ -694,10 +694,6 @@ MODULE m_types_greensf
          IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),this%contour%nz),source=cmplx_0)
 
          DO spin = 1, 4
-            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(spin1,spin2,:,:) = cmplx_0
-               CYCLE
-            ENDIF
             IF(spin < 3) THEN
                spin1 = spin
                spin2 = spin
@@ -707,6 +703,10 @@ MODULE m_types_greensf
             ELSE
                spin1 = 1
                spin2 = 2
+            ENDIF
+            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
+               gmat(spin1,spin2,:,:) = cmplx_0
+               CYCLE
             ENDIF
             CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
             gmat(spin1,spin2,:,:) = temp(:,:)
@@ -735,10 +735,6 @@ MODULE m_types_greensf
          IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),SIZE(f,1),this%contour%nz),source=cmplx_0)
 
          DO spin = 1, 4
-            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(spin1,spin2,:,:,:) = cmplx_0
-               CYCLE
-            ENDIF
             IF(spin < 3) THEN
                spin1 = spin
                spin2 = spin
@@ -748,6 +744,10 @@ MODULE m_types_greensf
             ELSE
                spin1 = 1
                spin2 = 2
+            ENDIF
+            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
+               gmat(spin1,spin2,:,:,:) = cmplx_0
+               CYCLE
             ENDIF
             CALL this%getRadialRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
             gmat(spin1,spin2,:,:,:) = temp(:,:,:)

@@ -262,8 +262,7 @@ CONTAINS
                END SELECT
             ENDDO
          ELSE
-            !Write out a default contour
-210         FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '" label="', a,'"/>')
+            !Write out a default contour (Semicircle)
             WRITE(fileNum, 208) 128, -1.0, 0.0,1.0,"default"
          ENDIF
          WRITE(fileNum, '(a)') '      </greensFunction>'
