@@ -81,7 +81,6 @@ MODULE m_rhonmt21
                      IF (lplow.GT.lphi) CYCLE m_loop
 
                      DO lp = lplow, lphi,2
-                        IF ( MOD(lv+l+lp,2) .NE. 0 ) CYCLE
                         cil = mi**(l-lp)
                         coef1 = cil * sphhar%clnu(jmem,lh,ns)
                         lmp = lp*(lp+1) + mp
