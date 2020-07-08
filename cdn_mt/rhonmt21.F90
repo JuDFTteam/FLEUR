@@ -48,11 +48,11 @@ MODULE m_rhonmt21
       COMPLEX CPP_BLAS_cdotc
       EXTERNAL CPP_BLAS_cdotc
 
-      INTEGER jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nb,nn,ns,nt!,lplow0,lphi,lplow,lcond
+      INTEGER jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nb,nn,ns,nt,lphi,lplow
 
       DO ns=1,sym%nsymt
          !$OMP parallel do default(none) &
-         !$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp,na,nt,nn,natom,llpmax) &
+         !$OMP private(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp,na,nt,nn,natom,llpmax,lphi,lplow) &
          !$OMP shared(sym,we,ne,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
          !$OMP collapse(2)
          DO lh = 1,sphhar%nlh(ns)
@@ -61,7 +61,23 @@ MODULE m_rhonmt21
                DO jmem = 1,sphhar%nmem(lh,ns)
                   mv = sphhar%mlh(jmem,lh,ns)
                   m_loop: DO m = -l,l
+                     lm= l*(l+1) + m
                      mp = m - mv
+
+                     !maximum value of lp
+                     lphi  = l + lv
+                     !---> check that lphi is smaller than the max l of the
+                     !---> wavefunction expansion
+                     lphi = MIN(lphi,atoms%lmaxd)
+                     !--->  make sure that l + l'' + lphi is even
+                     lphi = lphi - MOD(l+lv+lphi,2)
+
+                     lplow = abs(l-lv)
+                     lplow = MAX(lplow,ABS(mp))
+                     !---> make sure that l + l'' + lplow is even
+                     lplow = lplow + MOD(ABS(lphi-lplow),2)
+
+                     IF (lplow.GT.lphi) CYCLE m_loop
 
                      DO lp = 0, atoms%lmaxd
                         IF(ABS(mp).GT.lp) CYCLE
@@ -72,7 +88,6 @@ MODULE m_rhonmt21
 
                         coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                         IF (ABS(coef) .LT. 1e-12 ) CYCLE
-                        lm= l*(l+1) + m
                         natom= 0
                         DO nn=1,atoms%ntype
                            llp= lp*(atoms%lmax(nn)+1)+l+1
