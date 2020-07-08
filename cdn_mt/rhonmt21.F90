@@ -39,6 +39,7 @@ CONTAINS
     !     .. Local Scalars .. 
     COMPLEX coef, cil, coef1
     COMPLEX, PARAMETER :: mi = (0.0,-1.0)
+    COMPLEX :: temp(ne)
     COMPLEX CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc
  
@@ -52,7 +53,7 @@ CONTAINS
           DO na= 1,atoms%neq(nn)
              nt= nt+1
              IF (sym%ntypsy(nt)==ns) THEN
-                !$OMP PARALLEL DO PRIVATE(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv) &
+                !$OMP PARALLEL DO PRIVATE(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv,temp) &
                 !$OMP DEFAULT(none) &
                 !$OMP SHARED(we,ne,na,nt,nn,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
                 !$OMP collapse(3)
@@ -72,10 +73,12 @@ CONTAINS
                                      coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                                      IF (ABS(coef) .GE. 0 ) THEN
                                         lm= l*(l+1) + m
-                                        uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1, we(:) * coef * eigVecCoeffs%acof(:,lm,nt,1),1)
-                                        udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,we(:) * coef * eigVecCoeffs%bcof(:,lm,nt,1),1)
-                                        dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1, we(:) * coef * eigVecCoeffs%acof(:,lm,nt,1),1)
-                                        ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,we(:) * coef * eigVecCoeffs%bcof(:,lm,nt,1),1)
+                                        temp(:) = coef * we(:) * eigVecCoeffs%acof(:,lm,nt,1)
+                                        uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                        dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+                                        temp(:) = coef * we(:) * eigVecCoeffs%bcof(:,lm,nt,1)
+                                        udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                        ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
                                      ENDIF ! (coef >= 0)
                                   ENDDO m_loop ! m
                                ENDDO  mp_loop
