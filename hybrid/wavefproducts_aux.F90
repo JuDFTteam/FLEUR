@@ -97,7 +97,7 @@ CONTAINS
       
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp
+      integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
       integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv, ierr
       integer, allocatable :: iob_arr(:), iband_arr(:)
       real    :: q(3), inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
@@ -137,6 +137,10 @@ CONTAINS
 
       call timestart("1st wavef2rs")
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
+      call psi_kqpt%save_npy("psi_kqpt_nk=" // int2str(ik) // &
+                                    "_iq=" // int2str(iq) // &
+                                    "_bandoi=" // int2str(bandoi) // ".npy")
+
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
@@ -145,13 +149,16 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       !$OMP PARALLEL default(private) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize)&
+      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp) 
 
       allocate(prod(0:fftd-1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc prod")
       allocate(psi_k(0:fftd-1,1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc psi_k")
+
+      iob_list   = -7 
+      iband_list = -7
 
       call fft%init(length_zfft, .true.)
       !$OMP DO 
@@ -160,6 +167,8 @@ CONTAINS
          psi_k(:,1) = conjg(psi_k(:,1)) * stars%ufft * inv_vol
 
          do iob = 1, psize
+            iob_list(iob + (iband-1)*psize)   = iob
+            iband_list(iob + (iband-1)*psize) = iband
             ! t_start = cputime()
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
             call fft%exec(prod)
@@ -177,7 +186,7 @@ CONTAINS
             if(cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                  cprod%data_r(hybdat%nbasp+igptm, iob + (iband-1)*psize) = real(prod(g2fft(length_zfft,g)))        
+                  cprod%data_r(hybdat%nbasp+igptm, iob + (iband-1)*psize) = real(prod(g2fft(length_zfft,g))) 
                enddo
             else
                DO igptm = 1, mpdata%n_g(iq)
@@ -191,6 +200,17 @@ CONTAINS
       deallocate(prod, psi_k)
       call fft%free()
       !$OMP END PARALLEL 
+      call save_npy("iob_is_nk=" // int2str(ik) // &
+                     "_iq=" // int2str(iq) // &
+                     "_bandoi=" // int2str(bandoi) // ".npy", iob_list)
+
+      call save_npy("iband_is_nk=" // int2str(ik) // &
+                     "_iq=" // int2str(iq) // &
+                     "_bandoi=" // int2str(bandoi) // ".npy", iband_list)
+
+      call cprod%save_npy("cprod_is_nk=" // int2str(ik) // &
+                           "_iq=" // int2str(iq) // &
+                           "_bandoi=" // int2str(bandoi) // ".npy")
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()

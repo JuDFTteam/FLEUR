@@ -290,6 +290,7 @@ CONTAINS
       enddo
       call timestop("dangeling MPI_barriers")
 #endif
+      call judft_error("stopit")
       call dot_result%free()
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
