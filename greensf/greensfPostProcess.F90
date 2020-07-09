@@ -202,7 +202,7 @@ MODULE m_greensfPostProcess
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
-                               u=f,udot=g,ulo=flo)
+                               u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Green's Function: IO/Write")
 #endif
