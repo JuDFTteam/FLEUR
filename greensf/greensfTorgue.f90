@@ -73,7 +73,6 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function Torgue: Integration")
       torgue_cmplx = cmplx_0
       iContour = -1
-      ALLOCATE(g_ii(atoms%jmtd,greensFunction(1)%contour%nz),source=cmplx_0)
       DO i_gf = 1, SIZE(greensFunction)
 
          IF(greensFunction(i_gf)%elem%atomType.NE.atomType.OR.&
