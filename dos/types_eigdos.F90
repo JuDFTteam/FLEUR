@@ -182,7 +182,7 @@ subroutine write_dos(eigdos,hdf_id)
       print *,"WARNING, only very basic BS written without HDF"
 
     DO jspin=1,eigdos%get_spins()
-      write(file,"(a,a,i0)") trim("BS.",jspin
+      write(file,"(a,i0)") "bands.",jspin
       open(18,file=file)
       ev=eigdos%get_eig()
       kx(1) = 0.0
@@ -192,10 +192,12 @@ subroutine write_dos(eigdos,hdf_id)
         kx(k)=kx(k-1)+ sqrt(dot_product(vkr-vkr_prev,vkr-vkr_prev))
         vkr_prev=vkr
       ENDDO
+      DO i = 1, minval(eigdos%get_neig())
       DO k = 1, kpts%nkpt
-        write(18,'(999f15.9)') kx(k),(ev(i,k,jspin),i = 1, minval(eigdos%get_neig()))
+        write(18,'(999f15.9)') kx(k),ev(i,k,jspin)
       !-eFermiCorrection
       ENDDO
+    ENDDO
       CLOSE (18)
     enddo
 #endif
