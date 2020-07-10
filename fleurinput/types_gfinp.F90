@@ -61,6 +61,7 @@ MODULE m_types_gfinp
    TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
       !General logical switches
       LOGICAL :: l_mperp = .FALSE.
+      LOGICAL :: l_resolvent = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
       !Number of elements
@@ -109,6 +110,7 @@ CONTAINS
          rank = 0
       END IF
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
+      CALL mpi_bc(this%l_resolvent,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
       CALL mpi_bc(this%ne,rank,mpi_comm)
@@ -179,6 +181,7 @@ CONTAINS
 
       IF (l_gfinfo_given) THEN
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
+         this%l_resolvent=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolvent'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/realAxis'

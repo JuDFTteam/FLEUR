@@ -263,6 +263,7 @@ MODULE m_tetrahedronInit
 
       USE m_tetsrt
       USE m_tetraWeight
+      USE m_resWeight
 
       REAL,             INTENT(IN)     :: eMesh(:)    !Energy points, where the weights are calculated
       REAL,             INTENT(IN)     :: etetra(:)   !Eigenvalues at the corners of the tetrahedron
@@ -307,7 +308,11 @@ MODULE m_tetrahedronInit
       IF(nstart /= 1) weight(:nstart-1) = 0.0
       !Calculate the weights
       DO ie = nstart, nend
-         weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+         IF(l_calcres) THEN
+            weight(ie) = resWeight(eMesh(ie),etetra(ind),vol,ind(icorn))
+         ELSE
+            weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+         ENDIF
       ENDDO
 
       !The loop terminates if the energy is larger than
