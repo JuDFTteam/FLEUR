@@ -89,14 +89,14 @@ MODULE m_greensfTorgue
             CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
          ENDIF
 
-         !$OMP parallel default(none) &
-         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
-         !$OMP shared(nh,nsym,l,lp,i_gf,atomType,torgue_cmplx) &
-         !$OMP private(lh,m,lamda,mem,mu,mp,phaseFactor,ipm,iz,alpha,jr) &
-         !$OMP private(realIntegral,imagIntegral,g_ii,g_iiSpin,g_Spin)
+!         !$OMP parallel default(none) &
+!         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
+!         !$OMP shared(nh,nsym,l,lp,i_gf,atomType,torgue_cmplx) &
+!         !$OMP private(lh,m,lamda,mem,mu,mp,phaseFactor,ipm,iz,alpha,jr) &
+!         !$OMP private(realIntegral,imagIntegral,g_ii,g_iiSpin,g_Spin)
          ALLOCATE(g_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
          ALLOCATE(g_iiSpin(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
-         !$OMP do collapse(2) reduction(+:torgue_cmplx)
+!         !$OMP do collapse(2) reduction(+:torgue_cmplx)
          DO lh = 0, nh
             DO m = -l, l
                lamda = sphhar%llh(lh,nsym)
@@ -132,9 +132,9 @@ MODULE m_greensfTorgue
                ENDDO
             ENDDO
          ENDDO
-         !$OMP end do
+!         !$OMP end do
          DEALLOCATE(g_ii,g_iiSpin)
-         !$OMP end parallel
+!         !$OMP end parallel
 
       ENDDO
       torgue = REAL(torgue_cmplx)
