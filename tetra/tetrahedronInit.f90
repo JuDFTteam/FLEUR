@@ -309,7 +309,7 @@ MODULE m_tetrahedronInit
       !Calculate the weights
       DO ie = nstart, nend
          IF(l_calcres) THEN
-            weight(ie) = resWeight(eMesh(ie),etetra(ind),vol,ind(icorn))
+            weight(ie) = resWeight(  eMesh(ie),etetra(ind),ind(icorn),vol,film)
          ELSE
             weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
          ENDIF
