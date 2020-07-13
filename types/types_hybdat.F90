@@ -80,9 +80,9 @@ contains
       DO nk = 1, fi%kpts%nkpt, 1
          hybdat%ne_eig(nk) = results%neig(nk, jsp)
          hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
+         hybdat%nbands(nk) = fi%hybinp%bands1
       END do
 
-      hybdat%nbands(nk) = fi%hybinp%bands1
       DO nk = 1, fi%kpts%nkpt
          IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
             hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
