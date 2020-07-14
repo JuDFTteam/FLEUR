@@ -92,9 +92,13 @@ MODULE m_tetrahedronInit
                   w  = getWeightSingleBand([efermi],etetra,icorn,vol(itet)*fac(ikpt),film,.FALSE.)
                ENDIF
 
-               IF(l_weights_pres)  weights(iband,ikpt) = weights(iband,ikpt) + w(1)
                IF(l_weightsum_pres) weightSum = weightSum + w(1)
 
+               IF(l_weights_pres) THEN
+                  !$OMP critical
+                  weights(iband,ikpt) = weights(iband,ikpt) + w(1)
+                  !$OMP end critical
+               ENDIF
             ENDDO
          ENDDO
       ENDDO
