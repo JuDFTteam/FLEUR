@@ -38,6 +38,7 @@ CONTAINS
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
     CALL new_argument(0,"-trace","Try to generate a traceback in case of an error","")
+    CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
 
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
     IF (.NOT. juDFT_was_argument("-h")) RETURN
