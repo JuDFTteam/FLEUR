@@ -37,6 +37,7 @@ MODULE m_types_kpts
       CHARACTER(LEN=50), ALLOCATABLE :: specialPointNames(:)
       REAL, ALLOCATABLE              :: specialPoints(:, :)
       INTEGER, ALLOCATABLE           :: ntetra(:, :)
+      INTEGER, ALLOCATABLE           :: tetraList(:,:) !List with the tetrahedra containing the current kpoint (for more efficient loops)
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
       type(t_eibz), allocatable      :: EIBZ(:)
@@ -122,6 +123,7 @@ CONTAINS
       CALL mpi_bc(this%specialPointIndices, rank, mpi_comm)
       CALL mpi_bc(this%specialPoints, rank, mpi_comm)
       CALL mpi_bc(this%ntetra, rank, mpi_comm)
+      CALL mpi_bc(this%tetraList,rank,mpi_comm)
       CALL mpi_bc(this%voltet, rank, mpi_comm)
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
@@ -308,7 +310,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film, l_eibz
 
-      INTEGER :: n
+      INTEGER :: n,itet,ntet
       call timestart("init_kpts")
       DO n = 1, kpts%nkpt
          kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
@@ -323,6 +325,18 @@ CONTAINS
          enddo
          !$OMP END PARALLEL DO
       end if
+
+      if(kpts%ntet>0) then
+         allocate(kpts%tetraList(MERGE(6,24,film),kpts%nkpt),source=0)
+         do n = 1, kpts%nkpt
+            ntet = 0
+            do itet = 1, kpts%ntet
+               IF(ALL(kpts%ntetra(:,itet).NE.n)) CYCLE
+               ntet = ntet + 1
+               kpts%tetraList(ntet,n) = itet
+            enddo
+         enddo
+      endif
       call timestop("init_kpts")
    END SUBROUTINE init_kpts
 
