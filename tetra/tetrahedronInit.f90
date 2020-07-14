@@ -44,7 +44,7 @@ MODULE m_tetrahedronInit
       REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(SIZE(kpts%ntetra,1))
-      REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),fac,vol
+      REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),fac(kpts%nkpt),vol(kpts%ntet)
       logical :: l_weights_pres, l_weightsum_pres
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
@@ -60,38 +60,45 @@ MODULE m_tetrahedronInit
       IF(PRESENT(weights)) weights = 0.0
       IF(PRESENT(weightSum)) weightSum = 0.0
 
-      !More efficient to just loop through all tetrahedra
-      DO itet = 1, kpts%ntet
-         k = kpts%ntetra(:,itet)
-         where(k.GT.kpts%nkpt) k = kpts%bkp(k)
+      vol = kpts%voltet(:)/kpts%ntet
+      DO ikpt = 1, kpts%nkpt
+         fac(ikpt) = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
+      ENDDO
 
+      !More efficient to just loop through all tetrahedra
+      !$OMP parallel do default(none) &
+      !$OMP shared(neig,film,ncorn,vol,l_weights_pres,l_weightsum_pres) &
+      !$OMP shared(kpts,fac,eig,weights,efermi) &
+      !$OMP private(itet,ikpt,icorn,k,iband,etetra,w) &
+      !$OMP reduction(+:weightSum) collapse(3)
+      DO itet = 1, kpts%ntet
          DO icorn = 1, ncorn
-            ikpt = kpts%ntetra(icorn,itet)
-            IF(ikpt.GT.kpts%nkpt) CYCLE
-            fac = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
-            vol = kpts%voltet(itet)/kpts%ntet*fac
-            !$OMP parallel do default(none) &
-            !$OMP shared(itet,neig,ikpt,icorn,film,ncorn,k,vol,l_weights_pres,l_weightsum_pres) &
-            !$OMP shared(eig,weights,efermi) &
-            !$OMP private(iband,etetra,w) &
-            !$OMP reduction(+:weightSum) schedule(dynamic,1)
             DO iband = 1, neig
+
+               !Check if the current corner is part of the IBZ
+               ikpt = kpts%ntetra(icorn,itet)
+               IF(ikpt.GT.kpts%nkpt) CYCLE
+
+               !This array is to get the right indices in the eig array
+               k = kpts%ntetra(:,itet)
+               where(k.GT.kpts%nkpt) k = kpts%bkp(k)
 
                etetra = eig(iband,k)
 
                IF( ALL(etetra>efermi) ) CYCLE
                IF( ALL(etetra<efermi) ) THEN
-                  w = vol/REAL(ncorn)
+                  w = vol(itet)*fac(ikpt)/REAL(ncorn)
                ELSE
-                  w  = getWeightSingleBand([efermi],etetra,icorn,vol,film,.FALSE.)
+                  w  = getWeightSingleBand([efermi],etetra,icorn,vol(itet)*fac(ikpt),film,.FALSE.)
                ENDIF
 
                IF(l_weights_pres)  weights(iband,ikpt) = weights(iband,ikpt) + w(1)
                IF(l_weightsum_pres) weightSum = weightSum + w(1)
+
             ENDDO
-            !$OMP end parallel do
          ENDDO
       ENDDO
+      !$OMP end parallel do
 
    END SUBROUTINE getWeightKpoints
 
