@@ -325,40 +325,40 @@ MODULE m_tetrahedronInit
       l_calcres = .FALSE.
       IF(PRESENT(l_res)) l_calcres = l_res
 
-      !Find the range in the (equidistant) energy mesh where the weights are changing
-      IF( SIZE(eMesh)>1 .AND..NOT.l_calcres) THEN
-         !Extract basic parameters of the equidistant eMesh
-         eb = MINVAL(eMesh)
-         et = MAXVAL(eMesh)
-         del = eMesh(2)-eMesh(1)
-
-         !Get last point to the left of the lowest eigenvalue in the tetrahedron
-         nstart = INT((etetra(ind(1))-eb)/del)+1
-         nstart = MAX(1,nstart)
-
-         !Get first point to the right of the highest eigenvalue in the tetrahedron
-         nend   = INT((etetra(ind(SIZE(etetra)))-eb)/del)+2
-         nend   = MIN(SIZE(eMesh),nend)
-         nend   = MAX(1,nend)
+      IF(l_calcres) THEN
+         weight = resWeight(eMesh,etetra(ind),ind(icorn),vol,film)
       ELSE
-         nstart = 1
-         nend   = SIZE(eMesh)
-      ENDIF
+         !Find the range in the (equidistant) energy mesh where the weights are changing
+         IF( SIZE(eMesh)>1) THEN
+            !Extract basic parameters of the equidistant eMesh
+            eb = MINVAL(eMesh)
+            et = MAXVAL(eMesh)
+            del = eMesh(2)-eMesh(1)
 
-      IF(nstart /= 1) weight(:nstart-1) = 0.0
-      !Calculate the weights
-      DO ie = nstart, nend
-         IF(l_calcres) THEN
-            weight(ie) = resWeight(  eMesh(ie),etetra(ind),ind(icorn),vol,film)
+            !Get last point to the left of the lowest eigenvalue in the tetrahedron
+            nstart = INT((etetra(ind(1))-eb)/del)+1
+            nstart = MAX(1,nstart)
+
+            !Get first point to the right of the highest eigenvalue in the tetrahedron
+            nend   = INT((etetra(ind(SIZE(etetra)))-eb)/del)+2
+            nend   = MIN(SIZE(eMesh),nend)
+            nend   = MAX(1,nend)
          ELSE
-            weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+            nstart = 1
+            nend   = SIZE(eMesh)
          ENDIF
-      ENDDO
 
-      !The loop terminates if the energy is larger than
-      !all eigenvalues at the tetrahedron/triangle corners (nend)
-      !For all consecutive values the weight is constant
-      IF(nend.NE.SIZE(eMesh)) weight(nend+1:) = weight(nend)
+         IF(nstart /= 1) weight(:nstart-1) = 0.0
+         !Calculate the weights
+         DO ie = nstart, nend
+            weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+         ENDDO
+
+         !The loop terminates if the energy is larger than
+         !all eigenvalues at the tetrahedron/triangle corners (nend)
+         !For all consecutive values the weight is constant
+         IF(nend.NE.SIZE(eMesh)) weight(nend+1:) = weight(nend)
+      ENDIF
 
    END FUNCTION getWeightSingleBand
 
