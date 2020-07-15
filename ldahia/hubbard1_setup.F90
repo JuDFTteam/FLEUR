@@ -49,7 +49,7 @@ MODULE m_hubbard1_setup
       REAL    :: U,J
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
-      CHARACTER(len=300) :: cwd,path,folder,xPath
+      CHARACTER(len=300) :: folder
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -74,13 +74,7 @@ MODULE m_hubbard1_setup
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
-
-         !Get the working directory
-         CALL get_environment_variable('PWD',cwd)
-         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(hubbard1CalcFolder))
-         CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
-         !Remove everything from the last iteration (Good Idea??)
-         CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
+         CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(hubbard1CalcFolder)))
 
          !Positions of the DFT+HIA elements in all DFT+U related arrays
          indStart = atoms%n_u+1
@@ -103,8 +97,7 @@ MODULE m_hubbard1_setup
 
             !Create Subfolder (if there are multiple Hubbard 1 procedures)
             CALL hubbard1_path(atoms,i_hia,folder)
-            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-            CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
+            CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(folder)))
 
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
@@ -166,17 +159,17 @@ MODULE m_hubbard1_setup
             ! Check for additional input files
             !-------------------------------------------------------
             !Is a crystal field matrix present in the work directory (overwrites the calculated matrix)
-            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-            IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1data%ccfmat(i_hia,-l:l,-l:l),l)
+            INQUIRE(file=TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
+            IF(l_ccfexist) CALL read_ccfmat(hub1data%ccfmat(i_hia,-l:l,-l:l),l)
             !Is a bath parameter file present
-            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
+            INQUIRE(file=TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
             !Copy the bath file to the Hubbard 1 solver if its present
-            IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+            IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(folder)))
 
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
-            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
+            CALL write_hubbard1_input(folder,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
                                       hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
       ENDIF !fmpi%irank == 0
@@ -228,19 +221,17 @@ MODULE m_hubbard1_setup
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
 
-         CALL get_environment_variable('PWD',cwd)
          CALL hubbard1_path(atoms,i_hia,folder)
-         WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
 
          ALLOCATE(e(gdft(i_hia)%contour%nz),source=cmplx_0)
 
          CALL timestart("Hubbard 1: EDsolver")
          !We have to change into the Hubbard1 directory so that the solver routines can read the config
-         CALL CHDIR(TRIM(ADJUSTL(xPath)))
+         CALL CHDIR(TRIM(ADJUSTL(folder)))
 #ifdef CPP_EDSOLVER
          !Open the output file for the solver
          hubbardioUnit = 4000+i_hia
-         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(hubbard1Outfile)),&
+         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(hubbard1Outfile)),&
               status="replace", action="write", iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
          e = gdft(i_hia)%contour%e*hartree_to_ev_const
@@ -255,7 +246,11 @@ MODULE m_hubbard1_setup
          CLOSE(hubbardioUnit, iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
 #endif
-         CALL CHDIR(TRIM(ADJUSTL(cwd)))
+         IF(atoms%n_hia>1) THEN
+            CALL CHDIR("../../")
+         ELSE
+            CALL CHDIR("../")
+         ENDIF
          CALL timestop("Hubbard 1: EDsolver")
 
          DEALLOCATE(e)
@@ -275,7 +270,7 @@ MODULE m_hubbard1_setup
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
 #ifdef CPP_DEBUG
-         OPEN(unit=1337, file=TRIM(ADJUSTL(xPath)) // 'mu',&
+         OPEN(unit=1337, file=TRIM(ADJUSTL(folder)) // 'mu',&
               status="replace", action="write", iostat=io_error)
 #endif
 
