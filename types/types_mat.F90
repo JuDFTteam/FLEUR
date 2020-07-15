@@ -45,9 +45,30 @@ MODULE m_types_mat
       procedure        :: conjugate => t_mat_conjg
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
+      procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_pos_eigvec_sum(mat)
+      implicit none 
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      integer :: ne, i
+      real    :: sum_sign_r
+
+      do ne = 1,size(mat%data_r,2)
+         i = -1
+         sum_sign_r = 0.0
+         do while (abs(sum_sign_r) < 1e-8)
+            i = i + 1
+            if(mat%matsize1-i < 1) exit
+            sum_sign_r = sum(mat%data_r(:mat%matsize1-i,ne))
+         enddo
+         if(mat%matsize1-i >= 1) then
+            mat%data_r(:,ne) = mat%data_r(:,ne) / sign(1.0, sum_sign_r)
+         endif
+      enddo
+   end subroutine t_mat_pos_eigvec_sum
+
    subroutine t_mat_bcast(mat, root, comm)
 #ifdef CPP_MPI
       use mpi

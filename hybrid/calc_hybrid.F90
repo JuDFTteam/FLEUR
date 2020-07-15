@@ -152,6 +152,7 @@ CONTAINS
          type(t_fleurinput), intent(in)    :: fi
          TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
+         write (*,*) "first_iteration_alloc"
          if(allocated(hybdat%ne_eig)) deallocate(hybdat%ne_eig)
          allocate(hybdat%ne_eig(fi%kpts%nkpt), source=0)
 

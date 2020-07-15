@@ -127,6 +127,7 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
+      call z_k%save_npy("zmat_kqpt=" // int2str(ikqpt) // "_bandoi=" // int2str(bandoi) // ".npy")
 #if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       call timestart("Post read_z Barrier")
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -147,18 +148,17 @@ CONTAINS
 
 
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
+      iob_list   = -7 
+      iband_list = -7
       !$OMP PARALLEL default(private) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
       !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp) 
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp, bandoi) 
 
       allocate(prod(0:fftd-1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc prod")
       allocate(psi_k(0:fftd-1,1), stat=ok)
       if(ok /= 0) call juDFT_error("can't alloc psi_k")
-
-      iob_list   = -7 
-      iband_list = -7
 
       call fft%init(length_zfft, .true.)
       !$OMP DO 
@@ -167,7 +167,7 @@ CONTAINS
          psi_k(:,1) = conjg(psi_k(:,1)) * stars%ufft * inv_vol
 
          do iob = 1, psize
-            iob_list(iob + (iband-1)*psize)   = iob
+            iob_list(iob + (iband-1)*psize)   = iob + bandoi-1
             iband_list(iob + (iband-1)*psize) = iband
             ! t_start = cputime()
             prod = psi_k(:,1) * psi_kqpt%data_c(:,iob)
