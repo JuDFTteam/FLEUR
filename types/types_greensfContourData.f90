@@ -60,7 +60,7 @@ MODULE m_types_greensfContourData
          CLASS(t_greensfContourData), INTENT(INOUT)::this
          INTEGER, INTENT(IN):: mpi_comm
          INTEGER, INTENT(IN), OPTIONAL::irank
-         INTEGER ::rank,myrank,n,ierr
+         INTEGER ::rank
          IF (PRESENT(irank)) THEN
             rank = irank
          ELSE
@@ -85,7 +85,7 @@ MODULE m_types_greensfContourData
       REAL,                        INTENT(IN)    :: ef
       INTEGER,                     INTENT(IN)    :: irank
 
-      INTEGER iz,n,i_gf,iContour
+      INTEGER iz,n
       REAL e1, e2, sigma
       COMPLEX del
       REAL r, xr, expo, ff

@@ -36,7 +36,7 @@ MODULE m_occmtx
 
 
       INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns,spin_start,spin_end
-      REAL    :: re,imag,nup,ndwn,nhi,nlow,tr
+      REAL    :: nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=300) :: message
       TYPE(t_contourInp) :: contourInp
@@ -49,7 +49,7 @@ MODULE m_occmtx
       contourInp = gfinp%contour(g%elem%iContour)
 
       !Check for Contours not reproducing occupations
-      IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.contourInp%et.NE.0.0) &
+      IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.ABS(contourInp%et).GT.1e-12) &
          WRITE(oUnit,*) "Energy contour not ending at efermi: These are not the actual occupations"
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
          WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"

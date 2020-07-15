@@ -22,7 +22,7 @@ MODULE m_crystalfield
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,nococonv,greensfImagPart,v,ef,hub1data)
+   SUBROUTINE crystal_field(atoms,gfinp,input,nococonv,greensfImagPart,v,ef,hub1data)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
@@ -31,14 +31,13 @@ MODULE m_crystalfield
       TYPE(t_gfinp),             INTENT(IN)    :: gfinp
       TYPE(t_input),             INTENT(IN)    :: input
       TYPE(t_nococonv),          INTENT(IN)    :: nococonv
-      TYPE(t_hub1inp),           INTENT(IN)    :: hub1inp
       TYPE(t_potden),            INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
       REAL,                      INTENT(IN)    :: ef
       TYPE(t_hub1data),          INTENT(INOUT) :: hub1data
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp,i_elem
-      REAL    tr,xiSOC,del,eb
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,i_u,isp,i_elem
+      REAL    tr,del,eb
       COMPLEX vso
       LOGICAL, PARAMETER :: l_correctMinus = .FALSE.
       REAL, PARAMETER :: excTolerance = 0.2/hartree_to_ev_const
@@ -107,7 +106,7 @@ MODULE m_crystalfield
             DO jspin = 1, 2
                DO m = -l, l
                   DO mp = -l, l
-                     isp = 3.0-2.0*jspin !1,-1
+                     isp = 3-2*jspin !1,-1
                      IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
                         vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
                      ELSE

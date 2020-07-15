@@ -63,7 +63,7 @@ MODULE m_greensfCalcImagPart
             ALLOCATE(dosWeights(SIZE(eMesh),nBands),source=0.0)
             ALLOCATE(resWeights(SIZE(eMesh),nBands),source=0.0)
             ALLOCATE(indBound(nBands,2),source=0)
-            IF(.FALSE..AND..NOT.input%film) THEN !Here we also calculate the resolvent weights
+            IF(gfinp%l_resolvent) THEN !Here we also calculate the resolvent weights
                CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,SIZE(eMesh),&
                                     input%film,dosWeights,bounds=indBound,resWeights=resWeights,dos=.TRUE.)
             ELSE

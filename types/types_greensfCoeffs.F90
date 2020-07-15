@@ -80,12 +80,11 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,atoms,input,noco,jsp_start,jsp_end,nkpts,nbands)
+      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,atoms,noco,jsp_start,jsp_end,nkpts,nbands)
 
          CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),                INTENT(IN)     :: gfinp
          TYPE(t_atoms),                INTENT(IN)     :: atoms
-         TYPE(t_input),                INTENT(IN)     :: input
          TYPE(t_noco),                 INTENT(IN)     :: noco
          INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
          INTEGER,                      INTENT(IN)     :: nkpts,nbands !number of kpts and bands handled by this rank
@@ -237,7 +236,7 @@ MODULE m_types_greensfCoeffs
          CLASS(t_greensfImagPart), INTENT(INOUT)::this
          INTEGER, INTENT(IN):: mpi_comm
          INTEGER, INTENT(IN), OPTIONAL::irank
-         INTEGER ::rank,myrank,n,ierr
+         INTEGER ::rank
          IF (PRESENT(irank)) THEN
             rank = irank
          ELSE

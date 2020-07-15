@@ -5,94 +5,114 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_rhonmt21
-  !     *************************************************************
-  !     subroutine sets up the coefficients of the spin (up,down) 
-  !     part of the non-spherical muffin-tin density. 
-  !                                                 pk`00 ff`01 gb`02
-  !     Added parallelization and reworked for the efficient use with FFN.
-  !                                                 R. Hilgers July '20
-  !     *************************************************************
-CONTAINS
-  SUBROUTINE rhonmt21(atoms,sphhar,we,ne,sym,eigVecCoeffs,uunmt21,udnmt21,dunmt21,ddnmt21)
+   !     *************************************************************
+   !     subroutine sets up the coefficients of the spin (up,down)
+   !     part of the non-spherical muffin-tin density.
+   !                                                 pk`00 ff`01 gb`02
+   !     Added parallelization and reworked for the efficient use with FFN.
+   !                                                 R. Hilgers July '20
+   !     *************************************************************
+   USE m_gaunt,ONLY:gaunt1
+   USE m_types_setup
+   USE m_types_cdnval
+   USE m_constants
+
+   IMPLICIT NONE
+
+   CONTAINS
+
+   SUBROUTINE rhonmt21(atoms,sphhar,we,ne,sym,eigVecCoeffs,uunmt21,udnmt21,dunmt21,ddnmt21)
+
+
+      TYPE(t_sym),          INTENT(IN)    :: sym
+      TYPE(t_sphhar),       INTENT(IN)    :: sphhar
+      TYPE(t_atoms),        INTENT(IN)    :: atoms
+      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+
+      !     .. Scalar Arguments ..
+      INTEGER,              INTENT(IN)    :: ne
+
+      !     .. Array Arguments ..
+      REAL,                 INTENT(IN)    :: we(:)!(nobd)
+      COMPLEX,              INTENT(INOUT) :: uunmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: udnmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: dunmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+      COMPLEX,              INTENT(INOUT) :: ddnmt21(:,:,:)!((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
+
+      !     .. Local Scalars ..
+      COMPLEX coef, cil, coef1
+      COMPLEX, PARAMETER :: mi = (0.0,-1.0)
+      COMPLEX :: temp(ne)
+
 #include"cpp_double.h"
-    USE m_gaunt,ONLY:gaunt1
-    USE m_types_setup
-    USE m_types_cdnval
+      COMPLEX CPP_BLAS_cdotc
+      EXTERNAL CPP_BLAS_cdotc
 
-    IMPLICIT NONE
+      INTEGER jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nb,nn,ns,nt,lphi,lplow
 
-    TYPE(t_sym),          INTENT(IN)    :: sym
-    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
-    TYPE(t_atoms),        INTENT(IN)    :: atoms
-    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+      DO ns=1,sym%nsymt
+         !$OMP parallel do default(none) &
+         !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
+         !$OMP private(cil,jmem,coef1,coef,temp,na,nt,nn,natom) &
+         !$OMP shared(sym,we,ne,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
+         !$OMP collapse(2)
+         DO lh = 1,sphhar%nlh(ns)
+            DO l = 0,atoms%lmaxd
+               lv = sphhar%llh(lh,ns)
+               DO jmem = 1,sphhar%nmem(lh,ns)
+                  mv = sphhar%mlh(jmem,lh,ns)
+                  m_loop: DO m = -l,l
+                     lm= l*(l+1) + m
+                     mp = m - mv
 
-    !     .. Scalar Arguments ..
-    INTEGER,              INTENT(IN)    :: ne   
+                     !maximum value of lp
+                     lphi  = l + lv
+                     !---> check that lphi is smaller than the max l of the
+                     !---> wavefunction expansion
+                     lphi = MIN(lphi,atoms%lmaxd)
+                     !--->  make sure that l + l'' + lphi is even
+                     lphi = lphi - MOD(l+lv+lphi,2)
 
-    !     .. Array Arguments ..
-    REAL,                 INTENT(IN)    :: we(:)!(nobd)
-    COMPLEX,              INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-    COMPLEX,              INTENT(INOUT) :: udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-    COMPLEX,              INTENT(INOUT) :: dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-    COMPLEX,              INTENT(INOUT) :: ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)
-              
-    !     .. Local Scalars .. 
-    COMPLEX coef, cil, coef1
-    COMPLEX, PARAMETER :: mi = (0.0,-1.0)
-    COMPLEX CPP_BLAS_cdotc
-    EXTERNAL CPP_BLAS_cdotc
- 
-    INTEGER jmem,l,lh,llp,lm,lmp,lp,lv,m, mp,mv,na,natom,nb,nn,ns,nt!,lplow0,lphi,lplow,lcond
-    !     ..
-    !
-    DO ns=1,sym%nsymt
-       natom= 0
-       DO nn=1,atoms%ntype
-          nt= natom
-          DO na= 1,atoms%neq(nn)
-             nt= nt+1
-             IF (sym%ntypsy(nt)==ns) THEN
-                !$OMP PARALLEL DO PRIVATE(lh,lp,l,lv,cil,llp,jmem,coef1,mp,lmp,m,lm,coef,mv) &
-                !$OMP DEFAULT(none) &
-                !$OMP SHARED(we,ne,na,nt,nn,ns,uunmt21,udnmt21,dunmt21,ddnmt21,atoms,sphhar,eigVecCoeffs) &
-                !$OMP collapse(3)
-                DO lh = 1,sphhar%nlh(ns)
-                   DO lp = 0,atoms%lmax(nn)
-                      DO l = 0,atoms%lmax(nn)
-                         lv = sphhar%llh(lh,ns)
-                         IF ( MOD(lv+l+lp,2) .EQ. 0 ) THEN
-                            cil = mi**(l-lp)
-                            llp= lp*(atoms%lmax(nn)+1)+l+1
-                            DO jmem = 1,sphhar%nmem(lh,ns)
-                               mv = sphhar%mlh(jmem,lh,ns)
-                               coef1 = cil * sphhar%clnu(jmem,lh,ns) 
-                               mp_loop: DO mp = -lp,lp
-                                  lmp = lp*(lp+1) + mp
-                                  m_loop: DO m = -l,l
-                                     coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
-                                     IF (ABS(coef) .GE. 0 ) THEN
-                                        lm= l*(l+1) + m
-                                        uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1, we(:) * coef * eigVecCoeffs%acof(:,lm,nt,1),1)
-                                        udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,we(:) * coef * eigVecCoeffs%bcof(:,lm,nt,1),1)
-                                        dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1, we(:) * coef * eigVecCoeffs%acof(:,lm,nt,1),1)
-                                        ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,we(:) * coef * eigVecCoeffs%bcof(:,lm,nt,1),1)
-                                     ENDIF ! (coef >= 0)
-                                  ENDDO m_loop ! m
-                               ENDDO  mp_loop
-                            ENDDO ! jmem
-                         ENDIF ! ( MOD(lv+l+lp),2) == 0 )
-                      ENDDO ! lp
-                   ENDDO ! l
-                ENDDO ! lh
-                !$OMP END PARALLEL DO
-             ENDIF ! (sym%ntypsy(nt)==ns)
-          ENDDO ! na
-          natom= natom + atoms%neq(nn)
-       ENDDO ! nn
+                     lplow = abs(l-lv)
+                     lplow = MAX(lplow,ABS(mp))
+                     !---> make sure that l + l'' + lplow is even
+                     lplow = lplow + MOD(ABS(lphi-lplow),2)
 
-    ENDDO ! ns
+                     IF (lplow.GT.lphi) CYCLE m_loop
 
-    RETURN
+                     DO lp = lplow, lphi,2
+                        cil = mi**(l-lp)
+                        coef1 = cil * sphhar%clnu(jmem,lh,ns)
+                        lmp = lp*(lp+1) + mp
 
-  END SUBROUTINE rhonmt21
+                        coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
+                        IF (ABS(coef) .LT. 1e-12 ) CYCLE
+                        natom= 0
+                        DO nn=1,atoms%ntype
+                           llp= lp*(atoms%lmax(nn)+1)+l+1
+                           llpmax = (atoms%lmax(nn)+1)**2
+                           IF(llp.GT.llpmax) CYCLE
+                           nt= natom
+                           DO na= 1,atoms%neq(nn)
+                              nt= nt+1
+                              IF (sym%ntypsy(nt)==ns) THEN
+                                 temp(:) = coef * we(:) * eigVecCoeffs%acof(:,lm,nt,1)
+                                 uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                 dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+                                 temp(:) = coef * we(:) * eigVecCoeffs%bcof(:,lm,nt,1)
+                                 udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                 ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+                              ENDIF ! (sym%ntypsy(nt)==ns)
+                           ENDDO ! na
+                           natom= natom + atoms%neq(nn)
+                        ENDDO ! nn
+                     ENDDO
+                  ENDDO m_loop ! m
+               ENDDO ! jmem
+            ENDDO ! l
+         ENDDO ! lh
+         !$OMP end parallel do
+      ENDDO ! ns
+
+   END SUBROUTINE rhonmt21
 END MODULE m_rhonmt21

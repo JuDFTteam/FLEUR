@@ -36,11 +36,11 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(INOUT)  :: torgue(:)
       TYPE(t_potden),         INTENT(IN)     :: vTot
 
-      INTEGER :: jspin,na,nsym,nh,i_gf,l,lp,spin,iContour
-      INTEGER :: lh,mems,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
+      INTEGER :: na,nsym,nh,i_gf,l,lp,iContour
+      INTEGER :: lh,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
+      COMPLEX :: sigma(2,2,3),torgue_cmplx(3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
       REAL,    ALLOCATABLE :: bxc(:,:)
@@ -54,7 +54,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
       ALLOCATE(bxc(SIZE(vTot%mt,1),0:SIZE(vTot%mt,2)-1))
-      bxc = (vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2))/2.0
+      bxc = vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2)
 
       na=SUM(atoms%neq(:atomType-1))+1
       nsym = sym%ntypsy(na)
@@ -69,20 +69,10 @@ MODULE m_greensfTorgue
       sigma(1,1,3)=CMPLX(1.0,0.0)
       sigma(2,2,3)=CMPLX(-1.0,0.0)
 
-      chi(1,1) =  exp(ImagUnit*nococonv%alph(atomType)/2)*cos(nococonv%beta(atomType)/2)
-      chi(1,2) = -EXP(ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
-      chi(2,1) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*SIN(nococonv%beta(atomType)/2)
-      chi(2,2) =  EXP(-ImagUnit*nococonv%alph(atomType)/2)*COS(nococonv%beta(atomType)/2)
-
-      !sigma(:,:,1)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,1),chi))
-      !sigma(:,:,2)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,2),chi))
-      !sigma(:,:,3)=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(sigma(:,:,3),chi))
-
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
       torgue_cmplx = cmplx_0
       iContour = -1
-      ALLOCATE(g_ii(atoms%jmtd,greensFunction(1)%contour%nz),source=cmplx_0)
       DO i_gf = 1, SIZE(greensFunction)
 
          IF(greensFunction(i_gf)%elem%atomType.NE.atomType.OR.&
@@ -99,39 +89,52 @@ MODULE m_greensfTorgue
             CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
          ENDIF
 
+!         !$OMP parallel default(none) &
+!         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
+!         !$OMP shared(nh,nsym,l,lp,i_gf,atomType,torgue_cmplx) &
+!         !$OMP private(lh,m,lamda,mem,mu,mp,phaseFactor,ipm,iz,alpha,jr) &
+!         !$OMP private(realIntegral,imagIntegral,g_ii,g_iiSpin,g_Spin)
+         ALLOCATE(g_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+         ALLOCATE(g_iiSpin(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+!         !$OMP do collapse(2) reduction(+:torgue_cmplx)
          DO lh = 0, nh
-            lamda = sphhar%llh(lh,nsym)
-            mems = sphhar%nmem(lh,nsym)
-            DO mem = 1,mems
-               mu = sphhar%mlh(mem,lh,nsym)
-               DO m = -l, l
-                  DO mp = -lp, lp
-                     phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
-                     IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
-                     DO ipm = 1, 2
-                        CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                                flo(:,:,:,:,atomType),g_iiSpin)
-                        DO iz = 1, SIZE(g_ii,2)
-                           DO alpha = 1, 3 !(x,y,z)
-                              DO jr = 1, atoms%jri(atomType)
-                                 IF(ipm==1) THEN
-                                    g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
-                                 ELSE
-                                    g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
-                                 ENDIF
-                                 g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
-                              ENDDO
-                              CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                              CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                              torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                   * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
+            DO m = -l, l
+               lamda = sphhar%llh(lh,nsym)
+               IF(MOD(lamda+l+lp,2) .NE. 0) CYCLE
+               IF(lamda.GT.l+lp) CYCLE
+               IF(lamda.LT.abs(l-lp)) CYCLE
+               DO mem = 1,sphhar%nmem(lh,nsym)
+                  mu = sphhar%mlh(mem,lh,nsym)
+                  mp = m - mu
+                  IF(ABS(mp).GT.lp) CYCLE
+                  phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
+                  IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
+                  DO ipm = 1, 2
+                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
+                                                             flo(:,:,:,:,atomType),g_iiSpin)
+                     DO iz = 1, SIZE(g_ii,2)
+                        DO alpha = 1, 3 !(x,y,z)
+                           DO jr = 1, atoms%jri(atomType)
+                              IF(ipm==1) THEN
+                                 g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                              ELSE
+                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
+                              ENDIF
+                              g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
                            ENDDO
+                           CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                           CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
+                           torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
+                                                * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                         ENDDO
                      ENDDO
                   ENDDO
                ENDDO
             ENDDO
          ENDDO
+!         !$OMP end do
+         DEALLOCATE(g_ii,g_iiSpin)
+!         !$OMP end parallel
 
       ENDDO
       torgue = REAL(torgue_cmplx)
