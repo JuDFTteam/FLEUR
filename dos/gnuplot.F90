@@ -1,63 +1,80 @@
-    !----------------------------------------------------------------------
+module m_gnuplot_BS
+CONTAINS
+
+!----------------------------------------------------------------------
 ! once the file "bands.1" and "bands.2" are created, activate with:
 ! gnuplot < band.gnu > band.ps
 !----------------------------------------------------------------------
-      SUBROUTINE write_gnu(
-     >                     nosyp,d,ssy,name,jspins)
-!
+      SUBROUTINE gnuplot_BS(kpts,cell,jspins)
+      use m_types_cell
+      use m_types_kpts
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: nosyp,jspins
-      REAL,    INTENT (IN) :: d(nosyp)
-      CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
-      CHARACTER(len=8), INTENT (IN) :: name(10)
+      type(t_kpts),intent(in)  :: kpts
+      type(t_cell),intent(in)  :: cell
+      INTEGER, INTENT (IN)     :: jspins
+      CHARACTER(len=1) :: ssy
+      real   :: d(kpts%numSpecialPoints),vkr(3),vkr_prev(3)
 
-      INTEGER n,aoff,adel
+      INTEGER n,aoff,adel,k
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
-      write(*,*) aoff,adel
+      !write(*,*) aoff,adel
+
+      !Generate distances
+      d(1)=0.0
+      vkr_prev=matmul(kpts%specialPoints(:,1),cell%bmat)
+      DO k=2,kpts%numSpecialPoints
+        vkr=matmul(kpts%specialPoints(:,k),cell%bmat)
+        d(k)=d(k-1)+sqrt(dot_product(vkr-vkr_prev,vkr-vkr_prev))
+        vkr_prev=vkr
+      ENDDO
+
 
       OPEN (27,file='band.gnu',status='unknown')
       WRITE (27,900)
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE (27,904) name(:)
-      DO n = 1, nosyp
+      WRITE (27,904) kpts%name
+      DO n = 1, kpts%numSpecialPoints
         WRITE (27,905) d(n),d(n)
       ENDDO
-      WRITE (27,906) d(1),d(nosyp)
+      WRITE (27,906) d(1),d(size(d))
 !
 ! nomal labels
 !
-      IF (iachar(ssy(1)) < aoff ) THEN
-        WRITE (27,907) ssy(1),d(1)
+      ssy=kpts%specialPointNames(1)
+      IF (iachar(ssy) < aoff ) THEN
+        WRITE (27,907) ssy,d(1)
       ELSE
        WRITE (27,907) " ",d(1)
-      ENDIF
-      DO n = 2, nosyp-1
-        IF (iachar(ssy(n)) < aoff ) THEN
-          WRITE (27,908) ssy(n),d(n)
+     ENDIF
+      DO n = 2, kpts%numSpecialPoints-1
+        ssy=kpts%specialPointNames(n)
+        IF (iachar(ssy) < aoff ) THEN
+          WRITE (27,908) ssy,d(n)
         ELSE
           WRITE (27,908) " ",d(n)
         ENDIF
       ENDDO
-      IF (iachar(ssy(nosyp)) < aoff ) THEN
-        WRITE (27,909) ssy(nosyp),d(nosyp)
+      ssy=kpts%specialPointNames(n)
+      IF (iachar(ssy) < aoff ) THEN
+        WRITE (27,909) ssy,d(n)
       ELSE
-        WRITE (27,909) " ",d(nosyp)
+        WRITE (27,909) " ",d(n)
       ENDIF
-!
-! greek labels
-!
-      DO n = 1, nosyp
-        IF (iachar(ssy(n)) > aoff ) THEN
-          WRITE (27,914) achar(iachar(ssy(n))-adel),d(n)
+
+      DO n=1,kpts%numSpecialPoints
+        ssy=kpts%specialPointNames(n)
+        IF (iachar(ssy) > aoff ) THEN
+          WRITE (27,914) achar(iachar(ssy)-adel),d(n)
         ENDIF
       ENDDO
+
 !
 ! now write the rest
       WRITE (27,910)
-      WRITE (27,911) d(nosyp)+0.00001
+      WRITE (27,911) d(size(d))+0.00001
       IF (jspins == 2) WRITE (27,912)
       WRITE (27,913)
       CLOSE (27)
@@ -86,7 +103,9 @@
  912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \')
 #endif
  913  FORMAT ('"bands.1" using 1:($2+0.00)  w p pt  7 ps 0.5')
- 914  FORMAT ('set label "',a1,'" at ',f9.5,
-     +        ', -9.65 center font "Symbol,20"')
+ 914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')
 
-      END SUBROUTINE write_gnu
+    !call system("gnuplot <band.gnu >band.ps")
+
+  END SUBROUTINE gnuplot_BS
+end MODULE

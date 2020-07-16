@@ -155,9 +155,10 @@ subroutine write_dos(eigdos,hdf_id)
 #endif
   END subroutine
 
-  subroutine write_band(eigdos,kpts,cell,hdf_id)
+  subroutine write_band(eigdos,kpts,cell,hdf_id,efermi)
     use m_types_kpts
     use m_types_cell
+    use m_gnuplot_BS
 #ifdef CPP_HDF
      use HDF5
      use m_banddos_io
@@ -165,6 +166,7 @@ subroutine write_dos(eigdos,hdf_id)
     class(t_eigdos),INTENT(INOUT):: eigdos
     type(t_kpts),intent(in)      :: kpts
     type(t_cell),intent(in)      :: cell
+    real,intent(in)              :: efermi
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
     INTEGER::n
@@ -173,14 +175,18 @@ subroutine write_dos(eigdos,hdf_id)
     enddo
 #else
     integer,intent(in):: hdf_id !not used
+#endif
     integer:: jspin,i,k
     real,allocatable  :: ev(:,:,:),kx(:)
     real              :: vkr(3),vkr_prev(3)
     character(len=100)::file
     allocate(kx(kpts%nkpt))
-    if (eigdos%name_of_dos.ne."Local") &
+    if (eigdos%name_of_dos.ne."Local") then
+#ifndef CPP_HDF
       print *,"WARNING, only very basic BS written without HDF"
-
+#endif
+      return
+    endif
     DO jspin=1,eigdos%get_spins()
       write(file,"(a,i0)") "bands.",jspin
       open(18,file=file)
@@ -193,14 +199,15 @@ subroutine write_dos(eigdos,hdf_id)
         vkr_prev=vkr
       ENDDO
       DO i = 1, minval(eigdos%get_neig())
-      DO k = 1, kpts%nkpt
-        write(18,'(999f15.9)') kx(k),ev(i,k,jspin)
-      !-eFermiCorrection
+        DO k = 1, kpts%nkpt
+          write(18,'(999f15.9)') kx(k),(ev(i,k,jspin)-efermi)*hartree_to_ev_const
+          !-eFermiCorrection
+        ENDDO
       ENDDO
-    ENDDO
       CLOSE (18)
     enddo
-#endif
+    call gnuplot_bs(kpts,cell,eigdos%get_spins())
+
   end subroutine
 
   subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)

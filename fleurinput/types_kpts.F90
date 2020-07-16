@@ -249,7 +249,7 @@ CONTAINS
          ENDIF
       ELSE
          DO n = 1, kpts%numSpecialPoints
-            WRITE (fh, 209) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
+            WRITE (fh, 211) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
 211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
          END DO
       END IF
