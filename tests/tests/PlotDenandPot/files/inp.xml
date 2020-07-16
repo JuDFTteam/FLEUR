@@ -9,7 +9,7 @@
       <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="t" swsp="F" lflip="f"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
-      <nocoParams l_ss="F" l_mperp="t" l_mtNocoPot="t" l_alignMT="f" l_constr="F" l_sourceFree="f" mix_b=".00000000">
+      <nocoParams l_ss="F" l_mperp="t" l_mtNocoPot="t" l_constr="F" l_sourceFree="f" mix_b=".00000000">
          <qss>.0000000000 .0000000000 .0000000000</qss>
       </nocoParams>
       <expertModes gw="0" secvar="F"/>

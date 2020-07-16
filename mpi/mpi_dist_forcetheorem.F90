@@ -5,21 +5,23 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_mpi_dist_forcetheorem
+#ifdef CPP_MPI
+   use mpi 
+#endif
 CONTAINS
 #ifndef CPP_OLDINTEL
-  SUBROUTINE mpi_dist_forcetheorem(mpi,forcetheo)
+  SUBROUTINE mpi_dist_forcetheorem(fmpi,forcetheo)
     USE m_types_mpi
     USE m_types_forcetheo, ONLY: t_forcetheo
     USE m_types_forcetheo_extended
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(in)::mpi
+    TYPE(t_mpi),INTENT(in)::fmpi
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(INOUT)::forcetheo
 
     INTEGER::t,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        SELECT TYPE(forcetheo)
        TYPE IS (t_forcetheo)
           t=1
@@ -33,8 +35,8 @@ CONTAINS
           t=5
        END SELECT
     ENDIF   
-    CALL MPI_BCAST(t,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) THEN
+    CALL MPI_BCAST(t,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank.NE.0) THEN
        IF (ALLOCATED(forcetheo)) DEALLOCATE(forcetheo)
        SELECT CASE (t)
        CASE(1)
@@ -53,13 +55,13 @@ CONTAINS
     !now we have the correct type, now we have to distribute the data
     SELECT TYPE(forcetheo)
     TYPE IS (t_forcetheo_mae)
-       CALL forcetheo%dist(mpi)
+       CALL forcetheo%dist(fmpi)
     TYPE IS (t_forcetheo_ssdisp)
-       CALL forcetheo%dist(mpi)
+       CALL forcetheo%dist(fmpi)
     TYPE IS (t_forcetheo_dmi)
-       CALL forcetheo%dist(mpi)
+       CALL forcetheo%dist(fmpi)
     TYPE IS (t_forcetheo_jij)
-       CALL forcetheo%dist(mpi)
+       CALL forcetheo%dist(fmpi)
     END SELECT
 #endif
   END SUBROUTINE mpi_dist_forcetheorem

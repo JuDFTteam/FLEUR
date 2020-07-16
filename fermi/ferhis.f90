@@ -6,7 +6,7 @@
 
 MODULE m_ferhis
 CONTAINS
-  SUBROUTINE ferhis(input,kpts,mpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
+  SUBROUTINE ferhis(input,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
                     nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results)
     !***********************************************************************
     !
@@ -58,7 +58,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_mpi),INTENT(IN)          :: mpi
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_kpts),INTENT(IN)         :: kpts
     TYPE(t_noco),INTENT(IN),OPTIONAL         :: noco
@@ -122,7 +122,7 @@ CONTAINS
     !     ..
 
     tkb=input%tkb !might be modified if we have an insulator
-    IF ( mpi%irank == 0 ) THEN
+    IF ( fmpi%irank == 0 ) THEN
        WRITE (oUnit,FMT='(/)')
        WRITE (oUnit,FMT='(''FERHIS:  Fermi-Energy by histogram:'')')
     END IF
@@ -131,7 +131,7 @@ CONTAINS
     IF (nstef.LT.n) THEN
        gap = e(INDEX(nstef+1)) - ef
        results%bandgap = gap*hartree_to_ev_const
-       IF ( mpi%irank == 0 ) THEN
+       IF ( fmpi%irank == 0 ) THEN
           attributes = ''
           WRITE(attributes(1),'(f20.10)') gap*hartree_to_ev_const
           WRITE(attributes(2),'(a)') 'eV'
@@ -139,7 +139,7 @@ CONTAINS
           WRITE (oUnit,FMT=8050) gap
        END IF
     END IF
-    IF ( mpi%irank == 0 ) THEN
+    IF ( fmpi%irank == 0 ) THEN
        WRITE (oUnit,FMT=8010) spindg* (ws-weight)
     END IF
     !
@@ -175,7 +175,7 @@ CONTAINS
 
           ENDDO ink_loop
           IF (ink>n) THEN
-             IF ( mpi%irank == 0 ) THEN
+             IF ( fmpi%irank == 0 ) THEN
                 WRITE (oUnit,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
              END IF
           ENDIF
@@ -188,9 +188,9 @@ CONTAINS
              !--->            ADJUST FERMI-ENERGY BY NEWTON-METHOD
              !
              nocst = ink - 1
-             CALL ef_newton(n,mpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
+             CALL ef_newton(n,fmpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
              !
-             IF ( mpi%irank == 0 ) THEN
+             IF ( fmpi%irank == 0 ) THEN
                 WRITE (oUnit,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
              END IF
 
@@ -198,7 +198,7 @@ CONTAINS
              !
              !--->       NO STATES BETWEEN EF-8kt AND EF+8kt AVAILABLE
              !
-             IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8020)
+             IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020)
              nocst = nstef
              we(INDEX(nocst)) = we(INDEX(nocst)) - wfermi
              ef = efermi
@@ -236,7 +236,7 @@ CONTAINS
     !
     w_iks(:,:,:) = 0.0
 
-    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8080) nocst
+    IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8080) nocst
     DO i=1,nocst
        w_iks(idxeig(INDEX(i)),idxkpt(INDEX(i)),idxjsp(INDEX(i))) = we(INDEX(i))
     ENDDO
@@ -251,7 +251,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8070) wvals
+    IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8070) wvals
     !
     !
     !=======>   DETERMINE ENTROPY
@@ -279,7 +279,7 @@ CONTAINS
     ENDDO
     entropy = -spindg*entropy
     results%ts = tkb*entropy
-    IF ( mpi%irank == 0 ) WRITE (oUnit,FMT=8060) entropy,entropy*3.0553e-6 !: boltzmann constant in htr/k
+    IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8060) entropy,entropy*3.0553e-6 !: boltzmann constant in htr/k
 
 
 
@@ -289,7 +289,7 @@ CONTAINS
     !
 
     seigv = seigv+spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
-    IF (mpi%irank == 0) THEN
+    IF (fmpi%irank == 0) THEN
        attributes = ''
        WRITE(attributes(1),'(f20.10)') seigv
        WRITE(attributes(2),'(a)') 'Htr'

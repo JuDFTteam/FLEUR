@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+   SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
       use m_work_package
       use m_structureconstant
       USE m_types
@@ -55,7 +55,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
-      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
@@ -122,7 +122,7 @@ CONTAINS
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
-      if (mpi%is_root()) write (*, *) "start of coulomb calculation"
+      if (fmpi%is_root()) write (*, *) "start of coulomb calculation"
 
       call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
 
@@ -142,9 +142,9 @@ CONTAINS
       CALL intgrf_init(fi%atoms%ntype, fi%atoms%jmtd, fi%atoms%jri, fi%atoms%dx, fi%atoms%rmsh, gridf)
 
       !     Calculate the structure constant
-      CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, mpi)
+      CALL structureconstant(structconst, fi%cell, fi%hybinp, fi%atoms, fi%kpts, fmpi)
 
-      IF (mpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
+      IF (fmpi%irank == 0) WRITE (oUnit, '(//A)') '### subroutine: coulombmatrix ###'
 
       !
       !     Matrix allocation
@@ -154,15 +154,15 @@ CONTAINS
       call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
       allocate(coulomb(fi%kpts%nkpt))
-      DO im = 1, work_pack%k_packs(1)%size
+      DO im = 1, work_pack%n_kpacks
          ikpt = work_pack%k_packs(im)%nk
          call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
       enddo
       call timestop("coulomb allocation")
 
-      IF (mpi%irank == 0) then
+      IF (fmpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
-                            float2str(sum([(coulomb(work_pack%k_packs(i)%nk)%size_mb(), i=1,work_pack%k_packs(1)%size)])) // " MB"
+                            float2str(sum([(coulomb(work_pack%k_packs(i)%nk)%size_mb(), i=1,work_pack%n_kpacks)])) // " MB"
       endif
 
       !     Generate Symmetry:
@@ -314,8 +314,8 @@ CONTAINS
       ! and       sphbesmoment1(r,l) = 1/r**(l-1) * INT(0..r) r'**(l+2) * j_l(qr') dr'
       !                                + r**(l+2) * INT(r..S) r'**(1-l) * j_l(qr') dr' .
 
-      iqnrmstart = mpi%irank + 1
-      iqnrmstep = mpi%isize
+      iqnrmstart = fmpi%irank + 1
+      iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
       call timestart("Bessel calculation")
@@ -428,7 +428,7 @@ CONTAINS
 
       call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
-      DO im = 1, work_pack%k_packs(1)%size
+      DO im = 1, work_pack%n_kpacks
          ikpt = work_pack%k_packs(im)%nk
 
          ! only the first rank handles the MT-MT part
@@ -503,7 +503,7 @@ CONTAINS
          !     (2c) r,r' in different MT
 
          call timestart("loop over interst.")
-         DO im = 1, work_pack%k_packs(1)%size
+         DO im = 1, work_pack%n_kpacks
             ikpt = work_pack%k_packs(im)%nk
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt))
@@ -523,7 +523,7 @@ CONTAINS
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
-         DO im = 1, work_pack%k_packs(1)%size
+         DO im = 1, work_pack%n_kpacks
             ikpt = work_pack%k_packs(im)%nk
 
             DO igpt0 = 1, ngptm1(ikpt)
@@ -564,9 +564,9 @@ CONTAINS
          !     (3b) r,r' in different MT
 
          call timestart("coulomb matrix 3b")
-         DO im = 1, work_pack%k_packs(1)%size
+         DO im = 1, work_pack%n_kpacks
             ikpt = work_pack%k_packs(im)%nk
-            if (mpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
+            if (fmpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate (carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
@@ -778,7 +778,7 @@ CONTAINS
          call timestop("sphbesintegral")
 
          call timestart("loop 2")
-         DO im = 1, work_pack%k_packs(1)%size
+         DO im = 1, work_pack%n_kpacks
             ikpt = work_pack%k_packs(im)%nk
             call timestart("harmonics setup")
             DO igpt = 1, mpdata%n_g(ikpt)
@@ -805,7 +805,7 @@ CONTAINS
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), fi%kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
-         DO im = 1, work_pack%k_packs(1)%size
+         DO im = 1, work_pack%n_kpacks
             ikpt = work_pack%k_packs(im)%nk
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
@@ -870,7 +870,7 @@ CONTAINS
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      DO im = 1, work_pack%k_packs(1)%size
+      DO im = 1, work_pack%n_kpacks
          ikpt = work_pack%k_packs(im)%nk
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
@@ -886,7 +886,7 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
       enddo
 
-      DO im = 1, work_pack%k_packs(1)%size
+      DO im = 1, work_pack%n_kpacks
          ikpt = work_pack%k_packs(im)%nk
          ! unpack coulomb into coulomb(ikpt)
 

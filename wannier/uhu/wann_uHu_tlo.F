@@ -33,7 +33,9 @@ c****************************************c
       USE m_wann_uHu_radintsra5
       USE m_constants
       USE m_dujdr
-
+#if (defined(CPP_MPI) && !defined(CPP_T90))
+      use mpi 
+#endif
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
@@ -108,7 +110,6 @@ C     .. Local Arrays ..
 
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
 C     .. Intrinsic Functions ..
@@ -815,7 +816,7 @@ c*********************************************************c
        t_gggint = t_gggint + t0-t1
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
 #endif
 
       deallocate( ulovulo_sph, ulovulo_non)

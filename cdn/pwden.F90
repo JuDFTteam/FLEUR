@@ -6,7 +6,7 @@
 
 MODULE m_pwden
 CONTAINS
-   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, mpi, noco, cell, atoms, sym, &
+   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, fmpi, noco, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
@@ -83,7 +83,7 @@ CONTAINS
       USE m_fft_interface
       IMPLICIT NONE
       TYPE(t_lapw), INTENT(IN)       :: lapw
-      TYPE(t_mpi), INTENT(IN)        :: mpi
+      TYPE(t_mpi), INTENT(IN)        :: fmpi
       TYPE(t_oneD), INTENT(IN)       :: oneD
       TYPE(t_banddos), INTENT(IN)    :: banddos
       TYPE(t_input), INTENT(IN)      :: input
@@ -234,8 +234,8 @@ CONTAINS
          q0_22 = zero
          IF (.NOT. zmat%l_real) THEN
             DO nu = 1, ne
-               q0_11 = q0_11 + we(nu)*CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1, nu), 1, zMat%data_c(1, nu), 1)
-               q0_22 = q0_22 + we(nu)*CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1, nu), 1)
+               q0_11 = q0_11 + we(nu)*CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:, nu), 1, zMat%data_c(1:, nu), 1)
+               q0_22 = q0_22 + we(nu)*CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1)
             ENDDO
          ENDIF
          q0_11 = q0_11/cell%omtil
@@ -243,11 +243,11 @@ CONTAINS
       ELSE
          IF (zmat%l_real) THEN
             DO nu = 1, ne
-               q0 = q0 + we(nu)*CPP_BLAS_sdot(lapw%nv(jspin), zMat%data_r(1, nu), 1, zMat%data_r(1, nu), 1)
+               q0 = q0 + we(nu)*CPP_BLAS_sdot(lapw%nv(jspin), zMat%data_r(:, nu), 1, zMat%data_r(:, nu), 1)
             ENDDO
          ELSE
             DO nu = 1, ne
-               q0 = q0 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(jspin), zMat%data_c(1, nu), 1, zMat%data_c(1, nu), 1))
+               q0 = q0 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(jspin), zMat%data_c(:, nu), 1, zMat%data_c(:, nu), 1))
             ENDDO
          ENDIF
          q0 = q0/cell%omtil
@@ -257,7 +257,7 @@ CONTAINS
       !
       IF (noco%l_noco) THEN
          rhomat = 0.0
-         IF (ikpt .LE. mpi%isize) THEN
+         IF (ikpt .LE. fmpi%isize) THEN
             dos%qis = 0.0
          ENDIF
       ELSE

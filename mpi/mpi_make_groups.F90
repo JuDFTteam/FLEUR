@@ -6,9 +6,10 @@
 
 MODULE m_mpimakegroups
   use m_juDFT
+  use mpi
 CONTAINS
   SUBROUTINE mpi_make_groups(&
-       mpi,kpts, input,atoms,noco,&
+       fmpi,kpts, input,atoms,noco,&
        mlotot,mlolotot,&
        n_start,n_groups,n,matsize,ne, n_rank,n_size,SUB_COMM)
 !------------------------------------------------------------------------
@@ -45,7 +46,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)       :: mpi
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
 
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -59,7 +60,6 @@ CONTAINS
     INTEGER i,n_members
     INTEGER, ALLOCATABLE :: i_mygroup(:)
 
-    INCLUDE 'mpif.h'
     INTEGER WORLD_GROUP,SUB_GROUP
     INTEGER ierr(3)
     LOGICAL l_cm
@@ -68,38 +68,38 @@ CONTAINS
 ! first determine the number of groups of k-points to process
 !
       n_groups = 0
-      IF (kpts%nkpt.GT.mpi%isize) THEN           ! if there are more k-points than PEs
+      IF (kpts%nkpt.GT.fmpi%isize) THEN           ! if there are more k-points than PEs
 
-        IF (mod(kpts%nkpt,mpi%isize).EQ.0) THEN  ! maybe kpts%nkpt is a multiple of mpi%isize
-          n_groups = kpts%nkpt/mpi%isize
+        IF (mod(kpts%nkpt,fmpi%isize).EQ.0) THEN  ! maybe kpts%nkpt is a multiple of fmpi%isize
+          n_groups = kpts%nkpt/fmpi%isize
           n_size = 1
-        ELSE                            ! or an integer fraction of mpi%isize fits
-          DO i=2,mpi%isize
-            IF (mod(mpi%isize,i).EQ.0) THEN
+        ELSE                            ! or an integer fraction of fmpi%isize fits
+          DO i=2,fmpi%isize
+            IF (mod(fmpi%isize,i).EQ.0) THEN
               n_size = i
-              n_groups = kpts%nkpt * i/mpi%isize
-              IF (mod(kpts%nkpt,mpi%isize/i).EQ.0) GOTO 990
+              n_groups = kpts%nkpt * i/fmpi%isize
+              IF (mod(kpts%nkpt,fmpi%isize/i).EQ.0) GOTO 990
             ENDIF
           ENDDO
           n_groups = kpts%nkpt               ! or use all PE's per k-point
-          n_size = mpi%isize
+          n_size = fmpi%isize
         ENDIF
 
-      ELSEIF (kpts%nkpt.LT.mpi%isize) THEN       ! if there are more PEs than k-points
+      ELSEIF (kpts%nkpt.LT.fmpi%isize) THEN       ! if there are more PEs than k-points
 
-        IF (mod(mpi%isize,kpts%nkpt).EQ.0) THEN  ! maybe mpi%isize is a multiple of kpts%nkpt
+        IF (mod(fmpi%isize,kpts%nkpt).EQ.0) THEN  ! maybe fmpi%isize is a multiple of kpts%nkpt
            n_groups = 1
-           n_size = mpi%isize/kpts%nkpt
+           n_size = fmpi%isize/kpts%nkpt
         ELSE                            ! or an integer fraction of kpts%nkpt fits
           DO i=kpts%nkpt-1,2,-1
             IF (mod(kpts%nkpt,i).EQ.0) THEN
                n_groups = kpts%nkpt/i
-               n_size = mpi%isize/i
-               IF (mod(mpi%isize,i).EQ.0) GOTO 990
+               n_size = fmpi%isize/i
+               IF (mod(fmpi%isize,i).EQ.0) GOTO 990
             ENDIF
           ENDDO
           n_groups = kpts%nkpt               ! or use all PE's per k-point
-          n_size = mpi%isize
+          n_size = fmpi%isize
         ENDIF
 
       ELSE
@@ -118,23 +118,23 @@ CONTAINS
 !
 ! check different algorithm
 !
-      CALL check_memory(input,atoms, mlotot,mlolotot,noco,kpts,mpi, n_size)
+      CALL check_memory(input,atoms, mlotot,mlolotot,noco,kpts,fmpi, n_size)
 
       write(*,*) n_size
-      n_members = MIN(kpts%nkpt,mpi%isize)
-      n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size) ) + 1
+      n_members = MIN(kpts%nkpt,fmpi%isize)
+      n_members = MIN(n_members , CEILING(REAL(fmpi%isize)/n_size) ) + 1
 
       l_cm = .false.
       DO WHILE (.not.l_cm)
         n_members = n_members - 1
-        IF ((mod(mpi%isize,n_members) == 0).AND.&
+        IF ((mod(fmpi%isize,n_members) == 0).AND.&
      &      (mod(kpts%nkpt,n_members) == 0) ) THEN
            l_cm = .true.
         ENDIF
       ENDDO
       n_groups = kpts%nkpt/n_members
-      n_size = mpi%isize/n_members
-      IF (mpi%irank == 0) THEN
+      n_size = fmpi%isize/n_members
+      IF (fmpi%irank == 0) THEN
         write(*,*) 'k-points in parallel: ',n_members
         write(*,*) "pe's per k-point:     ",n_size
         write(*,*) '# of k-point loops:   ',n_groups
@@ -142,11 +142,11 @@ CONTAINS
 !
 ! now, we make the groups
 !
-      n_start = mod(mpi%irank,n_members) + 1
+      n_start = mod(fmpi%irank,n_members) + 1
 !!      n_start = INT(irank/n_size) * n_size
       ALLOCATE ( i_mygroup(n_size) )
       n = 0
-      DO i = n_start,mpi%isize,n_members
+      DO i = n_start,fmpi%isize,n_members
 !!      DO i = n_start+1,n_start+n_size
         n = n+1
         i_mygroup(n) = i-1
@@ -154,11 +154,11 @@ CONTAINS
 
 !      write (*,*) irank,n_groups,n_start,i_mygroup
 
-      CALL MPI_COMM_GROUP (mpi%MPI_COMM,WORLD_GROUP,ierr)
-      CALL MPI_GROUP_INCL (WORLD_GROUP,n_size,i_mygroup, SUB_GROUP,ierr)
-      CALL MPI_COMM_CREATE (mpi%MPI_COMM,SUB_GROUP,SUB_COMM,ierr)
+      CALL MPI_COMM_GROUP (fmpi%MPI_COMM,WORLD_GROUP,ierr(1))
+      CALL MPI_GROUP_INCL (WORLD_GROUP,n_size,i_mygroup, SUB_GROUP,ierr(1))
+      CALL MPI_COMM_CREATE (fmpi%MPI_COMM,SUB_GROUP,SUB_COMM,ierr(1))
 
-      CALL MPI_COMM_RANK (SUB_COMM,n_rank,ierr)
+      CALL MPI_COMM_RANK (SUB_COMM,n_rank,ierr(1))
 !
 ! determine number of columns per group
 !
@@ -180,7 +180,7 @@ CONTAINS
       END SUBROUTINE mpi_make_groups
 
 !----------------------------------------------------------------------
-      SUBROUTINE check_memory(input,atoms, mlotot,mlolotot, noco,kpts,mpi, n_size)
+      SUBROUTINE check_memory(input,atoms, mlotot,mlolotot, noco,kpts,fmpi, n_size)
 
 !
 ! check the free and the (approximate) required memory ;
@@ -188,7 +188,7 @@ CONTAINS
 !
         USE m_types
       IMPLICIT NONE
-      type(t_mpi),INTENT(IN)         :: mpi
+      type(t_mpi),INTENT(IN)         :: fmpi
 
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -202,7 +202,7 @@ CONTAINS
       INTEGER*8 mem, matsz, m_h
       REAL, ALLOCATABLE :: test(:)
 
-      n_size = CEILING( real(mpi%isize)/min(kpts%nkpt,mpi%isize) )
+      n_size = CEILING( real(fmpi%isize)/min(kpts%nkpt,fmpi%isize) )
 
  10   CONTINUE
 !
@@ -252,7 +252,7 @@ CONTAINS
       WRITE(*,*) mb,'Mbytes needed  in hssphn!',err,mem
       IF ( err /= 0 ) THEN
         n_size = n_size * 2
-        IF (n_size > mpi%isize) THEN
+        IF (n_size > fmpi%isize) THEN
           mb = (mem+m_h)*8/(1024)**2
           WRITE(*,*) mb,'Mbytes needed  in hssphn!'
           CALL juDFT_error("mpi_make_groups: memory too small!",calledby ="mpi_make_groups")
@@ -284,7 +284,7 @@ CONTAINS
       WRITE(*,*) mb,'Mbytes needed  in chani !',err,mem
       IF ( err /= 0 ) THEN
         n_size = n_size * 2
-        IF (n_size > mpi%isize) THEN
+        IF (n_size > fmpi%isize) THEN
           mb = (mem)*8/(1024)**2
           WRITE(*,*) mb,'Mbytes needed  in chani !'
           CALL juDFT_error("mpi_make_groups: memory too small!",calledby&

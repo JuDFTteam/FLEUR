@@ -9,7 +9,7 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,oneD,sliceplot,mpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul)
+                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)                          
       ! 
@@ -42,7 +42,7 @@ CONTAINS
       TYPE(t_results),   INTENT(INOUT) :: results
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
+      TYPE(t_mpi),       INTENT(IN)    :: fmpi
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
@@ -64,7 +64,7 @@ CONTAINS
       INTEGER :: i
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          IF (noco%l_sourceFree) THEN
             CALL magnMomFromDen(input,atoms,noco,den,b,dummy1,dummy2)
             DO i=1,atoms%ntype
@@ -74,7 +74,7 @@ CONTAINS
          END IF
       END IF
 
-      IF (mpi%irank==0) WRITE (oUnit,FMT=8000)
+      IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
       CALL vTot%resetPotDen()
@@ -99,7 +99,7 @@ CONTAINS
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
 
-      CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
+      CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
       
       ! b)
       CALL vCoul%copy_both_spin(vTot)
@@ -114,19 +114,19 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
+                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
-      CALL vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+      CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)
 
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
-      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
+      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
+      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
+      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
    END SUBROUTINE vgen
 

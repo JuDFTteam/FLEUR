@@ -7,8 +7,12 @@ MODULE m_forcew
   ! ************************************************************
   ! Printing force components
   ! ************************************************************
+
+#ifdef CPP_MPI
+   use mpi 
+#endif
 CONTAINS
-  SUBROUTINE force_w(mpi,input,atoms,sym,results,cell,oneD,vacuum)
+  SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
     USE m_types
     USE m_constants
     USE m_xmlOutput
@@ -16,7 +20,7 @@ CONTAINS
 
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)       :: mpi
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_input),INTENT(IN)     :: input
@@ -34,13 +38,10 @@ CONTAINS
     !     .. Local Arrays ..
     REAL forcetot(3,atoms%ntype)
     CHARACTER(LEN=20) :: attributes(7)
-#ifdef CPP_MPI
-    include 'mpif.h'
-#endif
     !
     !     write spin-dependent forces
     !
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        nat1 = 1
        DO n = 1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
@@ -109,9 +110,9 @@ CONTAINS
        END IF
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
-    IF (l_forceConverged.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
+    IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 
   END SUBROUTINE force_w
 END MODULE m_forcew

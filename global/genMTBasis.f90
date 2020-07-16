@@ -7,7 +7,7 @@ MODULE m_genMTBasis
 
 CONTAINS
 
-  SUBROUTINE genMTBasis(atoms,enpara,vTot,mpi,iType,jspin,usdus,f,g,flo,l_dftspinpol)
+  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,l_dftspinpol,l_writeArg)
     USE m_types
     USE m_constants
     USE m_radfun
@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_atoms),  INTENT(IN)    :: atoms
     TYPE(t_enpara), INTENT(IN)    :: enpara
     TYPE(t_potden), INTENT(IN)    :: vTot
-    TYPE(t_mpi),    INTENT(IN)    :: mpi
+    TYPE(t_mpi),    INTENT(IN)    :: fmpi
     TYPE(t_usdus),  INTENT(INOUT) :: usdus
 
     INTEGER,        INTENT(IN)    :: iType
@@ -30,6 +30,7 @@ CONTAINS
     REAL,           INTENT(INOUT) :: f(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: g(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: flo(atoms%jmtd,2,atoms%nlod)
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_writeArg
 
 
     INTEGER                       :: l,nodeu,noded
@@ -39,7 +40,14 @@ CONTAINS
     LOGICAL    :: l_write,l_hia
     REAL       :: vrTmp(atoms%jmtd)
     INTEGER    :: i
-    l_write=mpi%irank==0 
+
+    IF(PRESENT(l_writeArg)) THEN
+      l_write = l_writeArg
+    ELSE
+      l_write = .TRUE.
+    ENDIF
+
+    l_write=l_write .and. fmpi%irank==0
     !$ l_write = l_write .and. omp_get_num_threads()==1
 
 
@@ -71,7 +79,7 @@ CONTAINS
 
     ! Generate the extra wavefunctions for the local orbitals, if there are any.
     IF (atoms%nlo(iType).GE.1) THEN
-       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),vTot%mt(:,0,iType,jspin),f,g,mpi,&
+       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),vTot%mt(:,0,iType,jspin),f,g,fmpi,&
             usdus,usdus%uuilon(1,1,jspin),usdus%duilon(1,1,jspin),usdus%ulouilopn(1,1,1,jspin),flo)
     END IF
 

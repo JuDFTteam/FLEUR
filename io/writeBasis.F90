@@ -9,7 +9,7 @@ MODULE m_writeBasis
 CONTAINS
 
 SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,&
-                      mpi,results,eig_id,oneD,sphhar,stars,vacuum)
+                      fmpi,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
    USE m_juDFT
@@ -44,7 +44,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
       TYPE(t_potden), INTENT(INOUT) :: vTot
       TYPE(t_potden), INTENT(INOUT) :: vCoul
       TYPE(t_potden), INTENT(INOUT) :: vx
-      TYPE(t_mpi), INTENT(IN)       :: mpi
+      TYPE(t_mpi), INTENT(IN)       :: fmpi
       TYPE(t_results), INTENT(INOUT):: results
       INTEGER, INTENT(IN)           :: eig_id
       TYPE(t_oneD), INTENT(IN)      :: oneD
@@ -148,7 +148,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
       l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
 !     check if z-reflection trick can be used
       l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
-!     IF (mpi%n_size > 1) l_zref = .FALSE.
+!     IF (fmpi%n_size > 1) l_zref = .FALSE.
       version = 1
       filename = 'basis.hdf'
 
@@ -323,7 +323,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
          write(jsp_name , '(a,i0)') '/jsp_',jsp
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
-!        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
+!        DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
          DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
             bk(:) = kpts%bk(:,nk)
@@ -353,7 +353,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
 	    write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
 
-            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,hub1inp%l_dftspinpol)
+            CALL genMTBasis(atoms,enpara,vTot,fmpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,hub1inp%l_dftspinpol)
 	    dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
 	    dimsInt = dims
 	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
@@ -461,7 +461,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
    DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        write(jsp_name , '(a,i0)') '/jsp_',jsp
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
-!      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
+!      DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
        DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
             bk(:) = kpts%bk(:,nk)

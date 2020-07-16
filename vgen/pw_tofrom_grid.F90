@@ -65,9 +65,12 @@ CONTAINS
     !     pgfft : contains the phases of the g-vectors of sph.
     !     isn   : isn = +1, fft transform for g-space to r-space
     !             isn = -1, vice versa
+    !     l_rdm : if true, calculate noco gradients in local frame of density matrix
+    !             improves convergence in case of GGA + noco (best with large G_max_xc)
     !
     !-------------------------------------------------------------------
     USE m_grdrsis
+    USE m_polangle
     USE m_mkgxyz3
     USE m_fft3dxc
     USE m_fft3d
@@ -86,15 +89,22 @@ CONTAINS
     REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:)
   
 
-    INTEGER      :: js,i,idm,ig,ndm,jdm
-    REAL         :: rhotot
+    INTEGER      :: js,i,idm,ig,ndm,jdm,j
+    REAL         :: rhotot,mmx,mmy,mmz,theta,phi
+    COMPLEX      :: ci,rho21
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: cqpw(:,:),ph_wrk(:)
     REAL,    ALLOCATABLE :: bf3(:)
     REAL,    ALLOCATABLE :: rhd1(:,:,:),rhd2(:,:,:)
     REAL,    ALLOCATABLE :: mx(:),my(:)
     REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:) 
-    
+    REAL,    ALLOCATABLE :: rhodiag(:,:),der(:,:,:),dder(:,:,:,:)
+    REAL,    ALLOCATABLE :: sinsqu(:),cossqu(:),sincos(:),rhdd(:,:,:,:)
+    COMPLEX, ALLOCATABLE :: exi(:)
+ 
+    LOGICAL, PARAMETER :: l_rdm=.true. 
+    ci=cmplx(0.,1.)
+
     ! Allocate arrays
     ALLOCATE( bf3(0:ifftd-1))
     IF (dograds) THEN
@@ -107,7 +117,12 @@ CONTAINS
     IF (l_noco)  THEN
        IF (dograds) THEN
           ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
-          ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
+          IF (l_rdm) THEN
+           ALLOCATE( rhodiag(0:ifftxc3-1,jspins),der(0:ifftxc3-1,3,4),dder(0:ifftxc3-1,3,3,4),rhdd(0:ifftxc3-1,2,3,3) )
+           ALLOCATE( sinsqu(0:ifftxc3-1),cossqu(0:ifftxc3-1),sincos(0:ifftxc3-1),exi(0:ifftxc3-1) )
+          ELSE
+            ALLOCATE( dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
+          ENDIF
        ELSE
           ALLOCATE( mx(0:ifftd-1),my(0:ifftd-1),magmom(0:ifftd-1))
        ENDIF
@@ -135,8 +150,22 @@ CONTAINS
           DO i=0,MIN(SIZE(rho,1),size(mx))-1 
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
              magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
+             IF (l_rdm.AND.dograds) THEN
+                rhodiag(i,1) = rho(i,1)
+                rhodiag(i,2) = rho(i,2)
+             ENDIF
              rho(i,1)= rhotot+magmom(i)
              rho(i,2)= rhotot-magmom(i)
+             IF (l_rdm.AND.dograds) THEN              ! prepare rotation matrix
+                mmx = 2.0 * mx(i)
+                mmy = 2.0 * my(i)
+                mmz = rhodiag(i,1) - rhodiag(i,2)
+                CALL pol_angle(mmx,mmy,mmz,theta,phi)
+                cossqu(i) = cos(0.5*theta)**2
+                sinsqu(i) = sin(0.5*theta)**2
+                sincos(i) = 2.0*sin(0.5*theta)*cos(0.5*theta)
+                exi(i)    = exp(-ci*phi)
+             ENDIF
           END DO
        ENDIF
     ENDIF
@@ -166,15 +195,39 @@ CONTAINS
 
        IF (l_noco) THEN
 
-          CALL grdrsis(magmom,cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,dmagmom )
+          IF (l_rdm) THEN
 
-          DO i=0,ifftxc3-1
-             DO idm=1,3
-                rhotot= rhd1(i,1,idm)/2.+rhd1(i,2,idm)/2.
-                rhd1(i,1,idm)= rhotot+dmagmom(i,idm) 
-                rhd1(i,2,idm)= rhotot-dmagmom(i,idm) 
+             CALL grdrsis( rhodiag(0,1),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,der(0,1,1) )
+             CALL grdrsis( rhodiag(0,2),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,der(0,1,2) )
+             CALL grdrsis( mx(0),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,der(0,1,3) )
+             CALL grdrsis( my(0),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,der(0,1,4) )
+
+             DO i=0,ifftxc3-1 ! project on magnetization axis
+                DO idm=1,3
+                   rho21 = der(i,idm,3) + ci * der(i,idm,4)
+                   rhd1(i,1,idm) = cossqu(i) * der(i,idm,1) + &
+                                   sincos(i) * real( exi(i)*rho21 ) + &
+                                   sinsqu(i) * der(i,idm,2)
+                   rhd1(i,2,idm) = sinsqu(i) * der(i,idm,1) - &
+                                   sincos(i) * real( exi(i)*rho21 ) + &
+                                   cossqu(i) * der(i,idm,2)
+                ENDDO
+             ENDDO
+
+          ELSE
+
+             CALL grdrsis(magmom,cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,dmagmom )
+
+             DO i=0,ifftxc3-1
+                DO idm=1,3
+                   rhotot= rhd1(i,1,idm)/2.+rhd1(i,2,idm)/2.
+                   rhd1(i,1,idm)= rhotot+dmagmom(i,idm) 
+                   rhd1(i,2,idm)= rhotot-dmagmom(i,idm) 
+                END DO
              END DO
-          END DO
+
+          END IF
+
        END IF
 
        !-->   for dd(rho)/d(xx,xy,yy,zx,yz,zz) = rhd2(:,:,idm) (idm=1,2,3,4,5,6)
@@ -201,20 +254,54 @@ CONTAINS
        DEALLOCATE(cqpw)
 
        IF (l_noco) THEN
-          DO idm = 1,3
-             CALL grdrsis(dmagmom(0,idm),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,ddmagmom(0,1,idm) )
-          END DO
-          ndm= 0
-          DO idm = 1,3
-             DO jdm = 1,idm
-                ndm = ndm + 1  
-                DO i=0,ifftxc3-1
-                   rhotot= rhd2(i,1,ndm)/2.+rhd2(i,2,ndm)/2.
-                   rhd2(i,1,ndm)= rhotot + ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
-                   rhd2(i,2,ndm)= rhotot - ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
-                END DO
-             ENDDO !jdm
-          ENDDO   !idm 
+
+          IF (l_rdm) THEN
+             DO idm = 1,3
+               CALL grdrsis( der(0,idm,1),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft, dder(0,1,idm,1) )
+               CALL grdrsis( der(0,idm,2),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft, dder(0,1,idm,2) )
+               CALL grdrsis( der(0,idm,3),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft, dder(0,1,idm,3) )
+               CALL grdrsis( der(0,idm,4),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft, dder(0,1,idm,4) )
+               DO i=0,ifftxc3-1 ! project on magnetization axis
+                 DO jdm=1,3
+                   rho21 = dder(i,jdm,idm,3) + ci * dder(i,jdm,idm,4)
+                   rhdd(i,1,jdm,idm) = cossqu(i) * dder(i,jdm,idm,1) + &
+                                   sincos(i) * real( exi(i)*rho21 ) + &
+                                   sinsqu(i) * dder(i,jdm,idm,2)
+                   rhdd(i,2,jdm,idm) = sinsqu(i) * dder(i,jdm,idm,1) - &
+                                   sincos(i) * real( exi(i)*rho21 ) + &
+                                   cossqu(i) * dder(i,jdm,idm,2)
+                 ENDDO
+               ENDDO
+             ENDDO
+             DO j=1,2
+               DO i=0,ifftxc3-1
+                 rhd2(i,j,1) = rhdd(i,j,1,1)
+                 rhd2(i,j,2) = 0.5*(rhdd(i,j,1,2)+rhdd(i,j,2,1)) ! xy - averaging should be unneccessary
+                 rhd2(i,j,3) = rhdd(i,j,2,2)
+                 rhd2(i,j,4) = 0.5*(rhdd(i,j,1,3)+rhdd(i,j,3,1)) ! zx
+                 rhd2(i,j,5) = 0.5*(rhdd(i,j,2,3)+rhdd(i,j,3,2)) ! yz
+                 rhd2(i,j,6) = rhdd(i,j,3,3)
+               ENDDO
+             ENDDO
+             DEALLOCATE (rhodiag,der,rhdd,dder,sinsqu,cossqu,sincos,exi)
+          ELSE
+
+             DO idm = 1,3
+                CALL grdrsis(dmagmom(0,idm),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,ddmagmom(0,1,idm) )
+             END DO
+             ndm= 0
+             DO idm = 1,3
+                DO jdm = 1,idm
+                   ndm = ndm + 1  
+                   DO i=0,ifftxc3-1
+                      rhotot= rhd2(i,1,ndm)/2.+rhd2(i,2,ndm)/2.
+                      rhd2(i,1,ndm)= rhotot + ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
+                      rhd2(i,2,ndm)= rhotot - ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
+                   END DO
+                ENDDO !jdm
+             ENDDO   !idm 
+             DEALLOCATE(dmagmom,ddmagmom)
+          END IF
        END IF
 
        IF (PRESENT(xcpot)) THEN

@@ -130,23 +130,14 @@ CONTAINS
        !c if beta = 0 or pi , only alpha+gamma or -gamma have a meaning:
        !c
        IF ( ABS(sinb).LT.1.0e-5 ) THEN 
-
           beta(ns) = 0.0
           IF ( cosb.LT.0.0 ) beta(ns) = pi
           GAMMA(ns) = 0.0
           cosa = dmat(1,1)/cosb
           sina = dmat(1,2)/cosb
-          IF ( ABS(sina).LT.1.0e-5 ) THEN
-             alpha(ns)=0.0
-             IF ( cosa.LT.0.0 ) alpha(ns)=alpha(ns)+pi
-          ELSE
-             alpha(ns) = 0.5*pi - ATAN(cosa/sina)
-             IF ( sina.LT.0.0 ) alpha(ns)=alpha(ns)+pi
-          ENDIF
-
+          alpha(ns) = 0.5*pi - ATAN2(cosa,sina)
        ELSE
-
-          beta(ns) = 0.5*pi - ATAN(cosb/sinb)
+          beta(ns) = 0.5*pi - ATAN2(cosb,sinb)
           !c
           !c determine alpha and gamma from d13 d23 d32 d31
           !c
@@ -154,21 +145,8 @@ CONTAINS
           sina = dmat(3,2)/sinb
           cosc =-dmat(1,3)/sinb
           sinc = dmat(2,3)/sinb
-          IF ( ABS(sina).LT.1.0e-5 ) THEN
-             alpha(ns)=0.0
-             IF ( cosa.LT.0.0 ) alpha(ns)=alpha(ns)+pi
-          ELSE
-             alpha(ns) = 0.5*pi - ATAN(cosa/sina)
-             IF ( sina.LT.0.0 ) alpha(ns)=alpha(ns)+pi
-          ENDIF
-          IF ( ABS(sinc).LT.1.0e-5 ) THEN
-             GAMMA(ns) = 0.0
-             IF ( cosc.LT.0.0 ) GAMMA(ns)=GAMMA(ns)+pi
-          ELSE
-             GAMMA(ns) = 0.5*pi - ATAN(cosc/sinc)
-             IF ( sinc.LT.0.0 ) GAMMA(ns)=GAMMA(ns)+pi
-          ENDIF
-
+          alpha(ns) = 0.5*pi - ATAN2(cosa,sina)
+          GAMMA(ns) = 0.5*pi - ATAN2(cosc,sinc)
        ENDIF
 
     ENDDO ! loop over nop
@@ -185,6 +163,7 @@ CONTAINS
       //,'   ns   alpha     beta      gamma    determ ')
 8010 FORMAT(i5,4f10.5)
 #endif
+    d_wgn = cmplx_0
     DO ns = 1, nop
 
        co_bh = COS(beta(ns)*0.5)

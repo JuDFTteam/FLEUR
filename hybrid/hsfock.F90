@@ -44,7 +44,7 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
-                     results, xcpot, mpi)
+                     results, xcpot, fmpi)
 
       use m_ex_to_vx
       USE m_judft
@@ -63,7 +63,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_k_package), intent(in)     :: k_pack
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)    :: lapw
       type(t_stars), intent(in)   :: stars
@@ -78,7 +78,7 @@ CONTAINS
       REAL, INTENT(IN)    :: eig_irr(:, :)
 
       ! local scalars
-      INTEGER                 ::  i, j, l, itype
+      INTEGER                 ::  l, itype
       INTEGER                 ::  iband, nk
       INTEGER                 ::  ikpt, ikpt0
       INTEGER                 ::  nbasfcn
@@ -97,14 +97,14 @@ CONTAINS
 
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
-      TYPE(t_mat)              :: ex, v_x, z_k
+      TYPE(t_mat)              :: ex, z_k
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
       ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*fi%atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, fi%atoms%ntype)])
-      IF(nk == 1 .and. mpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
+      IF(nk == 1 .and. fmpi%irank == 0) WRITE(*, *) 'calculate new HF matrix'
       IF(nk == 1 .and. jsp == 1 .and. fi%input%imix > 10) CALL system('rm -f broyd*')
       ! calculate all symmetrie operations, which yield k invariant
 
@@ -135,26 +135,32 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, mpi, ex)
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
-      CALL timestart("core exchange calculation")
+      if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+      if(k_pack%submpi%root()) then
+         ! calculate contribution from the core states to the HF exchange
+         CALL timestart("core exchange calculation")
+         IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+            call judft_error('HSE not implemented in hsfock')
+         ELSE
+            CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
+                              mpdata, fi%hybinp, hybdat, jsp, &
+                              lapw, nsymop, nsest, indx_sest, fmpi, a_ex, results, ex)
+            CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
+         END IF
 
-      ! calculate contribution from the core states to the HF exchange
-      IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-         call judft_error('HSE not implemented in hsfock')
-      ELSE
-         CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
-                             mpdata, fi%hybinp, hybdat, jsp, &
-                             lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
-         CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
-      END IF
+         CALL timestop("core exchange calculation")
 
-      deallocate(n_q)
-      CALL timestop("core exchange calculation")
+         call ex%save_npy("ex_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
+         ! call MPI_Barrier(MPI_COMM_WORLD, ok)
+         ! call judft_error("stopit: add_Vnonl")
 
-      call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, v_x)
-      CALL write_v_x(v_x, fi%kpts%nkpt*(jsp - 1) + nk)
-
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
+         call hybdat%v_x(nk, jsp)%u2l()
+      endif
+      call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
+      hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
 END MODULE m_hsfock

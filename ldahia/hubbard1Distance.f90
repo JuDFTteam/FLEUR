@@ -44,8 +44,7 @@ MODULE m_hubbard1Distance
       WRITE(oUnit,*) "  Occupation distance:     ", ABS(n_out-n_in)
       WRITE(oUnit,*) "  Density matrix distance: ", MAXVAL(elementDistance)
       DO ispin = 1, SIZE(n_mmp_in,3)
-         WRITE(oUnit,*)
-         WRITE(oUnit,'(A,I1,A,f14.8)') "Delta Spin ", ispin, ": ", elementDistance(ispin)
+         WRITE(oUnit,'(/,A,I1,A,f14.8)') "Delta Spin ", ispin, ": ", elementDistance(ispin)
          WRITE(oUnit,'(7f12.7)') REAL(  n_mmp_out(-lmaxU_const:,-lmaxU_const:,ispin) &
                                       - n_mmp_in (-lmaxU_const:,-lmaxU_const:,ispin)  )
       ENDDO

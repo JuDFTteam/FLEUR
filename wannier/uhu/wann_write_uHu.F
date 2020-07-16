@@ -10,6 +10,9 @@ c**************************c
      >               l_unformatted,l_symcc,l_check)
       use m_types
       use m_wann_uHu_symcheck
+#ifdef CPP_MPI
+      use mpi 
+#endif
 
       implicit none
       integer, intent(in)     :: jspin2
@@ -38,8 +41,7 @@ c**************************c
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
-      include 'mpif.h'
-      integer :: ierr(3)
+      integer :: ierr
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
 #endif

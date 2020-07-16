@@ -45,7 +45,9 @@ MODULE m_judft_xmlOutput
    END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput(filename,tag)
-
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       USE m_juDFT_args
       USE m_juDFT_usage
 !$    use omp_lib
@@ -55,7 +57,6 @@ MODULE m_judft_xmlOutput
       CHARACTER(len=*),INTENT(in)::filename,tag
 
 #ifdef CPP_MPI
-      include "mpif.h"
       INTEGER           :: err, isize
 #endif
       INTEGER           :: numFlags

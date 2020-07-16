@@ -42,6 +42,7 @@ CONTAINS
       TYPE(t_xml),INTENT(INOUT) ::xml
 
       INTEGER::numberNodes, ntype, itype
+      REAL :: rkmax
       CHARACTER(len=100)  :: xPathA
       CHARACTER(len=4), allocatable  :: xc_name
 
@@ -50,6 +51,11 @@ CONTAINS
       IF (numberNodes == 1) THEN
          this%g_cutoff=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
          this%linear_dep_tol=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
-      ENDIF
+      ELSE
+         ! set everything to default values
+         rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
+         this%g_cutoff = round_to_deci(rkmax - 0.5, 1)
+         this%linear_dep_tol = 1e-4
+      END IF
    END SUBROUTINE read_xml_mpinp
 END MODULE m_types_mpinp

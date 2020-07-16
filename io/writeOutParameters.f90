@@ -4,14 +4,14 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
+SUBROUTINE writeOutParameters(fmpi,input,sym,stars,atoms,vacuum,kpts,&
                               oneD,hybinp,cell,banddos,sliceplot,xcpot,&
                               noco,enpara,sphhar)
 
    USE m_types
    USE m_xmlOutput
 
-   TYPE(t_mpi),       INTENT(IN) :: mpi
+   TYPE(t_mpi),       INTENT(IN) :: fmpi
    TYPE(t_input),     INTENT(IN) :: input
    TYPE(t_sym),       INTENT(IN) :: sym
    TYPE(t_stars),     INTENT(IN) :: stars

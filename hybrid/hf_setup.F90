@@ -9,7 +9,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, fi, mpi,nococonv, results, jsp, enpara, &
+   SUBROUTINE hf_setup(mpdata, fi, fmpi,nococonv, results, jsp, enpara, &
                        hybdat, vr0, eig_irr)
       USE m_types
       USE m_constants
@@ -25,7 +25,7 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), INTENT(inout)   :: mpdata
-      TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_results), INTENT(INOUT) :: results
@@ -89,7 +89,7 @@ CONTAINS
          !                  of the group of degenerate states
 
          call timestart("degenerate treatment")
-         IF (mpi%irank == 0) THEN
+         IF (fmpi%irank == 0) THEN
             WRITE (oUnit, *)
             WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
@@ -112,7 +112,7 @@ CONTAINS
 
             hybdat%nbands(nk) = fi%hybinp%bands1
             IF (hybdat%nbands(nk) > hybdat%ne_eig(nk)) THEN
-               IF (mpi%irank == 0) THEN
+               IF (fmpi%irank == 0) THEN
                   WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
                   WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
                   WRITE (*, *) ' set hybdat%nbands equal to hybdat%ne_eig'
@@ -150,14 +150,14 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(fi%kpts%nkpt, fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
-                       mpdata, fi%hybinp, vr0, hybdat, fi%noco, nococonv,fi%oneD, mpi, fi%input, jsp)
+                       mpdata, fi%hybinp, vr0, hybdat, fi%noco, nococonv,fi%oneD, fmpi, fi%input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
-         CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
+         CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, fmpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  mpi, &
+         CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
                         fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
 
          ! set up pointer pntgpt

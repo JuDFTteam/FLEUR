@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,mpi,nococonv,stars,enpara,&
+   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
       USE m_types_hybdat
@@ -22,6 +22,9 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
+#ifdef CPP_MPI 
+      use mpi 
+#endif
 
       IMPLICIT NONE
 
@@ -29,7 +32,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-      TYPE(t_mpi), INTENT(IN)           :: mpi
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       type(t_stars), intent(in)         :: stars
       TYPE(t_enpara), INTENT(IN)        :: enpara
@@ -39,9 +42,9 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: hybmpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, j
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -49,8 +52,6 @@ CONTAINS
       REAL, ALLOCATABLE :: eig_irr(:, :)
 
       CALL timestart("hybrid code")
-
-      INQUIRE (file="v_x.1", exist=hybdat%l_addhf)
 
       IF (fi%kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -64,7 +65,7 @@ CONTAINS
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
-         call hybmpi%copy_mpi(mpi)            
+         call glob_mpi%init(fmpi%mpi_comm)
          results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
@@ -90,9 +91,9 @@ CONTAINS
          CALL timestart("Preparation for hybrid functionals")
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         if(hybmpi%rank == 0) write (*,*) "iterHF = ", iterHF
+         if(glob_mpi%rank == 0) write (*,*) "iterHF = ", iterHF
          CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
-                        enpara, mpi, v, iterHF)
+                        enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
 
@@ -104,37 +105,42 @@ CONTAINS
 
          ! use jsp=1 for coulomb work-planning
          call hybdat%set_states(fi, results, 1)
-         call work_pack%init(fi, hybdat, 1, hybmpi%rank, hybmpi%size)
-         CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+         call judft_comm_split(glob_mpi%comm, glob_mpi%rank, 1, tmp_comm)
+         call tmp_mpi%init(tmp_comm)
+         call work_pack%init(fi, hybdat, tmp_mpi, 1, glob_mpi%rank, glob_mpi%size)
+         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
          call work_pack%free()
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, hybmpi, work_pack%owner_nk(i))
+            call hybdat%coul(i)%mpi_ibc(fi, glob_mpi, work_pack%owner_nk(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
+         call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
+
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpdata,fi, mpi, nococonv, results, jsp, enpara, &
+            CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
             call timestop("HF_setup")
+
+            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, stars, results, xcpot, mpi)
+                           nococonv, stars, results, xcpot, fmpi)
             END DO
             call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
-         call MPI_Barrier(mpi%mpi_comm, err)
+         call MPI_Barrier(fmpi%mpi_comm, err)
          call timestop("Hybrid imbalance")
 #endif
 
@@ -169,44 +175,48 @@ CONTAINS
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
 
-      subroutine split_k_to_comm(fi, hybmpi, my_k_list, k_owner)
-         implicit none
-
-         type(t_fleurinput), intent(in)      :: fi
-         type(t_hybmpi), intent(in)          :: hybmpi
-         integer, allocatable, intent(inout) :: my_k_list(:)
-         integer, allocatable, intent(inout)  :: k_owner(:)
-         integer   :: i, irank
-
-         if(allocated(my_k_list)) deallocate(my_k_list)
-         allocate(my_k_list(0))
-
-         if(fi%kpts%nkpt < hybmpi%size) call judft_error("not enough k-points for mpis")
-         
-         ! get my k-list
-         do i = hybmpi%rank+1,fi%kpts%nkpt,hybmpi%size
-            my_k_list = [my_k_list, i]
-         enddo
-
-         ! findout who's got the other k's
-         if(.not. allocated(k_owner)) allocate(k_owner(fi%kpts%nkpt), source=-1)
-
-         do irank = 0,hybmpi%size-1
-            do i = irank+1,fi%kpts%nkpt,hybmpi%size
-               k_owner(i) = irank
+      subroutine distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
+         USE m_types
+         implicit none 
+         type(t_fleurinput), intent(in)    :: fi
+         type(t_hybmpi), intent(in)        :: glob_mpi
+         type(t_hybmpi), intent(inout)     :: wp_mpi
+         integer, intent(inout)            :: wp_rank, wp_size
+   
+         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm
+         integer, allocatable :: nprocs(:), weights(:), color(:)
+   
+   
+         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
+         allocate(nprocs(n_wps), source=0)
+         allocate(weights(n_wps), source=0)
+         allocate(color(glob_mpi%size), source=0)
+   
+         do j_wp = 1, n_wps
+            do ik = j_wp, fi%kpts%nkpt, n_wps
+               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
             enddo
          enddo
-
-         ! sanity check
-         do i = 1,size(my_k_list)
-            if(k_owner(my_k_list(i)) /= hybmpi%rank) then 
-               write (*,*) "my_k_list", my_k_list 
-               write (*,*) "i = ", i
-               write (*,*) "k_owner", k_owner
-               call judft_error("I should own my own k-point")
-            endif
+   
+         do i = 1,glob_mpi%size 
+            idx = minloc(1.0*nprocs/weights)
+            nprocs(idx(1)) = nprocs(idx(1)) + 1
          enddo
-
-      end subroutine split_k_to_comm
+   
+         cnt = 1
+         do i = 1,n_wps 
+            do j = 1,nprocs(i)
+               color(cnt) = i - 1
+               cnt = cnt + 1 
+            enddo 
+         enddo
+   
+         wp_rank = color(glob_mpi%rank+1) 
+         wp_size = n_wps
+         
+         call judft_comm_split(glob_mpi%comm, wp_rank, glob_mpi%rank, new_comm)
+   
+         call wp_mpi%init(new_comm)
+      end subroutine distrib_mpis
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

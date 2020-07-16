@@ -101,7 +101,7 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,vCorr)
+   SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,vCorr)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -121,7 +121,7 @@ CONTAINS
       ! Note: A_vec is assumed to be a density with an additional factor of r^2.
       !       A field of the same form will also be calculated.
 
-      TYPE(t_mpi),                  INTENT(IN)     :: mpi
+      TYPE(t_mpi),                  INTENT(IN)     :: fmpi
       TYPE(t_field),                INTENT(IN)     :: field
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
@@ -164,7 +164,7 @@ CONTAINS
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
-      CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
       CALL timestop("Building potential")
 
       DO i=1,3

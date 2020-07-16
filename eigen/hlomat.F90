@@ -16,7 +16,7 @@ MODULE m_hlomat
   ! p.kurz sept. 1996
   !***********************************************************************
 CONTAINS
-  SUBROUTINE hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
+  SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
        ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
     !
     USE m_hsmt_ab
@@ -26,7 +26,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_mpi),INTENT(IN)    :: mpi
+    TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_usdus),INTENT(IN)  :: ud
     TYPE(t_tlmplm),INTENT(IN) :: tlmplm
     TYPE(t_sym),INTENT(IN)    :: sym
@@ -139,8 +139,8 @@ CONTAINS
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                 locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-                IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
-                   locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
+                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
+                   locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage
                    IF (hmat%l_real) THEN
                       DO kp = 1,lapw%nv(iintsp)
                          hmat%data_r(kp,locol) = hmat%data_r(kp,locol) + chi*invsfct * (&
@@ -185,8 +185,8 @@ CONTAINS
           !--->       local orbitals at the same atom and with itself
           DO nkvec = 1,invsfct* (2*l+1)
              locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
-                locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
+             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
+                locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage
                 !--->          calculate the hamiltonian matrix elements with other
                 !--->          local orbitals at the same atom, if they have the same l
                 DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),iintsp==jintsp)
@@ -289,7 +289,7 @@ CONTAINS
                       END DO
                    END DO
                 END DO
-             ENDIF !If this lo to be calculated by mpi rank
+             ENDIF !If this lo to be calculated by fmpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels

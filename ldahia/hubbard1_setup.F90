@@ -15,12 +15,11 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
-
+#ifdef CPP_MPI
+   use mpi
+#endif
    IMPLICIT NONE
 
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
 #include"cpp_double.h"
 
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
@@ -28,13 +27,13 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,mpi,noco,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_input),    INTENT(IN)     :: input
-      TYPE(t_mpi),      INTENT(IN)     :: mpi
+      TYPE(t_mpi),      INTENT(IN)     :: fmpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
@@ -50,7 +49,7 @@ MODULE m_hubbard1_setup
       REAL    :: U,J
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
-      CHARACTER(len=300) :: cwd,path,folder,xPath
+      CHARACTER(len=300) :: folder
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -71,17 +70,11 @@ MODULE m_hubbard1_setup
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
-
-         !Get the working directory
-         CALL get_environment_variable('PWD',cwd)
-         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(hubbard1CalcFolder))
-         CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
-         !Remove everything from the last iteration (Good Idea??)
-         CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
+         CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(hubbard1CalcFolder)))
 
          !Positions of the DFT+HIA elements in all DFT+U related arrays
          indStart = atoms%n_u+1
@@ -104,13 +97,12 @@ MODULE m_hubbard1_setup
 
             !Create Subfolder (if there are multiple Hubbard 1 procedures)
             CALL hubbard1_path(atoms,i_hia,folder)
-            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-            CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
+            CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(folder)))
 
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),gfinp,input,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gdft(i_hia),gfinp,input,atoms,mmpMat(:,:,i_hia,:))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
@@ -161,52 +153,52 @@ MODULE m_hubbard1_setup
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
             mu_dc = doubleCountingPot(U,J,l,l_amf,.NOT.hub1inp%l_dftspinpol,occDFT(i_hia,:),&
-                                      l_write=mpi%irank==0)
+                                      l_write=fmpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files
             !-------------------------------------------------------
             !Is a crystal field matrix present in the work directory (overwrites the calculated matrix)
-            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-            IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1data%ccfmat(i_hia,-l:l,-l:l),l)
+            INQUIRE(file=TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
+            IF(l_ccfexist) CALL read_ccfmat(hub1data%ccfmat(i_hia,-l:l,-l:l),l)
             !Is a bath parameter file present
-            INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
+            INQUIRE(file=TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
             !Copy the bath file to the Hubbard 1 solver if its present
-            IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+            IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(folder)))
 
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
-            CALL write_hubbard1_input(xPath,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
+            CALL write_hubbard1_input(folder,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
                                       hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
          ENDDO
-      ENDIF !mpi%irank == 0
+      ENDIF !fmpi%irank == 0
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(*,*) "Calculating new density matrix ..."
       ENDIF
 
       !Argument order different because occDFT is not allocatable
-      CALL mpi_bc(0,mpi%mpi_comm,occDFT)
+      CALL mpi_bc(0,fmpi%mpi_comm,occDFT)
 
       !Initializations
       ALLOCATE(gu(atoms%n_hia))
       ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,input,contour_in=gdft(i_hia)%contour)
+         CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
          CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
                                  noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
 
 #ifdef CPP_MPI
       !distribute the individual hubbard1 elements over the ranks
-      n_hia_task = FLOOR(REAL(atoms%n_hia)/(mpi%isize))
-      extra = atoms%n_hia - n_hia_task*mpi%isize
-      i_hia_start = mpi%irank*n_hia_task + 1 + extra
-      i_hia_end   =(mpi%irank+1)*n_hia_task   + extra
-      IF(mpi%irank < extra) THEN
-         i_hia_start = i_hia_start - (extra - mpi%irank)
-         i_hia_end   = i_hia_end   - (extra - mpi%irank - 1)
+      n_hia_task = FLOOR(REAL(atoms%n_hia)/(fmpi%isize))
+      extra = atoms%n_hia - n_hia_task*fmpi%isize
+      i_hia_start = fmpi%irank*n_hia_task + 1 + extra
+      i_hia_end   =(fmpi%irank+1)*n_hia_task   + extra
+      IF(fmpi%irank < extra) THEN
+         i_hia_start = i_hia_start - (extra - fmpi%irank)
+         i_hia_end   = i_hia_end   - (extra - fmpi%irank - 1)
       ENDIF
 #else
       i_hia_start = 1
@@ -215,7 +207,7 @@ MODULE m_hubbard1_setup
 
 #ifdef CPP_MPI
       !Make sure that the ranks are synchronized
-      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
 
       mmpMat = cmplx_0
@@ -229,19 +221,17 @@ MODULE m_hubbard1_setup
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
 
-         CALL get_environment_variable('PWD',cwd)
          CALL hubbard1_path(atoms,i_hia,folder)
-         WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
 
          ALLOCATE(e(gdft(i_hia)%contour%nz),source=cmplx_0)
 
          CALL timestart("Hubbard 1: EDsolver")
          !We have to change into the Hubbard1 directory so that the solver routines can read the config
-         CALL CHDIR(TRIM(ADJUSTL(xPath)))
+         CALL CHDIR(TRIM(ADJUSTL(folder)))
 #ifdef CPP_EDSOLVER
          !Open the output file for the solver
          hubbardioUnit = 4000+i_hia
-         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(xPath)) // TRIM(ADJUSTL(hubbard1Outfile)),&
+         OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(hubbard1Outfile)),&
               status="replace", action="write", iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
          e = gdft(i_hia)%contour%e*hartree_to_ev_const
@@ -256,7 +246,11 @@ MODULE m_hubbard1_setup
          CLOSE(hubbardioUnit, iostat=io_error)
          IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
 #endif
-         CALL CHDIR(TRIM(ADJUSTL(cwd)))
+         IF(atoms%n_hia>1) THEN
+            CALL CHDIR("../../")
+         ELSE
+            CALL CHDIR("../")
+         ENDIF
          CALL timestop("Hubbard 1: EDsolver")
 
          DEALLOCATE(e)
@@ -276,12 +270,12 @@ MODULE m_hubbard1_setup
          ! so that the occupation of the correlated orbital does not change
          !----------------------------------------------------------------------
 #ifdef CPP_DEBUG
-         OPEN(unit=1337, file=TRIM(ADJUSTL(xPath)) // 'mu',&
+         OPEN(unit=1337, file=TRIM(ADJUSTL(folder)) // 'mu',&
               status="replace", action="write", iostat=io_error)
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -291,15 +285,15 @@ MODULE m_hubbard1_setup
 
       ENDDO
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*)
          WRITE(oUnit,'(A)') "Calculated mu to match Self-energy to DFT-GF"
       ENDIF
       !Collect the impurity Green's Function
       DO i_hia = 1, atoms%n_hia
-         CALL gu(i_hia)%collect(mpi%mpi_comm)
-         CALL selfen(i_hia)%collect(mpi%mpi_comm)
-         IF(mpi%irank.EQ.0) THEN
+         CALL gu(i_hia)%collect(fmpi%mpi_comm)
+         CALL selfen(i_hia)%collect(fmpi%mpi_comm)
+         IF(fmpi%irank.EQ.0) THEN
             !We found the chemical potential to within the desired accuracy
             WRITE(oUnit,*) 'i_hia: ',i_hia, "    muMatch = ", selfen(i_hia)%muMatch(:)
          ENDIF
@@ -307,7 +301,7 @@ MODULE m_hubbard1_setup
 
 
 #ifdef CPP_HDF
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          !------------------------------
          !Write out DFT Green's Function
          !------------------------------
@@ -334,7 +328,7 @@ MODULE m_hubbard1_setup
       n = SIZE(mmpMat)
       ALLOCATE(ctmp(n))
       CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
 #endif
 
@@ -344,7 +338,7 @@ MODULE m_hubbard1_setup
       results%last_mmpMatdistance = 0.0
       results%last_occdistance = 0.0
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
@@ -354,11 +348,11 @@ MODULE m_hubbard1_setup
       ENDIF
 
       !Broadcast the density matrix
-      CALL mpi_bc(den%mmpMat,0,mpi%mpi_comm)
-      CALL mpi_bc(results%last_occdistance,0,mpi%mpi_comm)
-      CALL mpi_bc(results%last_mmpMatdistance,0,mpi%mpi_comm)
+      CALL mpi_bc(den%mmpMat,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_occdistance,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_mmpMatdistance,0,fmpi%mpi_comm)
 
-      IF(mpi%irank.EQ.0) THEN
+      IF(fmpi%irank.EQ.0) THEN
          WRITE(*,*) "Hubbard 1 Iteration: ", hub1data%iter
          WRITE(*,*) "Distances: "
          WRITE(*,*) "-----------------------------------------------------"

@@ -312,6 +312,7 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpath=''
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/force')==1) xpath=xpathg
+    this%relax(:,n) = 0
     IF (xpath.NE.'') THEN
        this%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@calculate'))
        valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@relaxXYZ')
@@ -321,7 +322,6 @@ SUBROUTINE read_xml_atoms(this,xml)
        IF (relaxZ) this%relax(3,n) = 1
     ELSE
        this%l_geo(n) = .FALSE.
-       this%relax(:,n) = 0
     END IF
     !LO stuff
     this%nlo(n) = 0
@@ -352,10 +352,11 @@ SUBROUTINE read_xml_atoms(this,xml)
        IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="read_xml_atoms")
        this%n_u = this%n_u + 1
        this%lda_u(this%n_u)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
-
        this%lda_u(this%n_u)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
        this%lda_u(this%n_u)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
        this%lda_u(this%n_u)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
+       this%lda_u(this%n_u)%phi =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@phi'))
+       this%lda_u(this%n_u)%theta =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@theta'))
        this%lda_u(this%n_u)%atomType = n
     END DO
     !electron config
@@ -438,7 +439,9 @@ SUBROUTINE read_xml_atoms(this,xml)
 
        this%lda_u(this%n_u+this%n_hia)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
        this%lda_u(this%n_u+this%n_hia)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
-       this%lda_u(this%n_u+this%n_hia)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
+       this%lda_u(this%n_u+this%n_hia)%l_amf = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
+       this%lda_u(this%n_u+this%n_hia)%phi   = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@phi'))
+       this%lda_u(this%n_u+this%n_hia)%theta = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@theta'))
        this%lda_u(this%n_u+this%n_hia)%atomType = n
     END DO
  ENDDO

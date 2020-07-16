@@ -9,12 +9,12 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
-       jspin,mpi,v,input,hub1inp,td,ud)
+       jspin,fmpi,v,input,hub1inp,td,ud)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_nococonv),INTENT(IN) :: nococonv
     TYPE(t_input),INTENT(IN)    :: input
@@ -75,9 +75,9 @@ CONTAINS
        !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info)&
-       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,fmpi,input,hub1inp,uun21,udn21,dun21,ddn21,j1,j2)
        DO  n = 1,atoms%ntype
-          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,mpi,v,input,hub1inp,td,ud)
+          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,input,hub1inp,td,ud)
           OK=.FALSE.
           cholesky_loop:DO WHILE(.NOT.OK)
              OK=.TRUE.
@@ -105,16 +105,16 @@ CONTAINS
                          td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
                          td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
                       ELSE IF(j1>j2) THEN
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
                       ELSE
                          !For this part of the hamiltonian we need to perform hermitian conjugation on mmpMat
-                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) +  conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+                         td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+                         td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
                       ENDIF
                    ENDDO
                 ENDDO

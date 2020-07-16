@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
 
-  SUBROUTINE cdnmt(mpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+  SUBROUTINE cdnmt(fmpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1inp,jDOS,hub1data)
 
     USE m_types
@@ -27,7 +27,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_input),   INTENT(IN)    :: input
-    TYPE(t_mpi),     INTENT(IN)    :: mpi
+    TYPE(t_mpi),     INTENT(IN)    :: fmpi
     TYPE(t_usdus),   INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
@@ -69,7 +69,7 @@ CONTAINS
 
     CALL timestart("cdnmt")
 
-   IF (mpi%irank==0) THEN
+   IF (fmpi%irank==0) THEN
     IF (noco%l_mperp) THEN
        IF (denCoeffsOffdiag%l_fmpl) THEN
           !ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
@@ -338,7 +338,7 @@ CONTAINS
     ENDIF
 
 
-   ENDIF !(mpi%irank==0) THEN
+   ENDIF !(fmpi%irank==0) THEN
     CALL timestop("cdnmt")
 
 

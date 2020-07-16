@@ -70,7 +70,7 @@ CONTAINS
    END SUBROUTINE calc_kinEnergyDen_mt
 
 
-   SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco,nococonv, input, banddos, cell, atoms, enpara, stars, &
+   SUBROUTINE calc_EnergyDen(eig_id, fmpi, kpts, noco,nococonv, input, banddos, cell, atoms, enpara, stars, &
          vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
@@ -92,7 +92,7 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER,           INTENT(in)           :: eig_id
-      TYPE(t_mpi),       INTENT(in)           :: mpi
+      TYPE(t_mpi),       INTENT(in)           :: fmpi
       TYPE(t_kpts),      INTENT(in)           :: kpts
       TYPE(t_noco),      INTENT(in)           :: noco
       TYPE(t_nococonv),  INTENT(in)           :: nococonv
@@ -130,17 +130,17 @@ CONTAINS
       CALL dos%init(input,        atoms, kpts, banddos,results%eig)
       CALL vacdos%init(input,        atoms, kpts, banddos,results%eig)
 !      CALL moments%init(input,    atoms)
-      CALL moments%init(mpi,input,sphhar,atoms)
+      CALL moments%init(fmpi,input,sphhar,atoms)
       tmp_results = results
 
       DO jspin = 1,input%jspins
-         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+         CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
 
 
          ! replace brillouin weights with auxillary weights
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
-         CALL cdnval(eig_id, mpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
+         CALL cdnval(eig_id, fmpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
             enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
             EnergyDen, regCharges, dos, vacdos,tmp_results, moments, gfinp, hub1inp)
       ENDDO
@@ -242,12 +242,12 @@ CONTAINS
       endif
    end subroutine undo_vgen_finalize
 
-   subroutine set_kinED(mpi,   sphhar, atoms, sym,  xcpot, &
+   subroutine set_kinED(fmpi,   sphhar, atoms, sym,  xcpot, &
                         input, noco,   stars, vacuum,oned,cell,     den,     EnergyDen, vTot,kinED)
       use m_types
       use m_cdn_io
       implicit none
-      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym), INTENT(IN)      :: sym
@@ -281,7 +281,7 @@ CONTAINS
       call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
       call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected,kinED)
-      call set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
+      call set_kinED_mt(fmpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot_corrected,kinED)
 #endif
    end subroutine set_kinED
@@ -319,12 +319,12 @@ CONTAINS
       kinED%set = .True.
    end subroutine set_kinED_is
 
-   subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
+   subroutine set_kinED_mt(fmpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot,kinED)
       use m_types
       use m_mt_tofrom_grid
       implicit none
-      TYPE(t_mpi),INTENT(IN)         :: mpi
+      TYPE(t_mpi),INTENT(IN)         :: fmpi
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
       TYPE(t_sym), INTENT(IN)        :: sym
@@ -340,8 +340,8 @@ CONTAINS
       TYPE(t_sphhar)                 :: tmp_sphhar
 
 #ifdef CPP_MPI
-      n_start=mpi%irank+1
-      n_stride=mpi%isize
+      n_start=fmpi%irank+1
+      n_stride=fmpi%isize
 #else
       n_start=1
       n_stride=1

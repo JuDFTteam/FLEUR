@@ -6,11 +6,14 @@
 MODULE m_vgen_xcpot
 
    USE m_juDFT
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
+                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -40,7 +43,7 @@ CONTAINS
 
       CLASS(t_xcpot), INTENT(IN)           :: xcpot
       TYPE(t_hybdat), INTENT(IN)              :: hybdat
-      TYPE(t_mpi), INTENT(IN)              :: mpi
+      TYPE(t_mpi), INTENT(IN)              :: fmpi
 
       TYPE(t_oneD), INTENT(IN)              :: oneD
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
@@ -66,14 +69,13 @@ CONTAINS
       INTEGER :: ifftd, ifftd2, ifftxc3d, ispin, i, iType
       REAL    :: dpdot
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer:: ierr
 #endif
 
       CALL exc%init(stars, atoms, sphhar, vacuum, noco, 1, 1) !one spin only
       ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
 
-      call set_kinED(mpi, sphhar, atoms, sym,  xcpot, &
+      call set_kinED(fmpi, sphhar, atoms, sym,  xcpot, &
       input, noco, stars,vacuum,oned, cell, Den, EnergyDen, vTot,kinED)
 
       IF (PRESENT(results)) THEN
@@ -88,7 +90,7 @@ CONTAINS
       ! exchange correlation potential
 
       ! vacuum region
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          IF (input%film) THEN
             CALL timestart("Vxc in vacuum")
 
@@ -129,15 +131,15 @@ CONTAINS
       !     ------------------------------------------
       !     ----> muffin tin spheres region
 
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
 
-      CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
+      CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen,kinED, noco,vTot, vx, exc)
 
       ! add MT EXX potential to vr
-      IF (mpi%irank == 0) THEN
+      IF (fmpi%irank == 0) THEN
          CALL timestop("Vxc in MT")
 
          ! check continuity of total potential
@@ -213,7 +215,7 @@ CONTAINS
 
 8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)
          END IF
-      END IF ! mpi%irank == 0
+      END IF ! fmpi%irank == 0
 
    END SUBROUTINE vgen_xcpot
 

@@ -22,9 +22,11 @@ CONTAINS
     !
     USE m_abcof_soc
     USE m_types
+#ifdef CPP_MPI
+    use mpi 
+#endif
     IMPLICIT NONE
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER ierr(3)
 #endif
     

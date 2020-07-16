@@ -27,6 +27,7 @@ MODULE m_cdnpot_io_hdf
    PUBLIC writeCoreDensityHDF, readCoreDensityHDF
    PUBLIC writeCDNHeaderData, writePOTHeaderData
    PUBLIC isCoreDensityPresentHDF, deleteDensityEntryHDF
+   PUBLIC deleteObsoleteDensityMetadataHDF
    PUBLIC isDensityEntryPresentHDF, isPotentialEntryPresentHDF
    PUBLIC peekDensityEntryHDF
 #endif
@@ -262,10 +263,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ft2_gfxSpaceID, ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySpaceID, ft2_gfySetID
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing stars, index: ', starsIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -469,10 +466,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ft2_gfxSetID
       INTEGER(HID_T)                   :: ft2_gfySetID
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading stars, index: ', starsIndex
-#endif
-
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
@@ -673,10 +666,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing step function, index: ', stepfunctionIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -735,10 +724,6 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER(HID_T)            :: ustepSetID
       INTEGER(HID_T)            :: ufftSetID
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading step function, index: ', stepfunctionIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
@@ -828,10 +813,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing lattice harmonics, index: ', latharmsIndex
-#endif
-
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -907,10 +888,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: hdfError
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading lattice harmonics, index: ', latharmsIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
 
@@ -1044,10 +1021,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_USpaceID, ldau_USetID
       INTEGER(HID_T)                   :: ldau_JSpaceID, ldau_JSetID
       !LDA+U IDs (end)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Writing structure, index: ', structureIndex
-#endif
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1350,10 +1323,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: ldau_USetID
       INTEGER(HID_T)                   :: ldau_JSetID
       !LDA+U IDs (end)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading structure, index: ', structureIndex
-#endif
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
@@ -2341,7 +2310,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
-      INTEGER               :: previousDensityIndex, jspins
+      INTEGER               :: previousDensityIndex, jspins, jspinsmmp
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
@@ -2375,10 +2344,6 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: fzxyTemp(:,:,:,:)
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
       COMPLEX, ALLOCATABLE  :: mmpMatTemp(:,:,:,:)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'Reading density, archiveName: ', TRIM(ADJUSTL(archiveName))
-#endif
 
       den%pw = CMPLX(0.0,0.0)
       den%vacz = CMPLX(0.0,0.0)
@@ -2465,14 +2430,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',den%iter)
-
-#ifdef CPP_DEBUG
-      WRITE(*,*) '   previousDensityIndex: ', previousDensityIndex
-      WRITE(*,*) '   starsIndex: ', starsIndex
-      WRITE(*,*) '   latharmsIndex: ', latharmsIndex
-      WRITE(*,*) '   structureIndex: ', structureIndex
-      WRITE(*,*) '   stepfunctionIndex: ', stepfunctionIndex
-#endif
 
       WRITE(groupBName,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupBName)))
@@ -2694,15 +2651,17 @@ MODULE m_cdnpot_io_hdf
             (localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
             ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,3))
             dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
+            jspinsmmp = 3
          ELSE
             ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins))
             dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,jspins/)
+            jspinsmmp = jspins
          END IF
          CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
          CALL io_read_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),mmpMatTemp)
          CALL h5dclose_f(mmpMatSetID, hdfError)
 
-         den%mmpMat = CMPLX(0.0,0.0)
+         den%mmpMat = cmplx_0
          IF(l_mmpMatDimEquals) THEN
             den%mmpMat = mmpMatTemp
          ELSE
@@ -2710,7 +2669,7 @@ MODULE m_cdnpot_io_hdf
                DO j = 1, atoms%n_u+atoms%n_hia
                   IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
                   IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
-                  den%mmpMat(:,:,j,:) = mmpMatTemp(:,:,i,:)
+                  den%mmpMat(:,:,j,1:jspinsmmp) = mmpMatTemp(:,:,i,1:jspinsmmp)
                END DO
             END DO
          END IF
@@ -2904,6 +2863,34 @@ MODULE m_cdnpot_io_hdf
                localDensityType = DENSITY_TYPE_OUT_const
                densityTypeName = '/out'
             END IF
+         CASE(DENSITY_TYPE_FFN_IN_const)
+            densityTypeName = '/ffn_in'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_IN_const
+               densityTypeName = '/noco_in'
+            END IF
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_IN_const
+               densityTypeName = '/in'
+            END IF
+         CASE(DENSITY_TYPE_FFN_OUT_const)
+            densityTypeName = '/ffn_out'
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_NOCO_OUT_const
+               densityTypeName = '/noco_out'
+            END IF
+            groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+            l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+            IF(.NOT.l_exist) THEN
+               localDensityType = DENSITY_TYPE_OUT_const
+               densityTypeName = '/out'
+            END IF
          CASE(DENSITY_TYPE_PRECOND_const)
             densityTypeName = '/precond'
          CASE DEFAULT
@@ -3089,6 +3076,91 @@ MODULE m_cdnpot_io_hdf
       deleteDensityEntryHDF = .TRUE.
 
    END FUNCTION deleteDensityEntryHDF
+
+   SUBROUTINE deleteObsoleteDensityMetadataHDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                               currentStepfunctionIndex,lastDensityIndex)
+
+      INTEGER(HID_T), INTENT(IN)   :: fileID
+      INTEGER, INTENT(IN)          :: currentStarsIndex, currentLatharmsIndex
+      INTEGER, INTENT(IN)          :: currentStructureIndex, currentStepfunctionIndex
+      INTEGER, INTENT(IN)          :: lastDensityIndex
+
+      INTEGER                      :: iDen
+      INTEGER                      :: starsIndex, latharmsIndex
+      INTEGER                      :: structureIndex, stepfunctionIndex
+      INTEGER                      :: hdfError
+      LOGICAL                      :: l_exist
+      CHARACTER(LEN=30)            :: archiveName, groupname
+
+      LOGICAL                      :: neededStars(currentStarsIndex)
+      LOGICAL                      :: neededLatharms(currentLatharmsIndex)
+      LOGICAL                      :: neededStructures(currentStructureIndex)
+      LOGICAL                      :: neededStepfunctions(currentStepfunctionIndex)
+
+      neededStars(:) = .FALSE.
+      neededLatharms(:) = .FALSE.
+      neededStructures(:) = .FALSE.
+      neededStepfunctions(:) = .FALSE.
+
+      DO iDen = 1, lastDensityIndex
+         archiveName = ''
+         WRITE(archiveName,'(a,i0)') '/cdn-', iDen
+
+         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
+         IF(.NOT.l_exist) THEN
+            CYCLE
+         END IF
+
+         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+                                  starsIndex=starsIndex, latharmsIndex=latharmsIndex, &
+                                  structureIndex=structureIndex,stepfunctionIndex=stepfunctionIndex)
+         neededStars(starsIndex) = .TRUE.
+         neededLatharms(latharmsIndex) = .TRUE.
+         neededStructures(structureIndex) = .TRUE.
+         neededStepfunctions(stepfunctionIndex) = .TRUE.
+      END DO
+
+      DO starsIndex = 1, currentStarsIndex
+         IF (neededStars(starsIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/stars-', starsIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO latharmsIndex = 1, currentLatharmsIndex
+         IF (neededLatharms(latharmsIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO structureIndex = 1, currentStructureIndex
+         IF (neededStructures(structureIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/structure-', structureIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+      DO stepfunctionIndex = 1, currentStepfunctionIndex
+         IF (neededStepfunctions(stepfunctionIndex)) CYCLE
+         groupname = ''
+         WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
+         l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+         IF (l_exist) THEN
+            CALL h5ldelete_f(fileID, groupname, hdfError)
+         END IF
+      END DO
+
+   END SUBROUTINE deleteObsoleteDensityMetadataHDF
 
    LOGICAL FUNCTION isCoreDensityPresentHDF()
 

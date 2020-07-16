@@ -6,6 +6,10 @@ MODULE m_hsoham
   ! OpenMP parrallelization restored (U.Alekseeva 12.2019)
   !*********************************************************************
   !
+
+#ifdef CPP_MPI
+   use mpi 
+#endif
 CONTAINS
   SUBROUTINE hsoham(&
        atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,bhelp,&
@@ -13,11 +17,9 @@ CONTAINS
        hsomtx)
 
 #include"cpp_double.h"
-
     USE m_types
     IMPLICIT NONE
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
     TYPE(t_input),INTENT(IN)   :: input
@@ -198,10 +200,10 @@ CONTAINS
     ENDDO
     !
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(SUB_COMM,ierr)
+    CALL MPI_BARRIER(SUB_COMM,ierr(1))
     n = 4*nsz(1)*nsz(input%jspins)
     ALLOCATE(c_buf(n))
-    CALL MPI_REDUCE(hsomtx,c_buf,n,CPP_MPI_COMPLEX,MPI_SUM,0,SUB_COMM,ierr)
+    CALL MPI_REDUCE(hsomtx,c_buf,n,CPP_MPI_COMPLEX,MPI_SUM,0,SUB_COMM,ierr(2))
     IF (n_rank.EQ.0) THEN
         CALL CPP_BLAS_ccopy(n,c_buf,1,hsomtx,1)
     ENDIF

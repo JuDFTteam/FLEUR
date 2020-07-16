@@ -41,9 +41,87 @@ MODULE m_types_mat
       procedure        :: u2l => t_mat_u2l
       procedure        :: l2u => t_mat_l2u
       procedure        :: size_mb => t_mat_size_mb
+      procedure        :: print_type => t_mat_print_type
+      procedure        :: conjugate => t_mat_conjg
+      procedure        :: reset => t_mat_reset
+      procedure        :: bcast => t_mat_bcast
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_bcast(mat, root, comm)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      integer, intent(in)           :: root, comm 
+      
+      integer :: ierr, full_shape(2), me
+
+#ifdef CPP_MPI 
+      call MPI_Comm_rank(comm, me, ierr)
+      call MPI_Bcast(mat%l_real, 1, MPI_LOGICAL, root, comm, ierr)
+      !alloc mat same as root
+      if(me == root) then
+         full_shape = merge(shape(mat%data_r), shape(mat%data_c), mat%l_real)
+         call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
+      else 
+         call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
+         call mat%alloc(mat%l_real, full_shape(1), full_shape(2))         
+      endif
+
+      ! overwrite matsize as needed
+      call MPI_Bcast(mat%matsize1, 1, MPI_INTEGER, root, comm, ierr)
+      call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
+
+
+
+      if(mat%l_real) then
+         call MPI_Bcast(mat%data_r, product(full_shape), MPI_REAL8, root, comm, ierr)
+      else 
+         call MPI_Bcast(mat%data_c, product(full_shape), MPI_COMPLEX8, root, comm, ierr)
+      endif
+#endif
+   end subroutine t_mat_bcast
+
+   subroutine t_mat_reset(mat, val)
+      implicit none  
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      complex, intent(in)           :: val
+
+      if(mat%l_real) then 
+         mat%data_r = real(val)
+      else 
+         mat%data_c = val
+      endif
+   end subroutine t_mat_reset
+
+   subroutine t_mat_conjg(mat)
+      implicit none 
+      CLASS(t_mat), INTENT(INOUT) :: mat
+      integer :: i,j
+      
+      if(.not. mat%l_real) then
+         if(mat%matsize1 == size(mat%data_c,1) .and. mat%matsize2 == size(mat%data_c,2)) then 
+            call zlacgv(mat%matsize1 * mat%matsize2, mat%data_c, 1)
+         else 
+            !$OMP parallel do default(none) private(i) shared(mat)
+            do i =1,mat%matsize2 
+               call zlacgv(mat%matsize1, mat%data_c(1,i), 1)
+            enddo
+            !$OMP end parallel do
+         endif
+      endif 
+   end subroutine t_mat_conjg
+
+
+   subroutine t_mat_print_type(mat)
+      implicit none 
+      CLASS(t_mat), INTENT(IN)     :: mat 
+
+      write (*,*) "type -> t_mat"
+   end subroutine t_mat_print_type
+
    function t_mat_size_mb(mat) result(mb_size)
       implicit none
       class(t_mat), intent(inout) :: mat
@@ -140,11 +218,12 @@ CONTAINS
       implicit none
       class(t_mat), intent(in) :: mat
       real :: norm
+      real, external :: dnrm2, dznrm2
 
       if (mat%l_real) then
-         norm = norm2(mat%data_r)
+         norm = dnrm2(size(mat%data_r), mat%data_r, 1)
       else
-         norm = norm2(abs(mat%data_c))
+         norm = dznrm2(size(mat%data_c), mat%data_c, 1)
       endif
    end function t_mat_norm2
 
@@ -333,7 +412,7 @@ CONTAINS
          k = mat1%matsize1
       endif
 
-      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricieso the same type")
+      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
       if(transB_i == "N" ) then
          if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
          n = mat2%matsize2

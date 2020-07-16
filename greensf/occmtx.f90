@@ -9,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,mmpMat,spin,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,atoms,mmpMat,spin,usdus,denCoeffsOffDiag,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -24,16 +24,19 @@ MODULE m_occmtx
       TYPE(t_greensf),        INTENT(IN)    :: g
       TYPE(t_gfinp),          INTENT(IN)    :: gfinp
       TYPE(t_input),          INTENT(IN)    :: input
+      TYPE(t_atoms),          INTENT(IN)    :: atoms
       COMPLEX,                INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
-      INTEGER, OPTIONAL,      INTENT(IN)    :: spin
-      LOGICAL, OPTIONAL,      INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
-      LOGICAL, OPTIONAL,      INTENT(IN)    :: check
-      LOGICAL, OPTIONAL,      INTENT(INOUT) :: occError
+      INTEGER,       OPTIONAL,INTENT(IN)    :: spin
+      TYPE(t_usdus), OPTIONAL,INTENT(IN)    :: usdus
+      TYPE(t_denCoeffsOffDiag),OPTIONAL,INTENT(IN) :: denCoeffsOffDiag
+      LOGICAL,       OPTIONAL,INTENT(IN)    :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
+      LOGICAL,       OPTIONAL,INTENT(IN)    :: check
+      LOGICAL,       OPTIONAL,INTENT(INOUT) :: occError
 
 
 
-      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns
-      REAL    :: re,imag,nup,ndwn,nhi,nlow,tr
+      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,atomType,atomTypep,m,mp,i,ns,spin_start,spin_end
+      REAL    :: nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=300) :: message
       TYPE(t_contourInp) :: contourInp
@@ -46,23 +49,28 @@ MODULE m_occmtx
       contourInp = gfinp%contour(g%elem%iContour)
 
       !Check for Contours not reproducing occupations
-      IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.contourInp%et.NE.0.0) &
+      IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.ABS(contourInp%et).GT.1e-12) &
          WRITE(oUnit,*) "Energy contour not ending at efermi: These are not the actual occupations"
       IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
          WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
       IF(PRESENT(spin)) THEN
          mmpMat(:,:,spin) = cmplx_0
+         spin_start = spin
+         spin_end   = spin
       ELSE
          mmpMat = cmplx_0
+         spin_start = 1
+         IF(ALLOCATED(g%gmmpMat)) spin_end = SIZE(g%gmmpMat,4)
+         IF(ALLOCATED(g%uu)) spin_end = SIZE(g%uu,4)
       ENDIF
 
-      DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,SIZE(g%gmmpMat,4),PRESENT(spin))
+      DO ispin = spin_start, spin_end
          DO ipm = 1, 2
             !Integrate over the contour:
-            DO iz = 1, SIZE(g%gmmpMat,1)
+            DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
-               CALL g%get(iz,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(atoms,iz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -77,7 +85,7 @@ MODULE m_occmtx
             !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
             IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
                !left tail
-               CALL g%get(1,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(atoms,1,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -89,7 +97,7 @@ MODULE m_occmtx
                   ENDDO
                ENDDO
                !right tail
-               CALL g%get(g%contour%nz,ipm.EQ.2,gmat,spin=ispin)
+               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,gmat,spin=ispin,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -108,22 +116,29 @@ MODULE m_occmtx
       IF(PRESENT(check)) THEN
          IF(check) THEN
             IF(PRESENT(occError)) occError = .FALSE.
-            DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,input%jspins,PRESENT(spin))
+            DO ispin = spin_start, spin_end
+               IF(ispin>input%jspins) CYCLE !Only the spin-diagonal parts
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)
                   IF(REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).GT.1.05&
                      .OR.REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).LT.-0.01) THEN
 
-                     IF(PRESENT(occError)) occError = .TRUE.
-                     WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
-                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     IF(PRESENT(occError)) THEN
+                        occError = .TRUE.
+                     ELSE
+                        WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
+                        CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                     ENDIF
                   ENDIF
                ENDDO
                IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
-                  IF(PRESENT(occError)) occError = .TRUE.
-                  WRITE(message,9100) ispin,tr
-                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  IF(PRESENT(occError)) THEN
+                     occError = .TRUE.
+                  ELSE
+                     WRITE(message,9100) ispin,tr
+                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  ENDIF
                ENDIF
             ENDDO
          ENDIF
@@ -167,8 +182,8 @@ MODULE m_occmtx
             DO i = 1, 2*ns
                WRITE(oUnit,'(14f8.4)') gmat%data_r(i,:)
             ENDDO
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(oUnit,'(1x,A,A,A,f8.4)') "Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
 
             !Obtain the conversion matrix to the |J,mj> basis (Deprecated)
             !CALL cmat%init(.TRUE.,2*ns,2*ns)

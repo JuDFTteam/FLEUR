@@ -13,6 +13,10 @@ MODULE m_types_nococonv
     REAL   :: qss(3)=[0.,0.,0.]
     REAL, ALLOCATABLE    :: alph(:)
     REAL, ALLOCATABLE    :: beta(:)
+    REAL, ALLOCATABLE    :: alphRlx(:)
+    REAL, ALLOCATABLE    :: betaRlx(:)
+    REAL, ALLOCATABLE    :: betaPrev(:)
+    REAL, ALLOCATABLE    :: alphPrev(:)
     REAL, ALLOCATABLE    :: b_con(:,:)
   CONTAINS
     procedure:: init=>t_nococonv_init

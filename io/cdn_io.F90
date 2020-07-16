@@ -13,7 +13,9 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 MODULE m_cdn_io
-
+#ifdef CPP_MPI
+  use mpi
+#endif
   USE m_types
   USE m_juDFT
   USE m_loddop
@@ -722,7 +724,7 @@ CONTAINS
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
        WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
-       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
+       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_FFN_IN_const,&
             iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
             previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
        eFermiPrev = fermiEnergy
@@ -855,7 +857,7 @@ CONTAINS
 
   END SUBROUTINE writeCoreDensity
 
-  SUBROUTINE storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym,mpi,sphhar,noco)
+  SUBROUTINE storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym,fmpi,sphhar,noco)
 
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -863,7 +865,7 @@ CONTAINS
     TYPE(t_vacuum), INTENT(IN) :: vacuum
     TYPE(t_oneD),INTENT(IN)    :: oneD
     TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_stars),INTENT(IN)    :: stars
@@ -883,13 +885,13 @@ CONTAINS
     INTEGER(HID_T) :: fileID
 #endif
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
+    !INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
 
     CALL getIOMode(mode)
 
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
 
        IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -926,17 +928,17 @@ CONTAINS
        END IF
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
   END SUBROUTINE storeStructureIfNew
 
-  SUBROUTINE transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
+  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
     USE m_types
     USE m_constants
     USE m_qfix
     USE m_fix_by_gaussian
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -971,7 +973,7 @@ CONTAINS
     CHARACTER(len=50) :: archivename
 #endif
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
+    !INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
 
@@ -980,7 +982,7 @@ CONTAINS
     CALL getIOMode(mode)
     IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
-       IF (mpi%irank==0) THEN
+       IF (fmpi%irank==0) THEN
           CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
           IF (currentStructureIndex>0.AND.lastdensityindex>0) THEN
@@ -994,12 +996,12 @@ CONTAINS
           CALL closeCDNPOT_HDF(fileID)
        ENDIF
 #ifdef CPP_MPI
-       CALL mpi_bcast(l_same,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-       CALL mpi_bcast(l_structure_by_shift,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+       CALL mpi_bcast(l_same,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+       CALL mpi_bcast(l_structure_by_shift,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
        IF (l_same.OR..NOT.l_structure_by_shift) RETURN ! nothing to do
 
-       IF (mpi%irank==0) THEN
+       IF (fmpi%irank==0) THEN
           WRITE(oUnit,*) "Atomic movement detected, trying to adjust charge density"
 
           !Calculate shifts
@@ -1021,19 +1023,19 @@ CONTAINS
        !Now fix the density
        SELECT CASE(input%qfix)
        CASE (0,1) !just qfix the density
-          IF (mpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
-          IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix)
+          IF (fmpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+               den,noco%l_noco,fmpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
-          IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-               den,noco%l_noco,mpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+               den,noco%l_noco,fmpi%isize==1,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
-          IF (mpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
+          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,fmpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
        CASE default
           CALL judft_error("Wrong choice of qfix in input")
        END SELECT
        !Now write the density to file
-       IF (mpi%irank==0) CALL writedensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       IF (fmpi%irank==0) CALL writedensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
             0,-1.0,fermiEnergy,l_qfix,den)
 
 #endif
@@ -1505,6 +1507,9 @@ CONTAINS
                 WRITE(*,*) 'deleted density entry ', TRIM(ADJUSTL(archiveName))
              END IF
           END DO
+
+          CALL deleteObsoleteDensityMetadataHDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                                currentStepfunctionIndex,lastDensityIndex)
 
           CALL closeCDNPOT_HDF(fileID)
 #endif

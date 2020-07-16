@@ -26,13 +26,14 @@ module m_eig66_data
    TYPE, extends(t_data):: t_data_MPI
       INTEGER             :: n_size = 1
       INTEGER             :: size_k, size_eig
-      INTEGER             :: eig_handle, zr_handle, zc_handle, neig_handle, w_iks_handle
+      INTEGER             :: eig_handle, zr_handle, zc_handle, neig_handle, olap_r_handle, olap_c_handle
       INTEGER, ALLOCATABLE :: pe_basis(:, :), slot_basis(:, :)
       INTEGER, ALLOCATABLE :: pe_ev(:, :, :), slot_ev(:, :, :)
+      integer, allocatable :: pe_olap(:,:,:), slot_olap(:,:,:)
       INTEGER             :: irank
       INTEGER, POINTER :: neig_data(:)
-      REAL, POINTER    :: eig_data(:), zr_data(:), w_iks_data(:)
-      COMPLEX, POINTER :: zc_data(:)
+      REAL, POINTER    :: eig_data(:), zr_data(:), olap_r_data(:)
+      COMPLEX, POINTER :: zc_data(:), olap_c_data(:)
    END TYPE
    TYPE, EXTENDS(t_data):: t_data_hdf
 #ifdef CPP_HDF
@@ -45,9 +46,11 @@ module m_eig66_data
 
    TYPE, EXTENDS(t_data):: t_data_mem
       INTEGER, ALLOCATABLE :: eig_int(:)
-      REAL, ALLOCATABLE    :: eig_eig(:, :, :)
+      REAL, ALLOCATABLE    :: eig_eig(:, :)
       REAL, ALLOCATABLE    :: eig_vecr(:, :)
       COMPLEX, ALLOCATABLE :: eig_vecc(:, :)
+      REAL, ALLOCATABLE    :: olap_r(:, :)
+      COMPLEX, ALLOCATABLE :: olap_c(:, :)
    END TYPE
 
    TYPE t_list

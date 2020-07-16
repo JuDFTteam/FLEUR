@@ -131,22 +131,22 @@ CONTAINS
          IF(noco%l_mtNocoPot) mm(:,lh)=0.5*mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
 
          DO js = 1, jspV
-            DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
-               !Necessary gradients
-               IF (dograds) THEN
-                  !Colinear case only needs radial derivatives of chlh
-                  CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                                                 chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
-                  IF (noco%l_mtNocoPot) THEN
-                  !Noco case also needs radial derivatives of mm
-                     CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
-                                                 mm(:,lh), ndvgrd, drm(:,lh), drrm(:,lh))
-                 END IF
-              END IF
-            ENDDO
-         ENDDO ! js
-      ENDDO   ! lh
+            chlh(1:atoms%jri(n), lh, js) = den_mt(1:atoms%jri(n), lh, js) / &
+                                           (atoms%rmsh(1:atoms%jri(n), n)*atoms%rmsh(1:atoms%jri(n), n))
+
+            !Necessary gradients
+            IF (dograds) THEN
+               !Colinear case only needs radial derivatives of chlh
+               CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+                            chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
+               IF (noco%l_mtNocoPot) THEN
+               !Noco case also needs radial derivatives of mm
+                  CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
+                               mm(:,lh), ndvgrd, drm(:,lh), drrm(:,lh))
+               END IF
+            END IF
+         END DO ! js
+      END DO   ! lh
 
       !The following Loop maps chlh on the k-Grid using the lattice harmonics ylh
       kt = 0

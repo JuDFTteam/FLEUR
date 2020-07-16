@@ -110,28 +110,4 @@ contains
       endif
       call timestop("read_z")
    END subroutine read_z
-
-   subroutine read_v_x(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(INOUT)  :: mat
-      INTEGER, INTENT(IN)         :: rec
-      integer                     :: id
-
-      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "v_x." // int2str(rec))
-      CALL read_matrix(mat, 1, id)
-      call close_matrix(id)
-   END subroutine read_v_x
-
-   subroutine write_v_x(mat, rec)
-      use m_juDFT
-      implicit none
-      TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)       :: rec
-      integer :: id
-
-      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "v_x." // int2str(rec))
-      CALL write_matrix(mat, 1, id)
-      call close_matrix(id)
-   END subroutine write_v_x
-
 end module m_io_hybinp

@@ -1,13 +1,16 @@
 MODULE m_cdntot
+#ifdef CPP_MPI
+   use mpi
+#endif
 !     ********************************************************
 !     calculate the total charge density in the interstial.,
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
-                                   q, qis, qmt, qvac, qtot, qistot, mpi)
-      ! if called with mpi variable, distribute the calculation of the pwint 
-      ! over MPI processes in mpi%mpi_comm
+                                   q, qis, qmt, qvac, qtot, qistot, fmpi)
+      ! if called with fmpi variable, distribute the calculation of the pwint 
+      ! over fmpi processes in fmpi%mpi_comm
       USE m_intgr, ONLY : intgr3
       USE m_constants
       USE m_qsf
@@ -25,20 +28,17 @@ CONTAINS
       TYPE(t_potden),INTENT(IN) :: integrand
       REAL, INTENT(OUT)         :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                                    qvac(2,input%jspins), qtot, qistot
-      TYPE(t_mpi),INTENT(IN),OPTIONAL :: mpi
+      TYPE(t_mpi),INTENT(IN),OPTIONAL :: fmpi
       INTEGER                   :: jsp, j, ivac, nz, n, irank, nsize, intstart, intstop, chunk_size, leftover
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       REAL                      :: sum_over_ng3
-      COMPLEX,ALLOCATABLE       :: x(:) !(1:stars%ng3), may be distributed over MPI ranks
+      COMPLEX,ALLOCATABLE       :: x(:) !(1:stars%ng3), may be distributed over fmpi ranks
 #ifdef CPP_MPI
       INTEGER ierr
-#include "cpp_double.h"
-      INCLUDE "mpif.h"
 #endif
-
-      IF (PRESENT(mpi)) THEN
-         irank = mpi%irank
-         nsize = mpi%isize
+      IF (PRESENT(fmpi)) THEN
+         irank = fmpi%irank
+         nsize = fmpi%isize
       ELSE
          irank = 0
          nsize = 1
@@ -99,8 +99,8 @@ CONTAINS
          ENDDO
          DEALLOCATE(x)
 #ifdef CPP_MPI
-         IF (PRESENT(mpi)) THEN
-            CALL MPI_reduce(sum_over_ng3,qis(jsp),1,CPP_MPI_REAL,MPI_SUM,0,mpi%mpi_comm,ierr)
+         IF (PRESENT(fmpi)) THEN
+            CALL MPI_reduce(sum_over_ng3,qis(jsp),1,MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi%mpi_comm,ierr)
          ELSE
             qis(jsp) = sum_over_ng3
          ENDIF
@@ -162,7 +162,7 @@ CONTAINS
    END SUBROUTINE integrate_realspace
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
-                     den,l_printData,qtot,qistot,mpi,l_par)
+                     den,l_printData,qtot,qistot,fmpi,l_par)
 
       USE m_types
       USE m_juDFT
@@ -179,7 +179,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN) :: den
       LOGICAL,INTENT(IN)        :: l_printData,l_par
       REAL,INTENT(OUT)          :: qtot,qistot
-      TYPE(t_mpi),INTENT(IN)    :: mpi
+      TYPE(t_mpi),INTENT(IN)    :: fmpi
 
 !     .. Local Scalars ..
       REAL q(input%jspins),qis(input%jspins),w,mtCharge
@@ -190,13 +190,13 @@ CONTAINS
       CALL timestart("cdntot")
       IF (l_par) THEN
          CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
-                                   q, qis, qmt, qvac, qtot, qistot, mpi)
+                                   q, qis, qmt, qvac, qtot, qistot, fmpi)
       ELSE
          CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
       ENDIF
 
-      IF (mpi%irank.EQ.0) CALL cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
+      IF (fmpi%irank.EQ.0) CALL cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
       CALL timestop("cdntot")
    END SUBROUTINE cdntot
 

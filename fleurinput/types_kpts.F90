@@ -37,6 +37,7 @@ MODULE m_types_kpts
       CHARACTER(LEN=50), ALLOCATABLE :: specialPointNames(:)
       REAL, ALLOCATABLE              :: specialPoints(:, :)
       INTEGER, ALLOCATABLE           :: ntetra(:, :)
+      INTEGER, ALLOCATABLE           :: tetraList(:,:) !List with the tetrahedra containing the current kpoint (for more efficient loops)
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
       type(t_eibz), allocatable      :: EIBZ(:)
@@ -60,13 +61,15 @@ CONTAINS
       ! get the index of a kpoint
       implicit NONE
       class(t_kpts), intent(in)    :: kpts
-      real, intent(in)            :: kpoint(3)
-      integer                     :: idx, ret_idx
+      real, intent(in)             :: kpoint(3)
+      integer                      :: idx, ret_idx
+      real                         :: kpt_bz(3)
+
+      kpt_bz = kpts%to_first_bz(kpoint)
 
       ret_idx = 0
       DO idx = 1, kpts%nkptf
-         IF (all(abs(kpts%to_first_bz(kpoint) &
-                     - kpts%to_first_bz(kpts%bkf(:, idx))) < 1E-06)) THEN
+         IF (all(abs(kpt_bz - kpts%bkf(:, idx)) < 1E-06)) THEN
             ret_idx = idx
             exit
          END IF
@@ -81,7 +84,7 @@ CONTAINS
 
       k = k_in
       ! everything close to 0 or 1 get's mapped to 0 and 1
-      where (abs(k - nint(k)) < 1e-8) k = nint(k)
+      where (abs(k - dnint(k)) < 1e-8) k = dnint(k)
 
       ! map to 0 -> 1 interval
       k = k - floor(k)
@@ -120,6 +123,7 @@ CONTAINS
       CALL mpi_bc(this%specialPointIndices, rank, mpi_comm)
       CALL mpi_bc(this%specialPoints, rank, mpi_comm)
       CALL mpi_bc(this%ntetra, rank, mpi_comm)
+      CALL mpi_bc(this%tetraList,rank,mpi_comm)
       CALL mpi_bc(this%voltet, rank, mpi_comm)
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
@@ -297,26 +301,43 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE init_kpts(kpts, cell, sym, film)
+   SUBROUTINE init_kpts(kpts, cell, sym, film, l_eibz)
+      use m_juDFT
       USE m_types_cell
       USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)     :: sym
-      LOGICAL, INTENT(IN)         :: film
+      LOGICAL, INTENT(IN)         :: film, l_eibz
 
-      INTEGER :: n
-
+      INTEGER :: n,itet,ntet
+      call timestart("init_kpts")
       DO n = 1, kpts%nkpt
          kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
       ENDDO
       IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
-      allocate(kpts%EIBZ(kpts%nkpt))
-      do n = 1,kpts%nkpt 
-         call kpts%EIBZ(n)%init(kpts, sym, n)
-         ! write (*,*) "n: " // int2str(n) // " nkpt_EIBZ: " // int2str(kpts%nkpt_EIBZ(n))
-      enddo
+      if(l_eibz) then
+         allocate(kpts%EIBZ(kpts%nkpt))
+         !$OMP PARALLEL do default(none) private(n) shared(kpts, sym)
+         do n = 1,kpts%nkpt 
+            call kpts%EIBZ(n)%init(kpts, sym, n)
+         enddo
+         !$OMP END PARALLEL DO
+      end if
+
+      if(kpts%ntet>0) then
+         allocate(kpts%tetraList(MERGE(6,24,film),kpts%nkpt),source=0)
+         do n = 1, kpts%nkpt
+            ntet = 0
+            do itet = 1, kpts%ntet
+               IF(ALL(kpts%ntetra(:,itet).NE.n)) CYCLE
+               ntet = ntet + 1
+               kpts%tetraList(ntet,n) = itet
+            enddo
+         enddo
+      endif
+      call timestop("init_kpts")
    END SUBROUTINE init_kpts
 
    SUBROUTINE gen_bz(kpts, sym)
@@ -348,6 +369,7 @@ CONTAINS
       REAL, PARAMETER          :: eps = 1e-8
 
       INTEGER:: nsym, ID_mat(3, 3)
+      call timestart("gen_bz")
 
       nsym = sym%nop
       IF (.NOT. sym%invs) nsym = 2*sym%nop
@@ -407,7 +429,7 @@ CONTAINS
       ALLOCATE (kpts%bkf(3, kpts%nkptf))
       kpts%bkf = rarr1
       DEALLOCATE (rarr1)
-
+      call timestop("gen_bz")
    END SUBROUTINE gen_bz
 
    function nkpt3_kpts(kpts) result(nkpt3)
@@ -444,7 +466,7 @@ CONTAINS
       INTEGER               ::  isym, ic, iop, ikpt, ikpt1
       INTEGER               ::  nsymop, nrkpt
 !     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym)
+      INTEGER               ::  rrot(3, 3, sym%nsym), i
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)
@@ -468,14 +490,6 @@ CONTAINS
       
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
 
-      ! reallocate psym
-      !       ALLOCATE(help(ic))
-      !       help = psym(1:ic)
-      !       DEALLOCATE(psym)
-      !       ALLOCATE(psym(ic))
-      !       psym = help
-      !       DEALLOCATE(help)
-
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
       ! applying the symmetry operations of the little group of k
@@ -498,23 +512,23 @@ CONTAINS
             !determine number of rotkpt
             nrkpt = 0
             DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
+               IF (all(abs(rotkpt - kpts%bkf(:, ikpt1)) <= 1E-06)) THEN
                   nrkpt = ikpt1
                   EXIT
                END IF
             END DO
             IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
-
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
                parent(nrkpt) = ikpt
                symop(nrkpt) = psym(iop)
             END IF
-            IF (all(list == 0)) EXIT
 
+            if(all(list == 0)) exit
          END DO
       END DO
+
 
       ! for the Gamma-point holds:
       parent(1) = 1
@@ -542,7 +556,6 @@ CONTAINS
       INTEGER, ALLOCATABLE  :: psym(:)
       REAL                  :: rotkpt(3)
 
-
       allocate (psym(sym%nsym))
       parent = 0
       DO isym = 1, sym%nsym
@@ -563,7 +576,7 @@ CONTAINS
 
       ! calc numsymop
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
-      
+
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
@@ -571,6 +584,7 @@ CONTAINS
             !determine number of rotkpt
             nrkpt = kpts%get_nk(rotkpt)
             IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
+
 
             IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0

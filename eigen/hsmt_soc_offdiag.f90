@@ -8,13 +8,13 @@ MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,mpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_hsmt_fjgj
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -31,14 +31,15 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3), fjkiln,gjkiln
-    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3
-    !COMPLEX :: fct
+    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv
+    INTEGER NVEC_rem  !remainder
+    INTEGER, PARAMETER :: NVEC = 128
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
-    REAL, ALLOCATABLE :: xlegend(:)
+    REAL, ALLOCATABLE :: xlegend(:), dot(:)
     COMPLEX, ALLOCATABLE :: cph(:),fct(:)
 
     CALL timestart("offdiagonal soc-setup")
@@ -50,70 +51,84 @@ CONTAINS
     END DO
 
     !$OMP PARALLEL DEFAULT(NONE)&
-    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,mpi)&
+    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
-    !$OMP PRIVATE(cph,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln)
-    ALLOCATE(cph(MAXVAL(lapw%nv)))
-    ALLOCATE(xlegend(MAXVAL(lapw%nv)))
-    ALLOCATE(plegend(MAXVAL(lapw%nv),0:2))
-    ALLOCATE(dplegend(MAXVAL(lapw%nv),0:2))
-    ALLOCATE(fct(MAXVAL(lapw%nv)))
+    !$OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
+    !$OMP PRIVATE(kj_off,kj_vec,jv)
+    ALLOCATE(cph(NVEC))
+    ALLOCATE(xlegend(NVEC))
+    ALLOCATE(plegend(NVEC,0:2))
+    ALLOCATE(dplegend(NVEC,0:2))
+    ALLOCATE(fct(NVEC))
+    ALLOCATE(dot(NVEC))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
-    DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
-       kii=(ki-1)/mpi%n_size+1
+    DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
+       kii=(ki-1)/fmpi%n_size+1
 
-       !--->             set up phase factors
-       cph = 0.0
-       ski = lapw%gvec(:,ki,1)
-       DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
-          tnn = tpi_const*atoms%taual(:,nn)
-          DO kj = 1,ki
-             cph(kj) = cph(kj) +&
-                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)),&
-                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
-          END DO
-       END DO
        !Set up spinors...
        CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
 
-       !--->       x for legendre polynomials
-       DO kj = 1,ki
-          xlegend(kj) = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
-       END DO
-       plegend(:ki,0) = 1.0
-       dplegend(:ki,0) = 0.0
+       DO  kj_off = 1, ki, NVEC
+          NVEC_rem = NVEC
+          kj_vec = kj_off - 1 + NVEC
+          IF (kj_vec > ki) THEN
+             kj_vec = ki
+             NVEC_rem = ki - kj_off + 1
+          ENDIF
+          if (NVEC_rem<0 ) exit
 
-       !--->          update overlap and l-diagonal hamiltonian matrix
-       DO  l = 1,atoms%lmax(n)
+          !--->             set up phase factors
+          cph = 0.0
+          ski = lapw%gvec(:,ki,1)
+          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+             tnn = tpi_const*atoms%taual(:,nn)
+             DO jv = 1,NVEC_rem
+                kj = kj_off - 1 + jv
+                dot(jv) = DOT_PRODUCT(ski(1:3)-lapw%gvec(1:3,kj,1),tnn(1:3))
+             END DO
+             cph(:NVEC_rem) = cph(:NVEC_rem) + CMPLX(COS(dot(:NVEC_rem)),-SIN(dot(:NVEC_rem)))
+          END DO
 
-          !--->       legendre polynomials
-          l3 = MODULO(l, 3)
-          IF (l == 1) THEN
-             plegend(:ki,1) = xlegend(:ki)
-             dplegend(:ki,1) = 1.0
-          ELSE
-             plegend(:ki,l3) = fleg1(l-1)*xlegend(:ki)*plegend(:ki,MODULO(l-1,3)) - fleg2(l-1)*plegend(:ki,MODULO(l-2,3))
-             dplegend(:ki,l3)=REAL(l)*plegend(:ki,MODULO(l-1,3))+xlegend(:ki)*dplegend(:ki,MODULO(l-1,3))
-          END IF ! l
-          DO j1=1,2
-             fjkiln = fjgj%fj(ki,l,j1,1)
-             gjkiln = fjgj%gj(ki,l,j1,1)
-             DO j2=1,2
-                fct(:ki)  =cph(:ki) * dplegend(:ki,l3)*fl2p1(l)*(&
-                        fjkiln*fjgj%fj(:ki,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fjkiln*fjgj%gj(:ki,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        gjkiln*fjgj%fj(:ki,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        gjkiln*fjgj%gj(:ki,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
-                        * angso(:ki,j1,j2)
-                hmat(1,1)%data_c(:ki,kii)=hmat(1,1)%data_c(:ki,kii) + chi(1,1,j1,j2)*fct(:ki)
-                hmat(1,2)%data_c(:ki,kii)=hmat(1,2)%data_c(:ki,kii) + chi(1,2,j1,j2)*fct(:ki)
-                hmat(2,1)%data_c(:ki,kii)=hmat(2,1)%data_c(:ki,kii) + chi(2,1,j1,j2)*fct(:ki)
-                hmat(2,2)%data_c(:ki,kii)=hmat(2,2)%data_c(:ki,kii) + chi(2,2,j1,j2)*fct(:ki)
+          !--->       x for legendre polynomials
+          DO jv = 1,NVEC_rem
+             kj = kj_off - 1 + jv
+             xlegend(jv) = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
+          END DO
+          plegend(:NVEC_rem,0) = 1.0
+          dplegend(:NVEC_rem,0) = 0.0
+
+          !--->          update overlap and l-diagonal hamiltonian matrix
+          DO  l = 1,atoms%lmax(n)
+
+             !--->       legendre polynomials
+             l3 = MODULO(l, 3)
+             IF (l == 1) THEN
+                plegend(:NVEC_rem,1) = xlegend(:NVEC_rem)
+                dplegend(:NVEC_rem,1) = 1.0
+             ELSE
+                plegend(:NVEC_rem,l3) = fleg1(l-1)*xlegend(:NVEC_rem)*plegend(:NVEC_rem,MODULO(l-1,3)) - fleg2(l-1)*plegend(:NVEC_rem,MODULO(l-2,3))
+                dplegend(:NVEC_rem,l3)=REAL(l)*plegend(:NVEC_rem,MODULO(l-1,3))+xlegend(:NVEC_rem)*dplegend(:NVEC_rem,MODULO(l-1,3))
+             END IF ! l
+             DO j1=1,2
+                fjkiln = fjgj%fj(ki,l,j1,1)
+                gjkiln = fjgj%gj(ki,l,j1,1)
+                DO j2=1,2
+                   fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
+                        fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        gjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        gjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        * angso(kj_off:kj_vec,j1,j2)
+                   hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
+                   hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
+                   hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
+                   hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                ENDDO
              ENDDO
-          ENDDO
           !--->          end loop over l
+          ENDDO
        ENDDO
-       !--->    end loop over ki
+    !--->    end loop over ki
     ENDDO
     !$OMP END DO
     !--->       end loop over atom types (ntype)
@@ -122,19 +137,19 @@ CONTAINS
     !$OMP END PARALLEL
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
 
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,mpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
     USE m_setabc1lo
     USE m_hsmt_fjgj
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -199,8 +214,8 @@ CONTAINS
           if (l==0) cycle !no SOC for s-states
           DO nkvec = 1,invsfct* (2*l+1)
             locol_mat= lapw%nv(1)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-            IF (MOD(locol_mat-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
-              locol_loc=(locol_mat-1)/mpi%n_size+1 !this is the column in local storage
+            IF (MOD(locol_mat-1,fmpi%n_size) == fmpi%n_rank) THEN !only this MPI rank calculates this column
+              locol_loc=(locol_mat-1)/fmpi%n_size+1 !this is the column in local storage
               ki=lapw%kvec(nkvec,lo,na) !this LO is attached to this k+G
 
               !--->       legendre polynomials

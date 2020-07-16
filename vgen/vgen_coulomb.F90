@@ -7,10 +7,12 @@
 module m_vgen_coulomb
 
   use m_juDFT
-
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 contains
 
-  subroutine vgen_coulomb( ispin, mpi,  oneD, input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
              cell, sphhar, atoms, dosf, den, vCoul, results )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
@@ -39,7 +41,7 @@ contains
     implicit none
 
     integer,            intent(in)               :: ispin
-    type(t_mpi),        intent(in)               :: mpi
+    type(t_mpi),        intent(in)               :: fmpi
 
     type(t_oneD),       intent(in)               :: oneD
     type(t_input),      intent(in)               :: input
@@ -64,7 +66,6 @@ contains
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
 #ifdef CPP_MPI
-    include 'mpif.h'
     integer:: ierr
 #endif
 
@@ -76,14 +77,14 @@ contains
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
-    call psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+    call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
          den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
     call timestop( "psqpw" )
 
 
 
     ! VACUUM POTENTIAL
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       if ( oneD%odi%d1 ) then
         call timestart( "Vacuum" )
         !---> generates the m=0,gz=0 component of the vacuum potential
@@ -173,22 +174,22 @@ contains
         end if
       end if
     call timestop("interstitial")
-    end if ! mpi%irank == 0
+    end if ! fmpi%irank == 0
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
-    call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but ...
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
+    call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
 
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then
         call timestart( "checking" )
         call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, &

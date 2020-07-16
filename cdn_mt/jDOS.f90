@@ -92,7 +92,6 @@ MODULE m_jDOS
                            ELSE
                               aup = 0.0
                               bup = 0.0
-                              cup = 0.0
                            ENDIF
 
                            IF(ABS(mdown) <= l) THEN
@@ -174,7 +173,6 @@ MODULE m_jDOS
                      ENDDO
                   ENDIF
                ENDDO
-               !TODO: LOs
                j_ind=0
                DO l = 0, 3
                   DO jj = 1, 2

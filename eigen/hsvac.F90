@@ -11,7 +11,7 @@ CONTAINS
   !Overlap matrix
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
-       vacuum,stars, mpi,jsp,input,v,evac,cell,&
+       vacuum,stars, fmpi,jsp,input,v,evac,cell,&
        lapw,sym, noco,nococonv,hmat,smat)
 
 
@@ -27,7 +27,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_potden),INTENT(IN)     :: v
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:),smat(:,:)
     !     ..
@@ -106,8 +106,8 @@ CONTAINS
              ENDDO
           !--->       update hamiltonian and overlap matrices
           IF (jspin1==jspin2) THEN
-             DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
-                i0=(i-1)/mpi%n_size+1 !local column index
+             DO  i = fmpi%n_rank+1,lapw%nv(jspin2),fmpi%n_size
+                i0=(i-1)/fmpi%n_size+1 !local column index
                 ik = map2(i,jspin2)
                 DO j = 1,i - 1 !TODO check noco case
                    !--->             overlap: only  (g-g') parallel=0       '
@@ -146,8 +146,8 @@ CONTAINS
           ENDIF
 
           !--->    hamiltonian update
-          DO  i = mpi%n_rank+1,lapw%nv(jspin1),mpi%n_size
-             i0=(i-1)/mpi%n_size+1 !local column index
+          DO  i = fmpi%n_rank+1,lapw%nv(jspin1),fmpi%n_size
+             i0=(i-1)/fmpi%n_size+1 !local column index
              ik = map2(i,jspin1)
              DO j = 1,MERGE(i,lapw%nv(jspin2),jspin1==jspin2)
                 jk = map2(j,jspin2)

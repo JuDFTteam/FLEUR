@@ -40,7 +40,7 @@
 &atom desc="Gallium (Ga)" z=31 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p1" lo="3d" /
 &atom desc="Germanium (Ge)" z=32 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p2" lo="3d" /
 &atom desc="Arsenic (As)" z=33 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p3" lo="3d" /
-&atom desc="Selenium (Se)" z=34 econfig="1s2 2s2 2p6 3s 23p6|4s2 3d10 4p4" lo="3d" /
+&atom desc="Selenium (Se)" z=34 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p4" lo="3d" /
 &atom desc="Bromine (Br)" z=35 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p5" lo="3d" /
 &atom desc="Krypton (Kr)" z=36 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p6" lo="" /
 
@@ -60,8 +60,8 @@
 &atom desc="Tin (Sn)" z=50 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d10 5p2" lo="4d" /
 &atom desc="Antimony (Sb)" z=51 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d10 5p3" lo="4d" /
 &atom desc="Tellurium (Te)" z=52 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d10 5p4" lo="4d" /
-&atom desc="Iodine (I)" z=53 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d105 p5" lo="4d" /
-&atom desc="Xenon (Xe)" z=54 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d105 p6" lo="4d" /
+&atom desc="Iodine (I)" z=53 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d10 5p5" lo="4d" /
+&atom desc="Xenon (Xe)" z=54 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6|5s2 4d10 5p6" lo="4d" /
 
 &atom desc="Cesium (Cs)" z=55 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s1" lo="5s 5p" /
 &atom desc="Barium (Ba)" z=56 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2" lo="5s 5p" /
@@ -89,7 +89,7 @@
 &atom desc="Iridium (Ir)" z=77 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s2 5d7" lo="5p" /
 &atom desc="Platinum (Pt)" z=78 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s1 5d9" lo="5p" /
 &atom desc="Gold (Au)" z=79 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s1 5d10" lo="5p" /
-&atom desc="Mercury (Hg)" z=80 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s2  5d10" lo="5p" /
+&atom desc="Mercury (Hg)" z=80 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s2 5d10" lo="5p" /
 &atom desc="Thallium (Tl)" z=81 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14 5p6|6s2 5d10 6p1" lo="5d" /
 &atom desc="Lead (Pb)" z=82 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14 5p6|6s2 5d10 6p2" lo="5d" /
 &atom desc="Bismuth (Bi)" z=83 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 4f14|6s2 5d10 6p3" lo="5d" /

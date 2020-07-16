@@ -9,22 +9,23 @@ MODULE m_kk_cutoff
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,eMesh,cutoff)
+   SUBROUTINE kk_cutoff(im,noco,l_mperp,l,jspins,eMesh,cutoff,scalingFactor)
 
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the projDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-      REAL,                INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                INTENT(IN)     :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),        INTENT(IN)     :: noco
       LOGICAL,             INTENT(IN)     :: l_mperp
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
       REAL,                INTENT(IN)     :: eMesh(:)
       INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                INTENT(INOUT)  :: scalingFactor(:)
 
       INTEGER :: m,ispin,spins_cut,ne
-      REAL    :: lowerBound,upperBound,integral,n_states,scale
+      REAL    :: lowerBound,upperBound,integral,n_states
       REAL    :: ec,del,eb,et
       REAL, ALLOCATABLE :: projDOS(:,:)
 
@@ -49,6 +50,7 @@ MODULE m_kk_cutoff
 
       cutoff(:,1) = 1   !we don't modify the lower bound
       cutoff(:,2) = ne
+      scalingFactor(:) = 1.0
 
       DO ispin = 1, spins_cut
 
@@ -67,22 +69,20 @@ MODULE m_kk_cutoff
          IF(integral.LT.n_states) THEN
             !If we are calculating the greens function for a d-band this is expected to happen
             IF(l.EQ.2) THEN
-               scale = (2*l+1)/integral
+               scalingFactor(ispin) = n_states/integral
 
 #ifdef CPP_DEBUG
-               WRITE(*,9000) l,ispin,scale
+               WRITE(*,9000) l,ispin,scalingFactor(ispin)
 9000           FORMAT("Scaling the DOS for l=",I1," and spin ",I1,"   factor: ",f14.8)
 #endif
-
-               IF(scale.GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
-               im(:,-l:l,-l:l,ispin) = scale * im(:,-l:l,-l:l,ispin)
+               IF(scalingFactor(ispin).GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
             ELSE IF(integral.LT.n_states-0.1) THEN
                ! If the integral is to small we terminate here to avoid problems
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
          ELSE
-            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
 
+            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
             lowerBound = eb
             upperBound = et
 
@@ -117,4 +117,54 @@ MODULE m_kk_cutoff
       ENDDO
 
    END SUBROUTINE kk_cutoff
+
+   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,usdus,denCoeffsOffDiag,l_mperp,&
+                              l,atomType,input,eMesh,cutoff,scalingFactor)
+
+      REAL,                      INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,                      INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_usdus),             INTENT(IN)     :: usdus
+      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
+      LOGICAL,                   INTENT(IN)     :: l_mperp
+      INTEGER,                   INTENT(IN)     :: l
+      INTEGER,                   INTENT(IN)     :: atomType
+      TYPE(t_input),             INTENT(IN)     :: input
+      REAL,                      INTENT(IN)     :: eMesh(:)
+      INTEGER,                   INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                      INTENT(INOUT)  :: scalingFactor(:)
+
+      REAL, ALLOCATABLE :: im(:,:,:,:)
+
+      INTEGER :: jspin,m,mp
+
+      !calculate the spherical average from the original greens function
+      ALLOCATE(im(SIZE(uu,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(uu,4)),source=0.0)
+      DO jspin = 1, SIZE(im,4)
+         !$OMP parallel do default(none) &
+         !$OMP shared(usdus,denCoeffsOffDiag,jspin,l,atomType,im,uu,ud,du,dd) &
+         !$OMP private(m,mp) collapse(2)
+         DO m = -l,l
+            DO mp = -l,l
+               IF(jspin < 3) THEN
+                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) &
+                                    + dd(:,m,mp,jspin) * usdus%ddn(l,atomType,jspin)
+               ELSE
+                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) * denCoeffsOffDiag%uu21n(l,atomType) &
+                                    + ud(:,m,mp,jspin) * denCoeffsOffDiag%ud21n(l,atomType) &
+                                    + du(:,m,mp,jspin) * denCoeffsOffDiag%du21n(l,atomType) &
+                                    + dd(:,m,mp,jspin) * denCoeffsOffDiag%dd21n(l,atomType)
+               ENDIF
+            ENDDO
+         ENDDO
+         !$OMP end parallel do
+      ENDDO
+
+      CALL kk_cutoff(im,noco,l_mperp,l,input%jspins,eMesh,cutoff,scalingFactor)
+
+
+   END SUBROUTINE kk_cutoffRadial
+
 END MODULE m_kk_cutoff

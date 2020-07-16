@@ -7,12 +7,12 @@ MODULE m_types_mixvector
    !TODO!!!
    ! LDA+U
    ! Noco (third spin)
-
+#ifdef CPP_MPI
+   use mpi
+#endif
    USE m_types
    IMPLICIT NONE
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
+
    PRIVATE
    !Here we store the pointers used for metric
    TYPE(t_stars), POINTER  :: stars
@@ -393,20 +393,20 @@ CONTAINS
 
    END SUBROUTINE init_metric
 
-   SUBROUTINE init_storage_mpi(mpi_comm)
+   SUBROUTINE init_storage_mpi(comm_mpi)
       IMPLICIT NONE
-      INTEGER, INTENT(in):: mpi_comm
+      INTEGER, INTENT(in):: comm_mpi
       INTEGER      :: irank, isize, err, js, new_comm
-      mix_mpi_comm = mpi_comm
+      mix_mpi_comm = comm_mpi
 #ifdef CPP_MPI
 
-      CALL mpi_comm_rank(mpi_comm, irank, err)
-      CALL mpi_comm_size(mpi_comm, isize, err)
+      CALL mpi_comm_rank(comm_mpi, irank, err)
+      CALL mpi_comm_size(comm_mpi, isize, err)
 
       IF (isize == 1) RETURN !No parallelization
       js = MERGE(jspins, 3,.NOT. l_noco)!distribute spins
       js = MIN(js, isize)
-      CALL judft_comm_split(mpi_comm, MOD(irank, js), irank, new_comm)
+      CALL judft_comm_split(comm_mpi, MOD(irank, js), irank, new_comm)
       spin_here = (/MOD(irank, js) == 0, MOD(irank, js) == 1, (isize == 2 .AND. irank == 0) .OR. MOD(irank, js) == 2/)
 
       CALL mpi_comm_rank(new_comm, irank, err)
@@ -437,10 +437,10 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(mpi_comm, l_densitymatrix, oneD, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, oneD, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
       USE m_types
       IMPLICIT NONE
-      INTEGER, INTENT(IN)               :: mpi_comm
+      INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
       TYPE(t_oneD), INTENT(IN)          :: oneD
       TYPE(t_input), INTENT(IN)         :: input
@@ -465,7 +465,7 @@ CONTAINS
 
       vac_here = input%film
       misc_here = l_densitymatrix
-      CALL init_storage_mpi(mpi_comm)
+      CALL init_storage_mpi(comm_mpi)
 
       pw_length = 0; mt_length = 0; vac_length = 0; misc_length = 0
       mt_length_g = 0; vac_length_g = 0; misc_length_g = 0

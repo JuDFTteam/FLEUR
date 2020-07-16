@@ -25,11 +25,11 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
 
-   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, l_noco, n_size_opt, filename)
+   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, l_noco, l_olap, n_size_opt, filename)
       USE, INTRINSIC::iso_c_binding
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: id, mpi_comm, nmat, neig, nkpts, jspins
-      LOGICAL, INTENT(IN) :: l_noco, create, l_real, l_soc
+      LOGICAL, INTENT(IN) :: l_noco, create, l_real, l_soc, l_olap
       INTEGER, INTENT(IN), OPTIONAL:: n_size_opt
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
 #ifdef CPP_MPI
@@ -51,7 +51,7 @@ CONTAINS
       CALL MPI_COMM_RANK(MPI_COMM, d%irank, e)
       CALL MPI_COMM_SIZE(MPI_COMM, isize, e)
 
-      CALL create_maps(d, isize, nkpts, jspins, neig, d%n_size)
+      CALL create_maps(d, isize, nkpts, jspins, neig, d%n_size, nmat)
       local_slots = COUNT(d%pe_basis == d%irank)
       !Now create the windows
 
@@ -64,9 +64,6 @@ CONTAINS
       d%size_eig = neig
       CALL priv_create_memory(d%size_eig, local_slots, d%eig_handle, real_data_ptr=d%eig_data)
       d%eig_data = 1E99
-      !The w_iks
-      CALL priv_create_memory(d%size_eig, local_slots, d%w_iks_handle, real_data_ptr=d%w_iks_data)
-      d%w_iks_data = 1E99
 
       !The eigenvectors
       local_slots = COUNT(d%pe_ev == d%irank)
@@ -76,6 +73,16 @@ CONTAINS
       ELSE
          CALL priv_create_memory(slot_size, local_slots, d%zc_handle, cmplx_data_ptr=d%zc_data)
       ENDIF
+
+      !The eigenvectors
+      local_slots = COUNT(d%pe_olap == d%irank)
+      slot_size = nmat
+      IF (l_real .AND. .NOT. l_soc) THEN
+         CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
+      ELSE
+         CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
+      ENDIF
+
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
       CALL MPI_BARRIER(MPI_COMM, e)
       CALL timestop("create data spaces in ei66_mpi")
@@ -155,13 +162,13 @@ CONTAINS
       IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
    END SUBROUTINE close_eig
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, w_iks, list, zmat)
+   SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
       IMPLICIT NONE
       INTEGER, INTENT(IN)            :: id, nk, jspin
       INTEGER, INTENT(OUT), OPTIONAL  :: neig
-      REAL, INTENT(OUT), OPTIONAL  :: eig(:), w_iks(:)
+      REAL, INTENT(OUT), OPTIONAL  :: eig(:)
       INTEGER, INTENT(IN), OPTIONAL   :: list(:)
-      TYPE(t_mat), OPTIONAL  :: zmat
+      TYPE(t_mat), OPTIONAL  :: zmat, smat
 
 #ifdef CPP_MPI
       INTEGER                   :: pe, tmp_size, e, req
@@ -180,19 +187,13 @@ CONTAINS
          CALL MPI_GET(neig, 1, MPI_INTEGER, pe, slot, 1, MPI_INTEGER, d%neig_handle, e)
          CALL MPI_WIN_UNLOCK(pe, d%neig_handle, e)
       ENDIF
-      IF (PRESENT(eig) .OR. PRESENT(w_iks)) THEN
+      IF (PRESENT(eig)) THEN
          ALLOCATE (tmp_real(MIN(SIZE(eig), d%size_eig)))
          IF (PRESENT(eig)) THEN
             CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, pe, 0, d%eig_handle, e)
             CALL MPI_GET(tmp_real, SIZE(tmp_real), MPI_DOUBLE_PRECISION, pe, slot, SIZE(tmp_real), MPI_DOUBLE_PRECISION, d%eig_handle, e)
             CALL MPI_WIN_UNLOCK(pe, d%eig_handle, e)
             eig(:SIZE(tmp_real)) = tmp_real
-         END IF
-         IF (PRESENT(w_iks)) THEN
-            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, pe, 0, d%w_iks_handle, e)
-            CALL MPI_GET(tmp_real, SIZE(tmp_real), MPI_DOUBLE_PRECISION, pe, slot, SIZE(tmp_real), MPI_DOUBLE_PRECISION, d%w_iks_handle, e)
-            CALL MPI_WIN_UNLOCK(pe, d%w_iks_handle, e)
-            w_iks(:SIZE(tmp_real)) = tmp_real
          END IF
          DEALLOCATE (tmp_real)
       ENDIF
@@ -235,15 +236,56 @@ CONTAINS
          ENDDO
       ENDIF
 
+      if(allocated(tmp_real))  deallocate(tmp_real)
+      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+
+      IF (PRESENT(smat)) THEN
+         tmp_size = smat%matsize1
+         ALLOCATE (tmp_real(tmp_size))
+         ALLOCATE (tmp_cmplx(tmp_size))
+         DO n = 1, smat%matsize2
+            n1 = n
+            IF (PRESENT(list)) THEN
+               IF (n > SIZE(list)) CYCLE
+               n1 = list(n)
+            END IF
+            slot = d%slot_olap(nk, jspin, n1)
+            pe = d%pe_olap(nk, jspin, n1)
+
+            IF (smat%l_real) THEN
+               IF (.NOT. d%l_real) THEN
+                  CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, pe, 0, d%olap_c_handle, e)
+                  CALL MPI_GET(tmp_cmplx, tmp_size, MPI_DOUBLE_COMPLEX, pe, slot, tmp_size, MPI_DOUBLE_COMPLEX, d%olap_c_handle, e)
+                  CALL MPI_WIN_UNLOCK(pe, d%olap_c_handle, e)
+                  !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
+                  smat%data_r(:, n) = REAL(tmp_cmplx)
+               ELSE
+                  CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, pe, 0, d%olap_r_handle, e)
+                  CALL MPI_GET(tmp_real, tmp_size, MPI_DOUBLE_PRECISION, pe, slot, tmp_size, MPI_DOUBLE_PRECISION, d%olap_r_handle, e)
+                  CALL MPI_WIN_UNLOCK(pe, d%olap_r_handle, e)
+                  !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
+                  smat%data_r(:, n) = tmp_real
+               ENDIF
+            ELSE
+               IF (d%l_real) CALL judft_error("Could not read complex data, only real data is stored", calledby="eig66_mpi%read_eig")
+               CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, pe, 0, d%olap_c_handle, e)
+               CALL MPI_GET(tmp_cmplx, tmp_size, MPI_DOUBLE_COMPLEX, pe, slot, tmp_size, MPI_DOUBLE_COMPLEX, d%olap_c_handle, e)
+               CALL MPI_WIN_UNLOCK(pe, d%olap_c_handle, e)
+               !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
+               smat%data_c(:, n) = tmp_cmplx
+            ENDIF
+         ENDDO
+      ENDIF
+
 #endif
    END SUBROUTINE read_eig
 
-   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, w_iks, n_size, n_rank, zmat)
+   SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_size, n_rank, zmat, smat)
       INTEGER, INTENT(IN)          :: id, nk, jspin
       INTEGER, INTENT(IN), OPTIONAL :: n_size, n_rank
       INTEGER, INTENT(IN), OPTIONAL :: neig, neig_total
-      REAL, INTENT(IN), OPTIONAL :: eig(:), w_iks(:)
-      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat
+      REAL, INTENT(IN), OPTIONAL :: eig(:)
+      TYPE(t_mat), INTENT(IN), OPTIONAL :: zmat, smat
 
 #ifdef CPP_MPI
       INTEGER                   :: pe, tmp_size, e
@@ -276,7 +318,7 @@ CONTAINS
 
       !write the eigenvalues
       !only one process needs to do it
-      IF (PRESENT(eig) .OR. PRESENT(w_iks)) THEN
+      IF (PRESENT(eig)) THEN
          ALLOCATE (tmp_real(d%size_eig))
          tmp_real = 1E99
          IF (PRESENT(EIG)) THEN
@@ -284,12 +326,6 @@ CONTAINS
             CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE, pe, 0, d%eig_handle, e)
             CALL MPI_PUT(tmp_real, d%size_eig, MPI_DOUBLE_PRECISION, pe, slot, d%size_eig, MPI_DOUBLE_PRECISION, d%eig_handle, e)
             CALL MPI_WIN_UNLOCK(pe, d%eig_handle, e)
-         END IF
-         IF (PRESENT(w_iks)) THEN
-            tmp_real(:SIZE(w_iks)) = w_iks
-            CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE, pe, 0, d%w_iks_handle, e)
-            CALL MPI_PUT(tmp_real, d%size_eig, MPI_DOUBLE_PRECISION, pe, slot, d%size_eig, MPI_DOUBLE_PRECISION, d%w_iks_handle, e)
-            CALL MPI_WIN_UNLOCK(pe, d%w_iks_handle, e)
          END IF
          DEALLOCATE (tmp_real)
       ENDIF
@@ -329,6 +365,43 @@ CONTAINS
          ENDDO
       ENDIF
 
+      if(allocated(tmp_real))  deallocate(tmp_real)
+      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+      !write the overlap
+      !all procceses participate
+      IF (PRESENT(smat)) THEN
+         tmp_size = smat%matsize1
+         ALLOCATE (tmp_real(tmp_size))
+         ALLOCATE (tmp_cmplx(tmp_size))
+         DO n = 1, smat%matsize2
+            n1 = n - 1
+            IF (PRESENT(n_size)) n1 = n_size*n1
+            IF (PRESENT(n_rank)) n1 = n1 + n_rank
+            IF (n1 + 1 > SIZE(d%slot_olap, 3)) EXIT
+            slot = d%slot_olap(nk, jspin, n1 + 1)
+            pe = d%pe_olap(nk, jspin, n1 + 1)
+            IF (smat%l_real) THEN
+               IF (.NOT. d%l_real) THEN
+                  tmp_cmplx = smat%data_r(:, n)
+                  CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE, pe, 0, d%olap_c_handle, e)
+                  CALL MPI_PUT(tmp_cmplx, tmp_size, MPI_DOUBLE_COMPLEX, pe, slot, tmp_size, MPI_DOUBLE_COMPLEX, d%olap_c_handle, e)
+                  CALL MPI_WIN_UNLOCK(pe, d%olap_c_handle, e)
+               ELSE
+                  tmp_real = smat%data_r(:, n)
+                  CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE, pe, 0, d%olap_r_handle, e)
+                  CALL MPI_PUT(tmp_real, tmp_size, MPI_DOUBLE_PRECISION, pe, slot, tmp_size, MPI_DOUBLE_PRECISION, d%olap_r_handle, e)
+                  CALL MPI_WIN_UNLOCK(pe, d%olap_r_handle, e)
+               ENDIF
+            ELSE
+               IF (d%l_real) CALL juDFT_error("Could not write complex data to file prepared for real data", calledby="eig66_mpi%write_eig")
+               tmp_cmplx = smat%data_c(:, n)
+               CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE, pe, 0, d%olap_c_handle, e)
+               CALL MPI_PUT(tmp_cmplx, tmp_size, MPI_DOUBLE_COMPLEX, pe, slot, tmp_size, MPI_DOUBLE_COMPLEX, d%olap_c_handle, e)
+               CALL MPI_WIN_UNLOCK(pe, d%olap_c_handle, e)
+            ENDIF
+         ENDDO
+      ENDIF
+
 #endif
    END SUBROUTINE write_eig
 
@@ -341,7 +414,6 @@ CONTAINS
 
       d%neig_data = 0
       d%eig_data = 1E99
-      d%w_iks_data = 1E99
       IF (d%l_real .AND. .NOT. l_soc) THEN
          d%zr_data = 0.0
       ELSE
@@ -351,20 +423,27 @@ CONTAINS
    END SUBROUTINE reset_eig
 
 #ifdef CPP_MPI
-   SUBROUTINE create_maps(d, isize, nkpts, jspins, neig, n_size)
+   SUBROUTINE create_maps(d, isize, nkpts, jspins, neig, n_size, nmat)
       IMPLICIT NONE
       TYPE(t_data_MPI), INTENT(INOUT), ASYNCHRONOUS:: d
-      INTEGER, INTENT(IN):: isize, nkpts, jspins, neig, n_size
+      INTEGER, INTENT(IN):: isize, nkpts, jspins, neig, n_size, nmat
 
       INTEGER:: nk, j, n1, n2, n, pe, n_members
       INTEGER::used(0:isize)
 
-      ALLOCATE (d%pe_basis(nkpts, jspins), d%slot_basis(nkpts, jspins))
-      ALLOCATE (d%pe_ev(nkpts, jspins, neig), d%slot_ev(nkpts, jspins, neig))
+      allocate (d%pe_basis(nkpts, jspins))
+      allocate (d%slot_basis(nkpts, jspins))
+
+      allocate (d%pe_ev(nkpts, jspins, neig))
+      allocate (d%slot_ev(nkpts, jspins, neig))
+
+      allocate (d%pe_olap(nkpts, jspins, nmat))
+      allocate (d%slot_olap(nkpts, jspins, nmat))
 
       !basis contains a total of nkpts*jspins entries
       d%pe_basis = -1
-      d%pe_ev = -1
+      d%pe_ev    = -1
+      d%pe_olap  = -1
       used = 0
       n_members = isize/n_size !no of k-points in parallel
       DO j = 1, jspins
@@ -376,6 +455,7 @@ CONTAINS
             used(pe) = used(pe) + 1
          ENDDO
       ENDDO
+
       used = 0
       DO n = 1, neig
          DO j = 1, jspins
@@ -391,6 +471,18 @@ CONTAINS
          ENDDO
       ENDDO
 
+      used = 0
+      DO n = 1, nmat
+         DO j = 1, jspins
+            DO nk = 1, nkpts
+               n1 = nk + (j - 1)*nkpts - 1
+               pe = MOD(n1, n_members)*n_size + MOD(n - 1, n_size)
+               d%pe_olap(nk, j, n) = pe
+               d%slot_olap(nk, j, n) = used(pe)
+               used(pe) = used(pe) + 1
+            ENDDO
+         ENDDO
+      ENDDO
    END SUBROUTINE create_maps
 #endif
 

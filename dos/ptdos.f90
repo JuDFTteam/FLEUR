@@ -44,7 +44,7 @@ MODULE m_ptdos
             ei = ev(iBand,k)
 
             !sort in ascending order
-            CALL tetsrt(3,ei,ind)
+            ind = tetsrt(ei)
 
             !
             !calculate partial densities of states

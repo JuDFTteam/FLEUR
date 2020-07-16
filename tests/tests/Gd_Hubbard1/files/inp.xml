@@ -12,7 +12,7 @@
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
-      <greensFunction l_sphavg="T" minCalcDistance="0.00005">
+      <greensFunction minCalcDistance="0.00005">
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" eb="-0.5" et="0.0" alpha="1.0"/>
       </greensFunction>

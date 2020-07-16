@@ -46,6 +46,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: jspins
     LOGICAL,INTENT(IN)           :: l_offdiag
     INTEGER :: err(9),lmd,mlolotot
+    err = 0
     mlolotot=DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2
     lmd=atoms%lmaxd*(atoms%lmaxd+2)
     !lmplmd=(lmd*(lmd+3))/2
@@ -53,7 +54,7 @@ CONTAINS
     td%h_loc2=atoms%lmax*(atoms%lmax+2)+1
     td%h_loc2_nonsph=atoms%lnonsph*(atoms%lnonsph+2)+1
     IF (ALLOCATED(td%h_loc)) &
-         DEALLOCATE(td%tdulo,td%tuulo,&
+         DEALLOCATE(td%tdulo,td%tuulo,td%ulotd,td%ulotu,&
          td%tuloulo,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph)
     !    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
@@ -77,6 +78,7 @@ CONTAINS
     IF (ANY(err.NE.0)) THEN
        WRITE (*,*) 'an error occured during allocation of'
        WRITE (*,*) 'the tlmplm local matrix elements'
+       WRITE (*,'(9i7)') err(:)
        CALL juDFT_error("eigen: Error during allocation of tlmplm",calledby ="types_tlmplm")
     ENDIF
   END SUBROUTINE tlmplm_init

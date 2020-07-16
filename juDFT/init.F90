@@ -4,8 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_juDFT_init
-
+MODULE m_juDFT_init
+#ifdef CPP_MPI
+      use mpi 
+#endif
       USE m_judft_time
       USE m_judft_sysinfo
       USE m_judft_stop
@@ -29,6 +31,8 @@
 
       SUBROUTINE signal_handler()
       !Installs custom handlers for SIGTERM,SIGSEGV
+
+
 #ifdef __INTEL_COMPILER
       USE ifport
       INTEGER :: result
@@ -45,17 +49,19 @@
       !       would be changed if it would be defined in the module.
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       USE m_judft_time
       USE m_judft_sysinfo
       IMPLICIT NONE
       INTEGER :: signal
       INTEGER :: intel_signal_handler
 #ifdef CPP_MPI
-      include "mpif.h"
       INTEGER:: irank,ierr
-      LOGICAL:: mpi_init
-      CALL MPI_initialized(mpi_init,ierr)
-      IF (mpi_init) THEN
+      LOGICAL:: l_mpi_init
+      CALL MPI_initialized(l_mpi_init,ierr)
+      IF (l_mpi_init) THEN
          CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
          WRITE(0,*) "Signal ",signal," detected on PE:",irank
       ELSE
@@ -73,7 +79,7 @@
       CALL writetimes()
       CALL PRINT_memory_info(0,.true.)
 #ifdef CPP_MPI
-      IF (mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
+      IF (l_mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,0,ierr)
 #endif      
       STOP "Signal"
       intel_signal_handler=0

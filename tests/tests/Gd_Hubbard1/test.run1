@@ -15,10 +15,12 @@ $result+=jt::test_grepnumber("$workdir/Hubbard1/hloc.cfg","xiSOC","xiSOC *([^ ]*
 #test for one eigval file
 $result+=jt::test_fileexists("$workdir/Hubbard1/eigval7part.dat");
 #test matching chemical potential
-$result+=jt::test_grepnumber("$workdir/out","muMatch =","= *([^ ]*)",-0.0322,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","muMatch =","= *([^ ]*)",-3.195789903402195E-002,0.0001);
 #test density matrix
 $result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",6.99999999668645,0.0001);
 $result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",0.997538319677953,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-22560.5844266853,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","distance of spin densities for it=","3: *([^ ]*)",25.063413,0.0001);
 
 
 jt::stageresult($workdir,$result,"1");

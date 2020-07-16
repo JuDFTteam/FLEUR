@@ -8,7 +8,7 @@ MODULE m_rdmft
 
 CONTAINS
 
-SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
+SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
    use m_work_package
@@ -46,7 +46,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    IMPLICIT NONE
 
-   TYPE(t_mpi),           INTENT(IN)    :: mpi
+   TYPE(t_mpi),           INTENT(IN)    :: fmpi
    type(t_fleurinput), intent(in)    :: fi
    TYPE(t_enpara),        INTENT(INOUT) :: enpara
    TYPE(t_stars),         INTENT(IN)    :: stars
@@ -133,7 +133,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    INTEGER, ALLOCATABLE                 :: n_q(:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
-   type(t_hybmpi)    :: hybmpi
+   type(t_hybmpi)    :: glob_mpi
 
    complex :: c_phase(fi%input%neig)
 
@@ -272,7 +272,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    CALL regCharges%init(fi%input,fi%atoms)
    CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,results%eig)
    CALL vacdos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,results%eig)
-   CALL moments%init(mpi,fi%input,sphhar,fi%atoms)
+   CALL moments%init(fmpi,fi%input,sphhar,fi%atoms)
    CALL overallDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
    CALL overallVCoul%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTCOUL)
    IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
@@ -303,10 +303,10 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    DO jspin = 1, fi%input%jspins
       jsp = MERGE(1,jspin,fi%noco%l_noco)
 
-      CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,jsp)
+      CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,jsp)
 
-      DO ikpt_i = 1, SIZE(mpi%k_list)
-         ikpt= mpi%k_list(ikpt_i)
+      DO ikpt_i = 1, SIZE(fmpi%k_list)
+         ikpt= fmpi%k_list(ikpt_i)
          DO iBand = 1, highestState(ikpt,jsp)
             numStates = numStates + 1
             ! Construct cdnvalJob object for this state
@@ -321,19 +321,19 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
-            CALL cdnval(eig_id,mpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+            CALL cdnval(eig_id,fmpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
                         sphhar,fi%sym,vTot,fi%oned,cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
                         fi%gfinp,fi%hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
-            IF (mpi%irank.EQ.0) THEN
+            IF (fmpi%irank.EQ.0) THEN
                CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
                                  0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
 #ifdef CPP_MPI
-            CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
+            CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
 #endif
             ! For each state calculate Integral over KS effective potential times single state density
             potDenInt = 0.0
@@ -385,7 +385,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,fmpi,vTot, iterHF)
 
    !allocate coulomb matrix
    IF (.NOT.ALLOCATED(hybdat%coul)) ALLOCATE(hybdat%coul(fi%kpts%nkpt))
@@ -393,14 +393,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL hybdat%coul(ikpt)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, ikpt)
    END DO
 
-   CALL hybmpi%copy_mpi(mpi)
-   call work_pack%init(fi, hybdat, jsp, hybmpi%rank, hybmpi%size)
+   CALL glob_mpi%copy_mpi(fmpi)
+   call work_pack%init(fi, hybdat, glob_mpi, jsp, glob_mpi%rank, glob_mpi%size)
 
-   CALL coulombmatrix(mpi, fi, mpdata, hybdat, xcpot, work_pack)
+   CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
 
 
    DO ikpt = 1, fi%kpts%nkpt
-      CALL hybdat%coul(ikpt)%mpi_ibc(fi, hybmpi, 0)
+      CALL hybdat%coul(ikpt)%mpi_ibc(fi, glob_mpi, 0)
    END DO
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
@@ -447,20 +447,20 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       IF (fi%noco%l_mperp) jspmax = 1
 
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,jspin)
-         CALL cdnval(eig_id,mpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+         CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,jspin)
+         CALL cdnval(eig_id,fmpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
                      sphhar,fi%sym,vTot,fi%oned,cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
                      fi%gfinp,fi%hub1inp)
       END DO
 
-      CALL cdncore(mpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
+      CALL cdncore(fmpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
-      IF (mpi%irank.EQ.0) THEN
-         CALL qfix(mpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
+      IF (fmpi%irank.EQ.0) THEN
+         CALL qfix(fmpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
+      CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
 #endif
 
       ! Calculate Coulomb potential for overall density (+including external potential)
@@ -468,10 +468,10 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,mpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,fmpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1),stars%ufft)   ! Is there a problem with a second spin?!
 #ifdef CPP_MPI
-      CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallVCoul)
+      CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallVCoul)
 #endif
 
       overallVCoulSSDen = 0.0
@@ -482,13 +482,13 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
                ! Read the single-state density from disc
                filename = ''
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
-               IF (mpi%irank.EQ.0) THEN
+               IF (fmpi%irank.EQ.0) THEN
                   CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,&
                                    CDN_input_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
 #ifdef CPP_MPI
-               CALL mpi_bc_potden(mpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
+               CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
 #endif
 
                ! For each state calculate integral over Coulomb potential times single state density
@@ -524,7 +524,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,fi,mpi,nococonv,results,jspin,enpara,&
+         CALL HF_setup(mpdata,fi,fmpi,nococonv,results,jspin,enpara,&
                        hybdat,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
@@ -556,9 +556,9 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
             exMat%l_real=fi%sym%invs
             CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
                                      eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
-                                     mpi,exMat)
+                                     fmpi,exMat)
             CALL exchange_vccv1(ikpt,fi%input,fi%atoms,fi%cell, fi%kpts, fi%sym, fi%noco,nococonv, fi%oned,&
-                                mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,&
+                                mpdata,fi%hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,fmpi,&
                                 1.0,results,exMat)
 
             DEALLOCATE(indx_sest)
@@ -623,7 +623,7 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
       gradSum = 0.0
       DO ispin = 1, fi%input%jspins
          isp = MERGE(1,ispin,fi%noco%l_noco)
-!         CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
+!         CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
          DO ikpt = 1, fi%kpts%nkpt
             DO iBand = 1, highestState(ikpt,isp)
                occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)
@@ -865,14 +865,14 @@ SUBROUTINE rdmft(eig_id,mpi,fi,enpara,stars,&
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,mpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
+   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
                enpara,fi%cell,fi%noco,nococonv,vTot,results,fi%oned,fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0
    DO ispin = 1, fi%input%jspins
       isp = MERGE(1,ispin,fi%noco%l_noco)
-!      CALL cdnvalJob%init(mpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
+!      CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,isp,fi%banddos=fi%banddos)
       DO ikpt = 1, fi%kpts%nkpt
          DO iBand = 1, highestState(ikpt,isp)
             occStateI = results%w_iks(iBand,ikpt,isp) / (fi%kpts%wtkpt(ikpt))!*fi%kpts%nkptf)

@@ -6,12 +6,16 @@
 
       MODULE m_wann_updown
       use m_juDFT
+#ifdef CPP_MPI
+      use mpi 
+#endif
       CONTAINS
       SUBROUTINE wann_updown(
-     >      wann,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      wann,fmpi,input,kpts,sym,atoms,stars,vacuum,
      >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
-     >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
+     >      eig_id,l_real,mpi_communicatior,l_dulo,l_noco,l_ss,lmaxd,
+     >      ntypd,
      >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
@@ -68,8 +72,7 @@ c****************************************************************************
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
-      integer ierr(3)
+      integer ierr
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 
@@ -77,7 +80,7 @@ c****************************************************************************
 
 
       TYPE(t_wann),      INTENT(INOUT) :: wann
-      TYPE(t_mpi),INTENT(IN)    :: mpi
+      TYPE(t_mpi),INTENT(IN)    :: fmpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -93,7 +96,8 @@ c****************************************************************************
       TYPE(t_enpara),INTENT(IN) :: enpara
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
-      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
+      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
+      integer, intent (in) :: mpi_communicatior
       integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
@@ -313,7 +317,7 @@ c-----read the input file to determine what to do
       if(.not.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-         call MPI_BARRIER(mpi_comm,ierr)
+         call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 c**************************************************************
@@ -363,7 +367,6 @@ c**************************************************************
       if(l_p0)then
       write (*,*) 'fermi energy:',efermi
       write (*,*) 'emin,emax=',e1s,e2s
-      write (*,*) 'nbasfcn =',nbasfcn
       endif
       nlotot = 0
       do n = 1, ntype
@@ -479,7 +482,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
 
-        CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+        CALL cdn_read0(eig_id,fmpi%irank,fmpi%isize,jspin5,
      >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
      >  noco%l_noco, n_bands,n_size)
 
@@ -498,7 +501,7 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
-     >           mpi,cell,noco,nococonv,input,kpts,sym,atoms,           
+     >           fmpi,cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
      >            ntypd,neigd,nvd,wannierspin,
      >            isize,jspin,nbasfcn,
@@ -519,10 +522,12 @@ c*************************************************************
 #ifdef CPP_MPI
       if(l_p0)then
          do cpu_index=1,isize-1
-      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_comm,ierr)
+      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_communicatior,
+     & ierr)
          enddo
       else
-       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_comm,stt,ierr)
+       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_communicatior,stt,
+     & ierr)
       endif
 #endif
 
@@ -590,7 +595,7 @@ c***********************************************************
 
              call radflo(
      > atoms,n,jspin,enpara%ello0(:,:,jspin2),vr(1,n,jspin2),
-     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),mpi,
+     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),fmpi,
      <  usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin))
 
           enddo !ilo
@@ -835,7 +840,7 @@ c****************************************************************
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &  kptibz,cell,
      &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     &  .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
 
 
         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
@@ -847,7 +852,7 @@ c****************************************************************
 
         CALL cdn_read(
      & eig_id,
-     & lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, !wannierspin instead of DIMENSION%jspd?
      & kptibz,jspin,lapw%dim_nbasfcn(),
      & noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      & nbands,eigg(:,jspin),zzMat(jspin))
@@ -920,16 +925,16 @@ c              rotate the wavefunction
 c***********************************************************
       do jspin=1,wannierspin
         if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
-          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+           call wann_kptsrotate(
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,lapw%nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
+     >          tau,
+     >          lapw,    
+!     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
      x            zMat(jspin),nsfactor)
         else
           nsfactor=cmplx(1.0,0.0)
@@ -989,7 +994,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmat)then
          call wann_socmat(
-     >       mpi,enpara,input,noco,nococonv,atoms,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       theta,phi,jspins,irank,
@@ -1009,7 +1014,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
-     >       mpi,enpara,input,noco,nococonv,atoms,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       jspins,irank,
@@ -1222,7 +1227,7 @@ c     <           mmn(1:noccbd,1:noccbd,ikpt))
 10    continue ! end of cycle by the k-points
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 c******************************************************
 c     Write down the projections.
@@ -1234,7 +1239,7 @@ c******************************************************
         hescale=sqrt(hescale)
         nablamat=nablamat*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'nabl.updown',
+     >      mpi_communicatior,l_p0,'nabl.updown',
      >      'Matrix elements of nabla operator',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,
@@ -1243,14 +1248,14 @@ c******************************************************
 
       if(wann%l_socmat)then
 !        call wann_write_hsomtx(
-!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      mpi_communicatior,l_p0,'WF1.hsomtx',
 !     >      'Matrix elements of spin-orbit coupling',
 !     >      2,2,nbnd,nbnd,fullnkpts,
 !     >      irank,isize,
 !     <      hsomtx)
 
         call wann_write_matrix5(
-     >      mpi_comm,l_p0,'WF1.hsomtx',
+     >      mpi_communicatior,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
      >      nbnd,nbnd,2,2,fullnkpts,
      >      irank,isize,wann%l_unformatted,
@@ -1261,7 +1266,7 @@ c******************************************************
 
       if(wann%l_socmatvec)then
         call wann_write_matrix6(
-     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      mpi_communicatior,l_p0,'WF1.hsomtxvec',
      >      'Vectors for spin-orbit coupling',
      >      2,2,nbnd,nbnd,3,fullnkpts,
      >      irank,isize,wann%l_unformatted,
@@ -1270,7 +1275,7 @@ c******************************************************
 
       if(wann%l_mmn0)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.mmn0',
+     >      mpi_communicatior,l_p0,'updown.mmn0',
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.false.,.true.,
@@ -1279,7 +1284,7 @@ c******************************************************
 
       if(wann%l_perpmag)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.perpmag',
+     >      mpi_communicatior,l_p0,'updown.perpmag',
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.true.,.true.,
@@ -1292,7 +1297,7 @@ c******************************************************
         hescale=sqrt(hescale)
         surfcurr=surfcurr*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'surfcurr.updown',
+     >      mpi_communicatior,l_p0,'surfcurr.updown',
      >      'Surface currents',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,
@@ -1320,11 +1325,11 @@ c******************************************************
       write(oUnit,*)"time_film=",time_film
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 

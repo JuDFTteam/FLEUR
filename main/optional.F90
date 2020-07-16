@@ -5,8 +5,11 @@
 !--------------------------------------------------------------------------------
 MODULE m_optional
   USE m_juDFT
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 CONTAINS
-  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,&
+  SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,&
        stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
     !
     !----------------------------------------
@@ -59,7 +62,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
 
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
 
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -79,8 +82,7 @@ CONTAINS
     LOGICAL :: strho
     LOGICAL :: stateCheck=.TRUE.
 #ifdef CPP_MPI
-    include 'mpif.h'
-    INTEGER :: ierr(2)
+    INTEGER :: ierr
 #endif
     !     ..
     it = 1
@@ -97,11 +99,11 @@ CONTAINS
        ELSE IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
-       IF (mpi%irank == 0) THEN
+       IF (fmpi%irank == 0) THEN
           strho = .NOT.isDensityFilePresent(archiveType)
        END IF
 #ifdef CPP_MPI
-       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
     ENDIF
     IF (strho) THEN
@@ -115,13 +117,13 @@ CONTAINS
           END DO
        END IF
        IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any acutal polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
-       CALL stden(mpi,sphhar,stars,atoms,sym,vacuum,&
+       CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco,oneD)
        !
        !input%total=strho
        CALL timestop("generation of start-density")
     END IF
-    IF (mpi%irank == 0) THEN
+    IF (fmpi%irank == 0) THEN
        !
        !     --->generate spin polarized charge density
        !
@@ -148,12 +150,12 @@ CONTAINS
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
 
-    ENDIF ! mpi%irank == 0
+    ENDIF ! fmpi%irank == 0
 
-    IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
-    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
-    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
-    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
+    IF (input%strho)          CALL juDFT_end("starting density generated",fmpi%irank)
+    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",fmpi%irank)
+    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",fmpi%irank)
+    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',fmpi%irank)
 
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

@@ -12,7 +12,7 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
+SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
 
    USE m_juDFT_init
@@ -28,7 +28,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
 
    IMPLICIT NONE
 
-   TYPE(t_mpi),INTENT(IN)      :: mpi
+   TYPE(t_mpi),INTENT(IN)      :: fmpi
    TYPE(t_atoms),INTENT(IN)    :: atoms
 
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -76,7 +76,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
    rh = 0.0
    rhoss = 0.0
 
-   IF (mpi%irank == 0) THEN
+   IF (fmpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
       !TODO: reactivate efields
       !IF ( ABS(input%sigma).LT. 1.e-6) THEN
@@ -187,10 +187,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
             nat = nat + atoms%neq(n)
          END DO
       END DO ! ispin
-   END IF ! mpi%irank == 0
+   END IF ! fmpi%irank == 0
 
    DO ispin = 1, input%jspins
-      CALL cdnovlp(mpi,sphhar,stars,atoms,sym,vacuum,&
+      CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input,oneD,l_st,ispin,rh1(:,:,ispin),&
                    den%pw,den%vacxy,den%mt,den%vacz)
       !roa-
@@ -198,8 +198,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
 
 
    ! Check the normalization of total density
-   CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
-   IF (mpi%irank == 0) THEN
+   CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   IF (fmpi%irank == 0) THEN
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN
          CALL judft_warn("Starting density not charge neutral",hint= &
@@ -317,7 +317,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
          END DO ! ispin
          CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
-   END IF ! mpi%irank == 0
+   END IF ! fmpi%irank == 0
    
    DEALLOCATE ( rat,eig )
    DEALLOCATE ( rh,rh1)

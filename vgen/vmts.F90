@@ -1,8 +1,10 @@
 module m_vmts
-
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -41,7 +43,7 @@ contains
     implicit none
 
     type(t_input),  intent(in)        :: input
-    type(t_mpi),    intent(in)        :: mpi
+    type(t_mpi),    intent(in)        :: fmpi
     type(t_stars),  intent(in)        :: stars
     type(t_sphhar), intent(in)        :: sphhar
     type(t_atoms),  intent(in)        :: atoms
@@ -67,11 +69,8 @@ contains
     
     !$ complex, allocatable :: vtl_loc(:,:)
 #ifdef CPP_MPI
-    include 'mpif.h'
-    integer                       :: ierr(3)
+    integer                       :: ierr
     complex, allocatable          :: c_b(:)
-
-    external MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
@@ -82,19 +81,19 @@ contains
 
     
     ! q=0 component
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       vtl(0,1:atoms%ntype) = sfp_const * vpw(1)
     end if
 
     ! q/=0 components
     !$omp parallel default( none ) &
-    !$omp& shared( mpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
+    !$omp& shared( fmpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
     !$omp& private( vtl_loc )
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype)) 
     !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
-    do k = mpi%irank+2, stars%ng3, mpi%isize
+    do k = fmpi%irank+2, stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
       if ( .not. oneD%odi%d1 ) then
         call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -131,15 +130,15 @@ contains
 #ifdef CPP_MPI
     n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
     allocate( c_b(n1) )
-    call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
-    if ( mpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
+    call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+    if ( fmpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
     deallocate( c_b )
 #endif
 
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
-    if( mpi%irank == 0 ) then
+    if( fmpi%irank == 0 ) then
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if

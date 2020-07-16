@@ -19,17 +19,19 @@ module m_mpmom
   !     or see the original paper for the normal Coulomb case only:
   !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
-
+#ifdef CPP_MPI
+  use mpi
+#endif
 contains
 
-  subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
+  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
 
     use m_types
     USE m_constants
     implicit none
 
     type(t_input),   intent(in)   :: input
-    type(t_mpi),     intent(in)   :: mpi
+    type(t_mpi),     intent(in)   :: fmpi
     type(t_oneD),    intent(in)   :: oneD
     type(t_sym),     intent(in)   :: sym
     type(t_stars),   intent(in)   :: stars
@@ -47,15 +49,15 @@ contains
     complex                       :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     ! multipole moments of original charge density
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
       call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
+    call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
 
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       ! see (A14)
       qlm = qlmo - qlmp
       ! output section
@@ -76,7 +78,7 @@ contains
             &       'm',t27,'original',t57,'plane wave')
 8010   FORMAT (1x,i2,2x,i3,2x,2 (5x,2e15.5))
        !
-    end if ! mpi%irank == 0
+    end if ! fmpi%irank == 0
 
   end subroutine mpmom
 
@@ -159,10 +161,13 @@ contains
   end subroutine mt_moments
 
 
-!  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
-  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
+!  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
+  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
+#ifdef CPP_MPI
+    use mpi
+#endif
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -173,7 +178,7 @@ contains
     implicit none
 
     type(t_input),    intent(in)   :: input
-    type(t_mpi),      intent(in)   :: mpi
+    type(t_mpi),      intent(in)   :: fmpi
     type(t_oneD),     intent(in)   :: oneD
     type(t_sym),      intent(in)   :: sym
     type(t_stars),    intent(in)   :: stars
@@ -183,7 +188,7 @@ contains
     integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
 
-    integer                        :: n, k, l, ll1, lm, ierr(3), m
+    integer                        :: n, k, l, ll1, lm, ierr, m
     complex                        :: sk3i, cil, nqpw
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
@@ -192,14 +197,11 @@ contains
     logical                        :: od
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
-#ifdef CPP_MPI
-    include 'mpif.h'
-#endif
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -212,14 +214,14 @@ contains
     end if
 
 #ifdef CPP_MPI
-    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
+    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
 #endif
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
 !    !$omp parallel do default( shared ) private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, &
 !    !$omp& l, cil, ll1, m, lm, k ) reduction( +:qlmp )
-    do k = mpi%irank+2, stars%ng3, mpi%isize
+    do k = fmpi%irank+2, stars%ng3, fmpi%isize
       if ( od ) then
         call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
              atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm)
@@ -255,7 +257,7 @@ contains
     end do                      ! k = 2, stars%ng3
 !    !$omp end parallel do
 #ifdef CPP_MPI
-    CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, mpi%mpi_comm, ierr )
+    CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
 #else
     qlmp_out = qlmp
 #endif

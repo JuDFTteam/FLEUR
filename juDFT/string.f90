@@ -38,24 +38,38 @@ contains
       endif
    end function str2int
 
-   function int2str_int4(num) result(ret_str)
+   function int2str_int4(num, length) result(ret_str)
       implicit none
       integer, intent(in)            :: num
+      integer, intent(in), optional  :: length
       character(len=:), allocatable  :: ret_str
 
       allocate (character(100) :: ret_str)
       write (ret_str, *) num
       ret_str = strip(ret_str)
+
+      if(present(length)) then 
+         do while (len(ret_str) < length) 
+            ret_str = " " // ret_str 
+         enddo 
+      endif
    end function int2str_int4
 
-   function int2str_int8(num) result(ret_str)
+   function int2str_int8(num, length) result(ret_str)
       implicit none
-      integer(8), intent(in)            :: num
+      integer(8), intent(in)         :: num
+      integer, intent(in), optional  :: length
       character(len=:), allocatable  :: ret_str
 
       allocate (character(100) :: ret_str)
       write (ret_str, *) num
       ret_str = strip(ret_str)
+
+      if(present(length)) then 
+         do while (len(ret_str) < length) 
+            ret_str = " " // ret_str 
+         enddo 
+      endif
    end function int2str_int8
 
    function float2str(num) result(ret_str)

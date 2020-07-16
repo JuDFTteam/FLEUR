@@ -14,9 +14,12 @@ c       Frank Freimuth, November 2006
 c******************************************************************
       module m_wannier_to_lapw
       use m_juDFT
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       contains
       subroutine wannier_to_lapw(
-     >      mpi_comm,eig_id,l_real,
+     >      mpi_communicatior,eig_id,l_real,
      >      input,lapw,oneD,noco,nococonv,sym,cell,atoms,stars,vacuum,
      >      sphhar,
      >      vTot,
@@ -62,13 +65,12 @@ c******************************************************************
       TYPE(t_potden),INTENT(IN) :: vTot
 
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer mpiierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 #endif
       logical,intent(in):: l_soc, l_real
-      integer,intent(in)::unigrid(4),mpi_comm,eig_id
+      integer,intent(in)::unigrid(4),mpi_communicatior,eig_id
       integer,intent(in)::band_min(2),band_max(2)
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
@@ -697,7 +699,7 @@ c****************************************************************
       deallocate(u_matrix)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(1))
 #endif
 
       nrec=nrec+nkpts
@@ -708,7 +710,7 @@ c****************************************************************
       deallocate ( ff,gg)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
+      call MPI_BARRIER(mpi_communicatior,mpiierr(2))
 #endif
 
       end subroutine wannier_to_lapw

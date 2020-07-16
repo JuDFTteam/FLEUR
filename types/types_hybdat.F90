@@ -43,20 +43,20 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   :: pntgptd(:)
       INTEGER, ALLOCATABLE   :: pntgpt(:, :, :, :)
       INTEGER, ALLOCATABLE   :: nindxp1(:, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:)
-      INTEGER, ALLOCATABLE   ::  nbands(:)
-      INTEGER, ALLOCATABLE   ::  nobd(:, :)
-      INTEGER                ::  maxlmindx = -1
+      INTEGER, ALLOCATABLE   :: ne_eig(:)
+      INTEGER, ALLOCATABLE   :: nbands(:)
+      INTEGER, ALLOCATABLE   :: nobd(:, :)
+      INTEGER                :: maxlmindx = -1
       COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
-      INTEGER                ::  nbasp = -1
+      INTEGER                :: nbasp = -1
       INTEGER                :: eig_id = -1
-      INTEGER, ALLOCATABLE   ::  nbasm(:)
+      INTEGER, ALLOCATABLE   :: nbasm(:)
 
       ! coulomb matrix stuff
       type(t_coul), allocatable :: coul(:)
 
-      type(t_usdus)            :: usdus
-      type(t_mat), allocatable :: olap(:,:) ! (jsp, nkpt)
+      type(t_usdus)             :: usdus
+      type(t_mat), allocatable  :: v_x(:,:) ! nkpt, jsp
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free       => free_hybdat
@@ -139,7 +139,7 @@ contains
 #endif
    end subroutine t_coul_mpi_wait
 
-   subroutine t_coul_mpi_ibc(coul, fi, hybmpi, root)
+   subroutine t_coul_mpi_ibc(coul, fi, glob_mpi, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
@@ -149,7 +149,7 @@ contains
       implicit none 
       class(t_coul)                  :: coul
       type(t_fleurinput), intent(in) :: fi
-      type(t_hybmpi), intent(in)     :: hybmpi
+      type(t_hybmpi), intent(in)     :: glob_mpi
       integer, intent(in)            :: root
 #ifdef CPP_MPI
       integer :: ierr
@@ -157,28 +157,28 @@ contains
 
 
       if (fi%sym%invs) THEN
-         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(1), ierr)
+         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, glob_mpi%comm, coul%bcast_req(1), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1_r failed")
 
-         call MPI_IBcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(2), ierr)
+         call MPI_IBcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, glob_mpi%comm, coul%bcast_req(2), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
 
-         call MPI_IBcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(3), ierr)
+         call MPI_IBcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, glob_mpi%comm, coul%bcast_req(3), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
 
-         call MPI_IBcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, hybmpi%comm, coul%bcast_req(4), ierr)
+         call MPI_IBcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, glob_mpi%comm, coul%bcast_req(4), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
       else 
-         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, hybmpi%comm, coul%bcast_req(1), ierr)
+         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, glob_mpi%comm, coul%bcast_req(1), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1_c failed")
 
-         call MPI_IBcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(2), ierr)
+         call MPI_IBcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, glob_mpi%comm, coul%bcast_req(2), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
 
-         call MPI_IBcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(3), ierr)
+         call MPI_IBcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, glob_mpi%comm, coul%bcast_req(3), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
 
-         call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, hybmpi%comm, coul%bcast_req(4), ierr)
+         call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, glob_mpi%comm, coul%bcast_req(4), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
       endif
 #endif
@@ -206,7 +206,7 @@ contains
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
-      integer :: idum, info, isize, l, itype
+      integer :: info, isize, l, itype
 
       isize = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)),&
                                                     itype=1, fi%atoms%ntype)]) &

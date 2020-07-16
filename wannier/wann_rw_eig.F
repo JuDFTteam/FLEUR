@@ -15,7 +15,7 @@ c      Frank Freimuth, October 2006
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_write_eig(
-     >     mpi,cell,noco,nococonv,input,kpts,sym,atoms,          
+     >     fmpi,cell,noco,nococonv,input,kpts,sym,atoms,          
      >              eig_id,l_real,
      >              ntypd,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,
@@ -30,7 +30,7 @@ c****************************************************************
       use m_cdnread, only:cdn_read
 
       IMPLICIT NONE
-      TYPE(t_mpi),       INTENT(IN) :: mpi
+      TYPE(t_mpi),       INTENT(IN) :: fmpi
       TYPE(t_cell),      INTENT(IN) :: cell
       TYPE(t_noco),      INTENT(IN) :: noco
       TYPE(t_nococonv),  INTENT(IN) :: nococonv
@@ -146,7 +146,7 @@ c****************************************************************
          CALL lapw%init(input,noco,nococonv,kpts,
      & atoms,sym,kptibz,cell,
      & (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND.
-     & .NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     & .NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
 
          numbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
      &   lapw%nv(1)+atoms%nlotot,noco%l_noco)

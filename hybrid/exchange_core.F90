@@ -21,7 +21,7 @@ MODULE m_exchange_core
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, input,atoms, cell, kpts, sym, noco, nococonv, oneD,&
                              mpdata, hybinp, hybdat, jsp, lapw, &
-                             nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
+                             nsymop, nsest, indx_sest, fmpi, a_ex, results, mat_ex)
       use m_juDFT
       USE m_types
       USE m_constants
@@ -36,7 +36,7 @@ CONTAINS
       TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
-      TYPE(t_mpi), INTENT(IN)   :: mpi
+      TYPE(t_mpi), INTENT(IN)   :: fmpi
       TYPE(t_mpdata), intent(in)   :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -77,7 +77,7 @@ CONTAINS
 
       COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
-      complex                 :: c_phase(hybdat%nbands(nk)), cdum
+      complex                 :: c_phase(hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
       type(t_mat)             :: zmat, integral, carr, tmp, dot_result
 
@@ -219,7 +219,7 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
-            IF (mpi%irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
+            IF (fmpi%irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
             call judft_error('exchangeCore: Unusually large imaginary component.')
          END IF
@@ -235,7 +235,7 @@ CONTAINS
       ic = 0
       sum_offdia = 0
       IF (mat_ex%l_real) THEN
-         mat_ex%data_r = real(mat_ex%data_r + exchange/nsymop)
+         mat_ex%data_r = mat_ex%data_r + real(exchange/nsymop)
       ELSE
          mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
       END IF

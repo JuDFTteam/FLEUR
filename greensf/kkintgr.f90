@@ -45,7 +45,7 @@ MODULE m_kkintgr
       COMPLEX,       INTENT(INOUT)  :: g(:)        !Green's function on the complex plane
       INTEGER,       INTENT(IN)     :: method      !Integer associated with the method to be used (definitions above)
 
-      INTEGER  :: iz,izp,n1,n2,i,ne,nz
+      INTEGER  :: iz,izp,n1,n2,ne,nz
       INTEGER  :: ismooth,nsmooth
       REAL     :: eb,del
       REAL     :: re_n1,re_n2,im_n1,im_n2
@@ -78,10 +78,9 @@ MODULE m_kkintgr
             sigma(nsmooth) = AIMAG(ez(iz))
          ENDDO outer
          ALLOCATE(smoothed(ne,nsmooth), source=0.0)
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(nsmooth,smoothed,sigma,ne,eMesh,im) &
-         !$OMP PRIVATE(ismooth)
-         !$OMP DO
+         !$OMP parallel do default(none) &
+         !$OMP shared(nsmooth,smoothed,sigma,ne,eMesh,im) &
+         !$OMP private(ismooth)
          DO ismooth = 1, nsmooth
             smoothed(:,ismooth) = im(:ne)
             IF(ABS(sigma(ismooth)).LT.1e-12) CYCLE
@@ -96,23 +95,21 @@ MODULE m_kkintgr
                                 calledby="kkintgr")
             END SELECT
          ENDDO
-         !$OMP END DO
-         !$OMP END PARALLEL
+         !$OMP end parallel do
          CALL timestop("kkintgr: smoothing")
       ENDIF
 
 
       CALL timestart("kkintgr: integration")
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(nz,ne,method,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im,smoothed,smoothInd) &
-      !$OMP PRIVATE(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
-      !$OMP DO
+      !$OMP parallel do default(none) &
+      !$OMP shared(nz,ne,method,del,eb,l_conjg) &
+      !$OMP shared(g,ez,eMesh,im,smoothed,smoothInd) &
+      !$OMP private(iz,n1,n2,re_n1,re_n2,im_n1,im_n2)
       DO iz = 1, nz
          SELECT CASE(method)
 
          CASE(method_direct)
-            g(iz) = kk_direct(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
+            g(iz) = kk_direct(im,eMesh,MERGE(conjg(ez(iz)),ez(iz),l_conjg))
          CASE(method_maclaurin, method_deriv)
             !Use the previously smoothed version and interpolate after
             !Next point to the left
@@ -148,35 +145,26 @@ MODULE m_kkintgr
             CALL juDFT_error("Not a valid integration method", calledby="kkintgr")
          END SELECT
       ENDDO
-      !$OMP END DO
-      !$OMP END PARALLEL
+      !$OMP end parallel do
       CALL timestop("kkintgr: integration")
 
    END SUBROUTINE kkintgr
 
-   COMPLEX FUNCTION kk_direct(im,ne,z,del,eb)
+   PURE COMPLEX FUNCTION kk_direct(im,eMesh,z)
 
       USE m_trapz
 
       REAL,    INTENT(IN) :: im(:)
-      INTEGER, INTENT(IN) :: ne
+      REAL,    INTENT(IN) :: eMesh(:)
       COMPLEX, INTENT(IN) :: z
-      REAL,    INTENT(IN) :: del
-      REAL,    INTENT(IN) :: eb
 
-      COMPLEX :: integrand(ne)
-      INTEGER :: i
+      COMPLEX :: integrand(SIZE(eMesh))
 
-      integrand = 0.0
-      DO i = 1, ne
-         integrand(i) = 1.0/(z-(i-1)*del-eb) * im(i)
-      ENDDO
-
-      kk_direct = -1/pi_const *( trapz(REAL(integrand(:)),del,ne) &
-                        + ImagUnit * trapz(AIMAG(integrand(:)),del,ne))
+      integrand = 1.0/(z-eMesh) * im
+      kk_direct = -1/pi_const *trapz(integrand,eMesh(2)-eMesh(1),SIZE(eMesh))
    END FUNCTION kk_direct
 
-   REAL FUNCTION kk_num(im,ne,ire,method)
+   PURE REAL FUNCTION kk_num(im,ne,ire,method)
 
       REAL,    INTENT(IN)  :: im(:) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
@@ -198,14 +186,10 @@ MODULE m_kkintgr
          !Calculate the real part on the same energy points as the imaginary part
          !regardless of the contour
          !If i is odd skip the odd points and the other way around and use the trapezian method
-         DO j = 1, INT(ne/2.0)
-            IF(MOD(ire,2).EQ.0) THEN
-               i = 2*j-1
-            ELSE
-               i = 2*j
-            ENDIF
+         DO i = MERGE(1,2,MOD(ire,2)==0), ne, 2
             y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
-            IF(j.EQ.1 .OR. j.EQ.INT(ne/2.0)) y = y/2.0
+            IF(i.EQ.1 .OR. i.EQ.2 .OR.&
+               i.EQ.ne .OR. i.EQ.ne-1) y = y/2.0
             kk_num = kk_num + y
          ENDDO
 
@@ -227,7 +211,6 @@ MODULE m_kkintgr
             kk_num = kk_num + y
          ENDDO
       CASE default
-         CALL juDFT_error("No valid method for KK-integration chosen",calledby="kkintgr")
       END SELECT
 
    END FUNCTION kk_num

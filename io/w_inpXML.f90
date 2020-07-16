@@ -185,9 +185,9 @@ CONTAINS
       END IF
 
       IF (l_nocoOpt .OR. l_explicit) THEN
-160      FORMAT('      <nocoParams l_ss="', l1, '" l_mperp="', l1,'" l_mtNocoPot="', l1,'" l_alignMT="', l1, '" l_constr="', l1, '" l_sourceFree="', l1, &
-                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8, '">')
-         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT, noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b
+160      FORMAT('      <nocoParams l_ss="', l1, '" l_mperp="', l1,'" l_mtNocoPot="', l1,'" l_RelaxMT="', l1, '" l_constr="', l1, '" l_sourceFree="', l1, &
+                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8,'" l_RelaxAlpha="',l1, '" l_RelaxBeta="',l1,'" mix_RelaxWeightOffD="',f0.8,'">')
+         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT,noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b, noco%l_RelaxAlpha,noco%l_RelaxBeta,noco%mix_RelaxWeightOffD
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
          WRITE (fileNum, 162) noco%qss_inp
          WRITE (fileNum, '(a)') '      </nocoParams>'
@@ -234,8 +234,8 @@ CONTAINS
       WRITE (fileNum, 195) input%ldauLinMix, input%ldauMixParam, input%ldauSpinf
 
       IF(l_gfOpt) THEN
-205      FORMAT('      <greensFunction l_sphavg="', l1, '" l_mperp="', l1'">')
-         WRITE(fileNum, 205) gfinp%l_sphavg, gfinp%l_mperp
+205      FORMAT('      <greensFunction l_mperp="', l1'">')
+         WRITE(fileNum, 205) gfinp%l_mperp
 206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" elup="', f0.8, '"/>')
          WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
          IF(gfinp%numberContours>0) THEN
@@ -262,8 +262,7 @@ CONTAINS
                END SELECT
             ENDDO
          ELSE
-            !Write out a default contour
-210         FORMAT('         <contourSemicircle n="', i0, '" eb="', f0.8, '" et="', f0.8, '" alpha="', f0.8, '" label="', a,'"/>')
+            !Write out a default contour (Semicircle)
             WRITE(fileNum, 208) 128, -1.0, 0.0,1.0,"default"
          ENDIF
          WRITE(fileNum, '(a)') '      </greensFunction>'

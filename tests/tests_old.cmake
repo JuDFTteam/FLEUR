@@ -6,7 +6,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   Fe_1l_Tria )
+   Fe_1l_Tria GreensFunctionRadial GreensFunctionRadial_LO )
 
 #DOS related tests, need to be enabled again!
 set(SerialParallelTests ${SerialParallelTests}
@@ -32,7 +32,7 @@ set(HybridTests
 set(FFNTests
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
    PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
-   RelaxMTFeature Fe_bcc_SF_LDA 
+   RelaxMTFeature Fe_bcc_SF_LDA
 )
 
 

@@ -6,6 +6,9 @@
 
       MODULE m_cdnread
       use m_juDFT
+#ifdef CPP_MPI
+      use mpi 
+#endif
 !------------------------------------------------------------------------
 !     Two subroutines to read in the information stored on the 'eig'-file
 !     cdn_read0: reads energy-parameters and number of bands stored/pe
@@ -75,7 +78,6 @@ c n_bands(i) the number of ev's processed on n_rank=0...i-1
 ! Local variables ...
       INTEGER :: isp,i
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
       INTEGER mpiierr
 #endif
 

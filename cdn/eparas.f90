@@ -23,14 +23,14 @@ MODULE m_eparas
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE eparas(jsp,atoms,noccbd,ev_list,mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
+  SUBROUTINE eparas(jsp,atoms,noccbd,ev_list,fmpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
                     usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
     use m_types_dos
     use m_types_mcd
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
-    TYPE(t_mpi),           INTENT(IN)    :: mpi
+    TYPE(t_mpi),           INTENT(IN)    :: fmpi
     TYPE(t_atoms),         INTENT(IN)    :: atoms
     TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
@@ -62,7 +62,7 @@ CONTAINS
     !---> initialize ener, sqal, enerlo and sqlo on first call
     !
 
-    IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
+    IF ((ikpt.LE.fmpi%isize).AND..NOT.l_evp) THEN
        regCharges%ener(:,:,jsp) = 0.0
        regCharges%sqal(:,:,jsp) = 0.0
        regCharges%enerlo(:,:,jsp) = 0.0
