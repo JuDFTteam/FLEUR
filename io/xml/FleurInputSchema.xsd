@@ -751,15 +751,16 @@
          <xsd:element name="realAxis" type="ERealAxisType"/>
          <xsd:sequence>
             <xsd:choice maxOccurs="unbounded" minOccurs="1">
-               <xsd:element name="contourRectangle" type="EContourRectangleType"/>
-               <xsd:element name="contourSemicircle" type="EContourSemicircleType"/>
-               <xsd:element name="contourDOS" type="EContourDOSType"/>
+               <xsd:element name="contourRectangle"   type="EContourRectangleType"/>
+               <xsd:element name="contourSemicircle"  type="EContourSemicircleType"/>
+               <xsd:element name="contourDOS"         type="EContourDOSType"/>
             </xsd:choice>
          </xsd:sequence>
       </xsd:sequence>
-      <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
-      <xsd:attribute default="F" name="l_resolvent" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F"    name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="F"    name="l_resolvent" type="FleurBool" use="optional"/>
       <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
+      <xsd:attribute default="T"    name="outputSphavg" type="FleurBool" use="optional">
    </xsd:complexType>
 
    <xsd:complexType name="ERealAxisType">
