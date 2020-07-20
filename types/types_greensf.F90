@@ -55,24 +55,25 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
       CONTAINS
-         PROCEDURE, PASS :: init           => init_greensf
-         PROCEDURE       :: mpi_bc         => mpi_bc_greensf
-         PROCEDURE       :: collect        => collect_greensf
-         PROCEDURE       :: get            => get_gf
-         PROCEDURE       :: getRadial      => getRadial_gf
-         PROCEDURE       :: getRadialSpin  => getRadialSpin_gf
-         PROCEDURE       :: getRadialRadial => getRadialRadial_gf!(Full Radial dependence for intersite)
+         PROCEDURE, PASS :: init                => init_greensf
+         PROCEDURE       :: mpi_bc              => mpi_bc_greensf
+         PROCEDURE       :: collect             => collect_greensf
+         PROCEDURE       :: get                 => get_gf
+         PROCEDURE       :: getRadial           => getRadial_gf
+         PROCEDURE       :: getRadialSpin       => getRadialSpin_gf
+         PROCEDURE       :: getRadialRadial     => getRadialRadial_gf!(Full Radial dependence for intersite)
          PROCEDURE       :: getRadialRadialSpin => getRadialRadialSpin_gf
-         PROCEDURE       :: set            => set_gf
-         PROCEDURE       :: reset          => reset_gf
-         PROCEDURE       :: resetSingleElem=> resetSingleElem_gf
+         PROCEDURE       :: integrateOverMT     => integrateOverMT_greensf
+         PROCEDURE       :: set                 => set_gf
+         PROCEDURE       :: reset               => reset_gf
+         PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
    END TYPE t_greensf
 
    PUBLIC t_greensf
 
    CONTAINS
 
-      SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in)
+      SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in,l_sphavg_in)
 
          CLASS(t_greensf),             INTENT(INOUT)  :: this
          TYPE(t_gfelementtype), TARGET,INTENT(IN)     :: gfelem
@@ -81,8 +82,10 @@ MODULE m_types_greensf
          TYPE(t_input),                INTENT(IN)     :: input
          !Pass a already calculated energy contour to the type
          TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)   :: contour_in
+         LOGICAL,                    OPTIONAL, INTENT(IN)   :: l_sphavg_in !To overwrite the allocation for integrateOverMT_greensf
 
          INTEGER spin_dim,lmax,nLO
+         LOGICAL l_sphavg
 
          this%elem => gfelem
 
@@ -94,7 +97,10 @@ MODULE m_types_greensf
          spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
-         IF(this%elem%l_sphavg) THEN
+         l_sphavg = this%elem%l_sphavg
+         IF(PRESENT(l_sphavg_in)) l_sphavg = l_sphavg_in
+
+         IF(l_sphavg) THEN
             ALLOCATE(this%gmmpMat(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
          ELSE
             ALLOCATE(this%uu(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
@@ -901,5 +907,80 @@ MODULE m_types_greensf
          ENDIF
 
       END SUBROUTINE resetSingleElem_gf
+
+      FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,l_fullRadial) Result(gIntegrated)
+
+         USE m_intgr
+
+         CLASS(t_greensf),    INTENT(IN)     :: this
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
+         TYPE(t_input),       INTENT(IN)     :: input
+         TYPE(t_gfinp),       INTENT(IN)     :: gfinp
+         REAL,                INTENT(IN)     :: f(:,:,0:,:,:)
+         REAL,                INTENT(IN)     :: g(:,:,0:,:,:)
+         REAL,                INTENT(IN)     :: flo(:,:,:,:,:)
+         LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fullRadial
+
+         TYPE(t_greensf) :: gIntegrated
+
+         LOGICAL :: l_fullRadialArg
+         INTEGER :: l,lp,atomType,atomTypep,ipm,spin,m,mp,iz,jr,jrp
+         REAL    :: realPart, imagPart
+         COMPLEX, ALLOCATABLE :: gmatR(:,:),gmatRRp(:,:,:)
+
+         l_fullRadialArg = .FALSE.
+         IF(PRESENT(l_fullRadial)) l_fullRadialArg = l_fullRadial
+
+         IF(this%elem%l_sphavg) CALL juDFT_error("GF has to be provided with radial dependence",&
+                                                 calledby="integrateOverMT_greensf")
+
+
+         CALL timestart("Green's Function: Average over MT")
+         CALL gIntegrated%init(this%elem,gfinp,atoms,input,contour_in=this%contour,l_sphavg_in=.TRUE.)
+
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType  = this%elem%atomType
+         atomTypep = this%elem%atomTypep
+
+         DO ipm = 1, 2
+            DO spin = 1 , SIZE(this%uu,5)
+               DO mp = -lp, lp
+                  DO m = -l, l
+                     IF(l_fullRadial) THEN
+                        CALL this%getRadialRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatRRp)
+                        IF(.NOT.ALLOCATED(gmatR)) ALLOCATE(gmatR(SIZE(gmatRRp,1),SIZE(gmatRRp,3)),source=cmplx_0)
+                     ELSE
+                        CALL this%getRadial(atoms,m,mp,ipm==2,spin,f(:,:,0:,:,atomType),g(:,:,0:,:,atomType),&
+                                            flo(:,:,:,:,atomType),gmatR)
+                     ENDIF
+
+                     !$OMP parallel do default(none) &
+                     !$OMP shared(gmatR,gmatRRp,atoms,this,gIntegrated) &
+                     !$OMP shared(ipm,m,mp,spin,l_fullRadial,atomType,atomTypep) &
+                     !$OMP private(iz,jr,realPart,imagPart)
+                     DO iz = 1, SIZE(gmatR,2)
+                        IF(l_fullRadial) THEN
+                           DO jr = 1, SIZE(gmatR,1)
+                              CALL intgr3(REAL(gmatRRp(jr,:,iz)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
+                              CALL intgr3(AIMAG(gmatRRp(jr,:,iz)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
+
+                              gmatR(jr,iz) = realPart + ImagUnit * imagPart
+                           ENDDO
+                        ENDIF
+                        CALL intgr3(REAL(gmatR(:,iz)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realPart)
+                        CALL intgr3(AIMAG(gmatR(:,iz)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
+
+                        gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
+                     ENDDO
+                     !$OMP end parallel do
+
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+         CALL timestop("Green's Function: Average over MT")
+
+      END FUNCTION integrateOverMT_greensf
 
 END MODULE m_types_greensf
