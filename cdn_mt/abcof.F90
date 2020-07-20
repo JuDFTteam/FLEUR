@@ -229,13 +229,13 @@ CONTAINS
 
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(iAtom)
-                      fkr = MATMUL(oneD%ods%mrot(:,:,inap),fk(:))
-                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
+                      fkr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fk(:))
+                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
                    ELSE
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
-                      fkr = MATMUL(sym%mrot(:,:,inap),fk(:))
-                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
+                      fkr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fk(:))
+                      fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
                    END IF
                    fkp = MATMUL(fkr,cell%bmat)
                    fgp = MATMUL(fgr,cell%bmat)
@@ -309,11 +309,11 @@ CONTAINS
                    ENDIF
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(iAtom)
-                      fgr = MATMUL(oneD%ods%mrot(:,:,inap),fg(:))
+                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
                    ELSE
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
-                      fgr = MATMUL(sym%mrot(:,:,inap),fg(:))
+                      fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
                    END IF
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
@@ -322,7 +322,7 @@ CONTAINS
                 CALL timestart("force contributions")
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
-                IF (zmat%l_real) THEN 
+                IF (zmat%l_real) THEN
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e_r,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e_r,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                    DO i =1,3
