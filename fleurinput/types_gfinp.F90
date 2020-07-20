@@ -62,7 +62,7 @@ MODULE m_types_gfinp
       !General logical switches
       LOGICAL :: l_mperp = .FALSE.
       LOGICAL :: l_resolvent = .FALSE.
-      LOGICAL :: l_outputSphavg = .TRUE.
+      LOGICAL :: l_outputSphavg = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
       !Number of elements
