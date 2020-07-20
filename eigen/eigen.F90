@@ -191,13 +191,13 @@ CONTAINS
 
             call zmat%pos_eigvec_sum()
 
-            call save_npy("eigval_nk=" // int2str(nk) // ".npy", eig(:ne_all))
             IF (fmpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
+                call save_npy("eigval.npy", eig(:ne_all))
             ELSE
                 CALL write_eig(eig_id, nk,jsp,ne_found,&
                            n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)

@@ -127,7 +127,6 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 
-      call z_k%save_npy("zmat_kqpt=" // int2str(ikqpt) // "_bandoi=" // int2str(bandoi) // ".npy")
 #if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       call timestart("Post read_z Barrier")
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -138,10 +137,6 @@ CONTAINS
 
       call timestart("1st wavef2rs")
       call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, bandoi, bandof, jsp, psi_kqpt%data_c)
-      call psi_kqpt%save_npy("psi_kqpt_nk=" // int2str(ik) // &
-                                    "_iq=" // int2str(iq) // &
-                                    "_bandoi=" // int2str(bandoi) // ".npy")
-
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
@@ -208,9 +203,6 @@ CONTAINS
                      "_iq=" // int2str(iq) // &
                      "_bandoi=" // int2str(bandoi) // ".npy", iband_list)
 
-      call cprod%save_npy("cprod_is_nk=" // int2str(ik) // &
-                           "_iq=" // int2str(iq) // &
-                           "_bandoi=" // int2str(bandoi) // ".npy")
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()

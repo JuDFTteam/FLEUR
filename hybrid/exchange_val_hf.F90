@@ -107,7 +107,7 @@ CONTAINS
       complex, intent(in) :: c_phase_k(hybdat%nbands(k_pack%nk))
 
       ! local scalars
-      INTEGER                 ::  iband, iband1, jq, iq
+      INTEGER                 ::  iband, jband, iband1, jq, iq
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, cnt_read_z
@@ -130,9 +130,10 @@ CONTAINS
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL                 :: kqpt(3), kqpthlp(3),  rtmp
+      real, allocatable    :: cprod_save(:,:,:), carr1_save(:,:,:)
 
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
+      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result, tmp_dr, diff
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
@@ -176,6 +177,18 @@ CONTAINS
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
+
+            allocate(cprod_save(cprod_vv%matsize1, hybdat%nbands(ik), hybdat%nobd(ikqpt, jsp)), source=0.0)
+            !allocate(carr1_save, source=cprod_save) 
+            do iob = 1,psize
+               do iband = 1,hybdat%nbands(ik)
+                  cprod_save(:,iband,ibando + iob-1) = cprod_vv%data_r(:, iob + psize * (iband-1))
+            !      carr1_save(:,iband,ibando + iob-1) = carr1_v%data_r(:, iob + psize * (iband-1))
+               enddo
+            enddo
+            call save_npy("cprod_save_ibando=" // int2str(ibando) // ".npy", cprod_save)
+            !call save_npy("carr1_save_ibando=" // int2str(ibando) // ".npy", carr1_save)
+
             cnt_read_z = cnt_read_z -1
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -200,6 +213,7 @@ CONTAINS
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
+
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv)
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, psize, phase_vv, cprod_vv, carr3_vv)
@@ -222,7 +236,7 @@ CONTAINS
                call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
             END IF
             call timestop("sparse matrix products")
-
+            
             DO iband = 1, hybdat%nbands(ik)
                call timestart("apply prefactors carr1_v")
                if(mat_ex%l_real) then
@@ -241,6 +255,7 @@ CONTAINS
                call timestop("apply prefactors carr1_v")
             enddo
 
+
             call timestart("exch_vv dot prod")
             m = hybdat%nbands(ik)
             n = hybdat%nbands(ik)
@@ -248,11 +263,11 @@ CONTAINS
             lda = hybdat%nbasm(iq) * psize
             ldb = hybdat%nbasm(iq) * psize
             ldc = hybdat%nbands(ik)
+            call tmp_dr%init(dot_result)
             IF (mat_ex%l_real) THEN
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
                   call dgemm("T", "N", m, n, k, 1.0, carr1_v%data_r(1, iob), lda, cprod_vv%data_r(1, iob), ldb, 0.0, dot_result%data_r, ldc)
-
                   DO iband = 1, hybdat%nbands(ik)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
@@ -274,7 +289,6 @@ CONTAINS
                enddo
             END IF
             call timestop("exch_vv dot prod")
-
             call timestop("exchange matrix")
 
             call cprod_vv%free()
@@ -290,7 +304,7 @@ CONTAINS
       enddo
       call timestop("dangeling MPI_barriers")
 #endif
-      call judft_error("stopit")
+      !call judft_error("stopit")
       call dot_result%free()
 
 !   WRITE(7001,'(a,i7)') 'ik: ', ik
