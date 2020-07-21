@@ -153,7 +153,6 @@ CONTAINS
 
          CALL timestop("core exchange calculation")
 
-
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
