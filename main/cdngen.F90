@@ -179,7 +179,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
      CALL juDFT_end("DOS OK",fmpi%irank)
    END IF
 
-   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",mpi%irank)
+   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",fmpi%irank)
 
    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
    IF (fmpi%irank.EQ.0) THEN

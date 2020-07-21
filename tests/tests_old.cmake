@@ -6,11 +6,11 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   Fe_1l_Tria GreensFunctionRadial GreensFunctionRadial_LO )
+   GreensFunctionRadial GreensFunctionRadial_LO )
 
 #DOS related tests, need to be enabled again!
-set(SerialParallelTests ${SerialParallelTests}
-  CuBandXML  CuDOSXML CoMCDXML SmAtomjDOS )
+#set(SerialParallelTests ${SerialParallelTests}
+#  Fe_1l_Tria CuBandXML  CuDOSXML CoMCDXML SmAtomjDOS )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
