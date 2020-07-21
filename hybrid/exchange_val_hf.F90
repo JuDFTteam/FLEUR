@@ -131,7 +131,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL                 :: kqpt(3), kqpthlp(3),  rtmp
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
-      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result, tmp_dr, diff
+      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
       character(len=300)   :: errmsg
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
@@ -176,15 +176,6 @@ CONTAINS
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
 
-            allocate (cprod_save(cprod_vv%matsize1, hybdat%nbands(ik), hybdat%nobd(ikqpt, jsp)), source=0.0)
-            !allocate(carr1_save, source=cprod_save)
-            do iob = 1, psize
-               do iband = 1, hybdat%nbands(ik)
-                  cprod_save(:, iband, ibando + iob - 1) = cprod_vv%data_r(:, iob + psize*(iband - 1))
-                  !      carr1_save(:,iband,ibando + iob-1) = carr1_v%data_r(:, iob + psize * (iband-1))
-               enddo
-            enddo
-            call save_npy("cprod_save_ibando="//int2str(ibando)//".npy", cprod_save)
             !call save_npy("carr1_save_ibando=" // int2str(ibando) // ".npy", carr1_save)
 
             cnt_read_z = cnt_read_z - 1
@@ -260,7 +251,6 @@ CONTAINS
             lda = hybdat%nbasm(iq)*psize
             ldb = hybdat%nbasm(iq)*psize
             ldc = hybdat%nbands(ik)
-            call tmp_dr%init(dot_result)
             IF (mat_ex%l_real) THEN
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
@@ -428,10 +418,12 @@ CONTAINS
       END IF
 
       ! write exch_vv in mat_ex
-      if (k_pack%submpi%root()) then
-         CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
-      else
-         CALL mat_ex%alloc(matsize1=1)
+      if (.not. mat_ex%allocated()) then
+         if (k_pack%submpi%root()) then
+            CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
+         else
+            CALL mat_ex%alloc(matsize1=1)
+         endif
       endif
 
       IF (mat_ex%l_real) THEN
