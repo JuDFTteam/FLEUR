@@ -57,6 +57,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
    USE m_tlmplm_cholesky
+   USE m_types_dos
    USE m_types_mcd
    USE m_types_slab
    USE m_types_jDOS
