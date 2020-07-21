@@ -170,17 +170,21 @@ subroutine write_dos(eigdos,hdf_id)
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
     INTEGER::n
-    DO n=1,eigdos%get_num_weights()
-      call writebandData(hdf_id,eigdos%name_of_dos,eigdos%get_weight_name(n),eigdos%get_eig(),eigdos%get_weight_eig(n),kpts)
-    enddo
+
 #else
     integer,intent(in):: hdf_id !not used
 #endif
+
     integer:: jspin,i,k
     real,allocatable  :: ev(:,:,:),kx(:)
     real              :: vkr(3),vkr_prev(3)
     character(len=100)::file
     allocate(kx(kpts%nkpt))
+#ifdef CPP_HDF
+    DO n=1,eigdos%get_num_weights()
+      call writebandData(hdf_id,eigdos%name_of_dos,eigdos%get_weight_name(n),eigdos%get_eig(),eigdos%get_weight_eig(n),kpts)
+    enddo
+#endif
     if (eigdos%name_of_dos.ne."Local") then
 #ifndef CPP_HDF
       print *,"WARNING, only very basic BS written without HDF"

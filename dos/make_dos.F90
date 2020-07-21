@@ -52,7 +52,7 @@ CONTAINS
     eFermiPrev=merge(results%ef,eFermiPrev,l_error)
 
 #ifdef CPP_HDF
-      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos,eFermiPrev)
 #endif
 
     IF (banddos%band) THEN
