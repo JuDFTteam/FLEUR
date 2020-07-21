@@ -11,6 +11,7 @@ CONTAINS
 SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
+   use m_types_vacdos               
    use m_work_package
    USE m_types
    USE m_juDFT
