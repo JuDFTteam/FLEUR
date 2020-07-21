@@ -27,7 +27,7 @@ MODULE m_banddos_io
 
    CONTAINS
 
-   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, banddos)
+   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, banddos,eFermiPrev)
 
       USE m_types_input
       USE m_types_atoms
@@ -36,7 +36,7 @@ MODULE m_banddos_io
       USE m_types_banddos
 
       USE hdf5
-      USE m_cdn_io
+      !USE m_cdn_io
 
       TYPE(t_input),   INTENT(IN)  :: input
       TYPE(t_atoms),   INTENT(IN)  :: atoms
@@ -45,6 +45,8 @@ MODULE m_banddos_io
       TYPE(t_banddos), INTENT(IN)  :: banddos
 
       INTEGER(HID_T),       INTENT(OUT) :: fileID
+      REAL,INTENT(IN)           :: eFermiPrev
+
 
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
@@ -73,7 +75,7 @@ MODULE m_banddos_io
 
       INTEGER           :: hdfError, dimsInt(7)
       INTEGER           :: version
-      REAL              :: eFermiPrev
+
       LOGICAL           :: l_error
 
       INTEGER           :: atomicNumbers(atoms%nat)
@@ -95,11 +97,7 @@ MODULE m_banddos_io
       CALL io_write_attint0(metaGroupID,'version',version)
       CALL h5gclose_f(metaGroupID, hdfError)
 
-      CALL readPrevEFermi(eFermiPrev,l_error)
-      IF(l_error) THEN
-         ! No previous eFermi available
-         eFermiPrev = 0.0
-      END IF
+
 
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)

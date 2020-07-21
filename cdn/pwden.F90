@@ -73,6 +73,7 @@ CONTAINS
 !DEC$ NOOPTIMIZE
 #include"cpp_double.h"
       USE m_types
+      USE m_types_dos
       USE m_constants
       USE m_forceb8
       USE m_pwint

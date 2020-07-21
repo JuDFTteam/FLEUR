@@ -27,6 +27,7 @@ CONTAINS
     !
     !***********************************************************************
     USE m_types
+    USE m_types_dos
     USE m_types_eigdos
     USE m_constants
     IMPLICIT NONE
