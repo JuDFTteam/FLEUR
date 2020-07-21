@@ -19,7 +19,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !    calls cdnval to generate the valence charge and the
    !    core routines for the core contribution
    !*****************************************************
-
+   use m_types_vacdos
+   use m_types_mcd
+   use m_types_slab
+   use m_types_orbcomp
+   use m_types_jdos
    USE m_types
    USE m_constants
    USE m_juDFT
