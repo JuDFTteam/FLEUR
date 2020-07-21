@@ -467,8 +467,7 @@ CONTAINS
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
-      TYPE(t_gfelementtype) :: gfelem(this%n)
-
+      TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -501,6 +500,7 @@ CONTAINS
       ALLOCATE(this%hiaElem(atoms%n_hia))
       this%hiaElem = hiaElem
 
+      ALLOCATE(gfelem(this%n))
       gfelem = this%elem(:this%n)
       IF(ALLOCATED(this%elem)) DEALLOCATE(this%elem)
       ALLOCATE(this%elem(this%n))
