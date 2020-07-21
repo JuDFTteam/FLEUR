@@ -446,7 +446,7 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input,l_write)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input)
 
       USE m_types_atoms
       USE m_types_sym
@@ -460,7 +460,6 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_input),    INTENT(IN)     :: input
-      LOGICAL,          INTENT(IN)     :: l_write
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
@@ -492,6 +491,7 @@ CONTAINS
             written(atomType) = .TRUE.
          ENDIF
       ENDDO
+
       !After this point there are no new green's function elements to be added
 
       !Reallocate with correct size
@@ -507,73 +507,69 @@ CONTAINS
       this%elem = gfelem
 
       !Input checks
-      IF(l_write) THEN
-         IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
-            CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+      IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
+         CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+                          calledby="init_gfinp")
+      ENDIF
+
+      l_inter = .FALSE.
+      l_offd = .FALSE.
+      l_interAvg = .FALSE.
+      l_offdAvg = .FALSE.
+      DO i_gf = 1, this%n
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         l_sphavg  = this%elem(i_gf)%l_sphavg
+         atomDiff  = this%elem(i_gf)%atomDiff
+         IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
+            l_inter = .TRUE.
+            IF(l_sphavg) l_interAvg = .TRUE.
+         ENDIF
+         IF(l.NE.lp) THEN
+            l_offd = .TRUE.
+            IF(l_sphavg) l_offdAvg = .TRUE.
+         ENDIF
+
+      ENDDO
+
+      IF(l_inter) THEN
+         IF(sym%nop>1) THEN
+               CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
+                                calledby="init_gfinp")
+         ELSE IF(l_interAvg) THEN
+            CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
                              calledby="init_gfinp")
          ENDIF
+      ENDIF
 
-         l_inter = .FALSE.
-         l_offd = .FALSE.
-         l_interAvg = .FALSE.
-         l_offdAvg = .FALSE.
-         DO i_gf = 1, this%n
-            l  = this%elem(i_gf)%l
-            lp = this%elem(i_gf)%lp
-            atomType  = this%elem(i_gf)%atomType
-            atomTypep = this%elem(i_gf)%atomTypep
-            l_sphavg  = this%elem(i_gf)%l_sphavg
-            atomDiff  = this%elem(i_gf)%atomDiff
-            IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
-               l_inter = .TRUE.
-               IF(l_sphavg) l_interAvg = .TRUE.
-            ENDIF
-            IF(l.NE.lp) THEN
-               l_offd = .TRUE.
-               IF(l_sphavg) l_offdAvg = .TRUE.
-            ENDIF
-
-         ENDDO
-
-         IF(l_inter) THEN
-            IF(sym%nop>1) THEN
-                  CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
-                                   calledby="init_gfinp")
-            ELSE IF(l_interAvg) THEN
-               CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
-                                calledby="init_gfinp")
-            ENDIF
+      IF(l_offd) THEN
+         IF(sym%nop>1) THEN
+            CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
+                             calledby="init_gfinp")
+         ELSE IF(l_offdAvg) THEN
+            CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
+                             calledby="init_gfinp")
          ENDIF
+      ENDIF
 
-         IF(l_offd) THEN
-            IF(sym%nop>1) THEN
-               CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
-                                calledby="init_gfinp")
-            ELSE IF(l_offdAvg) THEN
-               CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
-                                calledby="init_gfinp")
-            ENDIF
-         ENDIF
-
-         IF(this%minCalcDistance>=0.0) THEN
-            IF(input%mindistance>this%minCalcDistance) THEN
-               CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
-                               "is smaller than the distance requirement:"//&
-                               "No Green's Functions will be calculated", calledby="init_gfinp")
-            ENDIF
+      IF(this%minCalcDistance>=0.0) THEN
+         IF(input%mindistance>this%minCalcDistance) THEN
+            CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
+                            "is smaller than the distance requirement:"//&
+                            "No Green's Functions will be calculated", calledby="init_gfinp")
          ENDIF
       ENDIF
 
 #ifdef CPP_DEBUG
-      IF(l_write) THEN
-         WRITE(*,*) "Green's Function Elements: "
-         WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
-         DO i_gf = 1, this%n
-            WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
-                                             this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
-                                             this%elem(i_gf)%atomDiff(:)
-         ENDDO
-      ENDIF
+      WRITE(*,*) "Green's Function Elements: "
+      WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
+      DO i_gf = 1, this%n
+         WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+                                          this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
+                                          this%elem(i_gf)%atomDiff(:)
+      ENDDO
 #endif
 
    END SUBROUTINE init_gfinp
