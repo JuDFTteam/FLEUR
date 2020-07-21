@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
-   use m_types_vacdos               
+   use m_types_vacdos
    use m_work_package
    USE m_types
    USE m_juDFT
@@ -39,6 +39,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    USE m_symmetrizeh
    USE m_bfgs_b2
    USE m_xmlOutput
+   USE m_types_dos
 
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
