@@ -232,7 +232,7 @@ contains
 
       if(mpi%irank == 0) THEN
          n_radbasfn = mpdata%num_radbasfn(l, itype)
-         WRITE(oUnit, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
+         WRITE(oUnit, '(6X,A,I4,''   ('',F22.18,'' )'')') &
             lchar(l)//':', n_radbasfn, norm2(olap)/n_radbasfn
       END if
       call timestop("check mpdata orthonormality")
