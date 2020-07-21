@@ -90,7 +90,7 @@ CONTAINS
       TYPE(t_mat), INTENT(INOUT)        :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-      ! blas 
+      ! blas
       real, external      :: ddot
       complex, external   :: zdotc
 
@@ -111,7 +111,7 @@ CONTAINS
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, cnt_read_z
-      INTEGER                 ::  ikqpt, iob, m,n,k,lda,ldb,ldc
+      INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
       REAL, SAVE             ::  divergence
@@ -130,8 +130,6 @@ CONTAINS
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL                 :: kqpt(3), kqpthlp(3),  rtmp
-      real, allocatable    :: cprod_save(:,:,:), carr1_save(:,:,:)
-
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result, tmp_dr, diff
       character(len=300)   :: errmsg
@@ -157,39 +155,39 @@ CONTAINS
 #if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       cnt_read_z = predict_max_read_z(fi, hybdat, jsp)
 #endif
-      DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
+      DO jq = 1, fi%kpts%EIBZ(ik)%nkpt
          iq = k_pack%q_packs(jq)%ptr
          iq_p = fi%kpts%bkp(iq)
 
-         ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
-         
+         ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
+
          n_parts = size(k_pack%q_packs(jq)%band_packs)
-         start   = k_pack%q_packs(jq)%submpi%rank+1
-         stride  = k_pack%q_packs(jq)%submpi%size 
+         start  = k_pack%q_packs(jq)%submpi%rank + 1
+         stride = k_pack%q_packs(jq)%submpi%size
          do ipart = start, n_parts, stride
-            if(n_parts > 1) write (*,*) "Part (" // int2str(ipart) //"/"// int2str(n_parts) // ") ik= " // int2str(ik) // " jq= " // int2str(jq)
+            if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
-            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize * hybdat%nbands(ik))
+            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             ELSE
-               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando+psize-1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
 
-            allocate(cprod_save(cprod_vv%matsize1, hybdat%nbands(ik), hybdat%nobd(ikqpt, jsp)), source=0.0)
-            !allocate(carr1_save, source=cprod_save) 
-            do iob = 1,psize
-               do iband = 1,hybdat%nbands(ik)
-                  cprod_save(:,iband,ibando + iob-1) = cprod_vv%data_r(:, iob + psize * (iband-1))
-            !      carr1_save(:,iband,ibando + iob-1) = carr1_v%data_r(:, iob + psize * (iband-1))
+            allocate (cprod_save(cprod_vv%matsize1, hybdat%nbands(ik), hybdat%nobd(ikqpt, jsp)), source=0.0)
+            !allocate(carr1_save, source=cprod_save)
+            do iob = 1, psize
+               do iband = 1, hybdat%nbands(ik)
+                  cprod_save(:, iband, ibando + iob - 1) = cprod_vv%data_r(:, iob + psize*(iband - 1))
+                  !      carr1_save(:,iband,ibando + iob-1) = carr1_v%data_r(:, iob + psize * (iband-1))
                enddo
             enddo
-            call save_npy("cprod_save_ibando=" // int2str(ibando) // ".npy", cprod_save)
+            call save_npy("cprod_save_ibando="//int2str(ibando)//".npy", cprod_save)
             !call save_npy("carr1_save_ibando=" // int2str(ibando) // ".npy", carr1_save)
 
-            cnt_read_z = cnt_read_z -1
+            cnt_read_z = cnt_read_z - 1
 
             ! The sparse matrix technique is not feasible for the HSE
             ! functional. Thus, a dynamic adjustment is implemented
@@ -217,7 +215,7 @@ CONTAINS
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv)
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, psize, phase_vv, cprod_vv, carr3_vv)
-               call cprod_vv%copy(carr3_vv, 1,1)
+               call cprod_vv%copy(carr3_vv, 1, 1)
                call carr3_vv%free()
             ELSE
                phase_vv(:, :) = cmplx_1
@@ -236,32 +234,31 @@ CONTAINS
                call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
             END IF
             call timestop("sparse matrix products")
-            
+
             DO iband = 1, hybdat%nbands(ik)
                call timestart("apply prefactors carr1_v")
-               if(mat_ex%l_real) then
+               if (mat_ex%l_real) then
                   DO iob = 1, psize
-                     do i=1,hybdat%nbasm(iq)
-                        carr1_v%data_r(i,iob + psize*(iband-1)) = carr1_v%data_r(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, ikqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
+                     do i = 1, hybdat%nbasm(iq)
+                        carr1_v%data_r(i, iob + psize*(iband - 1)) = carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                else
                   DO iob = 1, psize
-                     do i=1,hybdat%nbasm(iq)
-                        carr1_v%data_c(i,iob + psize*(iband-1)) = carr1_v%data_c(i,iob + psize*(iband-1)) * wl_iks(ibando+iob-1, ikqpt) * conjg(phase_vv(iob, iband))/n_q(jq)
+                     do i = 1, hybdat%nbasm(iq)
+                        carr1_v%data_c(i, iob + psize*(iband - 1)) = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                endif
                call timestop("apply prefactors carr1_v")
             enddo
 
-
             call timestart("exch_vv dot prod")
             m = hybdat%nbands(ik)
             n = hybdat%nbands(ik)
             k = hybdat%nbasm(iq)
-            lda = hybdat%nbasm(iq) * psize
-            ldb = hybdat%nbasm(iq) * psize
+            lda = hybdat%nbasm(iq)*psize
+            ldb = hybdat%nbasm(iq)*psize
             ldc = hybdat%nbands(ik)
             call tmp_dr%init(dot_result)
             IF (mat_ex%l_real) THEN
@@ -271,10 +268,10 @@ CONTAINS
                   DO iband = 1, hybdat%nbands(ik)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2) * dot_result%data_r(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_r(iband, nn2)
                      enddo
-                  END DO 
-               END DO  
+                  END DO
+               END DO
             ELSE
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
@@ -283,9 +280,9 @@ CONTAINS
                   DO iband = 1, hybdat%nbands(ik)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2) * dot_result%data_c(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_c(iband, nn2)
                      enddo
-                  END DO 
+                  END DO
                enddo
             END IF
             call timestop("exch_vv dot prod")
@@ -298,7 +295,7 @@ CONTAINS
 
 #if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
       call timestart("dangeling MPI_barriers")
-      do while(cnt_read_z > 0) 
+      do while (cnt_read_z > 0)
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          cnt_read_z = cnt_read_z - 1
       enddo
@@ -318,7 +315,10 @@ CONTAINS
 
       ! valence-valence-valence-valence exchange
 
-      IF ((.not. xcpot%is_name("hse")) .AND. (.not. xcpot%is_name("vhse"))) THEN ! no gamma point correction needed for HSE functional
+      IF ((.not. xcpot%is_name("hse")) .AND. &
+          (.not. xcpot%is_name("vhse")) .AND. &
+          k_pack%submpi%root()) THEN ! no gamma point correction needed for HSE functional
+
          IF (zero_order .and. .not. ibs_corr) THEN
             WRITE (oUnit, '(A)') ' Take zero order terms into account.'
          ELSE IF (zero_order .and. ibs_corr) THEN
@@ -428,7 +428,7 @@ CONTAINS
       END IF
 
       ! write exch_vv in mat_ex
-      if(k_pack%submpi%root()) then
+      if (k_pack%submpi%root()) then
          CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
       else
          CALL mat_ex%alloc(matsize1=1)
@@ -529,57 +529,57 @@ CONTAINS
    end function calc_divergence2
 
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
-      use m_types 
+      use m_types
       type(t_mat), intent(in)    :: in_part
       integer, intent(in)        :: ipart, psizes(:)
-      type(t_mat), intent(inout) :: out_total 
-      
+      type(t_mat), intent(inout) :: out_total
+
       integer :: nbands, iband, iob, offset, i, tsize
-      logical :: l_real 
+      logical :: l_real
 
       l_real = in_part%l_real
       tsize = sum(psizes)
 
-      nbands = in_part%matsize2 / psizes(ipart)
-      if(out_total%matsize2 / tsize /= nbands) call judft_error("nbands seems different")
-      offset = 0 
-      do i=1,ipart-1 
+      nbands = in_part%matsize2/psizes(ipart)
+      if (out_total%matsize2/tsize /= nbands) call judft_error("nbands seems different")
+      offset = 0
+      do i = 1, ipart - 1
          offset = offset + psizes(i)
       enddo
 
-      do iband = 1, nbands 
-         do iob = 1,psizes(ipart)
-            if(l_real) then 
-               out_total%data_r(:,iob + (iband-1)*tsize + offset) = in_part%data_r(:,iob + (iband-1) * psizes(ipart))
+      do iband = 1, nbands
+         do iob = 1, psizes(ipart)
+            if (l_real) then
+               out_total%data_r(:, iob + (iband - 1)*tsize + offset) = in_part%data_r(:, iob + (iband - 1)*psizes(ipart))
             else
-               out_total%data_c(:,iob + (iband-1)*tsize + offset) = in_part%data_c(:,iob + (iband-1) * psizes(ipart))
-            endif 
+               out_total%data_c(:, iob + (iband - 1)*tsize + offset) = in_part%data_c(:, iob + (iband - 1)*psizes(ipart))
+            endif
          enddo
       enddo
    end subroutine recombine_parts
 
    function predict_max_read_z(fi, hybdat, jsp) result(max_count)
-      implicit none 
+      implicit none
 
       type(t_fleurinput), intent(in) :: fi
       type(t_hybdat), intent(in)     :: hybdat
       integer, intent(in)            :: jsp
 
       integer :: max_count
-      integer :: ik, iq, jq,ikqpt, n_parts, my_count
+      integer :: ik, iq, jq, ikqpt, n_parts, my_count
       real    :: target_psize
       max_count = 0
-      do ik = 1,fi%kpts%nkpt 
+      do ik = 1, fi%kpts%nkpt
          !my_count = 0
-         DO jq = 1,fi%kpts%EIBZ(ik)%nkpt
+         DO jq = 1, fi%kpts%EIBZ(ik)%nkpt
             iq = fi%kpts%EIBZ(ik)%pointer(jq)
-            ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,ik) + fi%kpts%bkf(:,iq)))
+            ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
             ! arrays should be less than 5 gb
 
-            if(fi%sym%invs) then
-               target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
+            if (fi%sym%invs) then
+               target_psize = 5e9/(8.0*maxval(hybdat%nbasm)*hybdat%nbands(ik))
             else
-               target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * hybdat%nbands(ik)) 
+               target_psize = 5e9/(16.0*maxval(hybdat%nbasm)*hybdat%nbands(ik))
             endif
 
             n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
