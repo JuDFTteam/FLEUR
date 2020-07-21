@@ -1,9 +1,9 @@
 MODULE m_qintsl
   USE m_juDFT
 CONTAINS
-  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,ev_list,lapw,slab,oneD,zMat)          
+  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,ev_list,lapw,slab,oneD,zMat)
     !     *******************************************************
-    !     calculate the charge of the En(k) state 
+    !     calculate the charge of the En(k) state
     !     in the interstitial region of each leyer
     !                                             Yu.M. Koroteev
     !             From pwden_old.F and pwint.F by  c.l.fu
@@ -11,6 +11,7 @@ CONTAINS
 #include"cpp_double.h"
     USE m_pwintsl
     USE m_types
+    USE m_types_slab
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)   :: lapw
@@ -41,10 +42,10 @@ CONTAINS
     !
     !     calculate the star function expansion coefficients of
     !     the plane wave charge density for each En(k)
-    !    
+    !
     !     ----> g=0 star
     !
-    ALLOCATE ( stfunint(stars%ng3,slab%nsl), z_z(stars%ng3) ) 
+    ALLOCATE ( stfunint(stars%ng3,slab%nsl), z_z(stars%ng3) )
     !
     !  -----> calculate the integrals of star functions over
     !                     the layer interstitial
@@ -59,7 +60,7 @@ CONTAINS
                         volsli,volintsli,cell,slab%nmtsl(1,i),stars%kv3(1,j),x)
           stfunint(j,i) =  x*stars%nstr(j)
        ENDDO  ! over 3D stars
-    ENDDO     ! over vacuum%layers
+    ENDDO     ! over banddos%layers
     !
     ! Here, I reordered the stuff to save memory
     !
@@ -108,12 +109,12 @@ CONTAINS
           DO j = 1,stars%ng3
              qi = qi + z_z(j)*stfunint(j,i)
           ENDDO
-          slab%qintsl(i,ev_list(n),ikpt,isp) = qi 
-       ENDDO    ! over vacuum%layers         
+          slab%qintsl(i,ev_list(n),ikpt,isp) = qi
+       ENDDO    ! over banddos%layers
 
     ENDDO ! over states
 
-    DEALLOCATE ( stfunint, z_z ) 
+    DEALLOCATE ( stfunint, z_z )
 
   END SUBROUTINE q_int_sl
 END MODULE m_qintsl

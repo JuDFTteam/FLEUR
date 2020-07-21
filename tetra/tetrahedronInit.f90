@@ -17,7 +17,7 @@ MODULE m_tetrahedronInit
    !of weights. These differ in the order of the loops and the arguments provided.
    !------------------------------------------------------------------------------------
 
-   USE m_types
+   USE m_types_kpts
    USE m_juDFT
 
    IMPLICIT NONE

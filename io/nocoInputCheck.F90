@@ -52,12 +52,6 @@ MODULE m_nocoInputCheck
          CALL juDFT_error("force calculations not supported!!!",calledby="nocoInputCheck")
       END IF
 
-!---> make sure nstm equals zero
-      IF (vacuum%nstm.NE.0) THEN
-         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
-         WRITE (oUnit,*) 'does not support STM calculations(nstm .NE. 0).'
-         CALL juDFT_error("nstm /= 0 not supported!",calledby ="nocoInputCheck")
-      END IF
 
 !---> make sure starcoeff is switched off
 !      IF (starcoeff) THEN

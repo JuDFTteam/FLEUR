@@ -92,8 +92,8 @@
       ENDIF
 
       ALLOCATE( qal(qdim,input%neig,kpts%nkpt),&
-     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,input%neig,kpts%nkpt),&
-     &          qlay(input%neig,vacuum%layerd,2))
+     &          qval(banddos%nstars*banddos%layers*vacuum%nvac,input%neig,kpts%nkpt),&
+     &          qlay(input%neig,banddos%layers,2))
       IF (l_mcd) THEN
          ALLOCATE(mcd_local(3*atoms%ntype*ncored,input%neig,kpts%nkpt) )
       ELSE
@@ -204,10 +204,10 @@
             ELSEIF ( banddos%vacdos .and. input%film ) THEN
                DO i = 1,results%neig(k,jsp)
                   DO v = 1,vacuum%nvac
-                     DO l = 1,vacuum%layers
-                        index = (l-1)*vacuum%nstars + (v-1)*(vacuum%nstars*vacuum%layers) + 1
+                     DO l = 1,banddos%layers
+                        index = (l-1)*banddos%nstars + (v-1)*(banddos%nstars*banddos%layers) + 1
                         qval(index,i,k) = qlay(i,l,v)
-                        DO s = 1,vacuum%nstars - 1
+                        DO s = 1,banddos%nstars - 1
                            qval(index+s,i,k) = real(dos%qstars(s,i,l,v,k,jspin))
                         ENDDO
                      ENDDO
@@ -400,7 +400,7 @@
 !------------------------------------------------------------------------------
 
          IF ( banddos%vacdos .and. input%film ) THEN
-            ALLOCATE(g(ned,vacuum%nstars*vacuum%layers*vacuum%nvac))
+            ALLOCATE(g(ned,banddos%nstars*banddos%layers*vacuum%nvac))
             IF(kpts%ntet.EQ.0) THEN
                CALL juDFT_error("VACDOS requires a kpoint set with generated triangles",calledby="evaldos")
             ENDIF
@@ -408,12 +408,12 @@
 !     >                 emin,emax,jspins,ned,nstars*nvac*layers,neigd,
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
 !     <                 g)
-            CALL ptdos(input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,&
+            CALL ptdos(input%jspins,ned,banddos%nstars*vacuum%nvac*banddos%layers,&
                        ntb,kpts,ev,qval,e,g)
 
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN
-               DO ln = 1 , vacuum%nstars*vacuum%nvac*vacuum%layers
+               DO ln = 1 , banddos%nstars*vacuum%nvac*banddos%layers
                   CALL smooth(e,g(1,ln),sigma,ned)
                ENDDO
             ENDIF
@@ -423,7 +423,7 @@
             OPEN (18,FILE='VACDOS'//spin12(jspin))
 !            WRITE (18,'(i2,25(2x,i3))') Layers , (Zlay(l),l=1,Layers)
             DO i = 1 , ned
-             WRITE (18,99001) e(i) , (g(i,l),l=1,vacuum%Layers*vacuum%Nstars*vacuum%Nvac)
+             WRITE (18,99001) e(i) , (g(i,l),l=1,banddos%layers*banddos%nstars*vacuum%Nvac)
             ENDDO
             CLOSE (18)
             DEALLOCATE(g)

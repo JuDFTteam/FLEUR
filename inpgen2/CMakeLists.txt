@@ -99,12 +99,6 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
-${FLEUR_SRC}/types/types_usdus.F90
-${FLEUR_SRC}/types/types_cdnval.f90
-${FLEUR_SRC}/types/types_regionCharges.f90
-${FLEUR_SRC}/types/types_dos.f90
-${FLEUR_SRC}/types/types_denCoeffsOffdiag.f90
-${FLEUR_SRC}/types/types_gpumat.F90
 
 
 ${FLEUR_SRC}/kpoints/kptgen_hybrid.f90
@@ -116,8 +110,6 @@ ${FLEUR_SRC}/cdn/slabgeom.f90
 ${FLEUR_SRC}/dos/nstm3.f90
 ${FLEUR_SRC}/cdn/int_21.f90
 ${FLEUR_SRC}/cdn/int_21lo.f90
-${FLEUR_SRC}/cdn_mt/rhomt21.f90
-${FLEUR_SRC}/cdn_mt/rhonmt21.F90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 ${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f90
@@ -149,7 +141,7 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/inpgen")
 set_target_properties(inpgen2 PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen)
-target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS})
+target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS} "CPP_INPGEN")
 target_link_libraries(inpgen2 fleurinput juDFT)
 target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})

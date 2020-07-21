@@ -20,6 +20,9 @@ CONTAINS
     USE m_radfun
     USE m_orbmom2
     USE m_xmlOutput
+    use m_types_orbcomp
+    use m_types_jDOS
+    use m_types_mcd
 
     IMPLICIT NONE
 

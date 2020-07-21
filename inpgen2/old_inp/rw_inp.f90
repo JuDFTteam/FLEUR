@@ -136,13 +136,13 @@
       BACKSPACE 5
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8000,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
-        WRITE (oUnit,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
+     &                input%strho,input%film,banddos%dos,intDummy,intDummy,input%secvar
+        WRITE (oUnit,9000) input%strho,input%film,banddos%dos,99,0,input%secvar
  8000 FORMAT (6x,l1,6x,l1,5x,l1,7x,i2,6x,i2,8x,l1)
       ELSE
         READ (UNIT=5,FMT=8001,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
-        WRITE (oUnit,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
+     &                input%strho,input%film,banddos%dos,intDummy,intdummy,input%secvar
+        WRITE (oUnit,9000) input%strho,input%film,banddos%dos,99,0,input%secvar
  8001 FORMAT (6x,l1,6x,l1,5x,l1,7x,i3,6x,i2,8x,l1)
       END IF
 
@@ -611,22 +611,22 @@
 !-roa
 !+stm
       READ (UNIT=5,FMT=8075,END=99,ERR=99)&
-     &      banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
-     &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
-      WRITE (oUnit,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
-     &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
+     &      banddos%vacdos,banddos%layers,input%integ,banddos%starcoeff,banddos%nstars,&
+     &      banddos%locx(1),banddos%locy(1),banddos%locx(2),banddos%locy(2)
+      WRITE (oUnit,9210) banddos%vacdos,banddos%layers,input%integ,banddos%starcoeff,banddos%nstars,&
+     &      banddos%locx(1),banddos%locy(1),banddos%locx(2),banddos%locy(2),0,0.0
  8075 FORMAT (7x,l1,8x,i2,7x,l1,6x,l1,8x,i2,4(4x,f5.2),6x,i1,8x,f10.6)
 !-stm
       IF (banddos%vacdos) THEN
         IF (input%integ) THEN
           READ (UNIT=5,FMT=8076,END=99,ERR=99)&
-     &                    ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
-          WRITE (oUnit,9220) ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
+     &                    ((banddos%izlay(i,k),k=1,2),i=1,banddos%layers)
+          WRITE (oUnit,9220) ((banddos%izlay(i,k),k=1,2),i=1,banddos%layers)
  8076     FORMAT (10(2(i3,1x),1x))
         ELSE
           READ (UNIT=5,FMT=8077,END=99,ERR=99)&
-     &                    (vacuum%izlay(i,1),i=1,vacuum%layers)
-          WRITE (oUnit,9230) (vacuum%izlay(i,1),i=1,vacuum%layers)
+     &                    (banddos%izlay(i,1),i=1,banddos%layers)
+          WRITE (oUnit,9230) (banddos%izlay(i,1),i=1,banddos%layers)
  8077     FORMAT (20(i3,1x))
         END IF
       ELSE
@@ -639,7 +639,7 @@
       WRITE (oUnit,9240) ldum,input%score,sliceplot%plpot,band
       sliceplot%iplot=MERGE(1,0,ldum)
       IF (band) THEN
-        banddos%dos=.true. ; banddos%ndir = -4
+        banddos%dos=.true.
       ENDIF
       GOTO 993
  992  BACKSPACE(5)
@@ -679,7 +679,7 @@
 ! we demand that the values given there are consistent with the kpts-file
 
       IF(namex=='hf  '.OR.namex=='pbe0'.OR.namex=='exx '.OR.namex=='hse '.OR.namex=='vhse'.OR.&
-         (banddos%dos.AND.(banddos%ndir == -3))) THEN
+         (banddos%dos.and..false.)) THEN
          READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,grid
 
          IF(idum.EQ.0) THEN
@@ -740,7 +740,7 @@
       IF (namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &  .OR. namex.EQ.'vhse' )&
      &  l_hyb = .true.
-      WRITE (5,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
+      WRITE (5,9000) input%strho,input%film,banddos%dos,99,0,input%secvar
  9000 FORMAT ('strho=',l1,',film=',l1,',dos=',l1,',isec1=',i3,&
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
@@ -930,17 +930,17 @@
       WRITE (5,FMT=chform) input%lflip, (.false.,i=1,atoms%ntype)
 !-roa
 !+stm
-      WRITE (5,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
-     &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
+      WRITE (5,9210) banddos%vacdos,banddos%layers,input%integ,banddos%starcoeff,banddos%nstars,&
+     &      banddos%locx(1),banddos%locy(1),banddos%locx(2),banddos%locy(2)
  9210 FORMAT ('vacdos=',l1,',layers=',i2,',integ=',l1,',star=',l1,&
      & ',nstars=',i2,4(4x,f5.2),',nstm=',i1,',tworkf=',f10.6)
-!-stm
+!-stm 
       IF (banddos%vacdos) THEN
         IF (input%integ) THEN
-          WRITE (5,9220) ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
+          WRITE (5,9220) ((banddos%izlay(i,k),k=1,2),i=1,banddos%layers)
  9220     FORMAT (10(2(i3,1x),1x))
         ELSE
-          WRITE (5,9230) (vacuum%izlay(i,1),i=1,vacuum%layers)
+          WRITE (5,9230) (banddos%izlay(i,1),i=1,banddos%layers)
  9230     FORMAT (20(i3,1x))
         END IF
       ELSE

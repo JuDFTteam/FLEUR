@@ -6,7 +6,7 @@
 
 MODULE m_eparas
   !***********************************************************************
-  ! Calculates qlo, enerlo and sqlo, which are needed to determine the 
+  ! Calculates qlo, enerlo and sqlo, which are needed to determine the
   ! new energy parameters.
   ! Philipp Kurz 99/04
   !***********************************************************************
@@ -26,6 +26,8 @@ CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd,ev_list,fmpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
                     usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
+    use m_types_dos
+    use m_types_mcd
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
     TYPE(t_mpi),           INTENT(IN)    :: fmpi
@@ -36,14 +38,14 @@ CONTAINS
     TYPE(t_mcd), OPTIONAL, INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: noccbd,jsp     
+    INTEGER, INTENT (IN) :: noccbd,jsp
     INTEGER, INTENT (IN) :: ne,ikpt  ,skip_t
     LOGICAL, INTENT (IN) :: l_mcd,l_evp
     INTEGER, INTENT (IN) :: ev_list(noccbd)
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: eig(:)!(input%neig),
-    REAL,    INTENT (IN)  :: we(noccbd) 
+    REAL,    INTENT (IN)  :: we(noccbd)
 
     !     ..
     !     .. Local Scalars ..
@@ -88,7 +90,7 @@ CONTAINS
                       sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                    ENDDO
                 ELSE
-                   suma = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.) 
+                   suma = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.)
                    sumb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
                    DO natom = nt1,nt2
                       suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
@@ -103,7 +105,7 @@ CONTAINS
                               suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
                               sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
                               sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
-                              sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  ) 
+                              sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  )
                       ENDDO
                    ENDDO
                 ENDIF     ! end MCD

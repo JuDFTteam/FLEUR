@@ -4,8 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_cdngen
-#ifdef CPP_MPI 
-   use mpi 
+#ifdef CPP_MPI
+   use mpi
 #endif
 CONTAINS
 
@@ -19,7 +19,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !    calls cdnval to generate the valence charge and the
    !    core routines for the core contribution
    !*****************************************************
-
+   use m_types_vacdos
+   use m_types_mcd
+   use m_types_slab
+   use m_types_orbcomp
+   use m_types_jdos
    USE m_types
    USE m_constants
    USE m_juDFT
@@ -37,15 +41,16 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_orbMagMoms
    USE m_resMoms
    USE m_cdncore
-   USE m_doswrite
-   USE m_Ekwritesl
-   USE m_banddos_io
+   USE m_make_dos
+   !USE m_Ekwritesl
+   !USE m_banddos_io
    USE m_metagga
-   USE m_unfold_band_kpts
+   !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
    USE m_types_greensfContourData
    USE m_angles
+   USE m_types_eigdos
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -83,15 +88,14 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco)            :: noco_new
-   TYPE(t_regionCharges)   :: regCharges, fake_regCharges
-   TYPE(t_dos)             :: dos, fake_dos
-   TYPE(t_moments)         :: moments, fake_moments
-   TYPE(t_results)         :: fake_results
-   TYPE(t_mcd)             :: mcd
-   TYPE(t_slab)            :: slab
-   TYPE(t_orbcomp)         :: orbcomp
-   TYPE(t_jDOS)            :: jDOS
+   TYPE(t_regionCharges)          :: regCharges
+   TYPE(t_dos),TARGET             :: dos
+   TYPE(t_vacdos),TARGET          :: vacdos
+   TYPE(t_moments)                :: moments
+   TYPE(t_mcd),TARGET             :: mcd
+   TYPE(t_slab),TARGET            :: slab
+   TYPE(t_orbcomp),TARGET         :: orbcomp
+   TYPE(t_jDOS),TARGET            :: jDOS
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den, core_den
@@ -100,22 +104,32 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
-   INTEGER               :: jspin, jspmax, ierr
+   INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour
+
+   TYPE(t_eigdos_list) :: eigdos(6)
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error, perform_MetaGGA
+   LOGICAL               :: l_error,Perform_metagga
 
+   ! Initialization section
    CALL regCharges%init(input,atoms)
-   CALL dos%init(input,atoms,kpts,vacuum)
    CALL moments%init(fmpi,input,sphhar,atoms)
-   CALL mcd%init1(banddos,input,atoms,kpts)
-   CALL slab%init(banddos,atoms,cell,input,kpts)
-   CALL orbcomp%init(input,banddos,atoms,kpts)
-   CALL jDOS%init(input,banddos,atoms,kpts)
+   !initalize data for DOS
+   CALL dos%init(input,atoms,kpts,banddos,results%eig); eigdos(1)%p=>dos
+   CALL vacdos%init(input,atoms,kpts,banddos,results%eig); eigdos(6)%p=>vacdos
+   CALL mcd%init(banddos,input,atoms,kpts,results%eig);eigdos(2)%p=>mcd
+   CALL slab%init(banddos,atoms,cell,input,kpts);eigdos(3)%p=>slab
+   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig);eigdos(4)%p=>orbcomp
+   CALL jDOS%init(input,banddos,atoms,kpts);eigdos(5)%p=>jDOS
+
+   CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
+   results%force=0.0
+
 
    IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
       !Only calculate the greens function when needed
@@ -136,8 +150,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF(atoms%n_hia.GT.0 .AND. fmpi%irank==0 .AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
    ENDIF
 
-   CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
-   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -146,13 +158,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
    results%force=0.0
-   jspmax = input%jspins
-   IF (noco%l_mperp.OR.banddos%l_jDOS) jspmax = 1
-   DO jspin = 1,jspmax
+   DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,gfinp,&
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
 
@@ -163,30 +173,17 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                              vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
    endif
 
-   IF (fmpi%irank == 0) THEN
-      IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
-         IF (banddos%unfoldband) THEN
-            eFermiPrev = 0.0
-            CALL readPrevEFermi(eFermiPrev,l_error)
-            CALL write_band_sc(kpts,results,eFermiPrev)
-         END IF
-#ifdef CPP_HDF
-         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
-         CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
-         CALL closeBandDOSFile(banddosFile_id)
-#endif
-         CALL timestart("cdngen: dos")
-         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,&
-                       slab,orbcomp,jDOS,oneD)
-         IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
-            CALL Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
-         END IF
-         CALL timestop("cdngen: dos")
-      END IF
+   IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
+     IF (fmpi%irank == 0) THEN
+       CALL timestart("cdngen: dos")
+       call make_dos(kpts,atoms,vacuum,input,banddos,&
+                      sliceplot,noco,sym,cell,results,eigdos,oneD)
+       CALL timestop("cdngen: dos")
+     END IF
+     CALL juDFT_end("DOS OK",fmpi%irank)
    END IF
 
-   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",fmpi%irank)
-   IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",fmpi%irank)
+   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",fmpi%irank)
 
    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
    IF (fmpi%irank.EQ.0) THEN
@@ -247,21 +244,15 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins == 2) THEN
-         noco_new = noco
-
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
          CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
-!         noco = noco_new
-
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
          IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
           !  CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
-
          IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
-
       END IF
    END IF ! fmpi%irank == 0
    Perform_metagga = Allocated(Energyden%Mt) &
@@ -271,7 +262,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,core_den,'cdnc')
    endif
-
 
 #ifdef CPP_MPI
    CALL MPI_BCAST(nococonv%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)

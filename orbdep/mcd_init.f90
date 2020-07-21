@@ -5,9 +5,9 @@ CONTAINS
     !-----------------------------------------------------------------------
     !
     ! For a given atom-type 'itype' look, whether a core state is in the
-    ! energy interval [emcd_lo,emcd_up] and, if found, calculate the 
+    ! energy interval [emcd_lo,emcd_up] and, if found, calculate the
     ! MCD-matrix elements 'm_mcd'.
-    !          
+    !
     !-----------------------------------------------------------------------
 
     USE m_nabla
@@ -16,9 +16,10 @@ CONTAINS
     !USE m_setcor
     USE m_differ
     USE m_types
+    use m_types_mcd
     IMPLICIT NONE
 
-    
+
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(INOUT)    :: mcd
@@ -36,7 +37,7 @@ CONTAINS
     ! Locals ...
 
     INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr
-    REAL  c,t2,e,fj,fl,fn ,d,ms,rn 
+    REAL  c,t2,e,fj,fl,fn ,d,ms,rn
     INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states)),l_core(maxval(atoms%econf%num_states))
     REAL vrd(atoms%msh),occ(maxval(atoms%econf%num_states),2),a(atoms%msh),b(atoms%msh),j_core(maxval(atoms%econf%num_states)),e_mcd1(maxval(atoms%econf%num_states))
     REAL gv1(atoms%jmtd)

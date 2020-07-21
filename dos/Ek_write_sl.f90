@@ -49,7 +49,7 @@ CONTAINS
     ! ----->       write bandstructure to ek_orbcomp - file
     ! 
     WRITE (chntype,'(i2)') slab%nsl
-    chform = "('E',i3,'= ',f10.4,4x,'vac ( vacuum%layers ) vac = ',i3,' ('&
+    chform = "('E',i3,'= ',f10.4,4x,'vac ( banddos%layers ) vac = ',i3,' ('&
          &        ,"//chntype//"(i3,2x),')',i3))"
     WRITE (130,FMT=901) 
     WRITE (130,FMT=902) 

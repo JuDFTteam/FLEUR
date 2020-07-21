@@ -30,7 +30,9 @@ MODULE m_types_enpara
      PROCEDURE :: read
      PROCEDURE :: write
      PROCEDURE :: mix
+#ifndef CPP_INPGEN
      PROCEDURE :: calcOutParams
+#endif     
   END TYPE t_enpara
 
 
@@ -595,6 +597,7 @@ CONTAINS
 
   END SUBROUTINE mix
 
+#ifndef CPP_INPGEN
   SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
     USE m_types_setup
     USE m_types_regionCharges
@@ -633,6 +636,7 @@ CONTAINS
        END IF
     END DO
   END SUBROUTINE calcOutParams
+#endif
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
     USE m_constants

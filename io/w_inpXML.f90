@@ -536,20 +536,20 @@ CONTAINS
          fileNum = 98
       endif
 
-368   FORMAT('   <output dos="', l1, '" band="', l1, '" vacdos="', l1, '" slice="', l1, '" mcd="', l1, '">')
-      WRITE (fileNum, 368) banddos%dos, band, banddos%vacdos, sliceplot%slice, banddos%l_mcd
+368   FORMAT('   <output dos="', l1, '" band="', l1,  '" slice="', l1, '">')
+      WRITE (fileNum, 368) banddos%dos, band, sliceplot%slice
 
 !      <checks vchk="F" cdinf="F" disp="F"/>
 370   FORMAT('      <checks vchk="', l1, '" cdinf="', l1, '"/>')
       WRITE (fileNum, 370) input%vchk, input%cdinf
 
 !      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
-380   FORMAT('      <densityOfStates ndir="', i0, '" minEnergy="', f0.8, '" maxEnergy="', f0.8, '" sigma="', f0.8, '"/>')
-      WRITE (fileNum, 380) banddos%ndir, banddos%e2_dos, banddos%e1_dos, banddos%sig_dos
+380   FORMAT('      <bandDOS minEnergy="', f0.8, '" maxEnergy="', f0.8, '" sigma="', f0.8, '"/>')
+      WRITE (fileNum, 380)  banddos%e2_dos, banddos%e1_dos, banddos%sig_dos
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
-390   FORMAT('      <vacuumDOS layers="', i0, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', f0.5, '" locy1="', f0.5, '" locx2="', f0.5, '" locy2="', f0.5, '" nstm="', i0, '" tworkf="', f0.5, '"/>')
-      WRITE (fileNum, 390) vacuum%layers, input%integ, vacuum%starcoeff, vacuum%nstars, vacuum%locx(1), vacuum%locy(1), vacuum%locx(2), vacuum%locy(2), vacuum%nstm, vacuum%tworkf
+390   FORMAT('      <vacuumDOS vacdos="', l1, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', f0.5, '" locy1="', f0.5, '" locx2="', f0.5, '" locy2="', f0.5, '" nstm="', i0, '" tworkf="', f0.5, '"/>')
+      WRITE (fileNum, 390) banddos%vacdos, input%integ, banddos%starcoeff, banddos%nstars, banddos%locx(1), banddos%locy(1), banddos%locx(2), banddos%locy(2), 0, 0.0
 
 !      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
 395   FORMAT('      <unfoldingBand unfoldBand="', l1, '" supercellX="', i0, '" supercellY="', i0, '" supercellZ="', i0, '"/>')
@@ -568,8 +568,8 @@ CONTAINS
       WRITE (fileNum, 420) input%eonly, input%l_bmt
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
-430   FORMAT('      <magneticCircularDichroism energyLo="', f0.8, '" energyUp="', f0.8, '"/>')
-      WRITE (fileNum, 430) banddos%e_mcd_lo, banddos%e_mcd_up
+430   FORMAT('      <magneticCircularDichroism mcd=',l1,' energyLo="', f0.8, '" energyUp="', f0.8, '"/>')
+      WRITE (fileNum, 430) banddos%l_mcd,banddos%e_mcd_lo, banddos%e_mcd_up
 
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN

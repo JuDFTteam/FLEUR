@@ -429,7 +429,7 @@
 
           WRITE (oUnit,'(a7,l1)') 'swsp = ',input%swsp
           WRITE (oUnit,'(15f6.2)') (atoms%bmu(i),i=1,atoms%ntype)
-          IF (vacuum%layers>vacuum%layerd)  CALL juDFT_error("too many layers",calledby ="inped")
+          IF (banddos%layers>banddos%layers)  CALL juDFT_error("too many layers",calledby ="inped")
           IF (sliceplot%slice) THEN
              input%cdinf = .FALSE.
              WRITE (oUnit,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s
@@ -480,31 +480,20 @@
           !
           !     check all the dos-related switches!
           !
-          IF (banddos%ndir.LT.0.AND..NOT.banddos%dos) THEN
-             CALL juDFT_error('STOP banddos: the inbuild dos-program  <0 can only be used if dos = true',calledby ="inped")
-          ENDIF
 
-          IF (banddos%ndir.LT.0.AND.banddos%dos) THEN
-             IF (banddos%e1_dos-banddos%e2_dos.LT.1e-3) THEN
-                CALL juDFT_error("STOP banddos: no valid energy window for internal dos-program",calledby ="inped")
-             ENDIF
-             IF (banddos%sig_dos.LT.0) THEN
-                CALL juDFT_error ("STOP DOS: no valid broadening (sig_dos) for internal dos-PROGRAM",calledby ="inped")
-             ENDIF
-          ENDIF
 
           IF (banddos%vacdos) THEN
              IF (.NOT. banddos%dos) THEN
                 CALL juDFT_error ("STOP DOS: only set vacdos = .true. if dos = .true." ,calledby ="inped")
              ENDIF
-             IF (.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1))THEN
+             IF (.NOT.banddos%starcoeff.AND.(banddos%nstars.NE.1))THEN
                 CALL juDFT_error("STOP banddos: if stars = f set vacuum=1" ,calledby ="inped")
              ENDIF
-             IF (vacuum%layers.LT.1) THEN
+             IF (banddos%layers.LT.1) THEN
                 CALL juDFT_error("STOP DOS: specify layers if vacdos = true" ,calledby ="inped")
              ENDIF
-             DO i=1,vacuum%layers
-                IF (vacuum%izlay(i,1).LT.1) THEN
+             DO i=1,banddos%layers
+                IF (banddos%izlay(i,1).LT.1) THEN
                    CALL juDFT_error("STOP DOS: all layers must be at z>0" ,calledby ="inped")
 
                 ENDIF
