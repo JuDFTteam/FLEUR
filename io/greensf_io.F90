@@ -278,6 +278,7 @@ MODULE m_greensf_io
          CALL io_write_attint0(currentelementGroupID,'iContour',iContour)
          CALL io_write_attlog0(currentelementGroupID,'l_onsite',l_onsite)
          CALL io_write_attlog0(currentelementGroupID,'l_sphavg',l_sphavg)
+         CALL io_write_attreal1(currentelementGroupID,'atomDiff',atomDiff)
          nLO = greensf(i_elem)%elem%countLOs(atoms)
          IF(nLO>0 .AND..NOT.l_sphavg.AND.PRESENT(u).AND..NOT.PRESENT(ulo)) THEN
             CALL juDFT_error("LO Radial Functions needed, but not present", calledby="writeGreensFData")
