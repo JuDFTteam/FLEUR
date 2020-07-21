@@ -51,6 +51,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_angles
    USE m_types_eigdos
+   USE m_types_dos
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
