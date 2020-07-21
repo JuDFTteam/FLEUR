@@ -487,7 +487,7 @@ CONTAINS
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,&
-                                           atoms,cell,l_write.AND..NOT.written(atomType))
+                                           atoms,cell,.NOT.written(atomType))
             written(atomType) = .TRUE.
          ENDIF
       ENDDO
