@@ -568,7 +568,7 @@ CONTAINS
       WRITE (fileNum, 420) input%eonly, input%l_bmt
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
-430   FORMAT('      <magneticCircularDichroism mcd=',l1,' energyLo="', f0.8, '" energyUp="', f0.8, '"/>')
+430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', f0.8, '" energyUp="', f0.8, '"/>')
       WRITE (fileNum, 430) banddos%l_mcd,banddos%e_mcd_lo, banddos%e_mcd_up
 
       WRITE (fileNum, '(a)') '   </output>'
