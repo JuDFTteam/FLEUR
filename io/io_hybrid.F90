@@ -13,43 +13,6 @@ module m_io_hybinp
    integer, save :: id_olap, id_z, id_v_x
    !public:: open_hybinp_io,read_cmt,write_cmt
 contains
-   subroutine read_olap(olap, rec, nbasfcn)
-      implicit none
-      TYPE(t_mat), INTENT(INOUT):: olap
-      INTEGER, INTENT(IN)           :: rec, nbasfcn
-      integer :: i, j, id
-
-      id = open_matrix(olap%l_real, olap%matsize1, 1, 1, "olap." // int2str(rec))
-      CALL read_matrix(olap, 1, id)
-      call close_matrix(id)
-
-      IF(olap%l_real) THEN
-         DO i = 1, nbasfcn
-            DO j = 1, i
-               olap%data_r(i, j) = olap%data_r(j, i)
-            END DO
-         END DO
-      ELSE
-         DO i = 1, nbasfcn
-            DO j = 1, i
-               olap%data_c(i, j) = CONJG(olap%data_c(j, i))
-            END DO
-         END DO
-         olap%data_c = conjg(olap%data_c)
-      END IF
-   END subroutine read_olap
-
-   subroutine write_olap(mat, rec)
-      implicit none
-      TYPE(t_mat), INTENT(IN)   :: mat
-      INTEGER, INTENT(IN)           :: rec
-      integer :: id
-
-      id = open_matrix(mat%l_real, mat%matsize1, 1, 1, "olap." // int2str(rec))
-      CALL write_matrix(mat, 1, id)
-      call close_matrix(id)
-   END subroutine write_olap
-
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
                      jsp, z_out, parent_z, c_phase, list)
       USE m_eig66_io
