@@ -962,23 +962,24 @@ MODULE m_types_greensf
                         ENDIF
                         CALL timestop("get Function")
 
-                     CALL timestart("integration")
-                     IF(l_fullRadialArg) THEN
-                        gmat = cmplx_0
-                        DO jr = 1, SIZE(gmat)
-                           CALL intgr3(REAL(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
-                           CALL intgr3(AIMAG(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
+                        CALL timestart("integration")
+                        IF(l_fullRadialArg) THEN
+                           gmat = cmplx_0
+                           DO jr = 1, SIZE(gmat)
+                              CALL intgr3(REAL(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
+                              CALL intgr3(AIMAG(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
 
-                           gmat(jr) = realPart + ImagUnit * imagPart
-                        ENDDO
-                     ELSE
-                        gmat = gmatR(:,iz)
-                     ENDIF
-                     CALL intgr3(REAL(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realPart)
-                     CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
+                              gmat(jr) = realPart + ImagUnit * imagPart
+                           ENDDO
+                        ELSE
+                           gmat = gmatR(:,iz)
+                        ENDIF
+                        CALL intgr3(REAL(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realPart)
+                        CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
 
-                     gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
-                     CALL timestop("integration")
+                        gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
+                        CALL timestop("integration")
+                     ENDDO
                   ENDDO
                ENDDO
             ENDDO
