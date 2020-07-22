@@ -6,7 +6,7 @@
 
 MODULE m_radovlp
   CONTAINS
-  SUBROUTINE rad_ovlp(atoms,usdus,input,hub1inp,vr,epar, uun21,udn21,dun21,ddn21)
+  SUBROUTINE rad_ovlp(atoms,usdus,input,hub1data,vr,epar, uun21,udn21,dun21,ddn21)
     !***********************************************************************
     ! calculates the overlap of the radial basis functions with different
     ! spin directions. These overlapp integrals are needed to calculate
@@ -22,7 +22,7 @@ MODULE m_radovlp
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_hub1inp),INTENT(IN) ::hub1inp
+    TYPE(t_hub1data), INTENT(IN) :: hub1data
     TYPE(t_usdus),INTENT(INOUT):: usdus
 
     !     .. Array Arguments ..
@@ -53,7 +53,7 @@ MODULE m_radovlp
 
              !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
              !the correlated orbitals with a non-spin-polarized basis
-             IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.hub1inp%l_dftspinpol) THEN
+             IF(l_hia.AND.input%jspins.EQ.2 .AND. hub1data%l_performSpinavg) THEN
                 vrTmp = (vr(:,0,iType,1) + vr(:,0,iType,2))/2.0
              ELSE
                 vrTmp = vr(:,0,iType,ispin)

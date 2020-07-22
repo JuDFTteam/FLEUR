@@ -99,6 +99,7 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
+${FLEUR_SRC}/types/types_hub1data.F90
 
 
 ${FLEUR_SRC}/kpoints/kptgen_hybrid.f90

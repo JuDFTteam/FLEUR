@@ -152,7 +152,7 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            mu_dc = doubleCountingPot(U,J,l,l_amf,.NOT.hub1inp%l_dftspinpol,occDFT(i_hia,:),&
+            mu_dc = doubleCountingPot(U,J,l,l_amf,hub1data%l_performSpinavg,occDFT(i_hia,:),&
                                       l_write=fmpi%irank==0)
 
             !-------------------------------------------------------

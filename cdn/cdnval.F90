@@ -126,7 +126,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat
    TYPE (t_gVacMap)           :: gVacMap
-   TYPE (t_tlmplm)           :: tlmplm
+   TYPE (t_tlmplm)            :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
 
    CALL timestart("cdnval")
@@ -195,7 +195,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    DO iType = 1, atoms%ntype
       DO ispin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
+         CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),&
+                         hub1data=hub1data)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
@@ -285,7 +286,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,input,hub1inp,tlmplm,usdus)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,input,hub1inp,hub1data,tlmplm,usdus)
            CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
          ENDIF

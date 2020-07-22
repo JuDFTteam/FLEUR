@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       jspin1,jspin2,jsp,fmpi,v,input,hub1inp,td,ud)
+       jspin1,jspin2,jsp,fmpi,v,input,hub1inp,hub1data,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -25,6 +25,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)       :: fmpi
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
+    TYPE(t_hub1data),INTENT(IN)  :: hub1data
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -59,7 +60,7 @@ CONTAINS
     ENDIF
 
     DO i=MIN(jspin1,jspin2),MAX(jspin1,jspin2)
-       CALL genMTBasis(atoms,enpara,v,fmpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1inp%l_dftspinpol)
+       CALL genMTBasis(atoms,enpara,v,fmpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1data=hub1data)
     ENDDO
     na=SUM(atoms%neq(:n-1))+1
     nsym = sym%ntypsy(na)
