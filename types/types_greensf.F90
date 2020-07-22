@@ -953,7 +953,7 @@ MODULE m_types_greensf
                   DO m = -l, l
 
                      CALL timestart("get Function")
-                     IF(l_fullRadial) THEN
+                     IF(l_fullRadialArg) THEN
                         CALL this%getRadialRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatRRp)
                      ELSE
                         CALL this%getRadial(atoms,m,mp,ipm==2,spin,f(:,:,0:,:,atomType),g(:,:,0:,:,atomType),&
@@ -964,10 +964,10 @@ MODULE m_types_greensf
                      CALL timestart("integration")
                      !$OMP parallel do default(none) &
                      !$OMP shared(this,gmatR,gmatRRp,atoms,gIntegrated) &
-                     !$OMP shared(ipm,m,mp,spin,l_fullRadial,atomType,atomTypep) &
+                     !$OMP shared(ipm,m,mp,spin,l_fullRadialArg,atomType,atomTypep) &
                      !$OMP private(iz,jr,realPart,imagPart,gmat)
                      DO iz = 1, this%contour%nz
-                        IF(l_fullRadial) THEN
+                        IF(l_fullRadialArg) THEN
                            gmat = cmplx_0
                            DO jr = 1, SIZE(gmat)
                               CALL intgr3(REAL(gmatRRp(:,jr,iz)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
