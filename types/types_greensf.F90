@@ -624,7 +624,7 @@ MODULE m_types_greensf
          !-------------------
          !$OMP parallel do default(none) &
          !$OMP shared(this,atoms,f,g,flo,gmat,m_ind,mp_ind,spin_ind,ipm,atomType,atomTypep,spin1,spin2,l,lp,iz) &
-         !$OMP private(jr,iLO_ind,iLOp_ind,ilo,ilop) &
+         !$OMP private(jr,iLO_ind,iLOp_ind,ilo,ilop)
          DO jr = 1, atoms%jri(atomType)
             gmat(:,jr) =  this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(jr,1,l,spin2,atomType) * f(:,1,lp,spin1,atomTypep) &
                                                                    +f(jr,2,l,spin2,atomType) * f(:,2,lp,spin1,atomTypep))&
@@ -738,7 +738,7 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
 
          INTEGER :: spin,spin1,spin2
-         COMPLEX,ALLOCATABLE :: temp(:,:,:)
+         COMPLEX,ALLOCATABLE :: temp(:,:)
 
          IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),SIZE(f,1)),source=cmplx_0)
 
@@ -754,7 +754,7 @@ MODULE m_types_greensf
                spin2 = 2
             ENDIF
             IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(spin1,spin2,:,:,:) = cmplx_0
+               gmat(spin1,spin2,:,:) = cmplx_0
                CYCLE
             ENDIF
             CALL this%getRadialRadial(atoms,iz,m,mp,l_conjg,spin,f,g,flo,temp)
@@ -957,7 +957,7 @@ MODULE m_types_greensf
                      DO iz = 1, this%contour%nz
                         CALL timestart("get Function")
                         IF(l_fullRadialArg) THEN
-                           CALL this%getRadialRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatRRp)
+                           CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
                         ENDIF
                         CALL timestop("get Function")
 
@@ -965,8 +965,8 @@ MODULE m_types_greensf
                         IF(l_fullRadialArg) THEN
                            gmat = cmplx_0
                            DO jr = 1, SIZE(gmat)
-                              CALL intgr3(REAL(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
-                              CALL intgr3(AIMAG(gmatRRp(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
+                              CALL intgr3(REAL(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
+                              CALL intgr3(AIMAG(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
 
                               gmat(jr) = realPart + ImagUnit * imagPart
                            ENDDO
