@@ -60,7 +60,7 @@ CONTAINS
     ! Local scalars
     INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size
     INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
-    REAL    :: tmk, qss(3), s2h ! s2h_e(ne)
+    REAL    :: tmk, qss(3), s2h 
     COMPLEX :: phase, c_1, c_2
     LOGICAL :: l_force
 
@@ -71,8 +71,8 @@ CONTAINS
     COMPLEX :: ylm((atoms%lmaxd+1)**2)
     COMPLEX :: ccchi(2,2)
     REAL,    ALLOCATABLE :: realCoeffs(:,:), imagCoeffs(:,:), workTrans_r(:,:)
-    REAL,    ALLOCATABLE :: s2h_e_r(:,:),fgpl(:,:)
-    COMPLEX, ALLOCATABLE :: s2h_e_c(:,:)
+    REAL,    ALLOCATABLE :: fgpl(:,:)
+    COMPLEX, ALLOCATABLE :: s2h_e(:,:)
     COMPLEX, ALLOCATABLE :: work_c(:,:), workTrans_c(:,:), workTrans_cf(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: abTemp(:,:)
@@ -92,14 +92,6 @@ CONTAINS
     ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
     ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
-    ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
-    ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
-    ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
-    IF (zmat%l_real) THEN
-       ALLOCATE(s2h_e_r(ne,MAXVAL(lapw%nv)))
-    ELSE
-       ALLOCATE(s2h_e_c(ne,MAXVAL(lapw%nv)))
-    ENDIF
 
     ! Initializations
     acof_size=size(acof,1)
@@ -116,7 +108,11 @@ CONTAINS
        force%aveccof = CMPLX(0.0,0.0)
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
-    END IF
+       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
+       ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
+       ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
+       ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
+    ENDIF
 
     ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
     !$acc data create(fjgj,fjgj%fj,fjgj%gj,work_c)
@@ -296,16 +292,16 @@ CONTAINS
 
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
-                CALL timestart("force contributions prep")
+                CALL timestart("force contributions")
                 DO iLAPW = 1,nvmax
 
                    fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
                    fk = lapw%bkpt + fg(:)
                    s2h = 0.5 * DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                    IF (zmat%l_real) THEN
-                      s2h_e_r(:ne,iLAPW) = (s2h-eig(:ne)) * workTrans_r(:ne,iLAPW)
+                      s2h_e(:ne,iLAPW) = CMPLX((s2h-eig(:ne)) * workTrans_r(:ne,iLAPW))
                    ELSE
-                      s2h_e_c(:ne,iLAPW) = (s2h-eig(:ne)) * workTrans_c(:ne,iLAPW)
+                      s2h_e(:ne,iLAPW) = (s2h-eig(:ne)) * workTrans_c(:ne,iLAPW)
                    ENDIF
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(iAtom)
@@ -317,40 +313,28 @@ CONTAINS
                    END IF
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
-                CALL timestop("force contributions prep")
 
-                CALL timestart("force contributions")
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
-                IF (zmat%l_real) THEN
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),CMPLX(s2h_e_r),ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),CMPLX(s2h_e_r),ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
-                   DO i =1,3
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
+                DO i =1,3
+                   IF (zmat%l_real) THEN
                       DO iLAPW = 1,nvmax
                          workTrans_cf(:,iLAPW) = CMPLX(workTrans_r(:,iLAPW) * fgpl(i,iLAPW))
                       ENDDO
-                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
-                      force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
-                      force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                   ENDDO
-                ELSE
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e_c,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e_c,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
-                   DO i =1,3
+                   ELSE
                       DO iLAPW = 1,nvmax
                          workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)  
                       ENDDO
-                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
-                      force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
-                      force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                   ENDDO
-                ENDIF
-                CALL timestop("force contributions")
+                   ENDIF
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                   force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                   force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
+                ENDDO
 
                 IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
-                   CALL timestart("force contributions2")
                    DO iLAPW = 1,nvmax
                       DO l = 0,atoms%lmax(iType)
                          ll1 = l* (l+1)
@@ -363,8 +347,8 @@ CONTAINS
                             inv_f = (-1)**(l-m)
                             c_1 =  CONJG(c_1) * inv_f
                             c_2 =  CONJG(c_2) * inv_f
-                            CALL zaxpy(ne,c_1,s2h_e_c(:,iLAPW),1, force%e1cof(1,lmp,jatom),1)
-                            CALL zaxpy(ne,c_2,s2h_e_c(:,iLAPW),1, force%e2cof(1,lmp,jatom),1)
+                            CALL zaxpy(ne,c_1,s2h_e(:,iLAPW),1, force%e1cof(1,lmp,jatom),1)
+                            CALL zaxpy(ne,c_2,s2h_e(:,iLAPW),1, force%e2cof(1,lmp,jatom),1)
                             DO i = 1,3
                                CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW)*fgpl(i,iLAPW),1, force%aveccof(i,1,lmp,jatom),3)
                                CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW)*fgpl(i,iLAPW),1, force%bveccof(i,1,lmp,jatom),3)
@@ -372,8 +356,8 @@ CONTAINS
                          END DO ! loop over m
                       END DO ! loop over l
                    END DO ! loop over LAPWs
-                   CALL timestop("force contributions2")
                 END IF
+                CALL timestop("force contributions")
              END IF
 
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
@@ -389,6 +373,13 @@ CONTAINS
     END DO ! loop over atoms
     !$acc end data
     DEALLOCATE(work_c)
+    IF(l_force) THEN
+       DEALLOCATE(helpMat_c)
+       DEALLOCATE(helpMat_force)
+       DEALLOCATE(workTrans_cf)
+       DEALLOCATE(s2h_e)
+    ENDIF
+  
     ! Treatment of atoms inversion symmetric to others
     IF (noco%l_soc.AND.sym%invs) THEN
 
