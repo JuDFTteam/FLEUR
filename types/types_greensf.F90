@@ -999,7 +999,7 @@ MODULE m_types_greensf
                DO mp = -lp, lp
                   DO m = -l, l
                      IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
-                     IF(l_fullRadialArg) THEN
+                     IF(.NOT.l_fullRadialArg) THEN
                         CALL this%getRadial(atoms,m,mp,ipm==2,spin,f(:,:,0:,:,atomType),g(:,:,0:,:,atomType),&
                                             flo(:,:,:,:,atomType),gmatR)
                      ENDIF
