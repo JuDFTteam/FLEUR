@@ -561,7 +561,7 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:) !Return matrix
 
          INTEGER spin1,spin2,ipm,spin_ind,m_ind,mp_ind,ilo,ilop,iLO_ind,iLOp_ind
-         INTEGER l,lp,atomType,atomTypep,nspins,iz,jr,jrp
+         INTEGER l,lp,atomType,atomTypep,nspins,jr,jrp
 
          IF(.NOT.this%l_calc) THEN
             CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
@@ -625,7 +625,6 @@ MODULE m_types_greensf
          !$OMP parallel do default(none) &
          !$OMP shared(this,atoms,f,g,flo,gmat,m_ind,mp_ind,spin_ind,ipm,atomType,atomTypep,spin1,spin2,l,lp,iz) &
          !$OMP private(jr,iLO_ind,iLOp_ind,ilo,ilop) &
-         !$OMP collapse(2)
          DO jr = 1, atoms%jri(atomType)
             gmat(:,jr) =  this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(jr,1,l,spin2,atomType) * f(:,1,lp,spin1,atomTypep) &
                                                                    +f(jr,2,l,spin2,atomType) * f(:,2,lp,spin1,atomTypep))&
