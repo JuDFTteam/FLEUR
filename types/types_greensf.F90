@@ -956,7 +956,7 @@ MODULE m_types_greensf
                      ENDIF
 
                      !$OMP parallel do default(none) &
-                     !$OMP shared(this,gmatR,gmatRRp,atoms,this,gIntegrated) &
+                     !$OMP shared(this,gmatR,gmatRRp,atoms,gIntegrated) &
                      !$OMP shared(ipm,m,mp,spin,l_fullRadial,atomType,atomTypep) &
                      !$OMP private(iz,jr,realPart,imagPart,gmat)
                      DO iz = 1, this%contour%nz
