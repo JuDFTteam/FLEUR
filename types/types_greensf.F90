@@ -948,7 +948,7 @@ MODULE m_types_greensf
          atomTypep = this%elem%atomTypep
 
          DO ipm = 1, 2
-            DO spin = 1 , SIZE(this%uu,5)
+            DO spin = 1 , SIZE(this%uu,4)
                DO mp = -lp, lp
                   DO m = -l, l
 
