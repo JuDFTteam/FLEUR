@@ -94,11 +94,11 @@ CONTAINS
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
     ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
     ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
+    ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
     IF (zmat%l_real) THEN
        ALLOCATE(s2h_e_r(ne,MAXVAL(lapw%nv)))
     ELSE
        ALLOCATE(s2h_e_c(ne,MAXVAL(lapw%nv)))
-       ALLOCATE (workTrans_cf(ne,MAXVAL(lapw%nv)))
     ENDIF
 
     ! Initializations
@@ -327,13 +327,12 @@ CONTAINS
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),CMPLX(s2h_e_r),ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                    DO i =1,3
                       DO iLAPW = 1,nvmax
-                         DO lm = 0,atoms%lmax(iType)*(atoms%lmax(iType)+2)
-                            c_1 = CONJG(abCoeffs(lm+1,iLAPW))
-                            c_2 = CONJG(abCoeffs(lm+1+abSize,iLAPW))
-                            force%aveccof(i,:ne,lm,iAtom) = force%aveccof(i,:ne,lm,iAtom) + c_1 * workTrans_r(:ne,iLAPW) * fgpl(i,iLAPW)
-                            force%bveccof(i,:ne,lm,iAtom) = force%bveccof(i,:ne,lm,iAtom) + c_2 * workTrans_r(:ne,iLAPW) * fgpl(i,iLAPW)
-                         ENDDO
+                         workTrans_cf(:,iLAPW) = CMPLX(workTrans_r(:,iLAPW) * fgpl(i,iLAPW))
                       ENDDO
+                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                      force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
+                      CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,SIZE(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                      force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                    ENDDO
                 ELSE
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e_c,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
