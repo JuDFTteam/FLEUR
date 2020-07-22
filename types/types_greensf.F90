@@ -67,6 +67,7 @@ MODULE m_types_greensf
          PROCEDURE       :: set                 => set_gf
          PROCEDURE       :: reset               => reset_gf
          PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
+         PROCEDURE       :: checkEmpty          => checkEmpty_greensf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -585,7 +586,6 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(SIZE(f,1),SIZE(f,1)),source=cmplx_0)
-         gmat = cmplx_0
 
          IF(spin < 3) THEN
             spin1 = spin
@@ -880,6 +880,33 @@ MODULE m_types_greensf
 
       END SUBROUTINE reset_gf
 
+      PURE FUNCTION checkEmpty_greensf(this,m,mp,spin) Result(l_empty)
+
+         CLASS(t_greensf),         INTENT(IN)   :: this
+         INTEGER,                  INTENT(IN)   :: m
+         INTEGER,                  INTENT(IN)   :: mp
+         INTEGER,                  INTENT(IN)   :: spin
+
+         LOGICAL :: l_empty
+
+         IF(ALLOCATED(this%gmmpMat)) THEN
+            l_empty = ALL(ABS(this%gmmpMat(:,m,mp,spin,:)).LT.1e-12)
+         ELSE
+            l_empty =     ALL(ABS(this%uu(:,m,mp,spin,:)).LT.1e-12) &
+                     .AND.ALL(ABS(this%dd(:,m,mp,spin,:)).LT.1e-12) &
+                     .AND.ALL(ABS(this%ud(:,m,mp,spin,:)).LT.1e-12) &
+                     .AND.ALL(ABS(this%du(:,m,mp,spin,:)).LT.1e-12)
+            IF(ALLOCATED(this%uulo)) THEN
+               l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:,spin,:)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%ulou(:,m,mp,:,spin,:)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%ulod(:,m,mp,:,spin,:)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%dulo(:,m,mp,:,spin,:)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%uloulop(:,m,mp,:,:,spin,:)).LT.1e-12)
+            ENDIF
+         ENDIF
+
+      END FUNCTION checkEmpty_greensf
+
       SUBROUTINE resetSingleElem_gf(this,m,mp,spin,ipm)
 
          !---------------------------------------------------
@@ -940,7 +967,7 @@ MODULE m_types_greensf
 
          CALL timestart("Green's Function: Average over MT")
          CALL gIntegrated%init(this%elem,gfinp,atoms,input,contour_in=this%contour,l_sphavg_in=.TRUE.)
-
+         gIntegrated%l_calc = .TRUE.
          l  = this%elem%l
          lp = this%elem%lp
          atomType  = this%elem%atomType
@@ -950,18 +977,16 @@ MODULE m_types_greensf
             DO spin = 1 , SIZE(this%uu,4)
                DO mp = -lp, lp
                   DO m = -l, l
+                     IF(this%checkEmpty(m,mp,spin)) CYCLE
                      IF(l_fullRadialArg) THEN
                         CALL this%getRadial(atoms,m,mp,ipm==2,spin,f(:,:,0:,:,atomType),g(:,:,0:,:,atomType),&
                                             flo(:,:,:,:,atomType),gmatR)
                      ENDIF
                      DO iz = 1, this%contour%nz
-                        CALL timestart("get Function")
                         IF(l_fullRadialArg) THEN
                            CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
                         ENDIF
-                        CALL timestop("get Function")
 
-                        CALL timestart("integration")
                         IF(l_fullRadialArg) THEN
                            gmat = cmplx_0
                            DO jr = 1, SIZE(gmat)
@@ -977,7 +1002,6 @@ MODULE m_types_greensf
                         CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
 
                         gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
-                        CALL timestop("integration")
                      ENDDO
                   ENDDO
                ENDDO
