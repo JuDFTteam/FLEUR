@@ -725,7 +725,6 @@ CONTAINS
       USE m_types_atoms
       USE m_types_cell
       USE m_sort
-      USE m_inv3
 
       !This is essentially a simplified version of chkmt, because we have a given
       !reference atom and do not need to consider all distances between all atoms
@@ -745,10 +744,10 @@ CONTAINS
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      REAL :: currentDist,minDist,amatAuxDet
+      REAL :: currentDist,minDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
-      REAL :: refPos(3),point(3),pos(3),diff(3)
+      REAL :: refPos(3),point(3),pos(3)
       REAL :: currentDiff(3),offsetPos(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
@@ -775,7 +774,6 @@ CONTAINS
          taualAux(3,i) = atoms%taual(3,i) - FLOOR(atoms%taual(3,i))
          posAux(:,i) = MATMUL(amatAux,taualAux(:,i))
       END DO
-      CALL inv3(amatAux,invAmatAux,amatAuxDet)
 
 
 
@@ -851,16 +849,15 @@ CONTAINS
          DO i = lastIndex, numNearestNeighbors
             lastIndex = i
             IF(ABS(nearestNeighborDists(i)-minDist).GT.1e-12) EXIT !Because the list is sorted
-            diff = MATMUL(invAmatAux,nearestNeighborDiffs(:,i))
             !l_sphavg has to be false
             i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=nearestNeighbors(i),&
-                             atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
+                             atomDiff=nearestNeighborDiffs(:,i),l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
 
             this%elem(i_gf)%refCutoff = refCutoff
 
             IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i), diff(:)
+               WRITE(oUnit,'(A,I6,I6,3f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i)
             ENDIF
 
          ENDDO
