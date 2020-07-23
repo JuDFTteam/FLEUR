@@ -429,9 +429,9 @@ MODULE m_types_greensf
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
          INTEGER,             INTENT(IN)     :: spin
-         REAL   ,             INTENT(IN)     :: f(:,:,0:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,0:,:)
-         REAL   ,             INTENT(IN)     :: flo(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: f(:,:,0:,:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,0:,:,:)
+         REAL   ,             INTENT(IN)     :: flo(:,:,:,:,:)
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:) !Return matrix
 
          INTEGER spin1,spin2,ipm,spin_ind,m_ind,mp_ind,ilo,ilop,iLO_ind,iLOp_ind
@@ -497,10 +497,14 @@ MODULE m_types_greensf
          ! Fetch the values
          !-------------------
          DO iz = 1, this%contour%nz
-            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * f(:,1,lp,spin1) + f(:,2,l,spin2) * f(:,2,lp,spin1)) &
-                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * g(:,1,lp,spin1) + g(:,2,l,spin2) * g(:,2,lp,spin1)) &
-                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * (g(:,1,l,spin2) * f(:,1,lp,spin1) + g(:,2,l,spin2) * f(:,2,lp,spin1)) &
-                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * (f(:,1,l,spin2) * g(:,1,lp,spin1) + f(:,2,l,spin2) * g(:,2,lp,spin1))
+            gmat(:,iz) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(:,1,l,spin2,atomType) * f(:,1,lp,spin1,atomTypep) &
+                                                                    +f(:,2,l,spin2,atomType) * f(:,2,lp,spin1,atomTypep))&
+                         + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ( g(:,1,l,spin2,atomType) * g(:,1,lp,spin1,atomTypep) &
+                                                                    +g(:,2,l,spin2,atomType) * g(:,2,lp,spin1,atomTypep))&
+                         + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * ( g(:,1,l,spin2,atomType) * f(:,1,lp,spin1,atomTypep) &
+                                                                    +g(:,2,l,spin2,atomType) * f(:,2,lp,spin1,atomTypep))&
+                         + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * ( f(:,1,l,spin2,atomType) * g(:,1,lp,spin1,atomTypep) &
+                                                                    +f(:,2,l,spin2,atomType) * g(:,2,lp,spin1,atomTypep))
 
             IF(ALLOCATED(this%uulo)) THEN
                iLO_ind = 0
@@ -508,31 +512,31 @@ MODULE m_types_greensf
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLO_ind = iLO_ind + 1
                   gmat(:,iz) = gmat(:,iz) &
-                              + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( f(:,1,lp,spin1) *flo(:,1,ilo,spin2) &
-                                                                                   +f(:,2,lp,spin1) *flo(:,2,ilo,spin2))&
-                              + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( g(:,1,lp,spin1) *flo(:,1,ilo,spin2) &
-                                                                                   +g(:,2,lp,spin1) *flo(:,2,ilo,spin2))
+                              + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( f(:,1,lp,spin1,atomTypep) *flo(:,1,ilo,spin2,atomType) &
+                                                                                   +f(:,2,lp,spin1,atomTypep) *flo(:,2,ilo,spin2,atomType))&
+                              + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( g(:,1,lp,spin1,atomTypep) *flo(:,1,ilo,spin2,atomType) &
+                                                                                   +g(:,2,lp,spin1,atomTypep) *flo(:,2,ilo,spin2,atomType))
                ENDDO
                iLO_ind = 0
                DO ilo = 1, atoms%nlo(atomTypep)
                   IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
                   iLO_ind = iLO_ind + 1
                   gmat(:,iz) = gmat(:,iz) &
-                              + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1)*f(:,1,l,spin2) &
-                                                                                   +flo(:,2,ilo,spin1)*f(:,2,l,spin2))&
-                              + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1)*g(:,1,l,spin2) &
-                                                                                   +flo(:,2,ilo,spin1)*g(:,2,l,spin2))
+                              + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1,atomTypep)*f(:,1,l,spin2,atomType) &
+                                                                                   +flo(:,2,ilo,spin1,atomTypep)*f(:,2,l,spin2,atomType))&
+                              + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ( flo(:,1,ilo,spin1,atomTypep)*g(:,1,l,spin2,atomType) &
+                                                                                   +flo(:,2,ilo,spin1,atomTypep)*g(:,2,l,spin2,atomType))
                ENDDO
                iLO_ind = 0
                DO ilo = 1, atoms%nlo(atomType)
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLOp_ind = 0
                   DO ilop = 1, atoms%nlo(atomTypep)
-                     IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                     IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                      iLOp_ind = iLOp_ind + 1
                      gmat(:,iz) = gmat(:,iz) &
-                                 + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) *( flo(:,1,ilo,spin2)*flo(:,1,ilop,spin1) &
-                                                                                                 +flo(:,2,ilo,spin2)*flo(:,2,ilop,spin1))
+                                 + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) *( flo(:,1,ilo,spin2,atomType)*flo(:,1,ilop,spin1,atomTypep) &
+                                                                                                 +flo(:,2,ilo,spin2,atomType)*flo(:,2,ilop,spin1,atomTypep))
                   ENDDO
                ENDDO
             ENDIF
@@ -691,9 +695,9 @@ MODULE m_types_greensf
          TYPE(t_atoms),       INTENT(IN)     :: atoms
          INTEGER,             INTENT(IN)     :: m,mp
          LOGICAL,             INTENT(IN)     :: l_conjg
-         REAL   ,             INTENT(IN)     :: f(:,:,0:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,0:,:)
-         REAL   ,             INTENT(IN)     :: flo(:,:,:,:)
+         REAL   ,             INTENT(IN)     :: f(:,:,0:,:,:)
+         REAL   ,             INTENT(IN)     :: g(:,:,0:,:,:)
+         REAL   ,             INTENT(IN)     :: flo(:,:,:,:,:)
          COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
 
          INTEGER :: spin,spin1,spin2
@@ -981,8 +985,7 @@ MODULE m_types_greensf
                   DO m = -l, l
                      IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
                      IF(.NOT.l_fullRadialArg) THEN
-                        CALL this%getRadial(atoms,m,mp,ipm==2,spin,f(:,:,0:,:,atomType),g(:,:,0:,:,atomType),&
-                                            flo(:,:,:,:,atomType),gmatR)
+                        CALL this%getRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatR)
                      ENDIF
                      DO iz = 1, this%contour%nz
                         IF(l_fullRadialArg) THEN
