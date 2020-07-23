@@ -881,48 +881,29 @@ MODULE m_types_greensf
 
       END SUBROUTINE reset_gf
 
-      PURE FUNCTION checkEmpty_greensf(this,m,mp,spin,ipm,iz) Result(l_empty)
+      PURE FUNCTION checkEmpty_greensf(this,m,mp,spin,ipm) Result(l_empty)
 
          CLASS(t_greensf),         INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: m
          INTEGER,                  INTENT(IN)   :: mp
          INTEGER,                  INTENT(IN)   :: spin
          INTEGER,                  INTENT(IN)   :: ipm
-         INTEGER,       OPTIONAL,  INTENT(IN)   :: iz
 
          LOGICAL :: l_empty
 
-         IF(PRESENT(iz)) THEN
-            IF(ALLOCATED(this%gmmpMat)) THEN
-               l_empty = ABS(this%gmmpMat(iz,m,mp,spin,ipm)).LT.1e-12
-            ELSE
-               l_empty =      ABS(this%uu(iz,m,mp,spin,ipm)).LT.1e-12 &
-                        .AND. ABS(this%dd(iz,m,mp,spin,ipm)).LT.1e-12 &
-                        .AND. ABS(this%ud(iz,m,mp,spin,ipm)).LT.1e-12 &
-                        .AND. ABS(this%du(iz,m,mp,spin,ipm)).LT.1e-12
-               IF(ALLOCATED(this%uulo)) THEN
-                  l_empty = l_empty .AND. ALL(ABS(this%uulo(iz,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%ulou(iz,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%ulod(iz,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%dulo(iz,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%uloulop(iz,m,mp,:,:,spin,ipm)).LT.1e-12)
-               ENDIF
-            ENDIF
+         IF(ALLOCATED(this%gmmpMat)) THEN
+            l_empty = ALL(ABS(this%gmmpMat(:,m,mp,spin,ipm)).LT.1e-12)
          ELSE
-            IF(ALLOCATED(this%gmmpMat)) THEN
-               l_empty = ALL(ABS(this%gmmpMat(:,m,mp,spin,ipm)).LT.1e-12)
-            ELSE
-               l_empty =      ALL(ABS(this%uu(:,m,mp,spin,ipm)).LT.1e-12) &
-                        .AND. ALL(ABS(this%dd(:,m,mp,spin,ipm)).LT.1e-12) &
-                        .AND. ALL(ABS(this%ud(:,m,mp,spin,ipm)).LT.1e-12) &
-                        .AND. ALL(ABS(this%du(:,m,mp,spin,ipm)).LT.1e-12)
-               IF(ALLOCATED(this%uulo)) THEN
-                  l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%ulou(:,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%ulod(:,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%dulo(:,m,mp,:,spin,ipm)).LT.1e-12) &
-                                    .AND. ALL(ABS(this%uloulop(:,m,mp,:,:,spin,ipm)).LT.1e-12)
-               ENDIF
+            l_empty =      ALL(ABS(this%uu(:,m,mp,spin,ipm)).LT.1e-12) &
+                     .AND. ALL(ABS(this%dd(:,m,mp,spin,ipm)).LT.1e-12) &
+                     .AND. ALL(ABS(this%ud(:,m,mp,spin,ipm)).LT.1e-12) &
+                     .AND. ALL(ABS(this%du(:,m,mp,spin,ipm)).LT.1e-12)
+            IF(ALLOCATED(this%uulo)) THEN
+               l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:,spin,ipm)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%ulou(:,m,mp,:,spin,ipm)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%ulod(:,m,mp,:,spin,ipm)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%dulo(:,m,mp,:,spin,ipm)).LT.1e-12) &
+                                 .AND. ALL(ABS(this%uloulop(:,m,mp,:,:,spin,ipm)).LT.1e-12)
             ENDIF
          ENDIF
 
@@ -1005,7 +986,6 @@ MODULE m_types_greensf
                      ENDIF
                      DO iz = 1, this%contour%nz
                         IF(l_fullRadialArg) THEN
-                           IF(this%checkEmpty(m,mp,spin,ipm,iz=iz)) CYCLE
                            CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
                         ENDIF
 
