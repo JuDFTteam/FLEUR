@@ -91,6 +91,7 @@ MODULE m_types_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: checkRadial    => checkRadial_gfinp
       PROCEDURE :: checkSphavg    => checkSphavg_gfinp
+      PROCEDURE :: checkOnsite    => checkOnsite_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -1043,6 +1044,22 @@ CONTAINS
       ENDDO
 
    END FUNCTION checkSphavg_gfinp
+
+   PURE LOGICAL FUNCTION checkOnsite_gfinp(this)
+
+      !Check if there are any oniste elements
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkOnsite_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%l.NE.this%elem(i_gf)%lp) CYCLE
+         IF(this%elem(i_gf)%atomType.NE.this%elem(i_gf)%atomTypep) CYCLE
+         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12) CYCLE
+         checkOnsite_gfinp = .TRUE.
+      ENDDO
+   END FUNCTION checkOnsite_gfinp
 
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
