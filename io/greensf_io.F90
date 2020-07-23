@@ -263,7 +263,7 @@ MODULE m_greensf_io
          iContour  = greensf(i_elem)%elem%iContour
 
          IF(.NOT.l_sphavg.AND.gfinp%l_outputSphavg) THEN
-            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,l_fullRadial=.TRUE.)
+            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,l_fullRadial=.FALSE.)
             l_sphavg = .TRUE.
          ELSE
             gfOut = greensf(i_elem)
