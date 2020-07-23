@@ -76,12 +76,12 @@ MODULE m_excSplitting
                   imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * usdus%ddn(l,atomType,ispin)
                   IF(nLO>0) THEN
                      DO iLO = 1, nLO
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=1,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=2,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=3,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,imat=4,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
                         DO iLOp = 1, nLO
-                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,mp,jspin,l_sphavg,iLO=iLO,iLOp=iLOp) * usdus%uloulopn(ilo,ilop,atomType,ispin)
+                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * usdus%uloulopn(ilo,ilop,atomType,ispin)
                         ENDDO
                      ENDDO
                   ENDIF
