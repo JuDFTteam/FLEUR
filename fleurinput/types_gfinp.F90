@@ -1056,7 +1056,7 @@ CONTAINS
       DO i_gf = 1, this%n
          IF(this%elem(i_gf)%l.NE.this%elem(i_gf)%lp) CYCLE
          IF(this%elem(i_gf)%atomType.NE.this%elem(i_gf)%atomTypep) CYCLE
-         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12) CYCLE
+         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12)) CYCLE
          checkOnsite_gfinp = .TRUE.
       ENDDO
    END FUNCTION checkOnsite_gfinp
