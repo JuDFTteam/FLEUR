@@ -485,7 +485,7 @@ CONTAINS
          IF(atomTypep<0) THEN !This indicates that the nshells argument was written here
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,&
                                            atoms,cell,.NOT.written(atomType))
             written(atomType) = .TRUE.
