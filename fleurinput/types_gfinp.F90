@@ -63,6 +63,7 @@ MODULE m_types_gfinp
       LOGICAL :: l_mperp = .FALSE.
       LOGICAL :: l_resolvent = .FALSE.
       LOGICAL :: l_outputSphavg = .FALSE.
+      LOGICAL :: l_intFullRadial = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
       !Number of elements
@@ -115,6 +116,7 @@ CONTAINS
       CALL mpi_bc(this%l_resolvent,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%l_outputSphavg,rank,mpi_comm)
+      CALL mpi_bc(this%l_intFullRadial,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
@@ -187,6 +189,8 @@ CONTAINS
          this%l_resolvent=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolvent'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
          this%l_outputSphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@outputSphavg'))
+         this%l_intFullRadial=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@intFullRadial'))
+
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/realAxis'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))

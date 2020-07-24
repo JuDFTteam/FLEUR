@@ -765,6 +765,7 @@
       <xsd:attribute default="F"    name="l_resolvent" type="FleurBool" use="optional"/>
       <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
       <xsd:attribute default="F"    name="outputSphavg" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F"    name="intFullRadial" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ERealAxisType">
