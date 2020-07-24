@@ -314,7 +314,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          CALL pwden(stars,kpts,banddos,oneD,input,fmpi,noco,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
