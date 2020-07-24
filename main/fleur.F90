@@ -464,7 +464,9 @@ END IF
           IF(fi%gfinp%n>0) THEN
              DO i_gf = 1, fi%gfinp%n
                 !Either the set distance has been reached (or is negative)
-                greensFunction(i_gf)%l_calc = results%last_distance < fi%gfinp%minCalcDistance.OR. fi%gfinp%minCalcDistance < 0.0
+                greensFunction(i_gf)%l_calc = (results%last_distance >= 0.0 .AND. &
+                                               results%last_distance < fi%gfinp%minCalcDistance) &
+                                               .OR. fi%gfinp%minCalcDistance < 0.0
                 !or we are in the first iteration for Hubbard 1
                 IF(fi%atoms%n_hia>0) THEN
                   greensFunction(i_gf)%l_calc = greensFunction(i_gf)%l_calc .OR. (iter==1 .AND.(hub1data%iter == 0 &
