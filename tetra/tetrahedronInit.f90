@@ -315,7 +315,7 @@ MODULE m_tetrahedronInit
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_res
 
       REAL    :: weight(SIZE(eMesh))
-      INTEGER :: i,ie,nstart,nend,ind(SIZE(etetra))
+      INTEGER :: i,ie,nstart,nend,ind(SIZE(etetra)),icornSorted
       REAL    :: eb,et,del
       LOGICAL :: l_calcres
 
@@ -323,11 +323,16 @@ MODULE m_tetrahedronInit
       !Sort the eigenvalues at the corners (ascending order in ind)
       ind = tetsrt(etetra)
 
+      !Find out where the corner went
+      DO i = 1, SIZE(ind)
+         IF(ind(i)==icorn) icornSorted = i
+      ENDDO
+
       l_calcres = .FALSE.
       IF(PRESENT(l_res)) l_calcres = l_res
 
       IF(l_calcres) THEN
-         weight = resWeight(eMesh,etetra(ind),ind(icorn),vol,film)
+         weight = resWeight(eMesh,etetra(ind),icornSorted,vol,film)
       ELSE
          !Find the range in the (equidistant) energy mesh where the weights are changing
          IF( SIZE(eMesh)>1) THEN
@@ -352,8 +357,8 @@ MODULE m_tetrahedronInit
          IF(nstart /= 1) weight(:nstart-1) = 0.0
          !Calculate the weights
          DO ie = nstart, nend
-            weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
-            IF(l_bloechl) weight(ie) = weight(ie) + bloechl(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+            weight(ie) = tetraWeight(eMesh(ie),etetra(ind),icornSorted,vol,film)
+            IF(l_bloechl) weight(ie) = weight(ie) + bloechl(eMesh(ie),etetra(ind),icornSorted,vol,film)
          ENDDO
 
          !The loop terminates if the energy is larger than
