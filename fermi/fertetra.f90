@@ -37,8 +37,8 @@ MODULE m_fertetra
       !First check the lower bound
       dlow = 0.0
       DO jspin = 1, jspins
-         CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                              lowBound,input%film,weightSum=weightSum)
+         CALL tetrahedronInit(kpts,input,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
+                              lowBound,weightSum=weightSum)
          dlow = dlow + weightSum * 2.0/input%jspins
       ENDDO
 
@@ -54,8 +54,8 @@ MODULE m_fertetra
          !Now check the upper bound
          dup = 0.0
          DO jspin = 1, jspins
-            CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                                 upperBound,input%film,weightSum=weightSum)
+            CALL tetrahedronInit(kpts,input,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
+                                 upperBound,weightSum=weightSum)
             dup = dup + weightSum * 2.0/input%jspins
          ENDDO
 
@@ -86,8 +86,8 @@ MODULE m_fertetra
             !-------------------------------------------------------
             ! Compute the current occupation
             !-------------------------------------------------------
-            CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                                 ef,input%film,weightSum=weightSum)
+            CALL tetrahedronInit(kpts,input,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
+                                 ef,weightSum=weightSum)
             dfermi = dfermi + weightSum * 2.0/input%jspins
          ENDDO
          IF(ABS(dfermi-input%zelec).LT.1e-12) THEN
@@ -110,8 +110,8 @@ MODULE m_fertetra
          !-------------------------------------------------------
          ! Compute the weights for charge density integration
          !-------------------------------------------------------
-         CALL tetrahedronInit(kpts,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
-                              ef,input%film,weightSum=weightSum,weights=w(:,:,jspin))
+         CALL tetrahedronInit(kpts,input,eig(:,:,jspin),MINVAL(ne(:,jspin)),&
+                              ef,weightSum=weightSum,weights=w(:,:,jspin))
          dfermi = dfermi + weightSum * 2.0/input%jspins
       ENDDO
 
@@ -126,8 +126,8 @@ MODULE m_fertetra
       seigv = 0.0
       DO jspin = 1,jspins
          s = 0.0
-         DO iBand = 1,MINVAL(ne(:,jspin))
-            DO ikpt = 1,kpts%nkpt
+         DO ikpt = 1,kpts%nkpt
+            DO iBand = 1,ne(ikpt,jspin)
                s = s + w(iBand,ikpt,jspin)
                seigv = seigv + w(iBand,ikpt,jspin)*eig(iBand,ikpt,jspin)
             ENDDO

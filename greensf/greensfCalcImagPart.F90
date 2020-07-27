@@ -64,11 +64,11 @@ MODULE m_greensfCalcImagPart
             ALLOCATE(resWeights(SIZE(eMesh),nBands),source=0.0)
             ALLOCATE(indBound(nBands,2),source=0)
             IF(gfinp%l_resolvent) THEN !Here we also calculate the resolvent weights
-               CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,SIZE(eMesh),&
-                                    input%film,dosWeights,bounds=indBound,resWeights=resWeights,dos=.TRUE.)
+               CALL tetrahedronInit(kpts,input,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,&
+                                    dosWeights,bounds=indBound,resWeights=resWeights,dos=.TRUE.)
             ELSE
-               CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,SIZE(eMesh),&
-                                    input%film,dosWeights,bounds=indBound,dos=.TRUE.)
+               CALL tetrahedronInit(kpts,input,ikpt,results%eig(ev_list,:,jsp),nBands,eMesh,&
+                                    dosWeights,bounds=indBound,dos=.TRUE.)
             ENDIF
             ALLOCATE(weights(SIZE(eMesh),nBands),source=cmplx_0)
             weights = fac * (resWeights - ImagUnit * pi_const * dosWeights)

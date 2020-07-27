@@ -653,6 +653,7 @@
       <xsd:attribute default="hist" name="mode" type="BZIntegrationModeEnum" use="optional"/>
       <xsd:attribute name="fermiSmearingEnergy" type="xsd:string" use="optional"/>
       <xsd:attribute name="fermiSmearingTemp" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="l_bloechl" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SOCType">
