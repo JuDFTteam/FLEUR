@@ -363,7 +363,17 @@ MODULE m_hubbard1_setup
          WRITE(oUnit,*) "nmmp element distance:    ", results%last_mmpMatdistance
          WRITE(oUnit,FMT=8140) hub1data%iter
 8140     FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
+         IF(hub1inp%l_correctEtot.AND..NOT.hub1inp%l_dftspinpol) THEN
+            IF(results%last_mmpMatdistance <= hub1inp%minMatDistance .AND. &
+               results%last_occdistance    <= hub1inp%minOccDistance) THEN
+
+               WRITE(*,*) 'Density matrix converged: switching off Spin averaging in DFT'
+               hub1data%l_performSpinavg = .FALSE.
+            ENDIF
+         ENDIF
       ENDIF
+
+      CALL mpi_bc(hub1data%l_performSpinavg,0,fmpi%mpi_comm)
 
    END SUBROUTINE hubbard1_setup
 
