@@ -116,7 +116,7 @@ MODULE m_tetrahedron_regular
 
       !Has the whole brillouin zone been covered?
       IF(ABS(sumvol-volbz).GT.1E-10) THEN
-            CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
+         CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
       ENDIF
 
       !Normalize volumes
