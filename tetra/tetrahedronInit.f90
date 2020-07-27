@@ -291,7 +291,7 @@ MODULE m_tetrahedronInit
    END SUBROUTINE getWeightEnergyMesh
 
 
-   PURE FUNCTION getWeightSingleBand(eMesh,etetra,icorn,vol,film,bloechl,l_res) Result(weight)
+   PURE FUNCTION getWeightSingleBand(eMesh,etetra,icorn,vol,film,l_bloechl,l_res) Result(weight)
 
       !--------------------------------------------------------------
       ! This is the core routine calculating the integration
@@ -304,13 +304,14 @@ MODULE m_tetrahedronInit
       USE m_tetsrt
       USE m_tetraWeight
       USE m_resWeight
+      USE m_bloechl
 
       REAL,             INTENT(IN)     :: eMesh(:)    !Energy points, where the weights are calculated
       REAL,             INTENT(IN)     :: etetra(:)   !Eigenvalues at the corners of the tetrahedron
       INTEGER,          INTENT(IN)     :: icorn       !Current k-point index (We calculate the weights for this corner)
       REAL,             INTENT(IN)     :: vol         !Volume of the tetrahedron
       LOGICAL,          INTENT(IN)     :: film        !Switch controls wether tetrahedron/triangular method is used
-      LOGICAL,          INTENT(IN)     :: bloechl     !Controls bloechl corrections (not atm)
+      LOGICAL,          INTENT(IN)     :: l_bloechl     !Controls bloechl corrections (not atm)
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_res
 
       REAL    :: weight(SIZE(eMesh))
@@ -352,6 +353,7 @@ MODULE m_tetrahedronInit
          !Calculate the weights
          DO ie = nstart, nend
             weight(ie) = tetraWeight(eMesh(ie),etetra(ind),ind(icorn),vol,film)
+            IF(l_bloechl) weight(ie) = weight(ie) + bloechl(eMesh(ie),etetra(ind),ind(icorn),vol,film)
          ENDDO
 
          !The loop terminates if the energy is larger than
