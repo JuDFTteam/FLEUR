@@ -6,7 +6,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   GreensFunctionRadial GreensFunctionRadial_LO )
+   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM )
 
 #DOS related tests, need to be enabled again!
 #set(SerialParallelTests ${SerialParallelTests}
