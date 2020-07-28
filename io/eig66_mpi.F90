@@ -483,6 +483,12 @@ CONTAINS
             ENDDO
          ENDDO
       ENDDO
+
+      call save_npy("d_slot_olap.npy", d%slot_olap)
+      call save_npy("d_pe_olap.npy", d%pe_olap)
+
+      call save_npy("d_slot_ev.npy", d%slot_ev)
+      call save_npy("d_pe_ev.npy", d%pe_ev)
    END SUBROUTINE create_maps
 #endif
 
