@@ -52,7 +52,6 @@ CONTAINS
 
     CLASS(t_mat),ALLOCATABLE :: smat(:,:),hmat(:,:)
     INTEGER :: i,j,nspins
-    type(t_mat) :: tmp
 
     !Matrices for Hamiltonian and Overlapp
     !In fi%noco case we need 4-matrices for each spin channel
