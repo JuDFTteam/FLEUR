@@ -116,7 +116,7 @@ MODULE m_fertetra
       ENDDO
 
       WRITE (oUnit,9200) ef,dfermi,input%zelec
-9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy ',f10.5,&
+9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy =',f10.5,&
                  ' dtot ',f10.5,' nelec ',f10.5)
 
       !----------------------------------------------
