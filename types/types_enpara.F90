@@ -30,7 +30,9 @@ MODULE m_types_enpara
      PROCEDURE :: read
      PROCEDURE :: write
      PROCEDURE :: mix
+#ifndef CPP_INPGEN
      PROCEDURE :: calcOutParams
+#endif     
   END TYPE t_enpara
 
 
@@ -90,14 +92,14 @@ CONTAINS
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
-  SUBROUTINE update(enpara,mpi_comm,atoms,vacuum,input,v,hub1inp)
+  SUBROUTINE update(enpara,mpi_comm,atoms,vacuum,input,v,hub1data)
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
     USE m_constants
     USE m_xmlOutput
     USE m_types_potden
-    USE m_types_hub1inp
+    USE m_types_hub1data
     USE m_find_enpara
     CLASS(t_enpara),INTENT(inout):: enpara
     INTEGER,INTENT(IN)          :: mpi_comm
@@ -105,7 +107,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_potden),INTENT(IN)   :: v
-    TYPE(t_hub1inp),INTENT(IN)  :: hub1inp
+    TYPE(t_hub1data),INTENT(IN)  :: hub1data
 
 
     LOGICAL ::  l_enpara
@@ -247,7 +249,7 @@ CONTAINS
        END IF
     END DO
 
-    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2.AND..NOT.hub1inp%l_dftspinpol) THEN
+    IF(atoms%n_hia.GT.0 .AND. input%jspins.EQ.2 .AND. hub1data%l_performSpinavg) THEN
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to
        !be non spin-polarized
@@ -595,6 +597,7 @@ CONTAINS
 
   END SUBROUTINE mix
 
+#ifndef CPP_INPGEN
   SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
     USE m_types_setup
     USE m_types_regionCharges
@@ -633,6 +636,7 @@ CONTAINS
        END IF
     END DO
   END SUBROUTINE calcOutParams
+#endif
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
     USE m_constants

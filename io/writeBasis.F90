@@ -8,7 +8,7 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTot,vCoul,vx,&
+SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vTot,vCoul,vx,&
                       fmpi,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
@@ -40,7 +40,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
       TYPE(t_atoms),INTENT(IN)      :: atoms
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_hub1inp),INTENT(IN)    :: hub1inp
+      TYPE(t_hub1data),INTENT(IN)   :: hub1data
       TYPE(t_potden), INTENT(INOUT) :: vTot
       TYPE(t_potden), INTENT(INOUT) :: vCoul
       TYPE(t_potden), INTENT(INOUT) :: vx
@@ -353,7 +353,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1inp,vTo
 	    write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
 
-            CALL genMTBasis(atoms,enpara,vTot,fmpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,hub1inp%l_dftspinpol)
+            CALL genMTBasis(atoms,enpara,vTot,fmpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,hub1data=hub1data)
 	    dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
 	    dimsInt = dims
 	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)

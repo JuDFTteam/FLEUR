@@ -136,15 +136,9 @@
          <force calculate="T" relaxXYZ="TTT"/>
       </atomGroup>
    </atomGroups>
-   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
+   <output dos="F" band="F" slice="F" >
       <checks vchk="F" cdinf="F"/>
-      <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
-      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000000" locy1=".00000000" locx2=".00000000" locy2=".00000000" nstm="0" tworkf=".00000000"/>
-      <plotting iplot="0"/>
-      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
-      <specialOutput eonly="F" bmt="F"/>
-      <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
-   </output>
+    </output>
   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
 </fleurInput>

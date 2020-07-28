@@ -341,7 +341,7 @@ END IF
        ENDIF
 
        IF (fi%atoms%n_u+fi%atoms%n_hia>0) THEN
-          CALL u_setup(fi%atoms,fi%input,fi%noco,fmpi,fi%hub1inp,inDen,vTot,results)
+          CALL u_setup(fi%atoms,fi%input,fi%noco,fmpi,hub1data,inDen,vTot,results)
        END IF
 
 
@@ -354,7 +354,7 @@ END IF
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           CALL timestart("Updating energy parameters")
-          CALL enpara%update(fmpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vToT,fi%hub1inp)
+          CALL enpara%update(fmpi%mpi_comm,fi%atoms,fi%vacuum,fi%input,vToT,hub1data)
           CALL timestop("Updating energy parameters")
           IF(.not.fi%input%eig66(1))THEN
             CALL eigen(fi,fmpi,stars,sphhar,xcpot,&
@@ -400,7 +400,7 @@ END IF
 
 	  IF (fi%input%gw.GT.0) THEN
 	    IF (fmpi%irank.EQ.0) THEN
-          CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,fi%hub1inp,vTot,vCoul,vx,fmpi,&
+          CALL writeBasis(input_soc,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,fi%cell,enpara,hub1data,vTot,vCoul,vx,fmpi,&
               results,eig_id,fi%oneD,sphhar,stars,fi%vacuum)
 	    END IF
 	    IF (fi%input%gw.EQ.2) THEN
@@ -464,7 +464,10 @@ END IF
           IF(fi%gfinp%n>0) THEN
              DO i_gf = 1, fi%gfinp%n
                 !Either the set distance has been reached (or is negative)
-                greensFunction(i_gf)%l_calc = results%last_distance < fi%gfinp%minCalcDistance.OR. fi%gfinp%minCalcDistance < 0.0
+                greensFunction(i_gf)%l_calc = (results%last_distance >= 0.0 .AND. &
+                                               results%last_distance < fi%gfinp%minCalcDistance) &
+                                               .OR. fi%gfinp%minCalcDistance < 0.0 & !No minCalcDistance distance set
+                                               .OR. iter == fi%input%itmax !Maximum iteration  reached
                 !or we are in the first iteration for Hubbard 1
                 IF(fi%atoms%n_hia>0) THEN
                   greensFunction(i_gf)%l_calc = greensFunction(i_gf)%l_calc .OR. (iter==1 .AND.(hub1data%iter == 0 &
@@ -483,7 +486,7 @@ END IF
                       archiveType,xcpot,outDen,EnergyDen,greensFunction,hub1data)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:) = inDen%mmpMat(:,:,fi%atoms%n_u+1:fi%atoms%n_u+fi%atoms%n_hia,:)
-          
+
           IF (fi%sliceplot%iplot.NE.0) THEN
           !               CDN including core charge
              IF(fi%noco%l_alignMT) THEN
@@ -515,7 +518,7 @@ END IF
                    CALL MPI_BCAST(nococonv%beta(n),1,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
                 ENDDO
 
-#endif    
+#endif
             END IF
         END IF
 

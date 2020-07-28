@@ -26,16 +26,16 @@ MODULE m_usetup
 
    CONTAINS
 
-   SUBROUTINE u_setup(atoms,input,noco,mpi,hub1inp,inDen,pot,results)
+   SUBROUTINE u_setup(atoms,input,noco,mpi,hub1data,inDen,pot,results)
 
-      TYPE(t_mpi),    INTENT(IN)    :: mpi
-      TYPE(t_input),  INTENT(IN)    :: input
-      TYPE(t_atoms),  INTENT(IN)    :: atoms
-      TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_hub1inp),INTENT(IN)    :: hub1inp
-      TYPE(t_potden), INTENT(IN)    :: inDen
-      TYPE(t_potden), INTENT(INOUT) :: pot
-      TYPE(t_results),INTENT(INOUT) :: results
+      TYPE(t_mpi),      INTENT(IN)    :: mpi
+      TYPE(t_input),    INTENT(IN)    :: input
+      TYPE(t_atoms),    INTENT(IN)    :: atoms
+      TYPE(t_noco),     INTENT(IN)    :: noco
+      TYPE(t_hub1data), INTENT(IN)    :: hub1data
+      TYPE(t_potden),   INTENT(IN)    :: inDen
+      TYPE(t_potden),   INTENT(INOUT) :: pot
+      TYPE(t_results),  INTENT(INOUT) :: results
 
 
       INTEGER :: itype,ispin,l,m,mp,i_u,n_u
@@ -68,7 +68,7 @@ MODULE m_usetup
          ENDDO
 
          ! calculate potential matrix and total energy correction
-         CALL v_mmp(atoms,input%jspins,hub1inp%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
+         CALL v_mmp(atoms,input%jspins,hub1data%l_performSpinavg,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
          !spin off-diagonal elements
          IF(noco%l_mtNocoPot) CALL v_mmp_21(atoms,n_mmp(:,:,:,3),u,pot%mmpMat(:,:,:,3),results%e_ldau)
 

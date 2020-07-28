@@ -7,7 +7,7 @@ MODULE m_genMTBasis
 
 CONTAINS
 
-  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,l_dftspinpol,l_writeArg)
+  SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,hub1data,l_writeArg)
     USE m_types
     USE m_constants
     USE m_radfun
@@ -25,7 +25,7 @@ CONTAINS
     INTEGER,        INTENT(IN)    :: iType
     INTEGER,        INTENT(IN)    :: jspin
 
-    LOGICAL,        INTENT(IN)    :: l_dftspinpol
+    TYPE(t_hub1data), OPTIONAL, INTENT(IN)  :: hub1data
 
     REAL,           INTENT(INOUT) :: f(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: g(atoms%jmtd,2,0:atoms%lmaxd)
@@ -37,15 +37,15 @@ CONTAINS
     REAL                          :: wronk
 
 
-    LOGICAL    :: l_write,l_hia
+    LOGICAL    :: l_write,l_hia,l_performSpinavg
     REAL       :: vrTmp(atoms%jmtd)
     INTEGER    :: i
 
-    IF(PRESENT(l_writeArg)) THEN
-      l_write = l_writeArg
-    ELSE
-      l_write = .TRUE.
-    ENDIF
+    l_write = .TRUE.
+    IF(PRESENT(l_writeArg)) l_write = l_writeArg
+
+    l_performSpinavg = .FALSE.
+    IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
 
     l_write=l_write .and. fmpi%irank==0
     !$ l_write = l_write .and. omp_get_num_threads()==1
@@ -62,15 +62,15 @@ CONTAINS
           ENDIF
        ENDDO
 
-       !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
-       !the correlated orbitals with a non-spin-polarized basis 
-       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1.AND..NOT.l_dftspinpol) THEN
+       !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
+       !the correlated orbitals with a non-spin-polarized basis
+       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1 .AND. l_performSpinavg) THEN
           vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
        ELSE
           vrTmp = vTot%mt(:,0,iType,jspin)
        ENDIF
        CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrTmp,atoms,&
-            f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)      
+            f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)
        IF (l_write) THEN
           WRITE (oUnit,FMT=8010) l,enpara%el0(l,iType,jspin),usdus%us(l,iType,jspin),usdus%dus(l,iType,jspin),&
                nodeu,usdus%uds(l,iType,jspin),usdus%duds(l,iType,jspin),noded,usdus%ddn(l,iType,jspin),wronk

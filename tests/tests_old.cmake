@@ -1,13 +1,16 @@
 enable_testing()
 
 set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
-   CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
+    Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
-   CoMCDXML  Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
+     Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
-   Fe_bcc_GreensFunction Fe_1l_GreensFunction
-   GreensFunctionRadial GreensFunctionRadial_LO GreensFunction_MultiContour
-   Fe_1l_Tria SmAtomjDOS )
+   Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
+   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM )
+
+#DOS related tests, need to be enabled again!
+#set(SerialParallelTests ${SerialParallelTests}
+#  Fe_1l_Tria CuBandXML  CuDOSXML CoMCDXML SmAtomjDOS )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -29,7 +32,7 @@ set(HybridTests
 set(FFNTests
    Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
    PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
-   RelaxMTFeature Fe_bcc_SF_LDA 
+   RelaxMTFeature Fe_bcc_SF_LDA
 )
 
 

@@ -17,8 +17,8 @@ c                  J.-P. Hanke, Dec. 2015   c
 c*******************************************c
       MODULE m_wann_uHu
       USE m_juDFT
-#ifdef CPP_MPI 
-      use mpi 
+#ifdef CPP_MPI
+      use mpi
 #endif
       CONTAINS
       SUBROUTINE wann_uHu(
@@ -678,8 +678,8 @@ c*****************************************************************c
 !     +                  nkpts,wannierspin,atoms%lmaxd,
 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-!     +                  fmpi%n_size,filename=trim(fstart)//fending,
-!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=banddos%layers,nstars=banddos%nstars,
 !     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
@@ -693,8 +693,8 @@ c*****************************************************************c
 !     +                   nkpts,wannierspin,atoms%lmaxd,
 !     +                   atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                   l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-!     +                   fmpi%n_size,filename=trim(fstart)//fending,
-!     +                   layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                   mpi%n_size,filename=trim(fstart)//fending,
+!     +                   layers=banddos%layers,nstars=banddos%nstars,
 !     +                   ncored=29,nsld=atoms%nat,
 !     +                   nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                   l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
@@ -710,8 +710,8 @@ c*****************************************************************c
 !     +                  nkpts,wannierspin,atoms%lmaxd,
 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-!     +                  fmpi%n_size,filename=trim(fstart)//fending,
-!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=banddos%layers,nstars=banddos%nstars,
 !     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
@@ -1044,14 +1044,14 @@ c$$$        nslibd=0
      &           cell,
      &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
      &           .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
-     
-     
+
+
             nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,
      &      lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
             CALL zMat_b%init(l_real,nbasfcn_b,input%neig)
             CALL zzMat%init(l_real,nbasfcn_b,input%neig)
-     
-     
+
+
         CALL cdn_read(
      &        eig_id,
      &      lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, !wannierspin instead of DIMENSION%jspd?
@@ -1490,7 +1490,7 @@ c      endif
         deallocate ( we_b,we_b2 )
       deallocate ( eigg )
 
- 
+
 
 
 

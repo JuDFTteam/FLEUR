@@ -55,8 +55,8 @@ CONTAINS
        WRITE(oUnit,*) "STOP DOS: only set banddos%vacdos = .true. if banddos%dos=.true."
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
-    IF (banddos%vacdos.AND.(.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1)))THEN
-       WRITE(oUnit,*) "STOP DOS: if stars = f set vacuum%nstars=1"
+    IF (banddos%vacdos.AND.(.NOT.banddos%starcoeff.AND.(banddos%nstars.NE.1)))THEN
+       WRITE(oUnit,*) "STOP DOS: if stars = f set banddos%nstars=1"
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
 
@@ -83,8 +83,8 @@ CONTAINS
              WRITE (85,FMT=8080) atoms%ntype, (atoms%neq(n),n=1,atoms%ntype)
              IF (banddos%vacdos) THEN
                 WRITE (86,FMT=8080) vacuum%nvac,kpts%nkpt
-                WRITE (86,FMT=8080) vacuum%layers
-                WRITE (86,'(20(i3,1x))') (vacuum%izlay(i,1),i=1,vacuum%layers)
+                WRITE (86,FMT=8080) banddos%layers
+                WRITE (86,'(20(i3,1x))') (banddos%izlay(i,1),i=1,banddos%layers)
              ENDIF
           ENDIF
 
@@ -122,11 +122,11 @@ CONTAINS
           WRITE (87,'(i3,1x,f12.6)') ikpt,wk
           i=0
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.banddos%e2_dos) i=i+1
+             IF (ABS(eig(n)-banddos%tworkf).LE.banddos%e2_dos) i=i+1
           END DO
           WRITE (87,FMT=990) bkpt(1), bkpt(2), i, n2max
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.banddos%e2_dos) THEN
+             IF (ABS(eig(n)-banddos%tworkf).LE.banddos%e2_dos) THEN
                 WRITE (87,FMT=1000) eig(n)
                 DO j=1,n2max
                    WRITE (87,FMT=1010) ac(j,n),bc(j,n)

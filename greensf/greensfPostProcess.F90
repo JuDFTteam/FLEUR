@@ -81,11 +81,11 @@ MODULE m_greensfPostProcess
                DO jspin = 1, input%jspins
                   CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
                                   f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
-                                  hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
+                                  hub1data=hub1data,l_writeArg=.FALSE.)
                   IF(atomType/=atomTypep) THEN
                      CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
                                      f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
-                                     hub1inp%l_dftspinpol,l_writeArg=.FALSE.)
+                                     hub1data=hub1data,l_writeArg=.FALSE.)
                   ENDIF
                ENDDO
                IF(gfinp%l_mperp) THEN
@@ -119,7 +119,7 @@ MODULE m_greensfPostProcess
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
-         CALL excSplitting(gfinp,atoms,input,greensfImagPart,results%ef)
+         CALL excSplitting(gfinp,atoms,input,usdus,greensfImagPart,results%ef)
 
          !-------------------------------------------------------
          ! Occupation matrix (only for diagonal onsite elements)

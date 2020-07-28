@@ -20,7 +20,7 @@ $result+=jt::test_fileexists("$workdir/Hubbard1/2_f/eigval7part.dat");
 #test density matrix
 $result+=jt::test_grepnumber("$workdir/out","nmmp occupation distance:",": *([^ ]*)",7.0000,0.0005);
 $result+=jt::test_grepnumber("$workdir/out","nmmp element distance:",": *([^ ]*)",0.9999,0.0005);
-$result+=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-22560.55561,0.00005);
-$result+=jt::test_grepnumber("$workdir/out","distance of spin densities for it=","3: *([^ ]*)",25.0533,0.0002);
+$result+=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-22560.55679,0.00005);
+$result+=jt::test_grepnumber("$workdir/out","distance of spin densities for it=","3: *([^ ]*)",25.0582,0.0002);
 
 jt::stageresult($workdir,$result,"1");

@@ -18,6 +18,8 @@ MODULE m_types_hub1data
       !which is calculated on the fly (fixed parameters are found in types_hub1inp)
       INTEGER           :: iter=0
       LOGICAL           :: l_runthisiter=.FALSE.   !switch which determines wether Hubbard 1 will be run in the current iteration
+      LOGICAL           :: l_performSpinavg = .TRUE.
+
 
       REAL, ALLOCATABLE :: mag_mom(:,:)    !magnetic moment (for exchange splitting)
       REAL, ALLOCATABLE :: xi(:)           !Spin-orbit coupling parameter
@@ -40,6 +42,8 @@ MODULE m_types_hub1data
       TYPE(t_hub1inp),     INTENT(IN)    :: hub1inp
 
       INTEGER :: i_hia
+
+      this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
 
       ALLOCATE (this%mag_mom(4*atoms%ntype,lmaxU_const-1),source=0.0)
       ALLOCATE (this%xi(4*atoms%ntype),source=0.0)

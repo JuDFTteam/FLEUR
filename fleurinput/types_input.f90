@@ -42,6 +42,7 @@ MODULE m_types_input
   REAL    :: spinf=2.0
   REAL    :: tkb=0.001
   INTEGER :: bz_integration=0
+  LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=3
   LOGICAL :: l_bmt=.FALSE.
   !INTEGER:: scale
   INTEGER:: kcrel =0
@@ -123,6 +124,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
  CALL mpi_bc(this%spinf,rank,mpi_comm)
  CALL mpi_bc(this%tkb,rank,mpi_comm)
  CALL mpi_bc(this%bz_integration,rank,mpi_comm)
+ CALL mpi_bc(this%l_bloechl,rank,mpi_comm)
  CALL mpi_bc(this%l_bmt,rank,mpi_comm)
  CALL mpi_bc(this%kcrel,rank,mpi_comm)
  CALL mpi_bc(this%frcor,rank,mpi_comm)
@@ -267,6 +269,9 @@ SUBROUTINE read_xml_input(this,xml)
  ELSE
     CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
  END IF
+ xPathA = '/fleurInput/calculationSetup/bzIntegration/@l_bloechl'
+ this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+
  this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
  ! Read in optional geometry optimization parameters
  xPathA = '/fleurInput/calculationSetup/geometryOptimization'

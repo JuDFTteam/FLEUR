@@ -5,6 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_cdnval
+!use m_types_jDOS
+!use m_types_orbcomp
+!use m_types_mcd
+!use m_types_slab
 
 IMPLICIT NONE
 
@@ -60,20 +64,7 @@ PRIVATE
       PROCEDURE,PASS :: init => denCoeffs_init
    END TYPE t_denCoeffs
 
-   TYPE t_slab
-      INTEGER              :: nsld, nsl
 
-      INTEGER, ALLOCATABLE :: nmtsl(:,:)
-      INTEGER, ALLOCATABLE :: nslat(:,:)
-      REAL,    ALLOCATABLE :: zsl(:,:)
-      REAL,    ALLOCATABLE :: volsl(:)
-      REAL,    ALLOCATABLE :: volintsl(:)
-      REAL,    ALLOCATABLE :: qintsl(:,:,:,:)
-      REAL,    ALLOCATABLE :: qmtsl(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init => slab_init
-   END TYPE t_slab
 
    TYPE t_eigVecCoeffs
       COMPLEX, ALLOCATABLE :: acof(:,:,:,:)
@@ -84,17 +75,7 @@ PRIVATE
          PROCEDURE,PASS :: init => eigVecCoeffs_init
    END TYPE t_eigVecCoeffs
 
-   TYPE t_mcd
-      REAL                 :: emcd_lo, emcd_up
 
-      INTEGER, ALLOCATABLE :: ncore(:)
-      REAL,    ALLOCATABLE :: e_mcd(:,:,:)
-      REAL,    ALLOCATABLE :: mcd(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init1 => mcd_init1
-   END TYPE t_mcd
 
    TYPE t_moments
 
@@ -111,24 +92,9 @@ PRIVATE
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
 
-   TYPE t_orbcomp
 
-      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
 
-      CONTAINS
-         PROCEDURE,PASS :: init => orbcomp_init
-   END TYPE t_orbcomp
 
-   TYPE t_jDOS
-
-      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)  !decomposition in percent
-      REAL, ALLOCATABLE    :: qmtp(:,:,:)      !How much of the state is in the muffin-tin sphere
-      REAL, ALLOCATABLE    :: occ(:,:,:)       !Occupation of the j-states
-
-      CONTAINS
-         PROCEDURE,PASS :: init => jDOS_init
-   END TYPE t_jDOS
 
    TYPE t_cdnvalJob
       LOGICAL              :: l_evp
@@ -153,8 +119,8 @@ PRIVATE
          PROCEDURE,PASS :: init => gVacMap_init
    END TYPE t_gVacMap
 
-PUBLIC t_orb, t_denCoeffs, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_moments, t_orbcomp, t_jDOS, t_cdnvalJob, t_gVacMap
+PUBLIC t_orb, t_denCoeffs,  t_eigVecCoeffs
+PUBLIC  t_moments,  t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
@@ -289,58 +255,7 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
 END SUBROUTINE denCoeffs_init
 
-SUBROUTINE slab_init(thisSlab,banddos,atoms,cell,input,kpts)
 
-   USE m_types_setup
-   USE m_types_kpts
-   USE m_slabdim
-   USE m_slabgeom
-
-   IMPLICIT NONE
-
-   CLASS(t_slab),      INTENT(INOUT) :: thisSlab
-   TYPE(t_banddos),    INTENT(IN)    :: banddos
-
-   TYPE(t_atoms),      INTENT(IN)    :: atoms
-   TYPE(t_cell),       INTENT(IN)    :: cell
-   TYPE(t_input),      INTENT(IN)    :: input
-   TYPE(t_kpts),       INTENT(IN)    :: kpts
-
-   INTEGER :: nsld
-
-   nsld=1
-
-   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      CALL slab_dim(atoms, nsld)
-      ALLOCATE (thisSlab%nmtsl(atoms%ntype,nsld))
-      ALLOCATE (thisSlab%nslat(atoms%nat,nsld))
-      ALLOCATE (thisSlab%zsl(2,nsld))
-      ALLOCATE (thisSlab%volsl(nsld))
-      ALLOCATE (thisSlab%volintsl(nsld))
-      ALLOCATE (thisSlab%qintsl(nsld,input%neig,kpts%nkpt,input%jspins))
-      ALLOCATE (thisSlab%qmtsl(nsld,input%neig,kpts%nkpt,input%jspins))
-      CALL slabgeom(atoms,cell,nsld,thisSlab%nsl,thisSlab%zsl,thisSlab%nmtsl,&
-                    thisSlab%nslat,thisSlab%volsl,thisSlab%volintsl)
-   ELSE
-      ALLOCATE (thisSlab%nmtsl(1,1))
-      ALLOCATE (thisSlab%nslat(1,1))
-      ALLOCATE (thisSlab%zsl(1,1))
-      ALLOCATE (thisSlab%volsl(1))
-      ALLOCATE (thisSlab%volintsl(1))
-      ALLOCATE (thisSlab%qintsl(1,1,1,input%jspins))
-      ALLOCATE (thisSlab%qmtsl(1,1,1,input%jspins))
-   END IF
-   thisSlab%nsld = nsld
-
-   thisSlab%nmtsl = 0
-   thisSlab%nslat = 0
-   thisSlab%zsl = 0.0
-   thisSlab%volsl = 0.0
-   thisSlab%volintsl = 0.0
-   thisSlab%qintsl = 0.0
-   thisSlab%qmtsl = 0.0
-
-END SUBROUTINE slab_init
 
 
 SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
@@ -377,39 +292,6 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
 
 END SUBROUTINE eigVecCoeffs_init
 
-SUBROUTINE mcd_init1(thisMCD,banddos,input,atoms,kpts)
-
-   USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_mcd),          INTENT(INOUT) :: thisMCD
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-
-   ALLOCATE (thisMCD%ncore(atoms%ntype))
-   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,29))
-   IF (banddos%l_mcd) THEN
-      thisMCD%emcd_lo = banddos%e_mcd_lo
-      thisMCD%emcd_up = banddos%e_mcd_up
-      ALLOCATE (thisMCD%m_mcd(29,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,29,input%neig,kpts%nkpt,input%jspins) )
-      IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
-   ELSE
-      ALLOCATE (thisMCD%m_mcd(1,1,1,1))
-      ALLOCATE (thisMCD%mcd(1,1,1,1,input%jspins))
-   ENDIF
-
-   thisMCD%ncore = 0
-   thisMCD%e_mcd = 0.0
-   thisMCD%mcd = 0.0
-   thisMCD%m_mcd = CMPLX(0.0,0.0)
-
-END SUBROUTINE mcd_init1
 
 SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
 
@@ -445,59 +327,7 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
 
 END SUBROUTINE moments_init
 
-SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
 
-   USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-
-   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      ALLOCATE(thisOrbcomp%comp(input%neig,23,atoms%nat,kpts%nkpt,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(input%neig,atoms%nat,kpts%nkpt,input%jspins))
-   ELSE
-      ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(1,1,1,input%jspins))
-   END IF
-
-   thisOrbcomp%comp = 0.0
-   thisOrbcomp%qmtp = 0.0
-
-END SUBROUTINE orbcomp_init
-
-SUBROUTINE jDOS_init(thisjDOS,input,banddos,atoms,kpts)
-
-   USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_jDOS),         INTENT(INOUT) :: thisjDOS
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-
-   !jDOS is under ndir = -5 at the moment
-   IF ((banddos%ndir.EQ.-5).AND.banddos%dos) THEN
-      ALLOCATE(thisjDOS%comp(input%neig,0:3,2,atoms%nat,kpts%nkpt),source = 0.0)
-      ALLOCATE(thisjDOS%qmtp(input%neig,atoms%nat,kpts%nkpt),source = 0.0)
-      ALLOCATE(thisjDOS%occ(0:3,2,atoms%nat),source=0.0)
-   ELSE
-      ALLOCATE(thisjDOS%comp(1,1,1,1,1),source = 0.0)
-      ALLOCATE(thisjDOS%qmtp(1,1,1),source = 0.0)
-      ALLOCATE(thisjDOS%occ(1,1,1),source=0.0)
-   END IF
-
-END SUBROUTINE jDOS_init
 
 SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
@@ -641,7 +471,7 @@ SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,
    thisGVacMap%gvac1d = 0
    thisGVacMap%gvac2d = 0
 
-   IF (vacuum%nstm.EQ.3.AND.input%film) THEN
+   IF (.false..AND.input%film) THEN
       CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
                  cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
    END IF

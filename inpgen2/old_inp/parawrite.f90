@@ -85,7 +85,7 @@
  8210 FORMAT (6x,'parameter (ncvd=',i3,')')
 
       WRITE (oUnit,'(6x,''Layers for vacuum DOS'')')
-      WRITE (oUnit,'(6x,''parameter(layerd='',i3,'')'')') vacuum%layerd
+      WRITE (oUnit,'(6x,''parameter(layerd='',i3,'')'')') banddos%layers
 
       WRITE (oUnit,'(6x,''Local Orbital Parameters'')')
       WRITE (oUnit,8220) atoms%nlod,atoms%llod

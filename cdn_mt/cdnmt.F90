@@ -20,6 +20,9 @@ CONTAINS
     USE m_radfun
     USE m_orbmom2
     USE m_xmlOutput
+    use m_types_orbcomp
+    use m_types_jDOS
+    use m_types_mcd
 
     IMPLICIT NONE
 
@@ -52,7 +55,7 @@ CONTAINS
     INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
-    LOGICAL l_hia
+    LOGICAL l_hia,l_performSpinavg
     !     ..
     !     .. Local Arrays ..
     REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
@@ -74,9 +77,12 @@ CONTAINS
        ENDIF
     ENDIF
 
+    l_performSpinavg = .FALSE.
+    IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
+
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
     !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
     !$OMP PRIVATE(l_hia,vrTmp)
@@ -109,7 +115,7 @@ CONTAINS
 
              !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
              !the correlated orbitals with a non-spin-polarized basis
-             IF(l_hia.AND.jspd.EQ.2.AND..NOT.hub1inp%l_dftspinpol) THEN
+             IF(l_hia.AND.jspd.EQ.2 .AND. l_performSpinavg) THEN
                 vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0
              ELSE
                 vrTmp = vr(:,itype,ispin)

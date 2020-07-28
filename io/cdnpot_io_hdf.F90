@@ -7,7 +7,6 @@
 MODULE m_cdnpot_io_hdf
 
    USE m_constants
-   USE m_types
    USE m_juDFT
 #ifdef CPP_HDF
    USE hdf5
@@ -233,7 +232,8 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePOTHeaderData
 
    SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, oneD, l_checkBroyd)
-
+     use m_types_stars
+     use m_types_oneD
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN) :: stars
@@ -436,7 +436,8 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStarsHDF
 
    SUBROUTINE readStarsHDF(fileID, starsIndex, stars, oneD)
-
+      use m_types_stars
+      use m_types_oneD
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: starsIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
@@ -649,7 +650,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStarsHDF
 
    SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars, l_CheckBroyd)
-
+      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex, starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN)    :: stars
@@ -708,7 +709,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStepfunctionHDF
 
    SUBROUTINE readStepfunctionHDF(fileID, stepfunctionIndex, stars)
-
+      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
@@ -795,7 +796,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStepfunctionHDF
 
    SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms, l_CheckBroyd)
-
+      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex, structureIndex
       TYPE(t_sphhar), INTENT(IN)  :: latharms
@@ -877,7 +878,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeLatharmsHDF
 
    SUBROUTINE readLatharmsHDF(fileID, latharmsIndex, latharms)
-
+      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex
       TYPE(t_sphhar), INTENT(INOUT) :: latharms
@@ -969,6 +970,12 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekLatharmsHDF
 
    SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex, l_CheckBroyd)
+      use m_types_input
+      use m_types_atoms
+      use m_types_cell
+      use m_types_vacuum
+      use m_types_oned
+      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: structureIndex
@@ -1054,12 +1061,12 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'nmzd',vacuum%nmzd)
       CALL io_write_attint0(groupID,'nmzxy',vacuum%nmzxy)
       CALL io_write_attint0(groupID,'nmzxyd',vacuum%nmzxyd)
-      CALL io_write_attint0(groupID,'layerd',vacuum%layerd)
-      CALL io_write_attint0(groupID,'layers',vacuum%layers)
+      !CALL io_write_attint0(groupID,'layerd',banddos%layers)
+      !CALL io_write_attint0(groupID,'layers',banddos%layers)
       CALL io_write_attint0(groupID,'nvac',vacuum%nvac)
       CALL io_write_attint0(groupID,'nvacd',vacuum%nvacd)
-      CALL io_write_attint0(groupID,'nstars',vacuum%nstars)
-      CALL io_write_attint0(groupID,'nstm',vacuum%nstm)
+      !CALL io_write_attint0(groupID,'nstars',banddos%nstars)
+      !CALL io_write_attint0(groupID,'nstm',vacuum%nstm)
       CALL io_write_attreal0(groupID,'delz',vacuum%delz)
       CALL io_write_attreal0(groupID,'dvac',vacuum%dvac)
 
@@ -1273,7 +1280,13 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writeStructureHDF
 
-   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex)
+   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym,structureIndex)
+      use m_types_input
+      use m_types_atoms
+      use m_types_cell
+      use m_types_vacuum
+      use m_types_oned
+      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER, INTENT(IN)           :: structureIndex
@@ -1356,12 +1369,12 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nmzd',vacuum%nmzd)
       CALL io_read_attint0(groupID,'nmzxy',vacuum%nmzxy)
       CALL io_read_attint0(groupID,'nmzxyd',vacuum%nmzxyd)
-      CALL io_read_attint0(groupID,'layerd',vacuum%layerd)
-      CALL io_read_attint0(groupID,'layers',vacuum%layers)
+      !CALL io_read_attint0(groupID,'layerd',banddos%layers)
+      !CALL io_read_attint0(groupID,'layers',banddos%layers)
       CALL io_read_attint0(groupID,'nvac',vacuum%nvac)
       CALL io_read_attint0(groupID,'nvacd',vacuum%nvacd)
-      CALL io_read_attint0(groupID,'nstars',vacuum%nstars)
-      CALL io_read_attint0(groupID,'nstm',vacuum%nstm)
+      !CALL io_read_attint0(groupID,'nstars',banddos%nstars)
+      !CALL io_read_attint0(groupID,'nstm',vacuum%nstm)
       CALL io_read_attreal0(groupID,'delz',vacuum%delz)
       CALL io_read_attreal0(groupID,'dvac',vacuum%dvac)
 
@@ -1557,7 +1570,8 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                               date,time,distance,fermiEnergy,l_qfix,iter,den)
-
+      use m_types_input
+      use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: den
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1810,7 +1824,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5sclose_f(frOffSpaceID,hdfError)
                CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,3:4))
                CALL h5dclose_f(frOffSetID, hdfError)
-            END IF 
+            END IF
 
             dims(:3)=(/2,ng3,input%jspins/)
             dimsInt = dims
@@ -2034,6 +2048,8 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
                                 iter,pot,fpw,l_mtNoco)
+      use m_types_input
+      use m_types_potden
 
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: pot
@@ -2293,6 +2309,13 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
                              archiveName, densityType,fermiEnergy,l_qfix,l_DimChange,den)
+      use m_types_input
+      use m_types_stars
+      use m_types_sphhar
+      use m_types_atoms
+      use m_types_vacuum
+      use m_types_oneD
+      use m_types_potden
 
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_stars),INTENT(IN)     :: stars
@@ -2335,7 +2358,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)        :: ldau_USetID
       INTEGER(HID_T)        :: ldau_JSetID
       INTEGER(HID_T)        :: mmpMatSetID
-      
+
       INTEGER, ALLOCATABLE  :: ldau_AtomType(:), ldau_l(:), ldau_l_amf(:)
       REAL,    ALLOCATABLE  :: ldau_U(:), ldau_J(:)
       REAL,    ALLOCATABLE  :: frTemp(:,:,:,:)
@@ -2560,7 +2583,7 @@ MODULE m_cdnpot_io_hdf
       den%mt = 0.0
       ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:jspins))
       dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
-      CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)   
+      CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp(:,:,:,:))
       CALL h5dclose_f(frSetID, hdfError)
       den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
@@ -2572,7 +2595,7 @@ MODULE m_cdnpot_io_hdf
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
          CALL h5dopen_f(groupID, 'froff', frOffSetID, hdfError)
          CALL io_read_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),frTemp(:,:,:,1:2))
-         CALL h5dclose_f(frOffSetID, hdfError)  
+         CALL h5dclose_f(frOffSetID, hdfError)
          den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
          DEALLOCATE(frTemp)
@@ -2928,7 +2951,8 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekDensityEntryHDF
 
    SUBROUTINE writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
-
+      use m_types_atoms
+      use m_types_input
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input
 
@@ -3007,6 +3031,8 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeCoreDensityHDF
 
    SUBROUTINE readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
+      use m_types_atoms
+      use m_types_input
 
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input

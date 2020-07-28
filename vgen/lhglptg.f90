@@ -13,7 +13,10 @@ CONTAINS
     USE m_polangle
     USE m_ylm
     USE m_dylm
-    USE m_types
+    USE m_types_sym
+    USE m_types_sphhar
+    USE m_types_atoms
+
     IMPLICIT NONE
 
     LOGICAL, INTENT(IN)         :: dograds
@@ -22,7 +25,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nsp  
+    INTEGER, INTENT (IN) :: nsp
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rx(:,:)!(3,dimension%nspd)

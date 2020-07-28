@@ -184,16 +184,15 @@ MODULE m_hubbard1_io
 
    END SUBROUTINE write_hubbard1_input
 
-   SUBROUTINE read_ccfmat(path,ccfmat,l)
+   SUBROUTINE read_ccfmat(ccfmat,l)
 
-      CHARACTER(len=*), INTENT(IN)  :: path
       REAL,             INTENT(INOUT) :: ccfmat(-l:,-l:)
       INTEGER,          INTENT(IN)  :: l
 
       INTEGER :: info, io_error,io_unit
 
       ccfmat = 0.0
-      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
+      OPEN(unit=io_unit, file=TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-error in Hubbard1-IO",calledby="read_ccfmat")
 
       READ(io_unit,*) ccfmat

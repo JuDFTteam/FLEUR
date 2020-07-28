@@ -11,7 +11,8 @@ CONTAINS
   SUBROUTINE q_mt_sl(jsp,atoms,sym,nobd,ev_list,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
     USE m_types_setup
     USE m_types_usdus
-    USE m_types_cdnval, ONLY: t_eigVecCoeffs, t_slab
+    USE m_types_cdnval, ONLY: t_eigVecCoeffs
+    USE m_types_slab
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_atoms),INTENT(IN)        :: atoms

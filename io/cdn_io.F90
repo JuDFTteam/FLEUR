@@ -147,6 +147,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_oneD),INTENT(IN)      :: oneD
+
     TYPE(t_potden),INTENT(INOUT) :: den
 
     INTEGER, INTENT (IN)      :: inOrOutCDN
@@ -384,6 +385,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_oneD),INTENT(IN)      :: oneD
+
     TYPE(t_potden),INTENT(INOUT) :: den
 
     INTEGER, INTENT (IN)      :: inOrOutCDN
@@ -870,12 +872,14 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_stars),INTENT(IN)    :: stars
 
+
     TYPE(t_input)              :: inputTemp
     TYPE(t_atoms)              :: atomsTemp
     TYPE(t_cell)               :: cellTemp
     TYPE(t_vacuum)             :: vacuumTemp
     TYPE(t_oneD)               :: oneDTemp
     TYPE(t_sym)                :: symTemp
+
 
     INTEGER        :: mode
     INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
@@ -903,7 +907,7 @@ CONTAINS
              currentStructureIndex = currentStructureIndex + 1
              l_writeStructure = .TRUE.
           ELSE
-             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
+             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp,currentStructureIndex)
              CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
              IF(.NOT.l_same) THEN
                 currentStructureIndex = currentStructureIndex + 1
@@ -948,6 +952,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_stars),INTENT(IN)    :: stars
+
     !Locals
     INTEGER :: archiveType
     LOGICAL :: l_qfix
@@ -962,6 +967,7 @@ CONTAINS
     TYPE(t_vacuum)             :: vacuumTemp
     TYPE(t_oneD)               :: oneDTemp
     TYPE(t_sym)                :: symTemp
+
 
 
     INTEGER :: mode,currentStarsIndex,currentLatharmsIndex,currentStructureIndex
@@ -990,7 +996,7 @@ CONTAINS
              WRITE(archivename,"(a,i0)") "cdn-",lastdensityindex
              CALL peekDensityEntryHDF(fileID, archivename, DENSITY_TYPE_IN_const, structureIndex=structureIndex)
              !Read that structure
-             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, StructureIndex)
+             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp,StructureIndex)
              CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same,l_structure_by_shift)
           ENDIF
           CALL closeCDNPOT_HDF(fileID)
@@ -1008,11 +1014,11 @@ CONTAINS
           shifts=atomsTemp%taual-atoms%taual
 
           !Determine type of charge
-          IF(noco%l_mtNocoPot) THEN 
+          IF(noco%l_mtNocoPot) THEN
           archiveType=CDN_ARCHIVE_TYPE_FFN_const
-          ELSE IF (noco%l_noco) THEN 
+          ELSE IF (noco%l_noco) THEN
           archiveType=CDN_ARCHIVE_TYPE_NOCO_const
-          ELSE 
+          ELSE
           archiveType=CDN_ARCHIVE_TYPE_CDN1_const
           END IF
           !read the current density

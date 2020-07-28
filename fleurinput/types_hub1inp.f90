@@ -16,9 +16,10 @@ MODULE m_types_hub1inp
       INTEGER :: itmax = 5
       REAL    :: minoccDistance=1.0e-2
       REAL    :: minmatDistance=1.0e-3
-      LOGICAL :: l_dftspinpol=.FALSE. !Determines whether the DFT part is spin-polarized in a magnetic DFT+Hubbard 1 calculation
-      LOGICAL :: l_fullMatch=.TRUE. !Determines whether two chemical potentials are used to match (if possible)
-      LOGICAL :: l_nonsphDC=.TRUE. !Determines whether to remove the nonspherical contributions to the Hamiltonian (in the HIA orbital)
+      LOGICAL :: l_dftspinpol=.FALSE.     !Determines whether the DFT part is spin-polarized in a magnetic DFT+Hubbard 1 calculation
+      LOGICAL :: l_fullMatch=.TRUE.       !Determines whether two chemical potentials are used to match (if possible)
+      LOGICAL :: l_nonsphDC=.TRUE.        !Determines whether to remove the nonspherical contributions to the Hamiltonian (in the HIA orbital)
+      LOGICAL :: l_correctEtot = .TRUE.   !Perform additional scf cycle without spin averaging of the correlated shell in DFT with frozen density matrix
 
       !Parameters for the solver
       REAL     :: beta = 100.0 !inverse temperature
@@ -122,6 +123,7 @@ CONTAINS
          this%l_dftspinpol = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dftspinpol'))
          this%l_fullMatch = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fullMatch'))
          this%l_nonsphDC = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_nonsphDC'))
+         this%l_correctEtot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_correctEtot'))
       ENDIF
 
       !Read in the additional information given in the ldaHIA tags (exchange splitting and additional keywords)

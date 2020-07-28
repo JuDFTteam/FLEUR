@@ -15,7 +15,7 @@
 
 MODULE m_cdnpot_io_common
 
-   USE m_types
+
    USE m_juDFT
    USE m_cdnpot_io_hdf
 #ifdef CPP_HDF
@@ -27,6 +27,8 @@ MODULE m_cdnpot_io_common
    CONTAINS
 
    SUBROUTINE compareStars(stars, refStars, oneD, refOneD, l_same)
+      use m_types_stars
+      use m_types_oneD
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_stars),INTENT(IN)  :: refStars
@@ -48,7 +50,7 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareStars
 
    SUBROUTINE compareStepfunctions(stars, refStars, l_same)
-
+      use m_types_stars
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_stars),INTENT(IN)  :: refStars
 
@@ -65,6 +67,12 @@ MODULE m_cdnpot_io_common
 
    SUBROUTINE compareStructure(input, atoms, vacuum, cell, sym, refInput, refAtoms, refVacuum,&
                                refCell, refSym, l_same,l_shift_only)
+      use m_types_input
+      use m_types_atoms
+      use m_types_vacuum
+      use m_types_cell
+      use m_types_sym
+
 
       TYPE(t_input),INTENT(IN)  :: input, refInput
       TYPE(t_atoms),INTENT(IN)  :: atoms, refAtoms
@@ -78,7 +86,7 @@ MODULE m_cdnpot_io_common
       INTEGER                   :: i
 
       l_same = .TRUE.
-  
+
 
       IF(atoms%ntype.NE.refAtoms%ntype) l_same = .FALSE.
       IF(atoms%nat.NE.refAtoms%nat) l_same = .FALSE.
@@ -103,7 +111,7 @@ MODULE m_cdnpot_io_common
          IF(ANY(sym%mrot(:,:,:sym%nop).NE.refSym%mrot(:,:,:sym%nop))) l_same = .FALSE.
          IF(ANY(ABS(sym%tau(:,:sym%nop)-refSym%tau(:,:sym%nop)).GT.1e-10)) l_same = .FALSE.
       END IF
-  
+
       IF (PRESENT(l_shift_only)) l_shift_only=l_same
       !Now the positions are checked...
       IF(l_same) THEN
@@ -119,7 +127,7 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareStructure
 
    SUBROUTINE compareLatharms(latharms, refLatharms, l_same)
-
+      use m_types_sphhar
       TYPE(t_sphhar)       :: latharms, refLatharms
 
       LOGICAL,      INTENT(OUT) :: l_same
@@ -136,6 +144,14 @@ MODULE m_cdnpot_io_common
    SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, latharms, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                        currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
+      use m_types_atoms
+      use m_types_input
+      use m_types_cell
+      use m_types_vacuum
+      use m_types_oneD
+      use m_types_stars
+      use m_types_sphhar
+      use m_types_sym
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -170,7 +186,7 @@ MODULE m_cdnpot_io_common
       IF(currentStructureIndex.EQ.0) THEN
          currentStructureIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,l_CheckBroyd)
+         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym,currentStructureIndex,l_CheckBroyd)
       ELSE
          CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
          CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)

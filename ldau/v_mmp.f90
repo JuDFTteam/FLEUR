@@ -25,15 +25,15 @@ MODULE m_vmmp
 
    CONTAINS
 
-   SUBROUTINE v_mmp(atoms,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e_ldau)
+   SUBROUTINE v_mmp(atoms,jspins,l_performSpinavg,ns_mmp,u,f0,f2, vs_mmp,e_ldau)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       INTEGER,          INTENT(IN)     :: jspins
       REAL,             INTENT(IN)     :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(IN)     :: f0(:),f2(:)
       COMPLEX,          INTENT(IN)     :: ns_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
-      LOGICAL,          INTENT(IN)     :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations
-                                                   !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
+      LOGICAL,          INTENT(IN)     :: l_performSpinavg !Is the double-counting averaged over spins (reason: for spin-polarized calculations
+                                                           !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
       COMPLEX,          INTENT(OUT)    :: vs_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
       REAL,             INTENT(INOUT)  :: e_ldau
 
@@ -80,7 +80,7 @@ MODULE m_vmmp
          !
          ! Use around-mean-field limit (true) of atomic limit (false)
          !
-         IF(jspins.EQ.2 .AND.i_u>atoms%n_u.AND..NOT.spin_pol) THEN
+         IF(jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg) THEN
             rho_sig(1)      = rho_tot/jspins
             rho_sig(jspins) = rho_tot/jspins
          ENDIF

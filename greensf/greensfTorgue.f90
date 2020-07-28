@@ -110,8 +110,7 @@ MODULE m_greensfTorgue
                   phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
                   DO ipm = 1, 2
-                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                             flo(:,:,:,:,atomType),g_iiSpin)
+                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
                      DO iz = 1, SIZE(g_ii,2)
                         DO alpha = 1, 3 !(x,y,z)
                            DO jr = 1, atoms%jri(atomType)
@@ -231,8 +230,7 @@ MODULE m_greensfTorgue
                      phaseFactor = gaunt1(lp,lh,l,mp,mh,m,atoms%lmaxd)
                      IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
                      DO ipm = 1, 2
-                        CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                                flo(:,:,:,:,atomType),g_iiSpin)
+                        CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
                         DO iz = 1, SIZE(g_ii,2)
                            DO alpha = 1, 3 !(x,y,z)
                               DO jr = 1, atoms%jri(atomType)

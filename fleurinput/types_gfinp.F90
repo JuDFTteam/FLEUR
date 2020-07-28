@@ -62,6 +62,8 @@ MODULE m_types_gfinp
       !General logical switches
       LOGICAL :: l_mperp = .FALSE.
       LOGICAL :: l_resolvent = .FALSE.
+      LOGICAL :: l_outputSphavg = .FALSE.
+      LOGICAL :: l_intFullRadial = .FALSE.
       REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
                                       !Negative means it is evaluated at every iteration
       !Number of elements
@@ -90,6 +92,7 @@ MODULE m_types_gfinp
       PROCEDURE :: eMesh          => eMesh_gfinp
       PROCEDURE :: checkRadial    => checkRadial_gfinp
       PROCEDURE :: checkSphavg    => checkSphavg_gfinp
+      PROCEDURE :: checkOnsite    => checkOnsite_gfinp
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
    END TYPE t_gfinp
 
@@ -112,6 +115,8 @@ CONTAINS
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
       CALL mpi_bc(this%l_resolvent,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
+      CALL mpi_bc(this%l_outputSphavg,rank,mpi_comm)
+      CALL mpi_bc(this%l_intFullRadial,rank,mpi_comm)
       CALL mpi_bc(this%n,rank,mpi_comm)
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
@@ -183,6 +188,9 @@ CONTAINS
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          this%l_resolvent=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolvent'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
+         this%l_outputSphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@outputSphavg'))
+         this%l_intFullRadial=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@intFullRadial'))
+
 
          xPathA = '/fleurInput/calculationSetup/greensFunction/realAxis'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -443,7 +451,7 @@ CONTAINS
 
    END SUBROUTINE read_xml_gfinp
 
-   SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input,l_write)
+   SUBROUTINE init_gfinp(this,atoms,sym,noco,cell,input)
 
       USE m_types_atoms
       USE m_types_sym
@@ -457,15 +465,13 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_input),    INTENT(IN)     :: input
-      LOGICAL,          INTENT(IN)     :: l_write
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
-      TYPE(t_gfelementtype) :: gfelem(this%n)
-
+      TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -484,12 +490,13 @@ CONTAINS
          IF(atomTypep<0) THEN !This indicates that the nshells argument was written here
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,iContour,atomType,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,&
-                                           atoms,cell,l_write.AND..NOT.written(atomType))
+                                           atoms,cell,.NOT.written(atomType))
             written(atomType) = .TRUE.
          ENDIF
       ENDDO
+
       !After this point there are no new green's function elements to be added
 
       !Reallocate with correct size
@@ -498,79 +505,76 @@ CONTAINS
       ALLOCATE(this%hiaElem(atoms%n_hia))
       this%hiaElem = hiaElem
 
+      ALLOCATE(gfelem(this%n))
       gfelem = this%elem(:this%n)
       IF(ALLOCATED(this%elem)) DEALLOCATE(this%elem)
       ALLOCATE(this%elem(this%n))
       this%elem = gfelem
 
       !Input checks
-      IF(l_write) THEN
-         IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
-            CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+      IF(this%l_mperp.AND..NOT.noco%l_mperp) THEN
+         CALL juDFT_error("For l_mperp for Green's Functions the l_mperp switch for noco has to be True",&
+                          calledby="init_gfinp")
+      ENDIF
+
+      l_inter = .FALSE.
+      l_offd = .FALSE.
+      l_interAvg = .FALSE.
+      l_offdAvg = .FALSE.
+      DO i_gf = 1, this%n
+         l  = this%elem(i_gf)%l
+         lp = this%elem(i_gf)%lp
+         atomType  = this%elem(i_gf)%atomType
+         atomTypep = this%elem(i_gf)%atomTypep
+         l_sphavg  = this%elem(i_gf)%l_sphavg
+         atomDiff  = this%elem(i_gf)%atomDiff
+         IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
+            l_inter = .TRUE.
+            IF(l_sphavg) l_interAvg = .TRUE.
+         ENDIF
+         IF(l.NE.lp) THEN
+            l_offd = .TRUE.
+            IF(l_sphavg) l_offdAvg = .TRUE.
+         ENDIF
+
+      ENDDO
+
+      IF(l_inter) THEN
+         IF(sym%nop>1) THEN
+               CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
+                                calledby="init_gfinp")
+         ELSE IF(l_interAvg) THEN
+            CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
                              calledby="init_gfinp")
          ENDIF
+      ENDIF
 
-         l_inter = .FALSE.
-         l_offd = .FALSE.
-         l_interAvg = .FALSE.
-         l_offdAvg = .FALSE.
-         DO i_gf = 1, this%n
-            l  = this%elem(i_gf)%l
-            lp = this%elem(i_gf)%lp
-            atomType  = this%elem(i_gf)%atomType
-            atomTypep = this%elem(i_gf)%atomTypep
-            l_sphavg  = this%elem(i_gf)%l_sphavg
-            atomDiff  = this%elem(i_gf)%atomDiff
-            IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
-               l_inter = .TRUE.
-               IF(l_sphavg) l_interAvg = .TRUE.
-            ENDIF
-            IF(l.NE.lp) THEN
-               l_offd = .TRUE.
-               IF(l_sphavg) l_offdAvg = .TRUE.
-            ENDIF
-
-         ENDDO
-
-         IF(l_inter) THEN
-            IF(sym%nop>1) THEN
-                  CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
-                                   calledby="init_gfinp")
-            ELSE IF(l_interAvg) THEN
-               CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
-                                calledby="init_gfinp")
-            ENDIF
+      IF(l_offd) THEN
+         IF(sym%nop>1) THEN
+            CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
+                             calledby="init_gfinp")
+         ELSE IF(l_offdAvg) THEN
+            CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
+                             calledby="init_gfinp")
          ENDIF
+      ENDIF
 
-         IF(l_offd) THEN
-            IF(sym%nop>1) THEN
-               CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
-                                calledby="init_gfinp")
-            ELSE IF(l_offdAvg) THEN
-               CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
-                                calledby="init_gfinp")
-            ENDIF
-         ENDIF
-
-         IF(this%minCalcDistance>=0.0) THEN
-            IF(input%mindistance>this%minCalcDistance) THEN
-               CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
-                               "is smaller than the distance requirement:"//&
-                               "No Green's Functions will be calculated", calledby="init_gfinp")
-            ENDIF
+      IF(this%minCalcDistance>=0.0) THEN
+         IF(input%mindistance>this%minCalcDistance) THEN
+            CALL juDFT_warn("The minimum Distance for Green's Function Calculation"// &
+                            "is smaller than the distance requirement:"//&
+                            "No Green's Functions will be calculated", calledby="init_gfinp")
          ENDIF
       ENDIF
 
 #ifdef CPP_DEBUG
-      IF(l_write) THEN
-         WRITE(*,*) "Green's Function Elements: "
-         WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
-         DO i_gf = 1, this%n
-            WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
-                                             this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
-                                             this%elem(i_gf)%atomDiff(:)
-         ENDDO
-      ENDIF
+      WRITE(*,*) "Green's Function Elements: "
+      WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
+      DO i_gf = 1, this%n
+         WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+                                          this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
+                                          this%elem(i_gf)%atomDiff(:)
+      ENDDO
 #endif
 
    END SUBROUTINE init_gfinp
@@ -726,6 +730,7 @@ CONTAINS
       USE m_types_atoms
       USE m_types_cell
       USE m_sort
+      USE m_inv3
 
       !This is essentially a simplified version of chkmt, because we have a given
       !reference atom and do not need to consider all distances between all atoms
@@ -745,10 +750,10 @@ CONTAINS
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      REAL :: currentDist,minDist
+      REAL :: currentDist,minDist,amatAuxDet
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
-      REAL :: refPos(3),point(3),pos(3)
+      REAL :: refPos(3),point(3),pos(3),diff(3)
       REAL :: currentDiff(3),offsetPos(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
@@ -775,6 +780,7 @@ CONTAINS
          taualAux(3,i) = atoms%taual(3,i) - FLOOR(atoms%taual(3,i))
          posAux(:,i) = MATMUL(amatAux,taualAux(:,i))
       END DO
+      CALL inv3(amatAux,invAmatAux,amatAuxDet)
 
 
 
@@ -850,15 +856,16 @@ CONTAINS
          DO i = lastIndex, numNearestNeighbors
             lastIndex = i
             IF(ABS(nearestNeighborDists(i)-minDist).GT.1e-12) EXIT !Because the list is sorted
+            diff = MATMUL(invAmatAux,nearestNeighborDiffs(:,i))
             !l_sphavg has to be false
             i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=nearestNeighbors(i),&
-                             atomDiff=nearestNeighborDiffs(:,i),l_fixedCutoffset=l_fixedCutoffset,&
+                             atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
 
             this%elem(i_gf)%refCutoff = refCutoff
 
             IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,3f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i)
+               WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i), diff(:)
             ENDIF
 
          ENDDO
@@ -1044,6 +1051,22 @@ CONTAINS
       ENDDO
 
    END FUNCTION checkSphavg_gfinp
+
+   PURE LOGICAL FUNCTION checkOnsite_gfinp(this)
+
+      !Check if there are any oniste elements
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkOnsite_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%l.NE.this%elem(i_gf)%lp) CYCLE
+         IF(this%elem(i_gf)%atomType.NE.this%elem(i_gf)%atomTypep) CYCLE
+         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12)) CYCLE
+         checkOnsite_gfinp = .TRUE.
+      ENDDO
+   END FUNCTION checkOnsite_gfinp
 
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
