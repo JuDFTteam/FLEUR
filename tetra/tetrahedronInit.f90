@@ -311,7 +311,7 @@ MODULE m_tetrahedronInit
       INTEGER,          INTENT(IN)     :: icorn       !Current k-point index (We calculate the weights for this corner)
       REAL,             INTENT(IN)     :: vol         !Volume of the tetrahedron
       LOGICAL,          INTENT(IN)     :: film        !Switch controls wether tetrahedron/triangular method is used
-      LOGICAL,          INTENT(IN)     :: l_bloechl     !Controls bloechl corrections (not atm)
+      LOGICAL,          INTENT(IN)     :: l_bloechl   !Controls bloechl corrections
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_res
 
       REAL    :: weight(SIZE(eMesh))
@@ -358,13 +358,13 @@ MODULE m_tetrahedronInit
          !Calculate the weights
          DO ie = nstart, nend
             weight(ie) = tetraWeight(eMesh(ie),etetra(ind),icornSorted,vol,film)
-            IF(l_bloechl) weight(ie) = weight(ie) + bloechl(eMesh(ie),etetra(ind),icornSorted,vol,film)
+            IF(l_bloechl) weight(ie) = weight(ie) - bloechl(eMesh(ie),etetra(ind),icornSorted,vol,film)
          ENDDO
 
          !The loop terminates if the energy is larger than
          !all eigenvalues at the tetrahedron/triangle corners (nend)
          !For all consecutive values the weight is constant
-         IF(nend.NE.SIZE(eMesh)) weight(nend+1:) = weight(nend)
+         IF(nend /= SIZE(eMesh)) weight(nend+1:) = weight(nend)
       ENDIF
 
    END FUNCTION getWeightSingleBand

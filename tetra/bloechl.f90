@@ -15,15 +15,13 @@ MODULE m_bloechl
       REAL,                INTENT(IN)     :: vol
       LOGICAL,             INTENT(IN)     :: film
 
-      INTEGER i
       REAL dos_ef
 
-      dos_ef = dos_tetra(efermi,etetra,vol)
       bloechl = 0.0
-      DO i = 1, 4
-         bloechl = bloechl + 1/40.0*dos_ef*(etetra(i)-etetra(ind))
-      ENDDO
-
+      IF(.NOT. film) THEN
+         dos_ef = dos_tetra(efermi,etetra,vol)
+         bloechl = 1/40.0*dos_ef*sum(etetra-etetra(ind))
+      ENDIF
 
    END FUNCTION bloechl
 
@@ -41,8 +39,8 @@ MODULE m_bloechl
 
       ELSE IF(energy.GE.etetra(2)) THEN
 
-         dos_tetra = 3.0 * vol * 1./((etetra(3)-etetra(1))*(etetra(4)-etetra(1))) * (etetra(2) - etetra(1) + 2*(energy - etetra(2)) &
-               -(etetra(3)-etetra(1)+etetra(4)-etetra(2)) * (energy-etetra(2))**2/((etetra(3)-etetra(2))*(etetra(4)-etetra(2))))
+         dos_tetra = vol * 3.0/((etetra(3)-etetra(1))*(etetra(4)-etetra(1))) * (etetra(2) - etetra(1) + 2*(energy - etetra(2)) &
+               -(etetra(3)-etetra(1)+etetra(4)-etetra(2)) * (energy-etetra(2))**2/((etetra(3)-etetra(2))*(etetra(4)-etetra(2)))) 
 
       ELSE IF(energy.GE.etetra(1)) THEN
 
