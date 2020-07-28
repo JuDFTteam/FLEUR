@@ -189,7 +189,6 @@ CONTAINS
                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
             END IF
 
-            call zmat%pos_eigvec_sum()
 
             IF (fmpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
