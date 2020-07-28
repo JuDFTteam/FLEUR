@@ -358,7 +358,7 @@ MODULE m_tetrahedronInit
          !Calculate the weights
          DO ie = nstart, nend
             weight(ie) = tetraWeight(eMesh(ie),etetra(ind),icornSorted,vol,film)
-            IF(l_bloechl) weight(ie) = weight(ie) - bloechl(eMesh(ie),etetra(ind),icornSorted,vol,film)
+            IF(l_bloechl) weight(ie) = weight(ie) + bloechl(eMesh(ie),etetra(ind),icornSorted,vol,film)
          ENDDO
 
          !The loop terminates if the energy is larger than
