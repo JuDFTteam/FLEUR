@@ -51,7 +51,8 @@ CONTAINS
 
 
     CLASS(t_mat),ALLOCATABLE :: smat(:,:),hmat(:,:)
-    INTEGER :: i,j,ispin,nspins
+    INTEGER :: i,j,nspins
+    type(t_mat) :: tmp
 
     !Matrices for Hamiltonian and Overlapp
     !In fi%noco case we need 4-matrices for each spin channel
@@ -99,7 +100,13 @@ CONTAINS
       if(any(shape(smat) /= 1)) then 
         call judft_error("Hybrid doesn't do noco.")
       endif
-      CALL write_eig(hybdat%eig_id, nk,isp, smat=smat(1,1))
+      call smat(1,1)%save_npy("olap_pre_writing_rank=" // int2str(fmpi%n_rank) // ".npy")
+      do i = 1,size(smat(1,1)%data_r,2)
+        tmp%l_real = smat(1,1)%l_real
+        if(.not. tmp%allocated()) call tmp%init(smat(1,1))
+        tmp%data_r(:,i) = i + 1000 * fmpi%n_rank 
+      enddo
+      CALL write_eig(hybdat%eig_id, nk,isp, smat=tmp)!smat(1,1))
    END IF
 
    IF(fi%hybinp%l_hybrid) THEN
