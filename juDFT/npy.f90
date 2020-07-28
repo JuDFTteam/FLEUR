@@ -10,9 +10,9 @@ module m_npy
 
    interface save_npy
       module procedure write_int64_vec, write_int64_mtx, &
-         write_int32_vec, write_int32_mtx, &
+         write_int32_vec, write_int32_mtx, write_int32_3d, &
          write_int16_vec, write_int16_mtx, &
-         write_int8_vec, write_int8_mtx, &
+         write_int8_vec, write_int8_mtx, write_int8_3d, &
          write_dbl_vec, write_dbl_mtx, &
          write_sng_vec, write_sng_mtx, &
          write_cmplx_sgn_vec, write_cmplx_sgn_mtx, &
@@ -824,6 +824,29 @@ contains
       close (unit=p_un)
    End Subroutine write_int32_mtx
 
+   Subroutine write_int32_3d(filename, mtx)
+      Implicit None
+      character(len=*), intent(in)     :: filename
+      integer(4), intent(in)           :: mtx(:,:,:)
+      character(len=*), parameter      :: var_type = "<i4"
+      integer(4)                       :: header_len, s_mtx(3), i, j
+
+      s_mtx = shape(mtx)
+      header_len = len(dict_str(var_type, s_mtx))
+
+      open (unit=p_un, file=filename, form="unformatted", &
+            access="stream")
+      write (p_un) magic_num, magic_str, major, minor
+
+      write (p_un) header_len
+
+      write (p_un) dict_str(var_type, s_mtx)
+
+      write (p_un) mtx
+
+      close (unit=p_un)
+   End Subroutine write_int32_3d
+
    Subroutine write_int32_vec(filename, vec)
       Implicit None
       character(len=*), intent(in)     :: filename
@@ -915,6 +938,29 @@ contains
 
       close (unit=p_un)
    End Subroutine write_int8_mtx
+
+   Subroutine write_int8_3d(filename, mtx)
+      Implicit None
+      character(len=*), intent(in)     :: filename
+      integer(1), intent(in)           :: mtx(:,:,:)
+      character(len=*), parameter      :: var_type = "<i1"
+      integer(4)                       :: header_len, s_mtx(3), i, j
+
+      s_mtx = shape(mtx)
+      header_len = len(dict_str(var_type, s_mtx))
+
+      open (unit=p_un, file=filename, form="unformatted", &
+            access="stream")
+      write (p_un) magic_num, magic_str, major, minor
+
+      write (p_un) header_len
+
+      write (p_un) dict_str(var_type, s_mtx)
+
+      write (p_un) mtx
+
+      close (unit=p_un)
+   End Subroutine write_int8_3d
 
    Subroutine write_int8_vec(filename, vec)
       Implicit None
