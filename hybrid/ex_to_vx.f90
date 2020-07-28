@@ -37,7 +37,7 @@ contains
       call olap%u2l()
       call olap%conjugate()
 
-      call judft_error("stop after olap")
+      !call judft_error("stop after olap")
 
       call olap%multiply(z, res=trafo)
       call trafo%save_npy("trafo.npy")
