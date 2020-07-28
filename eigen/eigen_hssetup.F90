@@ -100,7 +100,7 @@ CONTAINS
         call judft_error("Hybrid doesn't do noco.")
       endif
       call smat(1,1)%save_npy("olap_pre_writing_rank=" // int2str(fmpi%n_rank) // ".npy")
-      CALL write_eig(hybdat%eig_id, nk,isp, smat=smat(1,1)))
+      CALL write_eig(hybdat%eig_id, nk,isp, smat=smat(1,1))
    END IF
 
    IF(fi%hybinp%l_hybrid) THEN
