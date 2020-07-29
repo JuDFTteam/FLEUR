@@ -909,7 +909,7 @@ CONTAINS
 
          nshellAtom = 0
          symLoop: DO iop = 1, sym%nop
-            diffRot = matmul(sym%mrot(:,:,iop),repDiff)
+            diffRot = matmul(sym%mrot(:,:,iop),shellAux(:,1))
 
             DO ishellAtom = 1, nshellAtom
                !Is the atom equivalent to another atom already in the shell
