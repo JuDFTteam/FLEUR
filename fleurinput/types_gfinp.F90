@@ -750,7 +750,8 @@ CONTAINS
       TYPE(t_sym),      INTENT(IN)     :: sym
       LOGICAL,          INTENT(IN)     :: l_write
 
-      REAL, PARAMETER :: tol = 1e-7
+      REAL,    PARAMETER :: tol = 1e-7
+      INTEGER, PARAMETER :: maxAtoms = 27*atoms%nat
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
@@ -799,13 +800,13 @@ CONTAINS
 !     5. For the reference atom in auxiliary unit cell collect shortest distances
 !        to other atoms in neighborhood
 
-      ALLOCATE(sqrDistances(27*atoms%nat)) ! Formally 27, but 8 should be enough due to maxSqrDist
-      ALLOCATE(neighborAtoms(27*atoms%nat))
-      ALLOCATE(neighborAtomsDiff(3,27*atoms%nat))
-      ALLOCATE(distIndexList(27*atoms%nat))
-      ALLOCATE (nearestNeighbors(27*atoms%nat))
-      ALLOCATE (nearestNeighborDists(27*atoms%nat))
-      ALLOCATE (nearestNeighborDiffs(3,27*atoms%nat))
+      ALLOCATE(sqrDistances(maxAtoms)) ! Formally 27, but 8 should be enough due to maxSqrDist
+      ALLOCATE(neighborAtoms(maxAtoms))
+      ALLOCATE(neighborAtomsDiff(3,maxAtoms))
+      ALLOCATE(distIndexList(maxAtoms))
+      ALLOCATE (nearestNeighbors(maxAtoms))
+      ALLOCATE (nearestNeighborDists(maxAtoms))
+      ALLOCATE (nearestNeighborDiffs(3,maxAtoms))
       iAtom = 0
       DO n = 1, atoms%ntype
          DO na = 1, atoms%neq(n)
@@ -860,10 +861,10 @@ CONTAINS
       DEALLOCATE(sqrDistances,distIndexList,neighborAtomsDiff,neighborAtoms)
 
       !Maximum number of shells is number of atoms
-      ALLOCATE(shellDistance(27*atoms%nat),source = 0.0)
-      ALLOCATE(shellDiff(3,27*atoms%nat,27*atoms%nat),source = 0.0)
-      ALLOCATE(shellAtom(27*atoms%nat),source=0)
-      ALLOCATE(numshellAtoms(27*atoms%nat),source=0)
+      ALLOCATE(shellDistance(maxAtoms),source = 0.0)
+      ALLOCATE(shellDiff(3,maxAtoms,maxAtoms),source = 0.0)
+      ALLOCATE(shellAtom(maxAtoms),source=0)
+      ALLOCATE(numshellAtoms(maxAtoms),source=0)
 
       !Sort the nearestNeighbours into shells
       lastIndex = 1 !Skip the first element (onsite)
@@ -895,8 +896,8 @@ CONTAINS
       DEALLOCATE(nearestNeighborDiffs,nearestNeighborDists,nearestNeighbors)
 
 
-      ALLOCATE(shellAux(3,27*atoms%nat),source=0.0)
-      ALLOCATE(shellAux1(3,27*atoms%nat),source=0.0)
+      ALLOCATE(shellAux(3,maxAtoms),source=0.0)
+      ALLOCATE(shellAux1(3,maxAtoms),source=0.0)
       nshellsFound = nshells !We only want to consider nshells
       !Symmetry reduction
       DO ishell = 1, SIZE(shellDiff,3)
@@ -973,7 +974,7 @@ CONTAINS
          ENDIF
 
          !Transform to lattice coordinates
-         diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
+         diff = MATMUL(invAmatAux,shellDiff(:,1,ishell))
          !l_sphavg has to be false
          i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
                           atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
@@ -983,7 +984,7 @@ CONTAINS
 
          IF(l_write) THEN
             WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            shellDiff(:,ishellAtom,ishell), diff(:)
+                                            shellDiff(:,1,ishell), diff(:)
          ENDIF
 
       ENDDO
