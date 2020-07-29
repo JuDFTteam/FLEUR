@@ -972,6 +972,8 @@ CONTAINS
 
       ENDDO
 
+      nshellsFound = ishell - 1
+
       DO ishell = 1, nshellsFound
          IF(l_write) THEN
             WRITE(oUnit,'(/,A,f14.8)') 'Adding shell with distance: ', shellDistance(ishell)
