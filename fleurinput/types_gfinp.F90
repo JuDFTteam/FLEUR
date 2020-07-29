@@ -759,7 +759,7 @@ CONTAINS
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
       REAL :: refPos(3),point(3),pos(3),diff(3)
-      REAL :: currentDiff(3),offsetPos(3),repDiff(3),diffRot(3)
+      REAL :: currentDiff(3),offsetPos(3),diffRot(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
       INTEGER, ALLOCATABLE :: neighborAtoms(:)
@@ -768,7 +768,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: nearestNeighborDiffs(:,:)
       REAL,    ALLOCATABLE :: neighborAtomsDiff(:,:)
       REAL,    ALLOCATABLE :: sqrDistances(:)
-      REAL,    ALLOCATABLE :: neighbourShells(:,:,:)
 
       REAL,    ALLOCATABLE :: shellDistance(:)
       REAL,    ALLOCATABLE :: shellDiff(:,:,:)
@@ -905,7 +904,8 @@ CONTAINS
          IF(ishell.GT.nshellsFound) EXIT !We have finished the requested shells
 
          !Take the representative element of the shell
-         repDiff = shellDiff(:,1,ishell)
+         shellAux = 0.0
+         shellAux(:,1) = shellDiff(:,1,ishell)
 
          nshellAtom = 0
          symLoop: DO iop = 1, sym%nop
@@ -913,7 +913,7 @@ CONTAINS
 
             DO ishellAtom = 1, nshellAtom
                !Is the atom equivalent to another atom already in the shell
-               IF(ALL(ABS(diffRot-neighbourShells(:,ishellAtom,ishell)).LT.tol)) CYCLE symLoop
+               IF(ALL(ABS(diffRot-shellAux(:,ishellAtom)).LT.tol)) CYCLE symLoop
             ENDDO
 
             nshellAtom = nshellAtom + 1
@@ -922,16 +922,17 @@ CONTAINS
 
          IF(nshellAtom < numshellAtoms(ishell)) THEN  !Not all elements can be constructed from the representative element
 
+            shellAux1 = 0.0
             !Find the atoms which are not represented
             nshellAtom1 = 0
             atomLoop: DO iAtom = 1, numshellAtoms(ishell)
                DO ishellAtom = 1, nshellAtom1
-                  IF(ALL(ABS(neighbourShells(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol).OR.&
-                     ALL(ABS(neighbourShells(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
+                  IF(ALL(ABS(shellDiff(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol).OR.&
+                     ALL(ABS(shellDiff(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
                ENDDO
 
                nshellAtom1 = nshellAtom1 + 1
-               shellAux1(:,nshellAtom1) = neighbourShells(:,iAtom,ishell)
+               shellAux1(:,nshellAtom1) = shellDiff(:,iAtom,ishell)
             ENDDO atomLoop
 
             !We have found a new shell
