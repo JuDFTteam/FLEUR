@@ -755,7 +755,7 @@ CONTAINS
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
-      REAL :: currentDist,minDist,amatAuxDet
+      REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
       REAL :: refPos(3),point(3),pos(3),diff(3)
