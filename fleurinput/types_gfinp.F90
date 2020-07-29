@@ -972,7 +972,7 @@ CONTAINS
 
       ENDDO
 
-      nshellsFound = ishell - 2
+      nshellsFound = ishell - 1
 
       DO ishell = 1, nshellsFound
          IF(l_write) THEN
