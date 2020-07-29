@@ -960,7 +960,7 @@ MODULE m_types_greensf
 
          LOGICAL :: l_fullRadialArg
          INTEGER :: l,lp,atomType,atomTypep,ipm,spin,m,mp,iz,jr,jrp
-         REAL    :: realPart, imagPart
+         REAL    :: realPart, imagPart, atomDiff(3)
          COMPLEX, ALLOCATABLE :: gmatR(:,:)
          COMPLEX :: gmat(atoms%jmtd)
 
@@ -978,6 +978,10 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
+         atomDiff  = this%elem%atomDiff
+
+         !only intersite arguments have independent radial arguments ??
+         l_fullRadialArg = l_fullRadialArg.AND.(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12))
 
          DO ipm = 1, 2
             DO spin = 1 , SIZE(this%uu,4)
