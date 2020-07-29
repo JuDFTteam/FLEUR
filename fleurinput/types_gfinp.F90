@@ -859,8 +859,6 @@ CONTAINS
       END DO
       DEALLOCATE(sqrDistances,distIndexList,neighborAtomsDiff,neighborAtoms)
 
-      IF(nearestNeighborDists(1).GT.1e-12) CALL juDFT_error("Onsite Element not found",calledby ="addNearestNeighbours_gfelem")
-
       !Maximum number of shells is number of atoms
       ALLOCATE(shellDistance(27*atoms%nat),source = 0.0)
       ALLOCATE(neighbourShells(3,27*atoms%nat,27*atoms%nat),source = 0.0)
@@ -868,7 +866,7 @@ CONTAINS
       ALLOCATE(numshellAtoms(27*atoms%nat),source=0)
 
       !Sort the nearestNeighbours into shells
-      lastIndex = 2 !Skip the first element (onsite)
+      lastIndex = 1 !Skip the first element (onsite)
       ishell = 1
       DO
 
