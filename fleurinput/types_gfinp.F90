@@ -751,9 +751,8 @@ CONTAINS
       LOGICAL,          INTENT(IN)     :: l_write
 
       REAL,    PARAMETER :: tol = 1e-7
-      INTEGER, PARAMETER :: maxAtoms = 27*atoms%nat
 
-      INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
+      INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
       REAL :: currentDist,minDist,amatAuxDet
@@ -780,6 +779,8 @@ CONTAINS
 
 !     1. For the 1st version the auxiliary unit cell is just a copy of the original unit cell with
 !        all atoms within the cell.
+
+      maxAtoms = 27*atoms%nat
 
       DO i = 1, 3
          DO j = 1, 3
