@@ -933,8 +933,8 @@ CONTAINS
             nshellAtom1 = 0
             atomLoop: DO iAtom = 1, numshellAtoms(ishell)
                DO ishellAtom = 1, nshellAtom
-                  IF(ALL(ABS(shellDiff(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol).OR.&
-                     ALL(ABS(shellDiff(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
+                  IF(ALL(ABS(shellDiff(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop!.OR.&
+                     !ALL(ABS(shellDiff(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
                ENDDO
 
                nshellAtom1 = nshellAtom1 + 1
@@ -972,7 +972,7 @@ CONTAINS
 
       ENDDO
 
-      nshellsFound = ishell - 1
+      nshellsFound = ishell - 2
 
       DO ishell = 1, nshellsFound
          IF(l_write) THEN
