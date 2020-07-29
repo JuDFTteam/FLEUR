@@ -51,6 +51,7 @@ CONTAINS
 
 
     CLASS(t_mat),ALLOCATABLE :: smat(:,:),hmat(:,:)
+    type(t_mat)  :: fake_smat
     INTEGER :: i,j,nspins
 
     !Matrices for Hamiltonian and Overlapp
@@ -99,8 +100,21 @@ CONTAINS
       if(any(shape(smat) /= 1)) then 
         call judft_error("Hybrid doesn't do noco.")
       endif
-      call smat(1,1)%save_npy("olap_pre_writing_rank=" // int2str(fmpi%n_rank) // ".npy")
-      CALL write_eig(hybdat%eig_id, nk,isp, smat=smat(1,1))
+      call fake_smat%init(smat(1,1))
+      do i = 1,fake_smat%matsize1
+        do j = 1,fake_smat%matsize2
+           if(fake_smat%l_real) then 
+              fake_smat%data_r(i,j) = i + 1000 * j + (fmpi%n_rank * 1000000)
+           else 
+              fake_smat%data_c(i,j) = i + 1000 * j + (fmpi%n_rank * 1000000)
+           endif 
+         enddo
+      enddo
+
+      call fake_smat%save_npy("olap_pre_writing_rank=" // int2str(fmpi%n_rank) // ".npy")
+      if(fmpi%n_rank == 0) then
+         CALL write_eig(hybdat%eig_id, nk,isp, smat=fake_smat)
+      endif
    END IF
 
    IF(fi%hybinp%l_hybrid) THEN

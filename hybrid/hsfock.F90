@@ -58,6 +58,8 @@ CONTAINS
       USE m_exchange_core
       USE m_symmetrizeh
       use m_work_package
+      USE m_eig66_data
+      use m_eig66_mpi
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -98,6 +100,7 @@ CONTAINS
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
       TYPE(t_mat)              :: ex, z_k
+      TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -138,6 +141,12 @@ CONTAINS
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+
+
+      CALL priv_find_data(hybdat%eig_id, d)
+      call save_npy("olap_data_r_rank=" // int2str(fmpi%n_rank) // ".npy", d%olap_r_data)
+
+
       if(k_pack%submpi%root()) then
          ! calculate contribution from the core states to the HF exchange
          CALL timestart("core exchange calculation")

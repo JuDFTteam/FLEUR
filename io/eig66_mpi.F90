@@ -8,7 +8,7 @@ MODULE m_eig66_mpi
 #endif
    IMPLICIT NONE
    PRIVATE
-   PUBLIC open_eig, read_eig, write_eig, close_eig, reset_eig
+   PUBLIC open_eig, read_eig, write_eig, close_eig, reset_eig, priv_find_data
 CONTAINS
 
    SUBROUTINE priv_find_data(id, d)
@@ -431,14 +431,14 @@ CONTAINS
       INTEGER:: nk, j, n1, n2, n, pe, n_members
       INTEGER::used(0:isize)
 
-      allocate (d%pe_basis(nkpts, jspins))
-      allocate (d%slot_basis(nkpts, jspins))
+      allocate (d%pe_basis(nkpts, jspins), source=-1)
+      allocate (d%slot_basis(nkpts, jspins), source=-1)
 
-      allocate (d%pe_ev(nkpts, jspins, neig))
-      allocate (d%slot_ev(nkpts, jspins, neig))
+      allocate (d%pe_ev(nkpts, jspins, neig), source=-1)
+      allocate (d%slot_ev(nkpts, jspins, neig), source=-1)
 
-      allocate (d%pe_olap(nkpts, jspins, nmat))
-      allocate (d%slot_olap(nkpts, jspins, nmat))
+      allocate (d%pe_olap(nkpts, jspins, nmat), source=-1)
+      allocate (d%slot_olap(nkpts, jspins, nmat), source=-1)
 
       !basis contains a total of nkpts*jspins entries
       d%pe_basis = -1
