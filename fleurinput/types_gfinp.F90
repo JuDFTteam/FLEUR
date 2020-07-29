@@ -909,7 +909,6 @@ CONTAINS
             lastDist = shellDistance(ishell1)
          ENDDO
          IF(nshellDist>nshells) EXIT
-         WRITE(*,*) ishell,nshellDist
          !Take the representative element of the shell
          shellAux = 0.0
          shellAux(:,1) = shellDiff(:,1,ishell)
@@ -949,6 +948,7 @@ CONTAINS
             !Reorder shellDiff and all other arrays array (move everything above ishell one up to make space)
             DO ishell1 = nshellsFound, ishell + 2, -1
                shellAtom(ishell1) = shellAtom(ishell1-1)
+               shellDistance(ishell1) = shellDistance(ishell1-1)
                numshellAtoms(ishell1) = numshellAtoms(ishell1-1)
                shellDiff(:,:,ishell1) = shellDiff(:,:,ishell1-1)
             ENDDO
