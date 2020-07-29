@@ -913,7 +913,7 @@ CONTAINS
          shellAux = 0.0
          shellAux(:,1) = shellDiff(:,1,ishell)
 
-         nshellAtom = 0
+         nshellAtom = 1
          symLoop: DO iop = 1, sym%nop
             diffRot = matmul(sym%mrot(:,:,iop),shellAux(:,1))
 
