@@ -752,7 +752,7 @@ CONTAINS
 
       REAL,    PARAMETER :: tol = 1e-7
 
-      INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms
+      INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
       REAL :: currentDist,minDist,amatAuxDet
@@ -898,11 +898,18 @@ CONTAINS
 
       ALLOCATE(shellAux(3,maxAtoms),source=0.0)
       ALLOCATE(shellAux1(3,maxAtoms),source=0.0)
-      nshellsFound = nshells !We only want to consider nshells
+      nshellsFound = ishell !We only want to consider nshells
       !Symmetry reduction
       DO ishell = 1, SIZE(shellDiff,3)
          IF(ishell.GT.nshellsFound) EXIT !We have finished the requested shells
-
+         nshellDist = 0
+         lastDist = 0.0
+         DO ishell1 = 1, ishell
+            IF(shellDistance(ishell1)-lastDist.GT.1e-12) nshellDist = nshellDist + 1
+            lastDist = shellDistance(ishell1)
+         ENDDO
+         IF(nshellDist>nshells) EXIT
+         WRITE(*,*) ishell,nshellDist
          !Take the representative element of the shell
          shellAux = 0.0
          shellAux(:,1) = shellDiff(:,1,ishell)
