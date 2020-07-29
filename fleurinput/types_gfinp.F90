@@ -492,7 +492,7 @@ CONTAINS
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,&
-                                           atoms,cell,.NOT.written(atomType))
+                                           atoms,cell,sym,.NOT.written(atomType))
             written(atomType) = .TRUE.
          ENDIF
       ENDDO
@@ -725,10 +725,11 @@ CONTAINS
    END FUNCTION add_gfelem
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,l_write)
+                                          refCutoff,atoms,cell,sym,l_write)
 
       USE m_types_atoms
       USE m_types_cell
+      USE m_types_sym
       USE m_sort
       USE m_inv3
 
@@ -746,15 +747,19 @@ CONTAINS
       INTEGER,          INTENT(IN)     :: refCutoff
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_cell),     INTENT(IN)     :: cell
+      TYPE(t_sym),      INTENT(IN)     :: sym
       LOGICAL,          INTENT(IN)     :: l_write
+
+      REAL, PARAMETER :: tol = 1e-7
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxCubeAtoms,identicalAtoms
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
       REAL :: currentDist,minDist,amatAuxDet
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
       REAL :: refPos(3),point(3),pos(3),diff(3)
-      REAL :: currentDiff(3),offsetPos(3)
+      REAL :: currentDiff(3),offsetPos(3),repDiff(3),diffRot(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
       INTEGER, ALLOCATABLE :: neighborAtoms(:)
@@ -763,7 +768,14 @@ CONTAINS
       REAL,    ALLOCATABLE :: nearestNeighborDiffs(:,:)
       REAL,    ALLOCATABLE :: neighborAtomsDiff(:,:)
       REAL,    ALLOCATABLE :: sqrDistances(:)
+      REAL,    ALLOCATABLE :: neighbourShells(:,:,:)
 
+      REAL,    ALLOCATABLE :: shellDistance(:)
+      REAL,    ALLOCATABLE :: shellDiff(:,:,:)
+      INTEGER, ALLOCATABLE :: shellAtom(:)
+      INTEGER, ALLOCATABLE :: numshellAtoms(:)
+      REAL,    ALLOCATABLE :: shellAux(:,:)
+      REAL,    ALLOCATABLE :: shellAux1(:,:)
 
 !     1. For the 1st version the auxiliary unit cell is just a copy of the original unit cell with
 !        all atoms within the cell.
@@ -845,32 +857,137 @@ CONTAINS
          nearestNeighborDists(i) = SQRT(sqrDistances(distIndexList(i)))
          nearestNeighborDiffs(:,i) = neighborAtomsDiff(:,distIndexList(i))
       END DO
-      ishell = 0
-      lastIndex = 1
-      DO WHILE(ishell<=nshells)
-         !search for the atoms with the current minimal distance
-         minDist = MINVAL(nearestNeighborDists(:numNearestNeighbors))
-         IF(l_write) THEN
-            WRITE(oUnit,'(/,A,f14.8)') 'Adding shell with distance: ', minDist
-         ENDIF
-         DO i = lastIndex, numNearestNeighbors
-            lastIndex = i
-            IF(ABS(nearestNeighborDists(i)-minDist).GT.1e-12) EXIT !Because the list is sorted
-            diff = MATMUL(invAmatAux,nearestNeighborDiffs(:,i))
-            !l_sphavg has to be false
-            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=nearestNeighbors(i),&
-                             atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff)
+      DEALLOCATE(sqrDistances,distIndexList,neighborAtomsDiff,neighborAtoms)
 
-            this%elem(i_gf)%refCutoff = refCutoff
+      IF(nearestNeighborDists(1).GT.1e-12) CALL juDFT_error("Onsite Element not found",calledby ="addNearestNeighbours_gfelem")
 
-            IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, nearestNeighbors(i), nearestNeighborDiffs(:,i), diff(:)
+      !Maximum number of shells is number of atoms
+      ALLOCATE(shellDistance(27*atoms%nat),source = 0.0)
+      ALLOCATE(neighbourShells(3,27*atoms%nat,27*atoms%nat),source = 0.0)
+      ALLOCATE(shellAtom(27*atoms%nat),source=0)
+      ALLOCATE(numshellAtoms(27*atoms%nat),source=0)
+
+      !Sort the nearestNeighbours into shells
+      lastIndex = 2 !Skip the first element (onsite)
+      ishell = 1
+      DO
+
+         minDist = MINVAL(nearestNeighborDists(lastIndex:numNearestNeighbors))
+         shellDistance(ishell) = minDist
+         numshellAtoms(ishell) = 0
+         DO iAtom = lastIndex, numNearestNeighbors
+            lastIndex = iAtom
+            IF(ABS(nearestNeighborDists(iAtom)-minDist).GT.1e-12) EXIT !List is sorted
+            numshellAtoms(ishell) = numshellAtoms(ishell) + 1
+            IF(shellAtom(ishell) == 0) THEN
+               shellAtom(ishell) = nearestNeighbors(iAtom)
+            ELSE IF(shellAtom(ishell) .NE. nearestNeighbors(iAtom)) THEN
+               CALL juDFT_error("Found inequivalent atoms at same distance (not yet implemented)"&
+                                ,calledby ="addNearestNeighbours_gfelem")
             ENDIF
-
+            shellDiff(:,numshellAtoms(ishell),ishell) = nearestNeighborDiffs(:,iAtom)
          ENDDO
 
-         ishell = ishell + 1
+         IF (lastIndex<numNearestNeighbors) THEN
+            ishell = ishell + 1
+         ELSE
+            EXIT
+         ENDIF
+      ENDDO
+      DEALLOCATE(nearestNeighborDiffs,nearestNeighborDists,nearestNeighbors)
+
+
+      ALLOCATE(shellAux(3,27*atoms%nat),source=0.0)
+      ALLOCATE(shellAux1(3,27*atoms%nat),source=0.0)
+      nshellsFound = nshells !We only want to consider nshells
+      !Symmetry reduction
+      DO ishell = 1, SIZE(shellDiff,3)
+         IF(ishell.GT.nshellsFound) EXIT !We have finished the requested shells
+
+         !Take the representative element of the shell
+         repDiff = shellDiff(:,1,ishell)
+
+         nshellAtom = 0
+         symLoop: DO iop = 1, sym%nop
+            diffRot = matmul(sym%mrot(:,:,iop),repDiff)
+
+            DO ishellAtom = 1, nshellAtom
+               !Is the atom equivalent to another atom already in the shell
+               IF(ALL(ABS(diffRot-neighbourShells(:,ishellAtom,ishell)).LT.tol)) CYCLE symLoop
+            ENDDO
+
+            nshellAtom = nshellAtom + 1
+            shellAux(:,nshellAtom) = diffRot
+         ENDDO symLoop
+
+         IF(nshellAtom < numshellAtoms(ishell)) THEN  !Not all elements can be constructed from the representative element
+
+            !Find the atoms which are not represented
+            nshellAtom1 = 0
+            atomLoop: DO iAtom = 1, numshellAtoms(ishell)
+               DO ishellAtom = 1, nshellAtom1
+                  IF(ALL(ABS(neighbourShells(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol).OR.&
+                     ALL(ABS(neighbourShells(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
+               ENDDO
+
+               nshellAtom1 = nshellAtom1 + 1
+               shellAux1(:,nshellAtom1) = neighbourShells(:,iAtom,ishell)
+            ENDDO atomLoop
+
+            !We have found a new shell
+            nshellsFound = nshellsFound + 1
+            IF(nshellsFound > SIZE(shellDiff,3)) CALL juDFT_error("Dim Error: nshells > SIZE",calledby ="addNearestNeighbours_gfelem")
+
+            !Reorder shellDiff and all other arrays array (move everything above ishell one up to make space)
+            DO ishell1 = nshellsFound, ishell + 2, -1
+               shellAtom(ishell1) = shellAtom(ishell1-1)
+               numshellAtoms(ishell1) = numshellAtoms(ishell1-1)
+               shellDiff(:,:,ishell1) = shellDiff(:,:,ishell1-1)
+            ENDDO
+
+            !Modify ishell (fewer atoms)
+            numshellAtoms(ishell) = nshellAtom
+            DO ishellAtom = 1, nshellAtom
+               shellDiff(:,ishellAtom,ishell) = shellAux(:,ishellAtom)
+            ENDDO
+
+            !Insert Element at ishell+1 (This way it will be the next element in the
+            !loop if it needs to be deconstructed further)
+            shellAtom(ishell+1) = shellAtom(ishell)
+            shellDistance(ishell+1) = shellDistance(ishell)
+            numshellAtoms(ishell+1) = nshellAtom1
+            DO ishellAtom = 1, nshellAtom1
+               shellDiff(:,ishellAtom,ishell+1) = shellAux1(:,ishellAtom)
+            ENDDO
+
+         ENDIF
+
+      ENDDO
+
+      DO ishell = 1, nshellsFound
+         IF(l_write) THEN
+            WRITE(oUnit,'(/,A,f14.8)') 'Adding shell with distance: ', shellDistance(ishell)
+
+            WRITE(oUnit,'(/,A)') ' Contains the following atom pairs:'
+            DO ishellAtom = 1, numshellAtoms(ishell)
+               WRITE(oUnit,'(3f14.8)') neighbourShells(:,ishellAtom,ishell)
+            ENDDO
+         ENDIF
+
+         !Transform to lattice coordinates
+         diff = MATMUL(invAmatAux,neighbourShells(:,ishellAtom,ishell))
+         !l_sphavg has to be false
+         i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
+                          fixedCutoff=fixedCutoff)
+
+         this%elem(i_gf)%refCutoff = refCutoff
+
+         IF(l_write) THEN
+            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
+                                            neighbourShells(:,ishellAtom,ishell), diff(:)
+         ENDIF
+
       ENDDO
 
    END SUBROUTINE addNearestNeighbours_gfelem
