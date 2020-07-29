@@ -861,7 +861,7 @@ CONTAINS
 
       !Maximum number of shells is number of atoms
       ALLOCATE(shellDistance(27*atoms%nat),source = 0.0)
-      ALLOCATE(neighbourShells(3,27*atoms%nat,27*atoms%nat),source = 0.0)
+      ALLOCATE(shellDiff(3,27*atoms%nat,27*atoms%nat),source = 0.0)
       ALLOCATE(shellAtom(27*atoms%nat),source=0)
       ALLOCATE(numshellAtoms(27*atoms%nat),source=0)
 
@@ -968,12 +968,12 @@ CONTAINS
 
             WRITE(oUnit,'(/,A)') ' Contains the following atom pairs:'
             DO ishellAtom = 1, numshellAtoms(ishell)
-               WRITE(oUnit,'(3f14.8)') neighbourShells(:,ishellAtom,ishell)
+               WRITE(oUnit,'(3f14.8)') shellDiff(:,ishellAtom,ishell)
             ENDDO
          ENDIF
 
          !Transform to lattice coordinates
-         diff = MATMUL(invAmatAux,neighbourShells(:,ishellAtom,ishell))
+         diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
          !l_sphavg has to be false
          i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
                           atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
@@ -983,7 +983,7 @@ CONTAINS
 
          IF(l_write) THEN
             WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            neighbourShells(:,ishellAtom,ishell), diff(:)
+                                            shellDiff(:,ishellAtom,ishell), diff(:)
          ENDIF
 
       ENDDO
