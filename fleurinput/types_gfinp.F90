@@ -932,7 +932,7 @@ CONTAINS
             !Find the atoms which are not represented
             nshellAtom1 = 0
             atomLoop: DO iAtom = 1, numshellAtoms(ishell)
-               DO ishellAtom = 1, nshellAtom1
+               DO ishellAtom = 1, nshellAtom
                   IF(ALL(ABS(shellDiff(:,iAtom,ishell)-shellAux(:,ishellAtom)).LT.tol).OR.&
                      ALL(ABS(shellDiff(:,iAtom,ishell)+shellAux(:,ishellAtom)).LT.tol)) CYCLE atomLoop
                ENDDO
