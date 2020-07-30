@@ -30,11 +30,11 @@ MODULE m_greensfBZint
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem,i_elemLO,nLO,imatSize
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize,ikptf,ikptf_start,ikptf_end
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor,atomDiff(3)
-      LOGICAL :: l_sphavg
+      LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
@@ -89,16 +89,6 @@ MODULE m_greensfBZint
 
             DO natomp = natomp_start, natomp_end
 
-               !Phase factor for intersite elements (Does nothing atm)
-               IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
-                  phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),atomDiff(:)))
-               ELSE
-                  phase = cmplx_1
-               ENDIF
-
-               !l-offdiagonal phase
-               phase = phase * ImagUnit**(l-lp)
-
                DO ispin = spin_start, spin_end
                   IF(ispin==3) THEN
                      spin1 = 2
@@ -119,8 +109,24 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp.AND.ALL(ABS(atomDiff).LT.1e-12),&
-                                  l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  l_intersite = natom.NE.natomp.OR.ANY(ABS(atomDiff).GT.1e-12)
+                  !Workaround for symmetries and intersite phase
+                  ikptf_start = MERGE(1.        ,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
+                  ikptf_end   = MERGE(kpts%nkptf,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
+                  DO ikptf = ikptf_start, ikptf_end
+                     !Phase factor for intersite elements
+                     IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
+                        phase = exp(ImagUnit*dot_product(kpts%bkf(:,ikptf),atomDiff(:)))
+                     ELSE
+                        phase = cmplx_1
+                     ENDIF
+
+                     !l-offdiagonal phase
+                     phase = phase * ImagUnit**(l-lp)
+
+                     CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,.NOT.l_intersite.AND.l.EQ.lp,&
+                                     l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  ENDDO
                ENDDO
 
             ENDDO !natomp

@@ -177,7 +177,7 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells,maxIntersiteElem
       INTEGER :: i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
@@ -281,7 +281,9 @@ CONTAINS
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       n_hia = 0
 
-      ALLOCATE(this%elem((lmaxU_const+1)**2*27*ntype)) !27 because of intersite
+      !Maximum number of intersite elements (number of unit cells in a 7x7x7 block) (will be reallocated later with actual size)
+      maxIntersiteElem = 343
+      ALLOCATE(this%elem((lmaxU_const+1)**2*maxIntersiteElem*ntype)) !ntype shoul be nat ??
       ALLOCATE(this%hiaElem(4*ntype))
       ALLOCATE(this%numTorgueElems(ntype),source=0)
       ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
