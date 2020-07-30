@@ -19,19 +19,21 @@ MODULE m_types_gfinp
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
       !(used for mapping index in types_greensf)
-      INTEGER :: l = -1
+      INTEGER :: l  = -1
       INTEGER :: lp = -1
-      INTEGER :: atomType = 0
+      INTEGER :: atomType  = 0
       INTEGER :: atomTypep = 0
-      INTEGER :: iContour = 0 !Which energy contour is used
-      REAL    :: atomDiff(3) = [0.0,0.0,0.0] !Distance between atoms for intersite phase
+      REAL    :: atomDiff(3) = [0.0,0.0,0.0] !Distance between atoms (lattice coordinates) for intersite phase
+
+      INTEGER :: iContour = 0      !Which energy contour is used
       LOGICAL :: l_sphavg = .TRUE. !Is this element calculated with or without radial dependence
+
       !Parameters for the determination of the upper cutoff of the Kramers-Kronig Integration
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
-      INTEGER :: refCutoff = -1 !Choose cutoff to be the same as another
+      INTEGER :: refCutoff   = -1 !Choose cutoff to be the same as another
    CONTAINS
-      PROCEDURE :: countLOs => countLOs_gfelem
+      PROCEDURE :: countLOs => countLOs_gfelem !Count the local orbitals attached to the element
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -60,12 +62,12 @@ MODULE m_types_gfinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
       !General logical switches
-      LOGICAL :: l_mperp = .FALSE.
-      LOGICAL :: l_resolvent = .FALSE.
-      LOGICAL :: l_outputSphavg = .FALSE.
+      LOGICAL :: l_mperp         = .FALSE.
+      LOGICAL :: l_resolvent     = .FALSE.
+      LOGICAL :: l_outputSphavg  = .FALSE.
       LOGICAL :: l_intFullRadial = .FALSE.
-      REAL    :: minCalcDistance=-1.0 !This distance has to be reached before green's functions are calculated
-                                      !Negative means it is evaluated at every iteration
+      REAL    :: minCalcDistance = -1.0 !This distance has to be reached before green's functions are calculated
+                                        !Negative means it is evaluated at every iteration
       !Number of elements
       INTEGER :: n = 0
       !Information on the elements to be calculated
@@ -82,18 +84,21 @@ MODULE m_types_gfinp
       INTEGER, ALLOCATABLE :: torgueElem(:,:)
       INTEGER, ALLOCATABLE :: numTorgueElems(:)
    CONTAINS
-      PROCEDURE :: read_xml       => read_xml_gfinp
-      PROCEDURE :: mpi_bc         => mpi_bc_gfinp
-      PROCEDURE :: init           => init_gfinp
-      PROCEDURE :: find           => find_gfelem
-      PROCEDURE :: find_contour   => find_contour
-      PROCEDURE :: add            => add_gfelem
-      PROCEDURE :: uniqueElements => uniqueElements_gfinp
-      PROCEDURE :: eMesh          => eMesh_gfinp
-      PROCEDURE :: checkRadial    => checkRadial_gfinp
-      PROCEDURE :: checkSphavg    => checkSphavg_gfinp
-      PROCEDURE :: checkOnsite    => checkOnsite_gfinp
+      PROCEDURE :: read_xml             => read_xml_gfinp
+      PROCEDURE :: mpi_bc               => mpi_bc_gfinp
+      PROCEDURE :: init                 => init_gfinp
+      PROCEDURE :: find                 => find_gfelem
+      PROCEDURE :: find_contour         => find_contour
+      PROCEDURE :: add                  => add_gfelem
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
+      PROCEDURE :: uniqueElements       => uniqueElements_gfinp
+      PROCEDURE :: eMesh                => eMesh_gfinp
+
+      !Checks to see if specific elements are present in the elem array
+      PROCEDURE :: checkRadial          => checkRadial_gfinp !With Radial dependence
+      PROCEDURE :: checkSphavg          => checkSphavg_gfinp !Without Radial dependence
+      PROCEDURE :: checkOnsite          => checkOnsite_gfinp !Onsite Element (atomDiff=0 l=lp atom=atomp)
+      PROCEDURE :: checkOffdiagonal     => checkOffdiagonal_gfinp !Offdiagonal Element (not Onsite)
    END TYPE t_gfinp
 
    PUBLIC t_gfinp, t_contourInp, t_gfelementtype
@@ -598,8 +603,10 @@ CONTAINS
       LOGICAL :: l_sphavgArg, l_sphavgElem,loArg
       REAL    :: atomDiff(3)
 
+      !Process optional switches and arguments
       l_sphavgArg = .TRUE.
       IF(PRESENT(l_sphavg)) l_sphavgArg = l_sphavg
+
       loArg = .FALSE.
       IF(PRESENT(lo)) loArg = lo
 
@@ -612,6 +619,7 @@ CONTAINS
          maxGF = this%n
       ENDIF
 
+      !Count the unique Elements before maxGF
       DO i_gf = 1, maxGF
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
@@ -640,6 +648,7 @@ CONTAINS
          ENDIF
       ENDDO
 
+      !Get the index of the unque element associated with the ind-th element
       IF(PRESENT(indUnique)) THEN
          IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",&
                                                 calledby="uniqueElements_gfinp")
@@ -899,7 +908,7 @@ CONTAINS
       ALLOCATE(shellAux(3,maxAtoms),source=0.0)
       ALLOCATE(shellAux1(3,maxAtoms),source=0.0)
       nshellsFound = ishell !We only want to consider nshells
-      !Symmetry reduction
+      !Symmetry reduction (modernized and modified version of nshell.f from v26)
       DO ishell = 1, SIZE(shellDiff,3)
          IF(ishell.GT.nshellsFound) EXIT !We have finished the requested shells
          nshellDist = 0
@@ -984,7 +993,7 @@ CONTAINS
             ENDDO
          ENDIF
 
-         !Transform to lattice coordinates
+         !Transform represenative element to lattice coordinates
          diff = MATMUL(invAmatAux,shellDiff(:,1,ishell))
          !l_sphavg has to be false
          i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
@@ -1000,7 +1009,7 @@ CONTAINS
 
          !Add negative of diff (for Jij we need Gij and Gji (could maybe be done with conjugation))
          !This should not produce problems if symmertry is reduced because add makes sure that there
-         !are no duplicates
+         !are no duplicates in this%elem
          diff = -1.0 * diff
          i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
                           atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
@@ -1209,6 +1218,22 @@ CONTAINS
          checkOnsite_gfinp = .TRUE.
       ENDDO
    END FUNCTION checkOnsite_gfinp
+
+   PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
+
+      !Check if there are any oniste elements
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkOffdiagonal_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%l.EQ.this%elem(i_gf)%lp.AND. &
+            this%elem(i_gf)%atomType.EQ.this%elem(i_gf)%atomTypep.AND. &
+            ALL(ABS(this%elem(i_gf)%atomDiff).LT.1e-12)) CYCLE
+         checkOffdiagonal_gfinp = .TRUE.
+      ENDDO
+   END FUNCTION checkOffdiagonal_gfinp
 
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
