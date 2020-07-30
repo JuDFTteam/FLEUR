@@ -33,7 +33,7 @@ MODULE m_greensfBZint
       INTEGER :: i_elem,i_elemLO,nLO,imatSize,ikptf,ikptf_start,ikptf_end
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
-      REAL    :: atomFactor,atomDiff(3)
+      REAL    :: atomFactor,kptFac,atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
@@ -110,6 +110,7 @@ MODULE m_greensfBZint
                   ENDIF
 
                   l_intersite = natom.NE.natomp.OR.ANY(ABS(atomDiff).GT.1e-12)
+                  kptFac = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
                   !Workaround for symmetries and intersite phase
                   ikptf_start = MERGE(1         ,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
                   ikptf_end   = MERGE(kpts%nkptf,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
@@ -117,7 +118,7 @@ MODULE m_greensfBZint
                      !Phase factor for intersite elements
                      IF(l_intersite) THEN
                         IF(kpts%bkp(ikptf).NE.ikpt) CYCLE
-                        phase = exp(ImagUnit*dot_product(kpts%bkf(:,ikptf),atomDiff(:)))
+                        phase = exp(ImagUnit*dot_product(kpts%bkf(:,ikptf),atomDiff(:)))/kptFac
                      ELSE
                         phase = cmplx_1
                      ENDIF
