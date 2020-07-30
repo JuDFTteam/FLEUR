@@ -761,7 +761,7 @@ CONTAINS
 
       REAL,    PARAMETER :: tol = 1e-7
 
-      INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist
+      INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
       REAL :: currentDist,minDist,amatAuxDet,lastDist
@@ -785,10 +785,15 @@ CONTAINS
       REAL,    ALLOCATABLE :: shellAux(:,:)
       REAL,    ALLOCATABLE :: shellAux1(:,:)
 
+      CALL timestart("Green's Function: Add nearest Neighbors")
 !     1. For the 1st version the auxiliary unit cell is just a copy of the original unit cell with
 !        all atoms within the cell.
 
-      maxAtoms = 27*atoms%nat
+      !How many unit cells are included (determine based on nshells ??)
+      cubeEndIndex   =  1
+      cubeStartIndex = -cubeEndIndex
+      !How many atoms are there in total (in all of the copies)
+      maxAtoms = atoms%nat * (cubeEndIndex-cubeStartIndex+1)**3
 
       DO i = 1, 3
          DO j = 1, 3
@@ -809,13 +814,15 @@ CONTAINS
 !     5. For the reference atom in auxiliary unit cell collect shortest distances
 !        to other atoms in neighborhood
 
-      ALLOCATE(sqrDistances(maxAtoms)) ! Formally 27, but 8 should be enough due to maxSqrDist
+      ALLOCATE(sqrDistances(maxAtoms))
       ALLOCATE(neighborAtoms(maxAtoms))
       ALLOCATE(neighborAtomsDiff(3,maxAtoms))
       ALLOCATE(distIndexList(maxAtoms))
       ALLOCATE (nearestNeighbors(maxAtoms))
       ALLOCATE (nearestNeighborDists(maxAtoms))
       ALLOCATE (nearestNeighborDiffs(3,maxAtoms))
+
+      !Find the reference atom
       iAtom = 0
       DO n = 1, atoms%ntype
          DO na = 1, atoms%neq(n)
@@ -825,12 +832,14 @@ CONTAINS
             ENDIF
          ENDDO
       ENDDO
+
+      !Collect the Distances between the refAtom and all other atoms
       neighborAtoms = 0
       iNeighborAtom = 0
       identicalAtoms = 0
-      DO i = -1, 1
-         DO j = -1, 1
-            DO k = -1, 1
+      DO i = cubeStartIndex, cubeEndIndex
+         DO j = cubeStartIndex, cubeEndIndex
+            DO k = cubeStartIndex, cubeEndIndex
                DO m = 1, 3
                   offsetPos(m) = i*amatAux(m,1) + j*amatAux(m,2) + k*amatAux(m,3)
                END DO
@@ -860,6 +869,8 @@ CONTAINS
          WRITE(*,*) 'Position: ', refPos(:)
          CALL juDFT_error("Too many atoms at same position.",calledby ="addNearestNeighbours_gfelem")
       END IF
+
+      !Sort the atoms according to distance
       numNearestNeighbors = iNeighborAtom
       CALL sort(distIndexList(:iNeighborAtom),sqrDistances(:iNeighborAtom))
       DO i = 1, numNearestNeighbors
@@ -1023,6 +1034,8 @@ CONTAINS
          ENDIF
 
       ENDDO
+
+   CALL timestop("Green's Function: Add nearest Neighbors")
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
