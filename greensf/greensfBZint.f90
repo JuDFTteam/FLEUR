@@ -111,11 +111,12 @@ MODULE m_greensfBZint
 
                   l_intersite = natom.NE.natomp.OR.ANY(ABS(atomDiff).GT.1e-12)
                   !Workaround for symmetries and intersite phase
-                  ikptf_start = MERGE(1.        ,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
+                  ikptf_start = MERGE(1         ,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
                   ikptf_end   = MERGE(kpts%nkptf,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
                   DO ikptf = ikptf_start, ikptf_end
                      !Phase factor for intersite elements
-                     IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
+                     IF(l_intersite) THEN
+                        IF(kpts%bkp(ikptf).NE.ikpt) CYCLE
                         phase = exp(ImagUnit*dot_product(kpts%bkf(:,ikptf),atomDiff(:)))
                      ELSE
                         phase = cmplx_1
