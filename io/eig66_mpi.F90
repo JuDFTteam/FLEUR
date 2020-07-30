@@ -375,6 +375,9 @@ CONTAINS
          ALLOCATE (tmp_cmplx(tmp_size))
          DO n = 1, smat%matsize2
             n1 = n - 1
+            if((.not. present(n_size)) .and. (.not. present(n_rank)) ) then 
+               call juDFT_error("smat needs n_size & n_rank")
+            endif
             IF (PRESENT(n_size)) n1 = n_size*n1
             IF (PRESENT(n_rank)) n1 = n1 + n_rank
             IF (n1 + 1 > SIZE(d%slot_olap, 3)) EXIT
