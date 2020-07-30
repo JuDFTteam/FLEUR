@@ -68,7 +68,7 @@ CONTAINS
     scale = 0.0  ; mat = 0.0
 
     READ (line,lattice,iostat=ios)
-    if (ios.ne.0) call judft_error(("Error reading lattice:"//trim(line)))
+    if (ios.ne.0) call judft_error("Error reading lattice:"//trim(line), hint="Maybe add '' around the lattice type")
 
     IF ( abs(a0) < eps ) a0 = 1.0
     IF ( abs(a)  < eps ) a  = 1.0
