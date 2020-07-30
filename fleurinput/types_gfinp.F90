@@ -998,6 +998,21 @@ CONTAINS
                                             shellDiff(:,1,ishell), diff(:)
          ENDIF
 
+         !Add negative of diff (for Jij we need Gij and Gji (could maybe be done with conjugation))
+         !This should not produce problems if symmertry is reduced because add makes sure that there
+         !are no duplicates
+         diff = -1.0 * diff
+         i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
+                          fixedCutoff=fixedCutoff)
+
+         this%elem(i_gf)%refCutoff = refCutoff
+
+         IF(l_write) THEN
+            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
+                                            shellDiff(:,1,ishell), diff(:)
+         ENDIF
+
       ENDDO
 
    END SUBROUTINE addNearestNeighbours_gfelem
