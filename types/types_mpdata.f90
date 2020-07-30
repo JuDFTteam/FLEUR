@@ -471,6 +471,7 @@ contains
       call timestart("reduce lin. dep. mpdata")
 
       do itype = 1, atoms%ntype
+         if (hybinp%lcutm1(itype) <= 0) call judft_error("lcutm1 <= 0 isn't allowed for hybrid calculations")
          DO l = 0, hybinp%lcutm1(itype)
             full_n_radbasfn = mpdata%num_radbasfn(l, itype)
             n_grid_pt = atoms%jri(itype)
