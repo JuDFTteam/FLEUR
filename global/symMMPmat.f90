@@ -16,7 +16,7 @@ MODULE m_symMMPmat
 
    CONTAINS
 
-   PURE FUNCTION symMMPmatFull(mmpmat,sym,natom,l,atomDiff,bk,phase) Result(mmpmatSym)
+   PURE FUNCTION symMMPmatFull(mmpmat,sym,natom,l,atomDiff,bk,numDiffElems,phase) Result(mmpmatSym)
 
       COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_sym),      INTENT(IN)  :: sym
@@ -24,6 +24,7 @@ MODULE m_symMMPmat
       INTEGER,          INTENT(IN)  :: l
       REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
       REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
+      INTEGER,OPTIONAL, INTENT(IN)  :: numDiffElems
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase !multiply spin-offdiagonal phase
                                              !(if the full matrix is not given)
 
@@ -45,8 +46,8 @@ MODULE m_symMMPmat
             IF(phase) symPhase = exp(ImagUnit*sym%phase(isi))
          ENDIF
 
-         IF(PRESENT(atomDiff).AND.PRESENT(bk)) THEN
-            symPhase = symPhase * exp(ImagUnit*dot_product(bk,matmul(sym%mrot(:,:,isi),atomDiff)))
+         IF(PRESENT(atomDiff).AND.PRESENT(bk).AND.PRESENT(numDiffElems)) THEN
+            symPhase = symPhase * numDiffElems * exp(ImagUnit*dot_product(bk,matmul(TRANSPOSE(sym%mrot(:,:,isi)),atomDiff)))
          ENDIF
 
          mmpmatSym = mmpmatSym + symFac * symPhase * rotMMPmat(mmpmat,dwgn=sym%d_wgn(:,:,l,isi))
@@ -55,7 +56,7 @@ MODULE m_symMMPmat
 
    END FUNCTION symMMPmatFull
 
-   PURE FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,atomDiff,bk,phase) Result(mmpmatSym)
+   PURE FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,atomDiff,bk,numDiffElems,phase) Result(mmpmatSym)
 
       COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
       TYPE(t_sym),      INTENT(IN)  :: sym
@@ -63,6 +64,7 @@ MODULE m_symMMPmat
       INTEGER,          INTENT(IN)  :: l
       REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
       REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
+      INTEGER,OPTIONAL, INTENT(IN)  :: numDiffElems
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase
 
       INTEGER :: ilow(2),iup(2)
