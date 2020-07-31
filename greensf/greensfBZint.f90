@@ -123,7 +123,7 @@ MODULE m_greensfBZint
 
                   CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp,&
                                   l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
-                  ENDDO
+
                ENDDO
 
             ENDDO !natomp
