@@ -33,7 +33,7 @@ MODULE m_greensfSym
       COMPLEX, ALLOCATABLE :: imSym(:,:)
 
       !$OMP parallel default(none) &
-      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_sphavg)&
+      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_intersite,l_sphavg)&
       !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs)&
       !$OMP private(imat,iBand,imSym,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
