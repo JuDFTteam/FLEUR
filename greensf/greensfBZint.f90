@@ -30,7 +30,7 @@ MODULE m_greensfBZint
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem,i_elemLO,nLO,imatSize,iop,iop_start,iop_end
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor,kptFac,atomDiff(3)
@@ -111,22 +111,18 @@ MODULE m_greensfBZint
 
                   l_intersite = natom.NE.natomp.OR.ANY(ABS(atomDiff).GT.1e-12)
                   !We sum over the symmetry equivalent phase factors by applying the point symmetry
-                  !of the system
-                  iop_start = MERGE(1      ,1,l_intersite)
-                  iop_end   = MERGE(sym%nop,1,l_intersite)
-                  DO iop = iop_start, iop_end
-                     !Phase factor for intersite elements
-                     IF(l_intersite) THEN
-                        phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),matmul(sym%mrot(:,:,iop),atomDiff(:))))/sym%nop
-                     ELSE
-                        phase = cmplx_1
-                     ENDIF
+                  !of the system inside greensfSym
+                  IF(l_intersite) THEN
+                     phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),matmul(sym%mrot(:,:,iop),atomDiff(:))))
+                  ELSE
+                     phase = cmplx_1
+                  ENDIF
 
-                     !l-offdiagonal phase
-                     phase = phase * ImagUnit**(l-lp)
+                  !l-offdiagonal phase
+                  phase = phase * ImagUnit**(l-lp)
 
-                     CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,.NOT.l_intersite.AND.l.EQ.lp,&
-                                     l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,natom.EQ.natomp.AND.l.EQ.lp,&
+                                  l_sphavg,ispin,sym,atomFactor,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
                   ENDDO
                ENDDO
 
