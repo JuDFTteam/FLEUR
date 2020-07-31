@@ -142,11 +142,6 @@ CONTAINS
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
-
-      CALL priv_find_data(hybdat%eig_id, d)
-      call save_npy("olap_data_r_rank=" // int2str(fmpi%n_rank) // ".npy", d%olap_r_data)
-
-
       if(k_pack%submpi%root()) then
          ! calculate contribution from the core states to the HF exchange
          CALL timestart("core exchange calculation")
