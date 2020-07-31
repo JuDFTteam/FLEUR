@@ -49,7 +49,7 @@ MODULE m_symMMPmat
             symPhase = symPhase * exp(ImagUnit*dot_product(bk,matmul(sym%mrot(:,:,isi),atomDiff)))
          ENDIF
 
-         mmpmatSym = mmpmatSym + symFac * offdPhase * rotMMPmat(mmpmat,dwgn=sym%d_wgn(:,:,l,isi))
+         mmpmatSym = mmpmatSym + symFac * symPhase * rotMMPmat(mmpmat,dwgn=sym%d_wgn(:,:,l,isi))
 
       ENDDO
 
