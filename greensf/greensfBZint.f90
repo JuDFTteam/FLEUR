@@ -113,7 +113,7 @@ MODULE m_greensfBZint
                   !We sum over the symmetry equivalent phase factors by applying the point symmetry
                   !of the system inside greensfSym
                   IF(l_intersite) THEN
-                     phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),matmul(sym%mrot(:,:,iop),atomDiff(:))))
+                     phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),atomDiff(:)))
                   ELSE
                      phase = cmplx_1
                   ENDIF
