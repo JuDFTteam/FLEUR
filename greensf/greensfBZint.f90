@@ -114,7 +114,7 @@ MODULE m_greensfBZint
                   !of the system
                   iop_start = MERGE(1      ,1,l_intersite)
                   iop_end   = MERGE(sym%nop,1,l_intersite)
-                  DO iop = 1, sym%nop
+                  DO iop = iop_start, iop_end
                      !Phase factor for intersite elements
                      IF(l_intersite) THEN
                         phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),matmul(sym%mrot(:,:,iop),atomDiff(:))))/sym%nop
