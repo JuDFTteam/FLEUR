@@ -52,6 +52,9 @@ CONTAINS
       REAL :: zDebug_r(lapw_dim_nbasfcn,fi%input%neig)
       COMPLEX :: zDebug_c(lapw_dim_nbasfcn,fi%input%neig)
 
+      results%te_hfex%valence = 0.0
+      results%te_hfex%core    = 0.0
+
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
