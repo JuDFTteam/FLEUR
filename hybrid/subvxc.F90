@@ -538,10 +538,6 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       call timestart("apply to hmat")
-      ! call vxc%save_npy("vxc_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
-      ! call hmat%save_npy("hmat_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
-      ! call MPI_Barrier(MPI_COMM_WORLD, n)
-      ! call judft_error("stopit")
       do n = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
          n_loc = (n-1) / fmpi%n_size + 1
          DO nn = 1,MIN(n,hmat%matsize1)  

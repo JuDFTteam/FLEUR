@@ -29,30 +29,21 @@ contains
       
       call ex%u2l()
 
-      call ex%save_npy("ex_in_x2v.npy")
-
       call olap%init(z%l_real, z%matsize1, z%matsize1)
       CALL read_eig(hybdat%eig_id,nk,jsp, smat=olap)
-      call olap%save_npy("olap.npy")
       call olap%u2l()
       call olap%conjugate()
 
       !call judft_error("stop after olap")
 
       call olap%multiply(z, res=trafo)
-      call trafo%save_npy("trafo.npy")
-
       CALL ex%multiply(trafo, res=tmp, transB="C")
-      call tmp%save_npy("tmp.npy")
-
       CALL trafo%multiply(tmp, res=v_x)
-      call v_x%save_npy("v_x_pre_sym.npy")
 
       CALL timestop("T^-1*mat_ex*T^-1*")
 
       call timestart("symmetrizeh")
       CALL symmetrizeh(fi%atoms, fi%kpts%bkf(:, nk), jsp, lapw, fi%sym, hybdat%kveclo_eig, fi%cell, nsymop, psym, v_x)
-      call v_x%save_npy("v_x_post_sym.npy")
       call timestop("symmetrizeh")
    end subroutine ex_to_vx
 end module
