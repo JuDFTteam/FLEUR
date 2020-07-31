@@ -17,9 +17,12 @@ MODULE m_types_mpi
       INTEGER, ALLOCATABLE :: ev_list(:)
       !Communicator for PE on same node
       INTEGER :: mpi_comm_same_node
+      logical :: l_set_root_comm = .false. ! only create root comm once
+      integer :: root_comm ! communicator between all n_rank = 0
    CONTAINS
       procedure :: set_errhandler    => t_mpi_set_errhandler
       procedure :: is_root => mpi_is_root
+      procedure :: set_root_comm => t_mpi_set_root_comm
    END TYPE t_mpi
 
    INTERFACE juDFT_win_create
@@ -27,8 +30,18 @@ MODULE m_types_mpi
    END INTERFACE juDFT_win_create
 
    PRIVATE
-   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi
+   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm
 contains
+   subroutine t_mpi_set_root_comm(fmpi)
+      implicit none 
+      class(t_mpi), intent(inout) :: fmpi 
+
+      if(.not. fmpi%l_set_root_comm ) then 
+            call judft_comm_split(fmpi%mpi_comm, fmpi%n_rank, 0, fmpi%root_comm)
+            fmpi%l_set_root_comm = .True.
+      endif
+   end subroutine t_mpi_set_root_comm
+
    function mpi_is_root(mpi) result(is_root)
       implicit none 
       class(t_mpi), intent(in) :: mpi
