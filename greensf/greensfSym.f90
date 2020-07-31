@@ -8,8 +8,8 @@ MODULE m_greensfSym
 
    CONTAINS
 
-   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_onsite,l_sphavg,ispin,&
-                         sym,atomFactor,addPhase,im,greensfBZintCoeffs)
+   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_intersite,l_sphavg,ispin,&
+                         sym,atomFactor,atomDiff,bk,addPhase,im,greensfBZintCoeffs)
 
       INTEGER,                      INTENT(IN)     :: ikpt_i
       INTEGER,                      INTENT(IN)     :: i_elem
@@ -17,11 +17,14 @@ MODULE m_greensfSym
       INTEGER,                      INTENT(IN)     :: nLO
       INTEGER,                      INTENT(IN)     :: natom
       INTEGER,                      INTENT(IN)     :: l
-      LOGICAL,                      INTENT(IN)     :: l_onsite
+      LOGICAL,                      INTENT(IN)     :: l_diagonal
+      LOGICAL,                      INTENT(IN)     :: l_intersite
       LOGICAL,                      INTENT(IN)     :: l_sphavg
       INTEGER,                      INTENT(IN)     :: ispin
       TYPE(t_sym),                  INTENT(IN)     :: sym
       REAL,                         INTENT(IN)     :: atomFactor
+      REAL,                         INTENT(IN)     :: atomDiff(:)
+      REAL,                         INTENT(IN)     :: bk(:)
       COMPLEX,                      INTENT(IN)     :: addPhase
       COMPLEX,                      INTENT(IN)     :: im(-lmaxU_const:,-lmaxU_const:,:,:)
       TYPE(t_greensfBZintCoeffs),   INTENT(INOUT)  :: greensfBZintCoeffs
@@ -30,15 +33,17 @@ MODULE m_greensfSym
       COMPLEX, ALLOCATABLE :: imSym(:,:)
 
       !$OMP parallel default(none) &
-      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_onsite,l_sphavg)&
-      !$OMP shared(ispin,sym,atomFactor,addPhase,im,greensfBZintCoeffs)&
+      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_sphavg)&
+      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs)&
       !$OMP private(imat,iBand,imSym,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
       !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
-            IF(l_onsite) THEN !These rotations are only available for the onsite elements
-               imSym = symMMPmat(addPhase*im(:,:,iBand,imat),sym,natom,l,phase=(ispin.EQ.3))
+            IF(l_diagonal.AND.l_intersite) THEN !These rotations are only available for the onsite elements
+               imSym = symMMPmat(im(:,:,iBand,imat),sym,natom,l,bk=bk,atomDiff=atomDiff,phase=(ispin.EQ.3))
+            ELSE IF (l_diagonal) THEN
+               imSym = symMMPmat(im(:,:,iBand,imat),sym,natom,l,phase=(ispin.EQ.3))
             ELSE
                imSym = addPhase * conjg(im(:,:,iBand,imat))
             ENDIF

@@ -16,19 +16,21 @@ MODULE m_symMMPmat
 
    CONTAINS
 
-   PURE FUNCTION symMMPmatFull(mmpmat,sym,natom,l,phase) Result(mmpmatSym)
+   PURE FUNCTION symMMPmatFull(mmpmat,sym,natom,l,atomDiff,bk,phase) Result(mmpmatSym)
 
       COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_sym),      INTENT(IN)  :: sym
       INTEGER,          INTENT(IN)  :: natom
       INTEGER,          INTENT(IN)  :: l
+      REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
+      REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase !multiply spin-offdiagonal phase
                                              !(if the full matrix is not given)
 
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
       REAL    :: symFac
       INTEGER :: it,is,isi
-      COMPLEX :: offdPhase
+      COMPLEX :: symPhase
 
       mmpmatSym = cmplx_0
 
@@ -38,9 +40,13 @@ MODULE m_symMMPmat
          is  = sym%invarop(natom,it)
          isi = sym%invtab(is)
 
-         offdPhase = cmplx_1
+         symPhase = cmplx_1
          IF(PRESENT(phase)) THEN
-            IF(phase) offdPhase = exp(ImagUnit*sym%phase(isi))
+            IF(phase) symPhase = exp(ImagUnit*sym%phase(isi))
+         ENDIF
+
+         IF(PRESENT(atomDiff).AND.PRESENT(bk)) THEN
+            symPhase = symPhase * exp(ImagUnit*dot_product(bk,matmul(sym%mrot(:,:,isi),atomDiff)))
          ENDIF
 
          mmpmatSym = mmpmatSym + symFac * offdPhase * rotMMPmat(mmpmat,dwgn=sym%d_wgn(:,:,l,isi))
@@ -49,12 +55,14 @@ MODULE m_symMMPmat
 
    END FUNCTION symMMPmatFull
 
-   PURE FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,phase) Result(mmpmatSym)
+   PURE FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,atomDiff,bk,phase) Result(mmpmatSym)
 
       COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
       TYPE(t_sym),      INTENT(IN)  :: sym
       INTEGER,          INTENT(IN)  :: natom
       INTEGER,          INTENT(IN)  :: l
+      REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
+      REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
       LOGICAL,OPTIONAL, INTENT(IN)  :: phase
 
       INTEGER :: ilow(2),iup(2)
@@ -68,7 +76,7 @@ MODULE m_symMMPmat
       mmpmatIn(:,:,1) = mmpmat
 
       ALLOCATE(mmpmatOut2,mold=mmpMatIn)
-      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,phase=phase)
+      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,atomDiff=atomDiff,bk=bk,phase=phase)
 
       mmpmatSym = mmpmatOut2(:,:,1)
 
