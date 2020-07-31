@@ -107,7 +107,6 @@ CONTAINS
       
       exch = 0
       z%matsize1 = MIN(z%matsize1, hybdat%v_x(nk, jsp)%matsize2)
-      call hybdat%v_x(nk, jsp)%save_npy("vx_nk=" // int2str(nk) // "_nrank=" // int2str(fmpi%n_rank) // ".npy")
       IF (hybdat%v_x(nk, jsp)%l_real) then
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp)
       else

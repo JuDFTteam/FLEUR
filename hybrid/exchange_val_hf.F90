@@ -176,8 +176,6 @@ CONTAINS
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
             END IF
 
-            !call save_npy("carr1_save_ibando=" // int2str(ibando) // ".npy", carr1_save)
-
             cnt_read_z = cnt_read_z - 1
 
             ! The sparse matrix technique is not feasible for the HSE

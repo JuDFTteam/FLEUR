@@ -195,14 +195,6 @@ CONTAINS
       deallocate(prod, psi_k)
       call fft%free()
       !$OMP END PARALLEL 
-      call save_npy("iob_is_nk=" // int2str(ik) // &
-                     "_iq=" // int2str(iq) // &
-                     "_bandoi=" // int2str(bandoi) // ".npy", iob_list)
-
-      call save_npy("iband_is_nk=" // int2str(ik) // &
-                     "_iq=" // int2str(iq) // &
-                     "_bandoi=" // int2str(bandoi) // ".npy", iband_list)
-
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()
