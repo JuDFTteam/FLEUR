@@ -30,7 +30,7 @@ MODULE m_greensfBZint
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem,i_elemLO,nLO,imatSize,ikptf,ikptf_start,ikptf_end
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize,iop,iop_start,iop_end
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor,kptFac,atomDiff(3)
@@ -110,15 +110,14 @@ MODULE m_greensfBZint
                   ENDIF
 
                   l_intersite = natom.NE.natomp.OR.ANY(ABS(atomDiff).GT.1e-12)
-                  kptFac = REAL(COUNT(kpts%bkp(:).EQ.ikpt))
-                  !Workaround for symmetries and intersite phase
-                  ikptf_start = MERGE(1         ,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
-                  ikptf_end   = MERGE(kpts%nkptf,ikpt,l_intersite.AND.kpts%nkptf.NE.0)
-                  DO ikptf = ikptf_start, ikptf_end
+                  !We sum over the symmetry equivalent phase factors by applying the point symmetry
+                  !of the system
+                  iop_start = MERGE(1      ,1,l_intersite)
+                  iop_end   = MERGE(sym%nop,1,l_intersite)
+                  DO iop = 1, sym%nop
                      !Phase factor for intersite elements
                      IF(l_intersite) THEN
-                        IF(kpts%bkp(ikptf).NE.ikpt) CYCLE
-                        phase = exp(ImagUnit*dot_product(kpts%bkf(:,ikptf),atomDiff(:)))/kptFac
+                        phase = exp(ImagUnit*dot_product(kpts%bk(:,ikpt),matmul(sym%mrot(:,:,iop),atomDiff(:))))/sym%nop
                      ELSE
                         phase = cmplx_1
                      ENDIF
