@@ -422,7 +422,7 @@ CONTAINS
                                                 vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                              ELSE
-                                                vxc%data_c(y,x) = vxc%data_c(y,x) + rr*rc*bascof(i, lm, iatom)* &
+                                                vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc) + rr*rc*bascof(i, lm, iatom)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                              END IF
                                           endif
