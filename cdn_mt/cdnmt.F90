@@ -132,6 +132,10 @@ CONTAINS
                 IF (l.LE.input%lResMax) THEN
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
+                IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
+                  !1/SQRT(4pi) is added in crystalfieldCoeffs after normalization
+                  hub1data%cdn_spherical(j,l,itype) = hub1data%cdn_spherical(j,l,itype) + s/atoms%neq(itype)
+                ENDIF
              ENDDO
           ENDDO
 

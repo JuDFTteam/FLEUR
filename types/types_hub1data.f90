@@ -25,6 +25,8 @@ MODULE m_types_hub1data
       REAL, ALLOCATABLE :: xi(:)           !Spin-orbit coupling parameter
       REAL, ALLOCATABLE :: ccfmat(:,:,:)   !crystal field splitting matrix
 
+      REAL, ALLOCATABLE :: cdn_spherical(:,:,:)
+
       CONTAINS
 
       PROCEDURE, PASS :: init => hub1data_init
@@ -48,6 +50,7 @@ MODULE m_types_hub1data
       ALLOCATE (this%mag_mom(4*atoms%ntype,lmaxU_const-1),source=0.0)
       ALLOCATE (this%xi(4*atoms%ntype),source=0.0)
       ALLOCATE (this%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
+      ALLOCATE (this%cdn_spherical(atoms%jmtd,0:lmaxU_const,atoms%ntype),source=0.0)
 
       DO i_hia = 1, atoms%n_hia
          IF(hub1inp%l_soc_given(i_hia)) THEN
