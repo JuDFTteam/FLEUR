@@ -1032,7 +1032,9 @@ MODULE m_types_greensf
          l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
          !Do we have the offdiagonal scalar products
          l_explicit = .TRUE.
-         IF(PRESENT(scalarGF).AND.scalarGF%done.AND.l_offdiag) l_explicit = .FALSE.
+         IF(PRESENT(scalarGF)) THEN
+            IF(scalarGF%done.AND.l_offdiag) l_explicit = .FALSE.
+         ENDIF
          IF(PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag).AND..NOT.l_offdiag) l_explicit = .FALSE.
 
          !only intersite arguments have independent radial arguments ??
