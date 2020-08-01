@@ -11,6 +11,7 @@ MODULE m_greensfPostProcess
    USE m_crystalfield
    USE m_genMTBasis
    USE m_sointg
+   USE m_types_scalarGF
 
    IMPLICIT NONE
 
@@ -39,7 +40,7 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
-      LOGICAL  l_sphavg,l_check
+      LOGICAL  l_sphavg,l_check,l_offdiag
 
       REAL :: torgue(3),atomDiff(3),e
       REAL :: v0(atoms%jmtd),vso(atoms%jmtd,2),vso_l(atoms%jmtd,0:atoms%lmaxd)
@@ -47,6 +48,7 @@ MODULE m_greensfPostProcess
 
       TYPE(t_usdus)            :: usdus
       TYPE(t_denCoeffsOffDiag) :: denCoeffsOffDiag
+      TYPE(t_scalarGF)         :: scalarGF(gfinp%n)
 #ifdef CPP_HDF
       INTEGER(HID_T) :: greensf_fileID
 #endif
@@ -73,11 +75,20 @@ MODULE m_greensfPostProcess
                atomTypep = gfinp%elem(i_gf)%atomTypep
 
                l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+               l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
+               IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
+                  CALL scalarGF(i_gf)%init(atoms,input)
+               ENDIF
                IF(l_sphavg) CYCLE
 
                i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
-               IF(i_gf/=indUnique) CYCLE
+               IF(i_gf/=indUnique) THEN
+                  IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
+                     scalarGF(i_gf) = scalarGF(indUnique)
+                  ENDIF
+                  CYCLE
+               ENDIF
                DO jspin = 1, input%jspins
                   CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
                                   f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
@@ -95,6 +106,10 @@ MODULE m_greensfPostProcess
                      CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
                                                                    flo(:,:,:,:,atomTypep),atomTypep)
                   ENDIF
+               ENDIF
+               IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
+                  CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(atomDiff(:)).GT.1e-12),&
+                                                       gfinp%l_mperp,atoms,input,f,g,flo)
                ENDIF
             ENDDO
             CALL timestop("Green's Function: Radial Functions")
@@ -202,7 +217,8 @@ MODULE m_greensfPostProcess
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
-                               u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag)
+                               u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
+                               scalarGF=scalarGF)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Green's Function: IO/Write")
 #endif
