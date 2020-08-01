@@ -14,7 +14,7 @@ CONTAINS
        &                   sphhar,atoms,&
        &                   rx,nsp,&
        &                   sym,&
-       &                   ylh)
+       &                   ylh,ylhmh)
     !
     USE m_ylm
     USE m_types_sym
@@ -33,6 +33,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rx(:,:) !(3,dimension%nspd)
     REAL,    INTENT (OUT):: ylh(:,0:,:) !(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd)
+    COMPLEX, OPTIONAL, INTENT (OUT):: ylhmh(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL s
@@ -41,6 +42,7 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     !     ..
+    IF(PRESENT(ylhmh)) ylhmh = 0.0
     DO  nd = 1,sym%nsymt
        DO  k = 1,nsp
 
@@ -54,6 +56,7 @@ CONTAINS
              DO mem = 1,sphhar%nmem(lh,nd)
                 lm = ll1 + sphhar%mlh(mem,lh,nd)
                 s = s + REAL( sphhar%clnu(mem,lh,nd) * ylm(lm) )
+                IF(PRESENT(ylhmh)) ylhmh(k,lm,nd) = sphhar%clnu(mem,lh,nd) * ylm(lm)
              ENDDO
              ylh(k,lh,nd) = s
           ENDDO
