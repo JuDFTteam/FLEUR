@@ -265,7 +265,8 @@ MODULE m_types_greensf
             nspins = SIZE(this%uu,4)
          ENDIF
 
-         l_scalarGF = PRESENT(scalarGF).AND.scalarGF%done
+         l_scalarGF = PRESENT(scalarGF)
+         IF(l_scalarGF) l_scalarGF = scalarGF%done
          l_scalar = PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag)
          IF(l_scalar.AND.nspins==3) THEN
             IF(.NOT.PRESENT(denCoeffsOffDiag)) THEN
