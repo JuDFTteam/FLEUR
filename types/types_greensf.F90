@@ -430,7 +430,7 @@ MODULE m_types_greensf
                         ENDDO
                         iLO_ind = 0
                         DO ilo = 1,atoms%nlo(atomType)
-                           IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                            iLO_ind = iLO_ind + 1
                            iLOp_ind = 0
                            DO ilop = 1, atoms%nlo(atomTypep)
