@@ -5,6 +5,10 @@ MODULE m_types_scalarGF
 
    USE m_constants
    USE m_juDFT
+   USE m_types_atoms
+   USE m_types_input
+
+   IMPLICIT NONE
 
    PRIVATE
 
@@ -34,9 +38,6 @@ MODULE m_types_scalarGF
    CONTAINS
 
    SUBROUTINE init_scalarGF(this,atoms,input)
-
-      USE m_types_atoms
-      USE m_types_input
 
       CLASS(t_scalarGF),   INTENT(INOUT) :: this
       TYPE(t_atoms),       INTENT(IN)    :: atoms
@@ -71,8 +72,6 @@ MODULE m_types_scalarGF
 
    SUBROUTINE addScalarProduct_scalarGF(this,l,lp,atomType,atomTypep,l_phase,l_mperp,atoms,input,f,g,flo)
 
-      USE m_types_atoms
-      USE m_types_input
       USE m_intgr
 
       CLASS(t_scalarGF),   INTENT(INOUT) :: this

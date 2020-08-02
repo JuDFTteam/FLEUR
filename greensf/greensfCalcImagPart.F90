@@ -202,7 +202,7 @@ MODULE m_greensfCalcImagPart
                                  DO iLOp = 1, nLO
                                     imat = imat + 1
                                     CALL CPP_BLAS_caxpy(SIZE(eMesh),greensfBZintCoeffs%uloulop(iBand,m,mp,imat,i_elemLO,ikpt_i,spin_ind),&
-                                                     weights(:,iBand),1,imag(:,4 + 4*nLO+imat),1)
+                                                        weights(:,iBand),1,imag(:,4 + 4*nLO+imat),1)
                                  ENDDO
                               ENDDO
                            ENDIF

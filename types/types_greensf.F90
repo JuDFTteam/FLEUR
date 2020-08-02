@@ -226,7 +226,6 @@ MODULE m_types_greensf
          USE m_types_usdus
          USE m_types_denCoeffsOffDiag
          USE m_types_scalarGF
-         USE m_types_atoms
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
@@ -462,7 +461,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -593,7 +591,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialRadial_gf(this,atoms,iz,m,mp,l_conjg,spin,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh (r/=r')
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -729,7 +726,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -770,7 +766,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialRadialSpin_gf(this,atoms,iz,m,mp,l_conjg,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
