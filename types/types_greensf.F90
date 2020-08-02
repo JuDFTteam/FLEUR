@@ -1042,23 +1042,22 @@ MODULE m_types_greensf
 
          DO ipm = 1, 2
             DO spin = 1 , SIZE(this%uu,4)
-               DO mp = -lp, lp
-                  DO m = -l, l
-                     IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
-                     IF(l_explicit.AND..NOT.l_fullRadialArg) THEN
-                        CALL this%getRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatR)
-                     ENDIF
-                     DO iz = 1, this%contour%nz
-                        IF(l_explicit.AND.l_fullRadialArg) THEN
-                           CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
+               IF(.NOT.l_explicit) THEN
+                  DO iz = 1, this%contour%nz
+                     CALL this%get(atoms,iz,ipm==2,gmatTmp,spin=spin,usdus=usdus,&
+                                   denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+                     CALL gIntegrated%set(iz,ipm==2,gmatTmp,spin=spin)
+                  ENDDO
+               ELSE
+                  DO mp = -lp, lp
+                     DO m = -l, l
+                        IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
+                        IF(.NOT.l_fullRadialArg) THEN
+                           CALL this%getRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatR)
                         ENDIF
-
-                        IF(.NOT.l_explicit) THEN
-                           CALL this%get(atoms,iz,ipm==2,gmatTmp,spin=spin,usdus=usdus,&
-                                         denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
-                           CALL gIntegrated%set(iz,ipm==2,gmatTmp,spin=spin)
-                        ELSE
+                        DO iz = 1, this%contour%nz
                            IF(l_fullRadialArg) THEN
+                              CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
                               gmat = cmplx_0
                               DO jr = 1, SIZE(gmat)
                                  CALL intgr3(REAL(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
@@ -1073,10 +1072,10 @@ MODULE m_types_greensf
                            CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
 
                            gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
-                        ENDIF
+                        ENDDO
                      ENDDO
                   ENDDO
-               ENDDO
+               ENDIF
             ENDDO
          ENDDO
          CALL timestop("Green's Function: Average over MT")
