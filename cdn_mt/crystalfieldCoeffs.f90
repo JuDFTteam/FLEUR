@@ -11,14 +11,6 @@ MODULE m_crystalfieldCoeffs
 
    IMPLICIT NONE
 
-   !Conversion Factor between Blm and Alm<r^l>
-   REAL, PARAMETER :: alphalm(0:48) = [1.0,0.0,0.0,0.0,SQRT(6.0)/2.0,0.0,1.0/2.0,0.0,SQRT(6.0)/2.0, &
-                                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,SQRT(70.0)/8.0,-SQRT(35.0)/2.0,SQRT(10.0)/4.0,&
-                                       0.0,1.0/8.0,0.0,SQRT(10.0)/4.0,-SQRT(35.0)/2.0,SQRT(70.0)/8.0,0.0,0.0,0.0,0.0,&
-                                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,SQRT(231.0)/16.0,0.0,3*SQRT(14.0)/16.0,-SQRT(105.0)/8.0,&
-                                       SQRT(105.0)/16.0,0.0,1./16.0,0.0,SQRT(105.0)/16.0,-SQRT(105.0)/8.0,3*SQRT(14.0)/16.0,&
-                                       0.0,SQRT(231.0)/16.0]
-
    CONTAINS
 
    SUBROUTINE crystalfieldCoeffs(input,atoms,sphhar,sym,noco,vTot,hub1data)
@@ -44,8 +36,17 @@ MODULE m_crystalfieldCoeffs
       REAL, ALLOCATABLE :: vlm(:,:,:),vTotch(:,:)
       REAL, ALLOCATABLE :: Blm(:,:,:),Alm(:,:,:)
       REAL :: n_0(atoms%jmtd)
+      REAL, PARAMETER :: alphalm(0:48)
 
       TYPE(t_gradients)     :: grad
+
+      !Conversion Factor between Blm and Alm<r^l>
+      alphalm(0:)= [1.0,0.0,0.0,0.0,SQRT(6.0)/2.0,0.0,1.0/2.0,0.0,SQRT(6.0)/2.0, &
+                    0.0,0.0,0.0,0.0,0.0,0.0,0.0,SQRT(70.0)/8.0,-SQRT(35.0)/2.0,SQRT(10.0)/4.0,&
+                    0.0,1.0/8.0,0.0,SQRT(10.0)/4.0,-SQRT(35.0)/2.0,SQRT(70.0)/8.0,0.0,0.0,0.0,0.0,&
+                    0.0,0.0,0.0,0.0,0.0,0.0,0.0,SQRT(231.0)/16.0,0.0,3*SQRT(14.0)/16.0,-SQRT(105.0)/8.0,&
+                    SQRT(105.0)/16.0,0.0,1./16.0,0.0,SQRT(105.0)/16.0,-SQRT(105.0)/8.0,3*SQRT(14.0)/16.0,&
+                    0.0,SQRT(231.0)/16.0]
 
 
       CALL timestart('Crystal Field Coefficients')
