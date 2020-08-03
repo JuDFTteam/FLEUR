@@ -143,12 +143,12 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
-            l = greensFunction(i_gf)%elem%l
+            l  = greensFunction(i_gf)%elem%l
             lp = greensFunction(i_gf)%elem%lp
-            atomType = greensFunction(i_gf)%elem%atomType
-            atomTypep = greensFunction(i_gf)%elem%atomTypep
-            atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-            l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+            atomType    = greensFunction(i_gf)%elem%atomType
+            atomTypep   = greensFunction(i_gf)%elem%atomTypep
+            atomDiff(:) = greensFunction(i_gf)%elem%atomDiff(:)
+            l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
             IF(l.NE.lp) CYCLE
             IF(atomType.NE.atomTypep) CYCLE
             IF(ANY(ABS(atomDiff(:)).GT.1e-12)) CYCLE
