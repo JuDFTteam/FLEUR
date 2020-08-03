@@ -46,12 +46,15 @@ MODULE m_tetrahedronInit
 
       INTEGER :: ikpt,ncorn,itet,icorn,iband,k(SIZE(kpts%ntetra,1))
       REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),fac(kpts%nkpt),vol(kpts%ntet)
+      logical :: l_weights_pres, l_weightsum_pres
 
       IF(.NOT.PRESENT(weightSum).AND..NOT.PRESENT(weights)) THEN
          CALL juDFT_error("No output variable provided (either weightSum or weights)",&
                            calledby="getWeightKpoints")
       ENDIF
 
+      l_weights_pres = PRESENT(weights)
+      l_weightsum_pres = PRESENT(weightSum)
       !Tetrahedra or Triangles?
       ncorn = MERGE(3,4,input%film)
 
@@ -65,7 +68,7 @@ MODULE m_tetrahedronInit
 
       !More efficient to just loop through all tetrahedra
       !$OMP parallel do default(none) &
-      !$OMP shared(neig,ncorn,vol) &
+      !$OMP shared(neig,ncorn,vol,l_weights_pres,l_weightsum_pres) &
       !$OMP shared(kpts,input,fac,eig,weights,efermi) &
       !$OMP private(itet,ikpt,icorn,k,iband,etetra,w) &
       !$OMP reduction(+:weightSum) collapse(3)
@@ -87,9 +90,9 @@ MODULE m_tetrahedronInit
 
                w  = getWeightSingleBand([efermi],etetra,icorn,vol(itet)*fac(ikpt),input%film,input%l_bloechl)
 
-               IF(PRESENT(weightSum)) weightSum = weightSum + w(1)
+               IF(l_weightsum_pres) weightSum = weightSum + w(1)
 
-               IF(PRESENT(weights)) THEN
+               IF(l_weights_pres) THEN
                   !$OMP critical
                   weights(iband,ikpt) = weights(iband,ikpt) + w(1)
                   !$OMP end critical
@@ -118,7 +121,7 @@ MODULE m_tetrahedronInit
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
       INTEGER :: itet,iband,ncorn,ie,icorn,i,ntet,k(SIZE(kpts%ntetra,1))
-      LOGICAL :: l_dos
+      LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(SIZE(kpts%ntetra,1),neig,MERGE(6,24,input%film)),del,fac,vol
       REAL, ALLOCATABLE :: dos_weights(:)
       !Temporary Arrays to include end points
@@ -170,11 +173,12 @@ MODULE m_tetrahedronInit
          calc_eMesh = eMesh
       ENDIF
 
+      l_resWeights_pres = PRESENT(resWeights)
       !$OMP parallel default(none)&
-      !$OMP shared(neig,ntet,kpts,input,ikpt,resWeights,calc_weights) &
+      !$OMP shared(neig,ntet,l_resWeights_pres,kpts,input,ikpt,resWeights,calc_weights) &
       !$OMP shared(etetra,calc_eMesh,eMesh,fac) &
       !$OMP private(itet,iband,vol,i,icorn,resWeights_thread,calc_weights_thread)
-      IF(PRESENT(resWeights)) ALLOCATE(resWeights_thread(SIZE(resWeights,1),SIZE(resWeights,2)),source = 0.0)
+      IF(l_resWeights_pres) ALLOCATE(resWeights_thread(SIZE(resWeights,1),SIZE(resWeights,2)),source = 0.0)
       ALLOCATE(calc_weights_thread(SIZE(calc_weights,1),SIZE(calc_weights,2)),source = 0.0)
       !$OMP do collapse(2)
       DO itet = 1, ntet
@@ -184,7 +188,7 @@ MODULE m_tetrahedronInit
                IF(kpts%ntetra(i,kpts%tetraList(itet,ikpt))==ikpt) icorn = i
             ENDDO
 
-            IF(PRESENT(resWeights)) THEN
+            IF(l_resWeights_pres) THEN
                resWeights_thread(:,iband) = resWeights_thread(:,iband) &
                                            + getWeightSingleBand(eMesh,etetra(:,iband,itet),icorn,vol,&
                                                                  input%film,input%l_bloechl,l_res=.TRUE.)
@@ -200,20 +204,21 @@ MODULE m_tetrahedronInit
       ENDDO
       !$OMP end do
       !$OMP critical
-      IF(PRESENT(resWeights)) resWeights = resWeights + resWeights_thread
+      IF(l_resWeights_pres) resWeights = resWeights + resWeights_thread
       calc_weights = calc_weights + calc_weights_thread
       !$OMP end critical
       DEALLOCATE(calc_weights_thread)
-      IF(PRESENT(resWeights)) DEALLOCATE(resWeights_thread)
+      IF(l_resWeights_pres) DEALLOCATE(resWeights_thread)
       !$OMP end parallel
 
       weights = 0.0
+      l_bounds_pres = PRESENT(bounds)
       !-------------------------------------
       ! PostProcess weights
       !-------------------------------------
       !$OMP parallel default(none) &
       !$OMP shared(neig,l_dos,del,eMesh) &
-      !$OMP shared(calc_weights,weights,bounds,resWeights) &
+      !$OMP shared(calc_weights,weights,bounds,l_bounds_pres,l_resWeights_pres) &
       !$OMP private(iband,dos_weights,ie)
       IF(l_dos) ALLOCATE(dos_weights(SIZE(eMesh)+2),source=0.0)
       !$OMP do schedule(dynamic,1)
@@ -230,7 +235,7 @@ MODULE m_tetrahedronInit
          !--------------------------------------------------------------
          ! Find the range where the weights are bigger than weightCutoff
          !--------------------------------------------------------------
-         IF(PRESENT(bounds).AND..NOT.PRESENT(resWeights)) THEN
+         IF(l_bounds_pres.AND..NOT.l_resWeights_pres) THEN
             !--------------------
             ! Lower bound
             !--------------------
@@ -270,7 +275,7 @@ MODULE m_tetrahedronInit
                bounds(iband,1) = 1
                bounds(iband,2) = 1
             ENDIF
-         ELSE IF(PRESENT(bounds)) THEN
+         ELSE IF(l_bounds_pres) THEN
             bounds(iband,1) = 1
             bounds(iband,2) = SIZE(eMesh)
          ENDIF
