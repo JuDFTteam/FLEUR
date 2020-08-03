@@ -45,7 +45,8 @@ MODULE m_types_hub1data
 
       INTEGER :: i_hia
 
-      this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
+      this%l_performSpinavg = .FALSE.
+      IF(atoms%n_hia>0) this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
 
       ALLOCATE (this%mag_mom(MAX(1,atoms%n_hia),lmaxU_const-1),source=0.0)
       ALLOCATE (this%xi(MAX(1,atoms%n_hia)),source=0.0)
