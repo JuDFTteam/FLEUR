@@ -332,7 +332,7 @@ CONTAINS
               DO mem = 1,sphhar%nmem(lh,nd)
                 IF(sphhar%mlh(mem,lh,nd)<0) CYCLE
                 IF(sphhar%mlh(mem,lh,nd)==0) THEN
-                  vlh = dot_PRODUCT(vpot(:), ylh(:nsp, ll1, nd))
+                  vlh = dot_PRODUCT(vpot(:), ylhmh(:nsp, ll1, nd))
                   vr(jr, ll1, js) = vr(jr, ll1, js) + vlh
                 ELSE
                   lmplus  = ll1 + sphhar%mlh(mem,lh,nd)
