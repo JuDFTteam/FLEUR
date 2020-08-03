@@ -63,6 +63,7 @@ MODULE m_crystalfieldCoeffs
          !                          sigma
          !Decompose potential into V(r)
          !                          lm
+         ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
          CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
          CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
          !modified mt_from_grid with lm index

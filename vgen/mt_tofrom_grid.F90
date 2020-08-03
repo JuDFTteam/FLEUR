@@ -40,7 +40,7 @@ CONTAINS
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
       IF(l_mdependencyArg) THEN
-        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2), sphhar%ntypsd))
+        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd))
       ENDIF
       IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
@@ -341,13 +341,13 @@ CONTAINS
                   ! --->        determine the corresponding potential number
                   !c            through gauss integration
                   !
-                  vlhplus = dot_PRODUCT(vpot(:), ylh(:nsp, lmplus, nd))
+                  vlhplus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmplus, nd))
                   !Find the correspinding -m element
                   DO memp = 1,sphhar%nmem(lh,nd)
                     IF(sphhar%mlh(memp,lh,nd).NE.-sphhar%mlh(mem,lh,nd)) CYCLE
-                    vlhminus = dot_PRODUCT(vpot(:), ylh(:nsp, lmminus, nd))
-                    vr(jr, lmplus, js) = vr(jr, lmplus, js)   + REAL(vlhplus-vlhminus)
-                    vr(jr, lmminus, js) = vr(jr, lmminus, js) + REAL(vlhplus+vlhminus)
+                    vlhminus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmminus, nd))
+                    vr(jr, lmplus-1, js) = vr(jr, lmplus-1, js)   + REAL(vlhplus-vlhminus)
+                    vr(jr, lmminus-1, js) = vr(jr, lmminus-1, js) + REAL(vlhplus+vlhminus)
                   ENDDO
                 ENDIF
               ENDDO
