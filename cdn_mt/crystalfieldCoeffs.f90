@@ -43,7 +43,6 @@ MODULE m_crystalfieldCoeffs
       CHARACTER(LEN=20) :: attributes(5)
 
       REAL, ALLOCATABLE :: vlm(:,:,:),vTotch(:,:)
-      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
       REAL, ALLOCATABLE :: Blm(:,:,:),Alm(:,:,:)
       REAL :: n_0(atoms%jmtd)
 
@@ -116,7 +115,7 @@ MODULE m_crystalfieldCoeffs
          IF(atoms%n_hia > 0) THEN
             DO i_hia = atoms%n_u + 1, atoms%n_u + atoms%n_hia
                IF(atoms%lda_u(i_hia)%atomType.NE.iType.OR.atoms%lda_u(i_hia)%l.NE.lcf) CYCLE
-               CALL crystalfieldPot(atoms,input,lmax,lcf,Blm,hub1data%ccfmat(i_hia-atoms%n_u,:,:))
+               CALL crystalfieldPot(input,lmax,lcf,Blm,hub1data%ccfmat(i_hia-atoms%n_u,:,:))
             ENDDO
          ENDIF
 
@@ -127,7 +126,7 @@ MODULE m_crystalfieldCoeffs
       CALL timestop('Crystal Field Coefficients')
    END SUBROUTINE crystalfieldCoeffs
 
-   SUBROUTINE crystalfieldPot(atoms,input,lmax,lcf,Blm,ccf)
+   SUBROUTINE crystalfieldPot(input,lmax,lcf,Blm,ccf)
 
       !For Hubbard 1:
       !Construct the crystalfield potential in the correlated subshell
@@ -139,7 +138,6 @@ MODULE m_crystalfieldCoeffs
       !---------------------------------------------------
       !Here we average over spins
 
-      TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_input),    INTENT(IN)     :: input
       INTEGER,          INTENT(IN)     :: lmax,lcf
       REAL,             INTENT(IN)     :: Blm(0:,-lmax:,:)
