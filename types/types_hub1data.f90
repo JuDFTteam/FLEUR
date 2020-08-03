@@ -47,16 +47,18 @@ MODULE m_types_hub1data
 
       this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
 
-      ALLOCATE (this%mag_mom(4*atoms%ntype,lmaxU_const-1),source=0.0)
-      ALLOCATE (this%xi(4*atoms%ntype),source=0.0)
-      ALLOCATE (this%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
-      ALLOCATE (this%cdn_spherical(atoms%jmtd,0:lmaxU_const,atoms%ntype),source=0.0)
-
+      ALLOCATE (this%mag_mom(MAX(1,atoms%n_hia),lmaxU_const-1),source=0.0)
+      ALLOCATE (this%xi(MAX(1,atoms%n_hia)),source=0.0)
+      ALLOCATE (this%ccfmat(MAX(1,atoms%n_hia),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
       DO i_hia = 1, atoms%n_hia
          IF(hub1inp%l_soc_given(i_hia)) THEN
             this%xi(i_hia) = hub1inp%xi_par(i_hia)
          ENDIF
       ENDDO
+
+      !This can be used outside of hubbard 1
+      ALLOCATE (this%cdn_spherical(atoms%jmtd,0:lmaxU_const,atoms%ntype),source=0.0)
+
 
    END SUBROUTINE hub1data_init
 

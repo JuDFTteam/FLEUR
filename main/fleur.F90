@@ -130,7 +130,7 @@ CONTAINS
        CALL wann_optional(fmpi,fi%input,fi%kpts,fi%atoms,fi%sym,fi%cell,fi%oneD,fi%noco,wann)
     END IF
 
-    IF(fi%atoms%n_hia>0) CALL hub1data%init(fi%atoms,fi%hub1inp)
+    CALL hub1data%init(fi%atoms,fi%hub1inp)
 
     iter     = 0
     iterHF   = 0

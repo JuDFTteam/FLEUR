@@ -113,6 +113,7 @@ MODULE m_crystalfieldCoeffs
          ENDDO
 
          IF(atoms%n_hia > 0) THEN
+            !Construct the crystal field potential in the correlated subshell
             DO i_hia = atoms%n_u + 1, atoms%n_u + atoms%n_hia
                IF(atoms%lda_u(i_hia)%atomType.NE.iType.OR.atoms%lda_u(i_hia)%l.NE.lcf) CYCLE
                CALL crystalfieldPot(input,lmax,lcf,Blm,hub1data%ccfmat(i_hia-atoms%n_u,:,:))

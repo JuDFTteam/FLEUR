@@ -150,7 +150,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc))
    ENDIF
 
-   IF(atoms%n_hia.GT.0 .AND. fmpi%irank==0 .AND.PRESENT(hub1data)) THEN 
+   IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN
       hub1data%mag_mom = 0.0
       hub1data%cdn_spherical = 0.0
    ENDIF
@@ -225,7 +225,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    ENDIF
 
    !For now only calculate if Hubbard 1 is performed
-   IF(.FALSE..AND.atoms%n_hia>0 .AND.PRESENT(hub1data).AND.fmpi%irank.EQ.0) THEN
+   IF(.FALSE..AND.PRESENT(hub1data).AND.fmpi%irank.EQ.0) THEN
       CALL crystalfieldCoeffs(input,atoms,sphhar,sym,noco,vTot,hub1data)
    ENDIF
 
