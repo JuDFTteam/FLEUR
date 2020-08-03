@@ -54,6 +54,7 @@ MODULE m_crystalfieldCoeffs
       !initializations
       ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=0.0)
       ALLOCATE(Blm(0:lmax,-lmax:lmax,input%jspins),source=0.0)
+      ALLOCATE(Alm(0:lmax,-lmax:lmax,input%jspins),source=0.0)
       !Question rotate to global frame ??
 
       CALL openXMLElementNoAttributes('crystalfieldCoefficients')
