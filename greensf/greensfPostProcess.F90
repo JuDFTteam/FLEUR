@@ -73,6 +73,7 @@ MODULE m_greensfPostProcess
                lp = gfinp%elem(i_gf)%lp
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
+               atomDiff  = gfinp%elem(i_gf)%atomDiff
 
                l_sphavg  = gfinp%elem(i_gf)%l_sphavg
                l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
