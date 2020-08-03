@@ -36,7 +36,7 @@ MODULE m_crystalfieldCoeffs
       REAL, ALLOCATABLE :: vlm(:,:,:),vTotch(:,:)
       REAL, ALLOCATABLE :: Blm(:,:,:),Alm(:,:,:)
       REAL :: n_0(atoms%jmtd)
-      REAL, PARAMETER :: alphalm(0:48)
+      REAL :: alphalm(0:48)
 
       TYPE(t_gradients)     :: grad
 
