@@ -58,7 +58,7 @@ CONTAINS
                 s = s + REAL( sphhar%clnu(mem,lh,nd) * ylm(lm) )
                 IF(PRESENT(ylhmh)) THEN
                   IF(sphhar%mlh(mem,lh,nd)==0) THEN
-                    ylhmh(k,lm-1,nd) = sphhar%clnu(mem,lh,nd) * ylm(lm)
+                    ylhmh(k,lm-1,nd) = REAL(sphhar%clnu(mem,lh,nd) * ylm(lm))
                   ELSE
                     ylhmh(k,lm-1,nd) = ylhmh(k,lm-1,nd) + REAL(sphhar%clnu(mem,lh,nd) * ylm(lm))
                     !Add to the -m component
