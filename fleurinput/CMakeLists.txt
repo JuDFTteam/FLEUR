@@ -28,5 +28,6 @@ endif()
 
 
 target_compile_definitions(fleurinput PUBLIC ${FLEUR_DEFINITIONS})
+target_link_libraries(fleurinput ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(fleurinput juDFT)
 set_target_properties(fleurinput PROPERTIES Fortran_MODULE_DIRECTORY modules/fleurinput)
