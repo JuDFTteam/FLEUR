@@ -11,7 +11,7 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
-   REAL, ALLOCATABLE :: ylhmh(:, :, :)
+   COMPLEX, ALLOCATABLE :: ylhmh(:, :, :)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, mt_from_gridlm, finish_mt_grid
 CONTAINS
    SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout, l_mdependency)
@@ -40,7 +40,7 @@ CONTAINS
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
       IF(l_mdependencyArg) THEN
-        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd),source=0.0)
+        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd),source=CMPLX(0.0,0.0))
       ENDIF
       IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
@@ -312,10 +312,10 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN):: sphhar
       INTEGER, INTENT(IN)       :: jspins, n
       REAL, INTENT(IN)          :: v_in(:, :)
-      REAL, INTENT(INOUT)       :: vr(:, 0:, :)
+      COMPLEX, INTENT(INOUT)    :: vr(:, 0:, :)
 
       REAL    :: vpot(atoms%nsp())
-      REAL :: vlh
+      COMPLEX :: vlh
       INTEGER :: js, kt, lh, jr, nd, nsp,ll1,mem,lm
 
       nsp = atoms%nsp()
@@ -335,7 +335,7 @@ CONTAINS
                 ! --->        determine the corresponding potential number
                 !c            through gauss integration
                 !
-                vlh = dot_PRODUCT(vpot(:), ylhmh(:nsp, lm, nd))
+                vlh = dot_PRODUCT(vpot(:), conjg(ylhmh(:nsp, lm, nd)))
                 vr(jr, lm, js) = vr(jr, lm, js) + vlh
               ENDDO
             ENDDO ! lh
