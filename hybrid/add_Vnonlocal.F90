@@ -26,8 +26,8 @@ MODULE m_add_vnonlocal
 !         |  calculate valence-core contribution                              c
 !                                                                             c
 !     variables:                                                              c
-!         fi%kpts%nkptf   :=   number of kpoints                                      c
-!         fi%kpts%nkpt   :=   number of irreducible kpoints                          c
+!         fi%kpts%nkptf   :=   number of kpoints                              c
+!         fi%kpts%nkpt   :=   number of irreducible kpoints                   c
 !         nbands  :=   number of bands for which the exchange matrix (mat_ex) c
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
@@ -114,6 +114,7 @@ CONTAINS
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp, transA="T")
       endif
 
+      WRITE (oUnit, '(A)') "          K-points,   iband,    exch - div (eV), div (eV),  exch (eV)"
       DO iband = 1, hybdat%nbands(nk)
          IF (z%l_real) THEN
             exch(iband, iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))

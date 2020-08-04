@@ -232,7 +232,7 @@ contains
 
       if(mpi%irank == 0) THEN
          n_radbasfn = mpdata%num_radbasfn(l, itype)
-         WRITE(oUnit, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
+         WRITE(oUnit, '(6X,A,I4,''   ('',F22.18,'' )'')') &
             lchar(l)//':', n_radbasfn, norm2(olap)/n_radbasfn
       END if
       call timestop("check mpdata orthonormality")
@@ -471,6 +471,7 @@ contains
       call timestart("reduce lin. dep. mpdata")
 
       do itype = 1, atoms%ntype
+         if (hybinp%lcutm1(itype) <= 0) call judft_error("lcutm1 <= 0 isn't allowed for hybrid calculations")
          DO l = 0, hybinp%lcutm1(itype)
             full_n_radbasfn = mpdata%num_radbasfn(l, itype)
             n_grid_pt = atoms%jri(itype)

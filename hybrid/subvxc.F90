@@ -422,7 +422,7 @@ CONTAINS
                                                 vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                              ELSE
-                                                vxc%data_c(y,x) = vxc%data_c(y,x) + rr*rc*bascof(i, lm, iatom)* &
+                                                vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc) + rr*rc*bascof(i, lm, iatom)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                              END IF
                                           endif
@@ -538,10 +538,6 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       call timestart("apply to hmat")
-      ! call vxc%save_npy("vxc_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
-      ! call hmat%save_npy("hmat_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
-      ! call MPI_Barrier(MPI_COMM_WORLD, n)
-      ! call judft_error("stopit")
       do n = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
          n_loc = (n-1) / fmpi%n_size + 1
          DO nn = 1,MIN(n,hmat%matsize1)  

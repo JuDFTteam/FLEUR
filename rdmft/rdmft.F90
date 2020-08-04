@@ -569,8 +569,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
 
-            CALL olap%alloc(fi%sym%invs,nbasfcn)
-            CALL read_olap(olap, fi%kpts%nkpt*(jspin-1)+ikpt, nbasfcn)
+            CALL read_eig(hybdat%eig_id,ikpt,jspin, smat=olap)
 
             zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 

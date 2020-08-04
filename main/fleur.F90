@@ -78,7 +78,7 @@ CONTAINS
    !$ USE omp_lib
    IMPLICIT NONE
 
-   TYPE(t_mpi),INTENT(IN)         :: fmpi
+   TYPE(t_mpi),INTENT(INOUT)      :: fmpi
    type(t_fleurinput), intent(in) :: fi
    class(t_xcpot), intent(in)     :: xcpot
    TYPE(t_sphhar),INTENT(IN)      :: sphhar
@@ -368,16 +368,19 @@ END IF
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
           IF (fi%hybinp%l_hybrid.AND.hybdat%l_calhf) THEN
-             IF (fmpi%irank==0) THEN
-                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,fmpi%mpi_comm,ierr)
-             ELSE
-                CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, fmpi%mpi_comm,ierr)
-             END IF
-             IF (fmpi%irank==0) THEN
-                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,fmpi%mpi_comm,ierr)
-             ELSE
-                CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, fmpi%mpi_comm,ierr)
-             END IF
+            call fmpi%set_root_comm()
+            if(fmpi%n_rank == 0) then
+               IF (fmpi%irank==0) THEN
+                  CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,fmpi%root_comm,ierr)
+               ELSE
+                  CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, fmpi%root_comm,ierr)
+               END IF
+               IF (fmpi%irank==0) THEN
+                  CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,fmpi%root_comm,ierr)
+               ELSE
+                  CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, fmpi%root_comm,ierr)
+               END IF
+            endif
           END IF
 #endif
 

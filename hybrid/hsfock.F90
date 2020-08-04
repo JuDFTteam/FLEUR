@@ -58,6 +58,8 @@ CONTAINS
       USE m_exchange_core
       USE m_symmetrizeh
       use m_work_package
+      USE m_eig66_data
+      use m_eig66_mpi
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -98,6 +100,7 @@ CONTAINS
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
       TYPE(t_mat)              :: ex, z_k
+      TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -138,6 +141,7 @@ CONTAINS
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+
       if(k_pack%submpi%root()) then
          ! calculate contribution from the core states to the HF exchange
          CALL timestart("core exchange calculation")
@@ -147,14 +151,11 @@ CONTAINS
             CALL exchange_vccv1(nk, fi%input, fi%atoms, fi%cell, fi%kpts, fi%sym, fi%noco, nococonv, fi%oneD, &
                               mpdata, fi%hybinp, hybdat, jsp, &
                               lapw, nsymop, nsest, indx_sest, fmpi, a_ex, results, ex)
+
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
          END IF
 
          CALL timestop("core exchange calculation")
-
-         call ex%save_npy("ex_nk=" // int2str(nk) // "_rank=" // int2str(fmpi%n_rank) // ".npy")
-         ! call MPI_Barrier(MPI_COMM_WORLD, ok)
-         ! call judft_error("stopit: add_Vnonl")
 
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()

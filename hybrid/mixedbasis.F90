@@ -356,7 +356,7 @@ CONTAINS
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
 
-               IF (fmpi%irank == 0) WRITE (oUnit, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
+               IF (fmpi%irank == 0) WRITE (oUnit, '(6x,I4,'' ->  '',F22.18)') i, rdum1
             END DO
             call mpdata%check_orthonormality(atoms, fmpi, l, itype, gridf)
          ENDDO

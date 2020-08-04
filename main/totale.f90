@@ -48,6 +48,7 @@ CONTAINS
     USE m_cdn_io
     USE m_types
     USE m_xmlOutput
+    use m_judft
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -119,10 +120,8 @@ CONTAINS
           !ELSE
           results%tote = results%tote - 0.5e0*results%te_hfex%valence + 0.5e0*results%te_hfex%core
           !END IF
-          WRITE (oUnit,FMT=8100)  0.5e0*results%te_hfex%valence
-          WRITE (oUnit,FMT=8101)  0.5e0*results%te_hfex%core
-8100      FORMAT (/,10x,'Fock-exchange energy (valence)=',t40,f20.10)
-8101      FORMAT (10x,'Fock-exchange energy (core)=',t40,f20.10)
+          write (oUnit,*)  'Fock-exchange energy (valence)= ' // float2str(0.5e0*results%te_hfex%valence)
+          write (oUnit,*)  'Fock-exchange energy (core)=    ' // float2str(0.5e0*results%te_hfex%core)
        ENDIF
 
 

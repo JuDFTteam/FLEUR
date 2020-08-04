@@ -34,8 +34,9 @@ contains
       call olap%u2l()
       call olap%conjugate()
 
-      call olap%multiply(z, trafo)
+      !call judft_error("stop after olap")
 
+      call olap%multiply(z, res=trafo)
       CALL ex%multiply(trafo, res=tmp, transB="C")
       CALL trafo%multiply(tmp, res=v_x)
 
