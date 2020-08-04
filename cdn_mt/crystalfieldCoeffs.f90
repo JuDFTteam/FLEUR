@@ -59,18 +59,18 @@ MODULE m_crystalfieldCoeffs
 
       CALL openXMLElementNoAttributes('crystalfieldCoefficients')
 
+      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
       DO iType = 1, atoms%ntype
 
          !                          sigma
          !Decompose potential into V(r)
          !                          lm
+         IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
          ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
-         CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
          CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
          !modified mt_from_grid with lm index
          vlm = 0.0
          CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
-         CALL finish_mt_grid()
 
          !Calculate n_4f^0(r) (normed spherical part of the 4f charge density)
          n_0 = hub1data%cdn_spherical(:,lcf,iType)
@@ -90,7 +90,7 @@ MODULE m_crystalfieldCoeffs
                DO m = -l, l
                   lm = l*(l+1) + m
                   CALL intgr3(vlm(:,lm,ispin)*n_0(:),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),Blm(l,m,ispin))
-                  Blm(l,m,ispin) = ((2*l+1)/(4*pi_const))**0.5 * Blm(l,m,ispin)
+                  Blm(l,m,ispin) = SQRT((2*l+1)/(4*pi_const)) * Blm(l,m,ispin)
                   Alm(l,m,ispin) = alphalm(lm) * Blm(l,m,ispin)
                ENDDO
             ENDDO
@@ -123,6 +123,7 @@ MODULE m_crystalfieldCoeffs
          ENDIF
 
       ENDDO
+      CALL finish_mt_grid()
 
       CALL closeXMLElement('crystalfieldCoefficients')
 
