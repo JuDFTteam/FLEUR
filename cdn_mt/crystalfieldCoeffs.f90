@@ -100,15 +100,15 @@ MODULE m_crystalfieldCoeffs
             CALL openXMLElementPoly('ccfCoeffs',['atomType','spin    '],[iType,ispin])
             DO l = 1, lmax
                DO m = -l, l
-                  IF(ABS(Blm(l,m,ispin)).LT.1e-12.AND.ABS(Alm(l,m,ispin)).LT.1e-12) CYCLE
+                  IF(ABS(Blm(l,m,ispin))/boltzmann_const.LT.1e-4.AND.ABS(Alm(l,m,ispin))/boltzmann_const.LT.1e-4) CYCLE
                   attributes = ''
                   WRITE(attributes(1),'(i0)') l
                   WRITE(attributes(2),'(i0)') m
-                  WRITE(attributes(3),'(f12.7)') Blm(l,m,ispin)*hartree_to_ev_const*1000.0
-                  WRITE(attributes(4),'(f12.7)') Alm(l,m,ispin)*hartree_to_ev_const*1000.0
-                  WRITE(attributes(5),'(a3)') 'meV'
+                  WRITE(attributes(3),'(f15.7)') Blm(l,m,ispin)/boltzmann_const
+                  WRITE(attributes(4),'(f15.7)') Alm(l,m,ispin)/boltzmann_const
+                  WRITE(attributes(5),'(a3)') 'K'
                   CALL writeXMLElementForm('ccf',['l   ','m   ','Blm ','Alm ','unit'],&
-                                           attributes,reshape([1,1,3,3,4,1,1,12,12,3],[5,2]))
+                                           attributes,reshape([1,1,3,3,4,1,1,15,15,1],[5,2]))
                ENDDO
             ENDDO
             CALL closeXMLElement('ccfCoeffs')
