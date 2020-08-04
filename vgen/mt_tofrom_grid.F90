@@ -11,7 +11,7 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
-   COMPLEX, ALLOCATABLE :: ylhmh(:, :, :)
+   REAL, ALLOCATABLE :: ylhmh(:, :, :)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, mt_from_gridlm, finish_mt_grid
 CONTAINS
    SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout, l_mdependency)
@@ -40,7 +40,7 @@ CONTAINS
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
       IF(l_mdependencyArg) THEN
-        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd))
+        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd),source=0.0)
       ENDIF
       IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
@@ -315,8 +315,8 @@ CONTAINS
       REAL, INTENT(INOUT)       :: vr(:, 0:, :)
 
       REAL    :: vpot(atoms%nsp())
-      COMPLEX :: vlhplus,vlhminus,vlh
-      INTEGER :: js, kt, lh, jr, nd, nsp,ll1,mem,lmplus,lmminus,memp
+      REAL :: vlh
+      INTEGER :: js, kt, lh, jr, nd, nsp,ll1,mem,lm
 
       nsp = atoms%nsp()
       nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -328,28 +328,15 @@ CONTAINS
             vpot = v_in(kt + 1:kt + nsp, js)*wt(:)!  multiplicate v_in with the weights of the k-points
 
             DO lh = 0, sphhar%nlh(nd)
-              ll1 = sphhar%llh(lh,nd) * ( sphhar%llh(lh,nd) + 1 ) + 1
+              ll1 = sphhar%llh(lh,nd) * ( sphhar%llh(lh,nd) + 1 )
               DO mem = 1,sphhar%nmem(lh,nd)
-                IF(sphhar%mlh(mem,lh,nd)<0) CYCLE
-                IF(sphhar%mlh(mem,lh,nd)==0) THEN
-                  vlh = dot_PRODUCT(vpot(:), ylhmh(:nsp, ll1, nd))
-                  vr(jr, ll1, js) = vr(jr, ll1, js) + vlh
-                ELSE
-                  lmplus  = ll1 + sphhar%mlh(mem,lh,nd)
-                  lmminus = ll1 - sphhar%mlh(mem,lh,nd)
-                  !
-                  ! --->        determine the corresponding potential number
-                  !c            through gauss integration
-                  !
-                  vlhplus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmplus, nd))
-                  !Find the correspinding -m element
-                  DO memp = 1,sphhar%nmem(lh,nd)
-                    IF(sphhar%mlh(memp,lh,nd).NE.-sphhar%mlh(mem,lh,nd)) CYCLE
-                    vlhminus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmminus, nd))
-                    vr(jr, lmplus-1, js) = vr(jr, lmplus-1, js)   + REAL(vlhplus-vlhminus)
-                    vr(jr, lmminus-1, js) = vr(jr, lmminus-1, js) + REAL(vlhplus+vlhminus)
-                  ENDDO
-                ENDIF
+                lm  = ll1 + sphhar%mlh(mem,lh,nd)
+                !
+                ! --->        determine the corresponding potential number
+                !c            through gauss integration
+                !
+                vlh = dot_PRODUCT(vpot(:), ylhmh(:nsp, lm, nd))
+                vr(jr, lm, js) = vr(jr, lm, js) + vlh
               ENDDO
             ENDDO ! lh
             kt = kt + nsp

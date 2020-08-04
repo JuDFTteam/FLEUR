@@ -33,7 +33,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rx(:,:) !(3,dimension%nspd)
     REAL,    INTENT (OUT):: ylh(:,0:,:) !(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd)
-    COMPLEX, OPTIONAL, INTENT (OUT):: ylhmh(:,0:,:)
+    REAL, OPTIONAL, INTENT (OUT):: ylhmh(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL s
@@ -56,7 +56,16 @@ CONTAINS
              DO mem = 1,sphhar%nmem(lh,nd)
                 lm = ll1 + sphhar%mlh(mem,lh,nd)
                 s = s + REAL( sphhar%clnu(mem,lh,nd) * ylm(lm) )
-                IF(PRESENT(ylhmh)) ylhmh(k,lm,nd) = sphhar%clnu(mem,lh,nd) * ylm(lm)
+                IF(PRESENT(ylhmh)) THEN
+                  IF(sphhar%mlh(mem,lh,nd)==0) THEN
+                    ylhmh(k,lm-1,nd) = sphhar%clnu(mem,lh,nd) * ylm(lm)
+                  ELSE
+                    ylhmh(k,lm-1,nd) = ylhmh(k,lm-1,nd) + REAL(sphhar%clnu(mem,lh,nd) * ylm(lm))
+                    !Add to the -m component
+                    lm = ll1 - sphhar%mlh(mem,lh,nd)
+                    ylhmh(k,lm-1,nd) = ylhmh(k,lm-1,nd) + REAL(sphhar%clnu(mem,lh,nd) * ylm(lm))
+                  ENDIF
+                ENDIF
              ENDDO
              ylh(k,lh,nd) = s
           ENDDO
