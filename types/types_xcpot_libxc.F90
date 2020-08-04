@@ -63,7 +63,6 @@ CONTAINS
 #ifdef CPP_LIBXC
       INTEGER :: err
       xcpot%jspins = jspins
-      xcpot%l_libxc = .TRUE.
       xcpot%func_vxc_id_x = func_vxc_id_x
       xcpot%func_exc_id_x = func_exc_id_x
       xcpot%func_vxc_id_c = func_vxc_id_c
