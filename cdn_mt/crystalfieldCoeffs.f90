@@ -33,7 +33,8 @@ MODULE m_crystalfieldCoeffs
       REAL    :: n_0Norm
       CHARACTER(LEN=20) :: attributes(5)
 
-      REAL, ALLOCATABLE :: vlm(:,:,:),vTotch(:,:)
+      COMPLEX, ALLOCATABLE :: vlm(:,:,:)
+      REAL, ALLOCATABLE :: vTotch(:,:)
       REAL, ALLOCATABLE :: Blm(:,:,:),Alm(:,:,:)
       REAL :: n_0(atoms%jmtd)
       REAL :: alphalm(0:48)
@@ -52,7 +53,7 @@ MODULE m_crystalfieldCoeffs
       CALL timestart('Crystal Field Coefficients')
 
       !initializations
-      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=0.0)
+      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
       ALLOCATE(Blm(0:lmax,-lmax:lmax,input%jspins),source=0.0)
       ALLOCATE(Alm(0:lmax,-lmax:lmax,input%jspins),source=0.0)
       !Question rotate to global frame ??
@@ -69,7 +70,7 @@ MODULE m_crystalfieldCoeffs
          ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
          CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
          !modified mt_from_grid with lm index
-         vlm = 0.0
+         vlm = cmplx_0
          CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
 
          !Calculate n_4f^0(r) (normed spherical part of the 4f charge density)
@@ -89,7 +90,7 @@ MODULE m_crystalfieldCoeffs
             DO l = 0, lmax
                DO m = -l, l
                   lm = l*(l+1) + m
-                  CALL intgr3(vlm(:,lm,ispin)*n_0(:),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),Blm(l,m,ispin))
+                  CALL intgr3(REAL(vlm(:,lm,ispin)*n_0(:)),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),Blm(l,m,ispin))
                   Blm(l,m,ispin) = SQRT((2*l+1)/(4*pi_const)) * Blm(l,m,ispin)
                   Alm(l,m,ispin) = alphalm(lm) * Blm(l,m,ispin)
                ENDDO
@@ -100,7 +101,11 @@ MODULE m_crystalfieldCoeffs
             CALL openXMLElementPoly('ccfCoeffs',['atomType','spin    '],[iType,ispin])
             DO l = 1, lmax
                DO m = -l, l
-                  IF(ABS(Blm(l,m,ispin))/boltzmann_const.LT.1e-4.AND.ABS(Alm(l,m,ispin))/boltzmann_const.LT.1e-4) CYCLE
+                  IF(ABS(Blm(l,m,ispin))/boltzmann_const.LT.1e-4.AND.ABS(Alm(l,m,ispin))/boltzmann_const.LT.1e-4) THEN
+                     Blm(l,m,ispin) = 0.0
+                     Alm(l,m,ispin) = 0.0
+                     CYCLE
+                  ENDIF
                   attributes = ''
                   WRITE(attributes(1),'(i0)') l
                   WRITE(attributes(2),'(i0)') m
