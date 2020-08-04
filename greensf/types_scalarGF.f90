@@ -96,7 +96,6 @@ MODULE m_types_scalarGF
          j2_start = MERGE(1,j1,l_mperp)
          j2_end   = MERGE(input%jspins,j1,l_mperp)
          DO j2 = j2_start, j2_end
-            IF(j2>j1) CYCLE !This scalar product is never used
             IF(atomType.EQ.atomTypep.AND..NOT.l_phase) THEN
                !Only l/=lp
                uu_tmp(:atoms%jri(atomType)) = f(:atoms%jri(atomType),1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&

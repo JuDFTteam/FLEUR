@@ -13,10 +13,11 @@ MODULE m_rotMMPmat
 
    CONTAINS
 
-   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,su) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,dwgnp,su) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: dwgn(-lmaxU_const:,-lmaxU_const:)
+      COMPLEX, OPTIONAL, INTENT(IN)  :: dwgnp(-lmaxU_const:,-lmaxU_const:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: su(:,:)
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
@@ -29,7 +30,11 @@ MODULE m_rotMMPmat
 
       IF(PRESENT(dwgn)) THEN
          DO ispin = 1, SIZE(mmpmat,3)
-            mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
+            IF(PRESENT(dwgnp)) THEN
+               mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgnp)),mmpmatOut(:,:,ispin))
+            ELSE
+               mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
+            ENDIF
             mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
          ENDDO
       ENDIF

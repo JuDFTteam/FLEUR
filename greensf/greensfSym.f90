@@ -43,7 +43,7 @@ MODULE m_greensfSym
          DO iBand = 1, SIZE(im,3)
             IF(l_diagonal.AND.l_intersite) THEN !These rotations are only available for the onsite elements
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,&
-                                                         bk=bk,atomDiff=atomDiff,numDiffElems=numDiffElems,phase=(ispin.EQ.3))
+                                                         bk=bk,atomDiff=atomDiff,phase=(ispin.EQ.3))
             ELSE IF (l_diagonal) THEN
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,phase=(ispin.EQ.3))
             ELSE
