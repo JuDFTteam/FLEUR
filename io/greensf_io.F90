@@ -86,10 +86,11 @@ MODULE m_greensf_io
    END SUBROUTINE closeGreensFFile
 
    SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, archiveType, greensf, mmpmat, selfen,&
-                               u, udot, ulo, usdus, denCoeffsOffDiag)
+                               u, udot, ulo, usdus, denCoeffsOffDiag, scalarGF)
 
       USE m_types
       USE m_types_selfen
+      USE m_types_scalarGF
       USE m_constants
       USE m_juDFT
 
@@ -107,6 +108,7 @@ MODULE m_greensf_io
       REAL,                      OPTIONAL, INTENT(IN) :: ulo(:,:,:,:,:)
       TYPE(t_usdus),             OPTIONAL, INTENT(IN) :: usdus
       TYPE(t_denCoeffsOffDiag),  OPTIONAL, INTENT(IN) :: denCoeffsOffDiag
+      TYPE(t_scalarGF),          OPTIONAL, INTENT(IN) :: scalarGF(:)
 
       INTEGER(HID_T)    :: elementsGroupID,contoursGroupID,radialGroupID
       INTEGER(HID_T)    :: currentelementGroupID,currentcontourGroupID
@@ -263,7 +265,8 @@ MODULE m_greensf_io
          iContour  = greensf(i_elem)%elem%iContour
 
          IF(.NOT.l_sphavg.AND.gfinp%l_outputSphavg) THEN
-            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,l_fullRadial=gfinp%l_intFullRadial)
+            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,usdus=usdus,denCoeffsOffdiag=denCoeffsOffDiag,&
+                                                    scalarGF=scalarGF(i_elem),l_fullRadial=gfinp%l_intFullRadial)
             l_sphavg = .TRUE.
          ELSE
             gfOut = greensf(i_elem)

@@ -76,14 +76,14 @@ MODULE m_types_greensf
 
       SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in,l_sphavg_in)
 
-         CLASS(t_greensf),             INTENT(INOUT)  :: this
-         TYPE(t_gfelementtype), TARGET,INTENT(IN)     :: gfelem
-         TYPE(t_gfinp),                INTENT(IN)     :: gfinp
-         TYPE(t_atoms),                INTENT(IN)     :: atoms
-         TYPE(t_input),                INTENT(IN)     :: input
+         CLASS(t_greensf),                     INTENT(INOUT)  :: this
+         TYPE(t_gfelementtype),      TARGET,   INTENT(IN)     :: gfelem
+         TYPE(t_gfinp),                        INTENT(IN)     :: gfinp
+         TYPE(t_atoms),                        INTENT(IN)     :: atoms
+         TYPE(t_input),                        INTENT(IN)     :: input
          !Pass a already calculated energy contour to the type
-         TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)   :: contour_in
-         LOGICAL,                    OPTIONAL, INTENT(IN)   :: l_sphavg_in !To overwrite the allocation for integrateOverMT_greensf
+         TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)     :: contour_in
+         LOGICAL,                    OPTIONAL, INTENT(IN)     :: l_sphavg_in !To overwrite the allocation for integrateOverMT_greensf
 
          INTEGER spin_dim,lmax,nLO
          LOGICAL l_sphavg
@@ -220,29 +220,34 @@ MODULE m_types_greensf
       !               certain energy point with an input matrix
       !----------------------------------------------------------------------------------
 
-      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,denCoeffsOffDiag)
+      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,denCoeffsOffDiag,scalarGF)
 
          USE m_types_mat
          USE m_types_usdus
          USE m_types_denCoeffsOffDiag
-         USE m_types_atoms
+         USE m_types_scalarGF
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
 
-         CLASS(t_greensf),        INTENT(IN)     :: this
-         TYPE(t_atoms),           INTENT(IN)     :: atoms
-         INTEGER,                 INTENT(IN)     :: iz
-         LOGICAL,                 INTENT(IN)     :: l_conjg
-         TYPE(t_mat),             INTENT(INOUT)  :: gmat !Return matrix
-         INTEGER,       OPTIONAL, INTENT(IN)     :: spin
-         TYPE(t_usdus), OPTIONAL, INTENT(IN)     :: usdus
+         CLASS(t_greensf),                   INTENT(IN)     :: this
+         TYPE(t_atoms),                      INTENT(IN)     :: atoms
+         INTEGER,                            INTENT(IN)     :: iz
+         LOGICAL,                            INTENT(IN)     :: l_conjg
+         TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
+         INTEGER,                  OPTIONAL, INTENT(IN)     :: spin
+         TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
          TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
+         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
 
          INTEGER matsize1,matsize2,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep,nspins,ilo,ilop,iLO_ind,iLOp_ind
-         LOGICAL l_full,l_scalar
+         LOGICAL l_full,l_scalar,l_scalarGF
+
+         REAL :: uun,dun,udn,ddn
+         REAL :: uulon(atoms%nlod),dulon(atoms%nlod),ulodn(atoms%nlod),uloun(atoms%nlod)
+         REAL :: uloulopn(atoms%nlod,atoms%nlod)
 
          IF(.NOT.this%l_calc) THEN
             CALL juDFT_error("The requested Green's Function element was not calculated", calledby="get_gf")
@@ -259,7 +264,9 @@ MODULE m_types_greensf
             nspins = SIZE(this%uu,4)
          ENDIF
 
-         l_scalar = PRESENT(usdus)
+         l_scalarGF = PRESENT(scalarGF)
+         IF(l_scalarGF) l_scalarGF = scalarGF%done
+         l_scalar = PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag)
          IF(l_scalar.AND.nspins==3) THEN
             IF(.NOT.PRESENT(denCoeffsOffDiag)) THEN
                   CALL juDFT_error("Offdiagonal Scalar products missing", calledby="get_gf")
@@ -323,6 +330,54 @@ MODULE m_types_greensf
                ind2_start = 0
             ENDIF
 
+            IF(l_scalar.OR.l_scalarGF) THEN
+               !Select the correct scalar products or integrals (So we do not have to repeat the actual combination)
+               IF(l_scalarGF) THEN
+                  uun = scalarGF%uun(spin1,spin2)
+                  dun = scalarGF%dun(spin1,spin2)
+                  udn = scalarGF%udn(spin1,spin2)
+                  ddn = scalarGF%ddn(spin1,spin2)
+
+                  IF(ALLOCATED(this%uulo)) THEN
+                     uulon(:) = scalarGF%uulon(:,spin1,spin2)
+                     uloun(:) = scalarGF%uloun(:,spin1,spin2)
+                     dulon(:) = scalarGF%dulon(:,spin1,spin2)
+                     ulodn(:) = scalarGF%ulodn(:,spin1,spin2)
+
+                     uloulopn(:,:) = scalarGF%uloulopn(:,:,spin1,spin2)
+                  ENDIF
+               ELSE IF(spin_ind<3) THEN
+                  uun = 1.0
+                  dun = 0.0
+                  udn = 0.0
+                  ddn = usdus%ddn(l,atomType,spin_ind)
+
+                  IF(ALLOCATED(this%uulo)) THEN
+                     uulon(:) = usdus%uulon(:,atomType,spin_ind)
+                     uloun(:) = usdus%uulon(:,atomType,spin_ind)
+                     dulon(:) = usdus%dulon(:,atomType,spin_ind)
+                     ulodn(:) = usdus%dulon(:,atomType,spin_ind)
+
+                     uloulopn(:,:) = usdus%uloulopn(:,:,atomType,spin_ind)
+                  ENDIF
+               ELSE
+                  uun = denCoeffsOffDiag%uu21n(l,atomType)
+                  dun = denCoeffsOffDiag%du21n(l,atomType)
+                  udn = denCoeffsOffDiag%ud21n(l,atomType)
+                  ddn = denCoeffsOffDiag%dd21n(l,atomType)
+
+                  IF(ALLOCATED(this%uulo)) THEN
+                     uulon(:) = denCoeffsOffDiag%uulo21n(:,atomType)
+                     uloun(:) = denCoeffsOffDiag%ulou21n(:,atomType)
+                     dulon(:) = denCoeffsOffDiag%dulo21n(:,atomType)
+                     ulodn(:) = denCoeffsOffDiag%ulod21n(:,atomType)
+
+                     uloulopn(:,:) = denCoeffsOffDiag%uloulop21n(:,:,atomType)
+                  ENDIF
+               ENDIF
+
+            ENDIF
+
             ind1 = ind1_start
             DO m = -l,l
                ind1 = ind1 + 1
@@ -351,55 +406,41 @@ MODULE m_types_greensf
                   !-------------------
                   ! Fetch the values
                   !-------------------
-                  IF(l_scalar) THEN
-                     IF(spin_ind<3) THEN
-                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) + &
-                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * usdus%ddn(l,atomType,spin_ind)
-                        IF(ALLOCATED(this%uulo)) THEN
-                           iLO_ind = 0
-                           DO ilo = 1, atoms%nlo(atomType)
-                              IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                              iLO_ind = iLO_ind + 1
-                              gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
-                                                       (this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) &
-                                                       +this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm))*usdus%uulon(ilo,atomType,spin_ind) &
-                                                      +(this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) &
-                                                       +this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm))*usdus%dulon(ilo,atomType,spin_ind)
-                              iLOp_ind = 0
-                              DO ilop = 1, atoms%nlo(atomType)
-                                 IF(atoms%llo(ilop,atomType).NE.l) CYCLE
-                                 iLOp_ind = iLOp_ind + 1
-                                 gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
-                                                          this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
-                                                        * usdus%uloulopn(ilo,ilop,atomType,spin_ind)
-                              ENDDO
+                  IF(l_scalar.OR.l_scalarGF) THEN
+                     gmat%data_c(ind1,ind2) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun &
+                                              + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn &
+                                              + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun &
+                                              + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * udn
+                     IF(ALLOCATED(this%uulo)) THEN
+                        iLO_ind = 0
+                        DO ilo = 1, atoms%nlo(atomType)
+                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                           iLO_ind = iLO_ind + 1
+                           gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                    + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uulon(ilo) &
+                                                    + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * dulon(ilo)
+                        ENDDO
+                        iLO_ind = 0
+                        DO ilo = 1, atoms%nlo(atomTypep)
+                           IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                           iLO_ind = iLO_ind + 1
+                           gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                    + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uloun(ilo) &
+                                                    + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ulodn(ilo)
+                        ENDDO
+                        iLO_ind = 0
+                        DO ilo = 1,atoms%nlo(atomType)
+                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                           iLO_ind = iLO_ind + 1
+                           iLOp_ind = 0
+                           DO ilop = 1, atoms%nlo(atomTypep)
+                              IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
+                              iLOp_ind = iLOp_ind + 1
+                              gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                       + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
+                                                        * uloulopn(ilo,ilop)
                            ENDDO
-                        ENDIF
-                     ELSE
-                        gmat%data_c(ind1,ind2) = this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%uu21n(l,atomType) + &
-                                                 this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%dd21n(l,atomType) + &
-                                                 this%du(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%du21n(l,atomType) + &
-                                                 this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * denCoeffsOffDiag%ud21n(l,atomType)
-                        IF(ALLOCATED(this%uulo)) THEN
-                           iLO_ind = 0
-                           DO ilo = 1, atoms%nlo(atomType)
-                              IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                              iLO_ind = iLO_ind + 1
-                              gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) &
-                                                       + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%uulo21n(ilo,atomType) &
-                                                       + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%ulou21n(ilo,atomType) &
-                                                       + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%dulo21n(ilo,atomType) &
-                                                       + this%ulod(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * denCoeffsOffDiag%ulod21n(ilo,atomType)
-                              iLOp_ind = 0
-                              DO ilop = 1, atoms%nlo(atomType)
-                                 IF(atoms%llo(ilop,atomType).NE.l) CYCLE
-                                 iLOp_ind = iLOp_ind + 1
-                                 gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) + &
-                                                          this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
-                                                        * denCoeffsOffDiag%uloulop21n(ilo,ilop,atomType)
-                              ENDDO
-                           ENDDO
-                        ENDIF
+                        ENDDO
                      ENDIF
                   ELSE
                      gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm)
@@ -420,7 +461,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -551,7 +591,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialRadial_gf(this,atoms,iz,m,mp,l_conjg,spin,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh (r/=r')
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -687,7 +726,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -728,7 +766,6 @@ MODULE m_types_greensf
 
       SUBROUTINE getRadialRadialSpin_gf(this,atoms,iz,m,mp,l_conjg,f,g,flo,gmat)
 
-         USE m_types_atoms
          !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
          !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
 
@@ -943,26 +980,34 @@ MODULE m_types_greensf
 
       END SUBROUTINE resetSingleElem_gf
 
-      FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,l_fullRadial) Result(gIntegrated)
+      FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,usdus,denCoeffsOffDiag,scalarGF,l_fullRadial) Result(gIntegrated)
 
          USE m_intgr
+         USE m_types_scalarGF
+         USE m_types_usdus
+         USE m_types_denCoeffsOffDiag
+         USE m_types_mat
 
-         CLASS(t_greensf),    INTENT(IN)     :: this
-         TYPE(t_atoms),       INTENT(IN)     :: atoms
-         TYPE(t_input),       INTENT(IN)     :: input
-         TYPE(t_gfinp),       INTENT(IN)     :: gfinp
-         REAL,                INTENT(IN)     :: f(:,:,0:,:,:)
-         REAL,                INTENT(IN)     :: g(:,:,0:,:,:)
-         REAL,                INTENT(IN)     :: flo(:,:,:,:,:)
-         LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fullRadial
+         CLASS(t_greensf),                   INTENT(IN) :: this
+         TYPE(t_atoms),                      INTENT(IN) :: atoms
+         TYPE(t_input),                      INTENT(IN) :: input
+         TYPE(t_gfinp),                      INTENT(IN) :: gfinp
+         REAL,                               INTENT(IN) :: f(:,:,0:,:,:)
+         REAL,                               INTENT(IN) :: g(:,:,0:,:,:)
+         REAL,                               INTENT(IN) :: flo(:,:,:,:,:)
+         TYPE(t_usdus),            OPTIONAL, INTENT(IN) :: usdus
+         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN) :: denCoeffsOffDiag
+         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN) :: scalarGF
+         LOGICAL,                  OPTIONAL, INTENT(IN) :: l_fullRadial
 
          TYPE(t_greensf) :: gIntegrated
 
-         LOGICAL :: l_fullRadialArg
+         LOGICAL :: l_fullRadialArg,l_explicit,l_offdiag
          INTEGER :: l,lp,atomType,atomTypep,ipm,spin,m,mp,iz,jr,jrp
-         REAL    :: realPart, imagPart
+         REAL    :: realPart, imagPart, atomDiff(3)
          COMPLEX, ALLOCATABLE :: gmatR(:,:)
          COMPLEX :: gmat(atoms%jmtd)
+         TYPE(t_mat) :: gmatTmp
 
          l_fullRadialArg = .FALSE.
          IF(PRESENT(l_fullRadial)) l_fullRadialArg = l_fullRadial
@@ -978,38 +1023,54 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
+         atomDiff  = this%elem%atomDiff
+         l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
+         !Do we have the offdiagonal scalar products
+         l_explicit = .TRUE.
+         IF(PRESENT(scalarGF)) THEN
+            IF(scalarGF%done.AND.l_offdiag) l_explicit = .FALSE.
+         ENDIF
+         IF(PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag).AND..NOT.l_offdiag) l_explicit = .FALSE.
+
+         !only intersite arguments have independent radial arguments ??
+         l_fullRadialArg = l_fullRadialArg.AND.(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12))
 
          DO ipm = 1, 2
             DO spin = 1 , SIZE(this%uu,4)
-               DO mp = -lp, lp
-                  DO m = -l, l
-                     IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
-                     IF(.NOT.l_fullRadialArg) THEN
-                        CALL this%getRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatR)
-                     ENDIF
-                     DO iz = 1, this%contour%nz
-                        IF(l_fullRadialArg) THEN
-                           CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
+               IF(.NOT.l_explicit) THEN
+                  DO iz = 1, this%contour%nz
+                     CALL this%get(atoms,iz,ipm==2,gmatTmp,spin=spin,usdus=usdus,&
+                                   denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+                     CALL gIntegrated%set(iz,ipm==2,gmatTmp,spin=spin)
+                  ENDDO
+               ELSE
+                  DO mp = -lp, lp
+                     DO m = -l, l
+                        IF(this%checkEmpty(m,mp,spin,ipm)) CYCLE
+                        IF(.NOT.l_fullRadialArg) THEN
+                           CALL this%getRadial(atoms,m,mp,ipm==2,spin,f,g,flo,gmatR)
                         ENDIF
+                        DO iz = 1, this%contour%nz
+                           IF(l_fullRadialArg) THEN
+                              CALL this%getRadialRadial(atoms,iz,m,mp,ipm==2,spin,f,g,flo,gmatR)
+                              gmat = cmplx_0
+                              DO jr = 1, SIZE(gmat)
+                                 CALL intgr3(REAL(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
+                                 CALL intgr3(AIMAG(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
 
-                        IF(l_fullRadialArg) THEN
-                           gmat = cmplx_0
-                           DO jr = 1, SIZE(gmat)
-                              CALL intgr3(REAL(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),realPart)
-                              CALL intgr3(AIMAG(gmatR(:,jr)),atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep),imagPart)
+                                 gmat(jr) = realPart + ImagUnit * imagPart
+                              ENDDO
+                           ELSE
+                              gmat = gmatR(:,iz)
+                           ENDIF
+                           CALL intgr3(REAL(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realPart)
+                           CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
 
-                              gmat(jr) = realPart + ImagUnit * imagPart
-                           ENDDO
-                        ELSE
-                           gmat = gmatR(:,iz)
-                        ENDIF
-                        CALL intgr3(REAL(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realPart)
-                        CALL intgr3(AIMAG(gmat),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagPart)
-
-                        gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
+                           gIntegrated%gmmpMat(iz,m,mp,spin,ipm) = realPart + ImagUnit * imagPart
+                        ENDDO
                      ENDDO
                   ENDDO
-               ENDDO
+               ENDIF
             ENDDO
          ENDDO
          CALL timestop("Green's Function: Average over MT")

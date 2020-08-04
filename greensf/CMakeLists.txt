@@ -13,4 +13,5 @@ greensf/occmtx.f90
 greensf/excSplitting.f90
 greensf/greensfTorgue.f90
 greensf/lstojmj.f90
+greensf/types_scalarGF.f90
 )

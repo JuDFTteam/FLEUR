@@ -40,7 +40,7 @@ CONTAINS
     REAL    :: v(3),bmrot(3,3),gkrot(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot))
-    LOGICAL :: l_apw, l_pres_abclo
+    LOGICAL :: l_apw
 
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
     ab_size = lmax*(lmax+2)+1
@@ -54,12 +54,11 @@ CONTAINS
     np = sym%invtab(sym%ngopr(na))
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
     bmrot = MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
-    l_pres_abclo = PRESENT(abclo)
 
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,l_pres_abclo,bmrot) &
+    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,bmrot) &
     !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
     !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
 #else
@@ -91,7 +90,7 @@ CONTAINS
        !$acc end loop
        abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
        abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       IF (l_pres_abclo) THEN
+       IF (PRESENT(abclo)) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
           term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)

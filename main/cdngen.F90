@@ -48,8 +48,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
+   USE m_crystalfieldCoeffs
    USE m_types_greensfContourData
-   USE m_angles
    USE m_types_eigdos
    USE m_types_dos
 #ifdef CPP_MPI
@@ -148,7 +148,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          CALL greensFunction(i_gf)%reset()
       ENDDO
       CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc))
-      IF(atoms%n_hia.GT.0 .AND. fmpi%irank==0 .AND.PRESENT(hub1data)) hub1data%mag_mom = 0.0
+   ENDIF
+
+   IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN
+      hub1data%mag_mom = 0.0
+      hub1data%cdn_spherical = 0.0
    ENDIF
 
 
@@ -220,6 +224,10 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
+   !For now only calculate if Hubbard 1 is performed
+   IF(.FALSE..AND.PRESENT(hub1data).AND.fmpi%irank.EQ.0) THEN
+      CALL crystalfieldCoeffs(input,atoms,sphhar,sym,noco,vTot,hub1data)
+   ENDIF
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then

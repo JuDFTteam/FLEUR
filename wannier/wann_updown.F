@@ -1258,7 +1258,7 @@ c******************************************************
      >      mpi_communicatior,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
      >      nbnd,nbnd,2,2,fullnkpts,
-     >      irank,isize,wann%l_unformatted,
+     >      irank,isize,wann%socmatfmt==2,
      <      hsomtx)
 
 
@@ -1269,7 +1269,7 @@ c******************************************************
      >      mpi_communicatior,l_p0,'WF1.hsomtxvec',
      >      'Vectors for spin-orbit coupling',
      >      2,2,nbnd,nbnd,3,fullnkpts,
-     >      irank,isize,wann%l_unformatted,
+     >      irank,isize,wann%socmatvecfmt==2,
      <      hsomtxvec)
       endif
 
@@ -1279,7 +1279,7 @@ c******************************************************
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.false.,.true.,
-     <      mmn,wann%l_unformatted)
+     <      mmn,wann%mmn0fmt==2)
       endif !l_soc and l_mmn0
 
       if(wann%l_perpmag)then
@@ -1288,7 +1288,7 @@ c******************************************************
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.true.,.true.,
-     <      perpmag,wann%l_unformatted)
+     <      perpmag,wann%perpmagfmt==2)
       endif !l_soc and l_mmn0
 
       if(wann%l_surfcurr)then

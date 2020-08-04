@@ -446,10 +446,22 @@ CONTAINS
           endif   
           IF(this%jobList(i).EQ.'socmat')THEN
              this%l_socmat=.TRUE.
-          ELSEIF(this%jobList(i).EQ.'socmatvec')THEN
+          ELSEIF(jobname.EQ.'socmatvec')THEN
              this%l_socmatvec=.TRUE.
-          ELSEIF(this%jobList(i).EQ.'socmatvecrs')THEN
-             this%l_socmatvecrs=.TRUE.             
+             if(l_param)then
+             read(param,*,iostat=stat) this%socmatvecfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
+          ELSEIF(jobname.EQ.'socmatvecrs')THEN
+             this%l_socmatvecrs=.TRUE.
+             if(l_param)then
+             read(param,*,iostat=stat) this%socmatvecrsfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
           ELSEIF(this%jobList(i).EQ.'unformatted')THEN
              this%l_unformatted=.TRUE.         
           ELSEIF(this%jobList(i).EQ.'ndegen')THEN

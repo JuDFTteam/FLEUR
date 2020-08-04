@@ -11,9 +11,10 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
-   PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
+   COMPLEX, ALLOCATABLE :: ylhmh(:, :, :)
+   PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, mt_from_gridlm, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout, l_mdependency)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
@@ -25,7 +26,12 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)      :: sym
       REAL, INTENT(OUT), OPTIONAL  :: thout(:)
       REAL, INTENT(OUT), OPTIONAL  :: phout(:)
+      LOGICAL,INTENT(IN), OPTIONAL :: l_mdependency
 
+      LOGICAL :: l_mdependencyArg
+
+      l_mdependencyArg = .FALSE.
+      IF(PRESENT(l_mdependency)) l_mdependencyArg = l_mdependency
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
@@ -33,6 +39,9 @@ CONTAINS
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
+      IF(l_mdependencyArg) THEN
+        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd))
+      ENDIF
       IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
          ALLOCATE (ylhtt, MOLD=ylh)
@@ -48,7 +57,11 @@ CONTAINS
          END IF
 
       ELSE
-         CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
+        IF(l_mdependencyArg) THEN
+           CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh, ylhmh=ylhmh)
+        ELSE
+           CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
+        ENDIF
       END IF
       !ENDIF
    END SUBROUTINE init_mt_grid
@@ -292,9 +305,63 @@ CONTAINS
 
    END SUBROUTINE mt_from_grid
 
+   SUBROUTINE mt_from_gridlm(atoms, sym, sphhar, n, jspins, v_in, vr)
+      IMPLICIT NONE
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym), INTENT(IN)   :: sym
+      TYPE(t_sphhar), INTENT(IN):: sphhar
+      INTEGER, INTENT(IN)       :: jspins, n
+      REAL, INTENT(IN)          :: v_in(:, :)
+      REAL, INTENT(INOUT)       :: vr(:, 0:, :)
+
+      REAL    :: vpot(atoms%nsp())
+      COMPLEX :: vlhplus,vlhminus,vlh
+      INTEGER :: js, kt, lh, jr, nd, nsp,ll1,mem,lmplus,lmminus,memp
+
+      nsp = atoms%nsp()
+      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+
+      DO js = 1, jspins
+         !
+         kt = 0
+         DO jr = 1, atoms%jri(n)
+            vpot = v_in(kt + 1:kt + nsp, js)*wt(:)!  multiplicate v_in with the weights of the k-points
+
+            DO lh = 0, sphhar%nlh(nd)
+              ll1 = sphhar%llh(lh,nd) * ( sphhar%llh(lh,nd) + 1 ) + 1
+              DO mem = 1,sphhar%nmem(lh,nd)
+                IF(sphhar%mlh(mem,lh,nd)<0) CYCLE
+                IF(sphhar%mlh(mem,lh,nd)==0) THEN
+                  vlh = dot_PRODUCT(vpot(:), ylhmh(:nsp, ll1, nd))
+                  vr(jr, ll1, js) = vr(jr, ll1, js) + vlh
+                ELSE
+                  lmplus  = ll1 + sphhar%mlh(mem,lh,nd)
+                  lmminus = ll1 - sphhar%mlh(mem,lh,nd)
+                  !
+                  ! --->        determine the corresponding potential number
+                  !c            through gauss integration
+                  !
+                  vlhplus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmplus, nd))
+                  !Find the correspinding -m element
+                  DO memp = 1,sphhar%nmem(lh,nd)
+                    IF(sphhar%mlh(memp,lh,nd).NE.-sphhar%mlh(mem,lh,nd)) CYCLE
+                    vlhminus = dot_PRODUCT(vpot(:), ylhmh(:nsp, lmminus, nd))
+                    vr(jr, lmplus-1, js) = vr(jr, lmplus-1, js)   + REAL(vlhplus-vlhminus)
+                    vr(jr, lmminus-1, js) = vr(jr, lmminus-1, js) + REAL(vlhplus+vlhminus)
+                  ENDDO
+                ENDIF
+              ENDDO
+            ENDDO ! lh
+            kt = kt + nsp
+         ENDDO   ! jr
+      ENDDO
+
+   END SUBROUTINE mt_from_gridlm
+
    SUBROUTINE finish_mt_grid()
       DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
+      IF(ALLOCATED(ylhmh)) DEALLOCATE (ylhmh)
    END SUBROUTINE finish_mt_grid
 
 END MODULE m_mt_tofrom_grid
