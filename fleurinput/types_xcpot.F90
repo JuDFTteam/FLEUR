@@ -101,10 +101,13 @@ CONTAINS
 
    SUBROUTINE read_xml_xcpot(this, xml)
       USE m_types_xml
+#ifdef CPP_LIBXC
+      USE xc_f90_lib_m
+#endif
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
-      CHARACTER(len=:), allocatable ::xpathA, xpathB
+      CHARACTER(len=:), allocatable ::xpathA, xpathB, valueString
       INTEGER          :: vxc_id_x, vxc_id_c, exc_id_x, exc_id_c, jspins
       LOGICAL          :: l_libxc_names
       l_libxc_names = .FALSE.
@@ -137,37 +140,37 @@ CONTAINS
          this%l_libxc = .TRUE.
          this%func_vxc_id_x = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@exchange'))
          this%func_vxc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@correlation'))
-         IF (xml%GetNumberOfNodes(TRIM(xPathA)//'/@etot_exchange') == 1) THEN
+         IF (xml%GetNumberOfNodes(xPathA//'/@etot_exchange') == 1) THEN
             this%func_exc_id_x = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@etot_exchange'))
          ELSE
             this%func_exc_id_x = vxc_id_x
          ENDIF
 
-         IF (xml%GetNumberOfNodes(TRIM(xPathA)//'/@exc_correlation') == 1) THEN
+         IF (xml%GetNumberOfNodes(xPathA//'/@exc_correlation') == 1) THEN
             this%func_exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@exc_correlation'))
          ELSE
             this%func_exc_id_c = this%func_vxc_id_c
          ENDIF
          ! LibXCName
-      ELSEIF (xml%GetNumberOfNodes(TRIM(xPathB)) == 1) THEN
+      ELSEIF (xml%GetNumberOfNodes(xPathB) == 1) THEN
          l_libxc_names = .TRUE.
 #ifdef CPP_LIBXC
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB)//'/@exchange')))
-         this%func_vxc_id_x = xc_f03_functional_get_number(TRIM(valueString))
+         valueString = xml%GetAttributeValue(xPathB //'/@exchange')
+         this%func_vxc_id_x = xc_f90_functional_get_number(valueString)
 
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB)//'/@correlation')))
-         this%func_vxc_id_c = xc_f03_functional_get_number(TRIM(valueString))
+         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@correlation')))
+         this%func_vxc_id_c = xc_f90_functional_get_number(valueString)
 
-         IF (xml%GetNumberOfNodes(TRIM(xPathB)//'/@etot_exchange') == 1) THEN
-            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB)//'/@etot_exchange')))
-            this%func_exc_id_x = xc_f03_functional_get_number(TRIM(valueString))
+         IF (xml%GetNumberOfNodes(xPathB//'/@etot_exchange') == 1) THEN
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@etot_exchange')))
+            this%func_exc_id_x = xc_f90_functional_get_number(valueString)
          ELSE
             this%func_exc_id_x = this%func_vxc_id_x
          ENDIF
 
-         IF (xml%GetNumberOfNodes(TRIM(xPathB)//'/@etot_correlation') == 1) THEN
-            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB)//'/@etot_correlation')))
-            this%func_exc_id_c = xc_f03_functional_get_number(TRIM(valueString))
+         IF (xml%GetNumberOfNodes(xPathB//'/@etot_correlation') == 1) THEN
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@etot_correlation')))
+            this%func_exc_id_c = xc_f90_functional_get_number(valueString)
          ELSE
             this%func_exc_id_c = this%func_vxc_id_c
          ENDIF
