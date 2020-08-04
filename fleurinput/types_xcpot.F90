@@ -117,11 +117,20 @@ CONTAINS
          this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
       ENDIF
 
+      if(this%inbuild_name == "LibXC" ) then
+         this%l_inbuild = .False.
+         this%l_libxc = .True.
+      endif
+
       !Input for libxc
       ! Read in xc functional parameters
       !Read in libxc parameters if present
       xPathA = '/fleurInput/xcFunctional/LibXCID'
       xPathB = '/fleurInput/xcFunctional/LibXCName'
+
+      if(xml%GetNumberOfNodes(xPathA) == 1 .and. xml%GetNumberOfNodes(xPathB) == 1) then
+         CALL judft_error("You specified libxc by name and id, please choose only one option")
+      endif
 
       ! LibXCID
       IF (xml%GetNumberOfNodes(xPathA) == 1) THEN
@@ -165,10 +174,11 @@ CONTAINS
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
 #endif
+      else
+         if(this%l_libxc) call judft_error("LibXC functional not specified", &
+            hint='add something like <xcFunctional name="LibXC" relativisticCorrections="F"><LibXCName exchange="gga_x_pbe" correlation="gga_c_pbe"/></xcFunctional>')
       ENDIF
 
-      IF (this%l_libxc .AND. l_libxc_names) CALL judft_error("You specified libxc by name and id, please choose only one option")
-      this%l_libxc = this%l_libxc .OR. l_libxc_names
       IF (this%l_inbuild .AND. this%l_libxc) CALL judft_error("You specified libxc and an inbuild xc-pot, please choose only one option")
       IF (.NOT. (this%l_inbuild .OR. this%l_libxc)) CALL judft_error("You specified no xc-pot")
 
