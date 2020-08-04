@@ -104,7 +104,7 @@ CONTAINS
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
-      CHARACTER(len=10)::xpathA, xpathB
+      CHARACTER(len=:), allocatable ::xpathA, xpathB
       INTEGER          :: vxc_id_x, vxc_id_c, exc_id_x, exc_id_c, jspins
       LOGICAL          :: l_libxc_names
       l_libxc_names = .FALSE.
