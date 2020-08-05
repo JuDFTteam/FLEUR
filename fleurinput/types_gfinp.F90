@@ -356,7 +356,11 @@ CONTAINS
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp)
+                     IF(nshells==0) THEN
+                        i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp)
+                     ELSE
+                        i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nTypep=-nshells)
+                     ENDIF
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
