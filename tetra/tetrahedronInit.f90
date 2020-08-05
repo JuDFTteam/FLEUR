@@ -86,7 +86,7 @@ MODULE m_tetrahedronInit
 
                etetra = eig(iband,k)
 
-               IF( ALL(etetra>efermi) .AND. .NOT.input%l_bloechl ) CYCLE
+               IF( ALL(etetra>efermi + 1E-8) .AND. .NOT.input%l_bloechl ) CYCLE
 
                w  = getWeightSingleBand([efermi],etetra,icorn,vol(itet)*fac(ikpt),input%film,input%l_bloechl)
 
@@ -194,7 +194,7 @@ MODULE m_tetrahedronInit
                                                                  input%film,input%l_bloechl,l_res=.TRUE.)
             ENDIF
 
-            IF( ALL(etetra(:,iband,itet)>MAXVAL(calc_eMesh)) .AND. .NOT.input%l_bloechl ) CYCLE
+            IF( ALL(etetra(:,iband,itet)>MAXVAL(calc_eMesh) + 1E-8) .AND. .NOT.input%l_bloechl ) CYCLE
 
             calc_weights_thread(:,iband) = calc_weights_thread(:,iband) &
                                           + getWeightSingleBand(calc_eMesh,etetra(:,iband,itet),icorn,vol,&
