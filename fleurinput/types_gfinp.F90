@@ -352,15 +352,11 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,l_sphavg)
+               refGF = this%find(refL,itype,iContour,l_sphavg,nTypep=-nshells)
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     IF(nshells==0) THEN
-                        i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp)
-                     ELSE
-                        i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nTypep=-nshells)
-                     ENDIF
+                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nTypep=-nshells)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -1109,7 +1105,11 @@ CONTAINS
             IF(this%elem(i_gf)%lp.NE.l) CYCLE
          ENDIF
          IF(PRESENT(nTypep)) THEN
-            IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
+            IF(nTypep/=0) THEN
+               IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
+            ELSE
+               IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
+            ENDIF
          ELSE
             IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
          ENDIF
