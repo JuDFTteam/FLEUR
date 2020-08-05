@@ -6,11 +6,12 @@
 
 MODULE m_mpi_bc_tool
   USE m_judft
+#ifdef CPP_MPI
+   use mpi
+#endif
+  !use m_types_xcpot_data
   IMPLICIT NONE
   PRIVATE
-#ifdef CPP_MPI
-  INCLUDE 'mpif.h'
-#endif
   !This interface is used to broadcast data. On the recieving PE the data-array is first allocated to
   !have the same shape as the one on irank
   INTERFACE mpi_bc
