@@ -108,7 +108,7 @@ CONTAINS
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
       CHARACTER(len=:), allocatable ::xpathA, xpathB, valueString
-      INTEGER          :: vxc_id_x, vxc_id_c, exc_id_x, exc_id_c, jspins
+      INTEGER          :: jspins
       LOGICAL          :: l_libxc_names
       l_libxc_names = .FALSE.
       IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC') == 1) &
@@ -143,11 +143,11 @@ CONTAINS
          IF (xml%GetNumberOfNodes(xPathA//'/@etot_exchange') == 1) THEN
             this%func_exc_id_x = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@etot_exchange'))
          ELSE
-            this%func_exc_id_x = vxc_id_x
+            this%func_exc_id_x = this%func_vxc_id_x
          ENDIF
 
-         IF (xml%GetNumberOfNodes(xPathA//'/@exc_correlation') == 1) THEN
-            this%func_exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@exc_correlation'))
+         IF (xml%GetNumberOfNodes(xPathA//'/@etot_correlation') == 1) THEN
+            this%func_exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA//'/@etot_correlation'))
          ELSE
             this%func_exc_id_c = this%func_vxc_id_c
          ENDIF
