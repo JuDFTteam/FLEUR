@@ -32,8 +32,8 @@ MODULE m_tetrahedron_regular
       REAL,    ALLOCATABLE,   INTENT(INOUT)  :: voltet(:)
 
 
-      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra
-      REAL    :: vol,sumvol,volbz,diag(2)
+      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i
+      REAL    :: vol,sumvol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
       INTEGER, ALLOCATABLE :: tetra(:,:)
       INTEGER, ALLOCATABLE :: kcorn(:)
@@ -57,11 +57,16 @@ MODULE m_tetrahedron_regular
          CALL get_tetra(kpts,cell,grid,ntetraCube,vol,tetra)
       ENDIF
 
+      !We shift the k-points by this vector only for the pointer array
+      DO i = 1, 3
+         minKpt(i) = MINVAL(kpts%bkf(i,:))
+      ENDDO
+
       !Set up pointer array for the kpts
       ALLOCATE(p(0:grid(1),0:grid(2),0:grid(3)),source=0)
       p = 0
       DO ikpt = 1, kpts%nkptf
-         iarr = nint(kpts%bkf(:,ikpt)*grid)
+         iarr = nint((kpts%bkf(:,ikpt)-minKpt(:))*grid)
          p(iarr(1),iarr(2),iarr(3)) = ikpt
       ENDDO
       p(grid(1),:,:) = p(0,:,:)
