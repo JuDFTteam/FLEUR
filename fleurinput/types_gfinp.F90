@@ -691,6 +691,7 @@ CONTAINS
                                                                 hint="This is a bug in FLEUR, please report",&
                                                                 calledby="add_gfelem")
 
+      l_found = .FALSE.
       !Check if this job has already been added
       IF(PRESENT(nTypep).OR..NOT.PRESENT(nshells)) THEN
          i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
@@ -1104,15 +1105,9 @@ CONTAINS
             IF(this%elem(i_gf)%lp.NE.l) CYCLE
          ENDIF
          IF(PRESENT(nTypep)) THEN
-            IF(nTypep/=nType) THEN
-               IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
-            ELSE
-               !The -1 will be replaced with the onsite element in init_gfinp
-               IF(this%elem(i_gf)%atomTypep.NE.nTypep.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
-            ENDIF
+            IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
          ELSE
-            !The -1 will be replaced with the onsite element in init_gfinp
-            IF(this%elem(i_gf)%atomTypep.NE.nType.AND.this%elem(i_gf)%atomTypep.NE.-1) CYCLE
+            IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
          ENDIF
          IF(this%elem(i_gf)%l_sphavg .neqv. l_sphavg) CYCLE
          !Check the phasefactor
