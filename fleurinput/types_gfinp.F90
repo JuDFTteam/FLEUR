@@ -692,7 +692,12 @@ CONTAINS
                                                                 calledby="add_gfelem")
 
       !Check if this job has already been added
-      i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
+      IF(PRESENT(nTypep).OR..NOT.PRESENT(nshells)) THEN
+         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
+      ELSE IF(PRESENT(nshells)) THEN
+         !Make sure we have not added the reference element for intersite elements
+         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=-nshells,atomDiff=atomDiff,l_found=l_found)
+      ENDIF
       IF(l_found) RETURN !Element was found
 
       this%n = this%n + 1
