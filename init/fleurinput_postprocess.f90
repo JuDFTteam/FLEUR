@@ -34,7 +34,7 @@ CONTAINS
     call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
 
-    call check_input_switches(banddos,vacuum,noco,atoms,input,sym)
+    call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.)
     !adjust positions by displacements

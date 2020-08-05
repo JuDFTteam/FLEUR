@@ -44,7 +44,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
       USE m_nocoInputCheck
       USE m_types_fleurinput
       type(t_banddos),INTENT(IN)::banddos
@@ -53,12 +53,19 @@ MODULE m_checks
       type(t_atoms),INTENT(IN)  ::atoms
       type(t_input),INTENT(IN)  ::input
       type(t_sym),INTENT(IN)    :: sym
+      type(t_kpts),INTENT(IN)   :: kpts
 
       integer :: i
 
-           ! Check DOS related stuff (from inped)
 
-  
+     !Check if there are tetrahedrons available for the tetrahedron method
+     IF((input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3).AND.kpts%ntet==0) THEN
+        CALL juDFT_error("You selected the tetrahedron method for Brillouin-zone Integration "//&
+                         "but the selected k-points set has no tetrahedron information",&
+                         hint="Either change mode to hist or generate tetrahedrons with the inpgen")
+     ENDIF
+
+     ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
         CALL juDFT_error("jDOS+collinear is not implemented at the moment.",&
                          hint="If you need this feature please create an issue on the fleur git")
