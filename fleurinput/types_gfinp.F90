@@ -34,7 +34,8 @@ MODULE m_types_gfinp
       REAL    :: fixedCutoff = 0.0
       INTEGER :: refCutoff   = -1 !Choose cutoff to be the same as another
    CONTAINS
-      PROCEDURE :: countLOs => countLOs_gfelem !Count the local orbitals attached to the element
+      PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
+      PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -1287,4 +1288,14 @@ CONTAINS
       ENDIF
 
    END FUNCTION countLOs_gfelem
+
+   PURE LOGICAL FUNCTION isOffDiag_gfelem(this)
+
+      CLASS(t_gfelementtype),   INTENT(IN)  :: this
+
+      isoffDiag_gfelem = this%l.NE.this%lp.OR.this%atomType.NE.this%atomTypep&
+                           .OR.ANY(ABS(this%atomDiff).GT.1e-12)
+
+   END FUNCTION isOffDiag_gfelem
+
 END MODULE m_types_gfinp

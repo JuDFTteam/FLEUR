@@ -40,9 +40,9 @@ MODULE m_greensfPostProcess
 
       INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
-      LOGICAL  l_sphavg,l_check,l_offdiag
+      LOGICAL  l_sphavg,l_check
 
-      REAL :: torgue(3),atomDiff(3),e
+      REAL :: torgue(3),e
       REAL :: v0(atoms%jmtd),vso(atoms%jmtd,2),vso_l(atoms%jmtd,0:atoms%lmaxd)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
@@ -73,11 +73,9 @@ MODULE m_greensfPostProcess
                lp = gfinp%elem(i_gf)%lp
                atomType  = gfinp%elem(i_gf)%atomType
                atomTypep = gfinp%elem(i_gf)%atomTypep
-               atomDiff  = gfinp%elem(i_gf)%atomDiff
 
                l_sphavg  = gfinp%elem(i_gf)%l_sphavg
-               l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
-               IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
+               IF(gfinp%elem(i_gf)%isOffDiag()) THEN
                   CALL scalarGF(i_gf)%init(atoms,input)
                ENDIF
                IF(l_sphavg) CYCLE
@@ -85,7 +83,7 @@ MODULE m_greensfPostProcess
                i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
 
                IF(i_gf/=indUnique) THEN
-                  IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
+                  IF(gfinp%elem(i_gf)%isOffDiag()) THEN
                      scalarGF(i_gf) = scalarGF(indUnique)
                   ENDIF
                   CYCLE
@@ -108,8 +106,8 @@ MODULE m_greensfPostProcess
                                                                    flo(:,:,:,:,atomTypep),atomTypep)
                   ENDIF
                ENDIF
-               IF(gfinp%l_outputSphavg.AND.l_offdiag) THEN
-                  CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(atomDiff(:)).GT.1e-12),&
+               IF(gfinp%elem(i_gf)%isOffDiag()) THEN
+                  CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(gfinp%elem(i_gf)%atomDiff).GT.1e-12),&
                                                        gfinp%l_mperp,atoms,input,f,g,flo)
                ENDIF
             ENDDO
@@ -143,18 +141,14 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
-            l  = greensFunction(i_gf)%elem%l
-            lp = greensFunction(i_gf)%elem%lp
-            atomType    = greensFunction(i_gf)%elem%atomType
-            atomTypep   = greensFunction(i_gf)%elem%atomTypep
-            atomDiff(:) = greensFunction(i_gf)%elem%atomDiff(:)
             l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
-            IF(l.NE.lp) CYCLE
-            IF(atomType.NE.atomTypep) CYCLE
-            IF(ANY(ABS(atomDiff(:)).GT.1e-12)) CYCLE
-            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 !If there are SCLOs present the occupations can get bigger than 1
+            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=l_check)
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+                           l_write=.TRUE.,check=l_check)
+            ELSE IF(gfinp%elem(i_gf)%isOffDiag()) THEN
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+                           scalarGF=scalarGF(i_gf),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
                CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,l_write=.TRUE.,check=l_check)

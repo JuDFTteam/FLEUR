@@ -265,7 +265,7 @@ MODULE m_types_greensf
          ENDIF
 
          l_scalarGF = PRESENT(scalarGF)
-         IF(l_scalarGF) l_scalarGF = scalarGF%done
+         IF(l_scalarGF) l_scalarGF = scalarGF%done.AND.this%elem%isOffDiag()
          l_scalar = PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag)
          IF(l_scalar.AND.nspins==3) THEN
             IF(.NOT.PRESENT(denCoeffsOffDiag)) THEN
@@ -1002,7 +1002,7 @@ MODULE m_types_greensf
 
          TYPE(t_greensf) :: gIntegrated
 
-         LOGICAL :: l_fullRadialArg,l_explicit,l_offdiag
+         LOGICAL :: l_fullRadialArg,l_explicit
          INTEGER :: l,lp,atomType,atomTypep,ipm,spin,m,mp,iz,jr,jrp
          REAL    :: realPart, imagPart, atomDiff(3)
          COMPLEX, ALLOCATABLE :: gmatR(:,:)
@@ -1024,13 +1024,12 @@ MODULE m_types_greensf
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
          atomDiff  = this%elem%atomDiff
-         l_offdiag = l.NE.lp.OR.atomType.NE.atomTypep.OR.ANY(ABS(atomDiff(:)).GT.1e-12)
          !Do we have the offdiagonal scalar products
          l_explicit = .TRUE.
          IF(PRESENT(scalarGF)) THEN
-            IF(scalarGF%done.AND.l_offdiag) l_explicit = .FALSE.
+            IF(scalarGF%done.AND.this%elem%isOffDiag()) l_explicit = .FALSE.
          ENDIF
-         IF(PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag).AND..NOT.l_offdiag) l_explicit = .FALSE.
+         IF(PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag).AND..NOT.this%elem%isOffDiag()) l_explicit = .FALSE.
 
          !only intersite arguments have independent radial arguments ??
          l_fullRadialArg = l_fullRadialArg.AND.(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12))

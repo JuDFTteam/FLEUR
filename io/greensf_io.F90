@@ -290,31 +290,29 @@ MODULE m_greensf_io
 
          IF(.NOT.l_sphavg) l_anyradial = .TRUE.
 
-         IF(l_onsite) THEN !Was only calculated for onsite elements
-            !Trace of occupation matrix
-            trc=0.0
-            DO ispin = 1, jspinsOut
-               DO m = -l, l
-                  trc(ispin) = trc(ispin) + REAL(mmpmat(m,m,i_elem,ispin))
-               ENDDO
+         !Trace of occupation matrix
+         trc=0.0
+         DO ispin = 1, jspinsOut
+            DO m = -l, l
+               trc(ispin) = trc(ispin) + REAL(mmpmat(m,m,i_elem,ispin))
             ENDDO
-            CALL io_write_attreal0(currentelementGroupID,"SpinUpTrace",trc(1))
-            IF(input%jspins.EQ.2) THEN
-               CALL io_write_attreal0(currentelementGroupID,"SpinDownTrace",trc(2))
-            ENDIF
-            IF(gfinp%l_mperp) THEN
-               CALL io_write_attreal0(currentelementGroupID,"OffDTrace",trc(3))
-            ENDIF
-
-            !Occupation matrix
-            dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut]
-            dimsInt=dims
-            CALL h5screate_simple_f(4,dims(:4),mmpmatSpaceID,hdfError)
-            CALL h5dcreate_f(currentelementGroupID, "mmpmat", H5T_NATIVE_DOUBLE, mmpmatSpaceID, mmpmatSetID, hdfError)
-            CALL h5sclose_f(mmpmatSpaceID,hdfError)
-            CALL io_write_complex3(mmpmatSetID,[-1,1,1,1],dimsInt(:4),mmpmat(:,:,i_elem,:jspinsOut))
-            CALL h5dclose_f(mmpmatSetID, hdfError)
+         ENDDO
+         CALL io_write_attreal0(currentelementGroupID,"SpinUpTrace",trc(1))
+         IF(input%jspins.EQ.2) THEN
+            CALL io_write_attreal0(currentelementGroupID,"SpinDownTrace",trc(2))
          ENDIF
+         IF(gfinp%l_mperp) THEN
+            CALL io_write_attreal0(currentelementGroupID,"OffDTrace",trc(3))
+         ENDIF
+
+         !Occupation matrix
+         dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut]
+         dimsInt=dims
+         CALL h5screate_simple_f(4,dims(:4),mmpmatSpaceID,hdfError)
+         CALL h5dcreate_f(currentelementGroupID, "mmpmat", H5T_NATIVE_DOUBLE, mmpmatSpaceID, mmpmatSetID, hdfError)
+         CALL h5sclose_f(mmpmatSpaceID,hdfError)
+         CALL io_write_complex3(mmpmatSetID,[-1,1,1,1],dimsInt(:4),mmpmat(:,:,i_elem,:jspinsOut))
+         CALL h5dclose_f(mmpmatSetID, hdfError)
 
          !Spherically averaged greensfData
          IF(l_sphavg) THEN
