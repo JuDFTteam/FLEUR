@@ -351,7 +351,7 @@ CONTAINS
             ENDIF
 
             !Find the reference element
-            IF(refL /= -1) THEN
+            IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
                refGF = this%find(refL,itype,iContour,l_sphavg,nTypep=-nshells)
                DO l = 0,lmaxU_const
@@ -426,7 +426,7 @@ CONTAINS
             ENDDO
 
             !Find the reference element
-            IF(refL /= -1) THEN
+            IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
                refGF = this%find(refL,itype,iContour,.FALSE.)
                DO l = 0,lmaxU_const
