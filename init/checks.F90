@@ -65,6 +65,12 @@ MODULE m_checks
                          hint="Either change mode to hist or generate tetrahedrons with the inpgen")
      ENDIF
 
+     !Check if the tetrahedrons make sense for tria
+     IF(input%bz_integration.EQ.2 .AND. ANY(kpts%ntetra.GT.kpts%nkpt)) THEN
+        CALL juDFT_error("You used tria for brillouin-zone Integration, but the tetrahedrons look "//&
+                         "like they were generated with tetra. These are not compatible")
+     ENDIF
+
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
         CALL juDFT_error("jDOS+collinear is not implemented at the moment.",&
