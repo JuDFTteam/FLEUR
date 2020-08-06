@@ -327,11 +327,12 @@ CONTAINS
       end if
 
       if(kpts%ntet>0) then
-         allocate(kpts%tetraList(MERGE(6,24,film),kpts%nkpt),source=0)
+         allocate(kpts%tetraList(MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)*MERGE(6,24,film),kpts%nkpt),source=0)
          do n = 1, kpts%nkpt
             ntet = 0
             do itet = 1, kpts%ntet
-               IF(ALL(kpts%ntetra(:,itet).NE.n)) CYCLE
+               IF(ALL(kpts%ntetra(:,itet).NE.n).AND.&
+                  ALL(kpts%bkp(kpts%ntetra(:,itet)).NE.n)) CYCLE
                ntet = ntet + 1
                kpts%tetraList(ntet,n) = itet
             enddo

@@ -32,9 +32,10 @@ MODULE m_tetrahedron_regular
       REAL,    ALLOCATABLE,   INTENT(INOUT)  :: voltet(:)
 
 
-      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i
-      REAL    :: vol,sumvol,volbz,diag(2),minKpt(3)
+      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,jtet
+      REAL    :: vol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
+      LOGICAL :: l_new
       INTEGER, ALLOCATABLE :: tetra(:,:)
       INTEGER, ALLOCATABLE :: kcorn(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
@@ -89,7 +90,6 @@ MODULE m_tetrahedron_regular
       ENDIF
 
       kpts%ntet = 0
-      sumvol = 0.0
       !Set up the tetrahedrons
       DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
@@ -108,19 +108,26 @@ MODULE m_tetrahedron_regular
 
                !Now divide the cube into tetrahedra
                DO itetra = 1, ntetraCube
-                  !Drop all tetrahedra without kpoints inside the IBZ
-                  sumvol = sumvol + vol
-                  IF(ALL(kcorn(tetra(:,itetra)).GT.kpts%nkpt)) CYCLE
-                  kpts%ntet = kpts%ntet+1
-                  ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
-                  voltet(kpts%ntet) = vol
+                  l_new = .TRUE.
+                  !Check for symmetry equivalent tetrahedra
+                  DO jtet = 1, kpts%ntet
+                     IF(ALL(kpts%bkp(kcorn(tetra(:,itetra)))-kpts%bkp(ntetra(:,jtet)).EQ.0)) THEN
+                        l_new = .FALSE.
+                        voltet(jtet) = voltet(jtet) + vol
+                     ENDIF
+                  ENDDO
+                  IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
+                     kpts%ntet = kpts%ntet+1
+                     ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
+                     voltet(kpts%ntet) = vol
+                  ENDIF
                ENDDO
             ENDDO
          ENDDO
       ENDDO
 
       !Has the whole brillouin zone been covered?
-      IF(ABS(sumvol-volbz).GT.1E-10) THEN
+      IF(ABS(SUM(voltet)-volbz).GT.1E-10) THEN
          CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
       ENDIF
 
