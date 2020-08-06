@@ -66,9 +66,11 @@ MODULE m_checks
      ENDIF
 
      !Check if the tetrahedrons make sense for tria
-     IF(input%bz_integration.EQ.2 .AND. ANY(kpts%ntetra.GT.kpts%nkpt)) THEN
-        CALL juDFT_error("You used tria for brillouin-zone Integration, but the tetrahedrons look "//&
-                         "like they were generated with tetra. These are not compatible")
+     IF(input%bz_integration.EQ.2) THEN
+        IF(ANY(kpts%ntetra.GT.kpts%nkpt)) THEN
+          CALL juDFT_error("You used tria for brillouin-zone Integration, but the tetrahedrons look "//&
+                           "like they were generated with tetra. These are not compatible")
+        ENDIF
      ENDIF
 
      ! Check DOS related stuff (from inped)
