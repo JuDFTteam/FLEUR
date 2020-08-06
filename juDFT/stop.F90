@@ -108,19 +108,19 @@ CONTAINS
        ENDIF
        WRITE(0,"(3a)") "Error message: ",message
        IF (PRESENT(calledby)) THEN
-          WRITE(0,"(3a)") "Error occurred in subroutine:",calledby
+          WRITE(0,"(3a)") "Error occurred in subroutine: ",calledby
        ENDIF
        IF (PRESENT(hint)) THEN
-          WRITE(0,"(3a)") "Hint:",hint
+          WRITE(0,"(3a)") "Hint: ",hint
        ENDIF
        IF (PRESENT(no)) THEN
-          WRITE(0,"(1a,i0)") "Error number:",no
+          WRITE(0,"(1a,i0)") "Error number: ",no
        ENDIF
        IF (PRESENT(file)) THEN
           IF (PRESENT(line)) THEN
-             WRITE(0,"(3a,i0)") "Source:",file,":",line
+             WRITE(0,"(3a,i0)") "Source: ",file,":",line
           ELSE
-             WRITE(0,"(3a)") "Source:",file
+             WRITE(0,"(3a)") "Source: ",file
           ENDIF
        ENDIF
 #ifdef CPP_MPI

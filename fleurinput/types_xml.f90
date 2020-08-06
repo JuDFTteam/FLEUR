@@ -484,7 +484,8 @@ CONTAINS
     errorStatus = 0
     errorStatus = parseXMLDocument(docFilename)
     IF(errorStatus.NE.0) THEN
-       CALL juDFT_error("XML document file not parsable: "//TRIM(ADJUSTL(docFilename)),calledby="xmlParseDoc")
+       CALL juDFT_error("XML document file not parsable: "//TRIM(ADJUSTL(docFilename)),calledby="xmlParseDoc",&
+                        hint="If there are no details listed above this message use 'xmllint --xinclude "//TRIM(ADJUSTL(docFilename))//"'")
     END IF
 
   END SUBROUTINE ParseDoc
@@ -507,7 +508,8 @@ CONTAINS
     errorStatus = 0
     errorStatus = validateXMLDocument()
     IF(errorStatus.NE.0) THEN
-       CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
+       CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xml%ValidateDoc",&
+                        hint="If there are no details listed above this message use 'xmllint --xinclude --schema FleurInputSchema.xsd inp.xml'.")
     END IF
 
   END SUBROUTINE ValidateDoc
