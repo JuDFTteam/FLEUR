@@ -89,7 +89,8 @@ CONTAINS
     CALL priv_create_comm(nkpt,neigd,fmpi)
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
-    fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
+    ! this corresponds to the compact = .true. switch in priv_create_comm 
+    fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )] 
 
     call fmpi%set_errhandler()
     if (fmpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
