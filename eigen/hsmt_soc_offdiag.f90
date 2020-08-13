@@ -61,13 +61,10 @@ CONTAINS
     ALLOCATE(dplegend(NVEC,0:2))
     ALLOCATE(fct(NVEC))
     ALLOCATE(dot(NVEC))
-    ALLOCATE(angso(lapw%nv(1),2,2))
+    ALLOCATE(angso(NVEC,2,2))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
-
-       !Set up spinors...
-       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,1,size(angso,1))
 
        DO  kj_off = 1, ki, NVEC
           NVEC_rem = NVEC
@@ -77,6 +74,9 @@ CONTAINS
              NVEC_rem = ki - kj_off + 1
           ENDIF
           if (NVEC_rem<0 ) exit
+
+          !Set up spinors...
+          CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,kj_off,kj_vec)
 
           !--->             set up phase factors
           cph = 0.0
@@ -119,7 +119,7 @@ CONTAINS
                         fjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
                         gjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
                         gjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
-                        * angso(kj_off:kj_vec,j1,j2)
+                        * angso(:NVEC_rem,j1,j2)
                    hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
                    hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
                    hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
