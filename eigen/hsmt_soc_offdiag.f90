@@ -37,10 +37,10 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
-    COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
+    COMPLEX:: chi(2,2,2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     REAL, ALLOCATABLE :: xlegend(:), dot(:)
-    COMPLEX, ALLOCATABLE :: cph(:),fct(:)
+    COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:)
 
     CALL timestart("offdiagonal soc-setup")
 
@@ -61,12 +61,13 @@ CONTAINS
     ALLOCATE(dplegend(NVEC,0:2))
     ALLOCATE(fct(NVEC))
     ALLOCATE(dot(NVEC))
+    ALLOCATE(angso(lapw%nv(1),2,2))
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
 
        !Set up spinors...
-       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
+       CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,1,size(angso,1))
 
        DO  kj_off = 1, ki, NVEC
           NVEC_rem = NVEC
@@ -236,7 +237,7 @@ CONTAINS
                 SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
               END DO
               !Set up spinors...
-              CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso)
+              CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,1,size(angso,1))
 
               DO j1=1,2
                 DO j2=1,2

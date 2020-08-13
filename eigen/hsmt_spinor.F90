@@ -50,7 +50,7 @@ CONTAINS
 
   END SUBROUTINE hsmt_spinor
 
-  SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso)
+  SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso,kj_start,kj_end)
     USE m_types
     use m_constants
     IMPLICIT NONE
@@ -59,6 +59,7 @@ CONTAINS
     INTEGER,INTENT(IN)           :: n,ki
     COMPLEX,INTENT(out)          :: chi_so(:,:,:,:)
     COMPLEX,INTENT(out),OPTIONAL :: angso(:,:,:)
+    INTEGER,INTENT(in), OPTIONAL :: kj_start,kj_end
 
     REAL     :: cross_k(3)
     INTEGER  :: j1,j2,kj
@@ -94,19 +95,22 @@ CONTAINS
        ENDDO
     ENDDO
     IF (.not.present(angso)) RETURN !only chis are needed
-  !In the first variation SOC case the off-diagonal spinors are needed
-       DO kj = 1,size(angso,1)
-          cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
-          cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
-          cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
-          DO j1=1,2
-             DO j2=1,2
-                angso(kj,j1,j2)= isigma_x(j1,j2)*cross_k(1)+&
+    !In the first variation SOC case the off-diagonal spinors are needed
+    IF (present(angso)) THEN
+      IF ((.not.present(kj_start)).or.((.not.present(kj_end)))) RETURN
+    ENDIF
+    DO kj = kj_start,kj_end
+       cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
+       cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
+       cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
+       DO j1=1,2
+          DO j2=1,2
+             angso(kj-kj_start+1,j1,j2)= isigma_x(j1,j2)*cross_k(1)+&
                      isigma_y(j1,j2)*cross_k(2)+ isigma_z(j1,j2)*cross_k(3)
-             ENDDO
           ENDDO
        ENDDO
-     END SUBROUTINE hsmt_spinor_soc
+    ENDDO
+  END SUBROUTINE hsmt_spinor_soc
 
 
 END MODULE m_hsmt_spinor
