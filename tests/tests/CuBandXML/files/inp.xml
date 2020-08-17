@@ -13,6 +13,8 @@
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
       <bzIntegration valenceElectrons="22.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointListSelection listName="default" />
+         <kPointLists>
          <kPointList name="default" count="20">
          <kPoint weight="0.050000">0.000000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.025000            0.000000            0.000000</kPoint>
@@ -35,6 +37,7 @@
          <kPoint weight="0.050000">0.450000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.475000            0.000000            0.000000</kPoint>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
       <symmetryOperations>

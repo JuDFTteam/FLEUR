@@ -12,9 +12,12 @@
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="144.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointList posScale="6.00000000" weightScale="1.00000000" count="1">
+         <kPointListSelection listName="default" />
+         <kPointLists>
+         <kPointList posScale="6.00000000" weightScale="1.00000000" count="1" name="default">
             <kPoint weight="    1.0">-2.0 4.0 -2.0</kPoint>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
    </calculationSetup>

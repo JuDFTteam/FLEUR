@@ -35,7 +35,7 @@ CONTAINS
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE (27,904) kpts%name
+      WRITE (27,904) kpts%kptsName
       DO n = 1, kpts%numSpecialPoints
         WRITE (27,905) d(n),d(n)
       ENDDO

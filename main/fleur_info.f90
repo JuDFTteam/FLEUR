@@ -25,12 +25,24 @@ MODULE m_fleur_info
       USE m_cdn_io
       USE m_setupMPI
       USE m_types
+      USE m_constants
 
       IMPLICIT NONE
 
       TYPE(t_kpts), INTENT(IN)     :: kpts
 
       LOGICAL       :: l_exist
+      CHARACTER(LEN=11) :: kptsKindString(3)
+
+      DATA kptsKindString /'unspecified','mesh       ','path       '/
+
+      WRITE(*,*) ''
+      WRITE(*,'(a)') ' ========== k-point set info =========='
+      WRITE(*,'(a)') ' Selected k-point list: '//TRIM(ADJUSTL(kpts%kptsName))
+      WRITE(*,'(a)') ' k-point list type: '//TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+      IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) WRITE(*,'(a,i0,a,i0,a,i0)') ' ', kpts%nkpt3(1), ' x ', kpts%nkpt3(2), ' x ', kpts%nkpt3(3)
+      WRITE(*,'(a,i0)') ' Number of k points: ', kpts%nkpt
+      WRITE(*,*) ''
 
       IF (.NOT.juDFT_was_argument("-info")) RETURN
 

@@ -6,11 +6,12 @@
 MODULE m_make_kpoints
   USE m_juDFT
   use m_types_kpts
+  USE m_constants
   IMPLICIT NONE
   private
   public :: make_kpoints
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str,kptsName,kptsPath)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
@@ -23,11 +24,13 @@ CONTAINS
     LOGICAL,INTENT(in)::l_socorss,film
     INTEGER,INTENT(inout)::bz_integration
     CHARACTER(len=*),INTENT(inout)::str
+    CHARACTER(len=*),INTENT(inout)::kptsName
+    CHARACTER(len=*),INTENT(inout)::kptsPath
 
     LOGICAL:: l_gamma,l_soc_or_ss, l_bzset
     REAL   :: den
     INTEGER:: nk,grid(3)
-    character(len=20)::name=""
+    character(len=40)::name=""
     !defaults
     l_soc_or_ss=l_socorss
     l_gamma=.false.
@@ -46,6 +49,8 @@ CONTAINS
     IF (INDEX(str,"#")>0) THEN
        name=str(:INDEX(str,"#")-1)
        str=trim(adjustl(str(INDEX(str,"#")+1:)))
+    ELSE
+       name = kptsName
     END IF
     str=ADJUSTL(str)
     DO WHILE(INDEX(str,'@')>0)
@@ -105,6 +110,7 @@ CONTAINS
        READ(str,*) kpts%nkpt
        PRINT *,"Generating a k-point set for bandstructures with ",kpts%nkpt," k-points"
        CALL init_special(kpts,cell,film)
+       kpts%kptsKind = KPTS_KIND_PATH
     ELSEIF(INDEX(str,'grid=')==1) THEN
        str=str(6:)
        READ(str,*) grid
@@ -124,7 +130,7 @@ CONTAINS
        CALL judft_error(("Could not process -k argument:"//str))
     ENDIF
 
-    if (len_trim(name)>0) kpts%name=name
+    if (len_trim(name)>0) kpts%kptsName=name
   END SUBROUTINE make_kpoints
 
   SUBROUTINE set_special_points(kpts,str)
@@ -371,11 +377,12 @@ CONTAINS
     REAL as
     REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
 
+    kpts%kptsKind = KPTS_KIND_MESH
+
     IF (ANY(grid==0)) THEN
        PRINT *,"Warning, k-point grid dimension increased to 1"
        WHERE(grid==0) grid=1
     END IF
-
 
     IF (l_gamma) THEN
        IF (bz_integration==2) CALL judft_error("tria and l_gamma incompatible")
@@ -528,6 +535,8 @@ CONTAINS
           kpts%voltet(j) = ABS(voltet(j))
        END DO
     ENDIF
+
+    kpts%nkpt3(:) = grid(:)
 
   END SUBROUTINE init_by_grid
 

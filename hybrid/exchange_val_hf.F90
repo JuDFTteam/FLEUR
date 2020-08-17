@@ -459,7 +459,7 @@ CONTAINS
       cdum = sqrt(expo)*rrad
       divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
       rrad = rrad**2
-      nkpt3 = kpts%nkpt3()
+      nkpt3 = kpts%calcNkpt3()
       kv1 = cell%bmat(1, :)/nkpt3(1)
       kv2 = cell%bmat(2, :)/nkpt3(2)
       kv3 = cell%bmat(3, :)/nkpt3(3)

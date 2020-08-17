@@ -97,6 +97,7 @@ CONTAINS
     CHARACTER(len=4)              :: namex
     CHARACTER(len=12)             :: relcor, tempNumberString
     CHARACTER(LEN=20)             :: filename
+    CHARACTER(LEN=40)             :: kptsSelection(3)
     REAL                          :: a1(3),a2(3),a3(3)
     REAL                          :: dtild, phi_add
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
@@ -129,9 +130,10 @@ CONTAINS
     ALLOCATE(t_xcpot_inbuild::xcpot)
     !Only PE==0 reads the input and does basic postprocessing
     IF (fmpi%irank.EQ.0) THEN
-       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-            sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
-            wann,xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp)
+       CALL fleurinput_read_xml(cell=cell,sym=sym,atoms=atoms,input=input,noco=noco,vacuum=vacuum,field=field,&
+            sliceplot=sliceplot,banddos=banddos,mpinp=mpinp,hybinp=hybinp,oneD=oneD,coreSpecInput=coreSpecInput,&
+            wann=wann,xcpot=xcpot,forcetheo_data=forcetheo_data,kpts=kpts,kptsSelection=kptsSelection,&
+            enparaXML=enparaXML,gfinp=gfinp,hub1inp=hub1inp)
        CALL fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
             Banddos,Oned,Xcpot,Kpts,gfinp)
     END IF
@@ -170,7 +172,7 @@ CONTAINS
     IF (fmpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
+            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
 #endif

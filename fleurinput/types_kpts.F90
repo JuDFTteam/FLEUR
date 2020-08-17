@@ -7,6 +7,7 @@
 MODULE m_types_kpts
    USE m_judft
    USE m_types_fleurinput_base
+   USE m_constants
    IMPLICIT NONE
    PRIVATE
    type t_eibz
@@ -19,9 +20,11 @@ MODULE m_types_kpts
    end type t_eibz
 
    TYPE, EXTENDS(t_fleurinput_base):: t_kpts
-      CHARACTER(len=20)              :: name = "default"
+      INTEGER                        :: kptsKind = 0
+      CHARACTER(len=40)              :: kptsName = "default"
       character(len=100)             :: comment = ""
       INTEGER                        :: nkpt = 0
+      INTEGER                        :: nkpt3(3) = 0 ! This variable is not supposed to be reliable. It is only meant as additional user information with the available data at IO time.
       INTEGER                        :: ntet = 0
       LOGICAL                        :: l_gamma = .FALSE.
       !(3,nkpt) k-vectors internal units
@@ -45,13 +48,15 @@ MODULE m_types_kpts
    CONTAINS
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
+      PROCEDURE :: read_xml_kptsByIndex
       PROCEDURE :: read_xml => read_xml_kpts
       PROCEDURE :: mpi_bc => mpi_bc_kpts
       procedure :: get_nk => kpts_get_nk
       procedure :: to_first_bz => kpts_to_first_bz
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
-      procedure :: nkpt3 => nkpt3_kpts
+      procedure :: calcNkpt3 => nkpt3_kpts
+
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -128,60 +133,96 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
-   SUBROUTINE read_xml_kpts(this, xml)
+   SUBROUTINE read_xml_kptsByIndex(this, xml, kptsIndex)
       USE m_types_xml
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT) ::xml
+      INTEGER, INTENT(IN), OPTIONAL :: kptsIndex
 
-      INTEGER:: number_sets, n
-      CHARACTER(len=200)::str, path, path2
+      INTEGER :: numNodes, i, number_sets, n, currentIndex
+      LOGICAL :: foundList, l_band
+      CHARACTER(len=200)::str, path, path2, label, altPurpose
+      CHARACTER(LEN=40) :: listName, typeString
 
-      number_sets = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList')
+      WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
+      numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path)))
+      IF(numNodes.NE.1) THEN
+         WRITE(*,*) 'kPointList index is ', kptsIndex
+         CALL judft_error(("kPointList for index is not available."))
+      END IF
+      listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
 
-      DO n = number_sets, 1, -1
-         WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[', n, ']'
-         IF (TRIM(ADJUSTL(this%name)) == xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
-      enddo
-      IF (n == 0) then
-         CALL judft_warn(("No kpoints named:"//TRIM(this%name)//" found"))
-         this%nkpt = 1
-         ALLOCATE (this%bk(3, this%nkpt))
-         ALLOCATE (this%wtkpt(this%nkpt))
-         this%bk = 0.0
-         this%wtkpt = 0.0
-         print *, "Using Gamma-point only as fallback"
-         RETURN
-      endif
+      this%kptsName = TRIM(ADJUSTL(listName))
+      this%kptsKind = 0
+      this%nkpt3(:) = 0
+      typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
+      SELECT CASE(typeString(1:11))
+         CASE ('unspecified')
+            this%kptsKind = KPTS_KIND_UNSPECIFIED
+         CASE ('mesh       ')
+            this%kptsKind = KPTS_KIND_MESH
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+         CASE ('path       ')
+            this%kptsKind = KPTS_KIND_PATH
+         CASE DEFAULT
+            this%kptsKind = KPTS_KIND_UNSPECIFIED
+            WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
+      END SELECT
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
+      numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
+      IF (numNodes.NE.this%nkpt) THEN
+         CALL judft_error("Inconsistent number of k-points in kPointList: "//TRIM(ADJUSTL(this%kptsName)))
+      END IF
 
-      this%numSpecialPoints = xml%GetNumberOfNodes(TRIM(path)//"/specialPoint")
+      ! count special points
+      this%numSpecialPoints = 0
+      DO i = 1, numNodes
+         label = ''
+         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
+         label = xml%GetAttributeValue(TRIM(path2)//'/@label')
+         IF (TRIM(ADJUSTL(label)).NE.'') this%numSpecialPoints = this%numSpecialPoints + 1
+      END DO
 
-      IF (this%numSpecialPoints > 0) THEN
-         If (this%numSpecialPoints < 2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(this%name)))
+      IF(this%numSpecialPoints.NE.0) THEN
+         IF(ALLOCATED(this%specialPointIndices)) DEALLOCATE(this%specialPointIndices)
+         ALLOCATE(this%specialPointIndices(this%numSpecialPoints))
          ALLOCATE (this%specialPoints(3, this%numSpecialPoints))
          ALLOCATE (this%specialPointNames(this%numSpecialPoints))
-         DO n = 1, this%numSpecialPoints
-            WRITE (path2, "(a,a,i0,a)") trim(path), "/specialPoint[", n, "]"
-            this%specialPointNames(n) = xml%getAttributeValue(path2//"/@name")
-            str = xml%getAttributeValue(path2)
-            this%specialPoints(1, n) = evaluatefirst(str)
-            this%specialPoints(2, n) = evaluatefirst(str)
-            this%specialPoints(3, n) = evaluatefirst(str)
-         ENDDO
-      ENDIF
-      n = xml%GetNumberOfNodes(TRIM(path)//'/kPoint')
-      IF (n .NE. this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//this%name))
+         ! set special points
+         currentIndex = 0
+         DO i = 1, numNodes
+            label = ''
+            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
+            label = xml%GetAttributeValue(TRIM(path2)//'/@label')
+            IF (TRIM(ADJUSTL(label)).NE.'') THEN
+               currentIndex = currentIndex + 1
+               this%specialPointNames(currentIndex) = TRIM(ADJUSTL(label))
+               str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
+               this%specialPoints(1, currentIndex) = evaluatefirst(str)
+               this%specialPoints(2, currentIndex) = evaluatefirst(str)
+               this%specialPoints(3, currentIndex) = evaluatefirst(str)
+            END IF
+         END DO
+      END IF
+
       ALLOCATE (this%bk(3, this%nkpt))
       ALLOCATE (this%wtkpt(this%nkpt))
-      DO n = 1, this%nkpt
-         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", n, "]"
-         this%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
-         str = xml%getAttributeValue(path2)
-         this%bk(1, n) = evaluatefirst(str)
-         this%bk(2, n) = evaluatefirst(str)
-         this%bk(3, n) = evaluatefirst(str)
-      ENDDO
+
+      DO i = 1, this%nkpt
+         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
+         this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight'))
+         str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
+         this%bk(1, i) = evaluatefirst(str)
+         this%bk(2, i) = evaluatefirst(str)
+         this%bk(3, i) = evaluatefirst(str)
+      END DO
+
       n = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder')
       IF (n .EQ. 1) THEN
          this%ntet = xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
@@ -205,61 +246,135 @@ CONTAINS
          ENDDO
       ENDIF
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
+
+   END SUBROUTINE read_xml_kptsByIndex
+
+   SUBROUTINE read_xml_kpts(this, xml)
+      USE m_types_xml
+      USE m_calculator
+      CLASS(t_kpts), INTENT(inout):: this
+      TYPE(t_xml), INTENT(INOUT) ::xml
+
+      INTEGER :: numNodes, i, number_sets, n, currentIndex, kptsIndex
+      LOGICAL :: foundList, l_band
+      CHARACTER(len=200)::str, path, path2, label, altPurpose
+      CHARACTER(LEN=40) :: listName, typeString
+
+
+      listName = xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')
+
+      numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
+
+      l_band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
+      IF (l_band) THEN
+         DO i = 1 , numNodes
+            WRITE (path2, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/altKPointList[',i,']'
+            altPurpose = ''
+            altPurpose = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@purpose')
+            IF (TRIM(ADJUSTL(altPurpose)).EQ.'bands') THEN
+               listName = ''
+               listName = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@listName')
+               EXIT
+            END IF
+         END DO
+      END IF
+
+      numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+      foundList = .FALSE.
+      kptsIndex = 0
+      DO i = 1, numNodes
+         path = ''
+         WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', i, ']'
+         IF (TRIM(ADJUSTL(listName)) == xml%GetAttributeValue(TRIM(path)//'/@name')) THEN
+            kptsIndex = i
+            foundList = .TRUE.
+            EXIT
+         END IF
+      END DO
+
+      IF(.NOT.foundList) THEN
+         CALL judft_error(("No kPointList named: "//TRIM(ADJUSTL(listName))//" found."))
+      END IF
+
+      CALL read_xml_kptsByIndex(this, xml, kptsIndex)
+
    END SUBROUTINE read_xml_kpts
 
-   SUBROUTINE print_xml(kpts, fh, filename)
+   SUBROUTINE print_xml(kpts, kptsUnit, filename)
       CLASS(t_kpts), INTENT(in):: kpts
-      INTEGER, INTENT(in)         :: fh
+      INTEGER, INTENT(in)         :: kptsUnit
       CHARACTER(len=*), INTENT(in), OPTIONAL::filename
 
-      INTEGER :: n
+      INTEGER :: n, iSpecialPoint
       LOGICAL :: l_exist
+      CHARACTER(LEN=11) :: kptsKindString(3)
+      CHARACTER(LEN=50) :: label
+
+      DATA kptsKindString /'unspecified','mesh       ','path       '/
+      label = ''
 
       IF (PRESENT(filename)) THEN
          INQUIRE (file=filename, exist=l_exist)
          IF (l_exist) THEN
-            OPEN (fh, file=filename, action="write", position="append")
+            OPEN (kptsUnit, file=filename, action="write", position="append")
          ELSE
-            OPEN (fh, file=filename, action="write")
+            OPEN (kptsUnit, file=filename, action="write")
          END IF
       ENDIF
 
-205   FORMAT('         <kPointList name="', a, '" count="', i0, '">')
-      WRITE (fh, 205) adjustl(trim(kpts%name)), kpts%nkpt
+205   FORMAT('         <kPointList name="', a, '" count="', i0, '" type="', a, '">')
+2051  FORMAT('         <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
+      IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
+         WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+      ELSE
+         WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+      END IF
       !IF (kpts%numSpecialPoints < 2) THEN
       DO n = 1, kpts%nkpt
+         DO iSpecialPoint = 1, kpts%numSpecialPoints
+            IF (kpts%specialPointIndices(iSpecialPoint).EQ.n) THEN
+               label = kpts%specialPointNames(iSpecialPoint)
+               EXIT
+            END IF
+         END DO
 206      FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-         WRITE (fh, 206) kpts%wtkpt(n), kpts%bk(:, n)
+2061     FORMAT('            <kPoint weight="', f20.13, '" label="',a ,'">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
+         IF(label.EQ.'') THEN
+            WRITE (kptsUnit, 206) kpts%wtkpt(n), kpts%bk(:, n)
+         ELSE
+            WRITE (kptsUnit, 2061) kpts%wtkpt(n), TRIM(ADJUSTL(label)), kpts%bk(:, n)
+         END IF
+         label = ''
       END DO
       IF (kpts%ntet > 0) THEN
          IF (SIZE(kpts%ntetra, 1) .EQ. 4) THEN
             !Bulk --> Tetrahedrons
-            WRITE (fh, 207) kpts%ntet
+            WRITE (kptsUnit, 207) kpts%ntet
 207         FORMAT('            <tetraeder ntet="', i0, '">')
             DO n = 1, kpts%ntet
 208            FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
-               WRITE (fh, 208) kpts%voltet(n), kpts%ntetra(:, n)
+               WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (fh, '(a)') '            </tetraeder>'
+            WRITE (kptsUnit, '(a)') '            </tetraeder>'
          ELSE IF (SIZE(kpts%ntetra, 1) .EQ. 3) THEN
             !Film --> Triangles
-            WRITE (fh, 209) kpts%ntet
+            WRITE (kptsUnit, 209) kpts%ntet
 209         FORMAT('            <triangles ntria="', i0, '">')
             DO n = 1, kpts%ntet
 210            FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
-               WRITE (fh, 210) kpts%voltet(n), kpts%ntetra(:, n)
+               WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (fh, '(a)') '            </triangles>'
+            WRITE (kptsUnit, '(a)') '            </triangles>'
          ENDIF
       ELSE
-         DO n = 1, kpts%numSpecialPoints
-            WRITE (fh, 211) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
-211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
-         END DO
+!         DO n = 1, kpts%numSpecialPoints
+!            WRITE (kptsUnit, 211) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
+!211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
+!         END DO
       END IF
       !END IF
-      WRITE (fh, '(a)') ('         </kPointList>')
-      IF (PRESENT(filename)) CLOSE (fh)
+      WRITE (kptsUnit, '(a)') ('         </kPointList>')
+      IF (PRESENT(filename)) CLOSE (kptsUnit)
    END SUBROUTINE print_xml
 
    SUBROUTINE add_special_line(kpts, point, name)

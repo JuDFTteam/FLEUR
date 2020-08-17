@@ -17,7 +17,9 @@
          <contourSemicircle n="128" eb="-0.5" et="0.0" alpha="1.0"/>
       </greensFunction>
       <bzIntegration valenceElectrons="36.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
-                  <kPointList name="default" count="10">
+         <kPointListSelection listName="default" />
+         <kPointLists>
+            <kPointList name="default" count="10">
             <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
             <kPoint weight="     2.0000000000000"> 0.0000000000000  0.0000000000000  0.3333333333333</kPoint>
             <kPoint weight="     6.0000000000000"> 0.0000000000000  0.2000000000000  0.0000000000000</kPoint>
@@ -358,6 +360,7 @@
                <tet vol="     0.7266666666667">39 1 70 25</tet>
             </tetraeder>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <symmetryOperations>

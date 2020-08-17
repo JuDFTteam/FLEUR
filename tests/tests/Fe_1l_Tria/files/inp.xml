@@ -13,6 +13,8 @@
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="16.00000000" mode="tria" fermiSmearingEnergy=".00100000">
+         <kPointListSelection listName="default" />
+         <kPointLists>
          <kPointList name="default" count="10">
             <kPoint weight="     4.0000000000000"> 0.4375000000000  0.4375000000000  0.0000000000000</kPoint>
             <kPoint weight="     8.0000000000000"> 0.4375000000000  0.3125000000000  0.0000000000000</kPoint>
@@ -36,6 +38,7 @@
                <tria vol="     1.0000000000000">8 9 10</tria>
             </triangles>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup=".50000000"/>
       <symmetryOperations>
