@@ -150,7 +150,8 @@ CONTAINS
              IF (input%film.AND.(vacuum%dvac <= 0.00)) THEN
                 WRITE(*,*)'Film calculation but no reasonable dVac provided'
                 WRITE(*,*)'Setting default for dVac'
-                vacuum%dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
+                vacuum%dvac=0.01
+                !vacuum%dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
              END IF
              READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
