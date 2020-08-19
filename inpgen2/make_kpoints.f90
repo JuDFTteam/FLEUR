@@ -9,7 +9,7 @@ MODULE m_make_kpoints
   USE m_constants
   IMPLICIT NONE
   private
-  public :: make_kpoints
+  public :: make_kpoints, add_special_points_default
 CONTAINS
   SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str,kptsName,kptsPath)
     USE m_types_kpts
@@ -545,13 +545,14 @@ CONTAINS
   END SUBROUTINE init_by_grid
 
 
-  SUBROUTINE add_special_points_default(kpts,film,cell)
+  SUBROUTINE add_special_points_default(kpts,film,cell,l_check)
     USE m_judft
     USE m_bravais
     USE m_types_cell
-    TYPE(t_kpts),INTENT(inout):: kpts
-    LOGICAL,INTENT(in)        :: film
-    TYPE(t_cell),INTENT(in)   :: cell
+    TYPE(t_kpts),INTENT(inout)     :: kpts
+    LOGICAL,INTENT(in)             :: film
+    LOGICAL,OPTIONAL,INTENT(INOUT) :: l_check
+    TYPE(t_cell),INTENT(in)        :: cell
 
     REAL, PARAMETER :: f12 = 1./2., f14 = 1./4., zro = 0.0
     REAL, PARAMETER :: f34 = 3./4., f38 = 3./8., one = 1.0
@@ -560,107 +561,148 @@ CONTAINS
     INTEGER:: idsyst,idtype
     CALL bravais(cell%amat,idsyst,idtype)
 
+    IF(PRESENT(l_check)) l_check =.FALSE.
     IF (.NOT.film) THEN
        IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
-          CALL kpts%add_special_line((/f12,f12,one/) ,"X")
-          CALL kpts%add_special_line((/f38,f38,f34/) ,"K")
-          CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
-          CALL kpts%add_special_line((/f12,f12,f12/) ,"L")
-          CALL kpts%add_special_line((/f12,f14,f34/) ,"W")
-          CALL kpts%add_special_line((/f12,zro,f12/) ,"X")
-          CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/f12,f12,one/) ,"X")
+             CALL kpts%add_special_line((/f38,f38,f34/) ,"K")
+             CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12,f12/) ,"L")
+             CALL kpts%add_special_line((/f12,f14,f34/) ,"W")
+             CALL kpts%add_special_line((/f12,zro,f12/) ,"X")
+             CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
-          CALL kpts%add_special_line((/f12,f12, f12/) ,"Z")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f14,f14,-f14/) ,"K")
-          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")
-          CALL kpts%add_special_line((/f14,f12,-f14/) ,"W")
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"Z")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f14,f14,-f14/) ,"K")
+             CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")
+             CALL kpts%add_special_line((/f14,f12,-f14/) ,"W")
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
           IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
-             CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
-             CALL kpts%add_special_line((/zro,f12, f12/) ,"L")
-             CALL kpts%add_special_line((/f13,f13, f12/) ,"H")
-             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             IF(.NOT.PRESENT(l_check)) THEN
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
+                CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+                CALL kpts%add_special_line((/zro,f12, f12/) ,"L")
+                CALL kpts%add_special_line((/f13,f13, f12/) ,"H")
+                CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             ELSE
+                l_check = .TRUE.
+             END IF
           ELSE                                             ! hexagonal (angle = 60)
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-             CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
-             CALL kpts%add_special_line((/f12,f12, f12/) ,"L")
-             CALL kpts%add_special_line((/f13,f23, f12/) ,"H")
-             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             IF(.NOT.PRESENT(l_check)) THEN
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+                CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+                CALL kpts%add_special_line((/f12,f12, f12/) ,"L")
+                CALL kpts%add_special_line((/f13,f23, f12/) ,"H")
+                CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             ELSE
+                l_check = .TRUE.
+             END IF
           ENDIF
        ENDIF
        IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 1).AND.(idtype ==  2) ) THEN       ! body centered cubic
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,-f12,f12/) ,"H")
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
-          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,-f12,f12/) ,"H")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
+             CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a > c)
-          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via Lambda and V)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-          CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via Y)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via Delta)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"N")    ! via Q)
-          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via W)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via Lambda and V)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+             CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via Y)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via Delta)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"N")    ! via Q)
+             CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via W)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"X")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a < c)
-          CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via F and Sigma)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via W)
-          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via Q)
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"N")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via U and Y)
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"X")
-          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via F and Sigma)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via W)
+             CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via Q)
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"N")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+             CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via U and Y)
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"X")
+             CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via U)
-          CALL kpts%add_special_line((/f12,zro, f12/) ,"R")    ! via T)
-          CALL kpts%add_special_line((/f12,f12, f12/) ,"A")    ! via S)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via U)
+             CALL kpts%add_special_line((/f12,zro, f12/) ,"R")    ! via T)
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"A")    ! via S)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via A)
-          CALL kpts%add_special_line((/f12,zro, f12/) ,"U")    ! via P)
-          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")    ! via E)
-          CALL kpts%add_special_line((/zro,f12, f12/) ,"T")    ! via B)
-          CALL kpts%add_special_line((/zro,zro, f12/), "Z")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via A)
+             CALL kpts%add_special_line((/f12,zro, f12/) ,"U")    ! via P)
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"R")    ! via E)
+             CALL kpts%add_special_line((/zro,f12, f12/) ,"T")    ! via B)
+             CALL kpts%add_special_line((/zro,zro, f12/), "Z")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
     ELSE
        WRITE(*,*) 'Note:'
@@ -668,44 +710,72 @@ CONTAINS
        WRITE(*,*) 'are experimental. If the generated k point path'
        WRITE(*,*) 'is not correct please specify it directly.'
        IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
           IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
-             CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-
+             IF(.NOT.PRESENT(l_check)) THEN
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
+                CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             ELSE
+                l_check = .TRUE.
+             END IF
           ELSE                                             ! hexagonal (angle = 60)
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-             CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
-             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             IF(.NOT.PRESENT(l_check)) THEN
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+                CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+                CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
+                CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             ELSE
+                l_check = .TRUE.
+             END IF
           ENDIF
        ENDIF
        IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
        IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
-          CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
-          CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          IF(.NOT.PRESENT(l_check)) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+             CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          ELSE
+             l_check = .TRUE.
+          END IF
        ENDIF
     END IF
-    IF (kpts%numspecialPoints<2) CALL judft_error("Not enough special points given and no default found")
+
+    IF (kpts%numspecialPoints<2) THEN
+       IF(.NOT.PRESENT(l_check)) THEN
+          CALL judft_error("Not enough special points given and no default found")
+       END IF
+    END IF
   END SUBROUTINE add_special_points_default
 END MODULE m_make_kpoints
