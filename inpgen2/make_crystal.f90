@@ -24,7 +24,7 @@ CONTAINS
     REAL,    INTENT(IN)     :: dvac
     TYPE(t_noco),INTENT(in) :: noco
 
-    TYPE(t_cell),INTENT(in)   ::cell
+    TYPE(t_cell),INTENT(inout)   ::cell
     TYPE(t_sym),INTENT(inout) ::sym !symor is checked
     TYPE(t_atoms),INTENT(out) ::atoms
 
@@ -49,12 +49,16 @@ CONTAINS
     !---> coords. also read in identification (atomic) number (atomid)
     !---> to distinguish different atom types (need not be atomic number)
     IF (film) THEN
+       cell%amat(3,3)=max(cell%amat(3,3),8.0+2*maxval(abs(atompos(3,:))))
        atompos(3,:)=atompos(3,:)/cell%amat(3,3)
+       DO n=1,SIZE(atompos,2)
+         atompos(:2,n) = atompos(:2,n) - ANINT( atompos(:2,n) - eps7 )
+       ENDDO
+    ELSE
+      DO n=1,SIZE(atompos,2)
+        atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
+      ENDDO
     ENDIF
-    DO n=1,SIZE(atompos,2)
-       atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
-    ENDDO
-
     !--->    calculate space group symmetry
     CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
     ! Check whether there is an inversion center that is not at the
