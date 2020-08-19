@@ -169,7 +169,7 @@ PROGRAM inpgen
               input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF (l_addPath) THEN
             kpts_str(numKpts) = 'band=250'
-            kptsPath(numKpts) = 'path=default'
+            kptsPath(numKpts) = 'default'
             WRITE(kptsName(numKpts),'(a,i0)') "path-", numKpts
          END IF
          l_fullinput=.FALSE.
