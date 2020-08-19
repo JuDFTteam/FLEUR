@@ -426,8 +426,6 @@
       <xsd:attribute name="flipSpinPhi" default="0.0" type="xsd:string" use="optional"/>
       <xsd:attribute name="flipSpinTheta"  default="0.0"  type="xsd:string" use="optional"/>
       <xsd:attribute name="flipSpinScale"  default="F" type="FleurBool" use="optional"/>
-      <xsd:attribute name="magField" type="xsd:double" use="optional"/>
-      <xsd:attribute name="vcaAddCharge" type="xsd:double" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="AtomGroupsType">
