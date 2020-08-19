@@ -73,13 +73,14 @@ CONTAINS
        END IF
     END DO symOpLoop
     IF (inversionOp.GT.0) THEN
-       IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7)) THEN
+       IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
           WRITE(*,*) 'Found inversion center at finite position.'
           WRITE(*,*) 'Shifting crystal by:'
           WRITE(*,'(3f15.10)') -0.5*sym%tau(:,inversionOp)            ! changed to minus
           WRITE(*,*) ''
           DO k = 1, SIZE(atomid)
              atompos(:,k) = atompos(:,k) - 0.5*sym%tau(:,inversionOp) ! GB`18
+             atompos(:,k) = atompos(:,k) - ANINT( atompos(:,k) - eps7 )
           END DO
           CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
        END IF
