@@ -44,6 +44,10 @@ CONTAINS
        CALL set_special_points(kpts,judft_string_for_argument("-specialk"))
     ENDIF
 
+    IF (kptsPath.NE.''.AND.kptsPath.NE.'default') THEN
+       CALL set_special_points(kpts,kptsPath)
+    ENDIF
+
     PRINT *,"Processing k-point string",str
     !set name
     IF (INDEX(str,"#")>0) THEN
