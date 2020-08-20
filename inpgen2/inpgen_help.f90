@@ -30,10 +30,10 @@ CONTAINS
     CALL new_argument(1,"-o","output filename (default inp.xml) (Use only if you convert an old inp.xml file)","")
     CALL new_argument(0,"-warn_only","do not stop for warnings","")
     CALL new_argument(1,"-inc","which data to include in inp.xml, e.g. +all,-species,+operations,-kpts","")
-    CALL new_argument(1,"-specialk","define a special-k point e.g. -specialk X=0.5,0.5,0.5;g=0.0,0.0,0.0","")
+    CALL new_argument(1,"-kptsPath","define a special-k point e.g. -kptsPath 'X=0.5,0.5,0.5;g=0.0,0.0,0.0'","")
 
     CALL new_argument(1,"-xmlXPath","specify an xml path and value to overwrite inp.xml","")
-    CALL new_argument(1,"-k","String to define k-point set e.g. -k name#nk=2","")
+    CALL new_argument(1,"-kpts","String to define k-point set e.g. -kpts name#nk=2","")
     call new_argument(0,"-no_send","Do not send usage data","")
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
@@ -61,13 +61,13 @@ CONTAINS
     CALL print_argument("-inp.xml")
     CALL print_argument("-o")
     CALL print_argument("-inp")
-    CALL print_argument("-k")
+    CALL print_argument("-kpts")
     CALL print_argument("-inc")
     CALL print_argument("-overwrite")
     CALL print_argument("-noco")
     CALL print_argument("-greensf")
     CALL print_argument("-warn_only")
-    CALL print_argument("-specialk")
+    CALL print_argument("-kptsPath")
     CALL print_argument("-trace")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
