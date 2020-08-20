@@ -11,7 +11,6 @@ CONTAINS
       USE m_types
       USE m_io_hybinp
       USE m_types_hybdat
-      use omp_lib
       use m_calc_l_m_from_lm
 #ifdef CPP_MPI
       use mpi 
