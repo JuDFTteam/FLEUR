@@ -146,7 +146,7 @@ CONTAINS
     INTEGER :: i,err
     real    :: kvec(3)
     rest=str
-    DO WHILE(len_TRIM(rest)>1) 
+    DO WHILE(len_TRIM(rest)>1)
        !cut out everything before first ";"
        IF (INDEX(rest,";")>0) THEN
           l=rest(:INDEX(rest,";")-1)
@@ -240,7 +240,7 @@ CONTAINS
        kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,i)
        kpts%specialPointIndices(i)=kpts%nkpt
        kpts%nkpt=kpts%nkpt+1
-       d=(kpts%specialPoints(:,i+1)-kpts%specialPoints(:,i))/(nk(i)+2)
+       d=(kpts%specialPoints(:,i+1)-kpts%specialPoints(:,i))/(nk(i)+1)
        DO ii=1,nk(i)
           kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,i)+d*ii
           kpts%nkpt=kpts%nkpt+1
