@@ -58,7 +58,7 @@ CONTAINS
    !end subroutine check_mpi_para
 
    function check_omp_para() result(parallel_ok)
-      use omp_lib
+      !$ use omp_lib
       use m_judft_string
       use m_judft_stop
       implicit none
@@ -71,9 +71,11 @@ CONTAINS
       summe = 0.0
       t_omp = 0.0
    
-      !$omp parallel reduction(+: t_omp) 
-      omp_threads = OMP_GET_NUM_THREADS()
-      t_omp = OMP_GET_WTIME()
+      !$omp parallel reduction(+: t_omp)
+      omp_threads = 1
+      !$ omp_threads = OMP_GET_NUM_THREADS()
+      t_omp = 1.0
+      !$ t_omp = OMP_GET_WTIME()
       !$omp do schedule(static) reduction(+:summe)
       do i = 1, loop_end
          do j = 1, omp_threads
@@ -81,17 +83,18 @@ CONTAINS
          enddo
       enddo
       !$omp end do
-      t_omp = OMP_GET_WTIME() - t_omp
+      !$ t_omp = OMP_GET_WTIME() - t_omp
       !$omp end parallel
 
       t_omp = t_omp / omp_threads
       summe = summe / omp_threads
 
-      t_seq = OMP_GET_WTIME()
+      t_seq = 1.0
+      !$ t_seq = OMP_GET_WTIME()
       do i = 1, loop_end
          summe = summe - 1.0
       enddo
-      t_seq = OMP_GET_WTIME() - t_seq
+      !$ t_seq = OMP_GET_WTIME() - t_seq
 
       if( abs(t_seq/t_omp -1.0) < 0.1)then
          parallel_ok = .True.
