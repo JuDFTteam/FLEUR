@@ -269,33 +269,37 @@ PROGRAM inpgen
          kptsUnit = 38
          OPEN (kptsUnit, file="kpts.xml", action="write")         
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
-100 FORMAT (a20,a15,i10,3x,a32)
-         WRITE(*,*) 'Stored k-point lists:'
-         WRITE(*,*) ''
-         WRITE(*,'(a20,a15,a10,3x,a)') 'NAME', 'TYPE', 'NKPT', 'COMMENT'
-         WRITE(*,*) '================================================================================'
          DO iKpts = 1, numKpts
             CALL kpts(iKpts)%print_XML(kptsUnit)
-            SELECT CASE(kpts(iKpts)%kptsKind)
-               CASE (KPTS_KIND_UNSPECIFIED)
-                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'UNSPECIFIED', kpts%nkpt, ''
-               CASE (KPTS_KIND_MESH)
-                  kptsComment = ''
-                  WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
-                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'MESH', kpts(iKpts)%nkpt, kptsComment
-               CASE (KPTS_KIND_PATH)
-                  kptsComment = ''
-                  kptsComment = TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(1)))
-                  DO iPoint = 2, kpts(iKpts)%numSpecialPoints
-                     kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
-                  END DO
-                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, kptsComment
-            END SELECT
          END DO
-         WRITE(*,*) '================================================================================'
          WRITE (kptsUnit, '(a)') "         </kPointLists>"
          CLOSE (kptsUnit)
       END IF
+
+100   FORMAT (a20,a15,i10,3x,a32)
+      WRITE(*,*) 'Stored k-point lists:'
+      WRITE(*,*) ''
+      WRITE(*,'(a20,a15,a10,3x,a)') 'NAME', 'TYPE', 'NKPT', 'COMMENT'
+      WRITE(*,*) '================================================================================'
+      DO iKpts = 1, numKpts
+         SELECT CASE(kpts(iKpts)%kptsKind)
+            CASE (KPTS_KIND_UNSPECIFIED)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'UNSPECIFIED', kpts%nkpt, ''
+            CASE (KPTS_KIND_MESH)
+               kptsComment = ''
+               WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'MESH', kpts(iKpts)%nkpt, kptsComment
+            CASE (KPTS_KIND_PATH)
+               kptsComment = ''
+               kptsComment = TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(1)))
+               DO iPoint = 2, kpts(iKpts)%numSpecialPoints
+                  kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
+               END DO
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, kptsComment
+         END SELECT
+      END DO
+      WRITE(*,*) '================================================================================'
+
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
