@@ -71,10 +71,11 @@ PROGRAM inpgen
       TYPE(t_enparaXML):: enparaxml
 
       INTEGER            :: idum, kptsUnit
-      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes
+      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets
       CHARACTER(len=40)  :: filename
       CHARACTER(len=200) :: xPath
       CHARACTER(LEN=40)  :: kptsSelection(3)
+      CHARACTER(LEN=200) :: tempString
       CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
@@ -135,6 +136,12 @@ PROGRAM inpgen
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
       ENDIF
 
+      numAddKptsSets = 0
+      IF(juDFT_was_argument("-kpts")) THEN
+         numAddKptsSets = 1
+         numKpts = numKpts + numAddKptsSets
+      END IF
+
       ALLOCATE(kpts(numKpts))
       ALLOCATE(kpts_str(numKpts))
       ALLOCATE(kptsName(numKpts))
@@ -171,9 +178,9 @@ PROGRAM inpgen
             l_check = .TRUE.
             CALL add_special_points_default(kpts(numKpts),input%film,cell,l_check)
             IF(l_check) THEN
-               kpts_str(numKpts) = 'band=250'
-               kptsPath(numKpts) = 'default'
-               WRITE(kptsName(numKpts),'(a,i0)') "path-", numKpts
+               kpts_str(numKpts-numAddKptsSets) = 'band=240'
+               kptsPath(numKpts-numAddKptsSets) = 'default'
+               WRITE(kptsName(numKpts-numAddKptsSets),'(a,i0)') "path-", numKpts-numAddKptsSets
             ELSE
                numKpts = numKpts - 1
                WRITE(*,*) 'No default k-point path for band structures for this unit cell type available:'
@@ -197,6 +204,34 @@ PROGRAM inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
                    xcpot,noco,mpinp,hybinp)
       ENDIF
+
+      IF (numAddKptsSets.EQ.1) THEN
+         kptsName(numKpts) = ''
+         kpts_str(numKpts) = ''
+         kptsPath(numKpts) = ''
+         tempString = ''
+         tempString = judft_string_for_argument("-kpts")
+         IF (INDEX(tempString,"#")>0) THEN
+            kptsName(numKpts)=tempString(:INDEX(tempString,"#")-1)
+            tempString = TRIM(ADJUSTL(tempString(INDEX(tempString,"#")+1:)))
+         END IF
+         kpts_str(numKpts) = TRIM(ADJUSTL(tempString))
+         IF(INDEX(kpts_str(numKpts),'band=')==1) THEN
+            IF (judft_was_argument("-kptsPath")) THEN
+               kptsPath(numKpts) = judft_string_for_argument("-kptsPath")
+            ELSE
+               kptsPath(numKpts) = 'default'
+            END IF
+         END IF
+         IF(kptsName(numKpts).EQ.'') THEN
+            IF(kptsPath(numKpts).EQ.'') THEN
+               WRITE(kptsName(numKpts),'(a,i0)') "default-", numKpts
+            ELSE
+               WRITE(kptsName(numKpts),'(a,i0)') "path-", numKpts
+            END IF
+         END IF
+      END IF
+
       !
       ! k-points can also be modified here
       !
@@ -229,7 +264,7 @@ PROGRAM inpgen
               l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      IF (.NOT.l_include(1).OR.judft_was_argument("-k")) THEN
+      IF (.NOT.l_include(1).OR.judft_was_argument("-kpts")) THEN
          kptsUnit = 38
          INQUIRE (file="kpts.xml", exist=l_exist)
          IF (l_exist) THEN

@@ -35,15 +35,6 @@ CONTAINS
     l_soc_or_ss=l_socorss
     l_gamma=.false.
 
-    IF (judft_was_argument("-k")) THEN
-       IF (LEN_TRIM(str)>1) CALL judft_error("Do not specify k-points in file and on command line")
-       str=judft_string_for_argument("-k")
-    END IF
-
-    IF (judft_was_argument("-specialk")) THEN
-       CALL set_special_points(kpts,judft_string_for_argument("-specialk"))
-    ENDIF
-
     IF (kptsPath.NE.''.AND.kptsPath.NE.'default') THEN
        CALL set_special_points(kpts,kptsPath)
     ENDIF
