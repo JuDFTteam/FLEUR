@@ -48,9 +48,32 @@ MODULE m_types_xcpot_libxc
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
       PROCEDURE        :: mpi_bc => mpi_bc_xcpot_libxc
+      PROCEDURE,NOPASS :: apply_cutoffs
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
+  subroutine apply_cutoffs(density_cutoff,rh,grad)
+    real,intent(INOUT) :: rh(:,:)
+    real,INTENT(IN)    :: density_cutoff
+    type(t_gradients),INTENT(INOUT),OPTIONAL :: grad
+
+
+
+    integer:: i,j
+    DO j=1,size(rh,2)
+      DO i=1,size(rh,1)
+        if (abs(rh(i,j))<density_cutoff) THEN
+          rh(i,j)=density_cutoff
+          if (present(grad)) Then
+            if (allocated(grad%sigma)) grad%sigma(:,i)=0.0 !if one spin is small, apply cutoff to all gradients!
+            if (allocated(grad%gr)) grad%gr(:,i,j)=0.0
+            if (allocated(grad%laplace)) grad%laplace(i,j)=0.0
+          endif
+        endif
+      ENDDO
+    ENDDO
+
+  end subroutine
 
    SUBROUTINE xcpot_init(xcpot, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, jspins)
       USE m_judft
@@ -58,10 +81,10 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(INOUT)    :: xcpot
       INTEGER, INTENT(IN)                 :: jspins, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
-      INTEGER                             :: errors(4) 
+      INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
-      errors = -1 
+      errors = -1
       xcpot%jspins = jspins
       xcpot%func_vxc_id_x = func_vxc_id_x
       xcpot%func_exc_id_x = func_exc_id_x

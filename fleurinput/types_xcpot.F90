@@ -105,22 +105,7 @@ CONTAINS
     real,INTENT(IN)    :: density_cutoff
     type(t_gradients),INTENT(INOUT),OPTIONAL :: grad
 
-
-
-    integer:: i,j
-    DO j=1,size(rh,2)
-      DO i=1,size(rh,1)
-        if (abs(rh(i,j))<density_cutoff) THEN
-          rh(i,j)=density_cutoff
-          if (present(grad)) Then
-            if (allocated(grad%sigma)) grad%sigma(:,i)=0.0 !if one spin is small, apply cutoff to all gradients!
-            if (allocated(grad%gr)) grad%gr(:,i,j)=0.0
-            if (allocated(grad%laplace)) grad%laplace(i,j)=0.0
-          endif
-        endif
-      ENDDO
-    ENDDO
-
+    !Do nothing here, only in libxc case
   end subroutine
 
    SUBROUTINE read_xml_xcpot(this, xml)
