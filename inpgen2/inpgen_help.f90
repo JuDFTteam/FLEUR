@@ -33,7 +33,7 @@ CONTAINS
     CALL new_argument(1,"-kptsPath","define a special-k point e.g. -kptsPath 'X=0.5,0.5,0.5;g=0.0,0.0,0.0'","")
 
     CALL new_argument(1,"-xmlXPath","specify an xml path and value to overwrite inp.xml","")
-    CALL new_argument(1,"-kpts","String to define k-point set e.g. -kpts name#nk=2","")
+    CALL new_argument(1,"-kpt","String to define k-point set e.g. -kpt name#nk=2","")
     call new_argument(0,"-no_send","Do not send usage data","")
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
@@ -61,7 +61,7 @@ CONTAINS
     CALL print_argument("-inp.xml")
     CALL print_argument("-o")
     CALL print_argument("-inp")
-    CALL print_argument("-kpts")
+    CALL print_argument("-kpt")
     CALL print_argument("-inc")
     CALL print_argument("-overwrite")
     CALL print_argument("-noco")

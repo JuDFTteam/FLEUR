@@ -137,7 +137,7 @@ PROGRAM inpgen
       ENDIF
 
       numAddKptsSets = 0
-      IF(juDFT_was_argument("-kpts")) THEN
+      IF(juDFT_was_argument("-kpt")) THEN
          numAddKptsSets = 1
          numKpts = numKpts + numAddKptsSets
       END IF
@@ -210,7 +210,7 @@ PROGRAM inpgen
          kpts_str(numKpts) = ''
          kptsPath(numKpts) = ''
          tempString = ''
-         tempString = judft_string_for_argument("-kpts")
+         tempString = judft_string_for_argument("-kpt")
          IF (INDEX(tempString,"#")>0) THEN
             kptsName(numKpts)=tempString(:INDEX(tempString,"#")-1)
             tempString = TRIM(ADJUSTL(tempString(INDEX(tempString,"#")+1:)))
@@ -264,7 +264,7 @@ PROGRAM inpgen
               l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      IF (.NOT.l_include(1).OR.judft_was_argument("-kpts")) THEN
+      IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
          kptsUnit = 38
          INQUIRE (file="kpts.xml", exist=l_exist)
          IF (l_exist) THEN
