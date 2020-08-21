@@ -71,11 +71,11 @@ PROGRAM inpgen
       TYPE(t_enparaXML):: enparaxml
 
       INTEGER            :: idum, kptsUnit
-      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets
+      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
       CHARACTER(len=40)  :: filename
       CHARACTER(len=200) :: xPath
       CHARACTER(LEN=40)  :: kptsSelection(3)
-      CHARACTER(LEN=200) :: tempString
+      CHARACTER(LEN=200) :: tempString, kptsComment
       CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
@@ -269,9 +269,30 @@ PROGRAM inpgen
          kptsUnit = 38
          OPEN (kptsUnit, file="kpts.xml", action="write")         
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
+100 FORMAT (a20,a15,i10,3x,a32)
+         WRITE(*,*) 'Stored k-point lists:'
+         WRITE(*,*) ''
+         WRITE(*,'(a20,a15,a10,3x,a)') 'NAME', 'TYPE', 'NKPT', 'COMMENT'
+         WRITE(*,*) '================================================================================'
          DO iKpts = 1, numKpts
             CALL kpts(iKpts)%print_XML(kptsUnit)
+            SELECT CASE(kpts(iKpts)%kptsKind)
+               CASE (KPTS_KIND_UNSPECIFIED)
+                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'UNSPECIFIED', kpts%nkpt, ''
+               CASE (KPTS_KIND_MESH)
+                  kptsComment = ''
+                  WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'MESH', kpts(iKpts)%nkpt, kptsComment
+               CASE (KPTS_KIND_PATH)
+                  kptsComment = ''
+                  kptsComment = TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(1)))
+                  DO iPoint = 2, kpts(iKpts)%numSpecialPoints
+                     kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
+                  END DO
+                  WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, kptsComment
+            END SELECT
          END DO
+         WRITE(*,*) '================================================================================'
          WRITE (kptsUnit, '(a)') "         </kPointLists>"
          CLOSE (kptsUnit)
       END IF
