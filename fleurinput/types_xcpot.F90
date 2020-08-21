@@ -35,7 +35,7 @@ MODULE m_types_xcpot
    END TYPE t_gradients
 
    TYPE, abstract, EXTENDS(t_fleurinput_base) :: t_xcpot
-      REAL :: gmaxxc=0.0 
+      REAL :: gmaxxc=0.0
       !Data for libxc
       LOGICAL                  :: l_libxc = .FALSE.
       INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
@@ -68,6 +68,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
+      PROCEDURE,NOPASS :: apply_cutoffs
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: read_xml => read_xml_xcpot
@@ -98,6 +99,29 @@ MODULE m_types_xcpot
       end subroutine mpi_bc_xcpot_abstract
    END INTERFACE
 CONTAINS
+
+  subroutine apply_cutoffs(density_cutoff,rh,grad)
+    real,intent(INOUT) :: rh(:,:)
+    real,INTENT(IN)    :: density_cutoff
+    type(t_gradients),INTENT(INOUT),OPTIONAL :: grad
+
+
+
+    integer:: i,j
+    DO j=1,size(rh,2)
+      DO i=1,size(rh,1)
+        if (abs(rh(i,j))<density_cutoff) THEN
+          rh(i,j)=density_cutoff
+          if (present(grad)) Then
+            if (allocated(grad%sigma)) grad%sigma(:,i)=0.0 !if one spin is small, apply cutoff to all gradients!
+            if (allocated(grad%gr)) grad%gr(:,i,j)=0.0
+            if (allocated(grad%laplace)) grad%laplace(i,j)=0.0
+          endif
+        endif
+      ENDDO
+    ENDDO
+
+  end subroutine
 
    SUBROUTINE read_xml_xcpot(this, xml)
       USE m_types_xml
