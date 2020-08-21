@@ -219,8 +219,6 @@ PROGRAM inpgen
          IF(INDEX(kpts_str(numKpts),'band=')==1) THEN
             IF (judft_was_argument("-kptsPath")) THEN
                kptsPath(numKpts) = judft_string_for_argument("-kptsPath")
-               WRITE(*,*) 'Point A'
-               WRITE(*,*) TRIM(ADJUSTL(kptsPath(numKpts)))
             ELSE
                kptsPath(numKpts) = 'default'
             END IF
