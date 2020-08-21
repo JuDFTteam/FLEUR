@@ -63,7 +63,7 @@ CONTAINS
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
-      CALL xcpot%apply_cutoffs(rho,grad)
+      CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then
          CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
