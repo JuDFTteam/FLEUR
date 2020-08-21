@@ -79,7 +79,7 @@ CONTAINS
 
   SUBROUTINE init(xml,old_version)
     USE iso_c_binding
-    CLASS(t_xml),INTENT(INOUT)::xml
+    CLASS(t_xml), INTENT(INOUT) :: xml
     LOGICAL,OPTIONAL,INTENT(inout):: old_version
 
     LOGICAL                        :: l_allow_old
@@ -89,8 +89,9 @@ CONTAINS
     CHARACTER(LEN=255)             :: xPathA,xPathB,valueString
     REAL                           :: tempReal
 
-
-    if (INITIALIZED) RETURN
+!   I comment this initialization test out because it causes trouble when generating additional k-point sets.
+!   Don't know for what it is needed, anyway. I leave rest of this mechanism in the code. ...for now. G.M. 
+!    if (INITIALIZED) RETURN
     INITIALIZED=.true.
 
     l_allow_old=.false.
@@ -126,6 +127,7 @@ CONTAINS
        valueString = xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@name')
        CALL ASSIGN_var(valueString,tempReal)
     END DO
+
   END SUBROUTINE init
 
 

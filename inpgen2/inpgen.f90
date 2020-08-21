@@ -230,6 +230,7 @@ PROGRAM inpgen
                WRITE(kptsName(numKpts),'(a,i0)') "path-", numKpts
             END IF
          END IF
+         l_kptsInitialized(numKpts) = .FALSE.
       END IF
 
       !
@@ -266,12 +267,6 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
          kptsUnit = 38
-         INQUIRE (file="kpts.xml", exist=l_exist)
-         IF (l_exist) THEN
-            STOP 'Case not yet implemented (inpgen.f90)'
-!            OPEN (kptsUnit, file="kpts.xml", action="write", position="append")
-         END IF
-
          OPEN (kptsUnit, file="kpts.xml", action="write")         
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
          DO iKpts = 1, numKpts
