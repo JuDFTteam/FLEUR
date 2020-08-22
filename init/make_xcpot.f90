@@ -23,7 +23,12 @@ contains
       TYPE(t_atoms), INTENT(IN)     :: atoms
       CLASS(t_xcpot), ALLOCATABLE, INTENT(INOUT) :: xcpot
 
-      INTEGER              ::func_vxc_id_c, func_vxc_id_x, func_exc_id_c, func_exc_id_x
+      INTEGER              :: func_vxc_id_c, func_vxc_id_x, func_exc_id_c, func_exc_id_x
+      REAL                 :: gmaxxc
+      LOGICAL              :: l_libxc
+      LOGICAL              :: l_inbuild
+      CHARACTER(len=10)    :: inbuild_name
+      LOGICAL              :: l_relativistic
 
       !Finish setup of xcpot
       xcpot%l_libxc = (xcpot%inbuild_name == "LibXC")
