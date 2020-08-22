@@ -30,16 +30,27 @@ contains
       IF (xcpot%l_libxc) THEN
          write (*,*) "func_ids", xcpot%func_vxc_id_c, xcpot%func_vxc_id_x, xcpot%func_exc_id_c, xcpot%func_exc_id_x
 
-         func_vxc_id_c = xcpot%func_vxc_id_c
-         func_vxc_id_x = xcpot%func_vxc_id_x
-         func_exc_id_c = xcpot%func_exc_id_c
-         func_exc_id_x = xcpot%func_exc_id_x
+         func_vxc_id_c  = xcpot%func_vxc_id_c
+         func_vxc_id_x  = xcpot%func_vxc_id_x
+         func_exc_id_c  = xcpot%func_exc_id_c
+         func_exc_id_x  = xcpot%func_exc_id_x
+         gmaxxc         = xcpot%gmaxxc
+         l_libxc        = .TRUE.
+         l_inbuild      = .FALSE.
+         inbuild_name   = xcpot%inbuild_name
+         l_relativistic = xcpot%l_relativistic
+         
          DEALLOCATE (xcpot)
          ALLOCATE (t_xcpot_libxc::xcpot)
          SELECT TYPE (xcpot)
          CLASS is (t_xcpot_libxc)!just allocated like this
             CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins)
          END SELECT
+         xcpot%gmaxxc         = gmaxxc
+         xcpot%l_libxc        = l_libxc
+         xcpot%l_inbuild      = l_inbuild
+         xcpot%inbuild_name   = inbuild_name
+         xcpot%l_relativistic = l_relativistic
       ELSE
          SELECT TYPE (xcpot)
          CLASS is (t_xcpot_inbuild_nf)
