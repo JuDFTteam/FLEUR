@@ -137,7 +137,7 @@ c****************************************************************************
 cccccccccccccccccc   local variables   cccccccccccccccccccc
 !      type(t_wann) :: wann  !now input variable
       integer :: lmd,nlotot,n,nmat,iter,ikpt
-      integer :: addnoco,addnoco2,funbas,loplod
+      integer :: addnoco,addnoco2,funbas,loplod,at
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer :: jsp_start,jsp_end,nrec,nrec1,nbands,nbands_b
       integer :: nodeu,noded,n_size,na,n_rank,nbnd,numbands
@@ -185,6 +185,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
       complex, allocatable :: socamn(:,:,:)
       complex, allocatable :: socmmn(:,:,:)
+      complex, allocatable :: torque(:,:,:,:,:)
       complex, allocatable :: socmmnk(:,:,:,:)
       complex, allocatable :: omn(:,:,:),vec(:,:),a(:)
       complex, allocatable :: smn(:,:,:)
@@ -201,6 +202,8 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer, allocatable :: iwork(:)
       integer :: info,lwork,lrwork,liwork,lee
       character :: jobz, uplo
+      character(len=10)  :: torquename
+      character(len=14)  :: torquenamekpts
       logical :: l_file
       logical :: l_amn2, l_conjugate
       character(len=3) :: spin12(2)
@@ -214,7 +217,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: funbas_start,funbas_stop,jspin5
       complex :: phasust
       integer,allocatable::pair_to_do(:,:)
-      integer :: ngopr1(natd)
+      integer :: ngopr1(natd),nbnd1p2
       integer,allocatable::maptopair(:,:,:)
       integer :: ldu,ldv,wannierspin,jspin2
       complex, allocatable :: amn_copy(:,:)
@@ -804,6 +807,18 @@ c****************************************************************
       endif
 
 
+      if(wann%l_torque)then
+         if(l_soc)then
+            allocate( torque(3,nbnd,nbnd,
+     &             wann%atomlist_num,fullnkpts) )
+         else
+            nbnd1p2=nbnd+nbnd
+            allocate( torque(3,nbnd1p2,nbnd1p2,
+     &             wann%atomlist_num,fullnkpts) )
+         endif
+         torque=cmplx(0.0,0.0)
+      endif
+
 
       i_rec = 0 ; n_rank = 0
 
@@ -1035,6 +1050,21 @@ c...for the lapws and local orbitals, summed by the basis functions
      >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
       endif
+      
+      if(wann%l_torque)then
+         call wann_torque(
+     >       amat,
+     >       ntype,lmaxd,lmax,natd,
+     >       neq,noccbd,lmd,natd,llod,nlod,
+     >       nlo,llo, 
+     >       acof,bcof,ccof,
+     >       usdus%us,usdus%dus,usdus%duds,usdus%uds,
+     >       usdus%ulos,usdus%dulos,
+     >       rmt,pos,wann%atomlist_num,wann%atomlist, 
+     >       (l_soc.or.l_noco),nbnd,
+     &       torque(:,:,:,:,ikpt))
+      endif
+      
 
 #ifdef CPP_TOPO
 
