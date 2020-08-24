@@ -905,7 +905,7 @@
 
    <xsd:complexType name="KPointType">
       <xsd:simpleContent>
-         <xsd:extension base="Double3DVecType">
+         <xsd:extension base="String3DVecType">
             <xsd:attribute name="weight" type="xsd:string" use="required"/>
             <xsd:attribute default="" name="label" type="xsd:string" use="optional"/>
          </xsd:extension>

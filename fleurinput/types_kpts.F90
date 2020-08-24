@@ -46,6 +46,7 @@ MODULE m_types_kpts
       type(t_eibz), allocatable      :: EIBZ(:)
       !integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
    CONTAINS
+      PROCEDURE :: calcCommonFractions
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
       PROCEDURE :: read_xml_kptsByIndex
@@ -306,8 +307,10 @@ CONTAINS
       CHARACTER(len=*), INTENT(in), OPTIONAL::filename
 
       INTEGER :: n, iSpecialPoint
+      REAL :: commonFractions(3)
       LOGICAL :: l_exist
       CHARACTER(LEN=11) :: kptsKindString(3)
+      CHARACTER(LEN=17) :: posString(3)
       CHARACTER(LEN=50) :: label
 
       DATA kptsKindString /'unspecified','mesh       ','path       '/
@@ -322,10 +325,13 @@ CONTAINS
          END IF
       ENDIF
 
+      commonFractions(:) = -1.0
+
 205   FORMAT('         <kPointList name="', a, '" count="', i0, '" type="', a, '">')
 2051  FORMAT('         <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
          WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+         CALL calcCommonFractions(kpts,commonFractions)
       ELSE
          WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
       END IF
@@ -337,12 +343,24 @@ CONTAINS
                EXIT
             END IF
          END DO
-206      FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-2061     FORMAT('            <kPoint weight="', f20.13, '" label="',a ,'">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-         IF(label.EQ.'') THEN
-            WRITE (kptsUnit, 206) kpts%wtkpt(n), kpts%bk(:, n)
+
+         posString(:) = ''
+         IF((kpts%kptsKind.EQ.KPTS_KIND_MESH).AND.(ALL(commonFractions(:).GT.1.0))) THEN
+            WRITE(posString(1),'(f7.2,a,f0.2)') commonFractions(1)*kpts%bk(1, n), '/' , commonFractions(1)
+            WRITE(posString(2),'(f7.2,a,f0.2)') commonFractions(2)*kpts%bk(2, n), '/' , commonFractions(2)
+            WRITE(posString(3),'(f7.2,a,f0.2)') commonFractions(3)*kpts%bk(3, n), '/' , commonFractions(3)
          ELSE
-            WRITE (kptsUnit, 2061) kpts%wtkpt(n), TRIM(ADJUSTL(label)), kpts%bk(:, n)
+            WRITE(posString(1),'(f16.13)') kpts%bk(1, n)
+            WRITE(posString(2),'(f16.13)') kpts%bk(2, n)
+            WRITE(posString(3),'(f16.13)') kpts%bk(3, n)
+         END IF
+
+206      FORMAT('            <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')
+2061     FORMAT('            <kPoint weight="', f20.13, '" label="',a ,'">', a, ' ', a, ' ', a, '</kPoint>')
+         IF(label.EQ.'') THEN
+            WRITE (kptsUnit, 206) kpts%wtkpt(n), TRIM(posString(1)), TRIM(posString(2)), TRIM(posString(3))
+         ELSE
+            WRITE (kptsUnit, 2061) kpts%wtkpt(n), TRIM(ADJUSTL(label)), TRIM(posString(1)), TRIM(posString(2)), TRIM(posString(3))
          END IF
          label = ''
       END DO
@@ -760,4 +778,43 @@ CONTAINS
       END DO
       nsymop = ic
    end subroutine calc_psym_nsymop
+
+   SUBROUTINE calcCommonFractions(kpts,commonFractions)
+
+      USE m_constants
+
+      IMPLICIT NONE
+
+      CLASS(t_kpts), INTENT(IN) :: kpts
+      REAL, INTENT(INOUT)    :: commonFractions(3)
+
+      INTEGER, PARAMETER :: upperBound = 50
+      INTEGER            :: i, j, ikpt
+      REAL               :: temp
+      LOGICAL            :: l_CommonFraction
+
+      IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
+         commonFractions(:) = -1
+         RETURN
+      END IF
+
+      DO j = 1, 3
+         DO i = 2, upperBound
+            l_CommonFraction = .TRUE.
+            DO ikpt = 1, kpts%nkpt
+               temp = i * kpts%bk(j,ikpt)
+               IF (ABS(temp - NINT(temp)).GT.1.0e-8) THEN
+                  l_CommonFraction = .FALSE.
+                  EXIT
+               END IF
+            END DO
+            IF(l_CommonFraction) THEN
+               commonFractions(j) = i
+               EXIT
+            END IF
+         END DO
+      END DO
+      
+   END SUBROUTINE
+
 END MODULE m_types_kpts
