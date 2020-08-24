@@ -1300,7 +1300,7 @@ c******************************************************
      >      mpi_communicatior,l_p0,'surfcurr.updown',
      >      'Surface currents',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,
+     >      irank,isize,wann%l_unformatted,
      <      surfcurr)
       endif
 
