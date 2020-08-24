@@ -60,10 +60,10 @@ c****************************************************************************
       use m_wann_write_nabla
       use m_wann_write_matrix6
       use m_wann_write_amn
-      use m_wann_write_nabla
       use m_wann_mmkb_int
       use m_wann_perpmag
       use m_wann_gabeffgagaunt
+      use m_wann_torque
 #ifdef CPP_TOPO
       use m_wann_nabla_updown
       use m_wann_surfcurr_updown
@@ -1242,7 +1242,7 @@ c******************************************************
      >      mpi_communicatior,l_p0,'nabl.updown',
      >      'Matrix elements of nabla operator',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,
+     >      irank,isize,wann%l_unformatted,
      <      nablamat)
       endif
 
