@@ -2222,7 +2222,7 @@ CONTAINS
                   fmpi%mpi_comm,l_p0,spin12(jspin)//'.nabl',&
                   'Matrix elements of nabla operator',&
                   nbnd,fullnkpts,nbnd,&
-                  fmpi%irank,fmpi%isize,&
+                  fmpi%irank,fmpi%isize,wann%l_unformatted,&
                   nablamat)
           ENDIF
 
@@ -2232,7 +2232,7 @@ CONTAINS
                   fmpi%mpi_comm,l_p0,spin12(jspin)//'.stm',&
                   'Matrix elements of stm operator',&
                   nbnd,fullnkpts,nbnd,&
-                  fmpi%irank,fmpi%isize,&
+                  fmpi%irank,fmpi%isize,wann%l_unformatted,&
                   soctomom)
           ENDIF
 
@@ -2242,7 +2242,7 @@ CONTAINS
                   fmpi%mpi_comm,l_p0,spin12(jspin)//'.surfcurr',&
                   'Surface currents',&
                   nbnd,fullnkpts,nbnd,&
-                  fmpi%irank,fmpi%isize,&
+                  fmpi%irank,fmpi%isize,wann%l_unformatted,&
                   surfcurr)
           ENDIF
 
