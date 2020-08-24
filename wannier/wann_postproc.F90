@@ -41,8 +41,8 @@ CONTAINS
     USE m_wann_rmat
     use m_wann_socmatvec_rs
     USE m_wann_nocoplot
-#ifdef CPP_TOPO
     USE m_wann_torque_rs
+#ifdef CPP_TOPO
     USE m_wann_offdiposop_rs
     USE m_wann_fft6
     USE m_wann_fft3
@@ -349,16 +349,17 @@ CONTAINS
        ENDIF
     ENDIF
 
-
+#endif
 
     IF(wann%l_torquers.AND.fmpi%irank==0) THEN
        CALL wann_torque_rs(&
             atoms%ntype,atoms%neq,rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            input%neig,.FALSE.)
+            input%neig,.FALSE.,wann%l_ndegen,ndegen, &
+            wann%wan90version,wann%l_unformatted)
     ENDIF
-#endif
+
     IF (wann%l_nablapaulirs.AND.fmpi%irank==0)THEN
        CALL wann_nabla_pauli_rs(&
             rvecnum,rvec,kpoints,&
