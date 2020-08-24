@@ -105,6 +105,7 @@ c**********************************************************
         enddo !j
        enddo !i
        enddo !ikpt
+       endif !l_unformatted 
        close(305)
       endif
 
