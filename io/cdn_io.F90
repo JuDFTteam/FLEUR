@@ -813,7 +813,7 @@ CONTAINS
 
   END SUBROUTINE readCoreDensity
 
-  SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints)
+  SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints,filename)
 
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
@@ -822,6 +822,7 @@ CONTAINS
     REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
     REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
     REAL, INTENT(IN) :: qints(:,:)!(atoms%ntype,input%jspins)
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: filename
 
     INTEGER :: mode, iUnit, iSpin, iAtom, i
 
@@ -837,7 +838,7 @@ CONTAINS
     IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-            currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+            currentStepfunctionIndex,readDensityIndex,lastDensityIndex,filename)
        CALL writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
        CALL closeCDNPOT_HDF(fileID)
 #endif

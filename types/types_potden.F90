@@ -23,7 +23,11 @@ MODULE m_types_potden
      REAL,ALLOCATABLE  :: phi_vacxy(:,:,:)
      REAL,ALLOCATABLE  :: theta_mt(:,:)
      REAL,ALLOCATABLE  :: phi_mt(:,:)
-     
+
+     ! Core density
+     REAL, ALLOCATABLE :: qint(:,:)
+     REAL, ALLOCATABLE :: tec(:,:)
+     REAL, ALLOCATABLE :: mtCore(:,:,:)
 
      ! For density matrix and associated potential matrix
      COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
@@ -258,6 +262,10 @@ CONTAINS
     PotDenCopy%pw         = PotDen%pw
     PotDenCopy%vacz       = PotDen%vacz
     PotDenCopy%vacxy      = PotDen%vacxy
+    PotDenCopy%qint       = PotDen%qint
+    PotDenCopy%tec        = PotDen%tec
+    PotDenCopy%mtCore     = PotDen%mtCore
+    PotDenCopy%mmpMat     = PotDen%mmpMat
 
   end subroutine copyPotDen
 
@@ -278,17 +286,17 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)  :: noco
     INTEGER,INTENT(IN)       :: jspins, potden_type
  
-    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
          atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jspins,potden_type
+    INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
@@ -301,11 +309,18 @@ CONTAINS
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
     IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
     IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
+    IF(ALLOCATED(pd%qint)) DEALLOCATE (pd%qint)
+    IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
+    IF(ALLOCATED(pd%mtCore)) DEALLOCATE (pd%mtCore)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
     ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
+
+    ALLOCATE (pd%qint(ntype,jspins))
+    ALLOCATE (pd%tec(ntype,jspins))
+    ALLOCATE (pd%mtCore(coreMsh,ntype,jspins))
 
     ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
 
@@ -314,6 +329,9 @@ CONTAINS
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
+    pd%qint = 0.0
+    pd%tec = 0.0
+    pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 !!$#CPP_TODO_copy !code from brysh1,brysh2... 
@@ -500,6 +518,9 @@ CONTAINS
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
+    pd%qint = 0.0
+    pd%tec = 0.0
+    pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
