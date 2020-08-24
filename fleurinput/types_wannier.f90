@@ -565,6 +565,25 @@ CONTAINS
             CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
              endif
             endif           
+          ELSEIF(jobname.EQ.'torquers')THEN
+            this%l_torquers=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%torquersfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
+          ELSEIF(jobname.EQ.'torque')THEN
+            this%l_torque=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%torquefmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif                    
+            
+            
+            
           ELSEIF(jobname.EQ.'perpmagrs')THEN
             this%l_perpmagrs=.TRUE.
             if(l_param)then
