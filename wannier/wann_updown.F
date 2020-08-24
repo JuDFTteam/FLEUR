@@ -1334,6 +1334,23 @@ c******************************************************
      <      surfcurr)
       endif
 
+      if(wann%l_torque)then
+       if(l_soc)then
+          nbnd1p2=nbnd
+       else
+          nbnd1p2=nbnd+nbnd
+       endif
+       do at=1,wann%atomlist_num
+         write(torquename,fmt='("torque_",i3.3)')wann%atomlist(at)
+         call wann_write_nabla(
+     >      mpi_communicatior,l_p0,torquename,
+     >      'Spin currents into MT-sphere',
+     >      nbnd1p2,fullnkpts,nbnd1p2,
+     >      irank,isize,wann%l_unformatted,
+     <      torque(:,:,:,at,:)) 
+       enddo
+      endif
+
       if( allocated (nablamat) ) deallocate( nablamat )
       deallocate ( mmn )
 
