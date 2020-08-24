@@ -722,18 +722,26 @@ CONTAINS
        END DO
     END IF
  
-    ALLOCATE(wannAtomList(xml%get_nat()))
-    DO i=1,xml%get_nat()
+    if(.not.this%l_atomlist)then
+        allocate(this%atomlist(xml%get_nat()))
+        do n=1,xml%get_nat()
+          this%atomlist(n)=n
+        enddo
+        this%atomlist_num=xml%get_nat()
+    else   
+     ALLOCATE(wannAtomList(xml%get_nat()))
+     DO i=1,xml%get_nat()
        wannAtomList(i)= evaluateFirstBoolOnly(xml%getAttributeValue(xml%posPath(i)//'/@wannier'))
-    ENDDO
-    this%atomlist_num = COUNT(wannAtomList)
-    n=0
-    DO i=1,xml%get_nat()
+     ENDDO
+     this%atomlist_num = COUNT(wannAtomList)
+     n=0
+     DO i=1,xml%get_nat()
        IF (wannAtomList(i)) THEN
           n=n+1
           this%atomlist(n) = i
        ENDIF
-    ENDDO
+     ENDDO
+    endif
 
     DEALLOCATE(wannAtomList)
     if(this%l_unformatted)then
