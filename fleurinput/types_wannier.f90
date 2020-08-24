@@ -741,9 +741,9 @@ CONTAINS
           this%atomlist(n) = i
        ENDIF
      ENDDO
+     DEALLOCATE(wannAtomList)
     endif
 
-    DEALLOCATE(wannAtomList)
     if(this%l_unformatted)then
         this%socmatvecfmt=2
         this%socmatvecrsfmt=2
