@@ -274,8 +274,8 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       TYPE(t_mat)   :: zMat(2),zzMat(2)
       TYPE(t_lapw)  :: lapw
 
-      IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
-     +     ,calledby ="wann_updown")
+!      IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
+!     +     ,calledby ="wann_updown")
 
 c-----initializations
       time_interstitial=0.0
