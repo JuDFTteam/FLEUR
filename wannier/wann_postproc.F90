@@ -355,7 +355,7 @@ CONTAINS
        CALL wann_torque_rs(&
             atoms%ntype,atoms%neq,rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-            noco%l_soc,wann%band_min,wann%band_max,&
+            (noco%l_soc.or.noco%l_noco),wann%band_min,wann%band_max,&
             input%neig,.FALSE.,wann%l_ndegen,ndegen, &
             wann%wan90version,wann%l_unformatted)
     ENDIF
