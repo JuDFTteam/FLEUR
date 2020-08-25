@@ -48,7 +48,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
-   USE m_crystalfieldCoeffs
+   USE m_writeCFOutput
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
@@ -224,9 +224,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   !For now only calculate if Hubbard 1 is performed
-   IF(.FALSE..AND.PRESENT(hub1data).AND.fmpi%irank.EQ.0) THEN
-      CALL crystalfieldCoeffs(input,atoms,sphhar,sym,noco,vTot,hub1data)
+   !Are there requests for crystal field outputs
+   IF(PRESENT(hub1data).AND.fmpi%irank.EQ.0 .AND. &
+      (ANY(atoms%l_outputCFcdn(:)).OR.ANY(atoms%l_outputCFpot(:)))) THEN
+      CALL writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data)
+      CALL juDFT_end("Crystal Field Output written",fmpi%irank)
    ENDIF
 
    CALL timestart("cdngen: cdncore")

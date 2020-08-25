@@ -452,6 +452,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="cFCoeffs" type="cFCoeffsOutputType"/>
       </xsd:sequence>
       <xsd:attribute name="species" type="xsd:string" use="required"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
@@ -750,6 +751,12 @@
       <xsd:attribute default="T" name="fullMatch" type="FleurBool" use="optional"/>
       <xsd:attribute default="T" name="l_nonsphDC" type="FleurBool" use="optional"/>
       <xsd:attribute default="T" name="l_correctEtot" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="cFCoeffsOutputType">
+      <xsd:attribute name="chargeDensity" type="FleurBool" use="required"/>
+      <xsd:attribute name="potential" type="FleurBool" use="required"/>
+      <xsd:attribute default="F" name="remove4f" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="GFGeneralType">

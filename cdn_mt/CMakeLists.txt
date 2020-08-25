@@ -31,5 +31,4 @@ cdn_mt/calcDenCoeffs.f90
 cdn_mt/magnMomFromDen.f90
 cdn_mt/alignSpinAxisMagn.f90
 cdn_mt/magMultipoles.F90
-cdn_mt/crystalfieldCoeffs.f90
 )
