@@ -31,6 +31,7 @@ MODULE m_writeCFOutput
 
       TYPE(t_gradients) :: grad
 
+      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
       DO iType = 1, atoms%ntype
 
          IF(atoms%l_outputCFcdn(iType)) THEN
