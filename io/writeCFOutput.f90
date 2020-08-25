@@ -31,6 +31,7 @@ MODULE m_writeCFOutput
 
       TYPE(t_gradients) :: grad
 
+      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
       CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
       DO iType = 1, atoms%ntype
 
