@@ -44,7 +44,7 @@ MODULE m_writeCFOutput
             OPEN(unit=29,file='n4f.'//int2str(iType)//'.dat',status='replace',action='write',iostat=io_error)
             IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
             DO iGrid = 1, atoms%jri(iType)
-               WRITE(29,'(2e14.8)') atoms%rmsh(iGrid,iType), n_0(iGrid)
+               WRITE(29,'(2e20.8)') atoms%rmsh(iGrid,iType), n_0(iGrid)
             ENDDO
             CLOSE(unit=29,iostat=io_error)
             IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
@@ -72,7 +72,7 @@ MODULE m_writeCFOutput
                        action='write',iostat=io_error)
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
                   DO iGrid = 1, atoms%jri(iType)
-                     WRITE(29,'(5e14.8)') atoms%rmsh(iGrid,iType), vlm(iGrid,lm,1), vlm(iGrid,lm,input%jspins)
+                     WRITE(29,'(5e20.8)') atoms%rmsh(iGrid,iType), vlm(iGrid,lm,1), vlm(iGrid,lm,input%jspins)
                   ENDDO
                   CLOSE(unit=29,iostat=io_error)
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
@@ -82,6 +82,7 @@ MODULE m_writeCFOutput
          ENDIF
 
       ENDDO
+      CALL finish_mt_grid()
 
    END SUBROUTINE writeCFOutput
 
