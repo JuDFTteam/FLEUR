@@ -141,7 +141,7 @@ MODULE m_occmtx
                      occError = .TRUE.
                   ELSE
                      WRITE(message,9110) ispin,tr
-9100                 FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
+9110                 FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
                      CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                   ENDIF
                ENDIF
