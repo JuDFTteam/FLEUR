@@ -297,6 +297,7 @@ PROGRAM inpgen
             END DO
             DO WHILE(ios==0)
                READ(inpOldUnit,'(a)',iostat=ios) line
+               IF(ios.NE.0) EXIT
                WRITE(kptsUnit,'(a)') TRIM(line)
             END DO
          END IF
