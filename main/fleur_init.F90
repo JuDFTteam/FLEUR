@@ -86,6 +86,7 @@ CONTAINS
     TYPE(t_forcetheo_data)::forcetheo_data
 
 
+    TYPE(t_kpts), ALLOCATABLE     :: kptsArray(:)
     INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
     INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
     INTEGER, ALLOCATABLE          :: speciesRepAtomType(:)
@@ -132,7 +133,7 @@ CONTAINS
     IF (fmpi%irank.EQ.0) THEN
        CALL fleurinput_read_xml(cell=cell,sym=sym,atoms=atoms,input=input,noco=noco,vacuum=vacuum,field=field,&
             sliceplot=sliceplot,banddos=banddos,mpinp=mpinp,hybinp=hybinp,oneD=oneD,coreSpecInput=coreSpecInput,&
-            wann=wann,xcpot=xcpot,forcetheo_data=forcetheo_data,kpts=kpts,kptsSelection=kptsSelection,&
+            wann=wann,xcpot=xcpot,forcetheo_data=forcetheo_data,kpts=kpts,kptsSelection=kptsSelection,kptsArray=kptsArray,&
             enparaXML=enparaXML,gfinp=gfinp,hub1inp=hub1inp)
        CALL fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
             Banddos,Oned,Xcpot,Kpts,gfinp)
@@ -172,7 +173,7 @@ CONTAINS
     IF (fmpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
+            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kptsArray,kptsSelection,enpara,gfinp,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
 #endif

@@ -261,7 +261,7 @@ PROGRAM inpgen
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts(1),kptsSelection,enpara,gfinp,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
