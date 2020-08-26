@@ -162,12 +162,16 @@ SUBROUTINE read_xml_input(this,xml)
  TYPE(t_xml),INTENT(INOUT)  ::xml
 
  CHARACTER(len=100):: valueString,xpathA,xpathB
- INTEGER:: numberNodes,nodeSum
+ INTEGER:: numberNodes,nodeSum, i
 
  !TODO! these switches should be in the inp-file
  this%l_core_confpot=.TRUE. !former CPP_CORE
  this%l_useapw=.FALSE.   !former CPP_APW
  this%comment =  xml%GetAttributeValue('/fleurInput/comment')
+ DO i = 1, LEN(this%comment)
+    IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '
+ END DO
+ this%comment = TRIM(ADJUSTL(this%comment))
  this%rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
  this%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
 

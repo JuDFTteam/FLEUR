@@ -58,7 +58,7 @@ CONTAINS
     IF (banddos%band) THEN
 !      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
        DO n=1,size(eigdos)
-         call eigdos(n)%p%write_band(kpts,cell,banddosFile_id,efermiPrev)
+         call eigdos(n)%p%write_band(kpts,input%comment,cell,banddosFile_id,efermiPrev)
        enddo
       IF (banddos%unfoldband) &
         CALL write_band_sc(kpts,results,eFermiPrev)
