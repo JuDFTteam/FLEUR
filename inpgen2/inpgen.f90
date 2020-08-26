@@ -70,10 +70,11 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_enparaXML):: enparaxml
 
-      INTEGER            :: idum, kptsUnit
+      INTEGER            :: idum, kptsUnit, inpOldUnit, ios
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
       CHARACTER(len=40)  :: filename
       CHARACTER(len=200) :: xPath
+      CHARACTER(len=800) :: line
       CHARACTER(LEN=40)  :: kptsSelection(3)
       CHARACTER(LEN=200) :: tempString, kptsComment
       CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
@@ -267,12 +268,39 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
          kptsUnit = 38
-         OPEN (kptsUnit, file="kpts.xml", action="write")         
+         inpOldUnit = 39
+         INQUIRE(file='kpts.xml',exist=l_exist)
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            CALL system('mv inp.xml inp_old.xml')
+            OPEN (inpOldUnit, file="inp_old.xml", action="read")
+            OPEN (kptsUnit, file="inp.xml", action="write")
+            ios = 0
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'<kPointLists>') EXIT
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         ELSE
+            OPEN (kptsUnit, file="kpts.xml", action="write")
+         END IF
+
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
          DO iKpts = 1, numKpts
             CALL kpts(iKpts)%print_XML(kptsUnit)
          END DO
          WRITE (kptsUnit, '(a)') "         </kPointLists>"
+
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'</kPointLists>') EXIT
+            END DO
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         END IF
+
          CLOSE (kptsUnit)
       END IF
 
