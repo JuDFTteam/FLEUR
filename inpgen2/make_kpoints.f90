@@ -516,6 +516,7 @@ CONTAINS
     ENDIF
 
     IF (bz_integration==2 .AND.random .OR. bz_integration==3 .AND..NOT.film) THEN
+       kpts%kptsKind = KPTS_KIND_TETRA
        ALLOCATE(kpts%ntetra(4,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
@@ -523,6 +524,7 @@ CONTAINS
           kpts%voltet(j) = ABS(voltet(j))
        END DO
     ELSE IF( (bz_integration==2 .OR. bz_integration==3) .AND. film) THEN
+       kpts%kptsKind = KPTS_KIND_TRIA
        ALLOCATE(kpts%ntetra(3,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
