@@ -379,7 +379,7 @@ c***********************************************************
              open(321,file=trim(torquename3)//'_unf',             
      &            form='unformatted'
 #ifdef CPP_INTEL
-             ,convert='BIG_ENDIAN')
+     &         ,convert='BIG_ENDIAN'
 #endif
      &                   )             
            else ! l_ndegen
@@ -387,7 +387,7 @@ c***********************************************************
              open(321,file=trim(torquename2)//'_unf',
      &            form='unformatted'
 #ifdef CPP_INTEL
-             ,convert='BIG_ENDIAN')
+     &         ,convert='BIG_ENDIAN'
 #endif             
      &                   )
            endif ! l_ndegen 
