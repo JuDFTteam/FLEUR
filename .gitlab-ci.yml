@@ -6,7 +6,7 @@ stages:
 
 
 build-gfortran-hdf5:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:centos
   stage: build
   artifacts:
      paths:
@@ -14,7 +14,6 @@ build-gfortran-hdf5:
      expire_in: 1h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh 
     - ./configure.sh GITLAB
     - cd build
     - make -j 2
@@ -24,7 +23,7 @@ build-gfortran-hdf5:
 #    - web
 
 .test-gfortran-hdf5: &test-gfortran-hdf5
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:centos
   stage: test
   dependencies:
     - build-gfortran-hdf5
