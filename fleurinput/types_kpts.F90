@@ -351,8 +351,8 @@ CONTAINS
 
       commonFractions(:) = -1.0
 
-205   FORMAT('         <kPointList name="', a, '" count="', i0, '" type="', a, '">')
-2051  FORMAT('         <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
+205   FORMAT('            <kPointList name="', a, '" count="', i0, '" type="', a, '">')
+2051  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
          WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
          CALL calcCommonFractions(kpts,commonFractions)
@@ -379,8 +379,8 @@ CONTAINS
             WRITE(posString(3),'(f16.13)') kpts%bk(3, n)
          END IF
 
-206      FORMAT('            <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')
-2061     FORMAT('            <kPoint weight="', f20.13, '" label="',a ,'">', a, ' ', a, ' ', a, '</kPoint>')
+206      FORMAT('               <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')
+2061     FORMAT('               <kPoint weight="', f20.13, '" label="',a ,'">', a, ' ', a, ' ', a, '</kPoint>')
          IF(label.EQ.'') THEN
             WRITE (kptsUnit, 206) kpts%wtkpt(n), TRIM(posString(1)), TRIM(posString(2)), TRIM(posString(3))
          ELSE
@@ -392,21 +392,21 @@ CONTAINS
          IF (kpts%kptsKind.EQ.KPTS_KIND_TETRA) THEN
             !Bulk --> Tetrahedrons
             WRITE (kptsUnit, 207) kpts%ntet
-207         FORMAT('            <tetraeder ntet="', i0, '">')
+207         FORMAT('               <tetraeder ntet="', i0, '">')
             DO n = 1, kpts%ntet
-208            FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+208            FORMAT('                  <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
                WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (kptsUnit, '(a)') '            </tetraeder>'
+            WRITE (kptsUnit, '(a)') '               </tetraeder>'
          ELSE IF (kpts%kptsKind.EQ.KPTS_KIND_TRIA) THEN
             !Film --> Triangles
             WRITE (kptsUnit, 209) kpts%ntet
-209         FORMAT('            <triangles ntria="', i0, '">')
+209         FORMAT('               <triangles ntria="', i0, '">')
             DO n = 1, kpts%ntet
-210            FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
+210            FORMAT('                  <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
                WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (kptsUnit, '(a)') '            </triangles>'
+            WRITE (kptsUnit, '(a)') '               </triangles>'
          ENDIF
       ELSE
 !         DO n = 1, kpts%numSpecialPoints
@@ -415,7 +415,7 @@ CONTAINS
 !         END DO
       END IF
       !END IF
-      WRITE (kptsUnit, '(a)') ('         </kPointList>')
+      WRITE (kptsUnit, '(a)') ('            </kPointList>')
       IF (PRESENT(filename)) CLOSE (kptsUnit)
    END SUBROUTINE print_xml
 
