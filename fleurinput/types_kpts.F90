@@ -216,6 +216,7 @@ CONTAINS
             IF (TRIM(ADJUSTL(label)).NE.'') THEN
                currentIndex = currentIndex + 1
                this%specialPointNames(currentIndex) = TRIM(ADJUSTL(label))
+               this%specialPointIndices(currentIndex) = i
                str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
                this%specialPoints(1, currentIndex) = evaluatefirst(str)
                this%specialPoints(2, currentIndex) = evaluatefirst(str)
@@ -359,7 +360,7 @@ CONTAINS
       ELSE
          WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
       END IF
-      !IF (kpts%numSpecialPoints < 2) THEN
+
       DO n = 1, kpts%nkpt
          DO iSpecialPoint = 1, kpts%numSpecialPoints
             IF (kpts%specialPointIndices(iSpecialPoint).EQ.n) THEN
