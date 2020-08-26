@@ -47,6 +47,7 @@ MODULE m_checks
     SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
       USE m_nocoInputCheck
       USE m_types_fleurinput
+      USE m_constants
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
@@ -81,20 +82,36 @@ MODULE m_checks
 
      IF (banddos%vacdos) THEN
         IF (.NOT.banddos%dos) THEN
-           CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="postprocessInput")
+           CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="check_input_switches")
         END IF
         IF (.NOT.banddos%starcoeff.AND.(banddos%nstars.NE.1))THEN
-           CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="postprocessInput")
+           CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="check_input_switches")
         END IF
         IF (banddos%layers.LT.1) THEN
-           CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="postprocessInput")
+           CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="check_input_switches")
         END IF
         DO i=1,banddos%layers
            IF (banddos%izlay(i,1).LT.1) THEN
-              CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="postprocessInput")
+              CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="check_input_switches")
            END IF
         END DO
      END IF
+
+     SELECT CASE (input%bz_integration)
+        CASE (2) !tria
+           IF (kpts%kptsKind.NE.KPTS_KIND_TRIA) THEN
+              CALL juDFT_warn('Chosen k-point set is not eligible for tria BZ integration.', calledby='check_input_switches')
+           END IF
+        CASE (3) !tetra
+           IF (kpts%kptsKind.NE.KPTS_KIND_TETRA) THEN
+              CALL juDFT_warn('Chosen k-point set is not eligible for tetra BZ integration.', calledby='check_input_switches')
+           END IF
+     END SELECT
+
+     IF((input%gw.EQ.2).AND.(kpts%kptsKind.NE.KPTS_KIND_SPEX_MESH)) THEN
+        CALL juDFT_warn('Chosen k-point set is not eligible for this GW step.', calledby='check_input_switches')
+     END IF
+
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
    END SUBROUTINE check_input_switches
 
