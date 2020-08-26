@@ -171,6 +171,18 @@ CONTAINS
             IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
          CASE ('path       ')
             this%kptsKind = KPTS_KIND_PATH
+         CASE ('tetra      ')
+            this%kptsKind = KPTS_KIND_TETRA
+         CASE ('tria       ')
+            this%kptsKind = KPTS_KIND_TRIA
+         CASE ('SPEX-mesh  ')
+            this%kptsKind = KPTS_KIND_SPEX_MESH
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
          CASE DEFAULT
             this%kptsKind = KPTS_KIND_UNSPECIFIED
             WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
@@ -309,11 +321,11 @@ CONTAINS
       INTEGER :: n, iSpecialPoint
       REAL :: commonFractions(3)
       LOGICAL :: l_exist
-      CHARACTER(LEN=11) :: kptsKindString(3)
+      CHARACTER(LEN=11) :: kptsKindString(6)
       CHARACTER(LEN=17) :: posString(3)
       CHARACTER(LEN=50) :: label
 
-      DATA kptsKindString /'unspecified','mesh       ','path       '/
+      DATA kptsKindString /'unspecified','mesh       ','path       ','tetra      ','tria       ','SPEX-mesh  '/
       label = ''
 
       IF(.NOT.ALLOCATED(kpts%bk)) RETURN
