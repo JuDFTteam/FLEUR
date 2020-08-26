@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
     TYPE(t_kpts),INTENT(OUT),OPTIONAL::kpts
-    TYPE(t_kpts),INTENT(OUT),OPTIONAL::kptsArray(:)
+    TYPE(t_kpts),ALLOCATABLE,INTENT(INOUT),OPTIONAL::kptsArray(:)
     TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
     TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
     CHARACTER(LEN=40),INTENT(OUT),OPTIONAL::kptsSelection(3)
@@ -79,6 +79,9 @@ CONTAINS
     END IF
     IF (PRESENT(kptsArray)) THEN
        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+       IF(.NOT.ALLOCATED(kptsArray)) THEN
+          ALLOCATE(kptsArray(numNodes))
+       END IF
        DO iNode = 1, numNodes
           CALL kptsArray(iNode)%read_xml_kptsByIndex(xml,iNode)
        END DO

@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kpts, kptsSelection, enpara, gfinp, &
+      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, gfinp, &
       l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -53,7 +53,7 @@ CONTAINS
       TYPE(t_stars), INTENT(IN)   :: stars
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_vacuum), INTENT(IN)   :: vacuum
-      TYPE(t_kpts), INTENT(IN)     :: kpts
+      TYPE(t_kpts), INTENT(IN)     :: kptsArray(:)
       TYPE(t_oneD), INTENT(IN)     :: oneD
 
       TYPE(t_mpinp), INTENT(IN)    :: mpinp
@@ -96,7 +96,7 @@ CONTAINS
 ! ..  Local Variables
       REAL     :: zc, sumWeight, occ(2)
       INTEGER  ::nw, idsprs, n1, n2
-      INTEGER ieq, i, k, na, n, ilo,iContour
+      INTEGER ieq, i, k, na, n, ilo,iContour, iKpts
       REAL s3, ah, a, hs2, rest
       LOGICAL l_hyb, ldum
       INTEGER :: ierr
@@ -277,17 +277,19 @@ CONTAINS
 210   FORMAT('         <kPointListSelection listName="', a, '"/>')
       WRITE (filenum, 210) TRIM(ADJUSTL(kptsSelection(1)))
 
-211   FORMAT('         <altKPointList listName="', a, '" purpose="', a, '"/>')
-      IF(kptsSelection(2).NE.'') THEN
-         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(2))), 'bands'
-      END IF
-      IF(kptsSelection(3).NE.'') THEN
-         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(3))), 'GW'
-      END IF
+!211   FORMAT('         <altKPointList listName="', a, '" purpose="', a, '"/>')
+!      IF(kptsSelection(2).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(2))), 'bands'
+!      END IF
+!      IF(kptsSelection(3).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(3))), 'GW'
+!      END IF
 
       if (l_include(1)) THEN
          WRITE (fileNum, '(a)') "         <kPointLists>"
-         call kpts%print_xml(fileNum)
+         DO iKpts = 1, SIZE(kptsArray)
+            CALL kptsArray(iKpts)%print_XML(fileNum)
+         END DO
          WRITE (fileNum, '(a)') "         </kPointLists>"
       else
          WRITE (fileNum, '(a)') '         <!-- k-points included here -->'

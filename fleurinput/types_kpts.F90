@@ -316,6 +316,8 @@ CONTAINS
       DATA kptsKindString /'unspecified','mesh       ','path       '/
       label = ''
 
+      IF(.NOT.ALLOCATED(kpts%bk)) RETURN
+
       IF (PRESENT(filename)) THEN
          INQUIRE (file=filename, exist=l_exist)
          IF (l_exist) THEN

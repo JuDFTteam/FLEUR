@@ -647,7 +647,7 @@
    <xsd:complexType name="BZIntegrationType">
       <xsd:sequence>
          <xsd:element name="kPointListSelection" type="KPointListSelectionType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointList" type="AltKPointListSelectionType"/>
+         <!--<xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointList" type="AltKPointListSelectionType"/>-->
          <xsd:element name="kPointLists" type="KPointListsType"/>
       </xsd:sequence>
       <xsd:attribute name="valenceElectrons" type="xsd:string" use="optional"/>
