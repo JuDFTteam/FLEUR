@@ -277,13 +277,13 @@ CONTAINS
 210   FORMAT('         <kPointListSelection listName="', a, '"/>')
       WRITE (filenum, 210) TRIM(ADJUSTL(kptsSelection(1)))
 
-211   FORMAT('         <altKPointList listName="', a, '" purpose="', a, '"/>')
-      IF(kptsSelection(2).NE.'') THEN
-         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(2))), 'bands'
-      END IF
-      IF(kptsSelection(3).NE.'') THEN
-         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(3))), 'GW'
-      END IF
+!211   FORMAT('         <altKPointList listName="', a, '" purpose="', a, '"/>')
+!      IF(kptsSelection(2).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(2))), 'bands'
+!      END IF
+!      IF(kptsSelection(3).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(3))), 'GW'
+!      END IF
 
       if (l_include(1)) THEN
          WRITE (fileNum, '(a)') "         <kPointLists>"
