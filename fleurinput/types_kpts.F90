@@ -807,10 +807,12 @@ CONTAINS
       REAL               :: temp
       LOGICAL            :: l_CommonFraction
 
-      IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
-         commonFractions(:) = -1
-         RETURN
-      END IF
+      commonFractions(:) = -1
+
+!      IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
+!         commonFractions(:) = -1
+!         RETURN
+!      END IF
 
       DO j = 1, 3
          DO i = 2, upperBound
