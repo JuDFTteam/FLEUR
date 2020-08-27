@@ -56,9 +56,9 @@ MODULE m_greensfCalcImagPart
          eig     = results%eig(ev_list,ikpt,jsp)
 
          SELECT CASE(input%bz_integration)
-         CASE(0) !Histogram method
+         CASE(BZINT_METHOD_HIST) !Histogram method
             wtkpt = kpts%wtkpt(ikpt)
-         CASE(3) !Tetrahedron method
+         CASE(BZINT_METHOD_TETRA) !Tetrahedron method
             CALL timestart("Green's Function: TetrahedronWeights")
             ALLOCATE(dosWeights(SIZE(eMesh),nBands),source=0.0)
             ALLOCATE(resWeights(SIZE(eMesh),nBands),source=0.0)
@@ -166,12 +166,12 @@ MODULE m_greensfCalcImagPart
                         !Check for a non-zero weight in the energy interval
                         l_zero = .TRUE.
                         SELECT CASE(input%bz_integration)
-                        CASE(0) !Histogram Method
+                        CASE(BZINT_METHOD_HIST) !Histogram Method
                            j = FLOOR((eig(iBand)-eb)/del)+1
                            IF(j.LE.SIZE(eMesh).AND.j.GE.1) l_zero = .FALSE.
                            eGrid_start = j
                            eGrid_end   = j
-                        CASE(3) !Tetrahedron method
+                        CASE(BZINT_METHOD_TETRA) !Tetrahedron method
                            IF(ANY(ABS(weights(indBound(iBand,1):indBound(iBand,2),iBand)).GT.1e-14)) l_zero = .FALSE.
                            eGrid_start = indBound(iBand,1)
                            eGrid_end   = indBound(iBand,2)
@@ -292,7 +292,7 @@ MODULE m_greensfCalcImagPart
          ENDDO!i_gf
          CALL timestop("Green's Function: Imaginary Part")
 
-         IF(input%bz_integration==3) DEALLOCATE(weights,indBound)
+         IF(input%bz_integration==BZINT_METHOD_TETRA) DEALLOCATE(weights,indBound)
       ENDDO!k-point loop
 
       !Collect the results from all mpi ranks

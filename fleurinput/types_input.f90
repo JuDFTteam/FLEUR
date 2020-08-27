@@ -6,6 +6,7 @@
 
 MODULE m_types_input
   USE m_judfT
+  USE m_constants
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
@@ -41,8 +42,8 @@ MODULE m_types_input
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
   REAL    :: tkb=0.001
-  INTEGER :: bz_integration=0
-  LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=3
+  INTEGER :: bz_integration=BZINT_METHOD_HIST
+  LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
   LOGICAL :: l_bmt=.FALSE.
   !INTEGER:: scale
   INTEGER:: kcrel =0
@@ -239,13 +240,13 @@ SUBROUTINE read_xml_input(this,xml)
  valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
  SELECT CASE (valueString)
  CASE ('hist')
-    this%bz_integration = 0
+    this%bz_integration = BZINT_METHOD_HIST
  CASE ('gauss')
-    this%bz_integration = 1
+    this%bz_integration = BZINT_METHOD_GAUSS
  CASE ('tria')
-    this%bz_integration = 2
+    this%bz_integration = BZINT_METHOD_TRIA
  CASE ('tetra')
-    this%bz_integration = 3
+    this%bz_integration = BZINT_METHOD_TETRA
  CASE DEFAULT
     CALL juDFT_error('Invalid bzIntegration mode selected!')
  END SELECT

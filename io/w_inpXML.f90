@@ -218,13 +218,13 @@ CONTAINS
       WRITE (fileNum, 190) input%l_f, input%forcealpha, TRIM(mixingScheme), input%epsdisp, input%epsforce
 
       SELECT CASE (input%bz_integration)
-      CASE (0)
+      CASE (BZINT_METHOD_HIST)
          bzIntMode = 'hist'
-      CASE (1)
+      CASE (BZINT_METHOD_GAUSS)
          bzIntMode = 'gauss'
-      CASE (2)
+      CASE (BZINT_METHOD_TRIA)
          bzIntMode = 'tria'
-      CASE (3)
+      CASE (BZINT_METHOD_TETRA)
          bzIntMode = 'tetra'
       CASE DEFAULT
          CALL judft_error("Invalid brillouin zone integration mode",calledby="w_inpXML")

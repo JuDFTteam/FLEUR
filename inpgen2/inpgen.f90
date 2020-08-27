@@ -80,6 +80,7 @@ PROGRAM inpgen
       CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
+      INTEGER, ALLOCATABLE :: kptsBZintegration(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
       LOGICAL            :: l_exist, l_addPath, l_check
 
@@ -148,11 +149,13 @@ PROGRAM inpgen
       ALLOCATE(kptsName(numKpts))
       ALLOCATE(kptsPath(numKpts))
       ALLOCATE(l_kptsInitialized(numKpts))
+      ALLOCATE(kptsBZintegration(numKpts))
       kpts_str(:)=""
       kptsPath(:)=""
       kptsName(:)=""
       kptsSelection(:) = ''
       l_kptsInitialized(:) = .TRUE.
+      kptsBZintegration = BZINT_METHOD_HIST
 
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
@@ -173,7 +176,7 @@ PROGRAM inpgen
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
          l_kptsInitialized(:) = .FALSE.
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,&
+         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
               input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -240,13 +243,14 @@ PROGRAM inpgen
       DO iKpts = 1, numKpts
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                           input%bz_integration,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
       END DO
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
          DO iKpts = numKpts, 1, -1
             IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
                kptsSelection(1) = kpts(iKpts)%kptsName
+               input%bz_integration = kptsBZintegration(iKpts)
             END IF
             IF(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_PATH) kptsSelection(2) = kpts(iKpts)%kptsName
          END DO

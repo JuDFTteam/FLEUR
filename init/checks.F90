@@ -58,22 +58,6 @@ MODULE m_checks
 
       integer :: i
 
-
-     !Check if there are tetrahedrons available for the tetrahedron method
-     IF((input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3).AND.kpts%ntet==0) THEN
-        CALL juDFT_error("You selected the tetrahedron method for Brillouin-zone Integration "//&
-                         "but the selected k-points set has no tetrahedron information",&
-                         hint="Either change mode to hist or generate tetrahedrons with the inpgen")
-     ENDIF
-
-     !Check if the tetrahedrons make sense for tria
-     IF(input%bz_integration.EQ.2) THEN
-        IF(ANY(kpts%ntetra.GT.kpts%nkpt)) THEN
-          CALL juDFT_error("You used tria for brillouin-zone Integration, but the tetrahedrons look "//&
-                           "like they were generated with tetra. These are not compatible")
-        ENDIF
-     ENDIF
-
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
         CALL juDFT_error("jDOS+collinear is not implemented at the moment.",&
@@ -98,11 +82,11 @@ MODULE m_checks
      END IF
 
      SELECT CASE (input%bz_integration)
-        CASE (2) !tria
+        CASE (BZINT_METHOD_TRIA) !tria
            IF (kpts%kptsKind.NE.KPTS_KIND_TRIA) THEN
               CALL juDFT_warn('Chosen k-point set is not eligible for tria BZ integration.', calledby='check_input_switches')
            END IF
-        CASE (3) !tetra
+        CASE (BZINT_METHOD_TETRA) !tetra
            IF (kpts%kptsKind.NE.KPTS_KIND_TETRA) THEN
               CALL juDFT_warn('Chosen k-point set is not eligible for tetra BZ integration.', calledby='check_input_switches')
            END IF

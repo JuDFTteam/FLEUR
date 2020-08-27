@@ -390,7 +390,7 @@ CONTAINS
          label = ''
       END DO
       IF (kpts%ntet > 0) THEN
-         IF (kpts%kptsKind.EQ.KPTS_KIND_TETRA) THEN
+         IF (SIZE(kpts%ntetra, 1).EQ.4) THEN
             !Bulk --> Tetrahedrons
             WRITE (kptsUnit, 207) kpts%ntet
 207         FORMAT('               <tetraeder ntet="', i0, '">')
@@ -399,7 +399,7 @@ CONTAINS
                WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
             WRITE (kptsUnit, '(a)') '               </tetraeder>'
-         ELSE IF (kpts%kptsKind.EQ.KPTS_KIND_TRIA) THEN
+         ELSE IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
             !Film --> Triangles
             WRITE (kptsUnit, 209) kpts%ntet
 209         FORMAT('               <triangles ntria="', i0, '">')
