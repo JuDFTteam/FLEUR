@@ -253,11 +253,7 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       logical :: var_alloc
 
-      if (mat%l_real) then
-         var_alloc = allocated(mat%data_r)
-      else
-         var_alloc = allocated(mat%data_c)
-      endif
+      var_alloc = allocated(mat%data_r) .or. allocated(mat%data_c)
    end function t_mat_allocated
 
    SUBROUTINE t_mat_lproblem(mat, vec)
