@@ -30,7 +30,7 @@ build-gfortran-hdf5:
     - build-gfortran-hdf5
   script:
     - ulimit -s unlimited
-    - export OMP_NUM_THREADS=2
+    - export OMP_NUM_THREADS=1
     - export OMPI_MCA_btl_vader_single_copy_mechanism=none
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     - cd $CI_PROJECT_DIR
