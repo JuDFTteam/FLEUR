@@ -358,8 +358,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
    thisCdnvalJob%weights = results%w_iks(:,:,jsp)*2.0/input%jspins
 
-   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
-   thisCdnvalJob%noccbd = 0
+   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt), source=0)
 
    ! determine bands to be used for each k point, MPI process
    DO ikpt_i = 1,SIZE(thisCdnvalJob%k_list)
@@ -424,13 +423,14 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
    INTEGER,ALLOCATABLE :: compact_ev_list(:)
    INTEGER :: nk
+   logical, allocatable :: l_nonzero(:)
 
    nk=thisCdnvalJob%k_list(ikpt)
    IF (l_empty) THEN
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
-      compact_ev_list=PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),&
-           thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8)
+      l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
+      compact_ev_list=PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)
    END IF
  END FUNCTION compact_ev_list
 
