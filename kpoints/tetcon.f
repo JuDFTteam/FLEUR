@@ -1,18 +1,18 @@
       MODULE m_tetcon
       use m_juDFT
+      use m_constants
 !
 ! This subroutine constructs the tetrahedra for the
 ! Brillouin zone integration
 !
       CONTAINS
       SUBROUTINE tetcon(
-     >                  iofile,ibfile,mkpt,ndiv3,
+     >                  mkpt,ndiv3,
      >                  nkpt,omega,kvc,nsym,
      <                  nt,voltet,ntetra)
 
       IMPLICIT NONE
 c
-      INTEGER, INTENT (IN) :: iofile,ibfile
       INTEGER, INTENT (IN) :: mkpt,ndiv3,nkpt,nsym
       REAL,    INTENT (IN) :: omega
       REAL,    INTENT (IN) :: kvc(3,mkpt)
@@ -409,21 +409,21 @@ C
       ssq=ssq/(6*nt)
       vsq=sqrt(vsq-vav*vav)
       ssq=sqrt(ssq-sav*sav)
-      write(iofile,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
+      write(oUnit,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
  5000 format(/,'   division into tetrahedra  ',/,
      $  '  there are      ',i5,'  tetrahedra ',/,
      $  '  volume         ',f15.10,'  +/-  ',f10.5,3x,2f10.5,/,
      $  '  side           ',f15.10,'  +/-  ',f10.5,3x,2f10.5,/)
-c     write(ibfile,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
-      write(iofile,5100) ((ntetra(j,i),j=1,4),i=1,nt)
+c     write(oUnit,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
+      write(oUnit,5100) ((ntetra(j,i),j=1,4),i=1,nt)
  5100 format(4(4x,4i4))
-c     write(ibfile,5100) ((ntetra(j,i),j=1,4),i=1,nt)
+c     write(oUnit,5100) ((ntetra(j,i),j=1,4),i=1,nt)
 C CHECK IF WE HAVE THE CORRECT TOTAL VOLUME
       vt=omega*vav*nt*nsym/(2*pi)**3-1.0
-      write(iofile,5200) vt
-c     write(ibfile,5200) vt
+      write(oUnit,5200) vt
+c     write(oUnit,5200) vt
       do 5300 i =1,nt
-c     write(ibfile,'('' tetrahedra # '',i5,'' is '',d12.4)') i,voltet(i)
+c     write(oUnit,'('' tetrahedra # '',i5,'' is '',d12.4)') i,voltet(i)
  5300 continue
  5200 format(/,'  voltetsum/volBZ - 1  ',d12.4)
 C
