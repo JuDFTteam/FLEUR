@@ -1,6 +1,6 @@
 enable_testing()
 
-set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
+set(SerialParallelTests CuBulkXML SiLOXML CuBandXML Fe_1lXML
     Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
@@ -10,7 +10,7 @@ set(SerialParallelTests CuBulkXML SiLOXML  Fe_1lXML
 
 #DOS related tests, need to be enabled again!
 #set(SerialParallelTests ${SerialParallelTests}
-#  Fe_1l_Tria CuBandXML  CuDOSXML CoMCDXML SmAtomjDOS )
+#  Fe_1l_Tria   CuDOSXML CoMCDXML SmAtomjDOS )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym

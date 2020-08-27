@@ -15,8 +15,8 @@
       <bzIntegration valenceElectrons="22.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="20">
-         <kPoint weight="0.050000">0.000000            0.000000            0.000000</kPoint>
+         <kPointList name="default" count="20" type="path">
+         <kPoint weight="0.050000" label="great">0.000000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.025000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.050000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.075000            0.000000            0.000000</kPoint>
@@ -35,7 +35,7 @@
          <kPoint weight="0.050000">0.400000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.425000            0.000000            0.000000</kPoint>
          <kPoint weight="0.050000">0.450000            0.000000            0.000000</kPoint>
-         <kPoint weight="0.050000">0.475000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.050000" label="path">0.475000            0.000000            0.000000</kPoint>
          </kPointList>
          </kPointLists>
       </bzIntegration>

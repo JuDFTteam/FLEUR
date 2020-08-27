@@ -6,8 +6,10 @@ jt::copyfile("files/enpara",$workdir);
 jt::testrun("$executable ",$workdir);
 
 #now test output
-$result=jt::test_fileexists("$workdir/band.1");
-$result=jt::test_fileexists("$workdir/DOS.1");
-$result+=jt::test_grepnumber("$workdir/DOS.1","9.40646","9.40646  (.....)",0.290,0.0001);
+$result=jt::test_fileexists("$workdir/bands.1");
+$result+=jt::test_grepexists("$workdir/bands.1","0\.033629.*\-0\.400779");
+$result+=jt::test_grepexists("$workdir/bands.1","0\.269033.*0\.614193");
+$result+=jt::test_grepexists("$workdir/bands.1","0\.336291.*32\.833232");
+$result+=jt::test_grepexists("$workdir/bands.1","0\.638954.*33\.485766");
 
 jt::stageresult($workdir,$result,"1");
