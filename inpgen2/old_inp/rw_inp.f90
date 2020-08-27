@@ -529,9 +529,9 @@
       WRITE (oUnit,9160) gauss,input%tkb,tria
  8010 FORMAT (6x,l1,f10.5,5x,l1)
 
-      IF(.NOT.(tria.OR.gauss)) input%bz_integration = 0
-      IF(gauss) input%bz_integration = 1
-      IF(tria)  input%bz_integration = 2
+      IF(.NOT.(tria.OR.gauss)) input%bz_integration = BZINT_METHOD_HIST
+      IF(gauss) input%bz_integration = BZINT_METHOD_GAUSS
+      IF(tria)  input%bz_integration = BZINT_METHOD_TRIA
 !
 
 !
@@ -915,7 +915,7 @@
       WRITE (5,9150) input%ellow,input%elup,input%zelec
 9150  FORMAT (4f10.5)
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
-      WRITE (5,9160) input%bz_integration==1,input%tkb,input%bz_integration==2
+      WRITE (5,9160) input%bz_integration==BZINT_METHOD_GAUSS,input%tkb,input%bz_integration==BZINT_METHOD_TRIA
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
       WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
  9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)

@@ -90,18 +90,8 @@ CONTAINS
 
       ! Bcasts for derived class t_xcpot_inbuild
       CALL mpi_bc(this%icorr, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_rpbe, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_wc, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_hse, rank, mpi_comm)
-      CALL mpi_bc(this%data%uk, rank, mpi_comm)
-      CALL mpi_bc(this%data%um, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_pbes, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_pbe0, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_bh, rank, mpi_comm)
-      CALL mpi_bc(this%data%is_mjw, rank, mpi_comm)
-      CALL mpi_bc(this%data%exchange_weight, rank, mpi_comm)
-      CALL mpi_bc(this%data%krla, rank, mpi_comm)
       CALL mpi_bc(this%lda_atom, rank, mpi_comm)
+      call this%data%mpi_bc(rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_xcpot_ib
 

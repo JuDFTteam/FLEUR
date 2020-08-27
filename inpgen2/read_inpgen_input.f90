@@ -9,10 +9,10 @@ MODULE m_read_inpgen_input
   USE m_calculator
   IMPLICIT NONE
   PRIVATE
-  PUBLIC read_inpgen_input
+  PUBLIC read_inpgen_input, peekInpgenInput
 CONTAINS
 
-  SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,&
+  SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
        input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     USE m_atompar
@@ -30,24 +30,29 @@ CONTAINS
 
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
-    CHARACTER(len=40),INTENT(OUT):: kpts_str
-    TYPE(t_input),INTENT(out)    :: input
-    TYPE(t_sym),INTENT(OUT)      :: sym
-    TYPE(t_noco),INTENT(OUT)     :: noco
-    TYPE(t_vacuum),INTENT(OUT)   :: vacuum
-    TYPE(t_stars),INTENT(OUT)    :: stars
+    CHARACTER(len=40),INTENT(OUT)  :: kpts_str(:)
+    CHARACTER(len=40),INTENT(out)  :: kptsName(:)
+    CHARACTER(len=500),INTENT(out) :: kptsPath(:)
+    INTEGER,INTENT(OUT)            :: kptsBZintegration(:)
+    TYPE(t_input),INTENT(out)      :: input
+    TYPE(t_sym),INTENT(OUT)        :: sym
+    TYPE(t_noco),INTENT(OUT)       :: noco
+    TYPE(t_vacuum),INTENT(OUT)     :: vacuum
+    TYPE(t_stars),INTENT(OUT)      :: stars
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)    :: xcpot
-    TYPE(t_cell),INTENT(OUT)     :: cell
-    TYPE(t_hybinp),INTENT(OUT)   :: hybinp
+    TYPE(t_cell),INTENT(OUT)       :: cell
+    TYPE(t_hybinp),INTENT(OUT)     :: hybinp
 
 
     !locals
     REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det,temp
-    INTEGER             :: ios,n,i
+    INTEGER             :: ios,n,i, iKpts
     CHARACTER(len=100)  :: filename
     LOGICAL             :: l_exist
     CHARACTER(len=16384):: line
     TYPE(t_atompar)     :: ap
+
+    iKpts = 0
 
     !
     !read file and create normalized scratch file
@@ -96,7 +101,15 @@ CONTAINS
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
           CASE('kpt ')
-             CALL process_kpts(line,kpts_str,input%bz_integration,input%tkb)
+             iKpts = iKpts + 1
+             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
+             IF(TRIM(ADJUSTL(kptsName(iKpts))).EQ.'') THEN
+                IF(TRIM(ADJUSTL(kptsPath(iKpts))).EQ.'') THEN
+                   WRITE(kptsName(iKpts),'(a,i0)') "default-", iKpts
+                ELSE
+                   WRITE(kptsName(iKpts),'(a,i0)') "path-", iKpts
+                END IF
+             END IF
           CASE('film')
              CALL process_film(line,vacuum%dvac,cell%amat(3,3))
           CASE('gen ','sym ')
@@ -138,7 +151,8 @@ CONTAINS
              IF (input%film.AND.(vacuum%dvac <= 0.00)) THEN
                 WRITE(*,*)'Film calculation but no reasonable dVac provided'
                 WRITE(*,*)'Setting default for dVac'
-                vacuum%dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
+                vacuum%dvac=0.01
+                !vacuum%dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
              END IF
              READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
@@ -184,50 +198,111 @@ CONTAINS
 
     CALL cell%init(0.0)
 
+    CLOSE(98)
+
   END SUBROUTINE read_inpgen_input
 
+  SUBROUTINE peekInpgenInput(numKpts,numKptsPath)
 
-  SUBROUTINE process_kpts(line,kpts_str,bz_integration_out,tkb)
+    INTEGER, INTENT(INOUT) :: numKpts
+    INTEGER, INTENT(INOUT) :: numKptsPath
+
+    INTEGER             :: ios
+    LOGICAL             :: l_exist
+    CHARACTER(len=100)  :: filename
+    CHARACTER(len=16384):: line
+
+    CHARACTER(len=40)  :: kpts_str
+    CHARACTER(len=40)  :: kptsName
+    CHARACTER(len=500) :: kptsPath
+    INTEGER            :: bz_integration_out
+    REAL               :: tkb
+
+    numKpts = 0
+    numKptsPath = 0
+    ios = 0
+
+    filename=juDFT_string_for_argument("-f")
+    INQUIRE(file=filename,exist=l_exist)
+    IF (.NOT.l_exist) CALL judft_error("Input file specified is not readable")
+    OPEN(97,file=filename)
+    !OPEN(98,status='scratch')
+    OPEN(98,file="scratch")
+    CALL normalize_file(97,98)
+    CLOSE(97)
+
+    REWIND(98)
+
+    DO WHILE(ios==0)
+       READ(98,"(a)",iostat=ios) line
+       IF (ios.NE.0) EXIT
+       IF (line(1:1)=="&") THEN
+          SELECT CASE(line(2:5)) !e.g. atom
+          CASE('kpt ')
+             numKpts = numKpts + 1
+             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+             IF(kptsPath.NE.'') numKptsPath = numKptsPath + 1
+          END SELECT
+       END IF
+    END DO
+
+    CLOSE(98)
+
+  END SUBROUTINE peekInpgenInput
+
+
+  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+    USE m_constants
     CHARACTER(len=*),INTENT(in)::line
     CHARACTER(len=40),INTENT(out)::kpts_str
+    CHARACTER(len=40),INTENT(out)::kptsName
+    CHARACTER(len=500),INTENT(out)::kptsPath
     INTEGER,INTENT(inout)::bz_integration_out
     REAL,INTENT(inout):: tkb
 
     LOGICAL :: tria
     INTEGER :: div1,div2,div3,nkpt
     CHARACTER(len=5) :: bz_integration
+    CHARACTER(len=40) :: name
+    CHARACTER(len=500) :: path
     REAL    :: den
-    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den
+    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den,path,name
     div1=0;div2=0;div3=0;nkpt=0;den=0.0
-    bz_integration='hist'
+    bz_integration = 'hist'
+    name = ''
+    path = ''
     tria=.FALSE.
     READ(line,kpt)
     kpts_str=''
     IF (den>0.0) THEN
        WRITE(kpts_str,"(a,f0.6)") "den=",den
-    ELSEIF(nkpt>0) THEN
+    ELSEIF((nkpt>0).AND.(path.EQ.'')) THEN
        WRITE(kpts_str,"(a,i0)") "nk=",nkpt
+    ELSEIF((nkpt>0).AND.(path.NE.'')) THEN
+       WRITE(kpts_str,"(a,i0)") "band=",nkpt
     ELSEIF(ALL([div1,div2,div3]>0)) THEN
        WRITE(kpts_str,"(a,i0,a,i0,a,i0)") "grid=",div1,",",div2,",",div3
     END IF
     SELECT CASE(TRIM(ADJUSTL(bz_integration)))
     CASE('hist')
-       bz_integration_out = 0
+       bz_integration_out = BZINT_METHOD_HIST
     CASE('gauss')
-       bz_integration_out = 1
+       bz_integration_out = BZINT_METHOD_GAUSS
     CASE('tria')
-       bz_integration_out = 2
+       bz_integration_out = BZINT_METHOD_TRIA
     CASE('tetra')
-       bz_integration_out = 3
+       bz_integration_out = BZINT_METHOD_TETRA
     CASE DEFAULT
        CALL judft_error("No valid bz_integration mode",calledby="process_kpts")
     END SELECT
-    IF(tria.AND.bz_integration_out==0) THEN
-       bz_integration_out = 2
-    ELSE IF(tria.AND.bz_integration_out/=0) THEN
+    IF(tria.AND.bz_integration_out==BZINT_METHOD_HIST) THEN
+       bz_integration_out = BZINT_METHOD_TRIA
+    ELSE IF(tria.AND.bz_integration_out /= BZINT_METHOD_HIST) THEN
        CALL juDFT_warn("You specified both tria and bz_integration in the input,\\&
-            tria will be ignored",calledby="process_kpts")
+                       tria will be ignored",calledby="process_kpts")
     ENDIF
+    kptsName = name
+    kptsPath = path
 
   END SUBROUTINE process_kpts
 

@@ -33,7 +33,11 @@ CONTAINS
     this%phi=noco%phi_inp
     this%alph=noco%alph_inp
     this%beta=noco%beta_inp
-    this%qss=noco%qss_inp
+    if (noco%l_ss) THEN
+      this%qss=noco%qss_inp
+    else
+      this%qss=0.0
+    endif
     if (allocated(this%b_con)) deallocate(this%b_con)
     allocate(this%b_con(2,size(this%alph)))
     this%b_con=0.0
@@ -50,10 +54,10 @@ CONTAINS
 
 
       integer :: na,itype
-
-      nococonv%qss=noco%qss_inp
-      if (present(qss)) nococonv%qss=qss
-
+      if (noco%l_ss) THEN
+          nococonv%qss=noco%qss_inp
+          if (present(qss)) nococonv%qss=qss
+      endif
       ! Check noco stuff and calculate missing noco parameters
       IF (noco%l_noco) THEN
          IF (noco%l_ss) THEN

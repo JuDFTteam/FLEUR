@@ -17,6 +17,7 @@
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <!-- k-points included here -->
+         <kPointListSelection listName="default" />
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>

@@ -43,6 +43,7 @@ PROGRAM inpgen
   use m_fleurinput_read_xml
   USE m_types_mpinp
   USE m_constants
+  USE m_types_xml
 
       IMPLICIT NONE
 
@@ -62,16 +63,28 @@ PROGRAM inpgen
       TYPE(t_xcpot_inbuild_nf)::xcpot
       TYPE(t_enpara)   :: enpara
       TYPE(t_forcetheo):: forcetheo
-      TYPE(t_kpts)     :: kpts
+      TYPE(t_kpts), ALLOCATABLE :: kpts(:)
       TYPE(t_oned)     :: oned
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_enparaXML):: enparaxml
 
-      CHARACTER(len=40):: kpts_str,filename
-      LOGICAL          :: l_exist
-      INTEGER          :: idum
+      INTEGER            :: idum, kptsUnit, inpOldUnit, ios
+      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
+      CHARACTER(len=40)  :: filename
+      CHARACTER(len=200) :: xPath
+      CHARACTER(len=800) :: line
+      CHARACTER(LEN=40)  :: kptsSelection(3)
+      CHARACTER(LEN=200) :: tempString, kptsComment
+      CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
+      CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
+      CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
+      INTEGER, ALLOCATABLE :: kptsBZintegration(:)
+      LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
+      LOGICAL            :: l_exist, l_addPath, l_check
+
+      TYPE(t_xml)::xml
 
       INTERFACE
        FUNCTION dropDefaultEConfig() BIND(C, name="dropDefaultEconfig")
@@ -81,8 +94,6 @@ PROGRAM inpgen
       END INTERFACE
 
       CALL judft_init(oUnit,.FALSE.)
-
-      kpts_str=""
 
       !Start program and greet user
       CALL inpgen_help()
@@ -97,15 +108,65 @@ PROGRAM inpgen
       IF (l_inpxml.AND..NOT.(judft_was_argument("-inp.xml").or.judft_was_argument("-overwrite")))&
            CALL judft_error("inp.xml exists and can not be overwritten")
 
+      numKpts = 1
+      numKptsPath = 0
+      l_addPath = .FALSE.
       IF (judft_was_argument("-inp")) THEN
+      ELSEIF (judft_was_argument("-inp.xml")) THEN
+         !not yet
+         l_fullinput = .TRUE.
+         CALL xml%init(l_fullinput)
+         numKpts = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+         DO iKpts = 1, numKpts
+            xPath = ''
+            WRITE (xPath, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', iKpts, ']/@type'
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath)))
+            IF(numNodes.EQ.1) THEN
+               IF(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))).EQ.'path') numKptsPath = numKptsPath + 1
+            END IF
+         END DO
+         CALL xml%FreeResources()
+      ELSEIF(judft_was_argument("-f")) THEN
+         !read the input
+         CALL peekInpgenInput(numKpts, numKptsPath)
+         IF(numKpts.EQ.0) numKpts = 1
+         IF(numKptsPath.EQ.0) THEN
+            l_addPath = .TRUE.
+            numKpts = numKpts + 1
+         END IF
+      ELSE
+         CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
+      ENDIF
+
+      numAddKptsSets = 0
+      IF(juDFT_was_argument("-kpt")) THEN
+         numAddKptsSets = 1
+         numKpts = numKpts + numAddKptsSets
+      END IF
+
+      ALLOCATE(kpts(numKpts))
+      ALLOCATE(kpts_str(numKpts))
+      ALLOCATE(kptsName(numKpts))
+      ALLOCATE(kptsPath(numKpts))
+      ALLOCATE(l_kptsInitialized(numKpts))
+      ALLOCATE(kptsBZintegration(numKpts))
+      kpts_str(:)=""
+      kptsPath(:)=""
+      kptsName(:)=""
+      kptsSelection(:) = ''
+      l_kptsInitialized(:) = .TRUE.
+      kptsBZintegration = BZINT_METHOD_HIST
+
+      IF (judft_was_argument("-inp")) THEN
+         l_kptsInitialized(:) = .FALSE.
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
-              sliceplot,banddos,enpara,xcpot,kpts,hybinp, oneD)
+              sliceplot,banddos,enpara,xcpot,kpts(1),hybinp, oneD)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kpts=Kpts,enparaXML=enparaXML,old_version=l_fullinput)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_fullinput)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
@@ -114,9 +175,22 @@ PROGRAM inpgen
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
-
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,&
+         l_kptsInitialized(:) = .FALSE.
+         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
               input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+         IF (l_addPath) THEN
+            l_check = .TRUE.
+            CALL add_special_points_default(kpts(numKpts),input%film,cell,l_check)
+            IF(l_check) THEN
+               kpts_str(numKpts-numAddKptsSets) = 'band=240'
+               kptsPath(numKpts-numAddKptsSets) = 'default'
+               WRITE(kptsName(numKpts-numAddKptsSets),'(a,i0)') "path-", numKpts-numAddKptsSets
+            ELSE
+               numKpts = numKpts - 1
+               WRITE(*,*) 'No default k-point path for band structures for this unit cell type available:'
+               WRITE(*,*) 'None is generated by default. If needed a user specific path has to be specified.'
+            END IF
+         END IF
          l_fullinput=.FALSE.
       ELSE
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
@@ -134,11 +208,53 @@ PROGRAM inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
                    xcpot,noco,mpinp,hybinp)
       ENDIF
+
+      IF (numAddKptsSets.EQ.1) THEN
+         kptsName(numKpts) = ''
+         kpts_str(numKpts) = ''
+         kptsPath(numKpts) = ''
+         tempString = ''
+         tempString = judft_string_for_argument("-kpt")
+         IF (INDEX(tempString,"#")>0) THEN
+            kptsName(numKpts)=tempString(:INDEX(tempString,"#")-1)
+            tempString = TRIM(ADJUSTL(tempString(INDEX(tempString,"#")+1:)))
+         END IF
+         kpts_str(numKpts) = TRIM(ADJUSTL(tempString))
+         IF(INDEX(kpts_str(numKpts),'band=')==1) THEN
+            IF (judft_was_argument("-kptsPath")) THEN
+               kptsPath(numKpts) = judft_string_for_argument("-kptsPath")
+            ELSE
+               kptsPath(numKpts) = 'default'
+            END IF
+         END IF
+         IF(kptsName(numKpts).EQ.'') THEN
+            IF(kptsPath(numKpts).EQ.'') THEN
+               WRITE(kptsName(numKpts),'(a,i0)') "default-", numKpts
+            ELSE
+               WRITE(kptsName(numKpts),'(a,i0)') "path-", numKpts
+            END IF
+         END IF
+         l_kptsInitialized(numKpts) = .FALSE.
+      END IF
+
       !
       ! k-points can also be modified here
       !
-      call make_kpoints(kpts,cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                        input%bz_integration,kpts_str)
+      DO iKpts = 1, numKpts
+         IF (l_kptsInitialized(iKpts)) CYCLE
+         CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
+                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+      END DO
+
+      IF(ALL(kptsSelection(:).EQ.'')) THEN
+         DO iKpts = numKpts, 1, -1
+            IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
+               kptsSelection(1) = kpts(iKpts)%kptsName
+               input%bz_integration = kptsBZintegration(iKpts)
+            END IF
+            IF(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_PATH) kptsSelection(2) = kpts(iKpts)%kptsName
+         END DO
+      END IF
       !
       !Now the IO-section
       !
@@ -150,15 +266,81 @@ PROGRAM inpgen
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,gfinp,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               l_explicit,l_include,filename)
-         if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
+         if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      IF (.NOT.l_include(2).OR.judft_was_argument("-k")) THEN
-        !inquire(file="kpts.xml",exist=l_include(2))
-        !if (l_include(2)) call system("rm kpts.xml")
-        CALL kpts%print_XML(99,"kpts.xml")
-      endif
+      IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
+         kptsUnit = 38
+         inpOldUnit = 39
+         INQUIRE(file='kpts.xml',exist=l_exist)
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            CALL system('mv inp.xml inp_old.xml')
+            OPEN (inpOldUnit, file="inp_old.xml", action="read")
+            OPEN (kptsUnit, file="inp.xml", action="write")
+            ios = 0
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'<kPointLists>') EXIT
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         ELSE
+            OPEN (kptsUnit, file="kpts.xml", action="write")
+         END IF
+
+         WRITE (kptsUnit, '(a)') "         <kPointLists>"
+         DO iKpts = 1, numKpts
+            CALL kpts(iKpts)%print_XML(kptsUnit)
+         END DO
+         WRITE (kptsUnit, '(a)') "         </kPointLists>"
+
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'</kPointLists>') EXIT
+            END DO
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF(ios.NE.0) EXIT
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         END IF
+
+         CLOSE (kptsUnit)
+      END IF
+
+100   FORMAT (a20,a15,i10,3x,a)
+      WRITE(*,*) 'Stored k-point lists:'
+      WRITE(*,*) ''
+      WRITE(*,'(a20,a15,a10,3x,a)') 'NAME', 'TYPE', 'NKPT', 'COMMENT'
+      WRITE(*,*) '================================================================================'
+      DO iKpts = 1, numKpts
+         SELECT CASE(kpts(iKpts)%kptsKind)
+            CASE (KPTS_KIND_UNSPECIFIED)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'UNSPECIFIED', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_MESH)
+               kptsComment = ''
+               WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'MESH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+            CASE (KPTS_KIND_PATH)
+               kptsComment = ''
+               kptsComment = TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(1)))
+               DO iPoint = 2, kpts(iKpts)%numSpecialPoints
+                  kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
+               END DO
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+            CASE (KPTS_KIND_TETRA)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TETRA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_TRIA)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_SPEX_MESH)
+               kptsComment = ''
+               WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'SPEX-MESH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+         END SELECT
+      END DO
+      WRITE(*,*) '================================================================================'
+
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)

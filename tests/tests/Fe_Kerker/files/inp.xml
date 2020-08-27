@@ -12,23 +12,26 @@
       <expertModes gw="0" isec1="99" secvar="F"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="144.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-<kPointList name="default" count="   15">
-         <kPoint weight="0.040000">0.450000            0.450000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.450000            0.350000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.450000            0.250000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.450000            0.150000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.450000            0.050000            0.250000</kPoint>
-         <kPoint weight="0.040000">0.350000            0.350000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.350000            0.250000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.350000            0.150000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.350000            0.050000            0.250000</kPoint>
-         <kPoint weight="0.040000">0.250000            0.250000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.250000            0.150000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.250000            0.050000            0.250000</kPoint>
-         <kPoint weight="0.040000">0.150000            0.150000            0.250000</kPoint>
-         <kPoint weight="0.080000">0.150000            0.050000            0.250000</kPoint>
-         <kPoint weight="0.040000">0.050000            0.050000            0.250000</kPoint>
-      </kPointList>
+         <kPointListSelection listName="default" />
+         <kPointLists>
+         <kPointList name="default" count="   15">
+            <kPoint weight="0.040000">0.450000            0.450000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.450000            0.350000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.450000            0.250000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.450000            0.150000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.450000            0.050000            0.250000</kPoint>
+            <kPoint weight="0.040000">0.350000            0.350000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.350000            0.250000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.350000            0.150000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.350000            0.050000            0.250000</kPoint>
+            <kPoint weight="0.040000">0.250000            0.250000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.250000            0.150000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.250000            0.050000            0.250000</kPoint>
+            <kPoint weight="0.040000">0.150000            0.150000            0.250000</kPoint>
+            <kPoint weight="0.080000">0.150000            0.050000            0.250000</kPoint>
+            <kPoint weight="0.040000">0.050000            0.050000            0.250000</kPoint>
+         </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
 <symmetryOperations>

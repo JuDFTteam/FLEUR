@@ -502,7 +502,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'kmxxc_fft',stars%kmxxc_fft)
       CALL io_read_attint0(groupID,'nxc3_fft',stars%nxc3_fft)
       CALL io_read_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
-      IF(fileFormatVersion.GE.32) THEN
+      IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
       END IF
 
@@ -1379,7 +1379,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'dvac',vacuum%dvac)
 
 !      IO of od_nq2 has been moved to stars IO starting with fileFormatVersion 32
-      IF (fileFormatVersion.LT.32) THEN
+      IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
       END IF
 
@@ -1628,7 +1628,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupID,'nmz',nmz)
       CALL io_read_attint0(groupID,'nvac',nvac)
-      IF(fileFormatVersion.LT.32) THEN
+      IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',od_nq2)
       END IF
       n_u = 0
@@ -1655,7 +1655,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
       CALL io_read_attint0(groupID,'ng3',ng3)
       CALL io_read_attint0(groupID,'ng2',ng2)
-      IF(fileFormatVersion.GE.32) THEN
+      IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',od_nq2)
       END IF
       CALL h5gclose_f(groupID, hdfError)
@@ -2468,7 +2468,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'nmzxy',nmzxy)
       CALL io_read_attint0(groupBID,'nmz',nmz)
       CALL io_read_attint0(groupBID,'nvac',nvac)
-      IF(fileFormatVersion.LT.32) THEN
+      IF(io_attexists(groupBID,'od_nq2')) THEN
          CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
       END IF
       IF(fileFormatVersion.GE.29) THEN
@@ -2522,7 +2522,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupBName)), groupBID, hdfError)
       CALL io_read_attint0(groupBID,'ng3',ng3)
       CALL io_read_attint0(groupBID,'ng2',ng2)
-      IF(fileFormatVersion.GE.32) THEN
+      IF(io_attexists(groupBID,'od_nq2')) THEN
          CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
       END IF
       CALL h5gclose_f(groupBID, hdfError)

@@ -399,6 +399,9 @@ CONTAINS
 
 
     !---> check closure of group
+    sym%nop=nops
+    sym%mrot=mmrot(:,:,index_op(:nops))
+    sym%tau=ttau(:,index_op(:nops))
     lclose=sym%closure()
 
     IF ( ( ns==1 ) .AND. ( .NOT. lclose ) ) THEN

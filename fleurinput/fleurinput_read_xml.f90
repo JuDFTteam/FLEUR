@@ -4,7 +4,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,old_version)
+       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,old_version)
     USE m_types_xml
 
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
@@ -25,11 +25,17 @@ CONTAINS
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
     TYPE(t_kpts),INTENT(OUT),OPTIONAL::kpts
+    TYPE(t_kpts),ALLOCATABLE,INTENT(INOUT),OPTIONAL::kptsArray(:)
     TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
     TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
+    CHARACTER(LEN=40),INTENT(OUT),OPTIONAL::kptsSelection(3)
     LOGICAL,INTENT(INOUT),OPTIONAL :: old_version
 
     TYPE(t_xml)::xml
+
+    INTEGER :: numNodes, iNode
+    CHARACTER(LEN=40) :: listName, altPurpose
+    CHARACTER(LEN=200) :: xPath
 
     !Call to init of xml type initialized XML reading and connects to inp.xml
     call xml%init(old_version)
@@ -55,6 +61,31 @@ CONTAINS
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
+    IF (present(kptsSelection)) THEN
+       kptsSelection(:) = ''
+       kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')))
+       numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
+       DO iNode = 1 , numNodes
+          WRITE (xPath, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/altKPointList[',iNode,']'
+          altPurpose = ''
+          altPurpose = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@purpose')))
+          IF (TRIM(ADJUSTL(altPurpose)).EQ.'bands') THEN
+             kptsSelection(2) = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@listName')))
+          END IF
+          IF (TRIM(ADJUSTL(altPurpose)).EQ.'GW') THEN
+             kptsSelection(3) = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@listName')))
+          END IF
+       END DO
+    END IF
+    IF (PRESENT(kptsArray)) THEN
+       numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+       IF(.NOT.ALLOCATED(kptsArray)) THEN
+          ALLOCATE(kptsArray(numNodes))
+       END IF
+       DO iNode = 1, numNodes
+          CALL kptsArray(iNode)%read_xml_kptsByIndex(xml,iNode)
+       END DO
+    END IF
 
     call xml%FreeResources()
   END SUBROUTINE fleurinput_read_xml

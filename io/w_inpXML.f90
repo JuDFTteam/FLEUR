@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kpts, enpara, gfinp, &
+      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, gfinp, &
       l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -53,7 +53,7 @@ CONTAINS
       TYPE(t_stars), INTENT(IN)   :: stars
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_vacuum), INTENT(IN)   :: vacuum
-      TYPE(t_kpts), INTENT(IN)     :: kpts
+      TYPE(t_kpts), INTENT(IN)     :: kptsArray(:)
       TYPE(t_oneD), INTENT(IN)     :: oneD
 
       TYPE(t_mpinp), INTENT(IN)    :: mpinp
@@ -66,6 +66,7 @@ CONTAINS
       TYPE(t_gfinp), INTENT(IN)    :: gfinp
       CLASS(t_enparaxml), INTENT(IN)   :: enpara
       CLASS(t_forcetheo), INTENT(IN):: forcetheo !nothing is done here so far....
+      CHARACTER(LEN=40)          :: kptsSelection(3) ! 1: default selection, 2: alternative for band structures, alternative for GW
       LOGICAL, INTENT(IN)        :: l_explicitIn, l_includeIn(4)
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
 
@@ -95,7 +96,7 @@ CONTAINS
 ! ..  Local Variables
       REAL     :: zc, sumWeight, occ(2)
       INTEGER  ::nw, idsprs, n1, n2
-      INTEGER ieq, i, k, na, n, ilo,iContour
+      INTEGER ieq, i, k, na, n, ilo,iContour, iKpts
       REAL s3, ah, a, hs2, rest
       LOGICAL l_hyb, ldum
       INTEGER :: ierr
@@ -217,13 +218,13 @@ CONTAINS
       WRITE (fileNum, 190) input%l_f, input%forcealpha, TRIM(mixingScheme), input%epsdisp, input%epsforce
 
       SELECT CASE (input%bz_integration)
-      CASE (0)
+      CASE (BZINT_METHOD_HIST)
          bzIntMode = 'hist'
-      CASE (1)
+      CASE (BZINT_METHOD_GAUSS)
          bzIntMode = 'gauss'
-      CASE (2)
+      CASE (BZINT_METHOD_TRIA)
          bzIntMode = 'tria'
-      CASE (3)
+      CASE (BZINT_METHOD_TETRA)
          bzIntMode = 'tetra'
       CASE DEFAULT
          CALL judft_error("Invalid brillouin zone integration mode",calledby="w_inpXML")
@@ -273,8 +274,23 @@ CONTAINS
 200   FORMAT('      <bzIntegration valenceElectrons="', f0.8, '" mode="', a, '" fermiSmearingEnergy="', f0.8, '">')
       WRITE (fileNum, 200) input%zelec, TRIM(ADJUSTL(bzIntMode)), input%tkb
 
+210   FORMAT('         <kPointListSelection listName="', a, '"/>')
+      WRITE (filenum, 210) TRIM(ADJUSTL(kptsSelection(1)))
+
+!211   FORMAT('         <altKPointList listName="', a, '" purpose="', a, '"/>')
+!      IF(kptsSelection(2).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(2))), 'bands'
+!      END IF
+!      IF(kptsSelection(3).NE.'') THEN
+!         WRITE (filenum, 211) TRIM(ADJUSTL(kptsSelection(3))), 'GW'
+!      END IF
+
       if (l_include(1)) THEN
-         call kpts%print_xml(fileNum)
+         WRITE (fileNum, '(a)') "         <kPointLists>"
+         DO iKpts = 1, SIZE(kptsArray)
+            CALL kptsArray(iKpts)%print_XML(fileNum)
+         END DO
+         WRITE (fileNum, '(a)') "         </kPointLists>"
       else
          WRITE (fileNum, '(a)') '         <!-- k-points included here -->'
          WRITE (fileNum, '(a)') '         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>'

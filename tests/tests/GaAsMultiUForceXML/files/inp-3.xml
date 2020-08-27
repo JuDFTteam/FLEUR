@@ -12,9 +12,12 @@
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
       <geometryOptimization l_f="T" forcealpha="1.00000000" force_converged="0.2" />
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-      <kPointList name="default" count="1">
-          <kPoint weight="    8.000000">    0.375000     0.375000     0.250000</kPoint>
-      </kPointList>
+         <kPointListSelection listName="default" />
+         <kPointLists>
+         <kPointList name="default" count="1">
+             <kPoint weight="    8.000000">    0.375000     0.375000     0.250000</kPoint>
+         </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <symmetryOperations>

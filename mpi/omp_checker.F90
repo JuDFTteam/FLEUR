@@ -2,7 +2,7 @@ module m_omp_checker
 
 contains
    subroutine omp_checker()
-      use omp_lib
+      !$ use omp_lib
       use m_judft
       USE m_constants
       use, intrinsic :: iso_c_binding

@@ -253,7 +253,6 @@ CONTAINS
       USE m_trafo
       USE m_io_hybinp
       use m_juDFT
-      use omp_lib
 
       IMPLICIT NONE
 

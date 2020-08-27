@@ -114,16 +114,16 @@ c======================================================================
 c
       tpi = 2.0 * pimach()
 c
-   
+
       WRITE (oUnit,'('' k-points generated with tetrahedron '',
      >                                              ''method'')')
       WRITE (oUnit,'(''# k-points generated with tetrahedron '',
      >                                              ''method'')')
       WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
       WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
-    
+
       CALL kvecon(
-     >            6,6,mkpt,mface,
+     >            mkpt,mface,
      >            nkpt,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,
      <            vktet )
 !
@@ -134,7 +134,7 @@ c
 ! --->      determine the volume of each tetrahedron
 !
       CALL tetcon(
-     >            6,6,mkpt,ndiv3,
+     >            mkpt,ndiv3,
      >            nkpt,voluni,vktet,
      =            nsym,
      <            ntet,voltet,ntetra)
@@ -185,7 +185,7 @@ c
            vkxyz(:,i) = vktet(:,i)
            WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
      +           ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
-        ENDDO  
+        ENDDO
         nkstar = nkpt
 
       ELSEIF ( kmidtet.EQ.1) THEN

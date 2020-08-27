@@ -426,8 +426,6 @@
       <xsd:attribute name="flipSpinPhi" default="0.0" type="xsd:string" use="optional"/>
       <xsd:attribute name="flipSpinTheta"  default="0.0"  type="xsd:string" use="optional"/>
       <xsd:attribute name="flipSpinScale"  default="F" type="FleurBool" use="optional"/>
-      <xsd:attribute name="magField" type="xsd:double" use="optional"/>
-      <xsd:attribute name="vcaAddCharge" type="xsd:double" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="AtomGroupsType">
@@ -454,6 +452,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="cFCoeffs" type="cFCoeffsOutputType"/>
       </xsd:sequence>
       <xsd:attribute name="species" type="xsd:string" use="required"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
@@ -647,7 +646,9 @@
 
    <xsd:complexType name="BZIntegrationType">
       <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="1" name="kPointList" type="KPointListType"/>
+         <xsd:element name="kPointListSelection" type="KPointListSelectionType"/>
+         <!--<xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointList" type="AltKPointListSelectionType"/>-->
+         <xsd:element name="kPointLists" type="KPointListsType"/>
       </xsd:sequence>
       <xsd:attribute name="valenceElectrons" type="xsd:string" use="optional"/>
       <xsd:attribute default="hist" name="mode" type="BZIntegrationModeEnum" use="optional"/>
@@ -752,6 +753,12 @@
       <xsd:attribute default="T" name="l_correctEtot" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
+   <xsd:complexType name="cFCoeffsOutputType">
+      <xsd:attribute name="chargeDensity" type="FleurBool" use="required"/>
+      <xsd:attribute name="potential" type="FleurBool" use="required"/>
+      <xsd:attribute default="F" name="remove4f" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
    <xsd:complexType name="GFGeneralType">
       <xsd:sequence>
          <xsd:element name="realAxis" type="ERealAxisType"/>
@@ -820,19 +827,52 @@
       <xsd:attribute name="numberPoints" type="xsd:positiveInteger" use="optional" default="1321"/>
    </xsd:complexType>
 
-
-
+   <xsd:complexType name="KPointListsType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="1" name="kPointList" type="KPointListType"/>
+      </xsd:sequence>
+   </xsd:complexType>
 
    <xsd:complexType name="KPointListType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="1" name="kPoint" type="KPointType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="tetraeder" type="TetraederType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="triangles" type="TrianglesType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="specialPoint" type="SpecialPointType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
+      <xsd:attribute default="unspecified" name="type" type="kPointListTypeEnum" use="optional"/>
       <xsd:attribute name="count" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="nx" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="ny" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="nz" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
+
+   <xsd:complexType name="KPointListSelectionType">
+      <xsd:attribute name="listName" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="AltKPointListSelectionType">
+      <xsd:attribute name="listName" type="xsd:string" use="required"/>
+      <xsd:attribute name="purpose" type="KPointListPurposeEnum" use="required"/>
+   </xsd:complexType>
+
+   <xsd:simpleType name="kPointListTypeEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="mesh"/>
+         <xsd:enumeration value="path"/>
+         <xsd:enumeration value="tetra"/>
+         <xsd:enumeration value="tria"/>
+         <xsd:enumeration value="SPEX-mesh"/>
+         <xsd:enumeration value="unspecified"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="KPointListPurposeEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="bands"/>
+         <xsd:enumeration value="GW"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="TetraederType">
       <xsd:sequence>
@@ -875,8 +915,9 @@
 
    <xsd:complexType name="KPointType">
       <xsd:simpleContent>
-         <xsd:extension base="Double3DVecType">
+         <xsd:extension base="String3DVecType">
             <xsd:attribute name="weight" type="xsd:string" use="required"/>
+            <xsd:attribute default="" name="label" type="xsd:string" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>

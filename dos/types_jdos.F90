@@ -88,9 +88,9 @@ end function
       ALLOCATE(thisjDOS%occ(0:3,2,atoms%nat),source=0.0)
    ELSE
      allocate(thisjDOS%dos(0,0,0))
-      ALLOCATE(thisjDOS%comp(1,1,1,1,1),source = 0.0)
-      ALLOCATE(thisjDOS%qmtp(1,1,1),source = 0.0)
-      ALLOCATE(thisjDOS%occ(1,1,1),source=0.0)
+      ALLOCATE(thisjDOS%comp(1,1,1,0,1),source = 0.0)
+      ALLOCATE(thisjDOS%qmtp(1,0,1),source = 0.0)
+      ALLOCATE(thisjDOS%occ(1,1,0),source=0.0)
    END IF
 
 END SUBROUTINE jDOS_init

@@ -9,7 +9,7 @@
       subroutine wann_write_nabla(
      >               mpi_comm,l_p0,filename,title,
      >               nbnd,fullnkpts,nwfs,
-     >               irank,isize,
+     >               irank,isize,l_unformatted,
      <               nablamat)
 c*************************************************************
 c     This subroutine is used to write several matrices to 
@@ -40,6 +40,7 @@ c*************************************************************
       integer, intent(in)    :: nwfs
 
       integer, intent(in)    :: irank,isize
+      logical, intent(in)    :: l_unformatted
 
       complex, intent(inout) :: nablamat(:,:,:,:)
 
@@ -85,6 +86,11 @@ c**********************************************************
       write(oUnit,*)"wn: fullnkpts=",fullnkpts
 
       if(l_p0)then
+       if(l_unformatted)then
+        open(305,file=trim(filename)//'_unf',form='unformatted')
+        write(305)nbnd,nbnd,fullnkpts
+        write(305)nablamat(1:3,1:nbnd,1:nbnd,1:fullnkpts)
+       else !l_unformatted   
        open (305,file=filename)
        write (305,*)title
        write (305,'(3i5)') nbnd,nbnd,fullnkpts
@@ -99,6 +105,7 @@ c**********************************************************
         enddo !j
        enddo !i
        enddo !ikpt
+       endif !l_unformatted 
        close(305)
       endif
 

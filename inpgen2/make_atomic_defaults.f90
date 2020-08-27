@@ -80,6 +80,7 @@ CONTAINS
             ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))
          ENDIF
          CALL ap(n)%add_defaults()
+         atoms%speciesName(n)=ap(n)%desc
          atoms%jri(n)=ap(n)%jri
          atoms%dx(n)=ap(n)%dx
          atoms%lmax(n)=ap(n)%lmax

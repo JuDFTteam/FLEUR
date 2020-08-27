@@ -565,6 +565,25 @@ CONTAINS
             CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
              endif
             endif           
+          ELSEIF(jobname.EQ.'torquers')THEN
+            this%l_torquers=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%torquersfmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+            endif
+          ELSEIF(jobname.EQ.'torque')THEN
+            this%l_torque=.TRUE.
+            if(l_param)then
+             read(param,*,iostat=stat) this%torquefmt
+             if(stat/=0)then
+            CALL juDFT_error("problem with jobparam=",calledby="wann_read_inp")
+             endif
+          endif                    
+            
+            
+            
           ELSEIF(jobname.EQ.'perpmagrs')THEN
             this%l_perpmagrs=.TRUE.
             if(l_param)then
@@ -703,20 +722,28 @@ CONTAINS
        END DO
     END IF
  
-    ALLOCATE(wannAtomList(xml%get_nat()))
-    DO i=1,xml%get_nat()
+    if(.not.this%l_atomlist)then
+        allocate(this%atomlist(xml%get_nat()))
+        do n=1,xml%get_nat()
+          this%atomlist(n)=n
+        enddo
+        this%atomlist_num=xml%get_nat()
+    else   
+     ALLOCATE(wannAtomList(xml%get_nat()))
+     DO i=1,xml%get_nat()
        wannAtomList(i)= evaluateFirstBoolOnly(xml%getAttributeValue(xml%posPath(i)//'/@wannier'))
-    ENDDO
-    this%atomlist_num = COUNT(wannAtomList)
-    n=0
-    DO i=1,xml%get_nat()
+     ENDDO
+     this%atomlist_num = COUNT(wannAtomList)
+     n=0
+     DO i=1,xml%get_nat()
        IF (wannAtomList(i)) THEN
           n=n+1
           this%atomlist(n) = i
        ENDIF
-    ENDDO
+     ENDDO
+     DEALLOCATE(wannAtomList)
+    endif
 
-    DEALLOCATE(wannAtomList)
     if(this%l_unformatted)then
         this%socmatvecfmt=2
         this%socmatvecrsfmt=2

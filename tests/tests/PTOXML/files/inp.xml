@@ -11,9 +11,12 @@
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <bzIntegration valenceElectrons="42.00000000" mode="hist" fermiSmearingEnergy=".00331000">
+         <kPointListSelection listName="default" />
+         <kPointLists>
          <kPointList name="default" count="1">
             <kPoint weight="    8.000000">    0.250000     0.250000     0.250000</kPoint>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <symmetryOperations>

@@ -5,13 +5,14 @@ CONTAINS
 ! once the file "bands.1" and "bands.2" are created, activate with:
 ! gnuplot < band.gnu > band.ps
 !----------------------------------------------------------------------
-      SUBROUTINE gnuplot_BS(kpts,cell,jspins)
+      SUBROUTINE gnuplot_BS(kpts,title,cell,jspins)
       use m_types_cell
       use m_types_kpts
       IMPLICIT NONE
       type(t_kpts),intent(in)  :: kpts
       type(t_cell),intent(in)  :: cell
       INTEGER, INTENT (IN)     :: jspins
+      CHARACTER(LEN=*), INTENT(IN) :: title
       CHARACTER(len=1) :: ssy
       real   :: d(kpts%numSpecialPoints),vkr(3),vkr_prev(3)
 
@@ -35,7 +36,7 @@ CONTAINS
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE (27,904) kpts%name
+      WRITE (27,'(3a)') 'set title "', TRIM(ADJUSTL(title)), '"'
       DO n = 1, kpts%numSpecialPoints
         WRITE (27,905) d(n),d(n)
       ENDDO
@@ -79,19 +80,18 @@ CONTAINS
       WRITE (27,913)
       CLOSE (27)
 
- 900  FORMAT ('set terminal postscript enhanced "Times-Roman" 20')
+ 900  FORMAT ('set terminal postscript enhanced color "Times-Roman" 20')
  901  FORMAT ('set xlabel ""')
  902  FORMAT ('set ylabel "E - E_F (eV)"')
  903  FORMAT ('set nokey')
- 904  FORMAT ('set title "',10a8,'"')
  905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
  906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
 #ifdef CPP_AIX
  907  FORMAT ('set xtics ("',a1,'"',f9.5,', \\')
  908  FORMAT ('           "',a1,'"',f9.5,', \\')
 #else
- 907  FORMAT ('set xtics ("',a1,'"',f9.5,', \ ')
- 908  FORMAT ('           "',a1,'"',f9.5,', \ ')
+ 907  FORMAT ('set xtics ("',a1,'"',f9.5,', \')
+ 908  FORMAT ('           "',a1,'"',f9.5,', \')
 #endif
  909  FORMAT ('           "',a1,'"',f9.5,'  )')
  910  FORMAT ('set ytics -8,2,4')
@@ -99,8 +99,8 @@ CONTAINS
  911  FORMAT ('plot [0:',f9.5,'] [-9:5] \\')
  912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \\')
 #else
- 911  FORMAT ('plot [0:',f9.5,'] [-9:5] \ ')
- 912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \ ')
+ 911  FORMAT ('plot [0:',f9.5,'] [-9:5] \')
+ 912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \')
 #endif
  913  FORMAT ('"bands.1" using 1:($2+0.00)  w p pt  7 ps 0.5')
  914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')

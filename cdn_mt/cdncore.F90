@@ -150,6 +150,9 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
    IF (input%kcrel==0) THEN
       IF (fmpi%irank==0) THEN
          CALL writeCoreDensity(input,atoms,rhTemp,tec,qint)
+         outDen%mtCore = rhTemp
+         outDen%tec = tec
+         outDen%qint = qint
       END IF
       IF ((input%gw==1 .or. input%gw==3).AND.(fmpi%irank==0)) CLOSE(15)
    END IF

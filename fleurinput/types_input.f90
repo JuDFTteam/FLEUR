@@ -6,6 +6,7 @@
 
 MODULE m_types_input
   USE m_judfT
+  USE m_constants
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
@@ -41,8 +42,8 @@ MODULE m_types_input
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
   REAL    :: tkb=0.001
-  INTEGER :: bz_integration=0
-  LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=3
+  INTEGER :: bz_integration=BZINT_METHOD_HIST
+  LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
   LOGICAL :: l_bmt=.FALSE.
   !INTEGER:: scale
   INTEGER:: kcrel =0
@@ -162,12 +163,16 @@ SUBROUTINE read_xml_input(this,xml)
  TYPE(t_xml),INTENT(INOUT)  ::xml
 
  CHARACTER(len=100):: valueString,xpathA,xpathB
- INTEGER:: numberNodes,nodeSum
+ INTEGER:: numberNodes,nodeSum, i
 
  !TODO! these switches should be in the inp-file
  this%l_core_confpot=.TRUE. !former CPP_CORE
  this%l_useapw=.FALSE.   !former CPP_APW
  this%comment =  xml%GetAttributeValue('/fleurInput/comment')
+ DO i = 1, LEN(this%comment)
+    IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '
+ END DO
+ this%comment = TRIM(ADJUSTL(this%comment))
  this%rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
  this%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
 
@@ -235,13 +240,13 @@ SUBROUTINE read_xml_input(this,xml)
  valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
  SELECT CASE (valueString)
  CASE ('hist')
-    this%bz_integration = 0
+    this%bz_integration = BZINT_METHOD_HIST
  CASE ('gauss')
-    this%bz_integration = 1
+    this%bz_integration = BZINT_METHOD_GAUSS
  CASE ('tria')
-    this%bz_integration = 2
+    this%bz_integration = BZINT_METHOD_TRIA
  CASE ('tetra')
-    this%bz_integration = 3
+    this%bz_integration = BZINT_METHOD_TETRA
  CASE DEFAULT
     CALL juDFT_error('Invalid bzIntegration mode selected!')
  END SELECT
