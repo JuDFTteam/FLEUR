@@ -431,7 +431,7 @@ C     The following statement used to have a stop in it.
 C     If the word TETCON5 appears you have failed the < 1.0D-5 test.
 C
       if ( abs(vt).gt.eps1 ) THEN
-         write(iofile,'(''  tetcon5  '')')
+         write(oUnit,'(''  tetcon5  '')')
       endif
       RETURN
       END SUBROUTINE tetcon
