@@ -225,9 +225,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    ENDIF
 
    !Are there requests for crystal field outputs
-   IF(PRESENT(hub1data).AND.fmpi%irank.EQ.0 .AND. &
+   IF(PRESENT(hub1data).AND. &
       (ANY(atoms%l_outputCFcdn(:)).OR.ANY(atoms%l_outputCFpot(:)))) THEN
-      CALL writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data)
+      IF(fmpi%irank==0) CALL writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data)
       CALL juDFT_end("Crystal Field Output written",fmpi%irank)
    ENDIF
 
