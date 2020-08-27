@@ -52,7 +52,7 @@ CONTAINS
 
     eFermi = results%ef
 
-    IF(results%bandgap.GE.8.0*input%tkb) THEN
+    IF(results%bandgap.GE.8.0*input%tkb*hartree_to_ev_const) THEN
        WRITE(*,*) 'Fermi energy correction for insulators:'
        IF(.NOT.l_error) THEN
           eFermi = MAX(eFermi,eFermiPrev)
