@@ -80,6 +80,7 @@ CONTAINS
     l_performSpinavg = .FALSE.
     IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
 
+    qmtl = 0
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
@@ -92,8 +93,6 @@ CONTAINS
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
        ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
     ENDIF
-
-    qmtl = 0
 
     !$OMP DO
     DO itype = 1,atoms%ntype
