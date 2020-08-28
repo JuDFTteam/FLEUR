@@ -6,11 +6,11 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM )
+   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria)
 
 #DOS related tests, need to be enabled again!
 #set(SerialParallelTests ${SerialParallelTests}
-#  Fe_1l_Tria   CuDOSXML CoMCDXML SmAtomjDOS )
+#  CoMCDXML )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -37,7 +37,7 @@ set(FFNTests
 
 
 if (FLEUR_USE_HDF5)
-    set(SerialParallelTests ${SerialParallelTests} CuBandXML ${FFNTests})
+    set(SerialParallelTests ${SerialParallelTests} CuBandXML CuDOSXML SmAtomjDOS ${FFNTests})
 endif()
 
 #Check if all tests (including those running for a long time) should be executed
