@@ -7,23 +7,23 @@ MODULE m_ptdos
    !-------------------------------------------------------------------------
    ! Density of states calculated by linear triangular method
    !-------------------------------------------------------------------------
-   USE m_types
+   USE m_types_kpts
    USE m_tetsrt
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE ptdos(jspins,ne,ndos,nbands,kpts,ev,qal,eGrid,g)
+   SUBROUTINE ptdos(jspins,kpts,eGrid,ev,qal,g)
 
-      INTEGER,       INTENT(IN)  :: ne,jspins,ndos,nbands
+      INTEGER,       INTENT(IN)  :: jspins
       TYPE(t_kpts),  INTENT(IN)  :: kpts
-      REAL,          INTENT(IN)  :: qal(:,:,:)  !(ndos,nbands,nkpt)
-      REAL,          INTENT(IN)  :: eGrid(:)    !(ne)
-      REAL,          INTENT(IN)  :: ev(:,:)     !(nbands,nkpt)
-      REAL,          INTENT(OUT) :: g(:,:)      !(ne,ndos)
+      REAL,          INTENT(IN)  :: qal(:,:,:)  !(nbands,nkpt,jspins)
+      REAL,          INTENT(IN)  :: eGrid(:)
+      REAL,          INTENT(IN)  :: ev(:,:,:)   !(nbands,nkpt,jspins)
+      REAL,          INTENT(OUT) :: g(:,:)      !(ne,jspins)
 
-      INTEGER :: idos,iBand,itria,iGrid
+      INTEGER :: iBand,itria,iGrid,ispin
       INTEGER :: ind(3),k(3)
       REAL    :: sfac,fa
       REAL    :: ei(3)
@@ -32,31 +32,30 @@ MODULE m_ptdos
       sfac = 2.0*(3.0-jspins)
 
       g = 0.0
+      DO ispin = 1, jspins
+         DO itria = 1 , kpts%ntet
+            fa = sfac*kpts%voltet(itria)/kpts%ntet
+            k = kpts%ntetra(:,itria)
+            DO iBand = 1 , SIZE(ev,1)
+               !---------------------------
+               !eigenvalues at the corners
+               !of the current triangle
+               !---------------------------
+               ei = ev(iBand,k,ispin)
 
-      DO itria = 1 , kpts%ntet
-         fa = sfac*kpts%voltet(itria)/kpts%ntet
-         k = kpts%ntetra(:,itria)
-         DO iBand = 1 , nbands
-            !---------------------------
-            !eigenvalues at the corners
-            !of the current triangle
-            !---------------------------
-            ei = ev(iBand,k)
+               !sort in ascending order
+               ind = tetsrt(ei)
 
-            !sort in ascending order
-            ind = tetsrt(ei)
+               !
+               !calculate partial densities of states
+               !
 
-            !
-            !calculate partial densities of states
-            !
-
-            DO idos = 1 , ndos
-               DO iGrid = 1 , ne
-                  g(iGrid,idos) = g(iGrid,idos) + fa &
-                                  * dostet( eGrid(iGrid),ei(ind),qal(idos,iBand,k(ind)) )
+               DO iGrid = 1 , SIZE(eGrid)
+                  g(iGrid,ispin) = g(iGrid,ispin) + fa &
+                                  * dostet( eGrid(iGrid),ei(ind),qal(iBand,k(ind),ispin) )
                ENDDO
-            ENDDO
 
+            ENDDO
          ENDDO
       ENDDO
 

@@ -219,6 +219,8 @@ subroutine write_dos(eigdos,hdf_id)
     use m_types_banddos
     use m_types_input
     use m_dosbin
+    use m_ptdos
+    use m_tetra_dos
     use m_dostetra
     use m_types_kpts
 
@@ -245,11 +247,21 @@ subroutine write_dos(eigdos,hdf_id)
 
     DO n=1,eigdos%get_num_weights()
       print *,eigdos%name_of_dos,n,eigdos%get_num_weights()
-      if (kpts%ntet==0) then
+      SELECT CASE(input%bz_integration)
+
+      CASE(BZINT_METHOD_HIST, BZINT_METHOD_GAUSS)
         call dos_bin(input%jspins,kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
-      ELSE
+      CASE(BZINT_METHOD_TRIA)
+        IF(input%film) THEN
+          CALL ptdos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        ELSE
+          CALL tetra_dos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_neig(),eigdos%get_eig(),&
+                         eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        ENDIF
+      CASE(BZINT_METHOD_TETRA)
         CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
-      endif
+      END SELECT
+
     end do
   END subroutine
 
