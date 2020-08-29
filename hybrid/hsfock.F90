@@ -121,7 +121,7 @@ CONTAINS
                    c_phase=c_phase_k)    
 #ifdef CPP_MPI)
       call timestart("Post read_z Barrier: hsfock")
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Barrier(MPI_COMM_WORLD, ok)
       call timestop("Post read_z Barrier: hsfock")
 #endif
 
