@@ -97,7 +97,7 @@ CONTAINS
          if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
          call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv, input, ikpt, &
                      jsp, z(ikpt), c_phase=c_phase)
-#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
+#ifdef(CPP_MPI) 
          call timestart("Post read_z Barrier: checkolap")
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          call timestop("Post read_z Barrier: checkolap")
