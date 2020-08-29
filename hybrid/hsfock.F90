@@ -119,7 +119,7 @@ CONTAINS
       call z_k%init(fi%sym%invs, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)    
-#ifdef CPP_MPI)
+#ifdef CPP_MPI
       call timestart("Post read_z Barrier: hsfock")
       call MPI_Barrier(MPI_COMM_WORLD, ok)
       call timestop("Post read_z Barrier: hsfock")
