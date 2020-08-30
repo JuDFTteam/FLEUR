@@ -84,29 +84,30 @@ contains
       !     Determine cutoff radii for real-space and Fourier-space summation
       ! (1) real space
       call timestart("determine cutoff radii")
-      a = 1
-1     rexp = EXP(-a)
-      g(0) = rexp/a*(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
-      g(1) = rexp/a**2*(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
-      g(2) = rexp/a**3*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16 &
-                                                          *(1 + a/9))))))
-      g(3) = rexp/a**4*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                                   *(1 + a/8)))))))
-      g(4) = rexp/a**5*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                                   *(1 + a/7*(1 + a/8*(1 + a/10)))))))))
-      g(5) = rexp/a**6*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                                   *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10))))))))))
-      g(6) = rexp/a**7*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                                   *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
-      g(7) = rexp/a**8*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                                   *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
-      DO l = 8, 2*hybinp%lexp
-         g(l) = a**(-l - 1)
-      END DO
-      IF (ANY(g > convpar/10)) THEN ! one digit more accuracy for real-space sum
+
+      a = 0
+      g = 1e18
+      do while(ANY(g > convpar/10))
          a = a + 1
-         GOTO 1
-      END IF
+         rexp = EXP(-a)
+         g(0) = rexp/a*(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
+         g(1) = rexp/a**2*(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
+         g(2) = rexp/a**3*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16 &
+                                                            *(1 + a/9))))))
+         g(3) = rexp/a**4*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
+                                                                     *(1 + a/8)))))))
+         g(4) = rexp/a**5*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
+                                                                     *(1 + a/7*(1 + a/8*(1 + a/10)))))))))
+         g(5) = rexp/a**6*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
+                                                                     *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10))))))))))
+         g(6) = rexp/a**7*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
+                                                                     *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
+         g(7) = rexp/a**8*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
+                                                                     *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
+         DO l = 8, 2*hybinp%lexp
+            g(l) = a**(-l - 1)
+         END DO
+      enddo
       rad = a/scale
       call timestop("determine cutoff radii")
 
