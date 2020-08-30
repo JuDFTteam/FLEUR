@@ -1,4 +1,9 @@
 module m_structureconstant
+   USE m_types
+   USE m_juDFT
+   USE m_constants
+   USE m_rorder, ONLY: rorderp, rorderpf
+   use m_ylm
 contains
    !     -----------------------------------------------------------------------------------------------
 
@@ -15,22 +20,12 @@ contains
    !
 
    SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, fmpi)
-
-      USE m_juDFT
-      USE m_types
-      USE m_constants
-      USE m_rorder, ONLY: rorderp, rorderpf
-      use m_ylm
       IMPLICIT NONE
-
-      TYPE(t_mpi), INTENT(IN)   :: fmpi
-
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_hybinp), INTENT(IN) :: hybinp
-
       TYPE(t_cell), INTENT(IN)   :: cell
-
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-      TYPE(t_kpts), INTENT(IN)    :: kpts
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_kpts), INTENT(IN)   :: kpts
       ! - scalars -
 
       ! - arrays -
@@ -46,19 +41,18 @@ contains
       REAL                      ::  pref, rexp
       REAL                      ::  scale
 
-      COMPLEX                   ::  cdum, cexp
+      COMPLEX                   ::  cexp
 
       LOGICAL, SAVE          ::  first = .TRUE.
       ! - local arrays -
       INTEGER                   ::  conv(0:2*hybinp%lexp)
-      INTEGER, ALLOCATABLE     ::  pnt(:), ptsh(:, :)
+      INTEGER, ALLOCATABLE     ::  ptsh(:, :)
 
-      REAL                      ::  rc(3), ra(3), k(3), ki(3), ka(3), tmp_vec(3)
+      REAL                      ::  k(3), ki(3), ka(3)
       REAL                      ::  convpar(0:2*hybinp%lexp), g(0:2*hybinp%lexp)
       REAL, ALLOCATABLE     ::  radsh(:)
 
       COMPLEX                   ::  y((2*hybinp%lexp + 1)**2)
-      COMPLEX                   ::  shlp((2*hybinp%lexp + 1)**2, kpts%nkpt)
       REAL, PARAMETER           :: CONVPARAM = 1e-18
       ! Do some additional shells ( real-space and Fourier-space sum )
       INTEGER, PARAMETER        :: ADDSHELL1 = 40
@@ -140,114 +134,8 @@ contains
          WRITE (oUnit, '(/A)') 'Real-space sum'
       END IF
 
-      !
-      !     Determine atomic shells
-      call timestart("determine atomic shell")
-      CALL getshells(ptsh, nptsh, radsh, nshell, rad, cell%amat, first)
-      call timestop("determine atomic shell")
-
-      allocate (pnt(nptsh))
-      structconst = 0
-
-      !
-      !     Real-space sum
-      !
-      call timestart("realspace sum")
-      DO ic2 = 1, atoms%nat
-         DO ic1 = 1, atoms%nat
-            IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
-            !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
-            tmp_vec = atoms%taual(:, ic2) - atoms%taual(:, ic1)
-            call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, rc, 1)
-            DO i = 1, nptsh
-               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
-               tmp_vec = real(ptsh(:, i))
-               call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
-               ra = ra + rc
-               a = norm2(ra)
-               radsh(i) = a
-            END DO
-            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
-            ptsh = ptsh(:, pnt)
-            radsh = radsh(pnt)
-            maxl = 2*hybinp%lexp
-            a1 = HUGE(a1)  ! stupid initial value
-            ishell = 1
-            conv = HUGE(i)
-            shlp = 0
-            DO i = 1, nptsh
-               IF (ALL(conv /= HUGE(i))) EXIT
-               IF (i /= 1) THEN
-                  IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
-               ENDIF
-               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
-               tmp_vec = real(ptsh(:, i))
-               call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
-               ra = ra + rc
-
-               a = scale*norm2(ra)
-               IF (abs(a) < 1e-12) THEN
-                  CYCLE
-               ELSE IF (ABS(a - a1) > 1e-10) THEN
-                  a1 = a
-                  rexp = EXP(-a)
-                  IF (ishell <= conv(0)) g(0) = rexp/a &
-                                                *(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
-                  IF (ishell <= conv(1)) g(1) = rexp/a**2 &
-                                                *(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
-                  IF (ishell <= conv(2)) g(2) = rexp/a**3 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16*(1 + a/9))))))
-                  IF (ishell <= conv(3)) g(3) = rexp/a**4 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/8)))))))
-                  IF (ishell <= conv(4)) g(4) = rexp/a**5 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8 &
-                                                                                                               *(1 + a/10)))))))))
-                  IF (ishell <= conv(5)) g(5) = rexp/a**6 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                                                                        *(1 + a/10))))))))))
-                  IF (ishell <= conv(6)) g(6) = rexp/a**7 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
-                  IF (ishell <= conv(7)) g(7) = rexp/a**8 &
-                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
-                  DO l = 8, maxl
-                     IF (ishell <= conv(l)) g(l) = a**(-l - 1)
-                  END DO
-                  DO l = 0, maxl
-                     IF (conv(l) == HUGE(i) .AND. g(l) < convpar(l)/10) conv(l) = ishell + ADDSHELL1
-                  END DO
-               END IF
-               IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
-               call ylm4(maxl, ra, y)
-               y = CONJG(y)
-               !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
-               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
-               !$OMP collapse(2)
-               DO ikpt = 1, kpts%nkpt
-                  DO l = 0, maxl
-                     rdum = dot_product(kpts%bk(:, ikpt), ptsh(:, i))
-                     cexp = EXP(ImagUnit*tpi_const*rdum)
-                     lm = l**2
-                     IF (ishell <= conv(l)) THEN
-                        cdum = cexp*g(l)
-                        DO M = -l, l
-                           lm = lm + 1
-                           shlp(lm, ikpt) = shlp(lm, ikpt) + cdum*y(lm)
-                        END DO
-                     END IF
-                  END DO
-               END DO
-               !$OMP END PARALLEL DO
-            END DO
-            structconst(:, ic1, ic2, :) = shlp
-         END DO
-      END DO
-      call timestop("realspace sum")
-
-      deallocate (ptsh, radsh)
-
+      call realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+      
       IF (first) WRITE (oUnit, '(/A)') 'Fourier-space sum'
 
       !
@@ -475,4 +363,138 @@ contains
          nptsh, ' lattice points and', nshell, ' shells.'
 
    END SUBROUTINE getshells
+
+   subroutine realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+      implicit none 
+      type(t_atoms), intent(in) :: atoms 
+      type(t_cell), intent(in)  :: cell 
+      type(t_hybinp), intent(in):: hybinp
+      type(t_kpts), intent(in)  :: kpts
+      logical, intent(in)       :: first
+      real, intent(in)          :: rad, scale, convpar(0:2*hybinp%lexp)
+      real, intent(inout)       :: g(0:2*hybinp%lexp), a, a1
+      complex, intent(inout)    :: structconst(:,:,:,:)
+      
+      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell
+      integer ::  conv(0:2*hybinp%lexp)
+      integer, allocatable ::  pnt(:), ptsh(:,:)
+      INTEGER, PARAMETER        :: ADDSHELL1 = 40
+      INTEGER, PARAMETER        :: ADDSHELL2 = 0
+
+      real :: rdum, rexp, ra(3),  rc(3), tmp_vec(3)
+      real, allocatable    ::  radsh(:)
+
+      complex  ::  shlp((2*hybinp%lexp + 1)**2, kpts%nkpt)
+      COMPLEX  ::  cdum, cexp, y((2*hybinp%lexp + 1)**2)
+
+      rdum = cell%vol**(1.0/3) 
+
+      !
+      !     Determine atomic shells
+      call timestart("determine atomic shell")
+      CALL getshells(ptsh, nptsh, radsh, nshell, rad, cell%amat, first)
+      call timestop("determine atomic shell")
+
+      allocate (pnt(nptsh))
+      structconst = 0
+
+      !
+      !     Real-space sum
+      !
+      call timestart("realspace sum")
+      DO ic2 = 1, atoms%nat
+         DO ic1 = 1, atoms%nat
+            IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
+            !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
+            tmp_vec = atoms%taual(:, ic2) - atoms%taual(:, ic1)
+            call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, rc, 1)
+            DO i = 1, nptsh
+               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               tmp_vec = real(ptsh(:, i))
+               call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
+               ra = ra + rc
+               a = norm2(ra)
+               radsh(i) = a
+            END DO
+            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
+            ptsh = ptsh(:, pnt)
+            radsh = radsh(pnt)
+            maxl = 2*hybinp%lexp
+            a1 = HUGE(a1)  ! stupid initial value
+            ishell = 1
+            conv = HUGE(i)
+            shlp = 0
+            DO i = 1, nptsh
+               IF (ALL(conv /= HUGE(i))) EXIT
+               IF (i /= 1) THEN
+                  IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
+               ENDIF
+               !ra = MATMUL(cell%amat, ptsh(:, i)) + rc
+               tmp_vec = real(ptsh(:, i))
+               call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
+               ra = ra + rc
+
+               a = scale*norm2(ra)
+               IF (abs(a) < 1e-12) THEN
+                  CYCLE
+               ELSE IF (ABS(a - a1) > 1e-10) THEN
+                  a1 = a
+                  rexp = EXP(-a)
+                  IF (ishell <= conv(0)) g(0) = rexp/a &
+                                                *(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
+                  IF (ishell <= conv(1)) g(1) = rexp/a**2 &
+                                                *(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
+                  IF (ishell <= conv(2)) g(2) = rexp/a**3 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16*(1 + a/9))))))
+                  IF (ishell <= conv(3)) g(3) = rexp/a**4 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/8)))))))
+                  IF (ishell <= conv(4)) g(4) = rexp/a**5 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8 &
+                                                                                                               *(1 + a/10)))))))))
+                  IF (ishell <= conv(5)) g(5) = rexp/a**6 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10))))))))))
+                  IF (ishell <= conv(6)) g(6) = rexp/a**7 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
+                  IF (ishell <= conv(7)) g(7) = rexp/a**8 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
+                  DO l = 8, maxl
+                     IF (ishell <= conv(l)) g(l) = a**(-l - 1)
+                  END DO
+                  DO l = 0, maxl
+                     IF (conv(l) == HUGE(i) .AND. g(l) < convpar(l)/10) conv(l) = ishell + ADDSHELL1
+                  END DO
+               END IF
+               IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
+               call ylm4(maxl, ra, y)
+               y = CONJG(y)
+               !$OMP PARALLEL DO default(none) schedule(dynamic) &
+               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
+               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
+               !$OMP collapse(2)
+               DO ikpt = 1, kpts%nkpt
+                  DO l = 0, maxl
+                     rdum = dot_product(kpts%bk(:, ikpt), ptsh(:, i))
+                     cexp = EXP(ImagUnit*tpi_const*rdum)
+                     lm = l**2
+                     IF (ishell <= conv(l)) THEN
+                        cdum = cexp*g(l)
+                        DO M = -l, l
+                           lm = lm + 1
+                           shlp(lm, ikpt) = shlp(lm, ikpt) + cdum*y(lm)
+                        END DO
+                     END IF
+                  END DO
+               END DO
+               !$OMP END PARALLEL DO
+            END DO
+            structconst(:, ic1, ic2, :) = shlp
+         END DO
+      END DO
+      call timestop("realspace sum")
+
+      deallocate (ptsh, radsh)
+   end subroutine realspace_sum
 end module m_structureconstant
