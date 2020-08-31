@@ -4,6 +4,7 @@ module m_structureconstant
    USE m_constants
    USE m_rorder, ONLY: rorderp, rorderpf
    use m_ylm
+   use mpi
 contains
    !     -----------------------------------------------------------------------------------------------
 
@@ -142,7 +143,7 @@ contains
          WRITE (oUnit, '(/A)') 'Real-space sum'
       END IF
 
-      call realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+      call realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
       
       IF (first) WRITE (oUnit, '(/A)') 'Fourier-space sum'
 
@@ -372,18 +373,19 @@ contains
 
    END SUBROUTINE getshells
 
-   subroutine realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+   subroutine realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       type(t_cell), intent(in)  :: cell 
       type(t_hybinp), intent(in):: hybinp
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       type(t_kpts), intent(in)  :: kpts
       logical, intent(in)       :: first
       real, intent(in)          :: rad, scale, convpar(0:2*hybinp%lexp)
       real, intent(inout)       :: g(0:2*hybinp%lexp), a, a1
       complex, intent(inout)    :: structconst(:,:,:,:)
       
-      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell
+      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell, ierr
       integer ::  conv(0:2*hybinp%lexp)
       integer, allocatable ::  pnt(:), ptsh(:,:)
       INTEGER, PARAMETER        :: ADDSHELL1 = 40
@@ -410,7 +412,7 @@ contains
       !     Real-space sum
       !
       call timestart("realspace sum")
-      DO ic2 = 1, atoms%nat
+      DO ic2 = 1+fmpi%irank, atoms%nat, fmpi%isize
          !$OMP PARALLEL DO default(none) &
          !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
          !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
@@ -503,6 +505,7 @@ contains
          END DO
          !$OMP END PARALLEL DO
       END DO
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, structconst, size(structconst), MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       call timestop("realspace sum")
       deallocate (ptsh, radsh)
    end subroutine realspace_sum
