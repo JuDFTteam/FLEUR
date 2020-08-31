@@ -67,7 +67,7 @@ MODULE m_writeCFOutput
             !Decompose potential into V(r)
             !                          lm
             DO ispin =1, input%jspins
-               vTotProcess%mt(:atoms%jri(iType),0,iType,ispin) = atoms%rmsh(:atoms%jri(iType),iType)*vTotProcess%mt(:atoms%jri(iType),0,iType,ispin)/sfp_const
+               vTotProcess%mt(:atoms%jri(iType),0,iType,ispin) = sfp_const * vTotProcess%mt(:atoms%jri(iType),0,iType,ispin)/atoms%rmsh(:atoms%jri(iType),iType)
             ENDDO
             IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
             ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
