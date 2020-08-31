@@ -135,7 +135,6 @@ contains
       !    GOTO 2
       ! END IF
       rrad = a*scale
-      write (*,*) "rrad =", rrad
       call timestop("fourier space")
 
       IF (first) THEN
@@ -412,6 +411,12 @@ contains
       !
       call timestart("realspace sum")
       DO ic2 = 1, atoms%nat
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
+         !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
+         !$OMP private(rdum, cexp, lm, cdum)&
+         !$OMP firstprivate(ptsh, radsh) schedule(dynamic,1) &
+         !$OMP lastprivate(a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
             !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
@@ -422,8 +427,7 @@ contains
                tmp_vec = real(ptsh(:, i))
                call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
                ra = ra + rc
-               a = norm2(ra)
-               radsh(i) = a
+               radsh(i) = norm2(ra)
             END DO
             CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
             ptsh = ptsh(:, pnt)
@@ -479,10 +483,7 @@ contains
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
                call ylm4(maxl, ra, y)
                y = CONJG(y)
-               !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
-               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
-               !$OMP collapse(2)
+               
                DO ikpt = 1, kpts%nkpt
                   DO l = 0, maxl
                      rdum = dot_product(kpts%bk(:, ikpt), ptsh(:, i))
@@ -497,13 +498,12 @@ contains
                      END IF
                   END DO
                END DO
-               !$OMP END PARALLEL DO
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
+         !$OMP END PARALLEL DO
       END DO
       call timestop("realspace sum")
-
       deallocate (ptsh, radsh)
    end subroutine realspace_sum
 end module m_structureconstant
