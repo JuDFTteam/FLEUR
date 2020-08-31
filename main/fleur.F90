@@ -67,6 +67,7 @@ CONTAINS
       USE m_plot
       USE m_usetup
       USE m_hubbard1_setup
+      USE m_writeCFOutput
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
 #endif
