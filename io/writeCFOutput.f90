@@ -23,7 +23,7 @@ MODULE m_writeCFOutput
 
       INTEGER, PARAMETER :: lcf = 3
 
-      INTEGER :: iType,l,m,lm,io_error,iGrid
+      INTEGER :: iType,l,m,lm,io_error,iGrid,ispin
       REAL    :: n_0Norm
       LOGICAL :: processPot
 
@@ -32,11 +32,13 @@ MODULE m_writeCFOutput
       REAL :: n_0(atoms%jmtd)
 
       TYPE(t_gradients) :: grad
+      TYPE(t_potden) :: vTotProcess
 
       processPot = .FALSE.
       IF(PRESENT(pot)) processPot = pot
 
       IF(processPot) THEN
+         vTotProcess = vTot
          ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
          CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
       ENDIF
@@ -64,9 +66,12 @@ MODULE m_writeCFOutput
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
+            DO ispin =1, input%jspins
+               vTotProcess%mt(:atoms%jri(iType),0,iType,ispin) = atoms%rmsh(:atoms%jri(iType),iType)*vTotProcess%mt(:atoms%jri(iType),0,iType,ispin)/sfp_const
+            ENDDO
             IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
             ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
-            CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
+            CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTotProcess%mt(:,0:,iType,:),iType,noco,grad,vTotch)
             !modified mt_from_grid with lm index
             vlm = cmplx_0
             CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
