@@ -108,13 +108,12 @@ CONTAINS
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
 
-      COMPLEX     :: structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt)             ! nw = 1
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
-      COMPLEX, ALLOCATABLE   :: structconst1(:, :)
+      COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
-      INTEGER                    :: ishift, ishift1
+      INTEGER                    :: ishift, ishift1, ierr
       INTEGER                    :: iatom, iatom1, entry_len
       INTEGER                    :: indx1, indx2, indx3, indx4
       TYPE(t_mat)                :: coul_mtmt, mat, coulmat, smat, tmp
@@ -124,6 +123,8 @@ CONTAINS
       call timestart("prep in coulomb")
       if (fmpi%is_root()) write (*, *) "start of coulomb calculation"
 
+      allocate(structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt), stat=ierr)
+      if(ierr /= 0) call judft_error("can't allocate structconst. error: " // int2str(ierr))
       call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
 
       svol = SQRT(fi%cell%vol)
