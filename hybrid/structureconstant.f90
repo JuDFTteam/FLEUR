@@ -43,7 +43,8 @@ contains
 
       COMPLEX                   ::  cexp
 
-      LOGICAL, SAVE          ::  first = .TRUE.
+      LOGICAL, SAVE             ::  first = .TRUE.
+      logical                   ::  run_loop
       ! - local arrays -
       INTEGER                   ::  conv(0:2*hybinp%lexp)
       INTEGER, ALLOCATABLE     ::  ptsh(:, :)
@@ -86,8 +87,8 @@ contains
       call timestart("determine cutoff radii")
 
       a = 0
-      g = 1e18
-      do while(ANY(g > convpar/10))
+      run_loop = .True.
+      do while(run_loop)
          a = a + 1
          rexp = EXP(-a)
          g(0) = rexp/a*(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
@@ -107,27 +108,34 @@ contains
          DO l = 8, 2*hybinp%lexp
             g(l) = a**(-l - 1)
          END DO
+         run_loop = ANY(g > convpar/10)
       enddo
       rad = a/scale
       call timestop("determine cutoff radii")
 
       ! (2) Fourier space
       call timestart("fourier space")
-      a = 1
-2     aa = (1 + a**2)**(-1)
-      g(0) = pref*aa**4/a**2
-      g(1) = pref*aa**4/a
-      g(2) = pref*aa**5/3
-      g(3) = pref*aa**5*a/15
-      g(4) = pref*aa**6*a**2/105
-      g(5) = pref*aa**6*a**3/945
-      g(6) = pref*aa**7*a**4/10395
-      g(7) = pref*aa**7*a**5/135135
-      IF (ANY(g > convpar)) THEN
+      a = 0 
+      run_loop = .True.
+      do while(run_loop)
          a = a + 1
-         GOTO 2
-      END IF
+         aa = (1 + a**2)**(-1)
+         g(0) = pref*aa**4/a**2
+         g(1) = pref*aa**4/a
+         g(2) = pref*aa**5/3
+         g(3) = pref*aa**5*a/15
+         g(4) = pref*aa**6*a**2/105
+         g(5) = pref*aa**6*a**3/945
+         g(6) = pref*aa**7*a**4/10395
+         g(7) = pref*aa**7*a**5/135135
+         run_loop = ANY(g > convpar)
+      enddo
+      ! IF (ANY(g > convpar)) THEN
+      !    a = a + 1
+      !    GOTO 2
+      ! END IF
       rrad = a*scale
+      write (*,*) "rrad =", rrad
       call timestop("fourier space")
 
       IF (first) THEN
