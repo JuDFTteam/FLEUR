@@ -68,7 +68,7 @@ MODULE m_writeCFOutput
             !                          lm
             DO ispin =1, input%jspins
                DO iGrid=1,atoms%jri(iType)
-                  vTotProcess%mt(iGrid,:,iType,:)=vTotProcess%mt(iGrid,:,iType,:)*atoms%rmsh(iGrid,iType)**2
+                  vTotProcess%mt(iGrid,:,iType,ispin)=vTotProcess%mt(iGrid,:,iType,ispin)*atoms%rmsh(iGrid,iType)**2
                END DO
             ENDDO
             IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
