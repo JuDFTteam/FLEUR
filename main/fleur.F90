@@ -298,6 +298,8 @@ CONTAINS
 !!$                END IF
          !---< gwf
 
+         IF(ANY(fi%atoms%l_outputCFpot(:))) vCoul%potdenType = POTDEN_TYPE_CRYSTALFIELD !Excludes external potential
+
          IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
             sfscale = fi%noco%mag_scale
             CALL inDen%SpinsToChargeAndMagnetisation()
@@ -321,6 +323,13 @@ CONTAINS
             inDen%vacxy(:, :, :, 2:3) = inDen%vacxy(:, :, :, 2:3)/sfscale
             CALL inDen%ChargeAndMagnetisationToSpins()
          END IF
+
+         !CRYSTAL FIELD OUTPUT: POTENTIAL
+         IF(ANY(fi%atoms%l_outputCFpot(:)))) THEN
+            IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,pot=.TRUE.)
+            IF(.NOT.ANY(fi%atoms%l_outputCFcdn(:))) CALL juDFT_end("Crystal Field Output written (Pot)",fmpi%irank))
+         ENDIF
+
 
          IF (hub1data%l_runthisiter .AND. fi%atoms%n_hia > 0) THEN
             DO i_gf = 1, fi%gfinp%n

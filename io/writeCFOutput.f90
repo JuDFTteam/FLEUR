@@ -10,7 +10,7 @@ MODULE m_writeCFOutput
 
    CONTAINS
 
-   SUBROUTINE writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data)
+   SUBROUTINE writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data,pot)
 
       TYPE(t_atoms),       INTENT(IN)  :: atoms
       TYPE(t_input),       INTENT(IN)  :: input
@@ -19,11 +19,13 @@ MODULE m_writeCFOutput
       TYPE(t_noco),        INTENT(IN)  :: noco
       TYPE(t_potden),      INTENT(IN)  :: vTot
       TYPE(t_hub1data),    INTENT(IN)  :: hub1data
+      LOGICAL, OPTIONAL,   INTENT(IN)  :: pot
 
       INTEGER, PARAMETER :: lcf = 3
 
       INTEGER :: iType,l,m,lm,io_error,iGrid
       REAL    :: n_0Norm
+      LOGICAL :: processPot
 
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
       REAL, ALLOCATABLE :: vTotch(:,:)
@@ -31,8 +33,13 @@ MODULE m_writeCFOutput
 
       TYPE(t_gradients) :: grad
 
-      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
-      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
+      processPot = .FALSE.
+      IF(PRESENT(processPot)) processPot = pot
+
+      IF(processPot) THEN
+         ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
+         CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
+      ENDIF
       DO iType = 1, atoms%ntype
 
          IF(atoms%l_outputCFcdn(iType)) THEN
@@ -52,7 +59,7 @@ MODULE m_writeCFOutput
 
          ENDIF
 
-         IF(atoms%l_outputCFpot(iType)) THEN
+         IF(atoms%l_outputCFpot(iType).AND.processPot) THEN
 
             !                          sigma
             !Decompose potential into V(r)
@@ -83,7 +90,7 @@ MODULE m_writeCFOutput
          ENDIF
 
       ENDDO
-      CALL finish_mt_grid()
+      IF(processPot) CALL finish_mt_grid()
 
    END SUBROUTINE writeCFOutput
 
