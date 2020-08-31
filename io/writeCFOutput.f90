@@ -23,7 +23,7 @@ MODULE m_writeCFOutput
 
       INTEGER, PARAMETER :: lcf = 3
 
-      INTEGER :: iType,l,m,lm,io_error,iGrid,nd, lh,lv
+      INTEGER :: iType,l,m,lm,io_error,iGrid
       REAL    :: n_0Norm
       LOGICAL :: processPot
 
@@ -64,31 +64,27 @@ MODULE m_writeCFOutput
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
-            !IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
-            !ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
-            !CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
+            IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
+            ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
+            CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTot%mt(:,0:,iType,:),iType,noco,grad,vTotch)
             !modified mt_from_grid with lm index
-            !vlm = cmplx_0
-            !CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
+            vlm = cmplx_0
+            CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
 
             !Missing: only write out relevant components
 
-            !DO l = 2, 6, 2
-            !   DO m = -l, l
-            !      lm = l*(l+1) + m
-            nd = sym%ntypsy(SUM(atoms%neq(:iType - 1)) + 1)
-            DO lh = 1,sphhar%nlh(nd)
-               lv = sphhar%llh(lh,nd)
-               IF(sphhar%nmem(lh,nd) == 1) THEN
-                  OPEN(unit=29,file='V_'//int2str(lv)//int2str(0)//'.'//int2str(iType)//'.dat',status='replace',&
+            DO l = 2, 6, 2
+               DO m = -l, l
+                  lm = l*(l+1) + m
+                  OPEN(unit=29,file='V_'//int2str(l)//int2str(m)//'.'//int2str(iType)//'.dat',status='replace',&
                        action='write',iostat=io_error)
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
                   DO iGrid = 1, atoms%jri(iType)
-                     WRITE(29,'(5e20.8)') atoms%rmsh(iGrid,iType), vTot%mt(iGrid,lh,iType,1), vTot%mt(iGrid,lh,iType,input%jspins)!vlm(iGrid,lm,1), vlm(iGrid,lm,input%jspins)
+                     WRITE(29,'(5e20.8)') atoms%rmsh(iGrid,iType), vlm(iGrid,lm,1), vlm(iGrid,lm,input%jspins)
                   ENDDO
                   CLOSE(unit=29,iostat=io_error)
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
-               ENDIF
+               ENDDO
             ENDDO
 
          ENDIF
