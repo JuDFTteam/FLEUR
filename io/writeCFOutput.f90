@@ -34,7 +34,7 @@ MODULE m_writeCFOutput
       TYPE(t_gradients) :: grad
 
       processPot = .FALSE.
-      IF(PRESENT(processPot)) processPot = pot
+      IF(PRESENT(pot)) processPot = pot
 
       IF(processPot) THEN
          ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
