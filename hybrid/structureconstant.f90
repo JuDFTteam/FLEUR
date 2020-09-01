@@ -418,7 +418,7 @@ contains
          !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
          !$OMP private(rdum, cexp, lm, cdum)&
          !$OMP firstprivate(ptsh, radsh) schedule(dynamic,1) &
-         !$OMP lastprivate(a1)
+         !$OMP reduction(max:a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
             !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
