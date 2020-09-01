@@ -322,9 +322,8 @@ CONTAINS
                   END DO
                END DO
                rarr = sqrt(rarr/(4*pi_const))
-               !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
-               !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
-               !             CALL writeout(outtext,fmpi%irank)
+
+               write (oUnit, '(I6,4X,F14.12,''  ('',F14.12,'')'')') ikpt,sum(rarr(:1)**2/hybdat%nbands(ikpt)),maxval(rarr(:1))
             END DO
          END DO
       END DO
