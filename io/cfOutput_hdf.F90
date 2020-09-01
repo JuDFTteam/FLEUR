@@ -17,7 +17,7 @@ MODULE m_cfOutput_hdf
 
       TYPE(t_atoms),                INTENT(IN)  :: atoms
       INTEGER(HID_T),               INTENT(OUT) :: fileID
-      CHARACTER(len=:), OPTIONAL, ALLOCATABLE   INTENT(IN)  :: inFilename
+      CHARACTER(len=:), OPTIONAL, ALLOCATABLE,   INTENT(IN)  :: inFilename
       LOGICAL, OPTIONAL,            INTENT(IN)  :: l_create
 
       INTEGER          :: version,numCDN, numPOT
@@ -133,7 +133,7 @@ MODULE m_cfOutput_hdf
             CALL h5screate_simple_f(3,dims(:3),vlmDataSpaceID,hdfError)
             CALL h5dcreate_f(potGroupID, "vlm", H5T_NATIVE_DOUBLE, vlmDataSpaceID, vlmDataSetID, hdfError)
             CALL h5sclose_f(vlmDataSpaceID,hdfError)
-            CALL io_write_complex3(vlmDataSetID,[-1,1,1],dimsInt(:3),vlm(:atoms%jri(iType),lm,:))
+            CALL io_write_complex2(vlmDataSetID,[-1,1,1],dimsInt(:3),vlm(:atoms%jri(iType),lm,:))
             CALL h5dclose_f(vlmDataSetID, hdfError)
 
             CALL h5gclose_f(vlmGroupID, hdfError)
@@ -162,7 +162,7 @@ MODULE m_cfOutput_hdf
       INTEGER           :: dimsInt(7)
       INTEGER           :: hdfError
       LOGICAL           :: l_exist
-      CHARACTER(len=:)  :: groupName
+      CHARACTER(len=:),ALLOCATABLE  :: groupName
 
       groupName = '/cdn-'//int2str(iType)
 
