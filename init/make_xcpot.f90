@@ -19,9 +19,6 @@ contains
       USE m_types_xcpot_inbuild
       USE m_types_xcpot_inbuild_nofunction
       USE m_types_mpi
-#ifdef CPP_MPI
-      include 'mpif.h'
-#endif
 
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_input), INTENT(IN)     :: input
