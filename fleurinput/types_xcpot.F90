@@ -72,7 +72,7 @@ MODULE m_types_xcpot
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: read_xml => read_xml_xcpot
-      PROCEDURE(mpi_bc_xcpot_abstract), DEFERRED :: mpi_bc
+      PROCEDURE        :: mpi_bc => mpi_bc_xcpot_abstract
    END TYPE t_xcpot
 
    INTERFACE
@@ -89,16 +89,28 @@ MODULE m_types_xcpot
       END FUNCTION vc_is_LDA_abstract
    END INTERFACE
 
-   INTERFACE
-      subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
-         Use M_mpi_bc_tool
-         IMPORT t_xcpot
-         class(t_xcpot), intent(inout)::This
-         integer, intent(in):: Mpi_comm
-         integer, intent(in), Optional::Irank
-      end subroutine mpi_bc_xcpot_abstract
-   END INTERFACE
+
 CONTAINS
+
+  subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
+    Use M_mpi_bc_tool
+    class(t_xcpot), intent(inout)::This
+    integer, intent(in):: Mpi_comm
+    integer, intent(in), Optional::Irank
+    INTEGER :: rank
+
+    rank=merge(Irank,0,present(irank))
+    ! Bcasts for abstract base class t_xcpot
+    CALL mpi_bc(this%l_libxc, rank, mpi_comm)
+    CALL mpi_bc(this%func_vxc_id_c, rank, mpi_comm)
+    CALL mpi_bc(this%func_vxc_id_x, rank, mpi_comm)
+    CALL mpi_bc(this%func_exc_id_c, rank, mpi_comm)
+    CALL mpi_bc(this%func_exc_id_x, rank, mpi_comm)
+    CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
+    CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
+    CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
+  end subroutine mpi_bc_xcpot_abstract
+
 
   subroutine apply_cutoffs(density_cutoff,rh,grad)
     real,intent(INOUT) :: rh(:,:)

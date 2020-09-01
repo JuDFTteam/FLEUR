@@ -270,7 +270,7 @@ PROGRAM inpgen
               l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
+      IF (.NOT.l_include(1)) THEN
          kptsUnit = 38
          inpOldUnit = 39
          INQUIRE(file='kpts.xml',exist=l_exist)

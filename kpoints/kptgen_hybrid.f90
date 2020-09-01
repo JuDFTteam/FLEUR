@@ -28,7 +28,7 @@ CONTAINS
       INTEGER, INTENT(IN)           :: grid(3)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_kpts), INTENT(OUT)   :: kpts
+      TYPE(t_kpts), INTENT(INOUT)   :: kpts
 ! - scalars -
       LOGICAL, INTENT(IN)   ::  l_soc
 ! - local scalars -

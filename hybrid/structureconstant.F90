@@ -4,6 +4,9 @@ module m_structureconstant
    USE m_constants
    USE m_rorder, ONLY: rorderp, rorderpf
    use m_ylm
+#ifdef CPP_MPI
+   use mpi
+#endif
 contains
    !     -----------------------------------------------------------------------------------------------
 
@@ -43,7 +46,8 @@ contains
 
       COMPLEX                   ::  cexp
 
-      LOGICAL, SAVE          ::  first = .TRUE.
+      LOGICAL, SAVE             ::  first = .TRUE.
+      logical                   ::  run_loop
       ! - local arrays -
       INTEGER                   ::  conv(0:2*hybinp%lexp)
       INTEGER, ALLOCATABLE     ::  ptsh(:, :)
@@ -86,8 +90,8 @@ contains
       call timestart("determine cutoff radii")
 
       a = 0
-      g = 1e18
-      do while(ANY(g > convpar/10))
+      run_loop = .True.
+      do while(run_loop)
          a = a + 1
          rexp = EXP(-a)
          g(0) = rexp/a*(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
@@ -107,26 +111,32 @@ contains
          DO l = 8, 2*hybinp%lexp
             g(l) = a**(-l - 1)
          END DO
+         run_loop = ANY(g > convpar/10)
       enddo
       rad = a/scale
       call timestop("determine cutoff radii")
 
       ! (2) Fourier space
       call timestart("fourier space")
-      a = 1
-2     aa = (1 + a**2)**(-1)
-      g(0) = pref*aa**4/a**2
-      g(1) = pref*aa**4/a
-      g(2) = pref*aa**5/3
-      g(3) = pref*aa**5*a/15
-      g(4) = pref*aa**6*a**2/105
-      g(5) = pref*aa**6*a**3/945
-      g(6) = pref*aa**7*a**4/10395
-      g(7) = pref*aa**7*a**5/135135
-      IF (ANY(g > convpar)) THEN
+      a = 0 
+      run_loop = .True.
+      do while(run_loop)
          a = a + 1
-         GOTO 2
-      END IF
+         aa = (1 + a**2)**(-1)
+         g(0) = pref*aa**4/a**2
+         g(1) = pref*aa**4/a
+         g(2) = pref*aa**5/3
+         g(3) = pref*aa**5*a/15
+         g(4) = pref*aa**6*a**2/105
+         g(5) = pref*aa**6*a**3/945
+         g(6) = pref*aa**7*a**4/10395
+         g(7) = pref*aa**7*a**5/135135
+         run_loop = ANY(g > convpar)
+      enddo
+      ! IF (ANY(g > convpar)) THEN
+      !    a = a + 1
+      !    GOTO 2
+      ! END IF
       rrad = a*scale
       call timestop("fourier space")
 
@@ -135,7 +145,7 @@ contains
          WRITE (oUnit, '(/A)') 'Real-space sum'
       END IF
 
-      call realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+      call realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
       
       IF (first) WRITE (oUnit, '(/A)') 'Fourier-space sum'
 
@@ -365,18 +375,19 @@ contains
 
    END SUBROUTINE getshells
 
-   subroutine realspace_sum(atoms, cell, hybinp, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+   subroutine realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       type(t_cell), intent(in)  :: cell 
       type(t_hybinp), intent(in):: hybinp
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
       type(t_kpts), intent(in)  :: kpts
       logical, intent(in)       :: first
       real, intent(in)          :: rad, scale, convpar(0:2*hybinp%lexp)
       real, intent(inout)       :: g(0:2*hybinp%lexp), a, a1
       complex, intent(inout)    :: structconst(:,:,:,:)
       
-      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell
+      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell, ierr
       integer ::  conv(0:2*hybinp%lexp)
       integer, allocatable ::  pnt(:), ptsh(:,:)
       INTEGER, PARAMETER        :: ADDSHELL1 = 40
@@ -403,7 +414,13 @@ contains
       !     Real-space sum
       !
       call timestart("realspace sum")
-      DO ic2 = 1, atoms%nat
+      DO ic2 = 1+fmpi%irank, atoms%nat, fmpi%isize
+         !$OMP PARALLEL DO default(none) &
+         !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
+         !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
+         !$OMP private(rdum, cexp, lm, cdum)&
+         !$OMP firstprivate(ptsh, radsh) schedule(dynamic,1) &
+         !$OMP reduction(max:a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
             !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
@@ -414,8 +431,7 @@ contains
                tmp_vec = real(ptsh(:, i))
                call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, ra, 1)
                ra = ra + rc
-               a = norm2(ra)
-               radsh(i) = a
+               radsh(i) = norm2(ra)
             END DO
             CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
             ptsh = ptsh(:, pnt)
@@ -471,10 +487,7 @@ contains
                IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
                call ylm4(maxl, ra, y)
                y = CONJG(y)
-               !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP private(ikpt, l, m, rdum, cexp, lm, cdum) &
-               !$OMP shared(kpts, ptsh, ishell, conv, shlp, i, g, y, maxl)&
-               !$OMP collapse(2)
+               
                DO ikpt = 1, kpts%nkpt
                   DO l = 0, maxl
                      rdum = dot_product(kpts%bk(:, ikpt), ptsh(:, i))
@@ -489,13 +502,13 @@ contains
                      END IF
                   END DO
                END DO
-               !$OMP END PARALLEL DO
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
+         !$OMP END PARALLEL DO
       END DO
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, structconst, size(structconst), MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       call timestop("realspace sum")
-
       deallocate (ptsh, radsh)
    end subroutine realspace_sum
 end module m_structureconstant

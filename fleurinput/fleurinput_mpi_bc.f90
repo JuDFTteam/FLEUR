@@ -7,6 +7,7 @@ CONTAINS
        xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,rank)
     USE m_types_xml
 
+
     TYPE(t_cell),INTENT(INOUT)::cell
     TYPE(t_sym),INTENT(INOUT)::sym
     TYPE(t_atoms),INTENT(INOUT)::atoms
@@ -21,14 +22,14 @@ CONTAINS
     TYPE(t_oneD),INTENT(INOUT)::oneD
     TYPE(t_coreSpecInput),INTENT(INOUT)::coreSpecInput
     TYPE(t_wann),INTENT(INOUT)::wann
-    CLASS(t_xcpot),INTENT(INOUT)::xcpot
+    CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_forcetheo_data),INTENT(INOUT)::forcetheo_data
     TYPE(t_enparaXML),INTENT(INOUT)::enparaXML
     TYPE(t_kpts),INTENT(INOUT)::kpts
     TYPE(t_gfinp),INTENT(INOUT)::gfinp
     TYPE(t_hub1inp),INTENT(INOUT)::hub1inp
     INTEGER,INTENT(IN)::mpi_comm
-    INTEGER,INTENT(IN),OPTIONAL::rank
+    INTEGER,OPTIONAL,INTENT(IN)::rank
 
 
     CALL cell%mpi_bc(mpi_comm,rank)
@@ -45,12 +46,12 @@ CONTAINS
     CALL oneD%mpi_bc(mpi_comm,rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)
     CALL wann%mpi_bc(mpi_comm,rank)
-    CALL xcpot%mpi_bc(mpi_comm,rank)
     CALL forcetheo_data%mpi_bc(mpi_comm,rank)
     CALL enparaXML%mpi_bc(mpi_comm,rank)
     CALL kpts%mpi_bc(mpi_comm,rank)
     CALL gfinp%mpi_bc(mpi_comm,rank)
     CALL hub1inp%mpi_bc(mpi_comm,rank)
+    CALL xcpot%mpi_bc(mpi_comm,rank)
 
   END SUBROUTINE fleurinput_mpi_bc
 END MODULE m_fleurinput_mpi_bc
