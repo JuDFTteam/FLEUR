@@ -4,7 +4,9 @@ module m_structureconstant
    USE m_constants
    USE m_rorder, ONLY: rorderp, rorderpf
    use m_ylm
+#ifdef CPP_MPI
    use mpi
+#endif
 contains
    !     -----------------------------------------------------------------------------------------------
 
