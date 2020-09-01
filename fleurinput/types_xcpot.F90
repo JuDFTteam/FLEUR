@@ -94,7 +94,6 @@ CONTAINS
 
   subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
     Use M_mpi_bc_tool
-    IMPORT t_xcpot
     class(t_xcpot), intent(inout)::This
     integer, intent(in):: Mpi_comm
     integer, intent(in), Optional::Irank
