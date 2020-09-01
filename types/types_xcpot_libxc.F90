@@ -47,7 +47,6 @@ MODULE m_types_xcpot_libxc
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
-      PROCEDURE        :: mpi_bc => mpi_bc_xcpot_libxc
       PROCEDURE,NOPASS :: apply_cutoffs
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc

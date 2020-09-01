@@ -11,14 +11,19 @@ MODULE m_make_xcpot
    public make_xcpot
 
 contains
-   subroutine make_xcpot(xcpot, atoms, input)
+   subroutine make_xcpot(fmpi,xcpot, atoms, input)
       use m_types_xcpot
       use m_types_atoms
       use m_types_input
       USE m_types_xcpot_libxc
-      !USE m_types_xcpot_inbuild
+      USE m_types_xcpot_inbuild
       USE m_types_xcpot_inbuild_nofunction
+      USE m_types_mpi
+#ifdef CPP_MPI
+      include 'mpif.h'
+#endif
 
+      TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_atoms), INTENT(IN)     :: atoms
       CLASS(t_xcpot), ALLOCATABLE, INTENT(INOUT) :: xcpot
@@ -44,7 +49,7 @@ contains
          l_inbuild      = .FALSE.
          inbuild_name   = xcpot%inbuild_name
          l_relativistic = xcpot%l_relativistic
-         
+
          DEALLOCATE (xcpot)
          ALLOCATE (t_xcpot_libxc::xcpot)
          SELECT TYPE (xcpot)
@@ -57,12 +62,12 @@ contains
          xcpot%inbuild_name   = inbuild_name
          xcpot%l_relativistic = l_relativistic
       ELSE
-         SELECT TYPE (xcpot)
-         CLASS is (t_xcpot_inbuild_nf)
-            Call Xcpot%Init(Atoms%Ntype)
-         CLASS DEFAULT
-            CALL judft_error("Error in setup xcpot")
-         END SELECT
+        SELECT TYPE (xcpot)
+        CLASS is (t_xcpot_inbuild_nf)
+          Call Xcpot%Init(Atoms%Ntype)
+          CLASS DEFAULT
+          CALL judft_error("Error in setup xcpot")
+        END SELECT
       END IF
 
    end subroutine make_xcpot
