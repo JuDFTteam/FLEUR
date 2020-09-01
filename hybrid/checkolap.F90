@@ -1,5 +1,5 @@
 MODULE m_checkolap
-
+   use m_ylm
 CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, fmpi, &
@@ -257,6 +257,10 @@ CONTAINS
                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
                call timestart("pw part")
                ! PW part
+               !$OMP PARALLEL DO default(none) &
+               !$OMP private(igpt, gpt, cexp, q, qnorm, sphbes, y, pre_fac, lm, l, m, iband, cdum) &
+               !$OMP shared(lapw, jsp, atoms, kpts, iatom, ikpt, cell, itype, ineq, z, hybdat) &
+               !$OMP reduction(+:carr2)
                DO igpt = 1, lapw%nv(jsp)
                   gpt = lapw%gvec(:, igpt, jsp)
 
@@ -265,46 +269,31 @@ CONTAINS
                   q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
 
                   qnorm = norm2(q)
-                  call timestart("sphbessel")
                   call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
-                  call timestop("sphbessel")
-                  
-                  call timestart("harmonicsr")
-                  call harmonicsr(y, q, atoms%lmax(itype))
-                  y = conjg(y)
-                  call timestop("harmonicsr")
 
-                  call timestart("carr2")
+                  call ylm4(atoms%lmax(itype), q, y)
+                  y = conjg(y)
+                  
                   pre_fac = fpi_const / sqrt(cell%omtil) * cexp
                   if(z(1)%l_real) THEN
-                     !$OMP PARALLEL DO default(none) collapse(2) &
-                     !$OMP private(lm, iband, l,m,cdum) &
-                     !$OMP shared(atoms, hybdat, cell, sphbes, itype, ikpt, pre_fac, carr2, z) &
-                     !$OMP shared(igpt, y)
                      do lm = 1, (atoms%lmax(itype)+1)**2
+                        call calc_l_m_from_lm(lm, l, m)
                         DO iband = 1, hybdat%nbands(ikpt)
-                           call calc_l_m_from_lm(lm, l, m)
                            cdum = pre_fac * ImagUnit**l * sphbes(l)
                            carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
                         enddo
                      enddo
-                     !$OMP end parallel do
                   else
-                     !$OMP PARALLEL DO default(none) collapse(2) &
-                     !$OMP private(lm, iband, l,m,cdum) &
-                     !$OMP shared(atoms, hybdat, cell, sphbes, itype, ikpt, pre_fac, carr2, z)&
-                     !$OMP shared(igpt, y)
                      do lm = 1, (atoms%lmax(itype)+1)**2
+                        call calc_l_m_from_lm(lm, l, m)
                         DO iband = 1, hybdat%nbands(ikpt)
-                           call calc_l_m_from_lm(lm, l, m)
                            cdum = pre_fac * ImagUnit**l * sphbes(l)
                            carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
                         end DO
                      END DO
-                     !$OMP end parallel do
                   endif
-                  call timestop("carr2")
                enddo
+               !$OMP END PARALLEL DO
                call timestop("pw part")
 
                call timestart("MT-part")
