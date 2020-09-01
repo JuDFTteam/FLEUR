@@ -193,7 +193,39 @@ sub test_grep_lastnumber($$$$$){
 	print LOG "failed\n";
         return 1;
     }
-}       
+}   
+
+sub test_grep_firstnumber($$$$$){
+    my $file=shift;
+    my $grepfor=shift;
+    my $reg=shift;
+    my $value=shift;
+    my $tol=shift;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Grep for $grepfor in $file:";
+
+    my $l=`grep \"$grepfor\" $file | head -1`;
+
+
+    $l=~m/$reg/s;
+
+
+    print LOG "$1 == $value:";
+
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
+
+    if (abs($1-$value)<$tol){
+        print LOG "ok\n";
+        return 0;
+    }else{
+	print LOG "failed\n";
+        return 1;
+    }
+}   
 
 
 sub stageresult($$$){
