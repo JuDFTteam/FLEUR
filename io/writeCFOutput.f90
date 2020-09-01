@@ -5,6 +5,7 @@ MODULE m_writeCFOutput
    USE m_constants
    USE m_intgr
    USE m_mt_tofrom_grid
+   USE m_cfOutput_hdf
 
    IMPLICIT NONE
 
@@ -31,6 +32,10 @@ MODULE m_writeCFOutput
       REAL, ALLOCATABLE :: vTotch(:,:)
       REAL :: n_0(atoms%jmtd)
 
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: cfFileID
+#endif
+
       TYPE(t_gradients) :: grad
       TYPE(t_potden) :: vTotProcess
 
@@ -42,6 +47,10 @@ MODULE m_writeCFOutput
          ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
          CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
       ENDIF
+
+#ifdef CPP_HDF
+      CALL opencfFile(cfFileID, atoms, l_create = processPot.OR. .NOT.ANY(atoms%l_outputCFpot(:))) !Only create a new file in the first call from main/fleur
+#endif
       DO iType = 1, atoms%ntype
 
          IF(atoms%l_outputCFcdn(iType)) THEN
@@ -51,6 +60,10 @@ MODULE m_writeCFOutput
             CALL intgr3(n_0,atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),n_0Norm)
             n_0 = n_0/n_0Norm
 
+#ifdef CPP_HDF
+            CALL writeCFcdn(cfFileID, atoms, iType, n_0)
+#else
+            !Stupid text output
             OPEN(unit=29,file='n4f.'//int2str(iType)//'.dat',status='replace',action='write',iostat=io_error)
             IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
             DO iGrid = 1, atoms%jri(iType)
@@ -58,6 +71,7 @@ MODULE m_writeCFOutput
             ENDDO
             CLOSE(unit=29,iostat=io_error)
             IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
+#endif
 
          ENDIF
 
@@ -79,7 +93,10 @@ MODULE m_writeCFOutput
             CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
 
             !Missing: only write out relevant components
-
+#ifdef CPP_HDF
+            CALL writeCFpot(cfFileID, atoms, input, iType, vlm)
+#else
+            !Stupid text output
             DO l = 2, 6, 2
                DO m = -l, l
                   lm = l*(l+1) + m
@@ -93,10 +110,14 @@ MODULE m_writeCFOutput
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
                ENDDO
             ENDDO
-
+#endif
          ENDIF
 
       ENDDO
+
+#ifdef CPP_HDF
+      CALL closecfFile(cfFileID)
+#endif
       IF(processPot) CALL finish_mt_grid()
 
    END SUBROUTINE writeCFOutput
