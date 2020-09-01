@@ -73,7 +73,6 @@ CONTAINS
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
       LOGICAL, parameter      ::  l_mism = .false.
 
-
       call timestart("checkolap")
       allocate(z(nkpti))
       DO ikpt = 1, nkpti
