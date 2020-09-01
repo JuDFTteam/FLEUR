@@ -42,37 +42,59 @@ CONTAINS
     !    locals
     INTEGER :: ne,ikpt,kspin,j,i,n
     LOGICAL :: l_error
-    real    :: eFermiPrev
+    real    :: eFermiPrev, eFermi
 #ifdef CPP_HDF
     INTEGER(HID_t):: banddosFile_id
 #else
     INTEGER :: banddosFile_id
 #endif
     CALL readPrevEFermi(eFermiPrev,l_error)
-    eFermiPrev=merge(results%ef,eFermiPrev,l_error)
+
+    eFermi = results%ef
+
+    IF(results%bandgap.GE.8.0*input%tkb*hartree_to_ev_const) THEN
+       WRITE(*,*) 'Fermi energy correction for insulators:'
+       IF(.NOT.l_error) THEN
+          eFermi = MAX(eFermi,eFermiPrev)
+          WRITE(*,*) 'Fermi energy in bands.* files has been set to the maximal'
+          WRITE(*,*) 'value determined in the band structure calculation and'
+          WRITE(*,*) 'the calculation of the underlying density, respectively.'
+       ELSE
+          WRITE(*,*) 'No automatic correction of the Fermi energy has been performed.'
+       END IF
+    ELSE
+       WRITE(*,*) 'Fermi energy correction for metals:'
+       IF(.NOT.l_error) THEN
+          eFermi = eFermiPrev
+          WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
+          WRITE(*,*) 'It is consistent with last calculated density!'
+          WRITE(*,*) 'No manual correction (e.g. in band.gnu file) required.'
+       ELSE
+          WRITE(*,*) 'Fermi energy in bands.* files may not be consistent with last density.'
+          WRITE(*,*) 'Please correct it manually (e.g. in band.gnu file).'
+       END IF
+    END IF
 
 #ifdef CPP_HDF
-      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos,eFermiPrev)
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos,eFermi)
 #endif
 
     IF (banddos%band) THEN
 !      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
        DO n=1,size(eigdos)
-         call eigdos(n)%p%write_band(kpts,cell,banddosFile_id,efermiPrev)
+          call eigdos(n)%p%write_band(kpts,input%comment,cell,banddosFile_id,eFermi)
        enddo
-      IF (banddos%unfoldband) &
-        CALL write_band_sc(kpts,results,eFermiPrev)
+      IF (banddos%unfoldband) CALL write_band_sc(kpts,results,eFermi)
     ENDIF
 
     IF (input%cdinf) then
-      call cdninf(input,sym,noco,atoms,vacuum,&
-                    cell,kpts,eigdos(1)%p)
+      call cdninf(input,sym,noco,atoms,vacuum,cell,kpts,eigdos(1)%p)
     endif
 
     IF (banddos%dos) THEN
       DO n=1,size(eigdos)
          print *,"Makedos:",n
-         call eigdos(n)%p%make_dos(kpts,input,banddos,efermiPrev)
+         call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
          print *,"Smooth:",n
          call eigdos(n)%p%smooth(banddos)
          print *,"WriteDos:",n

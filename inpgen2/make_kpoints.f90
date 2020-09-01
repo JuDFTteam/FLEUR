@@ -52,27 +52,27 @@ CONTAINS
        ! Read in the integration method if they are specified on the command line (hist is standard)
        l_bzset = .FALSE. !To warn if there are multiple definitions on the command line
         IF (INDEX(str,'gauss@')==1) THEN
-          IF(bz_integration.NE.0) &
+          IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
-          bz_integration=1
+          bz_integration=BZINT_METHOD_GAUSS
           IF(l_bzset) &
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
           str=str(7:)
        ENDIF
        IF (INDEX(str,'tria@')==1) THEN
-          IF(bz_integration.NE.0) &
+          IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
-          bz_integration=2
+          bz_integration=BZINT_METHOD_TRIA
           IF(l_bzset) &
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
           str=str(6:)
        ENDIF
        IF (INDEX(str,'tetra@')==1) THEN
-          IF(bz_integration.NE.0) &
+          IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
-          bz_integration=3
+          bz_integration=BZINT_METHOD_TETRA
           IF(l_bzset) &
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
@@ -380,7 +380,7 @@ CONTAINS
     END IF
 
     IF (l_gamma) THEN
-       IF (bz_integration==2) CALL judft_error("tria and l_gamma incompatible")
+       IF (bz_integration==BZINT_METHOD_TRIA) CALL judft_error("tria and l_gamma incompatible")
        CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
     ELSE
        !------------------------------------------------------------
@@ -410,9 +410,9 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       !nbound  = MERGE(1,0,film.AND.bz_integration==2)
+       !nbound  = MERGE(1,0,film.AND.bz_integration==BZINT_METHOD_TRIA)
        nbound = 0
-       random  = bz_integration==2.AND..NOT.film
+       random  = bz_integration==BZINT_METHOD_TRIA.AND..NOT.film
        idimens = MERGE(2,3,film)
 
        ! Lattice information
@@ -464,7 +464,7 @@ CONTAINS
        ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
 
 
-       IF (bz_integration==2.AND.random) THEN
+       IF (bz_integration==BZINT_METHOD_TRIA.AND.random) THEN
           ! Calculate the points for tetrahedron method
           ndiv3 = 6*(mkpt+1)
           ALLOCATE (voltet(ndiv3),vktet(3,mkpt),ntetra(4,ndiv3))
@@ -489,7 +489,7 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF(bz_integration==2 .AND. film) THEN
+       IF(bz_integration==BZINT_METHOD_TRIA .AND. film) THEN
           ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
           l_tria = .FALSE.
           CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
@@ -506,7 +506,7 @@ CONTAINS
 
     ENDIF
 
-    IF(bz_integration==3) THEN
+    IF(bz_integration==BZINT_METHOD_TETRA) THEN
        !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
        CALL kpts%init(cell, sym, film, .false.) !To generate the full grid
        IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
@@ -515,20 +515,26 @@ CONTAINS
        CALL tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
     ENDIF
 
-    IF (bz_integration==2 .AND.random .OR. bz_integration==3 .AND..NOT.film) THEN
+    IF (bz_integration==BZINT_METHOD_TRIA .AND.random .OR. bz_integration==BZINT_METHOD_TETRA .AND..NOT.film) THEN
        ALLOCATE(kpts%ntetra(4,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
           kpts%ntetra(:,j) = ntetra(:,j)
           kpts%voltet(j) = ABS(voltet(j))
        END DO
-    ELSE IF( (bz_integration==2 .OR. bz_integration==3) .AND. film) THEN
+    ELSE IF( (bz_integration==BZINT_METHOD_TRIA .OR. bz_integration==BZINT_METHOD_TETRA) .AND. film) THEN
        ALLOCATE(kpts%ntetra(3,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
           kpts%ntetra(:,j) = ntetra(:,j)
           kpts%voltet(j) = ABS(voltet(j))
        END DO
+    ENDIF
+
+    IF(bz_integration==BZINT_METHOD_TRIA) THEN
+       kpts%kptsKind = KPTS_KIND_TRIA
+    ELSE IF(bz_integration==BZINT_METHOD_TETRA) THEN
+       kpts%kptsKind = KPTS_KIND_TETRA
     ENDIF
 
     kpts%nkpt3(:) = grid(:)

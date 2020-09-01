@@ -452,6 +452,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="cFCoeffs" type="cFCoeffsOutputType"/>
       </xsd:sequence>
       <xsd:attribute name="species" type="xsd:string" use="required"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
@@ -646,7 +647,7 @@
    <xsd:complexType name="BZIntegrationType">
       <xsd:sequence>
          <xsd:element name="kPointListSelection" type="KPointListSelectionType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointList" type="AltKPointListSelectionType"/>
+         <!--<xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointList" type="AltKPointListSelectionType"/>-->
          <xsd:element name="kPointLists" type="KPointListsType"/>
       </xsd:sequence>
       <xsd:attribute name="valenceElectrons" type="xsd:string" use="optional"/>
@@ -752,6 +753,12 @@
       <xsd:attribute default="T" name="l_correctEtot" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
+   <xsd:complexType name="cFCoeffsOutputType">
+      <xsd:attribute name="chargeDensity" type="FleurBool" use="required"/>
+      <xsd:attribute name="potential" type="FleurBool" use="required"/>
+      <xsd:attribute default="F" name="remove4f" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
    <xsd:complexType name="GFGeneralType">
       <xsd:sequence>
          <xsd:element name="realAxis" type="ERealAxisType"/>
@@ -853,6 +860,9 @@
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="mesh"/>
          <xsd:enumeration value="path"/>
+         <xsd:enumeration value="tetra"/>
+         <xsd:enumeration value="tria"/>
+         <xsd:enumeration value="SPEX-mesh"/>
          <xsd:enumeration value="unspecified"/>
       </xsd:restriction>
    </xsd:simpleType>
@@ -905,7 +915,7 @@
 
    <xsd:complexType name="KPointType">
       <xsd:simpleContent>
-         <xsd:extension base="Double3DVecType">
+         <xsd:extension base="String3DVecType">
             <xsd:attribute name="weight" type="xsd:string" use="required"/>
             <xsd:attribute default="" name="label" type="xsd:string" use="optional"/>
          </xsd:extension>

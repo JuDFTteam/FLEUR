@@ -46,6 +46,7 @@ MODULE m_types_kpts
       type(t_eibz), allocatable      :: EIBZ(:)
       !integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
    CONTAINS
+      PROCEDURE :: calcCommonFractions
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
       PROCEDURE :: read_xml_kptsByIndex
@@ -170,6 +171,18 @@ CONTAINS
             IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
          CASE ('path       ')
             this%kptsKind = KPTS_KIND_PATH
+         CASE ('tetra      ')
+            this%kptsKind = KPTS_KIND_TETRA
+         CASE ('tria       ')
+            this%kptsKind = KPTS_KIND_TRIA
+         CASE ('SPEX-mesh  ')
+            this%kptsKind = KPTS_KIND_SPEX_MESH
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
          CASE DEFAULT
             this%kptsKind = KPTS_KIND_UNSPECIFIED
             WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
@@ -203,6 +216,7 @@ CONTAINS
             IF (TRIM(ADJUSTL(label)).NE.'') THEN
                currentIndex = currentIndex + 1
                this%specialPointNames(currentIndex) = TRIM(ADJUSTL(label))
+               this%specialPointIndices(currentIndex) = i
                str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
                this%specialPoints(1, currentIndex) = evaluatefirst(str)
                this%specialPoints(2, currentIndex) = evaluatefirst(str)
@@ -298,6 +312,16 @@ CONTAINS
 
       CALL read_xml_kptsByIndex(this, xml, kptsIndex)
 
+      IF (l_band) THEN
+         IF (.NOT.this%kptsKind.EQ.KPTS_KIND_PATH) THEN
+            CALL juDFT_warn('Chosen k-point list is not eligible for band structure calculations.', calledby='read_xml_kpts')
+         END IF
+      ELSE
+         IF (this%kptsKind.EQ.KPTS_KIND_PATH) THEN
+            CALL juDFT_warn('Chosen k-point list is only eligible for band structure calculations.', calledby='read_xml_kpts')
+         END IF
+      END IF
+
    END SUBROUTINE read_xml_kpts
 
    SUBROUTINE print_xml(kpts, kptsUnit, filename)
@@ -306,12 +330,16 @@ CONTAINS
       CHARACTER(len=*), INTENT(in), OPTIONAL::filename
 
       INTEGER :: n, iSpecialPoint
+      REAL :: commonFractions(3)
       LOGICAL :: l_exist
-      CHARACTER(LEN=11) :: kptsKindString(3)
+      CHARACTER(LEN=11) :: kptsKindString(6)
+      CHARACTER(LEN=17) :: posString(3)
       CHARACTER(LEN=50) :: label
 
-      DATA kptsKindString /'unspecified','mesh       ','path       '/
+      DATA kptsKindString /'unspecified','mesh       ','path       ','tetra      ','tria       ','SPEX-mesh  '/
       label = ''
+
+      IF(.NOT.ALLOCATED(kpts%bk)) RETURN
 
       IF (PRESENT(filename)) THEN
          INQUIRE (file=filename, exist=l_exist)
@@ -322,14 +350,17 @@ CONTAINS
          END IF
       ENDIF
 
-205   FORMAT('         <kPointList name="', a, '" count="', i0, '" type="', a, '">')
-2051  FORMAT('         <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
+      commonFractions(:) = -1.0
+
+205   FORMAT('            <kPointList name="', a, '" count="', i0, '" type="', a, '">')
+2051  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
          WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+         CALL calcCommonFractions(kpts,commonFractions)
       ELSE
          WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
       END IF
-      !IF (kpts%numSpecialPoints < 2) THEN
+
       DO n = 1, kpts%nkpt
          DO iSpecialPoint = 1, kpts%numSpecialPoints
             IF (kpts%specialPointIndices(iSpecialPoint).EQ.n) THEN
@@ -337,34 +368,46 @@ CONTAINS
                EXIT
             END IF
          END DO
-206      FORMAT('            <kPoint weight="', f20.13, '">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-2061     FORMAT('            <kPoint weight="', f20.13, '" label="',a ,'">', f16.13, ' ', f16.13, ' ', f16.13, '</kPoint>')
-         IF(label.EQ.'') THEN
-            WRITE (kptsUnit, 206) kpts%wtkpt(n), kpts%bk(:, n)
+
+         posString(:) = ''
+         IF((kpts%kptsKind.EQ.KPTS_KIND_MESH).AND.(ALL(commonFractions(:).GT.1.0))) THEN
+            WRITE(posString(1),'(f7.2,a,f0.2)') commonFractions(1)*kpts%bk(1, n), '/' , commonFractions(1)
+            WRITE(posString(2),'(f7.2,a,f0.2)') commonFractions(2)*kpts%bk(2, n), '/' , commonFractions(2)
+            WRITE(posString(3),'(f7.2,a,f0.2)') commonFractions(3)*kpts%bk(3, n), '/' , commonFractions(3)
          ELSE
-            WRITE (kptsUnit, 2061) kpts%wtkpt(n), TRIM(ADJUSTL(label)), kpts%bk(:, n)
+            WRITE(posString(1),'(f16.13)') kpts%bk(1, n)
+            WRITE(posString(2),'(f16.13)') kpts%bk(2, n)
+            WRITE(posString(3),'(f16.13)') kpts%bk(3, n)
+         END IF
+
+206      FORMAT('               <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')
+2061     FORMAT('               <kPoint weight="', f20.13, '" label="',a ,'">', a, ' ', a, ' ', a, '</kPoint>')
+         IF(label.EQ.'') THEN
+            WRITE (kptsUnit, 206) kpts%wtkpt(n), TRIM(posString(1)), TRIM(posString(2)), TRIM(posString(3))
+         ELSE
+            WRITE (kptsUnit, 2061) kpts%wtkpt(n), TRIM(ADJUSTL(label)), TRIM(posString(1)), TRIM(posString(2)), TRIM(posString(3))
          END IF
          label = ''
       END DO
       IF (kpts%ntet > 0) THEN
-         IF (SIZE(kpts%ntetra, 1) .EQ. 4) THEN
+         IF (SIZE(kpts%ntetra, 1).EQ.4) THEN
             !Bulk --> Tetrahedrons
             WRITE (kptsUnit, 207) kpts%ntet
-207         FORMAT('            <tetraeder ntet="', i0, '">')
+207         FORMAT('               <tetraeder ntet="', i0, '">')
             DO n = 1, kpts%ntet
-208            FORMAT('               <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+208            FORMAT('                  <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
                WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (kptsUnit, '(a)') '            </tetraeder>'
-         ELSE IF (SIZE(kpts%ntetra, 1) .EQ. 3) THEN
+            WRITE (kptsUnit, '(a)') '               </tetraeder>'
+         ELSE IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
             !Film --> Triangles
             WRITE (kptsUnit, 209) kpts%ntet
-209         FORMAT('            <triangles ntria="', i0, '">')
+209         FORMAT('               <triangles ntria="', i0, '">')
             DO n = 1, kpts%ntet
-210            FORMAT('               <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
+210            FORMAT('                  <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
                WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
-            WRITE (kptsUnit, '(a)') '            </triangles>'
+            WRITE (kptsUnit, '(a)') '               </triangles>'
          ENDIF
       ELSE
 !         DO n = 1, kpts%numSpecialPoints
@@ -373,7 +416,7 @@ CONTAINS
 !         END DO
       END IF
       !END IF
-      WRITE (kptsUnit, '(a)') ('         </kPointList>')
+      WRITE (kptsUnit, '(a)') ('            </kPointList>')
       IF (PRESENT(filename)) CLOSE (kptsUnit)
    END SUBROUTINE print_xml
 
@@ -760,4 +803,45 @@ CONTAINS
       END DO
       nsymop = ic
    end subroutine calc_psym_nsymop
+
+   SUBROUTINE calcCommonFractions(kpts,commonFractions)
+
+      USE m_constants
+
+      IMPLICIT NONE
+
+      CLASS(t_kpts), INTENT(IN) :: kpts
+      REAL, INTENT(INOUT)    :: commonFractions(3)
+
+      INTEGER, PARAMETER :: upperBound = 50
+      INTEGER            :: i, j, ikpt
+      REAL               :: temp
+      LOGICAL            :: l_CommonFraction
+
+      commonFractions(:) = -1
+
+!      IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
+!         commonFractions(:) = -1
+!         RETURN
+!      END IF
+
+      DO j = 1, 3
+         DO i = 2, upperBound
+            l_CommonFraction = .TRUE.
+            DO ikpt = 1, kpts%nkpt
+               temp = i * kpts%bk(j,ikpt)
+               IF (ABS(temp - NINT(temp)).GT.1.0e-8) THEN
+                  l_CommonFraction = .FALSE.
+                  EXIT
+               END IF
+            END DO
+            IF(l_CommonFraction) THEN
+               commonFractions(j) = i
+               EXIT
+            END IF
+         END DO
+      END DO
+      
+   END SUBROUTINE
+
 END MODULE m_types_kpts

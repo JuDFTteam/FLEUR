@@ -240,15 +240,15 @@ CONTAINS
        !-po
        results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
        results%bandgap = 0.0
-       IF(input%bz_integration==0) THEN
+       IF(input%bz_integration==BZINT_METHOD_HIST) THEN
           CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
                nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
-       ELSE IF (input%bz_integration==1) THEN
+       ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
           CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
-       ELSE IF (input%bz_integration==2) THEN
+       ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
           CALL fertri(input,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
                results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
-       ELSE IF (input%bz_integration==3) THEN
+       ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
           CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ENDIF

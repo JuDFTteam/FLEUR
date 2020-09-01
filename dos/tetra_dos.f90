@@ -3,13 +3,13 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_tetrados
+MODULE m_tetra_dos
    !----------------------------------------------------------------------
    !
    ! This subroutine evaluates the density of states (g) by the linear
    ! tetrahedron method on a energy grid (e) of 'ned' points.
    !
-   ! ev()          ... eigenvalues
+   ! eig()          ... eigenvalues
    ! qal()         ... partial charges
    ! ntet          ... number of tetrahedrons
    ! ntetra(1-4,ntet)... index of k-points forming tetrahedron nt
@@ -17,87 +17,92 @@ MODULE m_tetrados
    !
    !                                                      gb 2000
    !----------------------------------------------------------------------
-   USE m_types
+   USE m_types_kpts
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE tetra_dos(qdim,neigd,ned,kpts,efermi,energy,nevk,ev,qal,g)
+   SUBROUTINE tetra_dos(jspins,kpts,eGrid,neig,eig,qal,g)
 
-      INTEGER,       INTENT(IN)    :: neigd,ned,qdim
-      REAL,          INTENT(IN)    :: efermi
+      INTEGER,       INTENT(IN)    :: jspins
       TYPE(t_kpts),  INTENT(IN)    :: kpts
-      INTEGER,       INTENT(IN)    :: nevk(:)     !(nkpt)
-      REAL,          INTENT(IN)    :: energy(:)   !(ned)
-      REAL,          INTENT(IN)    :: qal(:,:,:)  !(lmax*ntype+3,neigd,nkpt)
-      REAL,          INTENT(INOUT) :: ev(:,:)     !(neigd,nkpt)
-      REAL,          INTENT(OUT)   :: g(:,:)      !(ned,lmax*ntype+3)
+      INTEGER,       INTENT(IN)    :: neig(:,:)     !(nkpt,jspins)
+      REAL,          INTENT(IN)    :: eGrid(:)   !(ned)
+      REAL,          INTENT(IN)    :: qal(:,:,:)  !(neigd,nkpt,jspins)
+      REAL,          INTENT(IN)    :: eig(:,:,:)  !(neigd,nkpt,jspins)
+      REAL,          INTENT(OUT)   :: g(:,:)      !(ned,jspins)
 
-      INTEGER :: i,j,iBand,ikpt,ie,idim,itet,icorn,jcorn
-      REAL    :: ener,w
-      REAL    :: weight(4),eval(4),ecmax(neigd),term(ned)
-      REAL    :: wpar(qdim,neigd,kpts%nkpt)
+      INTEGER :: i,j,iBand,ikpt,ie,idim,itet,icorn,jcorn,ispin
+      REAL    :: ener,w,sfac
+      REAL    :: weight(4),eval(4),ecmax(SIZE(eig,1),jspins),term(SIZE(eGrid))
+      REAL, ALLOCATABLE :: wpar(:,:,:)
+      REAL, ALLOCATABLE :: eig_nondeg(:,:,:)
 
-      DO ikpt = 1,kpts%nkpt
-         ev(nevk(ikpt)+1:neigd,ikpt) = 1.0e10
-      ENDDO
+      eig_nondeg = eig
 
+      ALLOCATE(wpar,mold=qal)
       wpar = 0.0
 
-      DO iBand = 1,neigd
-         ecmax(iBand) = -1.0e25
-         DO ikpt = 1,kpts%nkpt
-            IF(ev(iBand,ikpt).GT.ecmax(iBand)) ecmax(iBand) = ev(iBand,ikpt)
+      sfac = 3.0 - 2.0*jspins
+
+      DO ispin = 1, jspins
+         DO iBand = 1,SIZE(eig,1)
+            ecmax(iBand,ispin) = -1.0e25
+            DO ikpt = 1,kpts%nkpt
+               IF(eig(iBand,ikpt,ispin).GT.ecmax(iBand,ispin)) ecmax(iBand,ispin) = eig(iBand,ikpt,ispin)
+            ENDDO
          ENDDO
       ENDDO
       !
       !  check for energy degeneracies in tetrahedrons
       !
-      DO itet = 1,kpts%ntet
-         DO iBand = 1,neigd
-            DO i = 1,3
-               icorn = kpts%ntetra(i,itet)
-               DO j = i+1,4
-                  jcorn = kpts%ntetra(j,itet)
-                  IF (abs(ev(iBand,icorn)-ev(iBand,jcorn)).LT.1.0e-7) THEN
-                     ev(iBand,icorn) = ev(iBand,icorn) + i*1.0e-7*itet
-                     ev(iBand,jcorn) = ev(iBand,jcorn) - i*1.0e-7*itet
-                  ENDIF
+      DO ispin = 1, jspins
+         DO itet = 1,kpts%ntet
+            DO iBand = 1,SIZE(eig_nondeg,1)
+               DO i = 1,3
+                  icorn = kpts%ntetra(i,itet)
+                  DO j = i+1,4
+                     jcorn = kpts%ntetra(j,itet)
+                     IF (abs(eig_nondeg(iBand,icorn,ispin)-eig_nondeg(iBand,jcorn,ispin)).LT.1.0e-7) THEN
+                        eig_nondeg(iBand,icorn,ispin) = eig_nondeg(iBand,icorn,ispin) + i*1.0e-7*itet
+                        eig_nondeg(iBand,jcorn,ispin) = eig_nondeg(iBand,jcorn,ispin) - i*1.0e-7*itet
+                     ENDIF
+                  ENDDO
                ENDDO
             ENDDO
          ENDDO
       ENDDO
 
-      WRITE (*,*) 'in tetra_dos'  ! do not remove  this statement
+      !WRITE (*,*) 'in tetra_dos'  ! do not remove  this statement
 
       !
       ! calculate partial weights
       !
-      DO ikpt=1,kpts%nkpt
-         DO iBand = 1,nevk(ikpt)
-            DO itet = 1,kpts%ntet
-               IF (ALL(kpts%ntetra(:,itet).ne.ikpt)) CYCLE
+      DO ispin = 1, jspins
+         DO ikpt=1,kpts%nkpt
+            DO iBand = 1,neig(ikpt,ispin)
+               DO itet = 1,kpts%ntet
+                  IF (ALL(kpts%ntetra(:,itet).ne.ikpt)) CYCLE
 
-               eval = ev(iBand,kpts%ntetra(:,itet))
+                  eval = eig_nondeg(iBand,kpts%ntetra(:,itet),ispin)
 
-               IF(ANY(eval.GE.9999.9)) CYCLE
+                  IF(ANY(eval.GE.9999.9)) CYCLE
 
-               DO i=1,4
-                  icorn = kpts%ntetra(i,itet)
+                  DO i=1,4
+                     icorn = kpts%ntetra(i,itet)
 
-                  weight(i)=1.0
-                  DO j=1,4
-                     IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
+                     weight(i)=1.0
+                     DO j=1,4
+                        IF (i.NE.j) weight(i)=weight(i)*(eval(j)-eval(i))
+                     ENDDO
+                     weight(i)=6.0*kpts%voltet(itet)/(weight(i)*kpts%ntet)
+
+                     wpar(iBand,icorn,ispin) =  wpar(iBand,icorn,ispin) &
+                                             + sfac*0.25*weight(i)*qal(iBand,ikpt,ispin)
                   ENDDO
-                  weight(i)=6.0*kpts%voltet(itet)/(weight(i)*kpts%ntet)
 
-                  DO idim=1,qdim
-                     wpar(idim,iBand,icorn) =  wpar(idim,iBand,icorn) &
-                                             + 0.25*weight(i)*qal(idim,iBand,ikpt)
-                  ENDDO
                ENDDO
-
             ENDDO
          ENDDO
       ENDDO
@@ -108,22 +113,22 @@ MODULE m_tetrados
       !
       g = 0.0
 
-      DO ikpt = 1,kpts%nkpt
-         DO iBand = 1,neigd
+      DO ispin = 1, jspins
+         DO ikpt = 1,kpts%nkpt
+            DO iBand = 1,neig(ikpt,ispin)
 
-            ener = ev(iBand,ikpt)
-            DO idim = 1, qdim
-               w  = 0.5*wpar(idim,iBand,ikpt)
-               DO ie = 1,ned
-                  term(ie) = energy(ie) - ener
-                  IF(energy(ie).GT.ecmax(iBand)) term(ie) = ecmax(iBand) - ener
+               ener = eig_nondeg(iBand,ikpt,ispin)
+               w  = 0.5*wpar(iBand,ikpt,ispin)
+               DO ie = 1,SIZE(eGrid)
+                  term(ie) = eGrid(ie) - ener
+                  IF(eGrid(ie).GT.ecmax(iBand,ispin)) term(ie) = ecmax(iBand,ispin) - ener
                   IF(term(ie).LT.0.0e0)         term(ie) = 0.0e0
-                  g(ie,idim) = g(ie,idim) + w * term(ie)**2
+                  g(ie,ispin) = g(ie,ispin) + w * term(ie)**2
                ENDDO
-            ENDDO
 
+            ENDDO
          ENDDO
       ENDDO
 
    END SUBROUTINE tetra_dos
-END MODULE m_tetrados
+END MODULE m_tetra_dos

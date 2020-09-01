@@ -28,26 +28,39 @@ contains
       TYPE(t_atoms), INTENT(IN)     :: atoms
       CLASS(t_xcpot), ALLOCATABLE, INTENT(INOUT) :: xcpot
 
-      INTEGER              ::func_vxc_id_c, func_vxc_id_x, func_exc_id_c, func_exc_id_x
-      integer :: xcpot_type,ierr
-
-
+      INTEGER              :: func_vxc_id_c, func_vxc_id_x, func_exc_id_c, func_exc_id_x
+      REAL                 :: gmaxxc
+      LOGICAL              :: l_libxc
+      LOGICAL              :: l_inbuild
+      CHARACTER(len=10)    :: inbuild_name
+      LOGICAL              :: l_relativistic
 
       !Finish setup of xcpot
       xcpot%l_libxc = (xcpot%inbuild_name == "LibXC")
       IF (xcpot%l_libxc) THEN
-        if (fmpi%irank==0) write (*,*) "func_ids", xcpot%func_vxc_id_c, xcpot%func_vxc_id_x, xcpot%func_exc_id_c, xcpot%func_exc_id_x
+         write (*,*) "func_ids", xcpot%func_vxc_id_c, xcpot%func_vxc_id_x, xcpot%func_exc_id_c, xcpot%func_exc_id_x
 
-        func_vxc_id_c = xcpot%func_vxc_id_c
-        func_vxc_id_x = xcpot%func_vxc_id_x
-        func_exc_id_c = xcpot%func_exc_id_c
-        func_exc_id_x = xcpot%func_exc_id_x
-        DEALLOCATE (xcpot)
-        ALLOCATE (t_xcpot_libxc::xcpot)
-        SELECT TYPE (xcpot)
-        CLASS is (t_xcpot_libxc)!just allocated like this
-          CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins)
-        END SELECT
+         func_vxc_id_c  = xcpot%func_vxc_id_c
+         func_vxc_id_x  = xcpot%func_vxc_id_x
+         func_exc_id_c  = xcpot%func_exc_id_c
+         func_exc_id_x  = xcpot%func_exc_id_x
+         gmaxxc         = xcpot%gmaxxc
+         l_libxc        = .TRUE.
+         l_inbuild      = .FALSE.
+         inbuild_name   = xcpot%inbuild_name
+         l_relativistic = xcpot%l_relativistic
+
+         DEALLOCATE (xcpot)
+         ALLOCATE (t_xcpot_libxc::xcpot)
+         SELECT TYPE (xcpot)
+         CLASS is (t_xcpot_libxc)!just allocated like this
+            CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins)
+         END SELECT
+         xcpot%gmaxxc         = gmaxxc
+         xcpot%l_libxc        = l_libxc
+         xcpot%l_inbuild      = l_inbuild
+         xcpot%inbuild_name   = inbuild_name
+         xcpot%l_relativistic = l_relativistic
       ELSE
         SELECT TYPE (xcpot)
         CLASS is (t_xcpot_inbuild_nf)

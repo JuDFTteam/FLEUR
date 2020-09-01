@@ -54,6 +54,8 @@ wannier/wann_pauli_rs.F
 wannier/wann_gabeffgagaunt.f
 wannier/wann_perpmag.f
 wannier/wann_perpmag_rs.F
+wannier/wann_torque_rs.F
+wannier/wann_torque.F
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
 wannier/wann_plot_symm.f

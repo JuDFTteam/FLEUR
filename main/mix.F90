@@ -206,7 +206,7 @@ contains
        CALL system("rm cdn_last.hdf")
        CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,.TRUE.,inDen,'cdn_last')
-
+       CALL writeCoreDensity(input,atoms,inDen%mtCore,inDen%tec,inDen%qint,'cdn_last')
     END IF
 #endif
 

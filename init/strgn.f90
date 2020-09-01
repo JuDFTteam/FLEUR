@@ -749,7 +749,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-       !OMP END PARALLLEL DO
+       !$OMP END PARALLEL DO
     ENDIF
     if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen")

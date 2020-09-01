@@ -64,7 +64,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    PARAMETER (l_st=.true.)
 
    !use the init_potden_simple routine to prevent extra dimensions from noco calculations
-   CALL den%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+   CALL den%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
                  atoms%n_u+atoms%n_hia,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 

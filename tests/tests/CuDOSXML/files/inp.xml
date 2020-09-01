@@ -15,7 +15,7 @@
       <bzIntegration valenceElectrons="22.00000000" mode="tria" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="20">
+         <kPointList name="default" count="20" type="tria">
             <kPoint weight="    1.000000">    0.500000     0.500000     0.000000</kPoint>
             <kPoint weight="    1.000000">    0.500000     0.500000     0.500000</kPoint>
             <kPoint weight="    1.000000">    0.500000     0.000000     0.500000</kPoint>

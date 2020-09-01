@@ -105,6 +105,10 @@ MODULE m_types_atoms
   !Logical switch which decides if the rotated cdn should be scaled.
   !Yet untested feature.
   LOGICAL, ALLOCATABLE :: flipSpinScale(:)
+  !Switches for the output for the calculation of crystal field coefficients
+  LOGICAL, ALLOCATABLE :: l_outputCFcdn(:)
+  LOGICAL, ALLOCATABLE :: l_outputCFpot(:)
+  LOGICAL, ALLOCATABLE :: l_outputCFremove4f(:)
 CONTAINS
   PROCEDURE :: init=>init_atoms
   PROCEDURE :: nsp => calc_nsp_atom
@@ -165,6 +169,9 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%flipSpinPhi,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinTheta,rank,mpi_comm)
  CALL mpi_bc(this%flipSpinScale,rank,mpi_comm)
+ CALL mpi_bc(this%l_outputCFcdn,rank,mpi_comm)
+ CALL mpi_bc(this%l_outputCFpot,rank,mpi_comm)
+ CALL mpi_bc(this%l_outputCFremove4f,rank,mpi_comm)
  call mpi_bc(this%itype,rank,mpi_comm)
 
 #ifdef CPP_MPI
@@ -260,6 +267,9 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%econf(this%ntype))
  ALLOCATE(this%ncv(this%ntype)) ! For what is this?
  ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
+ ALLOCATE(this%l_outputCFcdn(this%ntype),source=.FALSE.)
+ ALLOCATE(this%l_outputCFpot(this%ntype),source=.FALSE.)
+ ALLOCATE(this%l_outputCFremove4f(this%ntype),source=.FALSE.)
  this%nlod=MAXVAL(xml%get_nlo())
  ALLOCATE(this%llo(this%nlod,this%ntype))
  this%llo=0
@@ -378,6 +388,13 @@ SUBROUTINE read_xml_atoms(this,xml)
        CALL this%econf(n)%init_num(evaluateFirstIntOnly(xml%getAttributeValue(TRIM(xpaths)//'/@coreStates')),this%nz(n))
        call this%econf(n)%set_initial_moment(evaluateFirstOnly(xml%getAttributeValue(TRIM(xpaths)//'/@magMom')))
     END IF
+    !crystalField output
+    numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/cFCoeffs')
+    IF(numberNodes.EQ.1) THEN
+       this%l_outputCFcdn(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/cFCoeffs/@chargeDensity'))
+       this%l_outputCFpot(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/cFCoeffs/@potential'))
+       this%l_outputCFremove4f(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/cFCoeffs/@remove4f'))
+    ENDIF
     ! Read in atom positions
     numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/relPos')
     DO i = 1, numberNodes

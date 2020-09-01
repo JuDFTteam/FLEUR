@@ -99,7 +99,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL qssbti(3,2),qssbtii
     REAL bess(-oneD%odi%mb:oneD%odi%mb),dbss(-oneD%odi%mb:oneD%odi%mb)
-    COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:)
+    COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:),t1jz(:)
     REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
     REAL,    ALLOCATABLE :: ddue(:,:),t(:),te(:),tei(:,:),dummy(:)
     REAL,    ALLOCATABLE :: u(:,:,:),ue(:,:,:),v(:),yy(:)
@@ -758,6 +758,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
           !=============================================================
           IF (noco%l_noco) THEN
              !--->       diagonal elements of the density matrix, n_11 and n_22
+             CALL timestart("vacden4_noco")
              DO ispin = 1,input%jspins
                 IF (oneD%odi%d1) THEN
                    DO l = 1,nv2(ispin)
@@ -954,8 +955,8 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                    ENDDO
                 END DO
              END IF ! oneD%odi%d1
+             CALL timestop("vacden4_noco")
           ELSE                                ! collinear part
-
              IF (oneD%odi%d1) THEN
                 DO l = 1,nv2(jspin)
                    DO m = -oneD%odi%mb,oneD%odi%mb
@@ -1001,19 +1002,26 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
 
              ELSE         !D1
 
+                !$OMP PARALLEL DEFAULT(none) &
+                !$OMP SHARED(nv2,jspin,kvac1,kvac2,stars,ne,we,vacuum,den,ac,bc,u,ue,ivac) &
+                !$OMP PRIVATE(l1,i1,i2,i3,ig3,phs,ig3p,phsp,ind2,ind2p,n,jz,ui,uj,uei,uej)&
+                !$OMP PRIVATE(aa,bb,ab,ba,t1jz,l) 
+                ALLOCATE(t1jz(vacuum%nmzxy))
+                !$OMP DO SCHEDULE(dynamic,5)
                 DO l = 1,nv2(jspin)
                    DO  l1 = 1,l - 1
                       i1 = kvac1(l,jspin) - kvac1(l1,jspin)
                       i2 = kvac2(l,jspin) - kvac2(l1,jspin)
                       i3 = 0
+                      ig3 = stars%ig(i1,i2,i3)
+                      ind2 = stars%ig2(ig3)
+                      !IF (ind2 .ne.stars%ig2(ig3)) CYCLE
                       IF (iabs(i1).GT.stars%mx1) CYCLE
                       IF (iabs(i2).GT.stars%mx2) CYCLE
-                      ig3 = stars%ig(i1,i2,i3)
                       IF (ig3.EQ.0)  CYCLE
                       phs = stars%rgphs(i1,i2,i3)
                       ig3p = stars%ig(-i1,-i2,i3)
                       phsp = stars%rgphs(-i1,-i2,i3)
-                      ind2 = stars%ig2(ig3)
                       ind2p = stars%ig2(ig3p)
                       aa = 0.0
                       bb = 0.0
@@ -1030,12 +1038,19 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          uj = u(jz,l1,jspin)
                          uei = ue(jz,l,jspin)
                          uej = ue(jz,l1,jspin)
-                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                         den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1, ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                         den%vacxy(jz,ind2p-1,ivac,jspin) = den%vacxy(jz,ind2p-1, ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                         t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                       ENDDO
+                      !$OMP CRITICAL (denvacxy)
+                      den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
+                               + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                      den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
+                               + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
+                      !$OMP END CRITICAL (denvacxy)
                    ENDDO
                 END DO
+                !$OMP END DO
+                DEALLOCATE(t1jz)
+                !$OMP END PARALLEL
              END IF ! D1
           ENDIF
        END IF

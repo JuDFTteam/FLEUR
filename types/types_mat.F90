@@ -95,12 +95,10 @@ CONTAINS
       call MPI_Bcast(mat%matsize1, 1, MPI_INTEGER, root, comm, ierr)
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
-
-
       if(mat%l_real) then
-         call MPI_Bcast(mat%data_r, product(full_shape), MPI_REAL8, root, comm, ierr)
+         call MPI_Bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
       else 
-         call MPI_Bcast(mat%data_c, product(full_shape), MPI_COMPLEX8, root, comm, ierr)
+         call MPI_Bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
       endif
 #endif
    end subroutine t_mat_bcast
@@ -253,11 +251,7 @@ CONTAINS
       class(t_mat), intent(in) :: mat
       logical :: var_alloc
 
-      if (mat%l_real) then
-         var_alloc = allocated(mat%data_r)
-      else
-         var_alloc = allocated(mat%data_c)
-      endif
+      var_alloc = allocated(mat%data_r) .or. allocated(mat%data_c)
    end function t_mat_allocated
 
    SUBROUTINE t_mat_lproblem(mat, vec)

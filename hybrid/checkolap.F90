@@ -1,5 +1,5 @@
 MODULE m_checkolap
-
+   use m_ylm
 CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, fmpi, &
@@ -71,7 +71,7 @@ CONTAINS
                                  (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                    'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
-      LOGICAL                 ::  l_mism = .true.
+      LOGICAL, parameter      ::  l_mism = .false.
 
 
       call timestart("checkolap")
@@ -97,7 +97,7 @@ CONTAINS
          if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
          call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv, input, ikpt, &
                      jsp, z(ikpt), c_phase=c_phase)
-#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
+#ifdef CPP_MPI
          call timestart("Post read_z Barrier: checkolap")
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          call timestop("Post read_z Barrier: checkolap")
@@ -237,109 +237,98 @@ CONTAINS
          END DO
       END DO
 
-      IF(.not. l_mism) RETURN
+      IF(l_mism)then
 
-      IF(fmpi%irank == 0) WRITE(oUnit, '(/A)') &
-         'Mismatch of wave functions at the MT-sphere boundaries'
-      allocate(carr1(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
-      allocate(carr2(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
-      allocate(carr3(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+         IF(fmpi%irank == 0) WRITE(oUnit, '(/A)') &
+            'Mismatch of wave functions at the MT-sphere boundaries'
+         allocate(carr1(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+         allocate(carr2(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
+         allocate(carr3(maxval(hybdat%nbands),(atoms%lmaxd + 1)**2))
 
-      ! create lock for race-condition in coulomb
-      DO ikpt = 1, nkpti
-         iatom = 0
-         DO itype = 1, atoms%ntype
-            DO ineq = 1, atoms%neq(itype)
-               iatom = iatom + 1            
-               carr1 = 0; carr2 = 0; carr3 = 0
+         ! create lock for race-condition in coulomb
+         DO ikpt = 1, nkpti
+            iatom = 0
+            DO itype = 1, atoms%ntype
+               DO ineq = 1, atoms%neq(itype)
+                  iatom = iatom + 1            
+                  carr1 = 0; carr2 = 0; carr3 = 0
 
-               ! calculate k1,k2,k3
-               CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
-               call timestart("pw part")
-               ! PW part
-               DO igpt = 1, lapw%nv(jsp)
-                  gpt = lapw%gvec(:, igpt, jsp)
+                  ! calculate k1,k2,k3
+                  CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+                  call timestart("pw part")
+                  ! PW part
+                  !$OMP PARALLEL DO default(none) &
+                  !$OMP private(igpt, gpt, cexp, q, qnorm, sphbes, y, pre_fac, lm, l, m, iband, cdum) &
+                  !$OMP shared(lapw, jsp, atoms, kpts, iatom, ikpt, cell, itype, ineq, z, hybdat) &
+                  !$OMP reduction(+:carr2)
+                  DO igpt = 1, lapw%nv(jsp)
+                     gpt = lapw%gvec(:, igpt, jsp)
 
-                  cexp = exp(img*2*pi_const* &
-                             dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
-                  q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
+                     cexp = exp(img*2*pi_const* &
+                              dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
+                     q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
 
-                  qnorm = norm2(q)
-                  call timestart("sphbessel")
-                  call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
-                  call timestop("sphbessel")
-                  
-                  call timestart("harmonicsr")
-                  call harmonicsr(y, q, atoms%lmax(itype))
-                  y = conjg(y)
-                  call timestop("harmonicsr")
+                     qnorm = norm2(q)
+                     call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
 
-                  call timestart("carr2")
-                  pre_fac = fpi_const / sqrt(cell%omtil) * cexp
-                  if(z(1)%l_real) THEN
-                     !$OMP PARALLEL DO default(none) collapse(2) &
-                     !$OMP private(lm, iband, l,m,cdum) &
-                     !$OMP shared(atoms, hybdat, cell, sphbes, itype, ikpt, pre_fac, carr2, z) &
-                     !$OMP shared(igpt, y)
-                     do lm = 1, (atoms%lmax(itype)+1)**2
-                        DO iband = 1, hybdat%nbands(ikpt)
+                     call ylm4(atoms%lmax(itype), q, y)
+                     y = conjg(y)
+                     
+                     pre_fac = fpi_const / sqrt(cell%omtil) * cexp
+                     if(z(1)%l_real) THEN
+                        do lm = 1, (atoms%lmax(itype)+1)**2
                            call calc_l_m_from_lm(lm, l, m)
-                           cdum = pre_fac * ImagUnit**l * sphbes(l)
-                           carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
+                           DO iband = 1, hybdat%nbands(ikpt)
+                              cdum = pre_fac * ImagUnit**l * sphbes(l)
+                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
+                           enddo
                         enddo
-                     enddo
-                     !$OMP end parallel do
-                  else
-                     !$OMP PARALLEL DO default(none) collapse(2) &
-                     !$OMP private(lm, iband, l,m,cdum) &
-                     !$OMP shared(atoms, hybdat, cell, sphbes, itype, ikpt, pre_fac, carr2, z)&
-                     !$OMP shared(igpt, y)
-                     do lm = 1, (atoms%lmax(itype)+1)**2
-                        DO iband = 1, hybdat%nbands(ikpt)
+                     else
+                        do lm = 1, (atoms%lmax(itype)+1)**2
                            call calc_l_m_from_lm(lm, l, m)
-                           cdum = pre_fac * ImagUnit**l * sphbes(l)
-                           carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
-                        end DO
-                     END DO
-                     !$OMP end parallel do
-                  endif
-                  call timestop("carr2")
-               enddo
-               call timestop("pw part")
+                           DO iband = 1, hybdat%nbands(ikpt)
+                              cdum = pre_fac * ImagUnit**l * sphbes(l)
+                              carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
+                           end DO
+                        END DO
+                     endif
+                  enddo
+                  !$OMP END PARALLEL DO
+                  call timestop("pw part")
 
-               call timestart("MT-part")
-               ! MT
-               lm1 = 0
-               do lm = 1,(atoms%lmax(itype)+1)**2
-                  call calc_l_m_from_lm(lm, l, m)
-                  DO n = 1, mpdata%num_radfun_per_l(l, itype)
-                     lm1 = lm1 + 1
-                     rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
-                     DO iband = 1, hybdat%nbands(ikpt)
-                        carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
+                  call timestart("MT-part")
+                  ! MT
+                  lm1 = 0
+                  do lm = 1,(atoms%lmax(itype)+1)**2
+                     call calc_l_m_from_lm(lm, l, m)
+                     DO n = 1, mpdata%num_radfun_per_l(l, itype)
+                        lm1 = lm1 + 1
+                        rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
+                        DO iband = 1, hybdat%nbands(ikpt)
+                           carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
+                        END DO
                      END DO
                   END DO
-               END DO
-               call timestop("MT-part")
-               carr1 = carr2 - carr3
+                  call timestop("MT-part")
+                  carr1 = carr2 - carr3
 
 
-               rarr = 0
-               lm = 0
-               DO l = 0, atoms%lmax(itype)
-                  DO m = -l, l
-                     lm = lm + 1
-                     rarr = rarr + abs(carr1(:, lm))**2
+                  rarr = 0
+                  lm = 0
+                  DO l = 0, atoms%lmax(itype)
+                     DO m = -l, l
+                        lm = lm + 1
+                        rarr = rarr + abs(carr1(:, lm))**2
+                     END DO
                   END DO
+                  rarr = sqrt(rarr/(4*pi_const))
+
+                  write (oUnit, '(I6,4X,F14.12,''  ('',F14.12,'')'')') ikpt,sum(rarr(:1)**2/hybdat%nbands(ikpt)),maxval(rarr(:1))
                END DO
-               rarr = sqrt(rarr/(4*pi_const))
-               !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
-               !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
-               !             CALL writeout(outtext,fmpi%irank)
             END DO
          END DO
-      END DO
-      call timestop("checkolap")
+         call timestop("checkolap")
+      endif
    END SUBROUTINE checkolap
 
 END MODULE m_checkolap

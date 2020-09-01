@@ -146,7 +146,9 @@ CONTAINS
 
                 IF (info.NE.0) THEN
                    td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
-                   PRINT *,"Potential shift for atom type ",n," is too small. Increasing the value to:",td%e_shift(n,jsp)
+                   if (fmpi%is_root()) then
+                     PRINT *,"Potential shift for atom type ",n," is too small. Increasing the value to:",td%e_shift(n,jsp)
+                   endif
                    IF (td%e_shift(n,jsp)>e_shift_max) THEN
                       CALL judft_error("Potential shift at maximum")
                    ENDIF

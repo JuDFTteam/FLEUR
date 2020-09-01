@@ -70,15 +70,17 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_enparaXML):: enparaxml
 
-      INTEGER            :: idum, kptsUnit
-      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets
+      INTEGER            :: idum, kptsUnit, inpOldUnit, ios
+      INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
       CHARACTER(len=40)  :: filename
       CHARACTER(len=200) :: xPath
+      CHARACTER(len=800) :: line
       CHARACTER(LEN=40)  :: kptsSelection(3)
-      CHARACTER(LEN=200) :: tempString
+      CHARACTER(LEN=200) :: tempString, kptsComment
       CHARACTER(len=40), ALLOCATABLE  :: kpts_str(:)
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
+      INTEGER, ALLOCATABLE :: kptsBZintegration(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
       LOGICAL            :: l_exist, l_addPath, l_check
 
@@ -147,11 +149,13 @@ PROGRAM inpgen
       ALLOCATE(kptsName(numKpts))
       ALLOCATE(kptsPath(numKpts))
       ALLOCATE(l_kptsInitialized(numKpts))
+      ALLOCATE(kptsBZintegration(numKpts))
       kpts_str(:)=""
       kptsPath(:)=""
       kptsName(:)=""
       kptsSelection(:) = ''
       l_kptsInitialized(:) = .TRUE.
+      kptsBZintegration = BZINT_METHOD_HIST
 
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
@@ -172,7 +176,7 @@ PROGRAM inpgen
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
          l_kptsInitialized(:) = .FALSE.
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,&
+         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
               input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -239,13 +243,14 @@ PROGRAM inpgen
       DO iKpts = 1, numKpts
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                           input%bz_integration,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
       END DO
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
          DO iKpts = numKpts, 1, -1
             IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
                kptsSelection(1) = kpts(iKpts)%kptsName
+               input%bz_integration = kptsBZintegration(iKpts)
             END IF
             IF(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_PATH) kptsSelection(2) = kpts(iKpts)%kptsName
          END DO
@@ -261,20 +266,81 @@ PROGRAM inpgen
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts(1),kptsSelection,enpara,gfinp,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      IF (.NOT.l_include(1).OR.judft_was_argument("-kpt")) THEN
+      IF (.NOT.l_include(1)) THEN
          kptsUnit = 38
-         OPEN (kptsUnit, file="kpts.xml", action="write")         
+         inpOldUnit = 39
+         INQUIRE(file='kpts.xml',exist=l_exist)
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            CALL system('mv inp.xml inp_old.xml')
+            OPEN (inpOldUnit, file="inp_old.xml", action="read")
+            OPEN (kptsUnit, file="inp.xml", action="write")
+            ios = 0
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'<kPointLists>') EXIT
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         ELSE
+            OPEN (kptsUnit, file="kpts.xml", action="write")
+         END IF
+
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
          DO iKpts = 1, numKpts
             CALL kpts(iKpts)%print_XML(kptsUnit)
          END DO
          WRITE (kptsUnit, '(a)') "         </kPointLists>"
+
+         IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF (TRIM(ADJUSTL(line)).EQ.'</kPointLists>') EXIT
+            END DO
+            DO WHILE(ios==0)
+               READ(inpOldUnit,'(a)',iostat=ios) line
+               IF(ios.NE.0) EXIT
+               WRITE(kptsUnit,'(a)') TRIM(line)
+            END DO
+         END IF
+
          CLOSE (kptsUnit)
       END IF
+
+100   FORMAT (a20,a15,i10,3x,a)
+      WRITE(*,*) 'Stored k-point lists:'
+      WRITE(*,*) ''
+      WRITE(*,'(a20,a15,a10,3x,a)') 'NAME', 'TYPE', 'NKPT', 'COMMENT'
+      WRITE(*,*) '================================================================================'
+      DO iKpts = 1, numKpts
+         SELECT CASE(kpts(iKpts)%kptsKind)
+            CASE (KPTS_KIND_UNSPECIFIED)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'UNSPECIFIED', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_MESH)
+               kptsComment = ''
+               WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'MESH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+            CASE (KPTS_KIND_PATH)
+               kptsComment = ''
+               kptsComment = TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(1)))
+               DO iPoint = 2, kpts(iKpts)%numSpecialPoints
+                  kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
+               END DO
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+            CASE (KPTS_KIND_TETRA)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TETRA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_TRIA)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_SPEX_MESH)
+               kptsComment = ''
+               WRITE(kptsComment,'(i0,a,i0,a,i0)') kpts(iKpts)%nkpt3(1), ' x ', kpts(iKpts)%nkpt3(2), ' x ', kpts(iKpts)%nkpt3(3)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'SPEX-MESH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
+         END SELECT
+      END DO
+      WRITE(*,*) '================================================================================'
+
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)

@@ -22,5 +22,27 @@ MODULE m_types_xcpot_data
       LOGICAL             :: is_mjw = .false.
       REAL                :: exchange_weight
       INTEGER             :: krla !relativistic corrections
+   contains 
+      procedure :: mpi_bc => t_xcpot_data_mpi_bc 
    END TYPE t_xcpot_data
+contains 
+
+   subroutine t_xcpot_data_mpi_bc(data, rank, mpi_comm) 
+      use m_mpi_bc_tool
+      implicit NONE
+      class(t_xcpot_data), intent(inout) :: data 
+      integer, intent(in) :: rank, mpi_comm
+
+      CALL mpi_bc(data%is_rpbe, rank, mpi_comm)
+      CALL mpi_bc(data%is_wc, rank, mpi_comm)
+      CALL mpi_bc(data%is_hse, rank, mpi_comm)
+      CALL mpi_bc(data%uk, rank, mpi_comm)
+      CALL mpi_bc(data%um, rank, mpi_comm)
+      CALL mpi_bc(data%is_pbes, rank, mpi_comm)
+      CALL mpi_bc(data%is_pbe0, rank, mpi_comm)
+      CALL mpi_bc(data%is_bh, rank, mpi_comm)
+      CALL mpi_bc(data%is_mjw, rank, mpi_comm)
+      CALL mpi_bc(data%exchange_weight, rank, mpi_comm)
+      CALL mpi_bc(data%krla, rank, mpi_comm)
+   end subroutine t_xcpot_data_mpi_bc
 END MODULE m_types_xcpot_data

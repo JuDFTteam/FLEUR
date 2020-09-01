@@ -245,7 +245,7 @@ MODULE m_banddos_io
       if (io_groupexists(GroupID,"BS")) THEN
         call io_gopen(GroupID,"BS",BSgroupID)
       ELSE
-        CALL h5gcreate_f(fileID, "BS", BSGroupID, hdfError)
+        CALL h5gcreate_f(GroupID, "BS", BSGroupID, hdfError)
       endif
       if (.not.io_dataexists(BSGroupID,"kpts")) call io_write_var(BSGroupID,"kpts",kpts%bk)
       if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)

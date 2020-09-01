@@ -155,7 +155,7 @@ subroutine write_dos(eigdos,hdf_id)
 #endif
   END subroutine
 
-  subroutine write_band(eigdos,kpts,cell,hdf_id,efermi)
+  subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi)
     use m_types_kpts
     use m_types_cell
     use m_gnuplot_BS
@@ -166,6 +166,7 @@ subroutine write_dos(eigdos,hdf_id)
     class(t_eigdos),INTENT(INOUT):: eigdos
     type(t_kpts),intent(in)      :: kpts
     type(t_cell),intent(in)      :: cell
+    CHARACTER(LEN=*), INTENT(IN) :: title
     real,intent(in)              :: efermi
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
@@ -210,7 +211,7 @@ subroutine write_dos(eigdos,hdf_id)
       ENDDO
       CLOSE (18)
     enddo
-    call gnuplot_bs(kpts,cell,eigdos%get_spins())
+    call gnuplot_bs(kpts,title,cell,eigdos%get_spins())
 
   end subroutine
 
@@ -218,6 +219,8 @@ subroutine write_dos(eigdos,hdf_id)
     use m_types_banddos
     use m_types_input
     use m_dosbin
+    use m_ptdos
+    use m_tetra_dos
     use m_dostetra
     use m_types_kpts
 
@@ -244,11 +247,21 @@ subroutine write_dos(eigdos,hdf_id)
 
     DO n=1,eigdos%get_num_weights()
       print *,eigdos%name_of_dos,n,eigdos%get_num_weights()
-      if (kpts%ntet==0) then
+      SELECT CASE(input%bz_integration)
+
+      CASE(BZINT_METHOD_HIST, BZINT_METHOD_GAUSS)
         call dos_bin(input%jspins,kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
-      ELSE
+      CASE(BZINT_METHOD_TRIA)
+        IF(input%film) THEN
+          CALL ptdos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        ELSE
+          CALL tetra_dos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_neig(),eigdos%get_eig(),&
+                         eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        ENDIF
+      CASE(BZINT_METHOD_TETRA)
         CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
-      endif
+      END SELECT
+
     end do
   END subroutine
 

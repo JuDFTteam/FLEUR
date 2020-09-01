@@ -18,7 +18,7 @@
       <bzIntegration valenceElectrons="14.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="1">
+         <kPointList name="default" count="1" type="mesh">
             <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
          </kPointList>
          </kPointLists>
@@ -66,8 +66,6 @@
    <output dos="T" band="F"  slice="F" >
       <checks vchk="F" cdinf="F"/>
       <bandDOS  minEnergy="-.10000000" maxEnergy="-.050000000" sigma=".00100000"/>
-      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
       <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>

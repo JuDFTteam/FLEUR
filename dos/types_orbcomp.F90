@@ -84,9 +84,9 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts,eig)
       ALLOCATE(thisOrbcomp%qmtp(input%neig,atoms%nat,kpts%nkpt,input%jspins))
       thisOrbcomp%eig=eig
    ELSE
-     ALLOCATE(thisOrbcomp%dos(0,0,0))
-      ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(1,1,1,input%jspins))
+      ALLOCATE(thisOrbcomp%dos(0,0,0))
+      ALLOCATE(thisOrbcomp%comp(1,1,0,1,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(1,0,1,input%jspins))
    END IF
 
    thisOrbcomp%comp = 0.0
