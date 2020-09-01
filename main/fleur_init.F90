@@ -4,8 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_init
-#ifdef CPP_MPI 
-   use mpi 
+#ifdef CPP_MPI
+   use mpi
 #endif
   IMPLICIT NONE
 CONTAINS
@@ -44,6 +44,7 @@ CONTAINS
     USE m_fleurinput_postprocess
     USE m_make_forcetheo
     USE m_lapwdim
+    use m_make_xcpot
     USE m_gaunt, ONLY: gaunt_init
 #ifdef CPP_MPI
     !USE m_mpi_bc_all,  ONLY : mpi_bc_all
@@ -142,6 +143,7 @@ CONTAINS
          Sliceplot,Banddos,mpinp,hybinp,Oned,Corespecinput,Wann,&
          Xcpot,Forcetheo_data,Kpts,Enparaxml,gfinp,hub1inp,fmpi%Mpi_comm)
     !Remaining init is done using all PE
+    call make_xcpot(fmpi,xcpot,atoms,input)
     CALL nococonv%init(noco)
     CALL nococonv%init_ss(noco,atoms)
     CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
@@ -168,7 +170,7 @@ CONTAINS
     IF (.NOT.noco%l_noco) &
          CALL transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     IF (fmpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&

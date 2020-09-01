@@ -61,7 +61,6 @@ MODULE m_types_xcpot_inbuild_nofunction
       PROCEDURE        :: relativistic_correction
       PROCEDURE        :: is_name => xcpot_is_name
       PROCEDURE        :: init => xcpot_init
-      PROCEDURE        :: mpi_bc => mpi_bc_xcpot_ib
    END TYPE t_xcpot_inbuild_nf
    PUBLIC t_xcpot_inbuild_nf
 CONTAINS

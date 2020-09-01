@@ -7,7 +7,7 @@ CONTAINS
     USE m_types_fleurinput
     use m_make_sym
     USE m_chkmt
-    use m_make_xcpot
+    !use m_make_xcpot
     use m_lapwdim
     use m_checks
     USE m_relaxio
@@ -31,7 +31,7 @@ CONTAINS
     call vacuum%init(sym)
 
     CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
-    call make_xcpot(xcpot,atoms,input)
+    !call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
