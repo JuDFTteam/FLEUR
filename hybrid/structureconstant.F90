@@ -505,9 +505,7 @@ contains
          END DO
          !$OMP END PARALLEL DO
       END DO
-#ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE, structconst, size(structconst), MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-#endif
       call timestop("realspace sum")
       deallocate (ptsh, radsh)
    end subroutine realspace_sum
