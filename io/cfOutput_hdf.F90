@@ -16,12 +16,12 @@ MODULE m_cfOutput_hdf
       USE m_juDFT
 
       TYPE(t_atoms),                INTENT(IN)  :: atoms
-      CHARACTER(len=:), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
+      CHARACTER(len=:), OPTIONAL, ALLOCATABLE   INTENT(IN)  :: inFilename
       LOGICAL, OPTIONAL,            INTENT(IN)  :: l_create
 
       INTEGER          :: version,numCDN, numPOT
-      CHARACTER(len=:) :: filename
+      CHARACTER(len=:),ALLOCATABLE :: filename
       LOGICAL          :: l_exist
       LOGICAL          :: l_error,l_createIn
       INTEGER          :: hdfError
@@ -52,12 +52,6 @@ MODULE m_cfOutput_hdf
          CALL io_write_attint0(metaGroupID,'version',version)
 
          CALL h5gclose_f(metaGroupID, hdfError)
-
-         CALL readPrevEFermi(eFermiPrev,l_error)
-         IF(l_error) THEN
-            ! No previous eFermi available
-            eFermiPrev = 0.0
-         END IF
 
          !How many potentials and charge densities are written out
          CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
@@ -103,7 +97,8 @@ MODULE m_cfOutput_hdf
       INTEGER           :: dimsInt(7)
       INTEGER           :: hdfError
       INTEGER           :: l,m,lm
-      CHARACTER(len=:)  :: groupName
+      LOGICAL           :: l_exist
+      CHARACTER(len=:), ALLOCATABLE  :: groupName
 
       groupName = '/pot-'//int2str(iType)
 
@@ -116,7 +111,7 @@ MODULE m_cfOutput_hdf
       CALL h5gcreate_f(fileID, groupName, potGroupID, hdfError)
 
       !Radial Mesh
-      CALL io_write_attint0(cdnGroupID,'atomType',iType)
+      CALL io_write_attint0(potGroupID,'atomType',iType)
       CALL io_write_attreal0(potGroupID,'RMT',atoms%rmt(iType))
       dims(:1)=[atoms%jri(iType)]
       dimsInt=dims
@@ -166,6 +161,7 @@ MODULE m_cfOutput_hdf
       INTEGER(HSIZE_T)  :: dims(7)
       INTEGER           :: dimsInt(7)
       INTEGER           :: hdfError
+      LOGICAL           :: l_exist
       CHARACTER(len=:)  :: groupName
 
       groupName = '/cdn-'//int2str(iType)
@@ -184,7 +180,7 @@ MODULE m_cfOutput_hdf
       dims(:1)=[atoms%jri(iType)]
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),rmeshDataSpaceID,hdfError)
-      CALL h5dcreate_f(potGroupID, "rmesh", H5T_NATIVE_DOUBLE, rmeshDataSpaceID, rmeshDataSetID, hdfError)
+      CALL h5dcreate_f(cdnGroupID, "rmesh", H5T_NATIVE_DOUBLE, rmeshDataSpaceID, rmeshDataSetID, hdfError)
       CALL h5sclose_f(rmeshDataSpaceID,hdfError)
       CALL io_write_real1(rmeshDataSetID,[1],dimsInt(:1),atoms%rmsh(:atoms%jri(iType),iType))
       CALL h5dclose_f(rmeshDataSetID, hdfError)
@@ -192,9 +188,9 @@ MODULE m_cfOutput_hdf
       dims(:1)=[atoms%jri(iType)]
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),cdnDataSpaceID,hdfError)
-      CALL h5dcreate_f(cdnGroupID, "cdn", H5T_NATIVE_DOUBLE, cdnDataSpaceID, vlmDataSetID, hdfError)
+      CALL h5dcreate_f(cdnGroupID, "cdn", H5T_NATIVE_DOUBLE, cdnDataSpaceID, cdnDataSetID, hdfError)
       CALL h5sclose_f(cdnDataSpaceID,hdfError)
-      CALL io_write_complex3(cdnDataSetID,[1],dimsInt(:1),n4f(:atoms%jri(iType)))
+      CALL io_write_real1(cdnDataSetID,[1],dimsInt(:1),n4f(:atoms%jri(iType)))
       CALL h5dclose_f(cdnDataSetID, hdfError)
 
       CALL h5gclose_f(cdnGroupID, hdfError)
