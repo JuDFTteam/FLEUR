@@ -41,7 +41,7 @@ MODULE m_cfOutput_hdf
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
 
-      IF(l_create) THEN
+      IF(l_createIn) THEN
          IF(l_exist) THEN
             CALL system('rm '//TRIM(ADJUSTL(filename)))
          ENDIF
