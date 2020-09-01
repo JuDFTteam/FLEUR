@@ -107,9 +107,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
-   INTEGER               :: i_gf,iContour
+   INTEGER               :: i_gf,iContour,n
 
-   TYPE(t_eigdos_list) :: eigdos(6)
+   TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
@@ -120,12 +120,33 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL regCharges%init(input,atoms)
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
-   CALL dos%init(input,atoms,kpts,banddos,results%eig); eigdos(1)%p=>dos
-   CALL vacdos%init(input,atoms,kpts,banddos,results%eig); eigdos(6)%p=>vacdos
-   CALL mcd%init(banddos,input,atoms,kpts,results%eig);eigdos(2)%p=>mcd
-   CALL slab%init(banddos,atoms,cell,input,kpts);eigdos(3)%p=>slab
-   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig);eigdos(4)%p=>orbcomp
-   CALL jDOS%init(input,banddos,atoms,kpts);eigdos(5)%p=>jDOS
+   CALL dos%init(input,atoms,kpts,banddos,results%eig)
+   CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
+   CALL mcd%init(banddos,input,atoms,kpts,results%eig)
+   CALL slab%init(banddos,atoms,cell,input,kpts)
+   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
+   CALL jDOS%init(input,banddos,atoms,kpts)
+
+   if (banddos%dos.or.banddos%band) then
+     allocate(eigdos(count((/banddos%dos.or.banddos%band,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
+     n=2
+     eigdos(1)%p=>dos
+     if (banddos%vacdos) THEN
+       eigdos(n)%p=>vacdos; n=n+1;
+     endif
+     if (banddos%l_mcd) THEN
+       eigdos(n)%p=>mcd; n=n+1
+     endif
+     if (banddos%l_slab) THEN
+       eigdos(n)%p=>slab; n=n+1
+     endif
+     if (banddos%l_orb) THEN
+       eigdos(n)%p=>orbcomp; n=n+1
+     endif
+     if (banddos%l_jdos) eigdos(n)%p=>jDOS
+   endif
+
+
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
