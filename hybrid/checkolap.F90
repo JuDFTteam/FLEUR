@@ -326,8 +326,8 @@ CONTAINS
                END DO
             END DO
          END DO
-         call timestop("checkolap")
       endif
+      call timestop("checkolap")
    END SUBROUTINE checkolap
 
 END MODULE m_checkolap
