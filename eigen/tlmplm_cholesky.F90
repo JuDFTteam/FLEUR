@@ -37,7 +37,7 @@ CONTAINS
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
     INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax
-    LOGICAL OK
+    LOGICAL OK, isRoot
     COMPLEX :: one
     !     ..
     !     .. Local Arrays ..
@@ -65,6 +65,7 @@ CONTAINS
        ENDIF
     ENDIF
 
+    isRoot = fmpi%is_root()
 
     DO j1=jmin,jmax
        j2=MERGE(j1,3-j1,jsp<3)
@@ -76,7 +77,7 @@ CONTAINS
        !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info)&
-       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v)&
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,isRoot)&
        !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,j1,j2)
        DO  n = 1,atoms%ntype
           CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,input,hub1inp,hub1data,td,ud)
@@ -146,7 +147,7 @@ CONTAINS
 
                 IF (info.NE.0) THEN
                    td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
-                   if (fmpi%is_root()) then
+                   if (isRoot) then
                      PRINT *,"Potential shift for atom type ",n," is too small. Increasing the value to:",td%e_shift(n,jsp)
                    endif
                    IF (td%e_shift(n,jsp)>e_shift_max) THEN
