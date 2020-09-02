@@ -7,7 +7,7 @@ MODULE m_selecFFT
    INTEGER, PARAMETER :: defaultFFT_const = 0
    INTEGER, PARAMETER :: mklFFT_const = 1
    INTEGER, PARAMETER :: spFFT_const = 2
-   INTEGER, PARAMETER :: fftw_const = 2
+   INTEGER, PARAMETER :: fftw_const = 3
 
 #ifdef CPP_FFT_MKL
    LOGICAL, PARAMETER :: mklFFT_available = .TRUE.
