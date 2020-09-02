@@ -86,7 +86,7 @@ CONTAINS
  903  FORMAT ('set nokey')
  905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
  906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
-#ifdef CPP_AIX
+#if (defined(CPP_AIX) || defined(__PGI))
  907  FORMAT ('set xtics ("',a1,'"',f9.5,', \\')
  908  FORMAT ('           "',a1,'"',f9.5,', \\')
 #else
@@ -95,7 +95,7 @@ CONTAINS
 #endif
  909  FORMAT ('           "',a1,'"',f9.5,'  )')
  910  FORMAT ('set ytics -8,2,4')
-#ifdef CPP_AIX
+#if (defined(CPP_AIX) || defined(__PGI))
  911  FORMAT ('plot [0:',f9.5,'] [-9:5] \\')
  912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \\')
 #else
