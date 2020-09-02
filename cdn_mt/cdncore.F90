@@ -110,7 +110,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
             moments%stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
          END DO
       END IF
-      IF ((noco%l_noco).AND.(fmpi%irank==0)) THEN
+      IF ((noco%l_noco.and..not.input%ctail).AND.(fmpi%irank==0)) THEN
          IF (jspin==2) THEN
 
             IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for noco")
@@ -132,8 +132,14 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
             END DO
             !pk non-collinear (end)
          END IF
-      ELSE
+       endif
+   END DO
+   DO jspin = 1,input%jspins
          IF (input%ctail) THEN
+           if (noco%l_noco.and.jspin==1) THEN
+             rh(:,:,1)=(rh(:,:,1)+rh(:,:,2))/2.
+             rh(:,:,2)=rh(:,:,1)
+           ENDIF
             IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
             !+gu hope this works as well
             CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
@@ -144,8 +150,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
                outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin) / (input%jspins * cell%volint)
             END DO
          END IF
-      END IF
-   END DO
+    ENDDO
 
    IF (input%kcrel==0) THEN
       IF (fmpi%irank==0) THEN
