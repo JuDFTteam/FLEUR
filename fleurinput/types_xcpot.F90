@@ -99,7 +99,8 @@ CONTAINS
     integer, intent(in), Optional::Irank
     INTEGER :: rank
 
-    rank=merge(Irank,0,present(irank))
+    rank = 0
+    IF(PRESENT(Irank)) rank = Irank
     ! Bcasts for abstract base class t_xcpot
     CALL mpi_bc(this%l_libxc, rank, mpi_comm)
     CALL mpi_bc(this%func_vxc_id_c, rank, mpi_comm)
