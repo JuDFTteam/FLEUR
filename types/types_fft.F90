@@ -234,23 +234,17 @@ contains
       integer      :: ok
       class(t_fft) :: fft 
 
-      fft%initialized = .False.
-      fft%backend    = -1
-      fft%length     = [-1,-1,-1]
-
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-      !$OMP critical
-      call fftw_destroy_plan(fft%plan)
-      call fftw_free(fft%ptr_in)
-      call fftw_free(fft%ptr_out)
-      !$OMP end critical
-      fft%plan  = c_null_ptr
-      ! if(allocated(fft%in)) deallocate(fft%in)
-      ! if(allocated(fft%out)) deallocate(fft%out)       
+         !$OMP critical
+         call fftw_destroy_plan(fft%plan)
+         call fftw_free(fft%ptr_in)
+         call fftw_free(fft%ptr_out)
+         !$OMP end critical
+         fft%plan  = c_null_ptr     
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
@@ -266,5 +260,9 @@ contains
       case default
          
       end select
+
+      fft%initialized = .False.
+      fft%backend    = -1
+      fft%length     = [-1,-1,-1]
    end subroutine t_fft_free
 end module m_types_fft

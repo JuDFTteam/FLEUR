@@ -118,7 +118,7 @@ CONTAINS
       INTEGER idens, ndens, ispin, jkpt, jsp_start, jsp_end
       REAL q0, q0_11, q0_22, scale, xk(3)
       REAL s
-      COMPLEX x
+      COMPLEX x, norm
       INTEGER, PARAMETER::  ist(-1:1) = (/1, 0, 0/)
       REAL, PARAMETER:: zero = 0.00, tol_3 = 1.0e-3
       !
@@ -132,7 +132,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
       !
       LOGICAL l_real
-      REAL CPP_BLAS_sdot
+      REAL CPP_BLAS_sdot, dznrm2, dnrm2
       EXTERNAL CPP_BLAS_sdot
       COMPLEX CPP_BLAS_cdotc
       EXTERNAL CPP_BLAS_cdotc
@@ -235,8 +235,13 @@ CONTAINS
          q0_22 = zero
          IF (.NOT. zmat%l_real) THEN
             DO nu = 1, ne
-               q0_11 = q0_11 + we(nu)*CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:, nu), 1, zMat%data_c(1:, nu), 1)
-               q0_22 = q0_22 + we(nu)*CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1)
+               norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+               q0_11 = q0_11 + we(nu)*norm*norm
+               norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+               q0_22 = q0_22 + we(nu)*norm*norm
+!              alternative formulation for the 4 lines above:
+!               q0_11 = q0_11 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:, nu), 1, zMat%data_c(1:, nu), 1))
+!               q0_22 = q0_22 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1))
             ENDDO
          ENDIF
          q0_11 = q0_11/cell%omtil
@@ -244,11 +249,15 @@ CONTAINS
       ELSE
          IF (zmat%l_real) THEN
             DO nu = 1, ne
-               q0 = q0 + we(nu)*CPP_BLAS_sdot(lapw%nv(jspin), zMat%data_r(:, nu), 1, zMat%data_r(:, nu), 1)
+               norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
+               q0 = q0 + we(nu)*norm*norm
+!               q0 = q0 + we(nu)*CPP_BLAS_sdot(lapw%nv(jspin), zMat%data_r(:, nu), 1, zMat%data_r(:, nu), 1)
             ENDDO
          ELSE
             DO nu = 1, ne
-               q0 = q0 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(jspin), zMat%data_c(:, nu), 1, zMat%data_c(:, nu), 1))
+               norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+               q0 = q0 + we(nu)*norm*norm
+!               q0 = REAL(CPP_BLAS_cdotc(lapw%nv(jspin), zMat%data_c(:, nu), 1, zMat%data_c(:, nu), 1))
             ENDDO
          ENDIF
          q0 = q0/cell%omtil
