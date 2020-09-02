@@ -235,7 +235,7 @@ CONTAINS
          q0_22 = zero
          IF (.NOT. zmat%l_real) THEN
             DO nu = 1, ne
-               q0_11 = q0_11 + we(nu)*CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:lapw%nv(1), nu), 1, zMat%data_c(1:lapw%nv(1), nu), 1)
+               q0_11 = q0_11 + we(nu)*CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:, nu), 1, zMat%data_c(1:, nu), 1)
                q0_22 = q0_22 + we(nu)*CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1)
             ENDDO
          ENDIF
