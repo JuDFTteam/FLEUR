@@ -239,14 +239,12 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-      !$OMP critical
-      call fftw_destroy_plan(fft%plan)
-      call fftw_free(fft%ptr_in)
-      call fftw_free(fft%ptr_out)
-      !$OMP end critical
-      fft%plan  = c_null_ptr
-      ! if(allocated(fft%in)) deallocate(fft%in)
-      ! if(allocated(fft%out)) deallocate(fft%out)       
+         !$OMP critical
+         call fftw_destroy_plan(fft%plan)
+         call fftw_free(fft%ptr_in)
+         call fftw_free(fft%ptr_out)
+         !$OMP end critical
+         fft%plan  = c_null_ptr     
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
