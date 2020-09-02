@@ -234,10 +234,6 @@ contains
       integer      :: ok
       class(t_fft) :: fft 
 
-      fft%initialized = .False.
-      fft%backend    = -1
-      fft%length     = [-1,-1,-1]
-
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
       select case(fft%backend)
@@ -266,5 +262,9 @@ contains
       case default
          
       end select
+
+      fft%initialized = .False.
+      fft%backend    = -1
+      fft%length     = [-1,-1,-1]
    end subroutine t_fft_free
 end module m_types_fft
