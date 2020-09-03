@@ -332,11 +332,9 @@ CONTAINS
       INTEGER :: n, iSpecialPoint
       REAL :: commonFractions(3)
       LOGICAL :: l_exist
-      CHARACTER(LEN=11) :: kptsKindString(6)
       CHARACTER(LEN=17) :: posString(3)
       CHARACTER(LEN=50) :: label
 
-      DATA kptsKindString /'unspecified','mesh       ','path       ','tetra      ','tria       ','SPEX-mesh  '/
       label = ''
 
       IF(.NOT.ALLOCATED(kpts%bk)) RETURN
@@ -355,10 +353,10 @@ CONTAINS
 205   FORMAT('            <kPointList name="', a, '" count="', i0, '" type="', a, '">')
 2051  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
-         WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+         WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
          CALL calcCommonFractions(kpts,commonFractions)
       ELSE
-         WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+         WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
       END IF
 
       DO n = 1, kpts%nkpt
