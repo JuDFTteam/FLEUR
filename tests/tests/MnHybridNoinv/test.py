@@ -16,7 +16,7 @@ try:
    te.nprocs = 3
 
    if(te.parallel):
-      te.run(["mpiexec", "-n", f"{te.nprocs}", te.binary, "-trace"])
+      te.run(["mpirun", "-n", f"{te.nprocs}", "--allow-run-as-root", "--mca", "btl", "vader,self" , te.binary, "-trace"])
    else:
       te.run([te.binary, "-trace"])
 
