@@ -155,15 +155,15 @@ CONTAINS
       call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
       allocate(coulomb(fi%kpts%nkpt))
-      DO im = 1, work_pack%n_kpacks
-         ikpt = work_pack%k_packs(im)%nk
+      DO im = 1, size(fmpi%k_list)
+         ikpt = fmpi%k_list(im)
          call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
       enddo
       call timestop("coulomb allocation")
 
       IF (fmpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
-                            float2str(sum([(coulomb(work_pack%k_packs(i)%nk)%size_mb(), i=1,work_pack%n_kpacks)])) // " MB"
+                            float2str(sum([(coulomb(fmpi%k_list(i))%size_mb(), i=1,size(fmpi%k_list))])) // " MB"
       endif
 
       !     Generate Symmetry:
@@ -429,8 +429,8 @@ CONTAINS
 
       call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
-      DO im = 1, work_pack%n_kpacks
-         ikpt = work_pack%k_packs(im)%nk
+      DO im = 1, size(fmpi%k_list)
+         ikpt = fmpi%k_list(im)
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
@@ -504,8 +504,8 @@ CONTAINS
          !     (2c) r,r' in different MT
 
          call timestart("loop over interst.")
-         DO im = 1, work_pack%n_kpacks
-            ikpt = work_pack%k_packs(im)%nk
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt))
 
@@ -524,8 +524,8 @@ CONTAINS
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
-         DO im = 1, work_pack%n_kpacks
-            ikpt = work_pack%k_packs(im)%nk
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
 
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
@@ -565,8 +565,8 @@ CONTAINS
          !     (3b) r,r' in different MT
 
          call timestart("coulomb matrix 3b")
-         DO im = 1, work_pack%n_kpacks
-            ikpt = work_pack%k_packs(im)%nk
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
             if (fmpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
             ! group together quantities which depend only on l,m and igpt -> carr2a
             allocate (carr2a((fi%hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(fi%atoms%nat, maxval(mpdata%n_g)))
@@ -664,7 +664,7 @@ CONTAINS
          call timestop("coulomb matrix 3b")
 
          ! check if I own the gamma point
-         if(work_pack%has_nk(1)) then
+         if(any(fmpi%k_list == 1)) then
             !     Add corrections from higher orders in (3b) to coulomb(:,1)
             ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
             call timestart("add corrections from higher orders")
@@ -779,8 +779,8 @@ CONTAINS
          call timestop("sphbesintegral")
 
          call timestart("loop 2")
-         DO im = 1, work_pack%n_kpacks
-            ikpt = work_pack%k_packs(im)%nk
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
             call timestart("harmonics setup")
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -806,8 +806,8 @@ CONTAINS
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), fi%kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
-         DO im = 1, work_pack%n_kpacks
-            ikpt = work_pack%k_packs(im)%nk
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
             carr2 = 0; iarr = 0
             iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
             DO igpt0 = 1, ngptm1(ikpt)
@@ -861,7 +861,7 @@ CONTAINS
          call judft_error("HSE is not implemented")
       ELSE
          ! check for gamma
-         if(work_pack%has_nk(1)) then
+         if(any(fmpi%k_list == 1)) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
                                     fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb(1))
          endif
@@ -871,8 +871,8 @@ CONTAINS
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
-      DO im = 1, work_pack%n_kpacks
-         ikpt = work_pack%k_packs(im)%nk
+      DO im = 1, size(fmpi%k_list)
+         ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
       enddo
@@ -887,8 +887,8 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
       enddo
 
-      DO im = 1, work_pack%n_kpacks
-         ikpt = work_pack%k_packs(im)%nk
+      DO im = 1, size(fmpi%k_list)
+         ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
 
          ! only one processor per k-point calculates MT convolution
