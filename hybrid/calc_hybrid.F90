@@ -102,17 +102,11 @@ CONTAINS
             call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
          enddo
 
-
          ! use jsp=1 for coulomb work-planning
-         call hybdat%set_states(fi, results, 1)
-         call judft_comm_split(glob_mpi%comm, glob_mpi%rank, 1, tmp_comm)
-         call tmp_mpi%init(tmp_comm)
-         call work_pack%init(fi, hybdat, tmp_mpi, 1, glob_mpi%rank, glob_mpi%size)
-         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
-         call work_pack%free()
+         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, glob_mpi, work_pack%owner_nk(i))
+            call hybdat%coul(i)%mpi_ibc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)

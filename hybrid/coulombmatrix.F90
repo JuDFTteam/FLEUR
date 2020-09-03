@@ -32,10 +32,10 @@
 !     of spherical Bessel functions. The value lexp (LEXP in gwinp) is the corresponding cutoff.
 !
 MODULE m_coulombmatrix
-
+   use mpi
 CONTAINS
 
-   SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot, work_pack)
+   SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
       use m_work_package
       use m_structureconstant
       USE m_types
@@ -59,7 +59,6 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-      type(t_work_package), intent(in)  :: work_pack
 
       ! - local scalars -
       INTEGER                    :: inviop
@@ -506,7 +505,7 @@ CONTAINS
          call timestart("loop over interst.")
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
-            call loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
+            call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt))
 
             call coulomb(ikpt)%u2l()
@@ -1335,7 +1334,7 @@ CONTAINS
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
-   subroutine loop_over_interst(fi, hybdat, mpdata, structconst, sphbesmoment, moment, moment2, &
+   subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
                                 qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
       use m_types
       use m_juDFT
@@ -1348,6 +1347,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_mpdata), intent(in)        :: mpdata
+      type(t_mpi), intent(in)           :: fmpi
       REAL, intent(in)                  :: sphbesmoment(0:, :, :), qnrm(:), facC(-1:), gmat(:, :), moment(:, 0:, :), moment2(:, :)
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
@@ -1355,7 +1355,7 @@ CONTAINS
       type(t_mat), intent(inout)        :: coulmat
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
-      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1
+      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr
       integer  :: l2, m2, lm2, n, i, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
       real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
@@ -1365,7 +1365,8 @@ CONTAINS
       coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = 0
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
-      DO igpt0 = 1, ngptm1(ikpt) !1,ngptm1(ikpt)
+      !DO igpt0 = 1, ngptm1(ikpt)
+      do igpt0 = fmpi%n_rank + 1, ngptm1(ikpt), fmpi%n_size
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
          ix = hybdat%nbasp + igpt
@@ -1481,6 +1482,17 @@ CONTAINS
          END DO ! collapsed atom & lm loop (ic)
          !$OMP END PARALLEL DO
       END DO
+
+#ifdef CPP_MPI
+      DO igpt0 = 1, ngptm1(ikpt)
+         igpt = pgptm1(igpt0, ikpt)
+         ix = hybdat%nbasp + igpt
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, coulmat%data_c(:,ix), hybdat%nbasp,&
+                            MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%sub_comm,ierr)
+      enddo
+#endif
+
+      call save_npy("coul_ikpt=" // int2str(ikpt) // ".npy", coulmat%data_c)
 
       IF (fi%sym%invs) THEN
          CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
