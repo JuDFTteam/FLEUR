@@ -1,8 +1,11 @@
 MODULE m_vacfun
   use m_juDFT
+#ifdef CPP_MPI
+  use mpi
+#endif
 CONTAINS
   SUBROUTINE vacfun(&
-       vacuum,stars,input,nococonv,jspin1,jspin2,&
+       fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
        sym, cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
     !*********************************************************************
@@ -13,6 +16,7 @@ CONTAINS
     !               m. weinert
     !*********************************************************************
 
+#include"cpp_double.h"
     USE m_constants
     USE m_intgr, ONLY : intgz0
     USE m_vacuz
@@ -20,6 +24,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -47,15 +52,19 @@ CONTAINS
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero,fac
     COMPLEX phase
-    INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,ipot
+    INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,ipot,nbuf,ierr,loclen
+    INTEGER mat_start,mat_end
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
     REAL u(vacuum%nmzd,size(duz,1),input%jspins),ud(vacuum%nmzd,size(duz,1),input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
+    COMPLEX, ALLOCATABLE :: tddv_loc(:,:), tduv_loc(:,:), tudv_loc(:,:), tuuv_loc(:,:)
+    COMPLEX, ALLOCATABLE :: tv_gather_buf(:)
     !     ..
     fac=MERGE(1.0,-1.0,jspin1>=jspin2)
     ipot=MERGE(jspin1,3,jspin1==jspin2)
+
 
     tuuv=0.0;tudv=0.0;tddv=0.0;tduv=0.0
     udz=0.0;duz=0.0;ddnv=0.0;udz=0.;uz=0.
@@ -87,14 +96,23 @@ CONTAINS
           ud(:,ik,jspin) = scale*ud(:,ik,jspin)
        enddo
     ENDDO
+    loclen = size(tddv,2)/fmpi%n_size + 1
+    mat_start = fmpi%n_rank*loclen + 1
+    mat_end = (fmpi%n_rank+1)*loclen
+    ALLOCATE(tddv_loc(size(tddv,1),mat_start:mat_end))
+    ALLOCATE(tduv_loc(size(tddv,1),mat_start:mat_end))
+    ALLOCATE(tudv_loc(size(tddv,1),mat_start:mat_end))
+    ALLOCATE(tuuv_loc(size(tddv,1),mat_start:mat_end))
+    tuuv_loc=0.0;tudv_loc=0.0;tddv_loc=0.0;tduv_loc=0.0
+
     !--->    set up the tuuv, etc. matrices
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& COLLAPSE(2) &
-    !$OMP& SHARED(tuuv,tddv,tudv,tduv,ddnv,vz) &
-    !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,vacuum,u,vxy,tail,fac,np1,ivac,ipot,ud) &
-    !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
-    DO  ik = 1,nv2(jspin1)
-       DO  jk = 1,nv2(jspin2)
+    DO  jk = mat_start,mat_end
+       IF (jk>nv2(jspin2)) EXIT
+       !$OMP PARALLEL DO DEFAULT(none) &
+       !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,jk) &
+       !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,vacuum,u,vxy,tail,fac,np1,ivac,ipot,ud) &
+       !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
+       DO  ik = 1,nv2(jspin1)
 
           !--->     determine the warping component of the potential
           i1 = fac*(kvac(1,ik,jspin1) - kvac(1,jk,jspin2))
@@ -127,7 +145,7 @@ CONTAINS
                 x(np1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(vxy(i,ind2,ivac,ipot))
              enddo
              CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
-             tuuv(ik,jk) = phase*cmplx(xv,yv)
+             tuuv_loc(ik,jk) = phase*cmplx(xv,yv)
 
              !--->       tddv
              DO  i = 1,vacuum%nmzxy
@@ -138,7 +156,7 @@ CONTAINS
                 x(np1-i) =ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(vxy(i,ind2,ivac,ipot))
              enddo
              CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
-             tddv(ik,jk) = phase*cmplx(xv,yv)
+             tddv_loc(ik,jk) = phase*cmplx(xv,yv)
 
              !--->       tudv
              DO  i = 1,vacuum%nmzxy
@@ -149,7 +167,7 @@ CONTAINS
                 x(np1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(vxy(i,ind2,ivac,ipot))
              enddo
              CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
-             tudv(ik,jk) = phase*cmplx(xv,yv)
+             tudv_loc(ik,jk) = phase*cmplx(xv,yv)
 
              !--->       tduv
              DO  i = 1,vacuum%nmzxy
@@ -160,15 +178,15 @@ CONTAINS
                 x(np1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(vxy(i,ind2,ivac,ipot))
              enddo
              CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
-             tduv(ik,jk) = phase*cmplx(xv,yv)
+             tduv_loc(ik,jk) = phase*cmplx(xv,yv)
 
           ELSE
              !--->       diagonal (film muffin-tin) terms
              IF (jspin1==jspin2) THEN
-                tuuv(ik,ik) = cmplx(evac(ivac,jspin1),0.0)
-                tddv(ik,ik) = cmplx(evac(ivac,jspin1)*ddnv(ik,jspin1),0.0)
-                tudv(ik,ik) = cmplx(0.5,0.0)
-                tduv(ik,ik) = cmplx(0.5,0.0)
+                tuuv_loc(ik,ik) = cmplx(evac(ivac,jspin1),0.0)
+                tddv_loc(ik,ik) = cmplx(evac(ivac,jspin1)*ddnv(ik,jspin1),0.0)
+                tudv_loc(ik,ik) = cmplx(0.5,0.0)
+                tduv_loc(ik,ik) = cmplx(0.5,0.0)
              ELSE
 
                !--->          tuuv
@@ -180,7 +198,7 @@ CONTAINS
                    x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*vz(i,ivac,4)
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
-                tuuv(ik,jk) = cmplx(xv,yv)
+                tuuv_loc(ik,jk) = cmplx(xv,yv)
 
                 !--->          tddv
                 DO i = 1,vacuum%nmz
@@ -191,7 +209,7 @@ CONTAINS
                    x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*vz(i,ivac,4)
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
-                tddv(ik,jk) = cmplx(xv,yv)
+                tddv_loc(ik,jk) = cmplx(xv,yv)
 
                 !--->          tudv
                 DO i = 1,vacuum%nmz
@@ -202,7 +220,7 @@ CONTAINS
                    x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*vz(i,ivac,4)
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
-                tudv(ik,jk) = cmplx(xv,yv)
+                tudv_loc(ik,jk) = cmplx(xv,yv)
 
                 !--->          tduv
                 DO i = 1,vacuum%nmz
@@ -213,14 +231,34 @@ CONTAINS
                    x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*vz(i,ivac,4)
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
-                tduv(ik,jk) = cmplx(xv,yv)
+                tduv_loc(ik,jk) = cmplx(xv,yv)
              ENDIF
 
           ENDIF
        ENDDO
+       !$OMP END PARALLEL DO
     ENDDO
-    !$OMP END PARALLEL DO
 
+    IF ( fmpi%n_size == 1 ) THEN
+       tuuv = tuuv_loc(:,:size(tuuv,2))
+       tduv = tduv_loc(:,:size(tduv,2))
+       tudv = tudv_loc(:,:size(tudv,2))
+       tddv = tddv_loc(:,:size(tddv,2))
+    ELSE
+       nbuf = size(tuuv_loc)
+       ALLOCATE(tv_gather_buf(nbuf*fmpi%n_size))
+       CALL MPI_ALLGATHER(tuuv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
+       CALL CPP_BLAS_ccopy(size(tuuv),tv_gather_buf,1,tuuv,1)
+       CALL MPI_ALLGATHER(tduv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
+       CALL CPP_BLAS_ccopy(size(tduv),tv_gather_buf,1,tduv,1)
+       CALL MPI_ALLGATHER(tudv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
+       CALL CPP_BLAS_ccopy(size(tudv),tv_gather_buf,1,tudv,1)
+       CALL MPI_ALLGATHER(tddv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
+       CALL CPP_BLAS_ccopy(size(tddv),tv_gather_buf,1,tddv,1)
+       DEALLOCATE (tv_gather_buf)
+    ENDIF
+
+    DEALLOCATE(tddv_loc, tduv_loc, tudv_loc, tuuv_loc)
 
   END SUBROUTINE vacfun
 END MODULE m_vacfun

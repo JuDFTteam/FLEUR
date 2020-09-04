@@ -28,7 +28,7 @@ eigen/tlmplm_cholesky.F90
 eigen/tlmplm.F90
 #eigen/tlmplm_store.F90
 eigen/tlo.f90
-eigen/vacfun.f90
+eigen/vacfun.F90
 eigen/eigen_redist_matrix.f90
 )
 #if (FLEUR_USE_GPU)
