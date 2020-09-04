@@ -376,6 +376,7 @@ contains
    END SUBROUTINE getshells
 
    subroutine realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
+      use ieee_arithmetic
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       type(t_cell), intent(in)  :: cell 
@@ -409,6 +410,7 @@ contains
 
       allocate (pnt(nptsh))
       structconst = 0
+      a1 = 0
 
       !
       !     Real-space sum
@@ -419,7 +421,7 @@ contains
          !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
          !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
          !$OMP private(rdum, cexp, lm, cdum)&
-         !$OMP firstprivate(ptsh, radsh) schedule(dynamic,1) &
+         !$OMP firstprivate(ptsh, radsh) &
          !$OMP reduction(max:a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
@@ -437,7 +439,7 @@ contains
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
             maxl = 2*hybinp%lexp
-            a1 = HUGE(a1)  ! stupid initial value
+            a1 = 1e30  ! stupid initial value
             ishell = 1
             conv = HUGE(i)
             shlp = 0
