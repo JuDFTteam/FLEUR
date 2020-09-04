@@ -124,10 +124,10 @@ MODULE m_cfOutput_hdf
       DO l = 2, 6, 2
          DO m = -l,l
             lm = l * (l+1) + m
-            CALL h5gcreate_f(fileID, '/V-'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
+            CALL h5gcreate_f(potGroupID, '/V-'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
             CALL io_write_attint0(vlmGroupID,'l',l)
             CALL io_write_attint0(vlmGroupID,'m',m)
-
+            WRITE(*,*) MAXVAL(ABS(vlm(:atoms%jri(iType),lm,:)))
             dims(:3)=[2,atoms%jri(iType),input%jspins]
             dimsInt=dims
             CALL h5screate_simple_f(3,dims(:3),vlmDataSpaceID,hdfError)
