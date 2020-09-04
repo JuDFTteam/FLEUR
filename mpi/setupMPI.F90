@@ -74,6 +74,7 @@ CONTAINS
        ALLOCATE(fmpi%k_list(nkpt))
        ALLOCATE(fmpi%ev_list(neigd))
        fmpi%k_list=[(i,i=1,nkpt)]
+       fmpi%coulomb_owner=[(0,i=1,nkpt)]
        fmpi%ev_list=[(i,i=1,neigd)]
        WRITE(*,*) "--------------------------------------------------------"
        RETURN
