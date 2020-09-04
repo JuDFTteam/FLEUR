@@ -19,7 +19,6 @@ CONTAINS
       REAL,    INTENT (OUT):: vxc(:,:)
 
 !     .. previously untyped names ..
-      INTEGER,PARAMETER :: ndvgrd=6
 
       TYPE(t_gradients)::grad
 
@@ -35,8 +34,8 @@ CONTAINS
 !
       CALL xcpot%alloc_gradients(msh,jspins,grad)
       DO ispin = 1, jspins
-         CALL grdchlh(1,1,msh,dx,rad,dens(1:1,ispin),ndvgrd,&
-                     drr(1:1,ispin),ddrr(1:1,ispin))
+         CALL grdchlh(dx,dens(1:msh,ispin),&
+                     drr(:,ispin),ddrr(:,ispin),rad)
       ENDDO
 
       CALL mkgl0(jspins,rad,dens,drr,ddrr,&

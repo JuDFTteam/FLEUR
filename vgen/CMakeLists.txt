@@ -20,6 +20,7 @@ vgen/mkgxyz3.f90
 vgen/convol.f90
 vgen/grdrsis.f90
 vgen/mt_tofrom_grid.F90
+vgen/vac_tofrom_grid.F90
 vgen/int_nv.F90
 vgen/lhglptg.f90
 vgen/lhglpts.f90

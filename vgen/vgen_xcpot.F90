@@ -6,8 +6,8 @@
 MODULE m_vgen_xcpot
 
    USE m_juDFT
-#ifdef CPP_MPI 
-   use mpi 
+#ifdef CPP_MPI
+   use mpi
 #endif
 
 CONTAINS
@@ -29,8 +29,7 @@ CONTAINS
       USE m_constants
       USE m_intnv
       USE m_vmt_xc
-      USE m_vvacxc
-      USE m_vvacxcg
+      USE m_vvac_xc
       USE m_vis_xc
       USE m_checkdopall
       USE m_cdn_io
@@ -97,27 +96,28 @@ CONTAINS
             ifftd2 = 9*stars%mx1*stars%mx2
             IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
 
-            IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
+            !IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
 
-               IF (.NOT. oneD%odi%d1) THEN
-                  CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
-               ELSE
-                  CALL judft_error("OneD broken")
+            !   IF (.NOT. oneD%odi%d1) THEN
+            !      CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
+            !   ELSE
+            !      CALL judft_error("OneD broken")
                   ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,ifftd2,&
                   !             xcpot,input,odi%nq2,odi%nst2,den,noco,odi%kimax2%igf,&
                   !             odl%pgf,vTot%vacxy,vTot%vacz,excxy,excz)
-               END IF
-            ELSE      ! GGA
-               IF (oneD%odi%d1) THEN
-                  CALL judft_error("OneD broken")
+            !   END IF
+            !ELSE      ! GGA
+            !   IF (oneD%odi%d1) THEN
+            !      CALL judft_error("OneD broken")
                   ! CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
                   !              cell,xcpot,input,workDen, ichsmrg,&
                   !              vTot%vacxy,vTot%vacz,rhmn, exc%vacxy,exc%vacz)
 
-               ELSE
-                  CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
-               END IF
-            END IF
+            !   ELSE
+            !      CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
+            !   END IF
+            !END IF
+            CALL vvac_xc(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
             CALL timestop("Vxc in vacuum")
          END IF
 

@@ -86,7 +86,7 @@ CONTAINS
     use m_constants, only : fpi_const, ImagUnit
     use m_gaunt, only : gaunt1
     use m_types
-    USE m_grdchlh
+
 
     ! Type parameter
     ! ***************
@@ -244,7 +244,7 @@ CONTAINS
       divMt(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
 
    END SUBROUTINE divYlm
-   
+
    SUBROUTINE rotYlm(gradMtx, gradMty, gradMtz, rotMt)
       COMPLEX, INTENT(IN) :: gradMtx(:,:,:,:), gradMty(:,:,:,:), gradMtz(:,:,:,:) !r,lm,n,x
       COMPLEX, INTENT(OUT) :: rotMt(:,:,:,:)

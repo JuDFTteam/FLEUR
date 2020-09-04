@@ -115,7 +115,7 @@ CONTAINS
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: ifftd2
-       
+
       !     ..
       !     .. Local Scalars ..
       INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip
@@ -129,34 +129,32 @@ CONTAINS
       REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
       REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
       REAL, ALLOCATABLE :: rhtxc(:,:),dummy(:)
-      COMPLEX, ALLOCATABLE :: fgxy(:,:),rxydz(:,:),rxydzz(:),cqpw(:)   
-    
+      COMPLEX, ALLOCATABLE :: fgxy(:,:),rxydz(:,:),rxydzz(:),cqpw(:)
+
       d_15     = 1.e-15
       zro      = 0.0
       nt       = ifftd2
 
       ALLOCATE (rxydz(vacuum%nmzxy,stars%ng2-1))
       ALLOCATE (rhtdz(vacuum%nmzd),rhtdzz(vacuum%nmzd))
-    
-      DO ivac=1,vacuum%nvac 
+
+      DO ivac=1,vacuum%nvac
 
          ! the charge density in vacuum is expanded in 2-dim stars on a mesh
          ! in z-direction. the g||.ne.zero-components expand from 1 to nmzxy
          ! the g||.eq.zero-components expand from 1 to nmz
-         ! first we calculate vxc in the warping region 
+         ! first we calculate vxc in the warping region
 
          !
          ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
          !
-         ALLOCATE ( dummy(vacuum%nmz) )
-    
-         CALL grdchlh(0,1,vacuum%nmz,vacuum%delz,dummy,den%vacz(1,ivac,1),6,&
-                     rhtdz(1),rhtdzz(1))
-         DEALLOCATE ( dummy )
+
+         CALL grdchlh(vacuum%delz,den%vacz(1:vacuum%nmz,ivac,1),&
+                     rhtdz,rhtdzz)
          ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
          ALLOCATE ( rxydzr(vacuum%nmzxy), rxydzi(vacuum%nmzxy) )
          ALLOCATE ( rxydzzr(vacuum%nmzxy),rxydzzi(vacuum%nmzxy) )
-    
+
          DO iq = 1, stars%ng2-1
          !
          ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
@@ -164,69 +162,69 @@ CONTAINS
             DO ip=1,vacuum%nmzxy
                rhtxyr(ip)=den%vacxy(ip,iq,ivac,1)
             ENDDO
-            CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,6, rxydzr,rxydzzr) 
-    
+            CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
+
             DO ip=1,vacuum%nmzxy
                rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
             ENDDO
-               
-            CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyi,6, rxydzi,rxydzzi)
-    
+
+            CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
+
             DO ip=1,vacuum%nmzxy
                rxydz(ip,iq)=cmplx(rxydzr(ip),rxydzi(ip))
             ENDDO
-   
+
          ENDDO ! loop over 2D stars (iq)
-    
+
          DEALLOCATE ( rhtxyr,rhtxyi,rxydzr,rxydzi,rxydzzr,rxydzzi )
          DEALLOCATE ( dummy )
-    
+
          ALLOCATE ( rhdx(0:ifftd2-1),rhdy(0:ifftd2-1) )
          ALLOCATE ( rhdz(0:ifftd2-1))
-    
+
          ALLOCATE ( cqpw(stars%ng2-1),af2(0:ifftd2-1) )
          ALLOCATE ( fgxy(stars%ng2-1,3),bf2(0:ifftd2-1) )
-     
+
          af2=0.0
          DO ip = 1,vacuum%nmzxy
             ! loop over warping region
-    
+
             ! Transform charge and magnetization to real-space.
-    
+
             CALL fft2d(stars, af2(0),bf2, den%vacz(ip,ivac,1),0.,&
                        den%vacxy(ip,1,ivac,1), vacuum%nmzxyd,+1)
-    
-            ! calculate derivatives with respect to x,y in g-space 
-            ! and transform them to real-space.  
-    
+
+            ! calculate derivatives with respect to x,y in g-space
+            ! and transform them to real-space.
+
             DO iq=1,stars%ng2-1
                cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
             ENDDO
-    
-            rhti = 0.0                    
+
+            rhti = 0.0
             ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
-            ! (den%vacz is set to zero and gx is included in 
+            ! (den%vacz is set to zero and gx is included in
             ! dn/atoms =  FFT(0,i*gx*den%vacxy)
             CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
-    
+
             rhti = 0.0
             CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
                         stars, rhdy(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
-    
+
             rhti = 0.0
             CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,1), vacuum%nmzxyd,+1) 
-    
+                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,1), vacuum%nmzxyd,+1)
+
             !
             ! set minimal value of af2 to 1.0e-15
             !
-    
+
             !af2=max(af2,10e-13)
-    
+
             DO i=0,stars%kimax2
                af2(i)=max(af2(i),d_15)
             ENDDO
-    
+
             !
             !           ----> 2-d back fft to g space
             !
@@ -234,7 +232,7 @@ CONTAINS
             CALL fft2d(stars, rhdx,bf2, fgz(1),rhti,fgxy(:,1), 1,-1)
             CALL fft2d(stars, rhdy,bf2, fgz(2),rhti,fgxy(:,2), 1,-1)
             CALL fft2d(stars, rhdz,bf2, fgz(3),rhti,fgxy(:,3), 1,-1)
-    
+
             ! the g||.eq.zero component is added to grad%vacz
             !
             grad(1)%vacz(ip,ivac,1) = fgz(1) + grad(1)%vacz(ip,ivac,1)
@@ -248,24 +246,24 @@ CONTAINS
                grad(2)%vacxy(ip,irec2,ivac,1)=grad(2)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,2)
                grad(3)%vacxy(ip,irec2,ivac,1)=grad(3)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,3)
             ENDDO
-    
-         END DO ! ip=1,vacuum%nmzxy 
+
+         END DO ! ip=1,vacuum%nmzxy
          DEALLOCATE ( rhdx,rhdy,rhdz)
          DEALLOCATE ( cqpw,fgxy)
-    
-         ! now treat the non-warping region 
-    
+
+         ! now treat the non-warping region
+
          nmzdiff = vacuum%nmz - vacuum%nmzxy
-    
+
          ! The non-warping region runs from nmzxy+1 to nmz.
          ! The values from nmz0 to nmzxy are taken into account in order
-         ! to get the real-space derivative smooth around nmzxy+1. 
-    
+         ! to get the real-space derivative smooth around nmzxy+1.
+
          nmz0= vacuum%nmzxy+1+(6/2)-6
-         IF (nmz0 <= 0) THEN ! usually vacuum%nmzxy>6 
+         IF (nmz0 <= 0) THEN ! usually vacuum%nmzxy>6
             nmz0= 1
          END IF
-    
+
          DEALLOCATE ( af2)
 
          DO ip = vacuum%nmzxy + 1,vacuum%nmz
