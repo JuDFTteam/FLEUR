@@ -124,7 +124,7 @@ MODULE m_cfOutput_hdf
       DO l = 2, 6, 2
          DO m = -l,l
             lm = l * (l+1) + m
-            CALL h5gcreate_f(potGroupID, '/VKS.'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
+            CALL h5gcreate_f(potGroupID, 'VKS.'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
             CALL io_write_attint0(vlmGroupID,'l',l)
             CALL io_write_attint0(vlmGroupID,'m',m)
 
