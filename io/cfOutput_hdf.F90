@@ -124,14 +124,14 @@ MODULE m_cfOutput_hdf
       DO l = 2, 6, 2
          DO m = -l,l
             lm = l * (l+1) + m
-            CALL h5gcreate_f(potGroupID, '/V-'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
+            CALL h5gcreate_f(potGroupID, '/VKS.'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
             CALL io_write_attint0(vlmGroupID,'l',l)
             CALL io_write_attint0(vlmGroupID,'m',m)
-            WRITE(*,*) MAXVAL(ABS(vlm(:atoms%jri(iType),lm,:)))
+
             dims(:3)=[2,atoms%jri(iType),input%jspins]
             dimsInt=dims
             CALL h5screate_simple_f(3,dims(:3),vlmDataSpaceID,hdfError)
-            CALL h5dcreate_f(potGroupID, "vlm", H5T_NATIVE_DOUBLE, vlmDataSpaceID, vlmDataSetID, hdfError)
+            CALL h5dcreate_f(vlmGroupID, "vlm", H5T_NATIVE_DOUBLE, vlmDataSpaceID, vlmDataSetID, hdfError)
             CALL h5sclose_f(vlmDataSpaceID,hdfError)
             CALL io_write_complex2(vlmDataSetID,[-1,1,1],dimsInt(:3),vlm(:atoms%jri(iType),lm,:))
             CALL h5dclose_f(vlmDataSetID, hdfError)
