@@ -104,6 +104,8 @@ c...local
       data spin12/'  ', '.1', '.2'/
       character(len=6) :: filename
 
+      spi(:) = 0
+
       l_amn2=l_amn2_in
       if(.not.l_amn2_in)then
          inquire(file='pro2.1',exist=l_amn2_in)
