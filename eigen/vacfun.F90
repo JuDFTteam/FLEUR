@@ -246,6 +246,7 @@ CONTAINS
        tddv = tddv_loc(:,:size(tddv,2))
     ELSE
        nbuf = size(tuuv_loc)
+#ifdef CPP_MPI
        ALLOCATE(tv_gather_buf(nbuf*fmpi%n_size))
        CALL MPI_ALLGATHER(tuuv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
        CALL CPP_BLAS_ccopy(size(tuuv),tv_gather_buf,1,tuuv,1)
@@ -256,6 +257,7 @@ CONTAINS
        CALL MPI_ALLGATHER(tddv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
        CALL CPP_BLAS_ccopy(size(tddv),tv_gather_buf,1,tddv,1)
        DEALLOCATE (tv_gather_buf)
+#endif
     ENDIF
 
     DEALLOCATE(tddv_loc, tduv_loc, tudv_loc, tuuv_loc)
