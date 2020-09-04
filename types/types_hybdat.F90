@@ -139,7 +139,7 @@ contains
 #endif
    end subroutine t_coul_mpi_wait
 
-   subroutine t_coul_mpi_ibc(coul, fi, mpi_comm, root)
+   subroutine t_coul_mpi_ibc(coul, fi, communicator, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
@@ -149,35 +149,35 @@ contains
       implicit none 
       class(t_coul)                  :: coul
       type(t_fleurinput), intent(in) :: fi
-      integer, intent(in)            :: root, mpi_comm
+      integer, intent(in)            :: root, communicator
 #ifdef CPP_MPI
       integer :: ierr
 
 
 
       if (fi%sym%invs) THEN
-         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, mpi_comm, coul%bcast_req(1), ierr)
+         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, coul%bcast_req(1), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1_r failed")
 
-         call MPI_IBcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, mpi_comm, coul%bcast_req(2), ierr)
+         call MPI_IBcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, communicator, coul%bcast_req(2), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
 
-         call MPI_IBcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, mpi_comm, coul%bcast_req(3), ierr)
+         call MPI_IBcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, communicator, coul%bcast_req(3), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
 
-         call MPI_IBcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, mpi_comm, coul%bcast_req(4), ierr)
+         call MPI_IBcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, communicator, coul%bcast_req(4), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
       else 
-         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, mpi_comm, coul%bcast_req(1), ierr)
+         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, communicator, coul%bcast_req(1), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt1_c failed")
 
-         call MPI_IBcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, mpi_comm, coul%bcast_req(2), ierr)
+         call MPI_IBcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, communicator, coul%bcast_req(2), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt2_r failed")
 
-         call MPI_IBcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, mpi_comm, coul%bcast_req(3), ierr)
+         call MPI_IBcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, coul%bcast_req(3), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mt3_r failed")
 
-         call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, mpi_comm, coul%bcast_req(4), ierr)
+         call MPI_IBcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, communicator, coul%bcast_req(4), ierr)
          if(ierr /= 0) call judft_error("MPI_IBcast of coul%mtir_r failed")
       endif
 #endif
