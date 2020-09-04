@@ -138,7 +138,7 @@ CONTAINS
 
     LOGICAL, INTENT (in) :: l_real
     INTEGER, INTENT (in) :: nkpt
-    INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
+    INTEGER, INTENT (IN) :: eig_idList(:)!wann%nparampts)
 
     !ccccccccccccccccc   local variables   cccccccccccccccccccc
     INTEGER :: lmd,n,nmat,iter,ikpt,ikpt_b, pc

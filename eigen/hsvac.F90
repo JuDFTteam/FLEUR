@@ -86,11 +86,13 @@ CONTAINS
           DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
              s2=MIN(SIZE(hmat,1),jspin2) !in colinear case s2=1
           !--->       get the wavefunctions and set up the tuuv, etc matrices
+             CALL timestart("vacfun")
              CALL vacfun(&
-                  vacuum,stars,&
+                  fmpi,vacuum,stars,&
                   input,nococonv,jspin1,jspin2,&
                   sym, cell,ivac,evac,lapw%bkpt,v%vacxy,v%vacz,kvac,nv2,&
                   tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
+             CALL timestop("vacfun")
           !
           !--->       generate a and b coeffficients
           !
