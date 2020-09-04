@@ -32,7 +32,9 @@
 !     of spherical Bessel functions. The value lexp (LEXP in gwinp) is the corresponding cutoff.
 !
 MODULE m_coulombmatrix
+#ifdef CPP_MPI
    use mpi
+#endif
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
