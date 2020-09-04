@@ -1245,7 +1245,8 @@ CONTAINS
       INTEGER               :: i, j, ikpt, igpt, igptp
       REAL                  :: q(3), qnorm
 
-      allocate (qnrm(MAXVAL(ngpt)*kpts%nkpt), pqnrm(MAXVAL(ngpt), kpts%nkpt))
+      allocate (qnrm(MAXVAL(ngpt)*kpts%nkpt), source=0.0)
+      allocate (pqnrm(MAXVAL(ngpt), kpts%nkpt), source=0)
       i = 0
       DO ikpt = 1, kpts%nkpt
          igptloop: DO igpt = 1, ngpt(ikpt)
@@ -1493,9 +1494,6 @@ CONTAINS
                             MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%sub_comm,ierr)
       enddo
 #endif
-
-      call save_npy("coul_ikpt=" // int2str(ikpt) // ".npy", coulmat%data_c)
-
       IF (fi%sym%invs) THEN
          CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
