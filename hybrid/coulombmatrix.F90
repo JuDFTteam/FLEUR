@@ -117,7 +117,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1, ierr
       INTEGER                    :: iatom, iatom1, entry_len
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: coul_mtmt, mat, coulmat, smat, tmp
+      TYPE(t_mat)                :: coul_mtmt, mat, coulmat, smat
       type(t_mat), allocatable   :: coulomb(:)
 
       CALL timestart("Coulomb matrix setup")
@@ -126,7 +126,6 @@ CONTAINS
 
       allocate(structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt), stat=ierr)
       if(ierr /= 0) call judft_error("can't allocate structconst. error: " // int2str(ierr))
-      call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
 
       svol = SQRT(fi%cell%vol)
       fcoulfac = fpi_const/fi%cell%vol
@@ -153,7 +152,6 @@ CONTAINS
       !
 
       call timestart("coulomb allocation")
-      call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
       allocate(coulomb(fi%kpts%nkpt))
       DO im = 1, size(fmpi%k_list)
@@ -381,6 +379,11 @@ CONTAINS
       ix = 0
       iy = 0
       iy0 = 0
+
+
+      call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
+      call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
+
       DO itype = 1, fi%atoms%ntype
          DO ineq = 1, fi%atoms%neq(itype)
             ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
@@ -424,6 +427,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      call mat%free()
       call timestop("loop 1")
       
       call coul_mtmt%u2l()
@@ -480,6 +484,8 @@ CONTAINS
                END DO
             END DO
          END DO
+
+         call coul_mtmt%free()
          
          call coulmat%u2l()
          IF (fi%sym%invs) THEN
@@ -562,6 +568,7 @@ CONTAINS
             END DO
             call coulomb(ikpt)%u2l()
          END DO
+         call smat%free()
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
 
@@ -670,6 +677,8 @@ CONTAINS
             ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
             call timestart("add corrections from higher orders")
             rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+
+            call timestart("double gpt loop")
             !$OMP PARALLEL DO default(none) schedule(dynamic) &
             !$OMP private(igpt0, igpt2, ix, iqnrm2, igptp2, q2, qnorm2, igpt1, iy)&
             !$OMP private(iqnrm1,igptp1,q1,qnorm1,rdum1,iatm1,itype1,iatm2,itype2,cdum)&
@@ -712,39 +721,46 @@ CONTAINS
                END DO
             END DO
             !$OMP END PARALLEL DO
+            call timestop("double gpt loop")
 
             call coulomb(1)%u2l()   
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
+            call timestart("igpt1=1 loop")
             iy = hybdat%nbasp + 1
             DO igpt0 = 1, ngptm1(1)
-               igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-               ix = hybdat%nbasp + igpt2
-               iqnrm2 = pqnrm(igpt2, 1)
-               igptp2 = mpdata%gptm_ptr(igpt2, 1)
-               qnorm2 = qnrm(iqnrm2)
-               idum = ix*(ix - 1)/2 + iy
-               DO itype1 = 1, fi%atoms%ntype
-                  DO ineq1 = 1, fi%atoms%neq(itype1)
-                     ic2 = 0
-                     DO itype2 = 1, fi%atoms%ntype
-                        DO ineq2 = 1, fi%atoms%neq(itype2)
-                           ic2 = ic2 + 1
-                           cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
-                           coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
-                                             + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
-                                             +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
-                                             - sphbesmoment(2, itype2, iqnrm2)/18 &
-                                             + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
+               igpt2 = pgptm1(igpt0, 1)
+               IF (igpt2 /= 1) then
+                  ix = hybdat%nbasp + igpt2
+                  iqnrm2 = pqnrm(igpt2, 1)
+                  igptp2 = mpdata%gptm_ptr(igpt2, 1)
+                  qnorm2 = qnrm(iqnrm2)
+                  idum = ix*(ix - 1)/2 + iy
+                  DO itype1 = 1, fi%atoms%ntype
+                     DO ineq1 = 1, fi%atoms%neq(itype1)
+                        ic2 = 0
+                        DO itype2 = 1, fi%atoms%ntype
+                           DO ineq2 = 1, fi%atoms%neq(itype2)
+                              ic2 = ic2 + 1
+                              cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
+                              coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
+                                                + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
+                                                +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
+                                                - sphbesmoment(2, itype2, iqnrm2)/18 &
+                                                + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
+                           END DO
                         END DO
                      END DO
                   END DO
-               END DO
+               endif
             END DO
+            call timestop("igpt1=1 loop")
             call coulomb(1)%u2l()
 
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
+
+            call timestart("igpt1=igpt2=1 loop")
             iy = hybdat%nbasp + 1
             ix = hybdat%nbasp + 1
             idum = ix*(ix - 1)/2 + iy
@@ -759,6 +775,7 @@ CONTAINS
                   END DO
                END DO
             END DO
+            call timestop("igpt1=igpt2=1 loop")
             call coulomb(1)%u2l()
             call timestop("add corrections from higher orders")
          endif
