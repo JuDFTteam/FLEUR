@@ -484,8 +484,6 @@ CONTAINS
                END DO
             END DO
          END DO
-
-         call coul_mtmt%free()
          
          call coulmat%u2l()
          IF (fi%sym%invs) THEN
@@ -499,6 +497,7 @@ CONTAINS
          call timestop("MT-MT part")
 
       END DO
+      call coul_mtmt%free()
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
