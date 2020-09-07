@@ -725,16 +725,16 @@ CONTAINS
             END DO
             call timestop("double gpt loop")
 
-! #ifdef CPP_MPI
-!             call timestart("bcast dblgpt loop")
-!             do igpt0 = 1, ngptm1(1)
-!                root = mod(igpt0 - 1,fmpi%n_size)
-!                igpt2 = pgptm1(igpt0, 1)
-!                ix = hybdat%nbasp + igpt2
-!                call MPI_Bcast(coulomb(1)%data_c(hybdat%nbasp+2,ix), igpt2-1, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
-!             enddo
-!             call timestop("bcast dblgpt loop")
-! #endif
+#ifdef CPP_MPI
+            call timestart("bcast dblgpt loop")
+            do igpt0 = 1, ngptm1(1)
+               root = mod(igpt0 - 1,fmpi%n_size)
+               igpt2 = pgptm1(igpt0, 1)
+               ix = hybdat%nbasp + igpt2
+               call MPI_Bcast(coulomb(1)%data_c(hybdat%nbasp+2,ix), igpt2-1, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+            enddo
+            call timestop("bcast dblgpt loop")
+#endif
 
             call coulomb(1)%u2l()   
 
