@@ -232,9 +232,10 @@ CONTAINS
             ENDDO   ! js
          !Rotation to local if needed (Indicated by rotch)
             !Makegradients
-            IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
-                        ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
-            IF(jspins.LE.2)CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
+            !IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
+            !            ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+            !IF(jspins.LE.2)
+            CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
          END IF
          !Set charge to minimum value
