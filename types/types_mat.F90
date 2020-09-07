@@ -666,7 +666,7 @@ CONTAINS
       INTEGER :: i
 
       IF (mat%l_real) THEN
-         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
+         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1) 
       ELSE
          call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
       ENDIF
