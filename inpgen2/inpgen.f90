@@ -207,10 +207,6 @@ PROGRAM inpgen
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
                    xcpot,noco,mpinp,hybinp)
-
-         !sym%init has to be called because we need to call gen_bz for the tetra option
-         !and sym%invs has to be set
-         CALL sym%init(cell,input%film)
       ENDIF
 
       IF (numAddKptsSets.EQ.1) THEN
