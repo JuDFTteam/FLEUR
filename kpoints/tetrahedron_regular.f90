@@ -130,7 +130,7 @@ MODULE m_tetrahedron_regular
                   ENDDO
                   IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
                      kpts%ntet = kpts%ntet+1
-                     ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
+                     ntetra(:,kpts%ntet) = kpts%bkp(kcorn(tetra(:,itetra)))
                      voltet(kpts%ntet) = vol
                   ENDIF
                ENDDO
