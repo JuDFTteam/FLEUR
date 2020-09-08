@@ -1,6 +1,8 @@
 MODULE m_olap
    USE m_types_hybdat
+#ifdef CPP_MPI
    use mpi
+#endif
    private olap_pw_real, olap_pw_cmplx
    public olap_pw, olap_pwp, wfolap_init, wfolap_inv, wfolap_noinv
 

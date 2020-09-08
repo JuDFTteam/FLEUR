@@ -232,12 +232,13 @@ contains
             !$OMP END PARALLEL
 
          END DO
-
+#ifdef CPP_MPI
          buf_sz = size(structconst,1) * size(structconst,2)
          DO ic2 = 1, atoms%nat
             root = mod(ic2-1, fmpi%isize)
             call MPI_Bcast(structconst(1,1,ic2,ikpt), buf_sz, MPI_DOUBLE_COMPLEX, root, fmpi%mpi_comm, ierr)
          enddo
+#endif
       END DO
       call timestop("fourierspace sum")
       !
