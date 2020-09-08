@@ -110,8 +110,8 @@ CONTAINS
     versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
     read(versionString,*) tempReal
     xml%versionNumber=nint(tempReal*100)
-    IF(versionString.NE.'0.33') THEN
-      if (versionString=='0.30') call judft_error("Version number of inp.xml no longer supported. If you use the current development version try to simply replace 0.30 with 0.33 in inp.xml")
+    IF(versionString.NE.'0.32') THEN
+      if (versionString=='0.30') call judft_error("Version number of inp.xml no longer supported. If you use the current development version try to simply replace 0.30 with 0.32 in inp.xml")
       if (.not.l_allow_old) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
       old_version=.true.
     END IF
