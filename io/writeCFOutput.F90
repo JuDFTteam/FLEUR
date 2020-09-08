@@ -58,7 +58,8 @@ MODULE m_writeCFOutput
             n_0 = hub1data%cdn_spherical(:,lcf,iType)
             !Norm to int r^2 n_4f(r) dr = 1
             CALL intgr3(n_0,atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),n_0Norm)
-            n_0 = n_0/n_0Norm
+            !multiply with r^2 to conform with the other programs used in the python script
+            n_0 = n_0/n_0Norm * atoms%rmsh(iGrid,iType)**2
 
 #ifdef CPP_HDF
             CALL writeCFcdn(cfFileID, atoms, iType, n_0)
