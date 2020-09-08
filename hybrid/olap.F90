@@ -55,11 +55,13 @@ CONTAINS
       INTEGER                  :: dg(3)
 
       call timestart("olap_pw_real")
-      !$OMP PARALLEL DO default(none) schedule(guided) &
+      !$OMP PARALLEL default(none) &
       !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
       !$OMP shared(olap, gpt, cell, atoms, ngpt)
-      DO i = 1, ngpt
-         DO j = 1, i
+
+      !$OMP DO schedule(guided) 
+      DO j = 1, ngpt
+         DO i = 1, j
             olap%data_r(i,j) = 0.0
             dg = gpt(:, j) - gpt(:, i)
             g = gptnorm(dg, cell%bmat)
@@ -76,11 +78,19 @@ CONTAINS
                   olap%data_r(i, j) = real(olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                END DO
             END IF
-            IF (i == j) olap%data_r(i, j) = olap%data_r(i, j) + 1
-            olap%data_r(j, i) = olap%data_r(i, j)
          END DO
       END DO
-      !$OMP END PARALLEL DO
+      !$OMP end do
+
+      ! work on diagonal
+      !$OMP DO
+      do i = 1,ngpt 
+         olap%data_r(i,i) = olap%data_r(i,i) + 1
+      enddo
+      !$OMP END DO
+      !$OMP end parallel
+
+      call olap%u2l()
       call timestop("olap_pw_real")
    END SUBROUTINE olap_pw_real
 
