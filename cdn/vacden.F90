@@ -328,11 +328,11 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
 
              ALLOCATE ( dummy(vacuum%nmz) )
              CALL grdchlh(&
-                  0,1,vacuum%nmz,vacuum%delz,dummy,u(1,ik,jspin),4,&
-                  du,ddu(1,ik))
+                  vacuum%delz,u(1:vacuum%nmz,ik,jspin),&
+                  du,ddu(:,ik),order=4)
              CALL grdchlh(&
-                  0,1,vacuum%nmz,vacuum%delz,dummy,ue(1,ik,jspin),4,&
-                  due,ddue(1,ik))
+                  vacuum%delz,ue(1:vacuum%nmz,ik,jspin),&
+                  due,ddue(:,ik),order=4)
              DEALLOCATE ( dummy )
 
              IF (.FALSE.) THEN !IF (vacuum%nstm.EQ.1) THEN

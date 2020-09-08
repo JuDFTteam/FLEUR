@@ -27,7 +27,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: isn,stride
     REAL                 :: fg,fgi
 
-    REAL,   INTENT (INOUT):: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
+    REAL                  :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
     COMPLEX               :: fgxy(stride,stars%ng2-1)
     REAL,OPTIONAL,INTENT(IN) :: gfxy(0:) !factor to calculate the derivates, i.e. g_x
 
@@ -41,7 +41,7 @@ CONTAINS
     !
     IF (isn.GT.0) THEN
        !
-       !  ---> put stars onto the fft-grid 
+       !  ---> put stars onto the fft-grid
        !
        fg2(1) = CMPLX(fg,fgi)
        CALL CPP_BLAS_ccopy(stars%ng2-1,fgxy,stride,fg2(2),1)
@@ -53,7 +53,7 @@ CONTAINS
              afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
              bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
           ENDDO
-       ELSE 
+       ELSE
           DO i=0,stars%kimax2
              afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))
              bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))

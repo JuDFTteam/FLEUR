@@ -10,6 +10,7 @@ MODULE m_types_mpi
       INTEGER :: irank    !< rank of task in mpi_comm
       INTEGER :: isize    !< no of tasks in mpi_comm
       INTEGER, ALLOCATABLE :: k_list(:)
+      INTEGER, ALLOCATABLE :: coulomb_owner(:)
       !Eigenvalue parallelism
       INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
       INTEGER :: n_rank   !< rank in sub_comm

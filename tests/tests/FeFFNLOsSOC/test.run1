@@ -7,6 +7,5 @@ jt::testrun("$executable ",$workdir);
 
 $result+=jt::test_fileexists("$workdir/out");
 
-$result=+jt::test_grep_firstnumber("$workdir/out","mz=","mz*= *([^ ]*)",2.293,0.001);
-
+$result+=jt::test_grepexists("$workdir/out","mx=  0.00000 my=  0.00000 mz=  2.293");
 jt::stageresult($workdir,$result,"1");

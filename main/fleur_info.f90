@@ -32,14 +32,11 @@ MODULE m_fleur_info
       TYPE(t_kpts), INTENT(IN)     :: kpts
 
       LOGICAL       :: l_exist
-      CHARACTER(LEN=11) :: kptsKindString(3)
-
-      DATA kptsKindString /'unspecified','mesh       ','path       '/
 
       WRITE(*,*) ''
       WRITE(*,'(a)') ' ========== k-point set info =========='
-      WRITE(*,'(a)') ' Selected k-point list: '//TRIM(ADJUSTL(kpts%kptsName))
-      WRITE(*,'(a)') ' k-point list type: '//TRIM(ADJUSTL(kptsKindString(kpts%kptsKind + 1)))
+      WRITE(*,'(2a)') ' Selected k-point list: ', TRIM(ADJUSTL(kpts%kptsName))
+      WRITE(*,'(2a)') ' k-point list type: ', TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) WRITE(*,'(a,i0,a,i0,a,i0)') ' ', kpts%nkpt3(1), ' x ', kpts%nkpt3(2), ' x ', kpts%nkpt3(3)
       WRITE(*,'(a,i0)') ' Number of k points: ', kpts%nkpt
       WRITE(*,*) ''

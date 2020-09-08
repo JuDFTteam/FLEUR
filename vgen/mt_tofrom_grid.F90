@@ -7,7 +7,6 @@ MODULE m_mt_tofrom_grid
    USE m_types
    PRIVATE
    REAL, PARAMETER    :: d_15 = 1.e-15
-   INTEGER, PARAMETER :: ndvgrd = 6 ! this should be consistent across GGA derivative routines
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
@@ -150,12 +149,12 @@ CONTAINS
             !Necessary gradients
             IF (dograds) THEN
                !Colinear case only needs radial derivatives of chlh
-               CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                            chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
+               CALL grdchlh( atoms%dx(n), &
+                            chlh(1:atoms%jri(n), lh, js),  chlhdr(1:, lh, js), chlhdrr(1:, lh,js),atoms%rmsh(:,n))
                IF (noco%l_mtNocoPot) THEN
                !Noco case also needs radial derivatives of mm
-                  CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
-                               mm(:,lh), ndvgrd, drm(:,lh), drrm(:,lh))
+                  CALL grdchlh(atoms%dx(n), &
+                               mm(:atoms%jri(n),lh),  drm(:,lh), drrm(:,lh), atoms%rmsh(:, n))
                END IF
             END IF
          END DO ! js
@@ -232,10 +231,11 @@ CONTAINS
                ENDDO ! lh
             ENDDO   ! js
          !Rotation to local if needed (Indicated by rotch)
-            !Makegradients 
-            IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
-                        ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
-            IF(jspins.LE.2)CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
+            !Makegradients
+            !IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
+            !            ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+            !IF(jspins.LE.2)
+            CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
          END IF
          !Set charge to minimum value

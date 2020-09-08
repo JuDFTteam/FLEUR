@@ -23,7 +23,8 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
-    INTEGER :: omp=-1,i,isize,localrank,gpus,ii
+    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk 
+    logical :: finished
 #ifdef CPP_MPI
     CALL juDFT_COMM_SPLIT_TYPE(fmpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,fmpi%mpi_comm_same_node)
 #endif
@@ -73,6 +74,7 @@ CONTAINS
        ALLOCATE(fmpi%k_list(nkpt))
        ALLOCATE(fmpi%ev_list(neigd))
        fmpi%k_list=[(i,i=1,nkpt)]
+       fmpi%coulomb_owner=[(0,i=1,nkpt)]
        fmpi%ev_list=[(i,i=1,neigd)]
        WRITE(*,*) "--------------------------------------------------------"
        RETURN
@@ -91,6 +93,24 @@ CONTAINS
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm 
     fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )] 
+
+    ! create an array with the owners of the correct coulomb matrix
+    allocate(fmpi%coulomb_owner(nkpt), source=-1)
+    do nk =1,nkpt 
+      me = 0
+      finished = .False.
+      do while(.not. finished) 
+         if(any(nk == [(i, i=INT(me/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size)] )) then
+            fmpi%coulomb_owner(nk) = me 
+            finished = .True.
+         endif 
+         me = me + 1
+         if(me > fmpi%isize .and. .not. finished) then
+            call judft_error("somehow i cant lokate this k-point")
+         endif
+      enddo
+   enddo
+
 
     call fmpi%set_errhandler()
     if (fmpi%irank==0) WRITE(*,*) "--------------------------------------------------------"

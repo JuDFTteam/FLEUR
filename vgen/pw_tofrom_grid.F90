@@ -12,7 +12,7 @@ MODULE m_pw_tofrom_grid
    !----->  fft  information  for xc potential + energy
    INTEGER, ALLOCATABLE :: igxc_fft(:)
    REAL,    ALLOCATABLE :: gxc_fft(:,:) !gxc_fft(ig,idm)
-  
+
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
@@ -23,27 +23,27 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
-    
+
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
       !     also the x,y,z components of the g-vectors are set up to calculate
       !     derivatives.
       !     in principle this can also be done in main program once.
       !     it is done here to save memory.
-      
+
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     IF (dograds) THEN
        CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     ENDIF
-       
+
   END SUBROUTINE init_pw_grid
-  
+
   SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
-    !     ph_wrk: work array containing phase * g_x,gy...... 
+    !     ph_wrk: work array containing phase * g_x,gy......
     !     den%pw: charge density stored as stars
     !     rho   : charge density stored in real space
     !     v_xc   : exchange-correlation potential in real space
@@ -77,7 +77,7 @@ CONTAINS
     USE m_types
     USE m_constants
     IMPLICIT NONE
-    
+
     LOGICAL,INTENT(IN)                    :: dograds
     INTEGER,INTENT(IN)                    :: jspins
     LOGICAL,INTENT(IN)                    :: l_noco
@@ -87,7 +87,7 @@ CONTAINS
     TYPE(t_gradients),INTENT(OUT)         :: grad
     CLASS(t_xcpot), INTENT(IN),OPTIONAL   :: xcpot
     REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:)
-  
+
 
     INTEGER      :: js,i,idm,ig,ndm,jdm,j
     REAL         :: rhotot,mmx,mmy,mmz,theta,phi
@@ -97,12 +97,12 @@ CONTAINS
     REAL,    ALLOCATABLE :: bf3(:)
     REAL,    ALLOCATABLE :: rhd1(:,:,:),rhd2(:,:,:)
     REAL,    ALLOCATABLE :: mx(:),my(:)
-    REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:) 
+    REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:)
     REAL,    ALLOCATABLE :: rhodiag(:,:),der(:,:,:),dder(:,:,:,:)
     REAL,    ALLOCATABLE :: sinsqu(:),cossqu(:),sincos(:),rhdd(:,:,:,:)
     COMPLEX, ALLOCATABLE :: exi(:)
- 
-    LOGICAL, PARAMETER :: l_rdm=.true. 
+
+    LOGICAL, PARAMETER :: l_rdm=.true.
     ci=cmplx(0.,1.)
 
     ! Allocate arrays
@@ -139,7 +139,7 @@ CONTAINS
           ENDIF
        END DO
 
-       IF (l_noco) THEN  
+       IF (l_noco) THEN
           !  Get mx,my on real space grid and recalculate rho and magmom
           IF (dograds) THEN
              CALL fft3dxc(mx,my, den_pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
@@ -147,7 +147,7 @@ CONTAINS
           ELSE
              CALL fft3d(mx,my, den_pw(:,3), stars,+1)
           ENDIF
-          DO i=0,MIN(SIZE(rho,1),size(mx))-1 
+          DO i=0,MIN(SIZE(rho,1),size(mx))-1
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
              magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
              IF (l_rdm.AND.dograds) THEN
@@ -172,7 +172,7 @@ CONTAINS
     IF (dograds) THEN
 
     ! In collinear calculations all derivatives are calculated in g-spce,
-    ! in non-collinear calculations the derivatives of |m| are calculated in real space. 
+    ! in non-collinear calculations the derivatives of |m| are calculated in real space.
 
     !-->   for d(rho)/d(x,y,z) = rhd1(:,:,idm) (idm=1,2,3).
     !
@@ -181,7 +181,7 @@ CONTAINS
        ALLOCATE(cqpw(stars%ng3,jspins))
 
        cqpw(:,:)= ImagUnit*den_pw(:,:jspins)
-   
+
        DO idm=1,3
           DO ig = 0 , stars%kmxxc_fft - 1
              ph_wrk(ig) = stars%pgfft(ig) * gxc_fft(ig,idm)
@@ -221,8 +221,8 @@ CONTAINS
              DO i=0,ifftxc3-1
                 DO idm=1,3
                    rhotot= rhd1(i,1,idm)/2.+rhd1(i,2,idm)/2.
-                   rhd1(i,1,idm)= rhotot+dmagmom(i,idm) 
-                   rhd1(i,2,idm)= rhotot-dmagmom(i,idm) 
+                   rhd1(i,1,idm)= rhotot+dmagmom(i,idm)
+                   rhd1(i,2,idm)= rhotot-dmagmom(i,idm)
                 END DO
              END DO
 
@@ -235,7 +235,7 @@ CONTAINS
        !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z) * g_(x,y,z)
 
        cqpw(:,:)= -den_pw(:,:jspins)
-   
+
        ndm = 0
        DO idm = 1,3
           DO jdm = 1,idm
@@ -243,13 +243,13 @@ CONTAINS
              DO ig = 0 , stars%kmxxc_fft-1
                 ph_wrk(ig) = stars%pgfft(ig)*gxc_fft(ig,idm)*gxc_fft(ig,jdm)
              ENDDO
-             
+
              DO js=1,jspins
                 CALL fft3dxc(rhd2(0:,js,ndm),bf3, cqpw(:,js), stars%kxc1_fft,stars%kxc2_fft,&
                      stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
              END DO
-          END DO ! jdm 
-       END DO   ! idm 
+          END DO ! jdm
+       END DO   ! idm
 
        DEALLOCATE(cqpw)
 
@@ -292,14 +292,14 @@ CONTAINS
              ndm= 0
              DO idm = 1,3
                 DO jdm = 1,idm
-                   ndm = ndm + 1  
+                   ndm = ndm + 1
                    DO i=0,ifftxc3-1
                       rhotot= rhd2(i,1,ndm)/2.+rhd2(i,2,ndm)/2.
-                      rhd2(i,1,ndm)= rhotot + ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
-                      rhd2(i,2,ndm)= rhotot - ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
+                      rhd2(i,1,ndm)= rhotot + ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2.
+                      rhd2(i,2,ndm)= rhotot - ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2.
                    END DO
                 ENDDO !jdm
-             ENDDO   !idm 
+             ENDDO   !idm
              DEALLOCATE(dmagmom,ddmagmom)
           END IF
        END IF
@@ -308,13 +308,13 @@ CONTAINS
           CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
        END IF
 
-       ! 
+       !
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
-       ! 
+       !
        IF (PRESENT(rho)) THEN
           CALL mkgxyz3 (rho,rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
-               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
+               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),0,grad)
        ELSE
           !Dummy rho (only possible if grad is used for libxc mode)
           !CALL mkgxyz3 (RESHAPE((/0.0/),(/1,1/)),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
@@ -325,14 +325,14 @@ CONTAINS
           END IF
 
           CALL mkgxyz3 (0*rhd1(0:,:,1),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
-               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
+               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),0,grad)
        END IF
-       
+
     ENDIF
     IF (PRESENT(rho)) THEN
        WHERE(ABS(rho) < d_15) rho = d_15
     ENDIF
-   
+
   END SUBROUTINE pw_to_grid
 
 
@@ -347,10 +347,10 @@ CONTAINS
     LOGICAL,INTENT(in)            :: l_pw_w
     COMPLEX,INTENT(INOUT)         :: v_out_pw(:,:)
     COMPLEX,INTENT(INOUT),OPTIONAL:: v_out_pw_w(:,:)
-    
-    
+
+
     INTEGER              :: js,k,i
-    REAL,ALLOCATABLE     :: bf3(:),vcon(:) 
+    REAL,ALLOCATABLE     :: bf3(:),vcon(:)
     COMPLEX, ALLOCATABLE :: fg3(:)
     ALLOCATE( bf3(0:ifftd-1),fg3(stars%ng3))
     ALLOCATE ( vcon(0:ifftd-1) )
@@ -369,7 +369,7 @@ CONTAINS
 
        IF (l_pw_w) THEN
           IF (dograds) THEN
-             !----> Perform fft transform: v_xc(star) --> vxc(r) 
+             !----> Perform fft transform: v_xc(star) --> vxc(r)
              !     !Use large fft mesh for convolution
              fg3(stars%nxc3_fft+1:)=0.0
              CALL fft3d(vcon(0),bf3, fg3, stars,+1)
@@ -394,7 +394,7 @@ CONTAINS
        ENDIF
     END DO
   END SUBROUTINE pw_from_grid
-    
+
   SUBROUTINE finish_pw_grid()
     IMPLICIT NONE
     IF (ALLOCATED(igxc_fft)) DEALLOCATE(igxc_fft,gxc_fft)

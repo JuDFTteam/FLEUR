@@ -24,9 +24,13 @@ set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_roun
 
 set(HybridTests
    KClHybridPBE0
+   KClHybridPBE0_eigpar
    GaAsHybridPBE0
+   GaAsHybridPBE0_eigpar
    FeHybridPBE0
+   FeHybridPBE0_eigpar
    MnHybridNoinv
+   MnHybridNoinv_eigpar
 )
 
 set(FFNTests
