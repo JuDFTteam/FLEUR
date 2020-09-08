@@ -605,7 +605,7 @@ CONTAINS
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
-            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size !1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -625,8 +625,8 @@ CONTAINS
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
                      !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                        call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
-                           call calc_l_m_from_lm(lm1, l1, m1)
                            call calc_l_m_from_lm(lm2, l2, m2)
                            cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            l = l1 + l2
