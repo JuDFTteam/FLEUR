@@ -605,7 +605,7 @@ CONTAINS
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
-            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size !1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -625,8 +625,8 @@ CONTAINS
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
                      !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                        call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
-                           call calc_l_m_from_lm(lm1, l1, m1)
                            call calc_l_m_from_lm(lm2, l2, m2)
                            cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            l = l1 + l2
@@ -663,8 +663,20 @@ CONTAINS
                   coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
                call timestop("igpt1")
-            END DO
+            END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
+
+#ifdef CPP_MPI
+            call timestart("bcast itype&igpt1 loop")
+            do igpt0 = 1, ngptm1(ikpt)
+               root = mod(igpt0 - 1,fmpi%n_size)
+               igpt2 = pgptm1(igpt0, ikpt)
+               ix = hybdat%nbasp + igpt2
+               call MPI_Bcast(coulomb(ikpt)%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+            enddo
+            call timestop("bcast itype&igpt1 loop")
+#endif
+
             call coulomb(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
