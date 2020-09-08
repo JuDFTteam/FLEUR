@@ -663,8 +663,20 @@ CONTAINS
                   coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
                call timestop("igpt1")
-            END DO
+            END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
+
+#ifdef CPP_MPI
+            call timestart("bcast itype&igpt1 loop")
+            do igpt0 = 1, ngptm1(ikpt)
+               root = mod(igpt0 - 1,fmpi%n_size)
+               igpt2 = pgptm1(igpt0, ikpt)
+               ix = hybdat%nbasp + igpt2
+               call MPI_Bcast(coulomb(ikpt)%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+            enddo
+            call timestop("bcast itype&igpt1 loop")
+#endif
+
             call coulomb(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
