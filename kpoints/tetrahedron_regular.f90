@@ -114,7 +114,7 @@ MODULE m_tetrahedron_regular
                      l_found = .FALSE.
                      l_used = .FALSE.
                      DO icorn = 1, SIZE(ntetra,1)
-                        DO jcorn = icorn, icorn
+                        DO jcorn = 1, SIZE(ntetra,1)
                            IF(.NOT.l_used(jcorn).AND..NOT.l_found(icorn).AND.&
                               kpts%bkp(kcorn(tetra(icorn,itetra))).EQ.ntetra(jcorn,jtet)) THEN
                                  l_found(icorn) = .TRUE.
@@ -130,7 +130,7 @@ MODULE m_tetrahedron_regular
                   ENDDO
                   IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
                      kpts%ntet = kpts%ntet+1
-                     ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
+                     ntetra(:,kpts%ntet) = kpts%bkp(kcorn(tetra(:,itetra)))
                      voltet(kpts%ntet) = vol
                   ENDIF
                ENDDO
