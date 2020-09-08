@@ -436,6 +436,14 @@ CONTAINS
             END DO
          END IF
 
+         IF(l_gfOpt) THEN
+            WRITE (fileNum,316) .TRUE., "default",0,"calc"
+            WRITE (fileNum,318) .FALSE.,.FALSE.,.FALSE.,.FALSE.
+            WRITE (fileNum, '(a)') '         </greensfCalculation>'
+316         FORMAT('         <greensfCalculation l_sphavg="', l1, '" label="', a, '" nshells="', i0, '" kkintgrCutoff="', a, '">')
+318         FORMAT('            <diagElements s="', l1, '" p="', l1, '" d="', l1, '" f="', l1, '"/>')
+         ENDIF
+
          DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
             l = atoms%llo(ilo, iAtomType)

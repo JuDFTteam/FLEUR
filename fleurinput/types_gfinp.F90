@@ -18,7 +18,7 @@ MODULE m_types_gfinp
 
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
-      !(used for mapping index in types_greensf)
+      !(used for mapping index in gfinp%elem)
       INTEGER :: l  = -1
       INTEGER :: lp = -1
       INTEGER :: atomType  = 0
