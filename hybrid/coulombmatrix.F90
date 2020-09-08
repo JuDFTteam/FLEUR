@@ -906,7 +906,7 @@ CONTAINS
          ! check for gamma
          if(any(fmpi%k_list == 1)) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                    fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb(1))
+                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coulomb(1))
          endif
       END IF
       
@@ -916,7 +916,7 @@ CONTAINS
       call timestop("gap 1:")
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
-         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
+         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
       enddo
 
@@ -1160,7 +1160,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, fmpi, nbasm1, gridf, coulomb)
 
       USE m_types
       USE m_constants
@@ -1177,6 +1177,7 @@ CONTAINS
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_hybdat), INTENT(IN)    :: hybdat
+      type(t_mpi), intent(in)    :: fmpi
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:, :)
@@ -1195,7 +1196,7 @@ CONTAINS
 
       n = nbasm1(1)
       nn = n*(n + 1)/2
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(1), 1)), mpdata%n_g(1), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(1), 1)), mpdata%n_g(1), atoms, cell, fmpi)
 
       ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
       coeff = 0
@@ -1317,7 +1318,7 @@ CONTAINS
 
    END SUBROUTINE getnorm
 
-   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, ikpt, coulomb)
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, kpts, ikpt, coulomb)
       USE m_olap, ONLY: olap_pw
       USE m_types
       use m_judft
@@ -1326,6 +1327,7 @@ CONTAINS
       type(t_atoms), intent(in)  :: atoms
       type(t_cell), intent(in)   :: cell
       type(t_hybdat), intent(in) :: hybdat
+      type(t_mpi), intent(in)    :: fmpi
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
       type(t_mat), intent(inout) :: coulomb
@@ -1338,7 +1340,7 @@ CONTAINS
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
       CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
       !calculate IR overlap-matrix
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
 
       ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
       ! rewritten as O * x = C
@@ -1364,7 +1366,7 @@ CONTAINS
       ! rewritten as O^T * x^T = C^T
 
       ! reload O, since the solver destroys it.
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
       ! Notice O = O^T since it's symmetric
       call olap%linear_problem(coul_submtx)
 
