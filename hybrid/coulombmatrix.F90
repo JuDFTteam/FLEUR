@@ -83,7 +83,7 @@ CONTAINS
       COMPLEX                    :: cdum, cexp, csum
 
       ! - local arrays -
-      INTEGER                    :: g(3)
+      INTEGER                    :: g(3), root
       INTEGER, ALLOCATABLE   :: pqnrm(:, :)
       INTEGER                    :: rrot(3, 3, fi%sym%nsym), invrrot(3, 3, fi%sym%nsym)
       INTEGER, ALLOCATABLE   :: iarr(:), POINTER(:, :, :, :)!,pointer(:,:,:)
@@ -439,7 +439,7 @@ CONTAINS
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
-
+         coulmat%data_c = 0.0
          ix = 0
          ic2 = 0
          DO itype2 = 1, fi%atoms%ntype
@@ -605,7 +605,7 @@ CONTAINS
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
-            DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+            DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size !1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -625,8 +625,8 @@ CONTAINS
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
                      !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                        call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
-                           call calc_l_m_from_lm(lm1, l1, m1)
                            call calc_l_m_from_lm(lm2, l2, m2)
                            cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            l = l1 + l2
@@ -663,8 +663,20 @@ CONTAINS
                   coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
                call timestop("igpt1")
-            END DO
+            END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
+
+#ifdef CPP_MPI
+            call timestart("bcast itype&igpt1 loop")
+            do igpt0 = 1, ngptm1(ikpt)
+               root = mod(igpt0 - 1,fmpi%n_size)
+               igpt2 = pgptm1(igpt0, ikpt)
+               ix = hybdat%nbasp + igpt2
+               call MPI_Bcast(coulomb(ikpt)%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+            enddo
+            call timestop("bcast itype&igpt1 loop")
+#endif
+
             call coulomb(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
@@ -678,49 +690,63 @@ CONTAINS
             rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
 
             call timestart("double gpt loop")
-            !$OMP PARALLEL DO default(none) schedule(dynamic) &
-            !$OMP private(igpt0, igpt2, ix, iqnrm2, igptp2, q2, qnorm2, igpt1, iy)&
-            !$OMP private(iqnrm1,igptp1,q1,qnorm1,rdum1,iatm1,itype1,iatm2,itype2,cdum)&
-            !$OMP shared(ngptm1, pgptm1, hybdat, mpdata, coulomb, sphbesmoment,pqnrm,fi,rdum)
-            DO igpt0 = 1, ngptm1(1)
+            DO igpt0 = 1+fmpi%n_rank, ngptm1(1), fmpi%n_size
                igpt2 = pgptm1(igpt0, 1)
-               IF (igpt2 == 1) CYCLE
                ix = hybdat%nbasp + igpt2
-               iqnrm2 = pqnrm(igpt2, 1)
-               igptp2 = mpdata%gptm_ptr(igpt2, 1)
-               q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
-               qnorm2 = norm2(q2)
-               DO igpt1 = 2, igpt2
-                  iy = hybdat%nbasp + igpt1
-                  iqnrm1 = pqnrm(igpt1, 1)
-                  igptp1 = mpdata%gptm_ptr(igpt1, 1)
-                  q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
-                  qnorm1 = norm2(q1)
-                  rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
-                  do iatm1 = 1,fi%atoms%nat
-                     itype1 = fi%atoms%itype(iatm1)
-                     do iatm2 = 1,fi%atoms%nat 
-                        itype2 = fi%atoms%itype(iatm2)
-                        cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
-                                 (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
-                                    + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, iatm2))))
-                        coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) + rdum*cdum*( &
-                                          -sphbesmoment(1, itype1, iqnrm1) &
-                                          *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
-                                          - sphbesmoment(0, itype1, iqnrm1) &
-                                          *sphbesmoment(2, itype2, iqnrm2)/6 &
-                                          - sphbesmoment(2, itype1, iqnrm1) &
-                                          *sphbesmoment(0, itype2, iqnrm2)/6 &
-                                          + sphbesmoment(0, itype1, iqnrm1) &
-                                          *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
-                                          + sphbesmoment(1, itype1, iqnrm1) &
-                                          *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
+               if(igpt2 /= 1) then
+                  iqnrm2 = pqnrm(igpt2, 1)
+                  igptp2 = mpdata%gptm_ptr(igpt2, 1)
+                  q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
+                  qnorm2 = norm2(q2)
+
+                  !$OMP PARALLEL DO default(none) schedule(dynamic) &
+                  !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, q2, qnorm2, igptp2) &
+                  !$OMP shared(coulomb, ix, rdum, sphbesmoment, iqnrm2)&
+                  !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, qnorm1, rdum1, iatm1) &
+                  !$OMP private(itype1, iatm2, itype2, cdum)
+                  DO igpt1 = 2, igpt2
+                     iy = hybdat%nbasp + igpt1
+                     iqnrm1 = pqnrm(igpt1, 1)
+                     igptp1 = mpdata%gptm_ptr(igpt1, 1)
+                     q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
+                     qnorm1 = norm2(q1)
+                     rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
+                     do iatm1 = 1,fi%atoms%nat
+                        itype1 = fi%atoms%itype(iatm1)
+                        do iatm2 = 1,fi%atoms%nat 
+                           itype2 = fi%atoms%itype(iatm2)
+                           cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
+                                    (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
+                                       + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, iatm2))))
+                           coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) + rdum*cdum*( &
+                                             -sphbesmoment(1, itype1, iqnrm1) &
+                                             *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
+                                             - sphbesmoment(0, itype1, iqnrm1) &
+                                             *sphbesmoment(2, itype2, iqnrm2)/6 &
+                                             - sphbesmoment(2, itype1, iqnrm1) &
+                                             *sphbesmoment(0, itype2, iqnrm2)/6 &
+                                             + sphbesmoment(0, itype1, iqnrm1) &
+                                             *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
+                                             + sphbesmoment(1, itype1, iqnrm1) &
+                                             *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
+                        END DO
                      END DO
                   END DO
-               END DO
+                  !$OMP END PARALLEL DO
+               endif
             END DO
-            !$OMP END PARALLEL DO
             call timestop("double gpt loop")
+
+#ifdef CPP_MPI
+            call timestart("bcast dblgpt loop")
+            do igpt0 = 1, ngptm1(1)
+               root = mod(igpt0 - 1,fmpi%n_size)
+               igpt2 = pgptm1(igpt0, 1)
+               ix = hybdat%nbasp + igpt2
+               call MPI_Bcast(coulomb(1)%data_c(hybdat%nbasp+2,ix), igpt2-1, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+            enddo
+            call timestop("bcast dblgpt loop")
+#endif
 
             call coulomb(1)%u2l()   
 

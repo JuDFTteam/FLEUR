@@ -44,7 +44,7 @@ MODULE m_tetrahedronInit
       REAL, OPTIONAL,INTENT(INOUT) :: weightSum
       REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband,k(SIZE(kpts%ntetra,1))
+      INTEGER :: ikpt,ncorn,itet,icorn,iband
       REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),vol(kpts%ntet)
       logical :: l_weights_pres, l_weightsum_pres
 
@@ -67,21 +67,14 @@ MODULE m_tetrahedronInit
       !$OMP parallel do default(none) &
       !$OMP shared(neig,ncorn,vol,l_weights_pres,l_weightsum_pres) &
       !$OMP shared(kpts,input,eig,weights,efermi) &
-      !$OMP private(itet,ikpt,icorn,k,iband,etetra,w) &
+      !$OMP private(itet,ikpt,icorn,iband,etetra,w) &
       !$OMP reduction(+:weightSum) collapse(3)
       DO itet = 1, kpts%ntet
          DO icorn = 1, ncorn
             DO iband = 1, neig
 
-               !Check if the current corner is part of the IBZ
                ikpt = kpts%ntetra(icorn,itet)
-               IF(ikpt.GT.kpts%nkpt) ikpt = kpts%bkp(ikpt)
-
-               !This array is to get the right indices in the eig array
-               k = kpts%ntetra(:,itet)
-               where(k.GT.kpts%nkpt) k = kpts%bkp(k)
-
-               etetra = eig(iband,k)
+               etetra = eig(iband,kpts%ntetra(:,itet))
 
                IF( ALL(etetra>efermi + 1E-8) .AND. .NOT.input%l_bloechl ) CYCLE
 
@@ -117,7 +110,7 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,ntet,k(SIZE(kpts%ntetra,1))
+      INTEGER :: itet,iband,ncorn,ie,icorn,ntet
       LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(SIZE(kpts%ntetra,1),neig,SIZE(kpts%tetraList,1)),del,vol
       REAL, ALLOCATABLE :: dos_weights(:)
@@ -132,12 +125,9 @@ MODULE m_tetrahedronInit
       ntet = 1
       do
          itet = kpts%tetraList(ntet,ikpt)
-         !The array k is only for getting the right indices in the eigenvalues
-         k = kpts%ntetra(:,itet)
-         where(k.GT.kpts%nkpt) k = kpts%bkp(k)
 
          do iband = 1, neig
-            etetra(:,iband,ntet) = eig(iband,k)
+            etetra(:,iband,ntet) = eig(iband,kpts%ntetra(:,itet))
          enddo
          if(ntet < SIZE(kpts%tetraList,1)) THEN
             if(kpts%tetraList(ntet+1,ikpt)>0) THEN
@@ -179,9 +169,9 @@ MODULE m_tetrahedronInit
       DO itet = 1, ntet
          DO iband = 1, neig
             DO icorn = 1, SIZE(kpts%ntetra,1)
+
                vol = kpts%voltet(kpts%tetraList(itet,ikpt))/kpts%ntet
-               IF(kpts%ntetra(icorn,kpts%tetraList(itet,ikpt)).NE.ikpt.AND.&
-                  kpts%bkp(kpts%ntetra(icorn,kpts%tetraList(itet,ikpt))).NE.ikpt) CYCLE
+               IF(kpts%ntetra(icorn,kpts%tetraList(itet,ikpt)).NE.ikpt) CYCLE
 
                IF(l_resWeights_pres) THEN
                   resWeights_thread(:,iband) = resWeights_thread(:,iband) &

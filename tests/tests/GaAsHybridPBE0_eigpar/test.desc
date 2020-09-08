@@ -1,0 +1,8 @@
+$test_name="Fleur GaAs Hybrid PBE0";
+$test_code="Fleur";
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur with XML input with one step:
+1.Generate a starting density and run 2 HF iterations and compare total energies and other quantities
+EOF
+;
