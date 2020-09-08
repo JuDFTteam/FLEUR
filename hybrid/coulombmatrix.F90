@@ -35,6 +35,9 @@ MODULE m_coulombmatrix
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types
+   USE m_intgrf, ONLY: intgrf, intgrf_init
+   use m_sphbes, only: sphbes
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
@@ -45,13 +48,11 @@ CONTAINS
       USE m_juDFT
       USE m_constants
       USE m_trafo, ONLY: symmetrize, bramat_trafo
-      USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
       USE m_io_hybinp
       use m_ylm
-      use m_sphbes, only: sphbes
       use m_calc_l_m_from_lm
       use m_calc_mpsmat
       IMPLICIT NONE
@@ -97,9 +98,6 @@ CONTAINS
       REAL                       :: integrand(fi%atoms%jmtd), primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), &
                                     moment2(maxval(mpdata%num_radbasfn), fi%atoms%ntype)
-      REAL                       :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
-      REAL                       :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
-      REAL                       :: rarr(0:fi%hybinp%lexp + 1), rarr1(0:maxval(fi%hybinp%lcutm1))
       REAL, ALLOCATABLE   :: gmat(:, :), qnrm(:)
       REAL, ALLOCATABLE   :: sphbesmoment(:, :, :)
       REAL, ALLOCATABLE   :: sphbes0(:, :, :)
@@ -108,6 +106,8 @@ CONTAINS
       REAL                       :: facA(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
+      REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
 
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
@@ -318,56 +318,7 @@ CONTAINS
       iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
-      call timestart("Bessel calculation")
-      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
-      do iqnrm = 1, nqnrm
-         qnorm = qnrm(iqnrm)
-         DO itype = 1, fi%atoms%ntype
-            ng = fi%atoms%jri(itype)
-            rdum = fi%atoms%rmt(itype)
-            sphbes_var = 0
-            sphbesmoment1 = 0
-            IF (abs(qnorm) < 1e-12) THEN
-               sphbesmoment(0, itype, iqnrm) = rdum**3/3
-               DO i = 1, ng
-                  sphbes_var(i, 0) = 1
-                  sphbesmoment1(i, 0) = fi%atoms%rmsh(i, itype)**2/3 + (rdum**2 - fi%atoms%rmsh(i, itype)**2)/2
-               END DO
-            ELSE
-               call sphbes(fi%hybinp%lexp + 1, qnorm*rdum, rarr)
-               DO l = 0, fi%hybinp%lexp
-                  sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
-               END DO
-               DO i = ng, 1, -1
-                  rdum = fi%atoms%rmsh(i, itype)
-                  call sphbes(fi%hybinp%lcutm1(itype) + 1, qnorm*rdum, rarr)
-                  DO l = 0, fi%hybinp%lcutm1(itype)
-                     sphbes_var(i, l) = rarr(l)
-                     IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
-                     ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
-                     ENDIF
-                     IF (i == ng) rarr1(l) = rdum1
-                     sphbesmoment1(i, l) = (rdum**(l + 2)*rarr(l + 1)/rdum**(l + 1) &
-                                            + (rarr1(l) - rdum1)*rdum**l)/qnorm
-                  END DO
-               END DO
-            END IF
-            DO l = 0, fi%hybinp%lcutm1(itype)
-               DO n = 1, mpdata%num_radbasfn(l, itype)
-                  ! note that mpdata%radbasfn_mt already contains one factor rgrid
-                  olap(n, l, itype, iqnrm) = &
-                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
-                            fi%atoms, itype, gridf)
-
-                  integral(n, l, itype, iqnrm) = &
-                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
-                            fi%atoms, itype, gridf)
-
-               END DO
-            END DO
-         END DO
-      END DO
-      call timestop("Bessel calculation")
+      call bessel_calculation(fi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
 
       !
       !     (1) Case < MT | v | MT >
@@ -831,7 +782,7 @@ CONTAINS
                call ylm4(fi%hybinp%lexp, q, carr2(:, igpt))
             END DO
             call timestop("harmonics setup")
-            call perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
+            call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coulomb(ikpt))
             call coulomb(ikpt)%u2l()
          END DO
@@ -1544,16 +1495,15 @@ CONTAINS
       ENDIF
    endsubroutine loop_over_interst
 
-   subroutine perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
+   subroutine perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
       use m_juDFT
-      use m_types
       use m_constants, only: tpi_const,fpi_const
       use m_sphbessel_integral
-      !$ use omp_lib
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      type(t_mpi), intent(in)           :: fmpi
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:,:),pgptm1(:, :), nqnrm
       real, intent(in)                  :: qnrm(:), sphbes0(:, :, :)
       complex, intent(in)               :: carr2(:, :)
@@ -1561,7 +1511,7 @@ CONTAINS
       type(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, lm, m, idum, l, i
+      integer :: ic, itype, lm, m, idum, l, i, ierr, root
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
@@ -1570,7 +1520,7 @@ CONTAINS
 
       call timestart("double g-loop")
 
-      DO igpt0 = 1, ngptm1(ikpt)
+      DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
          igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -1616,6 +1566,17 @@ CONTAINS
          END DO
          !$OMP end parallel do
       END DO
+
+#ifdef CPP_MPI
+      call timestart("double g-loop bcast")
+      DO igpt0 = 1, ngptm1(ikpt)
+         igpt2 = pgptm1(igpt0, ikpt)
+         ix = hybdat%nbasp + igpt2
+         root = mod(igpt0-1, fmpi%n_size)
+         call MPI_Bcast(coulomb%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+      ENDDO
+      call timestop("double g-loop bcast")
+#endif
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 
@@ -1651,4 +1612,70 @@ CONTAINS
          enddo 
       enddo
    end subroutine collapse_ic_and_lm_loop
+
+   subroutine bessel_calculation(fi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
+      implicit NONE 
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      integer, intent(in)               :: nqnrm
+      real, intent(in)                  :: gridf(:,:), qnrm(:)
+      real, intent(inout)               :: sphbesmoment(0:,:,:), olap(:,0:,:,:), integral(:,0:,:,:)
+
+      integer :: iqnrm, itype, i, l, n, ng
+      REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: rarr(0:fi%hybinp%lexp + 1), rarr1(0:maxval(fi%hybinp%lcutm1))
+      real    :: rdum, qnorm, rdum1
+
+      call timestart("Bessel calculation")
+      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      do iqnrm = 1, nqnrm
+         qnorm = qnrm(iqnrm)
+         DO itype = 1, fi%atoms%ntype
+            ng = fi%atoms%jri(itype)
+            rdum = fi%atoms%rmt(itype)
+            sphbes_var = 0
+            sphbesmoment1 = 0
+            IF (abs(qnorm) < 1e-12) THEN
+               sphbesmoment(0, itype, iqnrm) = rdum**3/3
+               DO i = 1, ng
+                  sphbes_var(i, 0) = 1
+                  sphbesmoment1(i, 0) = fi%atoms%rmsh(i, itype)**2/3 + (rdum**2 - fi%atoms%rmsh(i, itype)**2)/2
+               END DO
+            ELSE
+               call sphbes(fi%hybinp%lexp + 1, qnorm*rdum, rarr)
+               DO l = 0, fi%hybinp%lexp
+                  sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
+               END DO
+               DO i = ng, 1, -1
+                  rdum = fi%atoms%rmsh(i, itype)
+                  call sphbes(fi%hybinp%lcutm1(itype) + 1, qnorm*rdum, rarr)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     sphbes_var(i, l) = rarr(l)
+                     IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
+                     ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
+                     ENDIF
+                     IF (i == ng) rarr1(l) = rdum1
+                     sphbesmoment1(i, l) = (rdum**(l + 2)*rarr(l + 1)/rdum**(l + 1) &
+                                            + (rarr1(l) - rdum1)*rdum**l)/qnorm
+                  END DO
+               END DO
+            END IF
+            DO l = 0, fi%hybinp%lcutm1(itype)
+               DO n = 1, mpdata%num_radbasfn(l, itype)
+                  ! note that mpdata%radbasfn_mt already contains one factor rgrid
+                  olap(n, l, itype, iqnrm) = &
+                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
+                            fi%atoms, itype, gridf)
+
+                  integral(n, l, itype, iqnrm) = &
+                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
+                            fi%atoms, itype, gridf)
+
+               END DO
+            END DO
+         END DO
+      END DO
+      call timestop("Bessel calculation")
+   end subroutine bessel_calculation
 END MODULE m_coulombmatrix
