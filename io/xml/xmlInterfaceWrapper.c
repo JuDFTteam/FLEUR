@@ -117,7 +117,7 @@ int initializeXPath()
    {
       fprintf(stderr, "Error: xmlDocument is null in initializeXPath()");
       return -1;
-   } 
+   }
    if(xPathObj) xmlXPathFreeObject(xPathObj);
    if(xPathCtxt) xmlXPathFreeContext(xPathCtxt);
    xPathCtxt = xmlXPathNewContext(xmlDocument);
@@ -211,4 +211,8 @@ int freeXMLResources()
    if(schema) xmlSchemaFree(schema);
    if(schemaValidCtxt) xmlSchemaFreeValidCtxt(schemaValidCtxt);
    return 0;
+}
+
+void write_xml_file(){
+  xmlSaveFileEnc("inp_dump.xml",xmlDocument,"UTF-8");
 }

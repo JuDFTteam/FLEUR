@@ -2,11 +2,11 @@ MODULE m_fleurinput_read_xml
   USE m_types_fleurinput
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
+  SUBROUTINE fleurinput_read_xml(xmlOUTFileID,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,old_version)
     USE m_types_xml
-
+    integer,INTENT(IN)               :: xmlOUTFileID
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
     TYPE(t_sym),INTENT(OUT),OPTIONAL::sym
     TYPE(t_atoms),INTENT(OUT),OPTIONAL::atoms
@@ -87,6 +87,7 @@ CONTAINS
        END DO
     END IF
 
+    call xml%writexml(xmlOUTFileID)
     call xml%FreeResources()
   END SUBROUTINE fleurinput_read_xml
 END MODULE m_fleurinput_read_xml
