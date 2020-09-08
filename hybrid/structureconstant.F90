@@ -49,7 +49,7 @@ contains
       LOGICAL, SAVE             ::  first = .TRUE.
       logical                   ::  run_loop
       ! - local arrays -
-      INTEGER                   ::  conv(0:2*hybinp%lexp), ierr
+      INTEGER                   ::  conv(0:2*hybinp%lexp), ierr, buf_sz, root
       INTEGER, ALLOCATABLE     ::  ptsh(:, :)
 
       REAL                      ::  k(3), ki(3), ka(3)
@@ -202,7 +202,7 @@ contains
             lm = 0
             !$OMP PARALLEL default(none) &
             !$OMP private(l, M, lm, ic1, ic2, cexp) &
-            !$OMP shared(ishell, conv, g, y, maxl, structconst, atoms, ikpt, ki)
+            !$OMP shared(ishell, conv, g, y, maxl, structconst, atoms, ikpt, ki, fmpi)
 
             !$OMP DO schedule(dynamic)
             DO l = 0, maxl
@@ -219,7 +219,7 @@ contains
             !$OMP END DO
 
             !$OMP DO schedule(dynamic) collapse(2)
-            DO ic2 = 1, atoms%nat
+            DO ic2 = 1+fmpi%irank, atoms%nat, fmpi%isize
                DO ic1 = 1, atoms%nat
                   IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
                   cexp = EXP(ImagUnit*tpi_const*dot_PRODUCT(ki, atoms%taual(:, ic1) - atoms%taual(:, ic2)))
@@ -232,6 +232,12 @@ contains
             !$OMP END PARALLEL
 
          END DO
+
+         buf_sz = size(structconst,1) * size(structconst,2)
+         DO ic2 = 1, atoms%nat
+            root = mod(ic2-1, fmpi%isize)
+            call MPI_Bcast(structconst(1,1,ic2,ikpt), buf_sz, MPI_DOUBLE_COMPLEX, root, fmpi%mpi_comm, ierr)
+         enddo
       END DO
       call timestop("fourierspace sum")
       !
