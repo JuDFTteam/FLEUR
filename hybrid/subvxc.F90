@@ -259,12 +259,16 @@ CONTAINS
          call timestart("Project on bascof")
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
+            call timestart("zgemm bascof")
             !call zgemm(transa, transb, m, n,      k,   alpha,   a,          lda,              b,                 ldb,           beta,     c,    ldc)
             call zgemm("N", "T", nnbas, lapw%nv(jsp), nnbas, cmplx_1, vrmat(1,1), hybdat%maxlmindx, bascof(1,1,iatom), lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
             carr = conjg(carr)
 
             !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
             call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
+            call timestop("zgemm bascof")
+
+            call timestart("apply bascof to vxc")
             if(vxc%l_real) then
                do j = fmpi%n_rank+1,lapw%nv(jsp),fmpi%n_size
                   j_loc=(j-1)/fmpi%n_size+1
@@ -280,6 +284,7 @@ CONTAINS
                   END DO
                END DO
             endif
+            call timestop("apply bascof to vxc")
          END DO
          call timestop("Project on bascof")
       END DO ! End loop over atom types
