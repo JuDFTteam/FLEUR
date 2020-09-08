@@ -1567,29 +1567,22 @@ CONTAINS
       COMPLEX :: cexp1(fi%atoms%ntype)
       complex :: cdum, cdum1 
       logical :: ldum
-!$    integer, parameter :: lock_size = 100
-!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("double g-loop")
 
-      ! create lock for race-condition in coulomb
-!$    do i =0,lock_size-1
-!$       call omp_init_lock(lock(i))
-!$    enddo
-
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(igpt0, igpt1, igpt2, ix, igptp2, iqnrm2, q2, y2, iy,igptp1, iqnrm1, q1) &
-      !$OMP private(y1, ic, itype, cexp1, lm, cdum, l, cdum1, m, idum, ldum) &
-      !$OMP shared(coulomb, ngptm1, ikpt, pgptm1, hybdat, mpdata, pqnrm, fi) &
-      !$OMP shared(lock, nqnrm, sphbes0, qnrm, carr2) &
-      !$OMP schedule(dynamic)
-      DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+      DO igpt0 = 1, ngptm1(ikpt)
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
          igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
          iqnrm2 = pqnrm(igpt2, ikpt)
          q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
          y2 = CONJG(carr2(:, igpt2))
+         
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(igpt1, iy, igptp1, iqnrm1, q1, y1, cexp1, ic, itype, lm) &
+         !$OMP private(cdum, l, cdum1, m, ldum) &
+         !$OMP shared(igpt2, coulomb, hybdat, mpdata, ikpt, fi, carr2, pqnrm, igptp2)&
+         !$OMP shared(qnrm, sphbes0, iqnrm2, nqnrm, y2, ix)
          DO igpt1 = 1, igpt2
             iy = hybdat%nbasp + igpt1
             igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -1619,16 +1612,10 @@ CONTAINS
                   cdum = cdum + cdum1*y1(lm)*y2(lm)
                ENDDO
             ENDDO
-            idum = ix*(ix - 1)/2 + iy
-!$          call omp_set_lock(lock(modulo(idum,lock_size)))
             coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
-!$          call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
+         !$OMP end parallel do
       END DO
-      !$OMP END PARALLEL DO
-!$    do i =0,lock_size-1
-!$       call omp_destroy_lock(lock(i))
-!$    enddo
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 
