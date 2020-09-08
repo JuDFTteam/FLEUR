@@ -6,7 +6,7 @@
 
 MODULE m_juDFT_init
 #ifdef CPP_MPI
-      use mpi 
+      use mpi
 #endif
       USE m_judft_time
       USE m_judft_sysinfo
@@ -26,6 +26,9 @@ MODULE m_juDFT_init
          juDFT_outUnit = outUnit
          IF (.NOT.judft_was_argument("-debugtime")) CALL signal_handler()
          IF (l_checkStack) CALL checkstack()
+#ifdef CPP_PATCH_INTEL
+       call patch_intel()
+#endif
 
       END SUBROUTINE juDFT_init
 
@@ -42,6 +45,28 @@ MODULE m_juDFT_init
 #endif
       END SUBROUTINE signal_handler
 
+#ifdef CPP_PATCH_INTEL
+      subroutine patch_intel()
+        !we try to patch the intel libraries to overwrite determination of 'INTEL' brand
+        !otherwise performance on AMD CPUs is bad.
+        INTERFACE
+          subroutine mkl_patch() BIND(C, name="intel_mkl_patch")
+          END subroutine
+        END INTERFACE
+        INTERFACE
+          subroutine cpu_patch() BIND(C, name="intel_cpu_patch")
+          END subroutine
+        END INTERFACE
+        print *,"INTEL PATCH applied"
+        call cpu_patch()
+        call mkl_patch()
+      end subroutine
+
+
+#endif
+
+
+
       END MODULE m_juDFT_init
 
       ! NOTE: The intel_signal_handler has to be outside the module
@@ -49,8 +74,8 @@ MODULE m_juDFT_init
       !       would be changed if it would be defined in the module.
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
-#ifdef CPP_MPI 
-      use mpi 
+#ifdef CPP_MPI
+      use mpi
 #endif
       USE m_judft_time
       USE m_judft_sysinfo
@@ -74,13 +99,13 @@ MODULE m_juDFT_init
       WRITE(0,*) " - A bug"
       WRITE(0,*) " - Your job running out of memory"
       WRITE(0,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(0,*) " - ...." 
+      WRITE(0,*) " - ...."
       WRITE(0,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
       CALL PRINT_memory_info(0,.true.)
 #ifdef CPP_MPI
       IF (l_mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,0,ierr)
-#endif      
+#endif
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler
