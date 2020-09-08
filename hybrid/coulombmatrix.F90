@@ -318,7 +318,7 @@ CONTAINS
       iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
-      call bessel_calculation(fi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
+      call bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
 
       !
       !     (1) Case < MT | v | MT >
@@ -1613,15 +1613,16 @@ CONTAINS
       enddo
    end subroutine collapse_ic_and_lm_loop
 
-   subroutine bessel_calculation(fi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
+   subroutine bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
       implicit NONE 
       type(t_fleurinput), intent(in)    :: fi
+      type(t_mpi), intent(in)           :: fmpi
       type(t_mpdata), intent(in)        :: mpdata
       integer, intent(in)               :: nqnrm
       real, intent(in)                  :: gridf(:,:), qnrm(:)
       real, intent(inout)               :: sphbesmoment(0:,:,:), olap(:,0:,:,:), integral(:,0:,:,:)
 
-      integer :: iqnrm, itype, i, l, n, ng
+      integer :: iqnrm, itype, i, l, n, ng, buf_sz, root, ierr
       REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
       REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
       REAL    :: rarr(0:fi%hybinp%lexp + 1), rarr1(0:maxval(fi%hybinp%lcutm1))
@@ -1629,8 +1630,7 @@ CONTAINS
 
       call timestart("Bessel calculation")
       
-      !do iqnrm = 1+fmpi%i_rank, nqnrm, fmpi%i_size
-      do iqnrm = 1, nqnrm
+      do iqnrm = 1+fmpi%irank, nqnrm, fmpi%isize
          qnorm = qnrm(iqnrm)
          !$OMP parallel do default(none) &
          !$OMP shared(olap, integral, sphbesmoment, fi,qnorm, iqnrm, mpdata, gridf) &
@@ -1680,6 +1680,22 @@ CONTAINS
             END DO
          END DO
       END DO
+
+#ifdef CPP_MPI 
+      call timestart("bcast bessel")
+      do iqnrm = 1, nqnrm
+         root = mod(iqnrm - 1,fmpi%isize)
+         buf_sz = size(olap,1) * size(olap,2) * size(olap,3)
+         call MPI_Bcast(olap(1,0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+
+         buf_sz = size(integral,1) * size(integral,2) * size(integral,3)
+         call MPI_Bcast(integral(1,0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+
+         buf_sz = size(sphbesmoment,1) * size(sphbesmoment,2)
+         call MPI_Bcast(sphbesmoment(0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+      enddo
+      call timestop("bcast bessel")
+#endif
       call timestop("Bessel calculation")
    end subroutine bessel_calculation
 END MODULE m_coulombmatrix
