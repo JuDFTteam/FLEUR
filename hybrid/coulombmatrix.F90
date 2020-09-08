@@ -1628,9 +1628,13 @@ CONTAINS
       real    :: rdum, qnorm, rdum1
 
       call timestart("Bessel calculation")
-      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
+      
+      !do iqnrm = 1+fmpi%i_rank, nqnrm, fmpi%i_size
       do iqnrm = 1, nqnrm
          qnorm = qnrm(iqnrm)
+         !$OMP parallel do default(none) &
+         !$OMP shared(olap, integral, sphbesmoment, fi,qnorm, iqnrm, mpdata, gridf) &
+         !$OMP private(itype, rdum, sphbes_var, sphbesmoment1, ng, rarr, rarr1, rdum1, i, l)
          DO itype = 1, fi%atoms%ntype
             ng = fi%atoms%jri(itype)
             rdum = fi%atoms%rmt(itype)
