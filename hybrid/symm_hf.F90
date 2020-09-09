@@ -18,7 +18,9 @@ MODULE m_symm_hf
    USE m_util
    USE m_intgrf
    USE m_io_hybinp
-
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 CONTAINS
 
    SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
@@ -72,7 +74,7 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       USE m_olap
@@ -84,7 +86,7 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(IN) :: hybdat
-
+      type(t_hybmpi), intent(in) :: submpi
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_lapw), INTENT(IN)   :: lapw
       type(t_nococonv), intent(in):: nococonv
@@ -108,7 +110,7 @@ CONTAINS
 
 !     - local scalars -
       INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
-      INTEGER                         :: itype, ieq, iatom, ratom
+      INTEGER                         :: itype, ieq, iatom, ratom, ierr
       INTEGER                         :: iband, iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
       INTEGER                         :: ok
@@ -276,7 +278,7 @@ CONTAINS
       wavefolap = 0
 
       call timestart("calc wavefolap")
-      do iatom = 1,fi%atoms%nat
+      do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
          cmthlp = transpose(cmt(:,:,iatom))
          lm = 0
@@ -298,6 +300,11 @@ CONTAINS
             END DO
          END DO
       END DO
+#ifdef CPP_MPI
+      call timestart("allreduce wavefolap")
+      call MPI_ALLREDUCE(MPI_IN_PLACE, wavefolap, size(wavefolap), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+      call timestop("allreduce wavefolap")
+#endif
       call timestop("calc wavefolap")
 
       allocate(symequivalent(nddb, nddb), stat=ok)
