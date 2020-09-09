@@ -62,7 +62,7 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
 
-      integer                 :: nbasfcn
+      integer                 :: nbasfcn, ierr
       REAL                    ::  integrand(fi%atoms%jmtd)
       REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
@@ -91,7 +91,9 @@ CONTAINS
       exchange = 0
       iatom = 0
       rdum = 0
-      do iatom = 1,fi%atoms%nat 
+
+      call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
+      do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
             DO p1 = 1, hybdat%nindxc(l1, itype)
@@ -131,13 +133,14 @@ CONTAINS
                   call integral%alloc(.False., n,n)
                   call carr%alloc(.False., n, hybdat%nbands(nk))
                   call tmp%init(carr)
-                  call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
                   allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
 
                   DO i = 1, n
-                     CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1), fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
-                     CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l, fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  ! -itype is to enforce inward integration
-
+                     CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1),&
+                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
+                     ! -itype is to enforce inward integration
+                     CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l,&
+                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  
                      primf1(:fi%atoms%jri(itype)) = primf1(:fi%atoms%jri(itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l
                      primf2(:fi%atoms%jri(itype)) = primf2(:fi%atoms%jri(itype))*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1)
                      DO j = 1, n
@@ -199,13 +202,14 @@ CONTAINS
                   call integral%free()
                   call carr%free()
                   call tmp%free()
-                  call dot_result%free()
                   deallocate(carr2, carr3, ctmp_vec)
-
                END DO
             END DO
          END DO
       END DO
+
+      call dot_result%free()
+      call MPI_ALLREDUCE(MPI_IN_PLACE, exchange, size(exchange), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
 
       IF (mat_ex%l_real) THEN
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
