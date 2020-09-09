@@ -129,12 +129,12 @@ CONTAINS
       INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
-      REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
+      complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
       COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
-      COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
+      COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
       COMPLEX, ALLOCATABLE             :: trace(:, :)
 
@@ -278,17 +278,21 @@ CONTAINS
       call timestart("calc wavefolap")
       do iatom = 1,fi%atoms%nat
          itype = fi%atoms%itype(iatom)
+         cmthlp = transpose(cmt(:,:,iatom))
          lm = 0
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
                nn = mpdata%num_radfun_per_l(l, itype)
                DO iband1 = 1, hybdat%nbands(nk)
-                  carr(:nn) = matmul(olapmt(:nn, :nn, l, itype), &
-                                       cmt(iband1, lm + 1:lm + nn, iatom))
+                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
+                  !          X,                  INCX,  BETA,    Y, INCY )
+                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
+                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
+                  
                   DO iband2 = 1, iband1
                      wavefolap(iband2, iband1) &
                         = wavefolap(iband2, iband1) &
-                           + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
+                           + dot_product(cmthlp(lm + 1:lm + nn, iband2), carr(:nn))
                   END DO
                END DO
                lm = lm + nn
