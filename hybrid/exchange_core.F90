@@ -82,7 +82,7 @@ CONTAINS
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
       CALL zmat%init(fi%sym%invs, nbasfcn, fi%input%neig)
-      if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+      
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, fi%kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
       ! zmat%matsize2 = hybdat%nbands(nk)
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
@@ -95,6 +95,7 @@ CONTAINS
       iatom = 0
       rdum = 0
 
+      call timestart("atom_loop")
       call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
       do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
@@ -210,10 +211,12 @@ CONTAINS
             END DO
          END DO
       END DO
-
+      call timestop("atom_loop")
       call dot_result%free()
 #ifdef CPP_MPI
+      call timestart("exchange allreduce")
       call MPI_ALLREDUCE(MPI_IN_PLACE, exchange, size(exchange), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+      call timestop("exchange allreduce")
 #endif
       IF (mat_ex%l_real) THEN
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
@@ -222,20 +225,22 @@ CONTAINS
          END IF
       ENDIF
 
+      call timestart("calc te_hfex%core")
       DO n1 = 1, hybdat%nobd(nk,jsp)
          results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1))
       END DO
+      call timestop("calc te_hfex%core")
 
       ! add the core-valence contribution to the exchange matrix mat_ex
       ! factor 1/nsymop is needed due to the symmetrization in symmetrizeh
 
-      ic = 0
-      sum_offdia = 0
+      call timestart("copy to mat_ex")
       IF (mat_ex%l_real) THEN
          mat_ex%data_r = mat_ex%data_r + real(exchange/nsymop)
       ELSE
          mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
       END IF
+      call timestop("copy to mat_ex")
       call timestop("exchange_vccv1")
    END SUBROUTINE exchange_vccv1
 
