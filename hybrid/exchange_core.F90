@@ -16,7 +16,10 @@
 !     It is done directly without employing the mixed basis set.
 
 MODULE m_exchange_core
-      USE m_types_hybdat
+   USE m_types_hybdat
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, lapw, submpi,&
@@ -209,8 +212,9 @@ CONTAINS
       END DO
 
       call dot_result%free()
+#ifdef CPP_MPI
       call MPI_ALLREDUCE(MPI_IN_PLACE, exchange, size(exchange), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
-
+#endif
       IF (mat_ex%l_real) THEN
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
