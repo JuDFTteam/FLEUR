@@ -276,25 +276,22 @@ CONTAINS
       wavefolap = 0
 
       call timestart("calc wavefolap")
-      iatom = 0
-      DO itype = 1, fi%atoms%ntype
-         DO ieq = 1, fi%atoms%neq(itype)
-            iatom = iatom + 1
-            lm = 0
-            DO l = 0, fi%atoms%lmax(itype)
-               DO M = -l, l
-                  nn = mpdata%num_radfun_per_l(l, itype)
-                  DO iband1 = 1, hybdat%nbands(nk)
-                     carr(:nn) = matmul(olapmt(:nn, :nn, l, itype), &
-                                        cmt(iband1, lm + 1:lm + nn, iatom))
-                     DO iband2 = 1, iband1
-                        wavefolap(iband2, iband1) &
-                           = wavefolap(iband2, iband1) &
-                             + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
-                     END DO
+      do iatom = 1,fi%atoms%nat
+         itype = fi%atoms%itype(iatom)
+         lm = 0
+         DO l = 0, fi%atoms%lmax(itype)
+            DO M = -l, l
+               nn = mpdata%num_radfun_per_l(l, itype)
+               DO iband1 = 1, hybdat%nbands(nk)
+                  carr(:nn) = matmul(olapmt(:nn, :nn, l, itype), &
+                                       cmt(iband1, lm + 1:lm + nn, iatom))
+                  DO iband2 = 1, iband1
+                     wavefolap(iband2, iband1) &
+                        = wavefolap(iband2, iband1) &
+                           + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
                   END DO
-                  lm = lm + nn
                END DO
+               lm = lm + nn
             END DO
          END DO
       END DO
