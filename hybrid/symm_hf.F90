@@ -289,23 +289,16 @@ CONTAINS
                   call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
                              cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
                   
-                  DO iband2 = 1, iband1
-                     wavefolap(iband2, iband1) &
-                        = wavefolap(iband2, iband1) &
-                           + dot_product(cmthlp(lm + 1:lm + nn, iband2), carr(:nn))
-                  END DO
+                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
+                  !          X,      INCX,  BETA,    Y, INCY )  
+                  call zgemv("C", nn, hybdat%nbands(nk), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
+                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
                END DO
                lm = lm + nn
             END DO
          END DO
       END DO
       call timestop("calc wavefolap")
-
-      DO iband1 = 1, hybdat%nbands(nk)
-         DO iband2 = 1, iband1
-            wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
-         END DO
-      END DO
 
       allocate(symequivalent(nddb, nddb), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
