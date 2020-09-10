@@ -483,16 +483,20 @@ CONTAINS
       end if
 
       if(kpts%ntet>0) then
+         CALL timestart("setup tetraList")
          allocate(kpts%tetraList(MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)*MERGE(6,24,film),kpts%nkpt),source=0)
+         !$OMP parallel do default(none) private(n,ntet,itet) shared(kpts)
          do n = 1, kpts%nkpt
             ntet = 0
             do itet = 1, kpts%ntet
-               IF(ALL(kpts%ntetra(:,itet).NE.n).AND.&
-                  ALL(kpts%bkp(kpts%ntetra(:,itet)).NE.n)) CYCLE
-               ntet = ntet + 1
-               kpts%tetraList(ntet,n) = itet
+               IF(ANY(kpts%ntetra(:,itet).EQ.n))THEN
+                  ntet = ntet + 1
+                  kpts%tetraList(ntet,n) = itet
+               ENDIF
             enddo
          enddo
+         !$OMP end parallel do
+         CALL timestop("setup tetraList")
       endif
       call timestop("init_kpts")
    END SUBROUTINE init_kpts
