@@ -267,6 +267,7 @@ CONTAINS
           .OR. (mat%matsize1 .NE. vec%matsize1)) &
          CALL judft_error("Invalid matices in t_mat_lproblem")
       IF (mat%l_real) THEN
+         call timestart("solve real linear problem")
          IF (mat%unsymmetry() < 1E-8) THEN
             !Matrix is symmetric
             CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
@@ -287,11 +288,14 @@ CONTAINS
             call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
             if (info /= 0) call judft_error("Error in dgesv for lproblem")
          END IF
+         call timestop("solve real linear problem")
       ELSE
+         call timestart("solve cmplx linear problem")
          ! I don't to do the whole testing for symmetry:
          allocate (ipiv(mat%matsize1))
          call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
          if (info /= 0) call judft_error("Error in zgesv for lproblem")
+         call timestop("solve cmplx linear problem")
       ENDIF
    END SUBROUTINE t_mat_lproblem
 
