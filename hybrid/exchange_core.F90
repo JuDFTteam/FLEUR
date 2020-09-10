@@ -236,7 +236,7 @@ CONTAINS
       buf_sz = hybdat%nbands(nk)**2
 
 #ifdef CPP_MPI
-      call timestart("exchange allreduce")
+      call timestart("exchange reduce")
       if(exchange%l_real) then 
          if(submpi%rank == 0) then
             call MPI_REDUCE(MPI_IN_PLACE, exchange%data_r, buf_sz, MPI_DOUBLE_PRECISION, MPI_SUM, 0, submpi%comm, ierr)
@@ -250,7 +250,7 @@ CONTAINS
             call MPI_REDUCE(exchange%data_c, MPI_IN_PLACE, buf_sz, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, submpi%comm, ierr)
          endif
       endif
-      call timestop("exchange allreduce")
+      call timestop("exchange reduce")
 #endif
 
       call timestart("calc te_hfex%core")
