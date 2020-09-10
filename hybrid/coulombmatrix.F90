@@ -1285,7 +1285,7 @@ CONTAINS
       integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
-      integer         :: nbasm, loc_size
+      integer         :: nbasm, loc_size, i, i_loc, root, ierr
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
@@ -1296,28 +1296,55 @@ CONTAINS
       ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
       ! rewritten as O * x = C
 
-      write (*,*) "olap_size", olap%matsize1, olap%matsize2
-      write (*,*) "rhs size", mpdata%n_g(ikpt),nbasm
-
       loc_size = floor((1.0*nbasm)/fmpi%n_size)
-      if(mod(nbasm,fmpi%n_size) < fmpi%n_rank) loc_size = loc_size + 1
+      if(mod(nbasm,fmpi%n_size) > fmpi%n_rank) loc_size = loc_size + 1
 
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
       if (coul_submtx%l_real) then
-         coul_submtx%data_r = real(coulomb%data_c(hybdat%nbasp + 1:, :))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_r(:,i_loc) = real(coulomb%data_c(hybdat%nbasp + 1:,i))
+         enddo
       else
-         coul_submtx%data_c = coulomb%data_c(hybdat%nbasp + 1:, :)
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_c(:,i_loc) = coulomb%data_c(hybdat%nbasp + 1:,i)
+         enddo
       endif
 
       call olap%linear_problem(coul_submtx)
 
       if (coul_submtx%l_real) then
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
-         coul_submtx%data_r = real(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_r(:,i_loc)
+         enddo
       else
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
-         coul_submtx%data_c = conjg(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_c(:,i_loc) 
+         enddo
       endif
+
+#ifdef CPP_MPI
+      do i = 1, nbasm
+         root = mod(i-1, fmpi%n_size)
+         call MPI_Bcast(coulomb%data_c(hybdat%nbasp + 1,i), mpdata%n_g(ikpt), &
+                         MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+      enddo
+#endif
+
+call coul_submtx%free()
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+      if (coul_submtx%l_real) then
+         coul_submtx%data_r = real(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+      else 
+         coul_submtx%data_c = conjg(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+      endif 
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
