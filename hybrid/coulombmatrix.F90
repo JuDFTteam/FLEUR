@@ -1286,6 +1286,7 @@ CONTAINS
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
       integer         :: nbasm, loc_size, i, i_loc, root, ierr
+      complex, allocatable :: tmp(:)
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
@@ -1299,6 +1300,7 @@ CONTAINS
       loc_size = floor((1.0*nbasm)/fmpi%n_size)
       if(mod(nbasm,fmpi%n_size) > fmpi%n_rank) loc_size = loc_size + 1
 
+      call timestart("copy in 1")
       call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
       if (coul_submtx%l_real) then
          i_loc = 0
@@ -1313,9 +1315,11 @@ CONTAINS
             coul_submtx%data_c(:,i_loc) = coulomb%data_c(hybdat%nbasp + 1:,i)
          enddo
       endif
+      call timestop("copy in 1")
 
       call olap%linear_problem(coul_submtx)
 
+      call timestart("copy out 1")
       if (coul_submtx%l_real) then
          i_loc = 0
          do i = fmpi%n_rank+1, nbasm, fmpi%n_size
@@ -1337,14 +1341,23 @@ CONTAINS
                          MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
       enddo
 #endif
+      call timestop("copy out 1")
 
-call coul_submtx%free()
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+      call timestart("copy in 2")
       if (coul_submtx%l_real) then
-         coul_submtx%data_r = real(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_r(:,i_loc) = real(coulomb%data_c(i, hybdat%nbasp + 1:))
+         enddo
       else 
-         coul_submtx%data_c = conjg(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_c(:,i_loc) = conjg(coulomb%data_c(i, hybdat%nbasp + 1:))
+         enddo
       endif 
+      call timestop("copy in 2")
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
@@ -1354,11 +1367,31 @@ call coul_submtx%free()
       ! Notice O = O^T since it's symmetric
       call olap%linear_problem(coul_submtx)
 
+      call timestart("copy out 2")
+      allocate(tmp(mpdata%n_g(ikpt)))
       if (coul_submtx%l_real) then
-         coulomb%data_c(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
-      else
-         coulomb%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
-      endif
+         do i = 1, nbasm
+            root = mod(i-1, fmpi%n_size)
+            i_loc = ((i-1)/fmpi%n_size) + 1
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_r(:,i_loc)  
+#ifdef CPP_MPI
+            call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+#endif 
+            coulomb%data_c(i, hybdat%nbasp + 1:) = real(tmp)
+         enddo
+      else 
+         do i = 1, nbasm
+            root = mod(i-1, fmpi%n_size)
+            i_loc = ((i-1)/fmpi%n_size) + 1
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_c(:,i_loc) 
+#ifdef CPP_MPI
+            call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+#endif 
+            coulomb%data_c(i, hybdat%nbasp + 1:) = conjg(tmp) 
+         enddo
+      endif 
+      call timestop("copy out 2")
+
 
       call coul_submtx%free()
       call olap%free()
