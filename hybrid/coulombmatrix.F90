@@ -1285,7 +1285,7 @@ CONTAINS
       integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
-      integer         :: nbasm
+      integer         :: nbasm, loc_size
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
@@ -1295,6 +1295,12 @@ CONTAINS
 
       ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
       ! rewritten as O * x = C
+
+      write (*,*) "olap_size", olap%matsize1, olap%matsize2
+      write (*,*) "rhs size", mpdata%n_g(ikpt),nbasm
+
+      loc_size = floor((1.0*nbasm)/fmpi%n_size)
+      if(mod(nbasm,fmpi%n_size) < fmpi%n_rank) loc_size = loc_size + 1
 
       call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
       if (coul_submtx%l_real) then
