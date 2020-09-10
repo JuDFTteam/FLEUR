@@ -84,7 +84,11 @@ CONTAINS
       CALL zmat%init(fi%sym%invs, nbasfcn, fi%input%neig)
       
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, fi%kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
-      ! zmat%matsize2 = hybdat%nbands(nk)
+#ifdef CPP_MPI 
+      call timestart("post read_z barrier core")
+      call MPI_Barrier(MPI_COMM_WORLD, ierr) 
+      call timestop("post read_z barrier core")
+#endif
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                           fi%sym, fi%oneD, zmat, jsp, nk, c_phase, cmt)
       call zmat%free()
