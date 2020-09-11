@@ -45,7 +45,7 @@ MODULE m_greensfTorgue
       CHARACTER(LEN=20) :: attributes(5)
 
       COMPLEX, ALLOCATABLE :: bxc(:,:)
-      COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: integrand(:),g_iiSpin(:,:,:,:)
 
       TYPE(t_potden) :: vTotProcess
       TYPE(t_gradients) :: grad
@@ -141,11 +141,16 @@ MODULE m_greensfTorgue
                         weight = greensFunction(i_gf)%contour%de(iz)
                         DO alpha = 1, 3 !(x,y,z)
                            DO jr = 1, atoms%jri(atomType)
-                              g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
-                              g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
+                              IF(ipm == 1) THEN
+                                 g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * bxc(jr,lhmu)
+                              ELSE
+                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
+                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * conjg(bxc(jr,lhmu))
+                              ENDIF
                            ENDDO
-                           CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lhmu)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                           CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lhmu)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
+                           CALL intgr3(REAL(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                           CALL intgr3(AIMAG(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
                            torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
                                                 * phaseFactor * MERGE(weight,conjg(weight),ipm.EQ.1)
                         ENDDO
