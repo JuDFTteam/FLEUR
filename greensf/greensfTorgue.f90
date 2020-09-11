@@ -119,7 +119,7 @@ MODULE m_greensfTorgue
 !         !$OMP shared(nh,nsym,l,lp,i_gf,atomType,torgue_cmplx) &
 !         !$OMP private(lh,m,lamda,mem,mu,mp,phaseFactor,ipm,iz,alpha,jr) &
 !         !$OMP private(realIntegral,imagIntegral,g_ii,g_iiSpin,g_Spin)
-         ALLOCATE(g_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+         ALLOCATE(integrand(atoms%jmtd),source=cmplx_0)
          ALLOCATE(g_iiSpin(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
 !         !$OMP do collapse(2) reduction(+:torgue_cmplx)
          DO lh = 0, nh
