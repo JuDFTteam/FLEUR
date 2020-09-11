@@ -80,11 +80,10 @@ CONTAINS
       REAL                  ::  bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
-      COMPLEX               ::  vrmat(hybdat%maxlmindx, hybdat%maxlmindx)
       COMPLEX               ::  carr(hybdat%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
-      COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
-      type(t_mat)           ::  vxc
+      type(t_mat)           ::  vxc, vrmat
+      type(t_mat), allocatable ::  bascof(:)
       COMPLEX               ::  bascof_lo(3, -atoms%llod:atoms%llod, 4*atoms%llod + 2, atoms%nlod, atoms%nat)
 
       CALL timestart("subvxc")
@@ -142,10 +141,11 @@ CONTAINS
 #ifndef CPP_OLDINTEL
       CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
 #endif
-      ALLOCATE (bascof(lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of bascof'
+      allocate(bascof(atoms%nat))
+      do ic = 1, atoms%nat 
+         call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))
+      enddo
 
-      bascof = 0
       ic = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
@@ -158,9 +158,9 @@ CONTAINS
                   DO i = 1, 2
                      indx = indx + 1
                      IF (i == 1) THEN
-                        bascof(:, indx, ic) = ahlp(:, lm, ic)
+                        bascof(ic)%data_c(:, indx) = ahlp(:, lm, ic)
                      ELSE IF (i == 2) THEN
-                        bascof(:, indx, ic) = bhlp(:, lm, ic)
+                        bascof(ic)%data_c(:, indx) = bhlp(:, lm, ic)
                      END IF
                   END DO
                END DO
@@ -172,6 +172,7 @@ CONTAINS
       deallocate(ahlp, bhlp)
 
       ! Loop over atom types
+      call vrmat%alloc(.false., hybdat%maxlmindx, hybdat%maxlmindx)
       iatom = 0
       DO itype = 1, atoms%ntype
 
@@ -221,7 +222,7 @@ CONTAINS
          call timestop("calc MT contrib aux radial integral")
 
          ! Calculate muffin tin contribution to vxc matrix
-         vrmat = 0
+         call vrmat%reset(cmplx_0)
          call timestart("calc MT contrib")
 
          j1 = 0
@@ -244,7 +245,7 @@ CONTAINS
                               END DO
                            END DO
                            rc = CMPLX(0, 1)**(l2 - l1) ! adjusts to a/b/ccof-scaling
-                           vrmat(j1, j2) = rr*rc
+                           vrmat%data_c(j1, j2) = rr*rc
                         END DO
                      END DO
                   END DO
@@ -260,12 +261,16 @@ CONTAINS
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
             call timestart("zgemm bascof")
-            !call zgemm(transa, transb, m, n,      k,   alpha,   a,          lda,              b,                 ldb,           beta,     c,    ldc)
-            call zgemm("N", "T", nnbas, lapw%nv(jsp), nnbas, cmplx_1, vrmat(1,1), hybdat%maxlmindx, bascof(1,1,iatom), lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
+            !call zgemm(transa, transb, m,    n,      k,     alpha,   a,                 lda,             
+            !           b,                 ldb,           beta,     c,    ldc)
+            call zgemm("N", "T", nnbas, lapw%nv(jsp), nnbas, cmplx_1, vrmat%data_c(1,1), hybdat%maxlmindx, &
+                        bascof(iatom)%data_c, lapw%dim_nvd(), cmplx_0, carr, hybdat%maxlmindx)
             carr = conjg(carr)
 
-            !call zgemm(transa, transb, m, n,      k,     alpha,   a,                 lda,            b,    ldb,              beta,    c,    ldc)
-            call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(1,1,iatom), lapw%dim_nvd(), carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
+            !call zgemm(transa, transb, m,      n,           k,     alpha,   a,                 lda,            
+            !              b,    ldb,              beta,    c,    ldc)
+            call zgemm("N", "N", lapw%nv(jsp), lapw%nv(jsp), nnbas, cmplx_1, bascof(iatom)%data_c, lapw%dim_nvd(),&
+                        carr, hybdat%maxlmindx, cmplx_0, carr1, lapw%dim_nvd()  )
             call timestop("zgemm bascof")
 
             call timestart("apply bascof to vxc")
@@ -424,10 +429,10 @@ CONTAINS
                                           if(mod(x-(fmpi%n_rank+1),fmpi%n_size) == 0) then
                                              x_loc = (x-1) / fmpi%n_size+1
                                              IF (hmat%l_real) THEN
-                                                vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) + invsfct*REAL(rr*rc*bascof(i, lm, iatom)* &
+                                                vxc%data_r(y,x_loc) = vxc%data_r(y,x_loc) + invsfct*REAL(rr*rc*bascof(iatom)%data_c(i, lm)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom)))
                                              ELSE
-                                                vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc) + rr*rc*bascof(i, lm, iatom)* &
+                                                vxc%data_c(y,x_loc) = vxc%data_c(y,x_loc) + rr*rc*bascof(iatom)%data_c(i, lm)* &
                                                                                           CONJG(bascof_lo(p1, m1, ikvec, ilo, iatom))
                                              END IF
                                           endif

@@ -263,7 +263,9 @@ CONTAINS
             endif
          END DO
       endif 
+#ifdef CPP_MPI
       call MPI_Bcast(results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, 0, submpi%comm, ierr)
+#endif
       call timestop("calc te_hfex%core")
 
       ! add the core-valence contribution to the exchange matrix mat_ex
