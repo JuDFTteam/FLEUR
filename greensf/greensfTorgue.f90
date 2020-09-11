@@ -6,6 +6,7 @@ MODULE m_greensfTorgue
    USE m_intgr
    USE m_gaunt
    USE m_xmlOutput
+   USE m_mt_tofrom_grid
 
    IMPLICIT NONE
 
@@ -36,15 +37,20 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(INOUT)  :: torgue(:)
       TYPE(t_potden),         INTENT(IN)     :: vTot
 
-      INTEGER :: na,nsym,nh,i_gf,l,lp,iContour,iGrid
+      INTEGER :: na,nsym,nh,i_gf,l,lp,iContour,iGrid,ispin,lhmu
       INTEGER :: lh,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
       COMPLEX :: sigma(2,2,3),torgue_cmplx(3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
-      REAL,    ALLOCATABLE :: bxc(:,:)
+      COMPLEX, ALLOCATABLE :: bxc(:,:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
+
+      TYPE(t_potden) :: vTotProcess
+      TYPE(t_gradients) :: grad
+      COMPLEX, ALLOCATABLE :: vlm(:,:,:)
+      REAL, ALLOCATABLE :: vTotch(:,:)
 
 
       IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="greensFunctionTorgue")
@@ -56,13 +62,28 @@ MODULE m_greensfTorgue
 
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
-      ALLOCATE(bxc(SIZE(vTot%mt,1),0:SIZE(vTot%mt,2)-1))
-      bxc = vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2)
-      DO lh = 0, nh
-         DO iGrid = 1, atoms%jri(atomType)
-            bxc(iGrid,lh) = bxc(iGrid,lh) * atoms%rmsh(iGrid,atomType)**2
-         ENDDO
+      vTotProcess = vTot
+      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
+      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
+      !                          sigma
+      !Decompose potential into V(r)
+      !                          lm
+      DO ispin =1, input%jspins
+         DO iGrid=1,atoms%jri(atomType)
+            vTotProcess%mt(iGrid,:,atomType,ispin)=vTotProcess%mt(iGrid,:,atomType,ispin)*atoms%rmsh(iGrid,atomType)**2
+         END DO
       ENDDO
+      ALLOCATE(vTotch(atoms%nsp()*atoms%jri(atomType),input%jspins))
+      CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTotProcess%mt(:,0:,atomType,:),atomType,noco,grad,vTotch)
+      !modified mt_from_grid with lm index
+      vlm = cmplx_0
+      CALL mt_from_gridlm(atoms, sym, sphhar, atomType, input%jspins, vTotch, vlm)
+      CALL finish_mt_grid()
+      !Get the Bxc part of the potential
+      ALLOCATE(bxc(SIZE(vlm,1),0:SIZE(vlm,2)-1))
+      bxc = vlm(:,:,1) - vlm(:,:,2)
+
+      DEALLOCATE(vTotch,vlm)
 
       ! sigma are the Pauli matrices
       sigma=cmplx_0
@@ -109,9 +130,10 @@ MODULE m_greensfTorgue
                IF(lamda.LT.abs(l-lp)) CYCLE
                DO mem = 1,sphhar%nmem(lh,nsym)
                   mu = sphhar%mlh(mem,lh,nsym)
+                  lhmu = lh * (lh+1) + mu
                   mp = m - mu
                   IF(ABS(mp).GT.lp) CYCLE
-                  phaseFactor = (sphhar%clnu(mem,lh,nsym))*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
+                  phaseFactor = gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
                   DO ipm = 1, 2
                      CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
@@ -125,8 +147,8 @@ MODULE m_greensfTorgue
                               ENDIF
                               g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
                            ENDDO
-                           CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                           CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
+                           CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lhmu)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                           CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lhmu)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
                            torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
                                                 * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                         ENDDO
