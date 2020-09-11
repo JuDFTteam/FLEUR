@@ -56,7 +56,7 @@ MODULE m_cfOutput_hdf
          !How many potentials and charge densities are written out
          CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
          CALL io_write_attint0(generalGroupID,'numPOT',COUNT(atoms%l_outputCFpot(:)))
-         CALL io_write_attint0(generalGroupID,'numCDN',COUNT(atoms%l_outputCFpot(:)))
+         CALL io_write_attint0(generalGroupID,'numCDN',COUNT(atoms%l_outputCFcdn(:)))
          CALL h5gclose_f(generalGroupID, hdfError)
       ELSE IF(l_exist) THEN
          !Only open file
