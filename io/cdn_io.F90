@@ -774,7 +774,7 @@ CONTAINS
        WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
        CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_FFN_IN_const,&
             iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-            previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix,
+            previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix,&
             mmpmatDistance,occDistance)
        IF(mmpmatDistance.GE.-1e-10.AND.occDistance.GE.-1e-10) THEN
          mmpmatDistancePrev = mmpmatDistance
