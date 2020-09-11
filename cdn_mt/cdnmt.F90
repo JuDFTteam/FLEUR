@@ -133,7 +133,7 @@ CONTAINS
                 END IF
                 IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
                   !1/SQRT(4pi) is added in crystalfieldCoeffs after normalization
-                  hub1data%cdn_spherical(j,l,itype) = hub1data%cdn_spherical(j,l,itype) + s/atoms%neq(itype)
+                  hub1data%cdn_spherical(j,l,itype) = hub1data%cdn_spherical(j,l,itype) + s/(atoms%neq(itype)*sfp_const)
                 ENDIF
              ENDDO
           ENDDO
