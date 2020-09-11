@@ -211,7 +211,7 @@ END DO
 
    ! write the spin-polarized density
     IF(input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     1,-1.0,0.0,.FALSE.,den)
+                     1,-1.0,0.0,-1.0,-1.0,.FALSE.,den)
     IF(opt) optDen%mt=den%mt
 
    ! read enpara and  flip lines
