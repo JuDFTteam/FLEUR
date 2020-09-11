@@ -128,15 +128,6 @@ CONTAINS
          CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell, fi%oneD, fi%noco, wann)
       END IF
 
-      CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
-      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
-      IF(.NOT.l_error) THEN
-         !Set the current HIA distance to the read in value
-         !Prevents too many HIA iterations after restart
-         results%last_mmpmatDistance = mmpmatDistancePrev
-         results%last_occDistance = occDistancePrev
-      ENDIF
-
       iter = 0
       iterHF = 0
       l_cont = (iter < fi%input%itmax)
@@ -188,6 +179,15 @@ CONTAINS
          ENDDO
       ENDIF
       ! Initialize Green's function (end)
+
+      IF(atoms%n_hia>0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
+      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      IF(.NOT.l_error) THEN
+         !Set the current HIA distance to the read in value
+         !Prevents too many HIA iterations after restart
+         results%last_mmpmatDistance = mmpmatDistancePrev
+         results%last_occDistance = occDistancePrev
+      ENDIF
 
       ! Open/allocate eigenvector storage (start)
       l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u + fi%atoms%n_hia > 0)
