@@ -36,7 +36,7 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(INOUT)  :: torgue(:)
       TYPE(t_potden),         INTENT(IN)     :: vTot
 
-      INTEGER :: na,nsym,nh,i_gf,l,lp,iContour
+      INTEGER :: na,nsym,nh,i_gf,l,lp,iContour,iGrid
       INTEGER :: lh,mem,mu,m,mp,iz,ipm,lamda,jr,alpha
       COMPLEX :: phaseFactor
       REAL    :: realIntegral, imagIntegral
@@ -50,6 +50,9 @@ MODULE m_greensfTorgue
       IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="greensFunctionTorgue")
       IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="greensFunctionTorgue")
 
+      na=SUM(atoms%neq(:atomType-1))+1
+      nsym = sym%ntypsy(na)
+      nh = sphhar%nlh(nsym)
 
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
@@ -60,10 +63,6 @@ MODULE m_greensfTorgue
             bxc(iGrid,lh) = bxc(iGrid,lh) * atoms%rmsh(iGrid,atomType)**2
          ENDDO
       ENDDO
-
-      na=SUM(atoms%neq(:atomType-1))+1
-      nsym = sym%ntypsy(na)
-      nh = sphhar%nlh(nsym)
 
       ! sigma are the Pauli matrices
       sigma=cmplx_0
