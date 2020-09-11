@@ -36,7 +36,7 @@ MODULE m_cdn_io
   PUBLIC readStars, writeStars
   PUBLIC readStepfunction, writeStepfunction
   PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
-  PUBLIC storeStructureIfNew,transform_by_moving_atoms
+  PUBLIC storeStructureIfNew,transform_by_moving_atoms, readPrevmmpDistances
   PUBLIC getIOMode
   PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
   PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
@@ -245,7 +245,7 @@ CONTAINS
 
           IF(l_DimChange) THEN
              CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                  1,-1.0,fermiEnergy,l_qfix,den)
+                  1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
           END IF
        ELSE
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -374,7 +374,7 @@ CONTAINS
   END SUBROUTINE readDensity
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-       relCdnIndex,distance,fermiEnergy,l_qfix,den,inFilename)
+       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename)
 
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
@@ -392,6 +392,7 @@ CONTAINS
     INTEGER, INTENT (IN)      :: relCdnIndex
     INTEGER, INTENT (IN)      :: archiveType
     REAL,    INTENT (IN)      :: fermiEnergy, distance
+    REAL,    INTENT (IN)      :: mmpmatDistance,occDistance
     LOGICAL, INTENT (IN)      :: l_qfix
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
@@ -513,8 +514,8 @@ CONTAINS
 
        CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-            currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,&
-            den%iter+relCdnIndex,den)
+            currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
+            occDistance,l_qfix,den%iter+relCdnIndex,den)
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -739,6 +740,57 @@ CONTAINS
     END IF
 
   END SUBROUTINE readPrevEFermi
+
+  SUBROUTINE readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
+
+    REAL,    INTENT(OUT) :: mmpmatDistancePrev,occDistancePrev
+    LOGICAL, INTENT(OUT) :: l_error
+
+    INTEGER        :: mode
+#ifdef CPP_HDF
+    INTEGER(HID_T) :: fileID
+#endif
+    INTEGER        :: currentStarsIndex,currentLatharmsIndex
+    INTEGER        :: currentStructureIndex,currentStepfunctionIndex
+    INTEGER        :: readDensityIndex, lastDensityIndex
+
+    INTEGER           :: starsIndex, latharmsIndex, structureIndex
+    INTEGER           :: stepfunctionIndex
+    INTEGER           :: date, time, iter, jspins, previousDensityIndex
+    REAL              :: fermiEnergy, distance
+    REAL              :: mmpmatDistance,occDistance
+    LOGICAL           :: l_qfix, l_exist
+    CHARACTER(LEN=30) :: archiveName
+
+    CALL getIOMode(mode)
+
+    mmpmatDistancePrev = 0.0
+    occDistancePrev = 0.0
+    l_error = .FALSE.
+    IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+       CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+            currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+       WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
+       CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_FFN_IN_const,&
+            iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
+            previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix,
+            mmpmatDistance,occDistance)
+       IF(mmpmatDistance.GE.-1e-10.AND.occDistance.GE.-1e-10) THEN
+         mmpmatDistancePrev = mmpmatDistance
+         occDistancePrev    = occDistance
+       ELSE
+         l_error = .TRUE.
+       ENDIF
+       CALL closeCDNPOT_HDF(fileID)
+#endif
+    ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+       STOP 'cdn.str not yet implemented!'
+    ELSE
+       l_error = .TRUE.
+    END IF
+
+  END SUBROUTINE readPrevmmpDistances
 
   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
 
@@ -1043,7 +1095,7 @@ CONTAINS
        END SELECT
        !Now write the density to file
        IF (fmpi%irank==0) CALL writedensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-            0,-1.0,fermiEnergy,l_qfix,den)
+            0,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
 
 #endif
     END IF

@@ -106,8 +106,9 @@ CONTAINS
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
-      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap
+      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error
       REAL    :: fix, sfscale
+      REAL    :: mmpmatDistancePrev,occDistancePrev
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -127,12 +128,17 @@ CONTAINS
          CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell, fi%oneD, fi%noco, wann)
       END IF
 
-      CALL hub1data%init(fi%atoms, fi%hub1inp)
+      CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
+      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      IF(.NOT.l_error) THEN
+         !Set the current HIA distance to the read in value
+         !Prevents too many HIA iterations after restart
+         results%last_mmpmatDistance = mmpmatDistancePrev
+         results%last_occDistance = occDistancePrev
+      ENDIF
 
       iter = 0
       iterHF = 0
-      hub1data%iter = 0
-      hub1data%l_runthisiter = .FALSE.
       l_cont = (iter < fi%input%itmax)
 
       IF (fmpi%irank .EQ. 0) CALL openXMLElementNoAttributes('scfLoop')
@@ -163,7 +169,7 @@ CONTAINS
             CALL toGlobalRelax(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen)
          END IF
          CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
-                           0, -1.0, results%ef, .FALSE., inDen)
+                           0, -1.0, results%ef, -1.0, -1.0, .FALSE., inDen)
       END IF
       IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) CALL fromGlobalRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
       ! Initialize and load inDen density (end)

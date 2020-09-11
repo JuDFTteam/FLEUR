@@ -1569,7 +1569,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,l_qfix,iter,den)
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den)
       use m_types_input
       use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
@@ -1582,6 +1582,7 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER, INTENT (IN)         :: date, time, iter
       REAL,    INTENT (IN)         :: fermiEnergy, distance
+      REAL,    INTENT (IN)         :: mmpmatDistance, occDistance
       LOGICAL, INTENT (IN)         :: l_qfix
 
       INTEGER                      :: i, iVac
@@ -1720,6 +1721,15 @@ MODULE m_cdnpot_io_hdf
          IF (distance.GE.-1e-10) THEN
             CALL io_write_attreal0(archiveID,'distance',distance)
          END IF
+
+         IF(n_u.GT.0) THEN
+            IF(mmpmatDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'mmpmatDistance',mmpmatDistance)
+            ENDIF
+            IF(occDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'occDistance',occDistance)
+            ENDIF
+         ENDIF
 
          l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
 
@@ -2839,7 +2849,8 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
                                   stepfunctionIndex, previousDensityIndex, jspins,&
-                                  date, time, distance, fermiEnergy, l_qfix)
+                                  date, time, distance, fermiEnergy,l_qfix, mmpmatDistance,&
+                                  occDistance)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
@@ -2849,6 +2860,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(OUT),OPTIONAL          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER, INTENT(OUT),OPTIONAL          :: previousDensityIndex, jspins
       REAL,    INTENT(OUT),OPTIONAL          :: fermiEnergy, distance
+      REAL,    INTENT(OUT),OPTIONAL          :: mmpmatDistance, occDistance
       LOGICAL, INTENT(OUT),OPTIONAL          :: l_qfix
 
       INTEGER              :: localDensityType
@@ -2939,6 +2951,21 @@ MODULE m_cdnpot_io_hdf
       IF (PRESENT(date)) CALL io_read_attint0(archiveID,'date',date)
       IF (PRESENT(time)) CALL io_read_attint0(archiveID,'time',time)
       IF (PRESENT(distance)) CALL io_read_attreal0(archiveID,'distance',distance)
+      
+      IF(PRESENT(mmpmatDistance)) THEN
+         IF(io_attexists(archiveID,'mmpmatDistance')) THEN
+            CALL io_read_attreal0(archiveID,'mmpmatDistance',mmpmatDistance)
+         ELSE
+            mmpmatDistance = -1.0
+         ENDIF
+      ENDIF
+      IF(PRESENT(occDistance)) THEN
+         IF(io_attexists(archiveID,'occDistance')) THEN
+            CALL io_read_attreal0(archiveID,'occDistance',occDistance)
+         ELSE
+            occDistance = -1.0
+         ENDIF
+      ENDIF
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
          IF (PRESENT(fermiEnergy)) CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)

@@ -7,7 +7,7 @@
 MODULE m_types_hub1data
 
    USE m_constants
-   USE m_types_setup
+   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -37,16 +37,49 @@ MODULE m_types_hub1data
 
    CONTAINS
 
-   SUBROUTINE hub1data_init(this,atoms,hub1inp)
+   SUBROUTINE hub1data_init(this,atoms,hub1inp,fmpi,mmpmatDistancePrev,occDistancePrev,l_error)
+
+      USE m_types_mpi
+      USE m_types_atoms
+      USE m_types_hub1inp
+      USE m_mpi_bc_tool
 
       CLASS(t_hub1data),   INTENT(INOUT) :: this
       TYPE(t_atoms),       INTENT(IN)    :: atoms
       TYPE(t_hub1inp),     INTENT(IN)    :: hub1inp
+      TYPE(t_mpi),         INTENT(IN)    :: fmpi
+      REAL,                INTENT(IN)    :: mmpmatDistancePrev,occDistancePrev
+      LOGICAL,             INTENT(IN)    :: l_error
 
       INTEGER :: i_hia
 
+
       this%l_performSpinavg = .FALSE.
-      IF(atoms%n_hia>0) this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
+      this%iter = 0
+      this%l_runthisiter = .FALSE.
+      IF(atoms%n_hia>0) THEN
+         IF(fmpi%irank == 0) THEN
+            this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
+
+            IF(.NOT.l_error) THEN
+               IF(hub1inp%l_correctEtot.AND..NOT.hub1inp%l_dftSpinpol.AND.&
+                  mmpmatDistancePrev<hub1inp%minmatDistance.AND.&
+                  occDistancePrev<hub1inp%minoccDistance) THEN
+                  !If we read converged distances it is assumed that the correction should kick in
+                  WRITE(*,*) "Previous density matrix was converged"
+                  WRITE(*,*) "Switching off spin averaging"
+                  this%l_performSpinavg = .FALSE.
+               ENDIF
+            ELSE
+               IF(hub1inp%l_correctEtot) THEN
+                  CALL juDFT_warn("No previous density matrix distances found",&
+                                  hint="setting spin averaging according to dftSpinpol",calledby="hub1data_init")
+               ENDIF
+            ENDIF
+         ENDIF
+         CALL mpi_bc(this%l_performSpinavg,0,fmpi%mpi_comm)
+      ENDIF
+
 
       ALLOCATE (this%mag_mom(MAX(1,atoms%n_hia),lmaxU_const-1),source=0.0)
       ALLOCATE (this%xi(MAX(1,atoms%n_hia)),source=0.0)
