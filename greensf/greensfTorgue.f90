@@ -55,6 +55,11 @@ MODULE m_greensfTorgue
       !Get Bxc from the total potential (local frame)
       ALLOCATE(bxc(SIZE(vTot%mt,1),0:SIZE(vTot%mt,2)-1))
       bxc = vTot%mt(:,:,atomType,1) - vTot%mt(:,:,atomType,2)
+      DO lh = 0, nh
+         DO iGrid = 1, atoms%jri(atomType)
+            bxc(iGrid,lh) = bxc(iGrid,lh) * atoms%rmsh(iGrid,atomType)**2
+         ENDDO
+      ENDDO
 
       na=SUM(atoms%neq(:atomType-1))+1
       nsym = sym%ntypsy(na)
