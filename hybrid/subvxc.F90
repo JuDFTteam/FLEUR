@@ -80,7 +80,6 @@ CONTAINS
       REAL                  ::  bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
-      COMPLEX               ::  vrmat(hybdat%maxlmindx, hybdat%maxlmindx)
       COMPLEX               ::  carr(hybdat%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
       COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
