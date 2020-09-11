@@ -137,7 +137,7 @@ MODULE m_greensfTorgue
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
                   DO ipm = 1, 2
                      CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
-                     DO iz = 1, SIZE(g_ii,2)
+                     DO iz = 1, SIZE(g_iiSpin,4)
                         weight = greensFunction(i_gf)%contour%de(iz)
                         DO alpha = 1, 3 !(x,y,z)
                            DO jr = 1, atoms%jri(atomType)
@@ -160,7 +160,7 @@ MODULE m_greensfTorgue
             ENDDO
          ENDDO
 !         !$OMP end do
-         DEALLOCATE(g_ii,g_iiSpin)
+         DEALLOCATE(integrand,g_iiSpin)
 !         !$OMP end parallel
 
       ENDDO
