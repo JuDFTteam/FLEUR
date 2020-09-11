@@ -16,7 +16,10 @@
 !     It is done directly without employing the mixed basis set.
 
 MODULE m_exchange_core
-      USE m_types_hybdat
+   USE m_types_hybdat
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, lapw, submpi,&
@@ -62,16 +65,15 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
 
-      integer                 :: nbasfcn
+      integer                 :: nbasfcn, ierr, buf_sz
       REAL                    ::  integrand(fi%atoms%jmtd)
       REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
 
       COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
-      COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
       complex                 :: c_phase(hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
-      type(t_mat)             :: zmat, integral, carr, tmp, dot_result
+      type(t_mat)             :: zmat, integral, carr, tmp, dot_result, exchange
 
       complex, external   :: zdotc
 
@@ -79,19 +81,27 @@ CONTAINS
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
       CALL zmat%init(fi%sym%invs, nbasfcn, fi%input%neig)
-      if(nk /= fi%kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
+      
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, fi%kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
-      ! zmat%matsize2 = hybdat%nbands(nk)
+#ifdef CPP_MPI 
+      call timestart("post read_z barrier core")
+      call MPI_Barrier(MPI_COMM_WORLD, ierr) 
+      call timestop("post read_z barrier core")
+#endif
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                           fi%sym, fi%oneD, zmat, jsp, nk, c_phase, cmt)
       call zmat%free()
 
+      call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk), hybdat%nbands(nk))
+
       allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))
 
-      exchange = 0
       iatom = 0
       rdum = 0
-      do iatom = 1,fi%atoms%nat 
+
+      call timestart("atom_loop")
+      call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
+      do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
             DO p1 = 1, hybdat%nindxc(l1, itype)
@@ -131,13 +141,14 @@ CONTAINS
                   call integral%alloc(.False., n,n)
                   call carr%alloc(.False., n, hybdat%nbands(nk))
                   call tmp%init(carr)
-                  call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
                   allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
 
                   DO i = 1, n
-                     CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1), fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
-                     CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l, fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  ! -itype is to enforce inward integration
-
+                     CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1),&
+                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
+                     ! -itype is to enforce inward integration
+                     CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l,&
+                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  
                      primf1(:fi%atoms%jri(itype)) = primf1(:fi%atoms%jri(itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l
                      primf2(:fi%atoms%jri(itype)) = primf2(:fi%atoms%jri(itype))*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1)
                      DO j = 1, n
@@ -180,18 +191,33 @@ CONTAINS
                         call timestop("zgemms")
 
                         call timestart("add to exchange")
-                        !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
-                        !$OMP private(n1, n2, nn2)&
-                        !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk)
-                        DO n1 = 1, hybdat%nbands(nk)
-                           DO n2 = 1, nsest(n1)!n1
-                              nn2 = indx_sest(n2, n1)
-                              if(nn2 <= n1) then
-                                 exchange(nn2, n1) = exchange(nn2, n1) + dot_result%data_c(n1,nn2)
-                              endif
+                        if(exchange%l_real) then
+                           !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
+                           !$OMP private(n1, n2, nn2)&
+                           !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk)
+                           DO n1 = 1, hybdat%nbands(nk)
+                              DO n2 = 1, nsest(n1)!n1
+                                 nn2 = indx_sest(n2, n1)
+                                 if(nn2 <= n1) then
+                                    exchange%data_r(nn2, n1) = exchange%data_r(nn2, n1) + real(dot_result%data_c(n1,nn2))
+                                 endif
+                              END DO
                            END DO
-                        END DO
-                        !$OMP END PARALLEL DO
+                           !$OMP END PARALLEL DO
+                        else
+                           !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
+                           !$OMP private(n1, n2, nn2)&
+                           !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk)
+                           DO n1 = 1, hybdat%nbands(nk)
+                              DO n2 = 1, nsest(n1)!n1
+                                 nn2 = indx_sest(n2, n1)
+                                 if(nn2 <= n1) then
+                                    exchange%data_c(nn2, n1) = exchange%data_c(nn2, n1) + dot_result%data_c(n1,nn2)
+                                 endif
+                              END DO
+                           END DO
+                           !$OMP END PARALLEL DO
+                        endif
                         call timestop("add to exchange")
                      END DO
                   END DO
@@ -199,35 +225,62 @@ CONTAINS
                   call integral%free()
                   call carr%free()
                   call tmp%free()
-                  call dot_result%free()
                   deallocate(carr2, carr3, ctmp_vec)
-
                END DO
             END DO
          END DO
       END DO
+      call timestop("atom_loop")
+      call dot_result%free()
 
-      IF (mat_ex%l_real) THEN
-         IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
-            WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
-            call judft_error('exchangeCore: Unusually large imaginary component.')
-         END IF
-      ENDIF
+      buf_sz = hybdat%nbands(nk)**2
 
-      DO n1 = 1, hybdat%nobd(nk,jsp)
-         results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1))
-      END DO
+#ifdef CPP_MPI
+      call timestart("exchange reduce")
+      if(exchange%l_real) then 
+         if(submpi%rank == 0) then
+            call MPI_REDUCE(MPI_IN_PLACE, exchange%data_r, buf_sz, MPI_DOUBLE_PRECISION, MPI_SUM, 0, submpi%comm, ierr)
+         else
+            call MPI_REDUCE(exchange%data_r, MPI_IN_PLACE, buf_sz, MPI_DOUBLE_PRECISION, MPI_SUM, 0, submpi%comm, ierr)
+         endif
+      else
+         if(submpi%rank == 0) then
+            call MPI_REDUCE(MPI_IN_PLACE, exchange%data_c, buf_sz, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, submpi%comm, ierr)
+         else
+            call MPI_REDUCE(exchange%data_c, MPI_IN_PLACE, buf_sz, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, submpi%comm, ierr)
+         endif
+      endif
+      call timestop("exchange reduce")
+#endif
+
+      call timestart("calc te_hfex%core")
+      if(submpi%rank == 0) then
+         DO n1 = 1, hybdat%nobd(nk,jsp)
+            if(exchange%l_real) then
+               results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange%data_r(n1, n1))
+            else 
+               results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange%data_c(n1, n1))
+            endif
+         END DO
+      endif 
+      call MPI_Bcast(results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, 0, submpi%comm, ierr)
+      call timestop("calc te_hfex%core")
 
       ! add the core-valence contribution to the exchange matrix mat_ex
       ! factor 1/nsymop is needed due to the symmetrization in symmetrizeh
 
-      ic = 0
-      sum_offdia = 0
-      IF (mat_ex%l_real) THEN
-         mat_ex%data_r = mat_ex%data_r + real(exchange/nsymop)
-      ELSE
-         mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
-      END IF
+      call timestart("copy to mat_ex")
+      if(submpi%rank == 0) then
+         IF (mat_ex%l_real) THEN
+            ! mat_ex%data_r = mat_ex%data_r + exchange%data_r/nsymop
+            call daxpy(buf_sz, 1.0/ nsymop, exchange%data_r, 1, mat_ex%data_r, 1)
+         ELSE
+            !mat_ex%data_c = mat_ex%data_c + CONJG(exchange%data_c)/nsymop
+            call zlacgv(buf_sz, exchange%data_c, 1)
+            call zaxpy(buf_sz, cmplx_1/nsymop, exchange%data_c, 1, mat_ex%data_c, 1)
+         END IF
+      endif
+      call timestop("copy to mat_ex")
       call timestop("exchange_vccv1")
    END SUBROUTINE exchange_vccv1
 

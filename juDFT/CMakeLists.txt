@@ -27,6 +27,12 @@ else()
 set(judft_HDF "")
 endif()
 
+if (JUDFT_PATCH_INTEL)
+    set(judft_HDF ${judft_HDF} patch_intel.c)
+endif()
+
+
+
 add_library(juDFT STATIC
 ${judft_HDF}
 usage_data.F90
@@ -46,6 +52,7 @@ npy.f90
 round.f90
 internalParams.f90
 )
+
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
 endif()

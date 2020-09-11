@@ -71,7 +71,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: iband, nbasfcn, i, i0, j
+      INTEGER                 :: iband, nbasfcn, i, i0, j, ierr
       REAL                    :: a_ex
       TYPE(t_mat)             :: tmp, z
       COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
@@ -101,6 +101,12 @@ CONTAINS
 
       CALL z%init(hmat%l_real, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
+
+#ifdef CPP_MPI
+      call timestart("post add_vnonl read_z barrier")
+      call MPI_Barrier(fmpi%mpi_comm, ierr)
+      call timestop("post add_vnonl read_z barrier")
+#endif
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90

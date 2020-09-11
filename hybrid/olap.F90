@@ -1,5 +1,8 @@
 MODULE m_olap
    USE m_types_hybdat
+#ifdef CPP_MPI
+   use mpi
+#endif
    private olap_pw_real, olap_pw_cmplx
    public olap_pw, olap_pwp, wfolap_init, wfolap_inv, wfolap_noinv
 
@@ -9,13 +12,14 @@ CONTAINS
 !     (Muffin-tin spheres are cut out.)
 !     olap_pw calculates full overlap matrix
 
-   SUBROUTINE olap_pw(olap, gpt, ngpt, atoms, cell)
+   SUBROUTINE olap_pw(olap, gpt, ngpt, atoms, cell, fmpi)
       use m_juDFT
       USE m_constants
       USE m_types
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
+      type(t_mpi), intent(in)    :: fmpi
 
 !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
@@ -29,19 +33,20 @@ CONTAINS
       INTEGER                  :: dg(3)
 
       if (olap%l_real) then
-         call olap_pw_real(olap, gpt, ngpt, atoms, cell)
+         call olap_pw_real(olap, gpt, ngpt, atoms, cell, fmpi)
       else
          call olap_pw_cmplx(olap, gpt, ngpt, atoms, cell)
       endif
    END SUBROUTINE olap_pw
 
-   subroutine olap_pw_real(olap, gpt, ngpt, atoms, cell)
+   subroutine olap_pw_real(olap, gpt, ngpt, atoms, cell, fmpi)
       use m_juDFT
       USE m_constants
       USE m_types
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
-      TYPE(t_atoms), INTENT(IN)   :: atoms
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      type(t_mpi), intent(in)    :: fmpi
 
       !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
@@ -49,17 +54,19 @@ CONTAINS
       INTEGER, INTENT(IN)       :: gpt(:, :)
       TYPE(t_mat)              :: olap
       !     - local -
-      INTEGER                  :: i, j, itype, icent, ineq
+      INTEGER                  :: i, j, itype, icent, ineq, ierr, root
       REAL                     :: g, r, fgr
       COMPLEX, PARAMETER       :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
 
       call timestart("olap_pw_real")
-      !$OMP PARALLEL DO default(none) schedule(guided) &
+      !$OMP PARALLEL default(none) &
       !$OMP private(i,j,dg,g,itype, icent, r, fgr)&
-      !$OMP shared(olap, gpt, cell, atoms, ngpt)
-      DO i = 1, ngpt
-         DO j = 1, i
+      !$OMP shared(olap, gpt, cell, atoms, ngpt, fmpi)
+
+      !$OMP DO schedule(guided) 
+      DO j = 1+fmpi%n_rank, ngpt, fmpi%n_size
+         DO i = 1, j
             olap%data_r(i,j) = 0.0
             dg = gpt(:, j) - gpt(:, i)
             g = gptnorm(dg, cell%bmat)
@@ -76,11 +83,24 @@ CONTAINS
                   olap%data_r(i, j) = real(olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                END DO
             END IF
-            IF (i == j) olap%data_r(i, j) = olap%data_r(i, j) + 1
-            olap%data_r(j, i) = olap%data_r(i, j)
          END DO
       END DO
-      !$OMP END PARALLEL DO
+      !$OMP end do
+
+      ! work on diagonal
+      !$OMP DO
+      do i = 1+fmpi%n_rank, ngpt, fmpi%n_size
+         olap%data_r(i,i) = olap%data_r(i,i) + 1
+      enddo
+      !$OMP END DO
+      !$OMP end parallel
+#ifdef CPP_MPI
+      do j = 1, ngpt
+         root = mod(j-1, fmpi%n_size)
+         call MPI_Bcast(olap%data_r(1,j), j, MPI_DOUBLE_PRECISION, root, fmpi%sub_comm, ierr)
+      enddo
+#endif
+      call olap%u2l()
       call timestop("olap_pw_real")
    END SUBROUTINE olap_pw_real
 
@@ -225,53 +245,53 @@ CONTAINS
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   SUBROUTINE wfolap_init(olappw, olapmt, gpt, &
-                          atoms, mpdata, cell, &
-                          bas1, bas2)
+!    SUBROUTINE wfolap_init(olappw, olapmt, gpt, &
+!                           atoms, mpdata, cell, &
+!                           bas1, bas2)
 
-      USE m_intgrf, ONLY: intgrf, intgrf_init
-      USE m_types
-      IMPLICIT NONE
-      TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_cell), INTENT(IN)   :: cell
-      TYPE(t_atoms), INTENT(IN)   :: atoms
+!       USE m_intgrf, ONLY: intgrf, intgrf_init
+!       USE m_types
+!       IMPLICIT NONE
+!       TYPE(t_mpdata), intent(in) :: mpdata
+!       TYPE(t_cell), INTENT(IN)   :: cell
+!       TYPE(t_atoms), INTENT(IN)   :: atoms
 
-!     - arrays -
-      INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
-      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
-                                  bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
-      REAL, INTENT(INOUT)      :: olapmt(maxval(mpdata%num_radfun_per_l), &
-                                         maxval(mpdata%num_radfun_per_l), &
-                                         0:atoms%lmaxd, &
-                                         atoms%ntype)
-      TYPE(t_mat), INTENT(INOUT):: olappw
+! !     - arrays -
+!       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
+!       REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), &
+!                                   bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+!       REAL, INTENT(INOUT)      :: olapmt(maxval(mpdata%num_radfun_per_l), &
+!                                          maxval(mpdata%num_radfun_per_l), &
+!                                          0:atoms%lmaxd, &
+!                                          atoms%ntype)
+!       TYPE(t_mat), INTENT(INOUT):: olappw
 
-!     - local -
-      INTEGER                  :: itype, l, nn, n1, n2
+! !     - local -
+!       INTEGER                  :: itype, l, nn, n1, n2
 
-      REAL, ALLOCATABLE         :: gridf(:, :)
+!       REAL, ALLOCATABLE         :: gridf(:, :)
 
-      CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
-      olapmt = 0
-      DO itype = 1, atoms%ntype
-         DO l = 0, atoms%lmax(itype)
-            nn = mpdata%num_radfun_per_l(l, itype)
-            DO n2 = 1, nn
-               DO n1 = 1, nn!n2
-                  !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
-                  olapmt(n1, n2, l, itype) = intgrf( &
-                                             bas1(:, n1, l, itype)*bas1(:, n2, l, itype) &
-                                             + bas2(:, n1, l, itype)*bas2(:, n2, l, itype), &
-                                             atoms, itype, gridf)
-!               olapmt(n2,n1,l,itype) = olapmt(n1,n2,l,itype)
-               END DO
-            END DO
-         END DO
-      END DO
+!       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
+!       olapmt = 0
+!       DO itype = 1, atoms%ntype
+!          DO l = 0, atoms%lmax(itype)
+!             nn = mpdata%num_radfun_per_l(l, itype)
+!             DO n2 = 1, nn
+!                DO n1 = 1, nn!n2
+!                   !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
+!                   olapmt(n1, n2, l, itype) = intgrf( &
+!                                              bas1(:, n1, l, itype)*bas1(:, n2, l, itype) &
+!                                              + bas2(:, n1, l, itype)*bas2(:, n2, l, itype), &
+!                                              atoms, itype, gridf)
+! !               olapmt(n2,n1,l,itype) = olapmt(n1,n2,l,itype)
+!                END DO
+!             END DO
+!          END DO
+!       END DO
 
-      CALL olap_pw(olappw, gpt, size(gpt, 2), atoms, cell)
+!       CALL olap_pw(olappw, gpt, size(gpt, 2), atoms, cell)
 
-   END SUBROUTINE wfolap_init
+!    END SUBROUTINE wfolap_init
 
    FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, olappw, olapmt, atoms, mpdata)
 

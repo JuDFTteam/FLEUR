@@ -32,10 +32,10 @@ MODULE m_tetrahedron_regular
       REAL,    ALLOCATABLE,   INTENT(INOUT)  :: voltet(:)
 
 
-      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,jtet
+      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,jtet,icorn,jcorn
       REAL    :: vol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
-      LOGICAL :: l_new
+      LOGICAL :: l_new,l_found(MERGE(3,4,film)),l_used(MERGE(3,4,film))
       INTEGER, ALLOCATABLE :: tetra(:,:)
       INTEGER, ALLOCATABLE :: kcorn(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
@@ -111,14 +111,26 @@ MODULE m_tetrahedron_regular
                   l_new = .TRUE.
                   !Check for symmetry equivalent tetrahedra
                   DO jtet = 1, kpts%ntet
-                     IF(ALL(kpts%bkp(kcorn(tetra(:,itetra)))-kpts%bkp(ntetra(:,jtet)).EQ.0)) THEN
+                     l_found = .FALSE.
+                     l_used = .FALSE.
+                     DO icorn = 1, SIZE(ntetra,1)
+                        DO jcorn = 1, SIZE(ntetra,1)
+                           IF(.NOT.l_used(jcorn).AND..NOT.l_found(icorn).AND.&
+                              kpts%bkp(kcorn(tetra(icorn,itetra))).EQ.ntetra(jcorn,jtet)) THEN
+                                 l_found(icorn) = .TRUE.
+                                 l_used(jcorn) = .TRUE.
+                           ENDIF
+                        ENDDO
+                     ENDDO
+                     IF(ALL(l_found)) THEN
                         l_new = .FALSE.
                         voltet(jtet) = voltet(jtet) + vol
+                        EXIT
                      ENDIF
                   ENDDO
                   IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
                      kpts%ntet = kpts%ntet+1
-                     ntetra(:,kpts%ntet) = kcorn(tetra(:,itetra))
+                     ntetra(:,kpts%ntet) = kpts%bkp(kcorn(tetra(:,itetra)))
                      voltet(kpts%ntet) = vol
                   ENDIF
                ENDDO

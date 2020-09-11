@@ -25,7 +25,6 @@ CONTAINS
     !USE m_InitParallelProcesses
     USE m_xmlOutput
     USE m_constants
-    USE m_winpXML
     USE m_writeOutParameters
     USE m_setupMPI
     USE m_cdn_io
@@ -94,7 +93,7 @@ CONTAINS
     REAL, ALLOCATABLE             :: xmlCoreOccs(:,:,:)
     LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
     !     .. Local Scalars ..
-    INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType,minneigd
+    INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType,minneigd,outxmlFileID
     COMPLEX    :: cdum
     CHARACTER(len=4)              :: namex
     CHARACTER(len=12)             :: relcor, tempNumberString
@@ -117,6 +116,7 @@ CONTAINS
 #endif
     IF (fmpi%irank.EQ.0) THEN
        CALL startFleur_XMLOutput()
+       outxmlFileID=getXMLOutputUnitNumber()
        IF (judft_was_argument("-info")) THEN
           CLOSE(oUnit)
           OPEN (oUnit,status='SCRATCH')
@@ -132,7 +132,7 @@ CONTAINS
     ALLOCATE(t_xcpot_inbuild::xcpot)
     !Only PE==0 reads the input and does basic postprocessing
     IF (fmpi%irank.EQ.0) THEN
-       CALL fleurinput_read_xml(cell=cell,sym=sym,atoms=atoms,input=input,noco=noco,vacuum=vacuum,field=field,&
+       CALL fleurinput_read_xml(outxmlFileID,cell=cell,sym=sym,atoms=atoms,input=input,noco=noco,vacuum=vacuum,field=field,&
             sliceplot=sliceplot,banddos=banddos,mpinp=mpinp,hybinp=hybinp,oneD=oneD,coreSpecInput=coreSpecInput,&
             wann=wann,xcpot=xcpot,forcetheo_data=forcetheo_data,kpts=kpts,kptsSelection=kptsSelection,kptsArray=kptsArray,&
             enparaXML=enparaXML,gfinp=gfinp,hub1inp=hub1inp)
@@ -171,14 +171,6 @@ CONTAINS
     IF (.NOT.noco%l_noco) &
          CALL transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
-#ifndef _OPENACC
-    IF (fmpi%irank.EQ.0) THEN
-       CALL w_inpXML(&
-            atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kptsArray,kptsSelection,enpara,gfinp,&
-            .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
-    END IF
-#endif
     !
     !--> determine more dimensions
     !

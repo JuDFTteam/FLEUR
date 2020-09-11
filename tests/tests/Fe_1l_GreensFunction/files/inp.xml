@@ -17,61 +17,32 @@
          <contourSemicircle n="128" eb="-1.00000000" et="0.00000000" alpha="1.00000000" label="default"/>
       </greensFunction>
       <bzIntegration valenceElectrons="16.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
-         <kPointListSelection listName="default" />
+         <kPointListSelection listName="default"/>
          <kPointLists>
-         <kPointList name="default" count="6"  type="tetra">
-            <kPoint weight="     4.0000000000000"> 0.4000000000000  0.4000000000000  0.0000000000000</kPoint>
-            <kPoint weight="     8.0000000000000"> 0.4000000000000  0.2000000000000  0.0000000000000</kPoint>
-            <kPoint weight="     4.0000000000000"> 0.4000000000000  0.0000000000000  0.0000000000000</kPoint>
-            <kPoint weight="     4.0000000000000"> 0.2000000000000  0.2000000000000  0.0000000000000</kPoint>
-            <kPoint weight="     4.0000000000000"> 0.2000000000000  0.0000000000000  0.0000000000000</kPoint>
-            <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
-            <triangles ntria="43">
-               <tria vol="     0.8600000000000">1 22 2</tria>
-               <tria vol="     0.8600000000000">22 2 4</tria>
-               <tria vol="     0.8600000000000">22 23 4</tria>
-               <tria vol="     0.8600000000000">23 4 25</tria>
-               <tria vol="     0.8600000000000">23 19 25</tria>
-               <tria vol="     0.8600000000000">19 25 21</tria>
-               <tria vol="     0.8600000000000">19 18 21</tria>
-               <tria vol="     0.8600000000000">18 21 7</tria>
-               <tria vol="     0.8600000000000">18 1 7</tria>
-               <tria vol="     0.8600000000000">1 7 2</tria>
-               <tria vol="     0.8600000000000">2 4 3</tria>
-               <tria vol="     0.8600000000000">4 3 5</tria>
-               <tria vol="     0.8600000000000">4 25 5</tria>
-               <tria vol="     1.7200000000000">25 5 6</tria>
-               <tria vol="     0.8600000000000">21 6 9</tria>
-               <tria vol="     0.8600000000000">21 7 9</tria>
-               <tria vol="     0.8600000000000">7 9 8</tria>
-               <tria vol="     0.8600000000000">7 2 8</tria>
-               <tria vol="     0.8600000000000">2 8 3</tria>
-               <tria vol="     1.7200000000000">3 5 11</tria>
-               <tria vol="     1.7200000000000">5 11 13</tria>
-               <tria vol="     1.7200000000000">5 6 13</tria>
-               <tria vol="     1.7200000000000">6 13 14</tria>
-               <tria vol="     1.7200000000000">6 9 14</tria>
-               <tria vol="     0.8600000000000">11 13 10</tria>
-               <tria vol="     0.8600000000000">13 10 12</tria>
-               <tria vol="     0.8600000000000">13 14 12</tria>
-               <tria vol="     0.8600000000000">14 12 24</tria>
-               <tria vol="     0.8600000000000">14 17 24</tria>
-               <tria vol="     1.7200000000000">17 24 20</tria>
-               <tria vol="     0.8600000000000">16 20 15</tria>
-               <tria vol="     0.8600000000000">16 11 15</tria>
-               <tria vol="     0.8600000000000">11 15 10</tria>
-               <tria vol="     0.8600000000000">10 12 1</tria>
-               <tria vol="     0.8600000000000">12 1 22</tria>
-               <tria vol="     0.8600000000000">12 24 22</tria>
-               <tria vol="     0.8600000000000">24 22 23</tria>
-               <tria vol="     0.8600000000000">24 20 23</tria>
-               <tria vol="     0.8600000000000">20 23 19</tria>
-               <tria vol="     0.8600000000000">20 15 19</tria>
-               <tria vol="     0.8600000000000">15 19 18</tria>
-               <tria vol="     0.8600000000000">15 10 18</tria>
-               <tria vol="     0.8600000000000">10 18 1</tria>
-            </triangles>
-         </kPointList>
+            <kPointList name="default" count="6" type="tetra">
+               <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
+               <kPoint weight="     4.0000000000000"> 0.0000000000000  0.2000000000000  0.0000000000000</kPoint>
+               <kPoint weight="     4.0000000000000"> 0.0000000000000  0.4000000000000  0.0000000000000</kPoint>
+               <kPoint weight="     4.0000000000000"> 0.2000000000000  0.2000000000000  0.0000000000000</kPoint>
+               <kPoint weight="     8.0000000000000"> 0.2000000000000  0.4000000000000  0.0000000000000</kPoint>
+               <kPoint weight="     4.0000000000000"> 0.4000000000000  0.4000000000000  0.0000000000000</kPoint>
+               <triangles ntria="14">
+                  <tria vol="     0.5600000000000">1 2 2</tria>
+                  <tria vol="     0.5600000000000">2 2 4</tria>
+                  <tria vol="     1.1200000000000">2 3 4</tria>
+                  <tria vol="     1.1200000000000">3 4 5</tria>
+                  <tria vol="     1.1200000000000">3 3 5</tria>
+                  <tria vol="     1.1200000000000">3 5 5</tria>
+                  <tria vol="     1.1200000000000">3 2 5</tria>
+                  <tria vol="     1.1200000000000">2 5 4</tria>
+                  <tria vol="     1.1200000000000">2 1 4</tria>
+                  <tria vol="     0.5600000000000">4 5 5</tria>
+                  <tria vol="     1.6800000000000">5 5 6</tria>
+                  <tria vol="     1.1200000000000">5 6 6</tria>
+                  <tria vol="     1.1200000000000">5 4 6</tria>
+                  <tria vol="     0.5600000000000">6 6 6</tria>
+               </triangles>
+            </kPointList>
          </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup=".50000000"/>
