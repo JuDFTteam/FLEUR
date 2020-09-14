@@ -84,7 +84,7 @@ if (DEFINED JUDFT_LIBRARIES )
 endif()
 
 if (DEFINED JUDFT_COMPILEOPTS )
-  target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:FORTRAN>:${JUDFT_COMPILEOPTS}>)
+  target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${JUDFT_COMPILEOPTS}>)
 endif()
 
 #Set module directories
