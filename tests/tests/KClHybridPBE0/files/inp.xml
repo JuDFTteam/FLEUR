@@ -24,6 +24,8 @@
          </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-3.80000000" elup="11.00000000"/>
+   </calculationSetup>
+   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -266,8 +268,6 @@
             <row-3>1 1 1 .0000000000</row-3>
          </symOp>
       </symmetryOperations>
-   </calculationSetup>
-   <cell>
       <bulkLattice scale="1.0000000000">
          <bravaisMatrix>
             <row-1>    0.0000000000     5.9450000000     5.9450000000</row-1>

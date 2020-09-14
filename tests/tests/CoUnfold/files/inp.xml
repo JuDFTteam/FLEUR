@@ -32,9 +32,9 @@
      	</kPointList>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
-      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"/> 
    </calculationSetup>
    <cell>
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"/> 
       <bulkLattice scale="1.0000000000">
 	<bravaisMatrix>
             <row-1>4.7377000000 -8.205937111 .0000000000</row-1>
