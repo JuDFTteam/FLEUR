@@ -165,7 +165,7 @@ PROGRAM inpgen
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
-         call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
+         call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,&
          sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_fullinput)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)

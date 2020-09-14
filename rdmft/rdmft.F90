@@ -332,7 +332,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
             IF (fmpi%irank.EQ.0) THEN
                CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
-                                 0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
+                                 0,-1.0,0.0,-1.0,-1.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
 #ifdef CPP_MPI
             CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
@@ -552,7 +552,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi,ikpt,hybdat,eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
+            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs

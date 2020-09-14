@@ -210,7 +210,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       den%iter = 0
 
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
-                        1,-1.0,0.0,.TRUE.,den)
+                        1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins

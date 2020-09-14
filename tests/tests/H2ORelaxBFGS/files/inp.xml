@@ -18,10 +18,10 @@
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
       <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-      <!-- symmetry operations included here -->
-      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
    </calculationSetup>
    <cell>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
       <filmLattice scale="1.00000000" dVac="3.19000000" dTilda="5.13000000">
          <bravaisMatrix>
             <row-1>   10.0000000000     0.0000000000     0.0000000000</row-1>

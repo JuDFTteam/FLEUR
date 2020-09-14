@@ -18,7 +18,9 @@ MODULE m_symm_hf
    USE m_util
    USE m_intgrf
    USE m_io_hybinp
-
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 CONTAINS
 
    SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
@@ -72,7 +74,7 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       USE m_olap
@@ -84,7 +86,7 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(IN) :: hybdat
-
+      type(t_hybmpi), intent(in) :: submpi
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_lapw), INTENT(IN)   :: lapw
       type(t_nococonv), intent(in):: nococonv
@@ -108,7 +110,7 @@ CONTAINS
 
 !     - local scalars -
       INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
-      INTEGER                         :: itype, ieq, iatom, ratom
+      INTEGER                         :: itype, ieq, iatom, ratom, ierr
       INTEGER                         :: iband, iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
       INTEGER                         :: ok
@@ -129,12 +131,12 @@ CONTAINS
       INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
-      REAL, ALLOCATABLE               :: olapmt(:, :, :, :)
+      complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
       COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
-      COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
+      COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
       COMPLEX, ALLOCATABLE             :: trace(:, :)
 
@@ -276,35 +278,34 @@ CONTAINS
       wavefolap = 0
 
       call timestart("calc wavefolap")
-      iatom = 0
-      DO itype = 1, fi%atoms%ntype
-         DO ieq = 1, fi%atoms%neq(itype)
-            iatom = iatom + 1
-            lm = 0
-            DO l = 0, fi%atoms%lmax(itype)
-               DO M = -l, l
-                  nn = mpdata%num_radfun_per_l(l, itype)
-                  DO iband1 = 1, hybdat%nbands(nk)
-                     carr(:nn) = matmul(olapmt(:nn, :nn, l, itype), &
-                                        cmt(iband1, lm + 1:lm + nn, iatom))
-                     DO iband2 = 1, iband1
-                        wavefolap(iband2, iband1) &
-                           = wavefolap(iband2, iband1) &
-                             + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
-                     END DO
-                  END DO
-                  lm = lm + nn
+      do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
+         itype = fi%atoms%itype(iatom)
+         cmthlp = transpose(cmt(:,:,iatom))
+         lm = 0
+         DO l = 0, fi%atoms%lmax(itype)
+            DO M = -l, l
+               nn = mpdata%num_radfun_per_l(l, itype)
+               DO iband1 = 1, hybdat%nbands(nk)
+                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
+                  !          X,                  INCX,  BETA,    Y, INCY )
+                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
+                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
+                  
+                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
+                  !          X,      INCX,  BETA,    Y, INCY )  
+                  call zgemv("C", nn, hybdat%nbands(nk), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
+                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
                END DO
+               lm = lm + nn
             END DO
          END DO
       END DO
+#ifdef CPP_MPI
+      call timestart("allreduce wavefolap")
+      call MPI_ALLREDUCE(MPI_IN_PLACE, wavefolap, size(wavefolap), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+      call timestop("allreduce wavefolap")
+#endif
       call timestop("calc wavefolap")
-
-      DO iband1 = 1, hybdat%nbands(nk)
-         DO iband2 = 1, iband1
-            wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
-         END DO
-      END DO
 
       allocate(symequivalent(nddb, nddb), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')

@@ -199,13 +199,14 @@ contains
 
     !write out mixed density (but not for a plotting run)
     IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-         1,results%last_distance,results%ef,.TRUE.,inDen)
+         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen)
 
 #ifdef CPP_HDF
     IF (fmpi%irank==0.and.judft_was_argument("-last_extra")) THEN
        CALL system("rm cdn_last.hdf")
        CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-            1,results%last_distance,results%ef,.TRUE.,inDen,'cdn_last')
+            1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,&
+            inDen,'cdn_last')
        CALL writeCoreDensity(input,atoms,inDen%mtCore,inDen%tec,inDen%qint,'cdn_last')
     END IF
 #endif

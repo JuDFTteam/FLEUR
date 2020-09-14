@@ -38,6 +38,7 @@ MODULE m_types_xml
      PROCEDURE :: get_ntype
      PROCEDURE :: posPath
      PROCEDURE :: set_basepath
+     procedure,NOPASS :: writexml
      PROCEDURE,NOPASS :: FreeResources
   END TYPE t_xml
   PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBoolOnly,evaluateFirstIntOnly,&
@@ -79,6 +80,7 @@ CONTAINS
 
   SUBROUTINE init(xml,old_version)
     USE iso_c_binding
+
     CLASS(t_xml), INTENT(INOUT) :: xml
     LOGICAL,OPTIONAL,INTENT(inout):: old_version
 
@@ -90,7 +92,7 @@ CONTAINS
     REAL                           :: tempReal
 
 !   I comment this initialization test out because it causes trouble when generating additional k-point sets.
-!   Don't know for what it is needed, anyway. I leave rest of this mechanism in the code. ...for now. G.M. 
+!   Don't know for what it is needed, anyway. I leave rest of this mechanism in the code. ...for now. G.M.
 !    if (INITIALIZED) RETURN
     INITIALIZED=.true.
 
@@ -127,7 +129,6 @@ CONTAINS
        valueString = xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@name')
        CALL ASSIGN_var(valueString,tempReal)
     END DO
-
   END SUBROUTINE init
 
 
@@ -665,5 +666,39 @@ CONTAINS
     END IF
 
   END SUBROUTINE FreeResources
+
+  subroutine writexml(fileNum)
+    USE iso_c_binding
+    interface
+      subroutine write_xml_file() bind(C, name="write_xml_file")
+      end subroutine
+    end interface
+    integer,intent(in):: filenum
+
+    integer :: err
+    logical :: firstline=.true.
+    character(len=500):: line
+
+    if (fileNum==0) return !no dump if called without proper fileNum, i.e. from inpgen
+
+    !This will dump the inp.xml into inp_dump.xml
+    call write_xml_file()
+    print *,"Now copying inp_dump.xml"
+    open(99,file="inp_dump.xml")
+    firstline=.true. !Do not copy first line of file
+    write(fileNum,*) "  <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->"
+    DO
+      READ(99,'(a)',iostat=err) line
+      if (firstline) then
+        firstline=.false.
+        CYCLE
+      endif
+      if (err.ne.0) exit
+      write(fileNum,*) "  ",trim(line)
+    end do
+    write(fileNum,*) "  <!-- END of dump of the inp.xml file -->"
+    close(99,status='delete')
+  end subroutine
+
 
 END MODULE m_types_xml

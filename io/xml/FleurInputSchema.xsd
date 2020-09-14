@@ -43,7 +43,6 @@
          <xsd:element name="coreElectrons" type="CoreElectronsType"/>
          <xsd:element name="magnetism" type="MagnetismType"/>
          <xsd:element name="bzIntegration" type="BZIntegrationType"/>
-         <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="soc" type="SOCType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="NocoParamsType"/>
@@ -123,6 +122,7 @@
 
    <xsd:complexType name="CellType">
       <xsd:sequence>
+         <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
          <xsd:choice>
             <xsd:element name="bulkLattice" type="BulkLatticeType"/>
             <xsd:element name="filmLattice" type="FilmLatticeType"/>

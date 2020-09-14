@@ -35,6 +35,9 @@ MODULE m_coulombmatrix
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types
+   USE m_intgrf, ONLY: intgrf, intgrf_init
+   use m_sphbes, only: sphbes
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
@@ -45,13 +48,11 @@ CONTAINS
       USE m_juDFT
       USE m_constants
       USE m_trafo, ONLY: symmetrize, bramat_trafo
-      USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
       USE m_io_hybinp
       use m_ylm
-      use m_sphbes, only: sphbes
       use m_calc_l_m_from_lm
       use m_calc_mpsmat
       IMPLICIT NONE
@@ -97,9 +98,6 @@ CONTAINS
       REAL                       :: integrand(fi%atoms%jmtd), primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), &
                                     moment2(maxval(mpdata%num_radbasfn), fi%atoms%ntype)
-      REAL                       :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
-      REAL                       :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
-      REAL                       :: rarr(0:fi%hybinp%lexp + 1), rarr1(0:maxval(fi%hybinp%lcutm1))
       REAL, ALLOCATABLE   :: gmat(:, :), qnrm(:)
       REAL, ALLOCATABLE   :: sphbesmoment(:, :, :)
       REAL, ALLOCATABLE   :: sphbes0(:, :, :)
@@ -108,6 +106,8 @@ CONTAINS
       REAL                       :: facA(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
+      REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
 
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
@@ -318,56 +318,7 @@ CONTAINS
       iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
-      call timestart("Bessel calculation")
-      !DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
-      do iqnrm = 1, nqnrm
-         qnorm = qnrm(iqnrm)
-         DO itype = 1, fi%atoms%ntype
-            ng = fi%atoms%jri(itype)
-            rdum = fi%atoms%rmt(itype)
-            sphbes_var = 0
-            sphbesmoment1 = 0
-            IF (abs(qnorm) < 1e-12) THEN
-               sphbesmoment(0, itype, iqnrm) = rdum**3/3
-               DO i = 1, ng
-                  sphbes_var(i, 0) = 1
-                  sphbesmoment1(i, 0) = fi%atoms%rmsh(i, itype)**2/3 + (rdum**2 - fi%atoms%rmsh(i, itype)**2)/2
-               END DO
-            ELSE
-               call sphbes(fi%hybinp%lexp + 1, qnorm*rdum, rarr)
-               DO l = 0, fi%hybinp%lexp
-                  sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
-               END DO
-               DO i = ng, 1, -1
-                  rdum = fi%atoms%rmsh(i, itype)
-                  call sphbes(fi%hybinp%lcutm1(itype) + 1, qnorm*rdum, rarr)
-                  DO l = 0, fi%hybinp%lcutm1(itype)
-                     sphbes_var(i, l) = rarr(l)
-                     IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
-                     ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
-                     ENDIF
-                     IF (i == ng) rarr1(l) = rdum1
-                     sphbesmoment1(i, l) = (rdum**(l + 2)*rarr(l + 1)/rdum**(l + 1) &
-                                            + (rarr1(l) - rdum1)*rdum**l)/qnorm
-                  END DO
-               END DO
-            END IF
-            DO l = 0, fi%hybinp%lcutm1(itype)
-               DO n = 1, mpdata%num_radbasfn(l, itype)
-                  ! note that mpdata%radbasfn_mt already contains one factor rgrid
-                  olap(n, l, itype, iqnrm) = &
-                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
-                            fi%atoms, itype, gridf)
-
-                  integral(n, l, itype, iqnrm) = &
-                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
-                            fi%atoms, itype, gridf)
-
-               END DO
-            END DO
-         END DO
-      END DO
-      call timestop("Bessel calculation")
+      call bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
 
       !
       !     (1) Case < MT | v | MT >
@@ -831,7 +782,7 @@ CONTAINS
                call ylm4(fi%hybinp%lexp, q, carr2(:, igpt))
             END DO
             call timestop("harmonics setup")
-            call perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
+            call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coulomb(ikpt))
             call coulomb(ikpt)%u2l()
          END DO
@@ -906,7 +857,7 @@ CONTAINS
          ! check for gamma
          if(any(fmpi%k_list == 1)) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                    fi%hybinp, hybdat, hybdat%nbasm, gridf, coulomb(1))
+                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coulomb(1))
          endif
       END IF
       
@@ -916,7 +867,7 @@ CONTAINS
       call timestop("gap 1:")
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
-         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
+         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
       enddo
 
@@ -1160,7 +1111,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, fmpi, nbasm1, gridf, coulomb)
 
       USE m_types
       USE m_constants
@@ -1177,6 +1128,7 @@ CONTAINS
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_hybdat), INTENT(IN)    :: hybdat
+      type(t_mpi), intent(in)    :: fmpi
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:, :)
@@ -1195,7 +1147,7 @@ CONTAINS
 
       n = nbasm1(1)
       nn = n*(n + 1)/2
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(1), 1)), mpdata%n_g(1), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(1), 1)), mpdata%n_g(1), atoms, cell, fmpi)
 
       ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
       coeff = 0
@@ -1317,7 +1269,7 @@ CONTAINS
 
    END SUBROUTINE getnorm
 
-   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, sym, kpts, ikpt, coulomb)
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, kpts, ikpt, coulomb)
       USE m_olap, ONLY: olap_pw
       USE m_types
       use m_judft
@@ -1326,53 +1278,120 @@ CONTAINS
       type(t_atoms), intent(in)  :: atoms
       type(t_cell), intent(in)   :: cell
       type(t_hybdat), intent(in) :: hybdat
+      type(t_mpi), intent(in)    :: fmpi
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
       type(t_mat), intent(inout) :: coulomb
       integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coulhlp, coul_submtx
-      integer         :: nbasm
+      integer         :: nbasm, loc_size, i, i_loc, root, ierr
+      complex, allocatable :: tmp(:)
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
       CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
       !calculate IR overlap-matrix
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
 
       ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
       ! rewritten as O * x = C
 
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), nbasm)
+      loc_size = floor((1.0*nbasm)/fmpi%n_size)
+      if(mod(nbasm,fmpi%n_size) > fmpi%n_rank) loc_size = loc_size + 1
+
+      call timestart("copy in 1")
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
       if (coul_submtx%l_real) then
-         coul_submtx%data_r = real(coulomb%data_c(hybdat%nbasp + 1:, :))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_r(:,i_loc) = real(coulomb%data_c(hybdat%nbasp + 1:,i))
+         enddo
       else
-         coul_submtx%data_c = coulomb%data_c(hybdat%nbasp + 1:, :)
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_c(:,i_loc) = coulomb%data_c(hybdat%nbasp + 1:,i)
+         enddo
       endif
+      call timestop("copy in 1")
 
       call olap%linear_problem(coul_submtx)
 
+      call timestart("copy out 1")
       if (coul_submtx%l_real) then
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
-         coul_submtx%data_r = real(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_r(:,i_loc)
+         enddo
       else
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
-         coul_submtx%data_c = conjg(transpose(coulomb%data_c(:, hybdat%nbasp + 1:)))
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_c(:,i_loc) 
+         enddo
       endif
+
+#ifdef CPP_MPI
+      do i = 1, nbasm
+         root = mod(i-1, fmpi%n_size)
+         call MPI_Bcast(coulomb%data_c(hybdat%nbasp + 1,i), mpdata%n_g(ikpt), &
+                         MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+      enddo
+#endif
+      call timestop("copy out 1")
+
+      call timestart("copy in 2")
+      if (coul_submtx%l_real) then
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_r(:,i_loc) = real(coulomb%data_c(i, hybdat%nbasp + 1:))
+         enddo
+      else 
+         i_loc = 0
+         do i = fmpi%n_rank+1, nbasm, fmpi%n_size
+            i_loc = i_loc + 1
+            coul_submtx%data_c(:,i_loc) = conjg(coulomb%data_c(i, hybdat%nbasp + 1:))
+         enddo
+      endif 
+      call timestop("copy in 2")
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
 
       ! reload O, since the solver destroys it.
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell)
+      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
       ! Notice O = O^T since it's symmetric
       call olap%linear_problem(coul_submtx)
 
+      call timestart("copy out 2")
+      allocate(tmp(mpdata%n_g(ikpt)))
       if (coul_submtx%l_real) then
-         coulomb%data_c(:, hybdat%nbasp + 1:) = transpose(coul_submtx%data_r)
-      else
-         coulomb%data_c(:, hybdat%nbasp + 1:) = conjg(transpose(coul_submtx%data_c))
-      endif
+         do i = 1, nbasm
+            root = mod(i-1, fmpi%n_size)
+            i_loc = ((i-1)/fmpi%n_size) + 1
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_r(:,i_loc)  
+#ifdef CPP_MPI
+            call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+#endif 
+            coulomb%data_c(i, hybdat%nbasp + 1:) = real(tmp)
+         enddo
+      else 
+         do i = 1, nbasm
+            root = mod(i-1, fmpi%n_size)
+            i_loc = ((i-1)/fmpi%n_size) + 1
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_c(:,i_loc) 
+#ifdef CPP_MPI
+            call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
+#endif 
+            coulomb%data_c(i, hybdat%nbasp + 1:) = conjg(tmp) 
+         enddo
+      endif 
+      call timestop("copy out 2")
+
 
       call coul_submtx%free()
       call olap%free()
@@ -1542,16 +1561,15 @@ CONTAINS
       ENDIF
    endsubroutine loop_over_interst
 
-   subroutine perform_double_g_loop(fi, hybdat, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
+   subroutine perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,pqnrm,qnrm, nqnrm, ikpt, coulomb)
       use m_juDFT
-      use m_types
       use m_constants, only: tpi_const,fpi_const
       use m_sphbessel_integral
-      !$ use omp_lib
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      type(t_mpi), intent(in)           :: fmpi
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:,:),pgptm1(:, :), nqnrm
       real, intent(in)                  :: qnrm(:), sphbes0(:, :, :)
       complex, intent(in)               :: carr2(:, :)
@@ -1559,35 +1577,28 @@ CONTAINS
       type(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, lm, m, idum, l, i
+      integer :: ic, itype, lm, m, idum, l, i, ierr, root
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
       complex :: cdum, cdum1 
       logical :: ldum
-!$    integer, parameter :: lock_size = 100
-!$    integer(kind=omp_lock_kind) :: lock(0:lock_size-1)
 
       call timestart("double g-loop")
 
-      ! create lock for race-condition in coulomb
-!$    do i =0,lock_size-1
-!$       call omp_init_lock(lock(i))
-!$    enddo
-
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(igpt0, igpt1, igpt2, ix, igptp2, iqnrm2, q2, y2, iy,igptp1, iqnrm1, q1) &
-      !$OMP private(y1, ic, itype, cexp1, lm, cdum, l, cdum1, m, idum, ldum) &
-      !$OMP shared(coulomb, ngptm1, ikpt, pgptm1, hybdat, mpdata, pqnrm, fi) &
-      !$OMP shared(lock, nqnrm, sphbes0, qnrm, carr2) &
-      !$OMP schedule(dynamic)
-      DO igpt0 = 1, ngptm1(ikpt)!1,ngptm1(ikpt)
+      DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
          igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
          iqnrm2 = pqnrm(igpt2, ikpt)
          q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
          y2 = CONJG(carr2(:, igpt2))
+         
+         !$OMP PARALLEL DO default(none) &
+         !$OMP private(igpt1, iy, igptp1, iqnrm1, q1, y1, cexp1, ic, itype, lm) &
+         !$OMP private(cdum, l, cdum1, m, ldum) &
+         !$OMP shared(igpt2, coulomb, hybdat, mpdata, ikpt, fi, carr2, pqnrm, igptp2)&
+         !$OMP shared(qnrm, sphbes0, iqnrm2, nqnrm, y2, ix)
          DO igpt1 = 1, igpt2
             iy = hybdat%nbasp + igpt1
             igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -1617,16 +1628,21 @@ CONTAINS
                   cdum = cdum + cdum1*y1(lm)*y2(lm)
                ENDDO
             ENDDO
-            idum = ix*(ix - 1)/2 + iy
-!$          call omp_set_lock(lock(modulo(idum,lock_size)))
             coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
-!$          call omp_unset_lock(lock(modulo(idum,lock_size)))
          END DO
+         !$OMP end parallel do
       END DO
-      !$OMP END PARALLEL DO
-!$    do i =0,lock_size-1
-!$       call omp_destroy_lock(lock(i))
-!$    enddo
+
+#ifdef CPP_MPI
+      call timestart("double g-loop bcast")
+      DO igpt0 = 1, ngptm1(ikpt)
+         igpt2 = pgptm1(igpt0, ikpt)
+         ix = hybdat%nbasp + igpt2
+         root = mod(igpt0-1, fmpi%n_size)
+         call MPI_Bcast(coulomb%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
+      ENDDO
+      call timestop("double g-loop bcast")
+#endif
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 
@@ -1662,4 +1678,90 @@ CONTAINS
          enddo 
       enddo
    end subroutine collapse_ic_and_lm_loop
+
+   subroutine bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
+      implicit NONE 
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpi), intent(in)           :: fmpi
+      type(t_mpdata), intent(in)        :: mpdata
+      integer, intent(in)               :: nqnrm
+      real, intent(in)                  :: gridf(:,:), qnrm(:)
+      real, intent(inout)               :: sphbesmoment(0:,:,:), olap(:,0:,:,:), integral(:,0:,:,:)
+
+      integer :: iqnrm, itype, i, l, n, ng, buf_sz, root, ierr
+      REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
+      REAL    :: rarr(0:fi%hybinp%lexp + 1), rarr1(0:maxval(fi%hybinp%lcutm1))
+      real    :: rdum, qnorm, rdum1
+
+      call timestart("Bessel calculation")
+      
+      do iqnrm = 1+fmpi%irank, nqnrm, fmpi%isize
+         qnorm = qnrm(iqnrm)
+         !$OMP parallel do default(none) &
+         !$OMP shared(olap, integral, sphbesmoment, fi,qnorm, iqnrm, mpdata, gridf) &
+         !$OMP private(itype, rdum, sphbes_var, sphbesmoment1, ng, rarr, rarr1, rdum1, i, l)
+         DO itype = 1, fi%atoms%ntype
+            ng = fi%atoms%jri(itype)
+            rdum = fi%atoms%rmt(itype)
+            sphbes_var = 0
+            sphbesmoment1 = 0
+            IF (abs(qnorm) < 1e-12) THEN
+               sphbesmoment(0, itype, iqnrm) = rdum**3/3
+               DO i = 1, ng
+                  sphbes_var(i, 0) = 1
+                  sphbesmoment1(i, 0) = fi%atoms%rmsh(i, itype)**2/3 + (rdum**2 - fi%atoms%rmsh(i, itype)**2)/2
+               END DO
+            ELSE
+               call sphbes(fi%hybinp%lexp + 1, qnorm*rdum, rarr)
+               DO l = 0, fi%hybinp%lexp
+                  sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
+               END DO
+               DO i = ng, 1, -1
+                  rdum = fi%atoms%rmsh(i, itype)
+                  call sphbes(fi%hybinp%lcutm1(itype) + 1, qnorm*rdum, rarr)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     sphbes_var(i, l) = rarr(l)
+                     IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
+                     ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
+                     ENDIF
+                     IF (i == ng) rarr1(l) = rdum1
+                     sphbesmoment1(i, l) = (rdum**(l + 2)*rarr(l + 1)/rdum**(l + 1) &
+                                            + (rarr1(l) - rdum1)*rdum**l)/qnorm
+                  END DO
+               END DO
+            END IF
+            DO l = 0, fi%hybinp%lcutm1(itype)
+               DO n = 1, mpdata%num_radbasfn(l, itype)
+                  ! note that mpdata%radbasfn_mt already contains one factor rgrid
+                  olap(n, l, itype, iqnrm) = &
+                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
+                            fi%atoms, itype, gridf)
+
+                  integral(n, l, itype, iqnrm) = &
+                     intgrf(fi%atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
+                            fi%atoms, itype, gridf)
+
+               END DO
+            END DO
+         END DO
+      END DO
+
+#ifdef CPP_MPI 
+      call timestart("bcast bessel")
+      do iqnrm = 1, nqnrm
+         root = mod(iqnrm - 1,fmpi%isize)
+         buf_sz = size(olap,1) * size(olap,2) * size(olap,3)
+         call MPI_Bcast(olap(1,0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+
+         buf_sz = size(integral,1) * size(integral,2) * size(integral,3)
+         call MPI_Bcast(integral(1,0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+
+         buf_sz = size(sphbesmoment,1) * size(sphbesmoment,2)
+         call MPI_Bcast(sphbesmoment(0,1,iqnrm), buf_sz, MPI_DOUBLE_PRECISION, root, fmpi%mpi_comm, ierr)
+      enddo
+      call timestop("bcast bessel")
+#endif
+      call timestop("Bessel calculation")
+   end subroutine bessel_calculation
 END MODULE m_coulombmatrix

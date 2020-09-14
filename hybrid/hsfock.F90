@@ -127,7 +127,7 @@ CONTAINS
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi, nk, hybdat, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
+      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
                    rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks
@@ -146,20 +146,22 @@ CONTAINS
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
-      if(k_pack%submpi%root()) then
-         ! calculate contribution from the core states to the HF exchange
-         CALL timestart("core exchange calculation")
-         IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            call judft_error('HSE not implemented in hsfock')
-         ELSE
-            CALL exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, &
-                              lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, ex)
+      
+      ! calculate contribution from the core states to the HF exchange
+      CALL timestart("core exchange calculation")
+      IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+         call judft_error('HSE not implemented in hsfock')
+      ELSE
+         CALL exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, &
+                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, ex)
 
+         if(k_pack%submpi%root()) then
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
-         END IF
+         endif
+      END IF
 
-         CALL timestop("core exchange calculation")
-
+      CALL timestop("core exchange calculation")
+      if(k_pack%submpi%root()) then
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif

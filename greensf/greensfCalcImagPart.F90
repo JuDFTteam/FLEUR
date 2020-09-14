@@ -155,7 +155,7 @@ MODULE m_greensfCalcImagPart
                                  imat = imat + 1
                                  CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
                                                      greensfBZintCoeffs%uloulop(:nBands,m,mp,imat,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                     CMPLX(0.0,0.0),imag(:,4+4*nLO+imat),1)
+                                                     CMPLX(0.0,0.0),imag(:,4+4*nLO+imat),SIZE(eMesh))
                               ENDDO
                            ENDDO
                         ENDIF
