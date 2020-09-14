@@ -19,10 +19,13 @@ if (DEFINED FLEUR_USE_HDF5)
    if (DEFINED FLEUR_HDF5_LIBRARIES)
      message("SET:${FLEUR_HDF5_LIBRARIES}")
      set(JUDFT_LIBRARIES ${FLEUR_HDF5_LIBRARIES} CACHE STRING "Libraries for linking with HDF5")
-   endif()		 
+   endif()
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
+if (CLI_PATCH_INTEL)
+   set(JUDFT_PATCH_INTEL ON)
+endif()
 
 add_subdirectory(juDFT)
 
