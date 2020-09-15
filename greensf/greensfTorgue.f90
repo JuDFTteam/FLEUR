@@ -6,6 +6,7 @@ MODULE m_greensfTorgue
    USE m_intgr
    USE m_gaunt
    USE m_xmlOutput
+   USE m_mt_tofrom_grid
 
    IMPLICIT NONE
 
@@ -123,12 +124,12 @@ MODULE m_greensfTorgue
                   lhmu = lh * (lh+1) + mu
                   mp = m - mu
                   IF(ABS(mp).GT.lp) CYCLE
-                  phaseFactor = gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
+                  phaseFactor = gaunt1(lp,lh,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
                   DO ipm = 1, 2
                      CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                      DO iz = 1, SIZE(g_ii,4)
-                        weight = greensFunction(i_gf)%contour%de(iz)
+                        weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
                         DO alpha = 1, 3 !(x,y,z)
                            DO jr = 1, atoms%jri(atomType)
                               IF(ipm == 1) THEN
@@ -138,12 +139,11 @@ MODULE m_greensfTorgue
                                  g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
                                  integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * conjg(bxc(jr,lhmu))
                               ENDIF
-                              g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
                            ENDDO
-                           CALL intgr3(REAL(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                           CALL intgr3(AIMAG(g_ii(:,iz)*bxc(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
+                           CALL intgr3(REAL(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                           CALL intgr3(AIMAG(integrand),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
                            torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
+                                                * MERGE(weight,conjg(weight),ipm.EQ.1)
                         ENDDO
                      ENDDO
                   ENDDO
