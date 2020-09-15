@@ -51,7 +51,7 @@
           sfp = 2 * SQRT(pi_const)
           !sphhar%nlhd = MAXVAL(sphhar%nlh(:))
 
-          IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
+          IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2!", calledby ="cdnsp")
 
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           input_jsp=input
