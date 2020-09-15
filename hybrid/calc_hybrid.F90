@@ -106,7 +106,7 @@ CONTAINS
          CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
 
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_ibc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
+            call hybdat%coul(i)%mpi_bc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
          enddo
 
          CALL hf_init(eig_id, mpdata, fi, hybdat)
