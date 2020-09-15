@@ -2696,7 +2696,7 @@ MODULE m_cdnpot_io_hdf
 
          den%mmpMat = cmplx_0
          IF(l_mmpMatDimEquals) THEN
-            den%mmpMat = mmpMatTemp
+            den%mmpMat(:,:,:,1:jspinsmmp) = mmpMatTemp(:,:,:,1:jspinsmmp)
          ELSE
             DO i = 1, n_u
                DO j = 1, atoms%n_u+atoms%n_hia
