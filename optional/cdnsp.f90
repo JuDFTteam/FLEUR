@@ -115,6 +115,15 @@
              END DO
           END IF
 
+          rhoc(:,:,1) = 0.5 * rhoc(:,:,1)
+          rhoc(:,:,jsp_new) = rhoc(:,:,1)
+          tec(:,1) = 0.5 * tec(:,1)
+          tec(:,jsp_new) = tec(:,1)
+          qintc(:,1) = 0.5 * qintc(:,1)
+          qintc(:,jsp_new) = 0.5 * qintc(:,1)
+
+          CALL writeCoreDensity(input,atoms,rhoc,tec,qintc)
+
           !     ----> write the spin-polarized density
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                             CDN_INPUT_DEN_const,0,-1.0,0.0,-1.0,-1.0,.FALSE.,den)
