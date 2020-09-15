@@ -116,46 +116,46 @@ MODULE m_greensfCalcImagPart
                   imag = cmplx_0
                   IF(gfinp%l_resolvent) THEN
                      IF(l_sphavg) THEN
-                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                             greensfBZintCoeffs%sphavg(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
-                                            CMPLX(0.0,0.0),imag(:,1),SIZE(eMesh))
+                                            cmplx_0,imag(:,1),SIZE(eMesh))
                      ELSE
-                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                             greensfBZintCoeffs%uu(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
-                                            CMPLX(0.0,0.0),imag(:,1),SIZE(eMesh))
-                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                            cmplx_0,imag(:,1),SIZE(eMesh))
+                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                             greensfBZintCoeffs%dd(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
-                                            CMPLX(0.0,0.0),imag(:,2),SIZE(eMesh))
-                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                            cmplx_0,imag(:,2),SIZE(eMesh))
+                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                             greensfBZintCoeffs%ud(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
-                                            CMPLX(0.0,0.0),imag(:,3),SIZE(eMesh))
-                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                            cmplx_0,imag(:,3),SIZE(eMesh))
+                        CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                             greensfBZintCoeffs%du(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
-                                            CMPLX(0.0,0.0),imag(:,4),SIZE(eMesh))
+                                            cmplx_0,imag(:,4),SIZE(eMesh))
                         IF(nLO>0) THEN
                            imat = 0
                            DO iLO = 1, nLO
                               imat = imat + 4
-                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                                   greensfBZintCoeffs%uulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                  CMPLX(0.0,0.0),imag(:,imat+1),SIZE(eMesh))
-                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                                  cmplx_0,imag(:,imat+1),SIZE(eMesh))
+                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                                   greensfBZintCoeffs%ulou(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                  CMPLX(0.0,0.0),imag(:,imat+2),SIZE(eMesh))
-                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                                  cmplx_0,imag(:,imat+2),SIZE(eMesh))
+                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                                   greensfBZintCoeffs%dulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                  CMPLX(0.0,0.0),imag(:,imat+3),SIZE(eMesh))
-                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                                  cmplx_0,imag(:,imat+3),SIZE(eMesh))
+                              CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                                   greensfBZintCoeffs%ulod(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                  CMPLX(0.0,0.0),imag(:,imat+4),SIZE(eMesh))
+                                                  cmplx_0,imag(:,imat+4),SIZE(eMesh))
                            ENDDO
                            imat = 0
                            DO iLO = 1, nLO
                               DO iLOp = 1, nLO
                                  imat = imat + 1
-                                 CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,CMPLX(1.0,0.0),weights,SIZE(eMesh),&
+                                 CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
                                                      greensfBZintCoeffs%uloulop(:nBands,m,mp,imat,i_elemLO,ikpt_i,spin_ind),nBands,&
-                                                     CMPLX(0.0,0.0),imag(:,4+4*nLO+imat),1)
+                                                     cmplx_0,imag(:,4+4*nLO+imat),1)
                               ENDDO
                            ENDDO
                         ENDIF

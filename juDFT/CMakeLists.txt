@@ -8,6 +8,7 @@ option(JUDFT_USE_HDF5MPI "Is the HDF5 version able to do parallel IO" OFF)
 option(JUDFT_USE_COLLECT "Collect usage data" ON)
 option(JUDFT_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 option(JUDFT_COMPILE_HDF5 "HDF5 is compiled as submodule" OFF)
+option(JUDFT_PATCH_INTEL "Apply patches to MKL for performance on AMD" OFF)
 #In addition you might want to set
 #set(JUDFT_LIBRARIES "-lsomething")
 #set(JUFDT_COMPILEOPTS "-r8")
@@ -56,6 +57,10 @@ internalParams.f90
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
 endif()
+if (JUDFT_PATCH_INTEL)
+  target_compile_definitions(juDFT PUBLIC CPP_PATCH_INTEL)
+endif()
+
 if (JUDFT_USE_HDF5)
   target_compile_definitions(juDFT PUBLIC CPP_HDF)
   if (JUDFT_COMPILE_HDF5)
@@ -79,7 +84,7 @@ if (DEFINED JUDFT_LIBRARIES )
 endif()
 
 if (DEFINED JUDFT_COMPILEOPTS )
-  target_compile_options(juDFT PRIVATE ${JUDFT_COMPILEOPTS})
+  target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${JUDFT_COMPILEOPTS}>)
 endif()
 
 #Set module directories

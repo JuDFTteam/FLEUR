@@ -99,6 +99,10 @@ MODULE m_nocoInputCheck
          CALL juDFT_warn("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
       ENDIF
       
+    IF(noco%l_mtnocoPot.AND.sym%nop.NE.1) THEN 
+       CALL juDFT_warn("FullyFullyNoco with symmetries might not deliver the desired results for you. This probably would require the implementation of magnetic space groups. ",calledby="nocoInputCheck")
+    END IF
+
     IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.noco%l_alignMT)) THEN
          CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxAlpha/Beta=T setting to achieve reasonable results.",calledby="nocoInputCheck")
       ENDIF

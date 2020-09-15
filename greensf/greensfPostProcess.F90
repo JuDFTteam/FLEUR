@@ -174,7 +174,7 @@ MODULE m_greensfPostProcess
                                   sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vTot)
             ENDDO
             CALL closeXMLElement('noncollinearTorgue')
-            IF(noco%l_soc) THEN
+            IF(.FALSE.) THEN
                CALL openXMLElementNoAttributes('spinorbitTorgue')
                WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
                WRITE(oUnit,'(/,A)') '---------------------------------'

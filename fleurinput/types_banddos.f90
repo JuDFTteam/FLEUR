@@ -133,6 +133,7 @@ CONTAINS
     allocate(this%dos_atom(xml%get_nat()))
     this%dos_atom=all_atoms
     na = 0
+    IF (xml%versionNumber > 31) then
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
        DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
@@ -141,7 +142,7 @@ CONTAINS
           this%dos_atom(na) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@banddos'))
         ENDDO
     ENDDO
-
+    endif
     ! Read in optional parameter for unfolding bandstructure of supercell
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand')
     IF (numberNodes.EQ.1) THEN
@@ -150,7 +151,7 @@ CONTAINS
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
     END IF
-
+    if (xml%versionNumber <32) return
     xPathA = '/fleurInput/output/vacuumDOS'
     IF (xml%GetNumberOfNodes(xpathA)==1) THEN
        this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))

@@ -63,7 +63,7 @@ CONTAINS
       IF (ALLOCATED(grad%gr)) THEN
          DO js=1,jspins
             DO i=1,nsp
-               grad%gr(:,kt+i,js)=[rhdr(i,js),rhdt(i,js),rhdf(i,js)]
+               grad%gr(:,kt+i,js)=[rhdr(i,js),rhdt(i,js)/rv1,rhdf(i,js)/(rv1*sin(thet(i)))]
             END DO
          END DO
          ! Use contracted gradients only for libxc.

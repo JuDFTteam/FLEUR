@@ -113,7 +113,7 @@ CONTAINS
          RETURN
       ENDIF
 
-      this%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
+      this%nop = xml%GetNumberOfNodes('/fleurInput/cell/symmetryOperations/symOp')
       this%nop2 = this%nop !might be changed later in film case
       ALLOCATE (this%mrot(3, 3, this%nop))
       ALLOCATE (this%tau(3, this%nop))
@@ -121,7 +121,7 @@ CONTAINS
       IF (this%nop < 1) CALL judft_error("No symmetries in inp.xml")
 
       DO n = 1, this%nop
-         WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/symmetryOperations/symOp[', n, ']'
+         WRITE (path, "(a,i0,a)") '/fleurInput/cell/symmetryOperations/symOp[', n, ']'
          str = xml%GetAttributeValue(TRIM(path)//'/row-1')
          READ (str, *) this%mrot(1, :, n), this%tau(1, n)
          str = xml%GetAttributeValue(TRIM(path)//'/row-2')

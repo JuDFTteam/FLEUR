@@ -275,7 +275,7 @@ SUBROUTINE read_xml_input(this,xml)
     CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
  END IF
  xPathA = '/fleurInput/calculationSetup/bzIntegration/@l_bloechl'
- this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+ IF (xml%versionNumber > 31) this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
 
  this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
  ! Read in optional geometry optimization parameters
@@ -339,7 +339,7 @@ SUBROUTINE read_xml_input(this,xml)
     ! Read in general output switches
     this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
     this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
-    this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
+    IF (xml%versionNumber > 31)this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
     ! Read in optional switches for checks
     xPathA = '/fleurInput/output/checks'
     numberNodes = xml%GetNumberOfNodes(xPathA)

@@ -145,23 +145,27 @@ CONTAINS
       LOGICAL :: foundList, l_band
       CHARACTER(len=200)::str, path, path2, label, altPurpose
       CHARACTER(LEN=40) :: listName, typeString
-
-      WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
+      IF (xml%versionNumber > 31) then
+        WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
+      ELSE
+        path='/fleurInput/calculationSetup/bzIntegration/kPointList'
+      endif
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path)))
       IF(numNodes.NE.1) THEN
          WRITE(*,*) 'kPointList index is ', kptsIndex
          CALL judft_error(("kPointList for index is not available."))
       END IF
-      listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
+      IF (xml%versionNumber > 31) then
+        listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
+        this%kptsName = TRIM(ADJUSTL(listName))
 
-      this%kptsName = TRIM(ADJUSTL(listName))
-      this%kptsKind = 0
-      this%nkpt3(:) = 0
-      typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
-      SELECT CASE(typeString(1:11))
-         CASE ('unspecified')
+        this%kptsKind = 0
+        this%nkpt3(:) = 0
+        typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
+          SELECT CASE(typeString(1:11))
+          CASE ('unspecified')
             this%kptsKind = KPTS_KIND_UNSPECIFIED
-         CASE ('mesh       ')
+          CASE ('mesh       ')
             this%kptsKind = KPTS_KIND_MESH
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
             IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
@@ -169,13 +173,13 @@ CONTAINS
             IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
             IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-         CASE ('path       ')
+          CASE ('path       ')
             this%kptsKind = KPTS_KIND_PATH
-         CASE ('tetra      ')
+          CASE ('tetra      ')
             this%kptsKind = KPTS_KIND_TETRA
-         CASE ('tria       ')
+          CASE ('tria       ')
             this%kptsKind = KPTS_KIND_TRIA
-         CASE ('SPEX-mesh  ')
+          CASE ('SPEX-mesh  ')
             this%kptsKind = KPTS_KIND_SPEX_MESH
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
             IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
@@ -183,10 +187,11 @@ CONTAINS
             IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
             IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-         CASE DEFAULT
+          CASE DEFAULT
             this%kptsKind = KPTS_KIND_UNSPECIFIED
             WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
-      END SELECT
+          END SELECT
+        endif
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
       IF (numNodes.NE.this%nkpt) THEN
@@ -275,39 +280,46 @@ CONTAINS
       CHARACTER(LEN=40) :: listName, typeString
 
 
-      listName = xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')
+      IF (xml%versionNumber > 31) then
+        listName = xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')
 
-      numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
+        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
 
-      l_band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
-      IF (l_band) THEN
-         DO i = 1 , numNodes
+        l_band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
+        IF (l_band) THEN
+          DO i = 1 , numNodes
             WRITE (path2, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/altKPointList[',i,']'
             altPurpose = ''
             altPurpose = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@purpose')
             IF (TRIM(ADJUSTL(altPurpose)).EQ.'bands') THEN
-               listName = ''
-               listName = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@listName')
-               EXIT
+              listName = ''
+              listName = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@listName')
+              EXIT
             END IF
-         END DO
-      END IF
+          END DO
+        END IF
 
-      numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
-      foundList = .FALSE.
-      kptsIndex = 0
-      DO i = 1, numNodes
-         path = ''
-         WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', i, ']'
-         IF (TRIM(ADJUSTL(listName)) == xml%GetAttributeValue(TRIM(path)//'/@name')) THEN
+        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+        foundList = .FALSE.
+        kptsIndex = 0
+        DO i = 1, numNodes
+          path = ''
+          WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', i, ']'
+          IF (TRIM(ADJUSTL(listName)) == xml%GetAttributeValue(TRIM(path)//'/@name')) THEN
             kptsIndex = i
             foundList = .TRUE.
             EXIT
-         END IF
-      END DO
+          END IF
+        END DO
+
+      ELSE
+        foundList=.true.
+        kptsIndex=1
+      endif
+      !simply read the first k-list
 
       IF(.NOT.foundList) THEN
-         CALL judft_error(("No kPointList named: "//TRIM(ADJUSTL(listName))//" found."))
+        CALL judft_error(("No kPointList named: "//TRIM(ADJUSTL(listName))//" found."))
       END IF
 
       CALL read_xml_kptsByIndex(this, xml, kptsIndex)
@@ -447,11 +459,11 @@ CONTAINS
 
    subroutine init_EIBZ(EIBZ, kpts, sym, nk)
       USE m_types_sym
-      implicit none 
-      class(t_eibz), intent(inout)   :: EIBZ 
-      type(t_kpts), intent(in)       :: kpts 
+      implicit none
+      class(t_eibz), intent(inout)   :: EIBZ
+      type(t_kpts), intent(in)       :: kpts
       type(t_sym), intent(in)        :: sym
-      integer, intent(in)            :: nk 
+      integer, intent(in)            :: nk
 
       call eibz%calc_nkpt_EIBZ(kpts, sym, nk)
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
@@ -476,7 +488,7 @@ CONTAINS
       if(l_eibz) then
          allocate(kpts%EIBZ(kpts%nkpt))
          !$OMP PARALLEL do default(none) private(n) shared(kpts, sym)
-         do n = 1,kpts%nkpt 
+         do n = 1,kpts%nkpt
             call kpts%EIBZ(n)%init(kpts, sym, n)
          enddo
          !$OMP END PARALLEL DO
@@ -648,7 +660,7 @@ CONTAINS
       ! which keep bk(:,nk,nw) invariant
       ! nsymop :: number of such symmetry-operations
       ! psym   :: points to the symmetry-operation
-      
+
       call calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
@@ -705,7 +717,7 @@ CONTAINS
 
    subroutine calc_pointer_EIBZ(eibz, kpts, sym, nk)
       USE m_types_sym
-      implicit none 
+      implicit none
       class(t_eibz), intent(inout)  :: eibz
       type(t_kpts), INTENT(IN)      :: kpts
       type(t_sym), intent(in)       :: sym
@@ -771,9 +783,9 @@ CONTAINS
 
    subroutine calc_psym_nsymop(kpts, sym, nk, psym, nsymop)
       USE m_types_sym
-      implicit none 
-      class(t_kpts), intent(in) :: kpts 
-      type(t_sym), intent(in)   :: sym 
+      implicit none
+      class(t_kpts), intent(in) :: kpts
+      type(t_sym), intent(in)   :: sym
       integer, intent(in)       :: nk
       INTEGER, intent(inout)    :: psym(:)
       integer, intent(inout)    :: nsymop
@@ -843,7 +855,7 @@ CONTAINS
             END IF
          END DO
       END DO
-      
+
    END SUBROUTINE
 
 END MODULE m_types_kpts

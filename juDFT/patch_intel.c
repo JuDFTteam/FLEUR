@@ -67,11 +67,10 @@ void intel_cpu_patch() {
 * Copyright (c) 2019. BSD License 2.0
 ******************************************************************************/
 //#include <stdint.h>
-
 #ifdef __cplusplus  // use C-style linking
 extern "C" {
 #endif
-
+/*
     // detect if Intel CPU
     int mkl_serv_intel_cpu() {
         return 1;
@@ -82,16 +81,17 @@ extern "C" {
         return 1;
     }
 
+
     int mkl_serv_cpuhaspnr_true() {
-        return 1;
+        return 0;
     }
 
     int mkl_serv_cpuhaspnr() {
-        return 1;
+        return 0;
     }
 
     int mkl_serv_cpuhasnhm() {
-        return 1;
+        return 0;
     }
 
     int mkl_serv_cpuisbulldozer() {
@@ -99,7 +99,7 @@ extern "C" {
     }
 
     int mkl_serv_cpuiszen() {
-        return 0;
+        return 1;
     }
 
     int mkl_serv_cpuisatomsse4_2() {
@@ -129,6 +129,20 @@ extern "C" {
     int mkl_serv_get_microarchitecture() {
         // I don't know what this number means
         return 33;
+    }
+   int mkl_serv_cpuisclx() {
+        return 1;
+    }
+    int mkl_serv_cpuiszen() {
+        return 1;
+    }
+*/
+    int mkl_serv_intel_cpu() {
+        return 1;
+    }
+
+    int mkl_serv_intel_cpu_true() {
+        return 1;
     }
 
 #ifdef __cplusplus

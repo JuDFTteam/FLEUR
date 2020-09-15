@@ -181,6 +181,7 @@ CONTAINS
       ENDIF
       ! Initialize Green's function (end)
 
+      l_error = .FALSE.
       IF(fi%atoms%n_hia>0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
       CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
       IF(.NOT.l_error) THEN

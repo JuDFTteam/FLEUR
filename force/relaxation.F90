@@ -25,6 +25,7 @@ CONTAINS
     USE m_mixing_history
     USE m_chkmt
     USE m_types_xml
+    USE m_xsf_io
 
     TYPE(t_mpi),INTENT(IN)   :: fmpi
     TYPE(t_input),INTENT(IN) :: input
@@ -113,6 +114,13 @@ CONTAINS
                                   atoms_non_displaced%pos(:,SUM(atoms%neq(:iType-1))+1)
        END DO
 
+       tempAtoms = atoms_non_displaced
+       tempDisplace = MATMUL(cell%bmat,totalDisplace)/tpi_const
+
+       CALL rotate_to_all_sites(tempDisplace,atoms_non_displaced,cell,sym,dispAll)
+       tempAtoms%taual(:,:)=atoms_non_displaced%taual(:,:)+dispAll(:,:)
+       tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
+
        numDispReduce = 0
        overlap=1.0
        DO WHILE(ANY(overlap>1E-10))
@@ -141,7 +149,10 @@ CONTAINS
        !Write file
        CALL write_relax(pos,force,energies,totalDisplace)
 
-
+       ! Structure in  xsf-format
+       OPEN (55,file="struct-relax.xsf",status='replace')
+       CALL xsf_WRITE_atoms(55,tempAtoms,input%film,.FALSE.,cell%amat)
+       CLOSE (55)
     ENDIF
 #ifdef CPP_MPI
     CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)

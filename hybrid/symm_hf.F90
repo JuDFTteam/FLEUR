@@ -277,6 +277,9 @@ CONTAINS
       IF(ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
       wavefolap = 0
 
+      allocate(cmthlp(size(cmt,2), size(cmt,1) ), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc cmthlp")
+
       call timestart("calc wavefolap")
       do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
@@ -300,6 +303,8 @@ CONTAINS
             END DO
          END DO
       END DO
+
+      deallocate(cmthlp)
 #ifdef CPP_MPI
       call timestart("allreduce wavefolap")
       call MPI_ALLREDUCE(MPI_IN_PLACE, wavefolap, size(wavefolap), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)

@@ -150,31 +150,35 @@ MODULE m_types_scalarGF
                   ENDDO
                ENDDO
             ELSE
-               !Full radial dependence
+               !Full radial dependence (We need to multiply each term with rmesh(atomtype)*rmesh(atomtypep) to get the right normalization)
                DO jri = 1, atoms%jri(atomTypep)
-                  uu_tmp2(:atoms%jri(atomType)) = f(jri,1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                + f(jri,2,lp,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp2(:atoms%jri(atomType)) = (f(jri,1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                 + f(jri,2,lp,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                 * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                   CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                ENDDO
                CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
                            this%uun(j1,j2))
                DO jri = 1, atoms%jri(atomTypep)
-                  uu_tmp2(:atoms%jri(atomType)) = f(jri,1,lp,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                + f(jri,2,lp,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp2(:atoms%jri(atomType)) = (f(jri,1,lp,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                 + f(jri,2,lp,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                 * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                   CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                ENDDO
                CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
                            this%udn(j1,j2))
                DO jri = 1, atoms%jri(atomTypep)
-                  uu_tmp2(:atoms%jri(atomType)) = g(jri,1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                + g(jri,2,lp,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp2(:atoms%jri(atomType)) = (g(jri,1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                 + g(jri,2,lp,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                 * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                   CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                ENDDO
                CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
                            this%dun(j1,j2))
                DO jri = 1, atoms%jri(atomTypep)
-                  uu_tmp2(:atoms%jri(atomType)) = g(jri,1,lp,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                + g(jri,2,lp,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp2(:atoms%jri(atomType)) = (g(jri,1,lp,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                 + g(jri,2,lp,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                 * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                   CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                ENDDO
                CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
@@ -183,15 +187,17 @@ MODULE m_types_scalarGF
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
 
                   DO jri = 1, atoms%jri(atomTypep)
-                     uu_tmp2(:atoms%jri(atomType)) = f(jri,1,lp,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
-                                                   + f(jri,2,lp,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)
+                     uu_tmp2(:atoms%jri(atomType)) = (f(jri,1,lp,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
+                                                    + f(jri,2,lp,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)) &
+                                                    * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                      CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                   ENDDO
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
                               this%uulon(ilo,j1,j2))
                   DO jri = 1, atoms%jri(atomTypep)
-                     uu_tmp2(:atoms%jri(atomType)) = g(jri,1,lp,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
-                                                   + g(jri,2,lp,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)
+                     uu_tmp2(:atoms%jri(atomType)) = (g(jri,1,lp,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
+                                                    + g(jri,2,lp,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)) &
+                                                    * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                      CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                   ENDDO
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
@@ -201,15 +207,17 @@ MODULE m_types_scalarGF
                   IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
 
                   DO jri = 1, atoms%jri(atomTypep)
-                     uu_tmp2(:atoms%jri(atomType)) = flo(jri,1,ilo,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                   + flo(jri,2,ilo,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)
+                     uu_tmp2(:atoms%jri(atomType)) = (flo(jri,1,ilo,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                    + flo(jri,2,ilo,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                    * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                      CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                   ENDDO
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
                               this%uloun(ilo,j1,j2))
                   DO jri = 1, atoms%jri(atomTypep)
-                     uu_tmp2(:atoms%jri(atomType)) = flo(jri,1,ilo,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
-                                                   + flo(jri,2,ilo,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)
+                     uu_tmp2(:atoms%jri(atomType)) = (flo(jri,1,ilo,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
+                                                    + flo(jri,2,ilo,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)) &
+                                                    * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                      CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                   ENDDO
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &
@@ -221,8 +229,9 @@ MODULE m_types_scalarGF
                   DO ilop = 1, atoms%nlo(atomTypep)
                      IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                      DO jri = 1, atoms%jri(atomTypep)
-                        uu_tmp2(:atoms%jri(atomType)) = flo(jri,1,ilop,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
-                                                      + flo(jri,2,ilop,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)
+                        uu_tmp2(:atoms%jri(atomType)) = (flo(jri,1,ilop,j1,atomTypep)*flo(:atoms%jri(atomType),1,ilo,j2,atomType)&
+                                                       + flo(jri,2,ilop,j1,atomTypep)*flo(:atoms%jri(atomType),2,ilo,j2,atomType)) &
+                                                       * atoms%rmsh(jri,atomTypep) * atoms%rmsh(:atoms%jri(atomType),atomType)
                         CALL intgr3(uu_tmp2,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),uu_tmp(jri))
                      ENDDO
                      CALL intgr3(uu_tmp,atoms%rmsh(:,atomTypep),atoms%dx(atomTypep),atoms%jri(atomTypep), &

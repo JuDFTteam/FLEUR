@@ -713,6 +713,8 @@ MODULE m_types_greensf
                   ENDDO
                ENDDO
             ENDIF
+            !Get the right normalization
+            gmat(:,jr) = gmat(:,jr) * atoms%rmsh(jr,atomType) * atoms%rmsh(:atoms%jri(atomTypep),atomTypep)
          ENDDO
          !$OMP end parallel do
 

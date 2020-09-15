@@ -577,6 +577,11 @@ CONTAINS
          ENDIF
       ENDIF
 
+      IF(ANY(this%numTorgueElems(:)>0)) THEN
+         IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="init_gfinp")
+         IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
+      ENDIF
+
 #ifdef CPP_DEBUG
       WRITE(*,*) "Green's Function Elements: "
       WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"

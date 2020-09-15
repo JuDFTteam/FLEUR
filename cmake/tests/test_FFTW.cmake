@@ -3,7 +3,6 @@
 try_compile(FLEUR_USE_FFTW ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_FFTW.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}  OUTPUT_VARIABLE compile_output
             )
-
 foreach (teststring "-lfftw3" "-lfftw3;-ldl")
     if (NOT FLEUR_USE_FFTW)
       set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${teststring}")
@@ -18,6 +17,7 @@ foreach (teststring "-lfftw3" "-lfftw3;-ldl")
       endif()
     endif()
   endforeach()
+#set(FLEUR_USE_FFTW false)
 
 message("FFT from FFTW found:${FLEUR_USE_FFTW}")
 if (FLEUR_USE_FFTW)

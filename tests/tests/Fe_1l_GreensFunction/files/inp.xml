@@ -46,6 +46,8 @@
          </kPointLists>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup=".50000000"/>
+   </calculationSetup>
+   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -128,8 +130,6 @@
             <row-3>0 0 -1 .0000000000</row-3>
          </symOp>
       </symmetryOperations>
-   </calculationSetup>
-   <cell>
       <filmLattice scale="1.00000000" dVac="5.80000000" dTilda="8.30000000">
          <bravaisMatrix>
             <row-1>    7.8400000000     0.0000000000     0.0000000000</row-1>
