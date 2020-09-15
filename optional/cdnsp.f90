@@ -170,34 +170,34 @@
              DEALLOCATE (clines)
              CLOSE(40)
           ENDIF
-          !
-          ! for lda+U: flip n-matrix
-          !
-          IF (atoms%n_u.GT.0) THEN
-             INQUIRE (file='n_mmp_mat',exist=n_exist)
-             IF (n_exist) THEN
-                OPEN (69,file='n_mmp_mat',status='old',form='formatted')
-                REWIND 69
-
-                n=0
-                DO
-                   READ (69,'(a)',iostat=ios) lineread
-                   IF (ios.NE.0) EXIT
-                   n = n+1
-                ENDDO
-                ALLOCATE (clines(n))
-                REWIND 69
-                DO i=1,n
-                   WRITE (69,'(a)') TRIM(clines(i))
-                ENDDO
-                DO i=1,n
-                   WRITE (69,'(a)') TRIM(clines(i))
-                ENDDO
-                DEALLOCATE (clines)
-
-                CLOSE(69)
-             ENDIF
-          ENDIF
+!          !
+!          ! for lda+U: flip n-matrix
+!          !
+!          IF (atoms%n_u.GT.0) THEN
+!             INQUIRE (file='n_mmp_mat',exist=n_exist)
+!             IF (n_exist) THEN
+!                OPEN (69,file='n_mmp_mat',status='old',form='formatted')
+!                REWIND 69
+!
+!                n=0
+!                DO
+!                   READ (69,'(a)',iostat=ios) lineread
+!                   IF (ios.NE.0) EXIT
+!                   n = n+1
+!                ENDDO
+!                ALLOCATE (clines(n))
+!                REWIND 69
+!                DO i=1,n
+!                   WRITE (69,'(a)') TRIM(clines(i))
+!                ENDDO
+!                DO i=1,n
+!                   WRITE (69,'(a)') TRIM(clines(i))
+!                ENDDO
+!                DEALLOCATE (clines)
+!
+!                CLOSE(69)
+!             ENDIF
+!          ENDIF
 
 
         END SUBROUTINE cdnsp
