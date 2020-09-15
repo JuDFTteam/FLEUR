@@ -2996,6 +2996,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HSIZE_T) :: dims(7)
       INTEGER          :: dimsInt(7)
 
+      l_delete = .FALSE.
       l_exist = io_groupexists(fileID,'/cdnc')
 
       IF(l_exist) THEN
