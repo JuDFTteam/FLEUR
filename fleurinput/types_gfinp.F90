@@ -1039,7 +1039,7 @@ CONTAINS
          !This should not produce problems if symmertry is reduced because add makes sure that there
          !are no duplicates in this%elem
          diff = -1.0 * diff
-         i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+         i_gf =  this%add(l,shellAtom(ishell),iContour,.FALSE.,lp=lp,nTypep=refAtom,&
                           atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
                           fixedCutoff=fixedCutoff)
 
