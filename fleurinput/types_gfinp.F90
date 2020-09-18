@@ -1047,8 +1047,8 @@ CONTAINS
          this%elem(i_gf)%numDiffElems = numshellAtoms(ishell)
 
          IF(l_write) THEN
-            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            shellDiff(:,1,ishell), diff(:)
+            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', shellAtom(ishell), refAtom, &
+                                            -1.0 * shellDiff(:,1,ishell), diff(:)
          ENDIF
 
       ENDDO
