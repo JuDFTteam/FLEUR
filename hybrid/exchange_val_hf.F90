@@ -213,8 +213,6 @@ CONTAINS
             call carr1_v%init(cprod_vv)
             ! calculate exchange matrix at iq
             call timestart("exchange matrix")
-            ! finish coulomb bcast
-            call hybdat%coul(iq_p)%mpi_wait()
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
                call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, carr1_v)

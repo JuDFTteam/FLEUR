@@ -402,7 +402,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
 
    DO ikpt = 1, fi%kpts%nkpt
-      CALL hybdat%coul(ikpt)%mpi_ibc(fi, fmpi%mpi_comm, 0)
+      CALL hybdat%coul(ikpt)%mpi_bc(fi, fmpi%mpi_comm, 0)
    END DO
 
    CALL hf_init(eig_id,mpdata,fi,hybdat)
