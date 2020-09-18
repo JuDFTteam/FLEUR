@@ -247,7 +247,7 @@ CONTAINS
          this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
          ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
          DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") TRIM((ADJUSTL(path)), "/tetraeder/tet[", n, "]"
+            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
             this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@vol'))
             str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
             READ (str,*) this%ntetra(:,n)
@@ -258,7 +258,7 @@ CONTAINS
          this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
          ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
          DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") TRIM((ADJUSTL(path)), "/triangles/tria[", n, "]"
+            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/triangles/tria[", n, "]"
             this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@vol'))
             str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
             READ (str,*) this%ntetra(:,n)
