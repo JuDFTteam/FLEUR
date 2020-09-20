@@ -108,11 +108,14 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
+                  !The eigenvector coefficients already contain part of the interstitial phase
+                  !but not necessarily the right one
+                  im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
+                                     * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
+                                                                                           - atoms%taual(:,natomp)))
+
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)
-
-                  !The eigenvector coefficients alredy contain part of the interstitial phase
-                  atomDiff = atomDiff - atoms%taual(:,natom) + atoms%taual(:,natomp)
 
                   CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
                                   sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
