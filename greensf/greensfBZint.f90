@@ -82,10 +82,6 @@ MODULE m_greensfBZint
             natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
             natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
 
-            !Deactivate this loop (notice natomp_end) (only calculate intersite between representative atoms)
-            !natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
-            !natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
-
             DO natomp = natomp_start, natomp_end
 
                DO ispin = spin_start, spin_end
@@ -97,7 +93,6 @@ MODULE m_greensfBZint
                      spin2 = ispin
                   ENDIF
                   !which scalar products for intersite and l offdiagonal(IF l_sphavg)
-                  !Can these be unified ?
                   !Spin diagonal elements
                   IF(spin1==spin2) THEN
                      CALL greensfSpinDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,&
