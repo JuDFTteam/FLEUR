@@ -137,12 +137,14 @@ CONTAINS
          CALL timestop("Calculation of non-local HF potential")
 
          call timestart("BCast v_x")
+#ifdef CPP_MPI
          call MPI_Allreduce(MPI_IN_PLACE, v_x_loc, size(v_x_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
          do jsp = 1, fi%input%jspins
             do nk = 1, fi%kpts%nkpt 
                call hybdat%v_x(nk, jsp)%bcast(v_x_loc(nk,jsp), fmpi%mpi_comm)
             enddo
          enddo
+#endif
          deallocate(v_x_loc)
          call timestop("BCast v_x")
 
