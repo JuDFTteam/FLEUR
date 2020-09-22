@@ -157,8 +157,8 @@ CONTAINS
       !Input for libxc
       ! Read in xc functional parameters
       !Read in libxc parameters if present
-      xPathA = '/fleurInput/xcFunctional/LibXCID'
-      xPathB = '/fleurInput/xcFunctional/LibXCName'
+      xPathA = '/fleurInput/calculationSetup/xcFunctional/LibXCID'
+      xPathB = '/fleurInput/calculationSetup/xcFunctional/LibXCName'
 
       if(xml%GetNumberOfNodes(xPathA) == 1 .and. xml%GetNumberOfNodes(xPathB) == 1) then
          CALL judft_error("You specified libxc by name and id, please choose only one option")
