@@ -7,11 +7,14 @@
       <cutoffs Kmax="3.80000000" Gmax="11.60000000" GmaxXC="9.60000000" numbands="16"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" />
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".10000000" phi=".00000000" l_soc="T" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -21,9 +24,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -45,7 +45,6 @@
          <vacuumEnergyParameters vacuum="1" spinUp="-.2500000" spinDown="-.2500000"/>
       </filmLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
       <species name="Fe-1" element="Fe" atomicNumber="26" >
          <mtSphere radius="2.59000000" gridPoints="623" logIncrement=".01900000"/>

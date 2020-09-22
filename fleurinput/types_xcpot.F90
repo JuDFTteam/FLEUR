@@ -130,16 +130,23 @@ CONTAINS
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
       CHARACTER(len=:), allocatable ::xpathA, xpathB, valueString
+      CHARACTER(LEN=50) :: xPathC
       INTEGER          :: jspins
       LOGICAL          :: l_libxc_names
       l_libxc_names = .FALSE.
-      IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC') == 1) &
-         this%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
+      this%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
 
-      IF (xml%GetNumberOfNodes('/fleurInput/xcFunctional/@name') == 1) THEN
+      xPathC = ''
+      IF (xml%versionNumber > 31) THEN
+         xPathC = '/fleurInput/calculationSetup/xcFunctional'
+      ELSE
+         xPathC = '/fleurInput/xcFunctional'
+      END IF
+
+      IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@name') == 1) THEN
          this%l_inbuild = .TRUE.
-         this%inbuild_name = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
-         this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
+         this%inbuild_name = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@name')))
+         this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@relativisticCorrections'))
       ENDIF
 
       if(this%inbuild_name == "LibXC" ) then

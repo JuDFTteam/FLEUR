@@ -172,26 +172,38 @@ CONTAINS
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
       WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax
 
-!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F", l_onlyMtStDen="F"/>
-140   FORMAT('      <magnetism jspins="', i0, '" l_noco="', l1, '" swsp="', l1, '" lflip="', l1, '" l_onlyMtStDen="',l1, '"/>')
-      WRITE (fileNum, 140) input%jspins, noco%l_noco, input%swsp, input%lflip, input%l_onlyMtStDen
+      SELECT TYPE (xcpot)
+      CLASS IS (t_xcpot_inbuild_nf)
+         !   <xcFunctional name="pbe" relativisticCorrections="F">
+135      FORMAT('      <xcFunctional name="', a, '" relativisticCorrections="', l1, '"/>')
+         WRITE (fileNum, 135) trim(xcpot%get_name()), xcpot%relativistic_correction()
+      END SELECT
+
+!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
+140   FORMAT('      <magnetism jspins="', i0, '" l_noco="', l1, '" l_ss="', l1, '">')
+141   FORMAT('      <magnetism jspins="', i0, '"/>')
+      IF(l_explicit.OR.l_nocoOpt) THEN
+         WRITE (fileNum, 140) input%jspins, noco%l_noco, noco%l_ss
+160      FORMAT('         <nocoParams l_mperp="', l1, '" l_constr="', l1, '" mix_b="', f0.8,'"/>')
+         WRITE (fileNum, 160) noco%l_mperp, noco%l_constr, noco%mix_b
+162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
+         WRITE (fileNum, 162) noco%qss_inp
+164      FORMAT('         <mtNocoParams l_mtNocoPot="', l1,'" l_RelaxMT="', l1, '" l_RelaxAlpha="',l1, '" l_RelaxBeta="',l1,'" mix_RelaxWeightOffD="',f0.8,'"/>')
+         WRITE (fileNum, 164) noco%l_mtNocoPot, noco%l_alignMT, noco%l_RelaxAlpha, noco%l_RelaxBeta, noco%mix_RelaxWeightOffD
+166      FORMAT('         <sourceFreeMag l_sourceFree="', l1, '" l_scaleMag="', l1, '" mag_scale="', f0.8,'"/>')
+         WRITE (fileNum, 166) noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale
+         WRITE (fileNum, '(a)') '      </magnetism>'
+      ELSE
+         WRITE (fileNum, 141) input%jspins
+      END IF
 
       !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
-150   FORMAT('      <soc theta="', f0.8, '" phi="', f0.8, '" l_soc="', l1, '" spav="', l1, '"/>')
-      WRITE (fileNum, 150) noco%theta_inp, noco%phi_inp, noco%l_soc, noco%l_spav
+150   FORMAT('      <soc l_soc="', l1, '" theta="', f0.8, '" phi="', f0.8, '" spav="', l1, '"/>')
+      WRITE (fileNum, 150) noco%l_soc, noco%theta_inp, noco%phi_inp, noco%l_spav
 
       IF (l_explicit .OR. hybinp%l_hybrid) THEN
 155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '"/>')
          WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1
-      END IF
-
-      IF (l_nocoOpt .OR. l_explicit) THEN
-160      FORMAT('      <nocoParams l_ss="', l1, '" l_mperp="', l1,'" l_mtNocoPot="', l1,'" l_RelaxMT="', l1, '" l_constr="', l1, '" l_sourceFree="', l1, &
-                '" l_scaleMag="', l1, '" mag_scale="', f0.8, '" mix_b="', f0.8,'" l_RelaxAlpha="',l1, '" l_RelaxBeta="',l1,'" mix_RelaxWeightOffD="',f0.8,'">')
-         WRITE (fileNum, 160) noco%l_ss, noco%l_mperp, noco%l_mtNocoPot, noco%l_alignMT,noco%l_constr, noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale, noco%mix_b, noco%l_RelaxAlpha,noco%l_RelaxBeta,noco%mix_RelaxWeightOffD
-162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
-         WRITE (fileNum, 162) noco%qss_inp
-         WRITE (fileNum, '(a)') '      </nocoParams>'
       END IF
 
       IF (oneD%odd%d1) THEN
@@ -206,28 +218,28 @@ CONTAINS
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
 190   FORMAT('      <geometryOptimization l_f="', l1, '" forcealpha="', f0.8, '" forcemix="', a, '" epsdisp="', f0.8, '" epsforce="', f0.8, '"/>')
       SELECT CASE (input%forcemix)
-      CASE (0)
-         mixingScheme = 'Straight'
-      CASE (1)
-         mixingScheme = 'CG'
-      CASE (2)
-         mixingScheme = 'BFGS'
-      CASE DEFAULT
-         mixingScheme = 'errorUnknownMixing'
+         CASE (0)
+            mixingScheme = 'Straight'
+         CASE (1)
+            mixingScheme = 'CG'
+         CASE (2)
+            mixingScheme = 'BFGS'
+         CASE DEFAULT
+            mixingScheme = 'errorUnknownMixing'
       END SELECT
       WRITE (fileNum, 190) input%l_f, input%forcealpha, TRIM(mixingScheme), input%epsdisp, input%epsforce
 
       SELECT CASE (input%bz_integration)
-      CASE (BZINT_METHOD_HIST)
-         bzIntMode = 'hist'
-      CASE (BZINT_METHOD_GAUSS)
-         bzIntMode = 'gauss'
-      CASE (BZINT_METHOD_TRIA)
-         bzIntMode = 'tria'
-      CASE (BZINT_METHOD_TETRA)
-         bzIntMode = 'tetra'
-      CASE DEFAULT
-         CALL judft_error("Invalid brillouin zone integration mode",calledby="w_inpXML")
+         CASE (BZINT_METHOD_HIST)
+            bzIntMode = 'hist'
+         CASE (BZINT_METHOD_GAUSS)
+            bzIntMode = 'gauss'
+         CASE (BZINT_METHOD_TRIA)
+            bzIntMode = 'tria'
+         CASE (BZINT_METHOD_TETRA)
+            bzIntMode = 'tetra'
+         CASE DEFAULT
+            CALL judft_error("Invalid brillouin zone integration mode",calledby="w_inpXML")
       END SELECT
 
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
@@ -269,6 +281,14 @@ CONTAINS
          WRITE(fileNum, '(a)') '      </greensFunction>'
       ENDIF
 
+!      IF(l_explicit.OR.l_hybrid) THEN
+!      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
+!220      FORMAT('      <energyParameterLimits ellow="', f0.8, '" elup="', f0.8, '"/>')
+!         WRITE (fileNum, 220) input%ellow, input%elup
+!      END IF
+
+      WRITE (fileNum, '(a)') '   </calculationSetup>'
+      WRITE (fileNum, '(a)') '   <cell>'
 
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
 200   FORMAT('      <bzIntegration valenceElectrons="', f0.8, '" mode="', a, '" fermiSmearingEnergy="', f0.8, '">')
@@ -297,11 +317,6 @@ CONTAINS
       end if
       WRITE (fileNum, '(a)') '      </bzIntegration>'
 
-!      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
-220   FORMAT('      <energyParameterLimits ellow="', f0.8, '" elup="', f0.8, '"/>')
-      WRITE (fileNum, 220) input%ellow, input%elup
-      WRITE (fileNum, '(a)') '   </calculationSetup>'
-      WRITE (fileNum, '(a)') '   <cell>'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -346,13 +361,6 @@ CONTAINS
       END IF
       WRITE (fileNum, '(a)') '   </cell>'
 
-      SELECT TYPE (xcpot)
-      CLASS IS (t_xcpot_inbuild_nf)
-         !   <xcFunctional name="pbe" relativisticCorrections="F">
-280      FORMAT('   <xcFunctional name="', a, '" relativisticCorrections="', l1, '"/>')
-         WRITE (fileNum, 280) trim(xcpot%get_name()), xcpot%relativistic_correction()
-      END SELECT
-
       uIndices = -1
       DO i_u = 1, atoms%n_u
          IF (uIndices(1, atoms%lda_u(i_u)%atomType) .EQ. -1) uIndices(1, atoms%lda_u(i_u)%atomType) = i_u
@@ -385,9 +393,9 @@ CONTAINS
             EXIT
          END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
-300      FORMAT('      <species name="', a, '" element="', a, '" atomicNumber="', i0, '" flipSpinPhi="', f0.8, '" flipSpinTheta="', f0.8, '" flipSpinScale="', l1, '">')
+300      FORMAT('      <species name="', a, '" element="', a, '" atomicNumber="', i0, '">')
          speciesName = TRIM(ADJUSTL(speciesNames(iSpecies)))
-         WRITE (fileNum, 300) TRIM(ADJUSTL(speciesName)), TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)))), atoms%nz(iAtomType), atoms%flipSpinPhi(iAtomType), atoms%flipSpinTheta(iAtomType), atoms%flipSpinScale(iAtomType)
+         WRITE (fileNum, 300) TRIM(ADJUSTL(speciesName)), TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)))), atoms%nz(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
 310      FORMAT('         <mtSphere radius="', f0.8, '" gridPoints="', i0, '" logIncrement="', f0.8, '"/>')
@@ -426,6 +434,11 @@ CONTAINS
             line = ''
             WRITE (line, '(i0,1x,i0,1x,i0,1x,i0)') hybinp%select1(1:4, iAtomType)
             WRITE (fileNum, 315) hybinp%lcutm1(iAtomType), hybinp%lcutwf(iAtomType), TRIM(ADJUSTL(line))
+         END IF
+
+         IF (l_explicit) THEN
+328         FORMAT('         <modInitDen flipSpinPhi="', f0.8, '" flipSpinTheta="', f0.8, '" flipSpinScale="', l1, '"/>')
+            WRITE (fileNum, 328) atoms%flipSpinPhi(iAtomType), atoms%flipSpinTheta(iAtomType), atoms%flipSpinScale(iAtomType)
          END IF
 
          IF (uIndices(1, iAtomType) .NE. -1) THEN

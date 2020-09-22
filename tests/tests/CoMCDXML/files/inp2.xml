@@ -7,13 +7,13 @@
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="8.70000000" numbands="50"/>
       <scfLoop itmax="2" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
-      <nocoParams l_ss="F" l_mperp="F" l_constr="F" mix_b=".00000000">
-         <qss>.0000000000 .0000000000 .0000000000</qss>
-      </nocoParams>
       <expertModes gw="0" isec1="99" secvar="F"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="18.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -31,9 +31,6 @@
             </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
 <symmetryOperations>
 <symOp>
 <row-1>     1    0    0        0.00000 </row-1>
@@ -74,9 +71,8 @@
       </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Co-1" element="Co" atomicNumber="27"  flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F" >
+      <species name="Co-1" element="Co" atomicNumber="27">
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -86,7 +82,7 @@
          </electronConfig>
          <energyParameters s="4" p="4" d="3" f="4"/>
       </species>
-      <species name="Co-2" element="Co" atomicNumber="27"   flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
+      <species name="Co-2" element="Co" atomicNumber="27">
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>

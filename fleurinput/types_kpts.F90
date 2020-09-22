@@ -146,7 +146,7 @@ CONTAINS
       CHARACTER(len=200)::str, path, path2, label, altPurpose
       CHARACTER(LEN=40) :: listName, typeString
       IF (xml%versionNumber > 31) then
-        WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
+        WRITE (path, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
       ELSE
         path='/fleurInput/calculationSetup/bzIntegration/kPointList'
       endif
@@ -155,43 +155,43 @@ CONTAINS
          WRITE(*,*) 'kPointList index is ', kptsIndex
          CALL judft_error(("kPointList for index is not available."))
       END IF
-      IF (xml%versionNumber > 31) then
-        listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
-        this%kptsName = TRIM(ADJUSTL(listName))
+      IF (xml%versionNumber > 31) THEN
+         listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
+         this%kptsName = TRIM(ADJUSTL(listName))
 
-        this%kptsKind = 0
-        this%nkpt3(:) = 0
-        typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
-          SELECT CASE(typeString(1:11))
-          CASE ('unspecified')
-            this%kptsKind = KPTS_KIND_UNSPECIFIED
-          CASE ('mesh       ')
-            this%kptsKind = KPTS_KIND_MESH
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
-            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
-            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
-            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-          CASE ('path       ')
-            this%kptsKind = KPTS_KIND_PATH
-          CASE ('tetra      ')
-            this%kptsKind = KPTS_KIND_TETRA
-          CASE ('tria       ')
-            this%kptsKind = KPTS_KIND_TRIA
-          CASE ('SPEX-mesh  ')
-            this%kptsKind = KPTS_KIND_SPEX_MESH
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
-            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
-            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
-            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-          CASE DEFAULT
-            this%kptsKind = KPTS_KIND_UNSPECIFIED
-            WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
-          END SELECT
-        endif
+         this%kptsKind = 0
+         this%nkpt3(:) = 0
+         typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
+         SELECT CASE(typeString(1:11))
+            CASE ('unspecified')
+               this%kptsKind = KPTS_KIND_UNSPECIFIED
+            CASE ('mesh       ')
+               this%kptsKind = KPTS_KIND_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE ('path       ')
+               this%kptsKind = KPTS_KIND_PATH
+            CASE ('tetra      ')
+               this%kptsKind = KPTS_KIND_TETRA
+            CASE ('tria       ')
+               this%kptsKind = KPTS_KIND_TRIA
+            CASE ('SPEX-mesh  ')
+               this%kptsKind = KPTS_KIND_SPEX_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE DEFAULT
+               this%kptsKind = KPTS_KIND_UNSPECIFIED
+               WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
+         END SELECT
+      END IF
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
       IF (numNodes.NE.this%nkpt) THEN
@@ -281,14 +281,14 @@ CONTAINS
 
 
       IF (xml%versionNumber > 31) then
-        listName = xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')
+        listName = xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')
 
-        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
+        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/altKPointList')
 
         l_band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
         IF (l_band) THEN
           DO i = 1 , numNodes
-            WRITE (path2, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/altKPointList[',i,']'
+            WRITE (path2, "(a,i0,a)") '/fleurInput/cell/bzIntegration/altKPointList[',i,']'
             altPurpose = ''
             altPurpose = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@purpose')
             IF (TRIM(ADJUSTL(altPurpose)).EQ.'bands') THEN
@@ -299,12 +299,12 @@ CONTAINS
           END DO
         END IF
 
-        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
         foundList = .FALSE.
         kptsIndex = 0
         DO i = 1, numNodes
           path = ''
-          WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', i, ']'
+          WRITE (path, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', i, ']'
           IF (TRIM(ADJUSTL(listName)) == xml%GetAttributeValue(TRIM(path)//'/@name')) THEN
             kptsIndex = i
             foundList = .TRUE.

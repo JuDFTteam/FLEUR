@@ -116,10 +116,10 @@ PROGRAM inpgen
          !not yet
          l_fullinput = .TRUE.
          CALL xml%init(l_fullinput)
-         numKpts = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+         numKpts = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
          DO iKpts = 1, numKpts
             xPath = ''
-            WRITE (xPath, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', iKpts, ']/@type'
+            WRITE (xPath, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', iKpts, ']/@type'
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath)))
             IF(numNodes.EQ.1) THEN
                IF(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))).EQ.'path') numKptsPath = numKptsPath + 1

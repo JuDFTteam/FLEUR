@@ -7,12 +7,15 @@
       <cutoffs Kmax="3.0000000" Gmax="8.50000000" GmaxXC="6.50000000" numbands="200"/>
       <scfLoop itmax="2" minDistance=".001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe0" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <prodBasis gcutm="2.90000000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="180"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="30.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -26,9 +29,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-3.80000000" elup="11.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -119,9 +119,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe0" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Mn-1" element="Mn" atomicNumber="25" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Mn-1" element="Mn" atomicNumber="25">
          <mtSphere radius="2.34000000" gridPoints="661" logIncrement=".01800000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -135,7 +134,7 @@
          <lo type="SCLO" l="0" n="3" eDeriv="0"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-      <species name="Mn-2" element="Mn" atomicNumber="25" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Mn-2" element="Mn" atomicNumber="25">
          <mtSphere radius="2.34000000" gridPoints="661" logIncrement=".01800000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>

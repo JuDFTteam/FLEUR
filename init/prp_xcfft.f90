@@ -82,32 +82,27 @@ CONTAINS
 !   arltv(i)    : length of reciprical lattice vector along
 !                 direction (i)
 !
-      IF(.NOT. xcpot%needs_grad()) xcpot%gmaxxc = stars%gmax
-      if(fmpi%irank == 0) WRITE(oUnit, '('' gmaxxc should be: 2*kmax <= gmaxxc <= gmax '')')
-      IF(abs(xcpot%gmaxxc - stars%gmax) .le. 10.0**(-6)) THEN
-         if(fmpi%irank == 0) WRITE(oUnit, '('' concerning memory, you may want to choose'',&
-        &              '' a smaller value for gmax'')')
+      if(fmpi%irank == 0) THEN
+         WRITE(oUnit, '(a)') 'gmaxxc should be: 2*kmax <= gmaxxc <= gmax'
+         IF(.NOT. xcpot%needs_grad()) xcpot%gmaxxc = stars%gmax         
+         IF(abs(xcpot%gmaxxc - stars%gmax) .le. 10.0**(-6)) THEN
+            WRITE(oUnit, '(a)') 'concerning memory, you may want to choose a smaller value for gmax'
+         END IF
+         IF(xcpot%gmaxxc .LE. 10.0**(-6)) THEN
+            WRITE(oUnit, '(a)') 'gmaxxc=gmax choosen as default value'
+            WRITE(oUnit, '(a)') 'concerning memory, you may want to choose a smaller value for gmax'
+            xcpot%gmaxxc = stars%gmax
+         END IF
+         IF(xcpot%gmaxxc .LE. 2*input%rkmax) THEN
+            WRITE(oUnit, '(a)') 'concerning accuracy and total energy convergence, you may want to choose a larger gmaxxc'
+         END IF
+         WRITE(oUnit, '(a,f10.6)') 'gmaxxc = ', xcpot%gmaxxc
       END IF
-      IF(xcpot%gmaxxc .LE. 10.0**(-6)) THEN
-         if(fmpi%irank == 0) WRITE(oUnit, '(" gmaxxc=0 : gmaxxc=gmax choosen as default",&
-     &              " value")')
-         if(fmpi%irank == 0) WRITE(oUnit, '(" concerning memory, you may want to choose",&
-     &              " a smaller value for gmax")')
-         xcpot%gmaxxc = stars%gmax
-      END IF
-      IF(xcpot%gmaxxc .LE. 2*input%rkmax) THEN
-         if(fmpi%irank == 0) WRITE(oUnit, '('' concerning accuracy and total energy'',&
-     &              '' convergence, you may want'',/,&
-     &              '' to choose a larger gmaxxc '')')
-      END IF
-      if(fmpi%irank == 0) write(oUnit, '('' gmaxxc ='',f10.6)') xcpot%gmaxxc
 !
 !---> Determine dimensions of fft-box of size mxc1, mxc2, mxc3,
 !     for which |G(mxc1,mxc2,mxc3)| < Gmaxxc
 !
-      CALL boxdim(&
-     &            cell%bmat,&
-     &            arltv1, arltv2, arltv3)!keep
+      CALL boxdim(cell%bmat,arltv1, arltv2, arltv3)!keep
 !
       mxc1 = int(xcpot%gmaxxc/arltv1) + 1
       mxc2 = int(xcpot%gmaxxc/arltv2) + 1
@@ -133,12 +128,11 @@ CONTAINS
 !---> for mxc = 2**p, fft is very fast. if mq very close to 2**p
 !     choose this, even 2**p < mxc . therefore:
 !
-      gmxxc_new = min(real(stars%kxc1_fft)*arltv1, &
-     &                 real(stars%kxc2_fft)*arltv2, real(stars%kxc3_fft)*arltv3)
+      gmxxc_new = min(real(stars%kxc1_fft)*arltv1, real(stars%kxc2_fft)*arltv2, real(stars%kxc3_fft)*arltv3)
       gmxxc_new = 0.5*gmxxc_new
 
       IF(gmxxc_new .LT. xcpot%gmaxxc) THEN
-         WRITE(oUnit, '('' gmaxxc recalculated '')')
+         WRITE(oUnit, '(a)') 'gmaxxc recalculated'
          WRITE(oUnit, 2100) xcpot%gmaxxc, gmxxc_new, gmxxc_new*gmxxc_new
          xcpot%gmaxxc = gmxxc_new
       ENDIF
@@ -150,8 +144,7 @@ CONTAINS
          if(fmpi%irank == 0) THEN
             WRITE(oUnit, '('' gmax must be at least gmxxc_new'')')
             WRITE(oUnit, '('' increase gmax , or reduce gmaxxc'')')
-            WRITE(oUnit, '('' gmxxc_new ='',f10.3,''  gmax ='',f10.3)') &
-        &                gmxxc_new, stars%gmax
+            WRITE(oUnit, '('' gmxxc_new ='',f10.3,''  gmax ='',f10.3)') gmxxc_new, stars%gmax
 !cc          CALL juDFT_error("gmxxc_new.gt.gmax",calledby="prp_xcfft")
          endif
       ENDIF
@@ -159,12 +152,11 @@ CONTAINS
 !------> check dimensions of fft chargedensity box used in pwden.f
 !
       IF(stars%kxc1_fft .GT. stars%kxc1_fft .OR. stars%kxc2_fft .gt. stars%kxc2_fft .OR. &
-    &                            stars%kxc3_fft .gt. stars%kxc3_fft) THEN
+         stars%kxc3_fft .gt. stars%kxc3_fft) THEN
          if(fmpi%irank == 0) THEN
             WRITE(oUnit, '('' box dim. for fft too small'')')
             WRITE(oUnit, 2110) stars%kxc1_fft, stars%kxc2_fft, stars%kxc3_fft, stars%kxc1_fft, stars%kxc2_fft, stars%kxc3_fft
-            CALL juDFT_error("mxc[1,2,3]d>kxc[1,2,3]d ", calledby&
-       &         ="prp_xcfft")
+            CALL juDFT_error("mxc[1,2,3]d>kxc[1,2,3]d ", calledby ="prp_xcfft")
          endif
       ENDIF
 2110  FORMAT(' stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft ', 6i5)
@@ -182,8 +174,7 @@ CONTAINS
       IF(stars%nxc3_fft .EQ. 0) THEN
          if(fmpi%irank == 0) THEN
             WRITE(oUnit, '('' presumably ng3 too small '')')
-            WRITE(oUnit, '('' sk3max, gmaxxc '', 2f10.6)')&
-        &                stars%sk3(stars%ng3), xcpot%gmaxxc
+            WRITE(oUnit, '('' sk3max, gmaxxc '', 2f10.6)') stars%sk3(stars%ng3), xcpot%gmaxxc
             CALL juDFT_error("nxc3_fft==0", calledby="prp_xcfft")
          endif
       ENDIF
@@ -200,17 +191,16 @@ CONTAINS
 !
       DO istr = 1, stars%nxc3_fft
          IF((2*stars%kv3(1, istr) .gt. stars%kxc1_fft) .OR.&
-      &       (2*stars%kv3(2, istr) .gt. stars%kxc2_fft) .OR.&
-      &       (2*stars%kv3(3, istr) .gt. stars%kxc3_fft)) THEN
+            (2*stars%kv3(2, istr) .gt. stars%kxc2_fft) .OR.&
+            (2*stars%kv3(3, istr) .gt. stars%kxc3_fft)) THEN
             if(fmpi%irank == 0) THEN
                WRITE(oUnit, '('' not all nxc3_fft stars in xc-pot/eng fft box'')')
                WRITE(oUnit, '('' inconsistency in def.s see also strgn1'')')
                WRITE(oUnit, '('' kxc1_fft,kxc2_fft,kxc3_fft,kv1,kv2,kv3 '',6i5)')&
-          &                 stars%kxc1_fft, stars%kxc2_fft, stars%kxc3_fft, 2*stars%kv3(1, istr),&
-          &                 2*stars%kv3(2, istr), 2*stars%kv3(3, istr)
+                  stars%kxc1_fft, stars%kxc2_fft, stars%kxc3_fft, 2*stars%kv3(1, istr),&
+                  2*stars%kv3(2, istr), 2*stars%kv3(3, istr)
             endif
-            CALL juDFT_error("2*stars([1,2,3],istr)>mxc[1,2,3]d", calledby&
-       &         ="prp_xcfft")
+            CALL juDFT_error("2*stars([1,2,3],istr)>mxc[1,2,3]d", calledby ="prp_xcfft")
          ENDIF
       ENDDO
 !
@@ -223,14 +213,13 @@ CONTAINS
 
       IF(stars%kmxxc_fft .gt. stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft) then
          if(fmpi%irank == 0) THEN
-            WRITE(oUnit, '('' array dimensions in later subroutines too'',&
-        &             '' small'')')
+            WRITE(oUnit, '(a)') 'array dimensions in later subroutines too small'
          endif
       ENDIF
 
 2100  format(/, 1x, 'old gmaxxc  =', f10.5, '(a.u.)**(-1) ==>  new gmaxxc'&
-      &      , '  =', f10.5, '(a.u.)**(-1) ', /, t38, '==>  new e_cut(xc)   =',&
-      &            f10.5, ' ry')
+             , '  =', f10.5, '(a.u.)**(-1) ', /, t38, '==>  new e_cut(xc)   =',&
+                   f10.5, ' ry')
 
    END SUBROUTINE prp_xcfft
 END MODULE m_prpxcfft

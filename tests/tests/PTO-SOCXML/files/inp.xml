@@ -7,23 +7,23 @@
       <cutoffs Kmax="4.50000000" Gmax="12.00000000" GmaxXC="10.00000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="wc" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="42.00000000" mode="hist" fermiSmearingEnergy=".00331000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="2">
-         <kPoint weight="0.500000">0.250000            0.250000           -0.250000</kPoint>
-         <kPoint weight="0.500000">0.250000            0.250000            0.250000</kPoint>
-         </kPointList>
+            <kPointList name="default" count="2">
+               <kPoint weight="0.500000">0.250000            0.250000           -0.250000</kPoint>
+               <kPoint weight="0.500000">0.250000            0.250000            0.250000</kPoint>
+            </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -74,7 +74,6 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="wc" relativisticCorrections="F"/>
    <atomSpecies>
       <species name="Pb-1" element="Pb" atomicNumber="82" >
          <mtSphere radius="2.10000000" gridPoints="853" logIncrement=".01600000"/>

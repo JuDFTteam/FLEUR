@@ -7,7 +7,8 @@
       <cutoffs Kmax="3.00000000" Gmax="10.00000000" GmaxXC="10.00000000" numbands="100"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <magnetism jspins="2" l_noco="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
@@ -16,6 +17,8 @@
          <realAxis ne="2700" ellow="-1.00000000" elup="1.00000000"/>
          <contourSemicircle n="128" eb="-1.00000000" et="0.00000000" alpha="1.00000000" label="default"/>
       </greensFunction>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="16.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default"/>
          <kPointLists>
@@ -45,9 +48,6 @@
             </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -139,9 +139,8 @@
          <vacuumEnergyParameters vacuum="1" spinUp="-.25000000" spinDown="-.25000000"/>
       </filmLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Fe-1" element="Fe" atomicNumber="26">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01300000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig>

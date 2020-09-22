@@ -279,6 +279,9 @@ SUBROUTINE read_xml_atoms(this,xml)
  this%n_u = 0
  this%bmu = 0.0
  na=0
+ this%flipSpinPhi = 0.0
+ this%flipSpinTheta = 0.0
+ this%flipSpinScale = .FALSE.
  DO n = 1, this%ntype
     !in Species:
     !@name,element,atomicNumber,coreStates
@@ -294,10 +297,10 @@ SUBROUTINE read_xml_atoms(this,xml)
        this%zatom(n) = 1.0e-10
     END IF
     this%zatom(n) = this%nz(n)
-    if (xml%versionNumber>31) THEN
-      this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpinPhi'))
-      this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinTheta'))
-      this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
+    if (xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/modInitDen').EQ.1) THEN
+      this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/modInitDen/@flipSpinPhi'))
+      this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinTheta'))
+      this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinScale'))
     END IF
     this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
     !Now the xml elements

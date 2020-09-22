@@ -27,7 +27,7 @@ MODULE m_types_noco
     LOGICAL:: l_spav= .FALSE.
     REAL   :: theta_inp=0.0
     REAL   :: phi_inp=0.0
-    REAL   :: qss_inp(3)=[0.,0.,0.]
+    REAL   :: qss_inp(3)=[0.0,0.0,0.0]
 
     LOGICAL, ALLOCATABLE :: l_relax(:)
     REAL, ALLOCATABLE    :: alph_inp(:)
@@ -90,6 +90,10 @@ MODULE m_types_noco
      CHARACTER(len=100)::xpathA,xpathB,valueString
 
       this%l_noco = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
+      this%l_ss = .FALSE.
+      IF (xml%versionNumber > 31) THEN
+         this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_ss'))
+      END IF
 
       ! Read in optional SOC parameters if present
       xPathA = '/fleurInput/calculationSetup/soc'
@@ -102,27 +106,57 @@ MODULE m_types_noco
       END IF
 
       ! Read in optional noco parameters if present
-      xPathA = '/fleurInput/calculationSetup/nocoParams'
+      IF (xml%versionNumber > 31) THEN
+         xPathA = '/fleurInput/calculationSetup/magnetism/nocoParams'
+      ELSE
+         xPathA = '/fleurInput/calculationSetup/nocoParams'
+      END IF
       numberNodes = xml%GetNumberOfNodes(xPathA)
       IF ((this%l_noco).AND.(numberNodes.EQ.0)) THEN
          CALL juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
       END IF
 
+      this%qss_inp = 0.0
       IF (numberNodes.EQ.1) THEN
-         this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
          this%l_mperp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          this%l_constr = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
-         this%l_mtNocoPot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
-         IF (xml%versionNumber > 31) this%l_sourceFree = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sourceFree'))
-         IF (xml%versionNumber > 31)this%l_scaleMag = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_scaleMag'))
-         IF (xml%versionNumber > 31)this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
          this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
-         IF (xml%versionNumber > 31)this%l_alignMT = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxMT'))
-         IF (xml%versionNumber > 31)this%l_RelaxBeta = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxBeta'))
-         IF (xml%versionNumber > 31)this%l_RelaxAlpha = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxAlpha'))
-         IF (xml%versionNumber > 31)this%mix_RelaxWeightOffD = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxWeightOffD'))
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
-         READ(valueString,*) this%qss_inp
+         IF (.NOT.(xml%versionNumber > 31)) THEN
+            this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
+            READ(valueString,*) this%qss_inp
+         END IF
+      END IF
+
+      IF (xml%versionNumber > 31) THEN
+         xPathA = '/fleurInput/calculationSetup/magnetism/qss'
+         numberNodes = xml%GetNumberOfNodes(xPathA)
+         IF (numberNodes.EQ.1) THEN
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            this%qss_inp(1) = evaluatefirst(valueString)
+            this%qss_inp(2) = evaluatefirst(valueString)
+            this%qss_inp(3) = evaluatefirst(valueString)
+         END IF
+      END IF
+
+      ! Read in noco MT parameters
+      xPathA = '/fleurInput/calculationSetup/magnetism/mtNocoParams'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         this%l_mtNocoPot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
+         this%l_alignMT = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxMT'))
+         this%l_RelaxBeta = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxBeta'))
+         this%l_RelaxAlpha = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxAlpha'))
+         this%mix_RelaxWeightOffD = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxWeightOffD'))
+      END IF
+
+      ! Read in optional source free magnetism parameters if present
+      xPathA = '/fleurInput/calculationSetup/magnetism/sourceFreeMag'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+      IF(numberNodes.EQ.1) THEN
+         this%l_sourceFree = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sourceFree'))
+         this%l_scaleMag = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_scaleMag'))
+         this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
       END IF
 
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
