@@ -6,15 +6,15 @@
 
 MODULE m_mpi_bc_potden
 #ifdef CPP_MPI
-   use mpi 
+   use mpi
 #endif
 CONTAINS
-   SUBROUTINE mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,potden)
+   SUBROUTINE mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,potden,nococonv)
 
    USE m_types
    USE m_constants
    IMPLICIT NONE
-   
+
    TYPE(t_mpi),INTENT(IN)        :: fmpi
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -24,6 +24,7 @@ CONTAINS
    TYPE(t_noco),INTENT(IN)       :: noco
    TYPE(t_oneD),INTENT(IN)       :: oneD
    TYPE(t_potden),INTENT(INOUT)  :: potden
+   TYPE(t_nococonv),INTENT(INOUT),optional :: nococonv
 
    INTEGER :: n, ierr
    LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc, l_pw_wAlloc
@@ -77,6 +78,10 @@ CONTAINS
       CALL MPI_BCAST(potden%mmpMat,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
    END IF
 
+   IF (present(nococonv)) THEN
+     CALL MPI_BCAST(nococonv%alph, size(nococonv%alph), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+     CALL MPI_BCAST(nococonv%beta, size(nococonv%beta), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+   ENDIF
 #endif
 
    END SUBROUTINE mpi_bc_potden
