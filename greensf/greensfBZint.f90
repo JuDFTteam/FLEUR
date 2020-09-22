@@ -30,10 +30,10 @@ MODULE m_greensfBZint
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem,i_elemLO,nLO,imatSize,numDiffElems
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
-      REAL    :: atomFactor,kptFac,atomDiff(3)
+      REAL    :: atomFactor,atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
@@ -54,8 +54,7 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         numDiffElems = gfinp%elem(i_gf)%numDiffElems
-         atomFactor = MERGE(1.0,1.0/atoms%neq(atomType),l.NE.lp)
+         atomFactor = 1/atoms%neq(atomType)
 
          i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
          i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
@@ -75,17 +74,13 @@ MODULE m_greensfBZint
                      imatSize,spin_start:spin_end),source=cmplx_0)
 
          natom_start = SUM(atoms%neq(:atomType-1)) + 1
-         natom_end   = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType)),l.NE.lp)
+         natom_end   = SUM(atoms%neq(:atomType))
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
-            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep)
-
-            !Deactivate this loop (notice natomp_end) (only calculate intersite between representative atoms)
-            !natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
-            !natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep)
+            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
+            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
 
             DO natomp = natomp_start, natomp_end
 
@@ -98,7 +93,6 @@ MODULE m_greensfBZint
                      spin2 = ispin
                   ENDIF
                   !which scalar products for intersite and l offdiagonal(IF l_sphavg)
-                  !Can these be unified ?
                   !Spin diagonal elements
                   IF(spin1==spin2) THEN
                      CALL greensfSpinDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,&
@@ -109,11 +103,17 @@ MODULE m_greensfBZint
                                              l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
                   ENDIF
 
+                  !The eigenvector coefficients already contain part of the interstitial phase
+                  !but not necessarily the right one
+                  im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
+                                     * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
+                                                                                           - atoms%taual(:,natomp)))
+
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l.EQ.lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
-                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),numDiffElems,phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
+                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
                ENDDO
 
