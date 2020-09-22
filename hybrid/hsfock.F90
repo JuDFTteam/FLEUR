@@ -165,7 +165,7 @@ CONTAINS
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
-      call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
+      call hybdat%v_x(nk,jsp)%bcast(0, fmpi%comm)
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock

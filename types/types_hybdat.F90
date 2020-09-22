@@ -14,7 +14,7 @@ MODULE m_types_hybdat
       procedure :: init     => t_coul_init
       procedure :: alloc    => t_coul_alloc
       procedure :: free     => t_coul_free
-      procedure :: mpi_bc  => t_coul_mpi_bc
+      procedure :: mpi_bc   => t_coul_mpi_bc
       procedure :: size_MB  => t_coul_size_MB
    end type t_coul
 
