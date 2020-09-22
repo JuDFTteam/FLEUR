@@ -7,11 +7,17 @@
       <cutoffs Kmax="3.50000000" Gmax="15.00000000" GmaxXC="10.00000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCID exchange="1" correlation="9"/>
+      </xcFunctional>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="22.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -22,9 +28,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -115,9 +118,6 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="LibXC" relativisticCorrections="F">
-      <LibXCID exchange="1" correlation="9"/>
-   </xcFunctional>
    <atomSpecies>
       <species name="Cu-1" element="Cu" atomicNumber="29" >
          <mtSphere radius="2.20000000" gridPoints="935" logIncrement=".01300000"/>
