@@ -418,6 +418,9 @@ CONTAINS
 
       call timestart("t_mat_multiply")
 
+      if(mat1%matsize1 == -1 .and. mat1%matsize2 == -1) call judft_error("mat1 not initialized")
+      if(mat2%matsize1 == -1 .and. mat2%matsize2 == -1) call judft_error("mat2 not initialized")
+
       transA_i = "N"
       if(present(transA)) transA_i = transA
       transB_i = "N"
