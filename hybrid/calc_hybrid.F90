@@ -44,12 +44,13 @@ CONTAINS
       ! local variables
       type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm, ierr
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
+      integer, allocatable :: v_x_loc(:,:)
 
       CALL timestart("hybrid code")
 
@@ -115,6 +116,7 @@ CONTAINS
          call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
 
          CALL timestart("Calculation of non-local HF potential")
+         allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
          DO jsp = 1, fi%input%jspins
             call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
@@ -128,10 +130,22 @@ CONTAINS
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, fmpi)
+               if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
             call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")
+
+         call timestart("BCast v_x")
+         call MPI_Allreduce(MPI_IN_PLACE, v_x_loc, size(v_x_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
+         do jsp = 1, fi%input%jspins
+            do nk = 1, fi%kpts%nkpt 
+               call hybdat%v_x(nk, jsp)%bcast(v_x_loc(nk,jsp), fmpi%mpi_comm)
+            enddo
+         enddo
+         deallocate(v_x_loc)
+         call timestop("BCast v_x")
+
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
          call MPI_Barrier(fmpi%mpi_comm, err)
