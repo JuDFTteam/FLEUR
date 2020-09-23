@@ -26,7 +26,6 @@ MODULE m_writeCFOutput
       INTEGER, PARAMETER :: lcf = 3
 
       INTEGER :: iType,l,m,lm,io_error,iGrid,ispin
-      LOGICAL :: processPot
 
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
       REAL, ALLOCATABLE :: vTotch(:,:)
@@ -84,7 +83,7 @@ MODULE m_writeCFOutput
 
          ENDIF
 
-         IF(atoms%l_outputCFpot(iType).AND.processPot) THEN
+         IF(atoms%l_outputCFpot(iType)) THEN
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
@@ -126,7 +125,7 @@ MODULE m_writeCFOutput
 #ifdef CPP_HDF
       CALL closecfFile(cfFileID)
 #endif
-      IF(processPot) CALL finish_mt_grid()
+      CALL finish_mt_grid()
 
    END SUBROUTINE writeCFOutput
 
