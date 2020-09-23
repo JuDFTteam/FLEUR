@@ -68,6 +68,7 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_mpi_bc_potden
+      USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
       USE m_writeBasis
