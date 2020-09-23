@@ -333,9 +333,9 @@ CONTAINS
          END IF
 
          !CRYSTAL FIELD OUTPUT: POTENTIAL
-         IF(ANY(fi%atoms%l_outputCFpot(:))) THEN
-            IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,pot=.TRUE.)
-            IF(.NOT.ANY(fi%atoms%l_outputCFcdn(:))) CALL juDFT_end("Crystal Field Output written (Pot)",fmpi%irank)
+         IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
+            IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,enpara,fmpi)
+            CALL juDFT_end("Crystal Field Output written",fmpi%irank)
          ENDIF
 
 

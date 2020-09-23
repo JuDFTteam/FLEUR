@@ -48,7 +48,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
-   USE m_writeCFOutput
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
@@ -243,12 +242,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                                                   "minCalcDistance: ", gfinp%minCalcDistance
          ENDIF
       ENDIF
-   ENDIF
-
-   !Are there requests for crystal field outputs
-   IF(PRESENT(hub1data).AND.ANY(atoms%l_outputCFcdn(:))) THEN
-      IF(fmpi%irank==0) CALL writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data,pot=.FALSE.)
-      CALL juDFT_end("Crystal Field Output written (cdn)",fmpi%irank)
    ENDIF
 
    CALL timestart("cdngen: cdncore")

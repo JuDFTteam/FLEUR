@@ -3,15 +3,15 @@ MODULE m_writeCFOutput
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_intgr
    USE m_mt_tofrom_grid
    USE m_cfOutput_hdf
+   USE m_genMTBasis
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data,pot)
+   SUBROUTINE writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data,enpara,fmpi)
 
       TYPE(t_atoms),       INTENT(IN)  :: atoms
       TYPE(t_input),       INTENT(IN)  :: input
@@ -20,16 +20,17 @@ MODULE m_writeCFOutput
       TYPE(t_noco),        INTENT(IN)  :: noco
       TYPE(t_potden),      INTENT(IN)  :: vTot
       TYPE(t_hub1data),    INTENT(IN)  :: hub1data
-      LOGICAL, OPTIONAL,   INTENT(IN)  :: pot
+      TYPE(t_enpara),      INTENT(IN)  :: enpara
+      TYPE(t_mpi),         INTENT(IN)  :: fmpi
 
       INTEGER, PARAMETER :: lcf = 3
 
       INTEGER :: iType,l,m,lm,io_error,iGrid,ispin
-      REAL    :: n_0Norm
       LOGICAL :: processPot
 
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
       REAL, ALLOCATABLE :: vTotch(:,:)
+      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
       REAL :: n_0(atoms%jmtd)
 
 #ifdef CPP_HDF
@@ -37,28 +38,32 @@ MODULE m_writeCFOutput
 #endif
 
       TYPE(t_gradients) :: grad
-      TYPE(t_potden) :: vTotProcess
+      TYPE(t_potden)    :: vTotProcess
+      TYPE(t_usdus)     :: usdus
 
-      processPot = .FALSE.
-      IF(PRESENT(pot)) processPot = pot
+      vTotProcess = vTot
+      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
+      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
 
-      IF(processPot) THEN
-         vTotProcess = vTot
-         ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
-         CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
-      ENDIF
+      ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
+      ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
+      ALLOCATE (flo(atoms%jmtd,2,atoms%nlod),source=0.0)
+      CALL usdus%init(atoms,input%jspins)
 
 #ifdef CPP_HDF
-      CALL opencfFile(cfFileID, atoms, l_create = processPot.OR. .NOT.ANY(atoms%l_outputCFpot(:))) !Only create a new file in the first call from main/fleur
+      CALL opencfFile(cfFileID, atoms, l_create = .TRUE.)
 #endif
       DO iType = 1, atoms%ntype
 
          IF(atoms%l_outputCFcdn(iType)) THEN
-            !Calculate n_4f^0(r) (normed spherical part of the 4f charge density)
-            n_0 = hub1data%cdn_spherical(:,lcf,iType)
-            !Norm to int r^2 n_4f(r) dr = 1
-            CALL intgr3(n_0,atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),n_0Norm)
-            n_0(:) = n_0(:)/n_0Norm
+            IF(vTot%potdenType.EQ.POTDEN_TYPE_CRYSTALFIELD) THEN
+               CALL juDFT_error("Simultaneous calculation of cf potential and charge density not supported yet",&
+                                calledby="writeCFOutput")
+            ENDIF
+            DO ispin = 1, input%jspins
+               CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f,g,flo,hub1data,.FALSE.)
+               n_0(:) = n_0(:) + f(:,1,lcf)*f(:,1,lcf) + f(:,2,lcf)*f(:,2,lcf)
+            ENDDO
 
 #ifdef CPP_HDF
             CALL writeCFcdn(cfFileID, atoms, iType, n_0)
@@ -76,7 +81,9 @@ MODULE m_writeCFOutput
          ENDIF
 
          IF(atoms%l_outputCFpot(iType).AND.processPot) THEN
-
+            IF(vTot%potdenType.NE.POTDEN_TYPE_CRYSTALFIELD) THEN
+               CALL juDFT_error("Wrong potential type for crystalfield",calledby="writeCFOutput")
+            ENDIF
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
