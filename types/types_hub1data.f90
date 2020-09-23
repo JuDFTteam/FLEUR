@@ -73,7 +73,7 @@ MODULE m_types_hub1data
             ELSE
                IF(hub1inp%l_correctEtot) THEN
                   WRITE(*,*) "No previous density matrix distances found"
-                  WRITE(*,*) "setting spin averaging according to dftSpinpol")
+                  WRITE(*,*) "setting spin averaging according to dftSpinpol"
                ENDIF
             ENDIF
          ENDIF
