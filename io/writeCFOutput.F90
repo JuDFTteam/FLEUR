@@ -50,16 +50,17 @@ MODULE m_writeCFOutput
       ALLOCATE (flo(atoms%jmtd,2,atoms%nlod),source=0.0)
       CALL usdus%init(atoms,input%jspins)
 
+      IF(ANY(atoms%l_outputCFcdn(:)).AND.ANY(atoms%l_outputCFpot(:))) THEN
+         CALL juDFT_error("Simultaneous calculation of cf potential and charge density not supported yet",&
+                          calledby="writeCFOutput")
+      ENDIF
+
 #ifdef CPP_HDF
       CALL opencfFile(cfFileID, atoms, l_create = .TRUE.)
 #endif
       DO iType = 1, atoms%ntype
 
          IF(atoms%l_outputCFcdn(iType)) THEN
-            IF(vTot%potdenType.EQ.POTDEN_TYPE_CRYSTALFIELD) THEN
-               CALL juDFT_error("Simultaneous calculation of cf potential and charge density not supported yet",&
-                                calledby="writeCFOutput")
-            ENDIF
             n_0 = 0.0
             DO ispin = 1, input%jspins
                CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f,g,flo,hub1data,.FALSE.)
@@ -84,9 +85,6 @@ MODULE m_writeCFOutput
          ENDIF
 
          IF(atoms%l_outputCFpot(iType).AND.processPot) THEN
-            IF(vTot%potdenType.NE.POTDEN_TYPE_CRYSTALFIELD) THEN
-               CALL juDFT_error("Wrong potential type for crystalfield",calledby="writeCFOutput")
-            ENDIF
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
