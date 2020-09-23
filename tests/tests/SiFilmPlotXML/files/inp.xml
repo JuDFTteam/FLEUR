@@ -85,7 +85,7 @@
       </filmLattice>
    </cell>
    <atomSpecies>
-      <species name="Si-1" element="Si" atomicNumber="14"  magMom=".00000000">
+      <species name="Si-1" element="Si" atomicNumber="14">
          <mtSphere radius="2.16000000" gridPoints="521" logIncrement=".02200000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
           <electronConfig>

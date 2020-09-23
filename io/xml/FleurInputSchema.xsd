@@ -431,7 +431,6 @@
       <xsd:attribute name="name" type="xsd:string" use="required"/>
       <xsd:attribute name="element" type="xsd:string" use="required"/>
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute default="0.0" name="magMom" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="AtomGroupsType">
@@ -488,9 +487,10 @@
    </xsd:complexType>
 
    <xsd:complexType name="ModInitDenType">
-      <xsd:attribute name="flipSpinPhi" default="0.0" type="xsd:string" use="optional"/>
-      <xsd:attribute name="flipSpinTheta"  default="0.0"  type="xsd:string" use="optional"/>
-      <xsd:attribute name="flipSpinScale"  default="F" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.0" name="magMom" type="xsd:string" use="optional"/>
+      <xsd:attribute default="0.0" name="flipSpinPhi" type="xsd:string" use="optional"/>
+      <xsd:attribute default="0.0" name="flipSpinTheta" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="flipSpinScale" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="MTSphereType">

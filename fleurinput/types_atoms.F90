@@ -301,8 +301,11 @@ SUBROUTINE read_xml_atoms(this,xml)
       this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/modInitDen/@flipSpinPhi'))
       this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinTheta'))
       this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinScale'))
+      this%bmu(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@magMom'))
     END IF
-    this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
+    IF (xml%versionNumber<32) THEN
+       this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
+    END IF
     !Now the xml elements
     !mtSphere
     xpath=xpaths
