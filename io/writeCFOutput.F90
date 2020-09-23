@@ -65,6 +65,8 @@ MODULE m_writeCFOutput
                CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f,g,flo,hub1data,.FALSE.)
                n_0(:) = n_0(:) + f(:,1,lcf)*f(:,1,lcf) + f(:,2,lcf)*f(:,2,lcf)
             ENDDO
+            !Divide by number of spins to make sure that n_0 is normed
+            n_0 = n_0/input%jspins
 
 #ifdef CPP_HDF
             CALL writeCFcdn(cfFileID, atoms, iType, n_0)
