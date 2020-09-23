@@ -60,6 +60,7 @@ MODULE m_writeCFOutput
                CALL juDFT_error("Simultaneous calculation of cf potential and charge density not supported yet",&
                                 calledby="writeCFOutput")
             ENDIF
+            n_0 = 0.0
             DO ispin = 1, input%jspins
                CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f,g,flo,hub1data,.FALSE.)
                n_0(:) = n_0(:) + f(:,1,lcf)*f(:,1,lcf) + f(:,2,lcf)*f(:,2,lcf)
