@@ -68,9 +68,7 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_writeCFOutput
-#ifdef CPP_MPI
       USE m_mpi_bc_potden
-#endif
       USE m_eig66_io
       USE m_chase_diag
       USE m_writeBasis
@@ -151,7 +149,7 @@ CONTAINS
                                               0, results%ef, l_qfix, inDen)
       IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
          CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, inDen)
-         CALL doRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
+         !CALL doRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
       END IF
       CALL timestart("Qfix")
       CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%oneD, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
@@ -235,15 +233,7 @@ CONTAINS
          CALL chase_distance(results%last_distance)
 #endif
 
-#ifdef CPP_MPI
-         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen)
-         IF (fi%noco%l_alignMT) THEN
-            DO n = 1, fi%atoms%ntype
-               CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            ENDDO
-         END IF
-#endif
+         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
@@ -251,13 +241,7 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) THEN
                   CALL toGlobalRelax(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen)
                END IF
-#ifdef CPP_MPI
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen)
-               DO n = 1, fi%atoms%ntype
-                  CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               ENDDO
-#endif
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
             END IF
             CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                            fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
@@ -269,13 +253,7 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) THEN
                   CALL fromGlobalRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
                END IF
-#ifdef CPP_MPI
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen)
-               DO n = 1, fi%atoms%ntype
-                  CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               ENDDO
-#endif
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
             END IF
          END IF
 
@@ -508,13 +486,7 @@ CONTAINS
                   IF (fmpi%irank .EQ. 0) THEN
                      CALL toGlobalRelax(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen)
                   END IF
-#ifdef CPP_MPI
-                  CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen)
-                  DO n = 1, fi%atoms%ntype
-                     CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                     CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  ENDDO
-#endif
+                  CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen,nococonv)
                END IF
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, &
                               fi%cell, fi%noco, nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
@@ -526,14 +498,7 @@ CONTAINS
                   IF (fmpi%irank .EQ. 0) THEN
                      CALL fromGlobalRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, outDen)
                   END IF
-#ifdef CPP_MPI
-                  CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen)
-                  DO n = 1, fi%atoms%ntype
-                     CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                     CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  ENDDO
-
-#endif
+                  CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen,nococonv)
                END IF
             END IF
 
@@ -584,14 +549,8 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) THEN
                   CALL toGlobalRelax(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen, outDen)
                END IF
-#ifdef CPP_MPI
                CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen)
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen)
-               DO n = 1, fi%atoms%ntype
-                  CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               ENDDO
-#endif
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, outDen,nococonv)
             END IF
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell, fi%oneD, &
@@ -606,22 +565,16 @@ CONTAINS
          ! mix fi%input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), &
                          stars, fi%atoms, sphhar, fi%vacuum, fi%input, &
-                         fi%sym, fi%cell, fi%noco, fi%oneD, archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
+                         fi%sym, fi%cell, fi%noco,nococonv, fi%oneD, archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
 
 !Rotating in local MT frame
          IF (fi%noco%l_alignMT) THEN
             IF (fmpi%irank .EQ. 0) THEN
                !CALL fromGlobalRelax(fi%vacuum,sphhar,stars,fi%sym,fi%oneD,fi%cell,fi%noco,nococonv,fi%input,fi%atoms,inDen)
-               CALL doRelax(fi%vacuum, sphhar, stars &
+               CALL fromGlobalRelax(fi%vacuum, sphhar, stars &
                             , fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
             END IF
-#ifdef CPP_MPI
-            CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen)
-            DO n = 1, fi%atoms%ntype
-               CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            ENDDO
-#endif
+            CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
          END IF
 
          IF (fmpi%irank == 0) THEN
