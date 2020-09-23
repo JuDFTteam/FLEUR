@@ -25,8 +25,6 @@ MODULE m_types_hub1data
       REAL, ALLOCATABLE :: xi(:)           !Spin-orbit coupling parameter
       REAL, ALLOCATABLE :: ccfmat(:,:,:)   !crystal field splitting matrix
 
-      REAL, ALLOCATABLE :: cdn_spherical(:,:,:)
-
       CONTAINS
 
       PROCEDURE, PASS :: init => hub1data_init
@@ -89,10 +87,6 @@ MODULE m_types_hub1data
             this%xi(i_hia) = hub1inp%xi_par(i_hia)
          ENDIF
       ENDDO
-
-      !This can be used outside of hubbard 1
-      ALLOCATE (this%cdn_spherical(atoms%jmtd,0:lmaxU_const,atoms%ntype),source=0.0)
-
 
    END SUBROUTINE hub1data_init
 
