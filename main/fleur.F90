@@ -332,12 +332,6 @@ CONTAINS
             CALL inDen%ChargeAndMagnetisationToSpins()
          END IF
 
-         !CRYSTAL FIELD OUTPUT: POTENTIAL
-         IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
-            IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,enpara,fmpi)
-            CALL juDFT_end("Crystal Field Output written",fmpi%irank)
-         ENDIF
-
 
          IF (hub1data%l_runthisiter .AND. fi%atoms%n_hia > 0) THEN
             DO i_gf = 1, fi%gfinp%n
@@ -368,6 +362,13 @@ CONTAINS
             CALL timestart("Updating energy parameters")
             CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
+
+            !CRYSTAL FIELD OUTPUT: POTENTIAL
+            IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
+               IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,enpara,fmpi)
+               CALL juDFT_end("Crystal Field Output written",fmpi%irank)
+            ENDIF
+
             IF (.not. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                           enpara, nococonv, mpdata, hybdat, &
