@@ -10,10 +10,9 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
-   COMPLEX, ALLOCATABLE :: ylhmh(:, :, :)
-   PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, mt_from_gridlm, finish_mt_grid
+   PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout, l_mdependency)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
@@ -25,12 +24,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)      :: sym
       REAL, INTENT(OUT), OPTIONAL  :: thout(:)
       REAL, INTENT(OUT), OPTIONAL  :: phout(:)
-      LOGICAL,INTENT(IN), OPTIONAL :: l_mdependency
 
-      LOGICAL :: l_mdependencyArg
-
-      l_mdependencyArg = .FALSE.
-      IF(PRESENT(l_mdependency)) l_mdependencyArg = l_mdependency
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
@@ -38,9 +32,6 @@ CONTAINS
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
-      IF(l_mdependencyArg) THEN
-        ALLOCATE(ylhmh(atoms%nsp(), 0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1, sphhar%ntypsd),source=CMPLX(0.0,0.0))
-      ENDIF
       IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
          ALLOCATE (ylhtt, MOLD=ylh)
@@ -56,11 +47,7 @@ CONTAINS
          END IF
 
       ELSE
-        IF(l_mdependencyArg) THEN
-           CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh, ylhmh=ylhmh)
-        ELSE
-           CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
-        ENDIF
+         CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
       !ENDIF
    END SUBROUTINE init_mt_grid
@@ -304,46 +291,6 @@ CONTAINS
       ENDDO
 
    END SUBROUTINE mt_from_grid
-
-   SUBROUTINE mt_from_gridlm(atoms, sym, sphhar, n, jspins, v_in, vr)
-      IMPLICIT NONE
-      TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_sphhar), INTENT(IN):: sphhar
-      INTEGER, INTENT(IN)       :: jspins, n
-      REAL, INTENT(IN)          :: v_in(:, :)
-      COMPLEX, INTENT(INOUT)    :: vr(:, 0:, :)
-
-      REAL    :: vpot(atoms%nsp())
-      COMPLEX :: vlh
-      INTEGER :: js, kt, lh, jr, nd, nsp,ll1,mem,lm
-
-      nsp = atoms%nsp()
-      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
-
-      DO js = 1, jspins
-         !
-         kt = 0
-         DO jr = 1, atoms%jri(n)
-            vpot = v_in(kt + 1:kt + nsp, js)*wt(:)!  multiplicate v_in with the weights of the k-points
-
-            DO lh = 0, sphhar%nlh(nd)
-              ll1 = sphhar%llh(lh,nd) * ( sphhar%llh(lh,nd) + 1 )
-              DO mem = 1,sphhar%nmem(lh,nd)
-                lm  = ll1 + sphhar%mlh(mem,lh,nd)
-                !
-                ! --->        determine the corresponding potential number
-                !c            through gauss integration
-                !
-                vlh = dot_PRODUCT(vpot(:), conjg(ylhmh(:nsp, lm, nd)))
-                vr(jr, lm, js) = vr(jr, lm, js) + vlh
-              ENDDO
-            ENDDO ! lh
-            kt = kt + nsp
-         ENDDO   ! jr
-      ENDDO
-
-   END SUBROUTINE mt_from_gridlm
 
    SUBROUTINE finish_mt_grid()
       DEALLOCATE (ylh, wt, rx, thet, phi)
