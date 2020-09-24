@@ -55,7 +55,7 @@ MODULE m_greensfTorgue
       ALLOCATE(vlm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,input%jspins),source=cmplx_0)
       vlm = cmplx_0
       DO ispin = 1, input%jspins
-         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, vTot%mt(:,0:,iType,ispin), vlm(:,:,ispin))
+         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, atomType, vTot%mt(:,0:,atomType,ispin), vlm(:,:,ispin))
       ENDDO
       !Get the Bxc part of the potential
       ALLOCATE(bxc(SIZE(vlm,1),SIZE(vlm,2)))
