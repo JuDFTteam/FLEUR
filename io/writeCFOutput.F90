@@ -3,7 +3,7 @@ MODULE m_writeCFOutput
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_mt_tofrom_grid
+   USE m_lattHarmsSphHarmsConv
    USE m_cfOutput_hdf
    USE m_genMTBasis
 
@@ -28,8 +28,7 @@ MODULE m_writeCFOutput
       INTEGER :: iType,l,m,lm,io_error,iGrid,ispin
 
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
-      REAL, ALLOCATABLE :: vTotch(:,:)
-      REAL, ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
+      REAL,    ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
       REAL :: n_0(atoms%jmtd)
 
 #ifdef CPP_HDF
@@ -41,8 +40,7 @@ MODULE m_writeCFOutput
       TYPE(t_usdus)     :: usdus
 
       vTotProcess = vTot
-      ALLOCATE(vlm(atoms%jmtd,0:MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2),input%jspins),source=cmplx_0)
-      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
+      ALLOCATE(vlm(atoms%jmtd,MAXVAL(sphhar%llh)*(MAXVAL(sphhar%llh)+2)+1,input%jspins),source=cmplx_0)
 
       ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
       ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd),source=0.0)
@@ -87,17 +85,10 @@ MODULE m_writeCFOutput
             !                          sigma
             !Decompose potential into V(r)
             !                          lm
-            DO ispin =1, input%jspins
-               DO iGrid=1,atoms%jri(iType)
-                  vTotProcess%mt(iGrid,:,iType,ispin)=vTotProcess%mt(iGrid,:,iType,ispin)*atoms%rmsh(iGrid,iType)**2
-               END DO
-            ENDDO
-            IF(ALLOCATED(vTotch)) DEALLOCATE(vTotch)
-            ALLOCATE(vTotch(atoms%nsp()*atoms%jri(iType),input%jspins))
-            CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTotProcess%mt(:,0:,iType,:),iType,noco,grad,vTotch)
-            !modified mt_from_grid with lm index
             vlm = cmplx_0
-            CALL mt_from_gridlm(atoms, sym, sphhar, iType, input%jspins, vTotch, vlm)
+            DO ispin = 1, input%jspins
+               CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, vTot%mt(:,0:,iType,ispin), vlm(:,:,ispin))
+            ENDDO
 
             !Missing: only write out relevant components
 #ifdef CPP_HDF
@@ -106,7 +97,7 @@ MODULE m_writeCFOutput
             !Stupid text output
             DO l = 2, 6, 2
                DO m = -l, l
-                  lm = l*(l+1) + m
+                  lm = l*(l+1) + m + 1
                   OPEN(unit=29,file='V_'//int2str(l)//int2str(m)//'.'//int2str(iType)//'.dat',status='replace',&
                        action='write',iostat=io_error)
                   IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")

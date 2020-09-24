@@ -87,7 +87,7 @@ MODULE m_cfOutput_hdf
       TYPE(t_atoms),    INTENT(IN)  :: atoms
       TYPE(t_input),    INTENT(IN)  :: input
       INTEGER,          INTENT(IN)  :: iType
-      COMPLEX,          INTENT(IN)  :: vlm(:,0:,:)
+      COMPLEX,          INTENT(IN)  :: vlm(:,:,:)
 
       INTEGER(HID_T) :: potGroupID, vlmGroupID
       INTEGER(HID_T) :: rmeshDataSpaceID,rmeshDataSetID
@@ -123,7 +123,7 @@ MODULE m_cfOutput_hdf
 
       DO l = 2, 6, 2
          DO m = -l,l
-            lm = l * (l+1) + m
+            lm = l * (l+1) + m + 1
             CALL h5gcreate_f(potGroupID, 'VKS.'//int2str(l)//'.'//int2str(m), vlmGroupID, hdfError)
             CALL io_write_attint0(vlmGroupID,'l',l)
             CALL io_write_attint0(vlmGroupID,'m',m)
