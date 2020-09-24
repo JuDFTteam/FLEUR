@@ -69,6 +69,7 @@ CONTAINS
       USE m_hubbard1_setup
       USE m_writeCFOutput
       USE m_mpi_bc_potden
+      USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
       USE m_writeBasis
@@ -180,7 +181,7 @@ CONTAINS
       ! Initialize Green's function (end)
 
       l_error = .FALSE.
-      IF(fi%atoms%n_hia>0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
+      IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
       CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
       IF(.NOT.l_error) THEN
          !Set the current HIA distance to the read in value
@@ -188,6 +189,9 @@ CONTAINS
          results%last_mmpmatDistance = mmpmatDistancePrev
          results%last_occDistance = occDistancePrev
       ENDIF
+      CALL mpi_bc(results%last_mmpmatDistance,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_occDistance,0,fmpi%mpi_comm)
+
 
       ! Open/allocate eigenvector storage (start)
       l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u + fi%atoms%n_hia > 0)

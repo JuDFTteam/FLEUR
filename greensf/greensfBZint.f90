@@ -54,7 +54,7 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         atomFactor = 1/atoms%neq(atomType)
+         atomFactor = 1.0/atoms%neq(atomType)
 
          i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
          i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
