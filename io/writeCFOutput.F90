@@ -116,7 +116,6 @@ MODULE m_writeCFOutput
 #ifdef CPP_HDF
       CALL closecfFile(cfFileID)
 #endif
-      CALL finish_mt_grid()
 
    END SUBROUTINE writeCFOutput
 
