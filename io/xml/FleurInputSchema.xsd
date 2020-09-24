@@ -524,7 +524,8 @@
    <xsd:complexType name="LdaHubbard1Type">
       <xsd:sequence>
          <xsd:element maxOccurs="3" minOccurs="0" name="exc" type="ExcType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="addArg" type="SolverArgType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="cFCoeff" type="cFCoeffInputType">
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="addArg"  type="SolverArgType"/>
       </xsd:sequence>
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="U" type="xsd:string" use="required"/>
@@ -533,7 +534,7 @@
       <xsd:attribute name="theta" type="xsd:string" use="optional" default="0.0"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
       <xsd:attribute default="calc" name="init_occ"      type="ManualCutoffType" use="optional"/>
-      <xsd:attribute default="calc" name="kkintgrCutoff" type="ManualCutoffType" use="optional"/>
+      <xsd:attribute default="calc" name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -541,6 +542,12 @@
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
       <xsd:attribute default="calc" name="init_mom" type="ManualCutoffType" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="cFCoeffInputType">
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="m" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="value" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="SolverArgType">
@@ -782,7 +789,7 @@
             </xsd:choice>
          </xsd:sequence>
       </xsd:sequence>
-      <xsd:attribute default="F"    name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="F"    name="l_mperp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F"    name="l_resolvent" type="FleurBool" use="optional"/>
       <xsd:attribute default="-1.0" name="minCalcDistance" use="optional"/>
       <xsd:attribute default="F"    name="outputSphavg" type="FleurBool" use="optional"/>
