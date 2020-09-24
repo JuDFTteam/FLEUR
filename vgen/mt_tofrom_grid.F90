@@ -295,7 +295,6 @@ CONTAINS
    SUBROUTINE finish_mt_grid()
       DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
-      IF(ALLOCATED(ylhmh)) DEALLOCATE (ylhmh)
    END SUBROUTINE finish_mt_grid
 
 END MODULE m_mt_tofrom_grid
