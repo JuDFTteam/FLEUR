@@ -6,7 +6,7 @@ MODULE m_greensfTorgue
    USE m_intgr
    USE m_gaunt
    USE m_xmlOutput
-   USE m_mt_tofrom_grid
+   USE m_lattHarmsSphHarmsConv
 
    IMPLICIT NONE
 
@@ -48,38 +48,22 @@ MODULE m_greensfTorgue
       COMPLEX, ALLOCATABLE :: integrand(:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:,:,:)
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
-      REAL,    ALLOCATABLE :: vTotch(:,:)
-
-      TYPE(t_potden)    :: vTotProcess
-      TYPE(t_gradients) :: grad
 
       CALL timestart("Green's Function Torgue: init")
       !Get Bxc from the total potential (local frame)
       !TODO: FFN components
-      vTotProcess = vTot
-      ALLOCATE(vlm(atoms%jmtd,0:atoms%lmaxd*(atoms%lmaxd+2),input%jspins),source=cmplx_0)
-      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym, l_mdependency=.TRUE.)
-      !                          sigma
-      !Decompose potential into V(r)
-      !                          lm
-      DO ispin =1, input%jspins
-         DO iGrid=1,atoms%jri(atomType)
-            vTotProcess%mt(iGrid,:,atomType,ispin)=vTotProcess%mt(iGrid,:,atomType,ispin)*atoms%rmsh(iGrid,atomType)**2
-         END DO
-      ENDDO
-      ALLOCATE(vTotch(atoms%nsp()*atoms%jri(atomType),input%jspins))
-      CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.True.,vTotProcess%mt(:,0:,atomType,:),atomType,noco,grad,vTotch)
-      !modified mt_from_grid with lm index
+      ALLOCATE(vlm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,input%jspins),source=cmplx_0)
       vlm = cmplx_0
-      CALL mt_from_gridlm(atoms, sym, sphhar, atomType, input%jspins, vTotch, vlm)
-      CALL finish_mt_grid()
+      DO ispin = 1, input%jspins
+         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, vTot%mt(:,0:,iType,ispin), vlm(:,:,ispin))
+      ENDDO
       !Get the Bxc part of the potential
-      ALLOCATE(bxc(SIZE(vlm,1),0:SIZE(vlm,2)-1))
+      ALLOCATE(bxc(SIZE(vlm,1),SIZE(vlm,2)))
       bxc = vlm(:,:,1) - vlm(:,:,2)
-      DEALLOCATE(vTotch,vlm)
+      DEALLOCATE(vlm)
 
       !L=0 of potential has an additional rescaling of r/sqrt(4pi)
-      bxc(:,0) = bxc(:,0) * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
+      bxc(:,1) = bxc(:,1) * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
 
       ! sigma are the Pauli matrices
       sigma=cmplx_0
@@ -124,7 +108,7 @@ MODULE m_greensfTorgue
                IF(lh.GT.l+lp) CYCLE
                IF(lh.LT.abs(l-lp)) CYCLE
                DO mu = -lh, lh
-                  lhmu = lh * (lh+1) + mu
+                  lhmu = lh * (lh+1) + mu + 1
                   mp = m - mu
                   IF(ABS(mp).GT.lp) CYCLE
                   phaseFactor = gaunt1(lp,lh,l,mp,mu,m,atoms%lmaxd)
