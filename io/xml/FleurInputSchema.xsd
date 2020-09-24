@@ -524,7 +524,7 @@
    <xsd:complexType name="LdaHubbard1Type">
       <xsd:sequence>
          <xsd:element maxOccurs="3" minOccurs="0" name="exc" type="ExcType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="cFCoeff" type="cFCoeffInputType">
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="cFCoeff" type="cFCoeffInputType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="addArg"  type="SolverArgType"/>
       </xsd:sequence>
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
