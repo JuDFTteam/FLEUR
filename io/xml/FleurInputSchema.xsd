@@ -429,7 +429,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
-      <xsd:attribute name="element" type="xsd:string" use="required"/>
+      <xsd:attribute name="element" type="xsd:string" use="optional"/>
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
