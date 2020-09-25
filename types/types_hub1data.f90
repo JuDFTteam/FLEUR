@@ -72,8 +72,8 @@ MODULE m_types_hub1data
                ENDIF
             ELSE
                IF(hub1inp%l_correctEtot) THEN
-                  CALL juDFT_warn("No previous density matrix distances found",&
-                                  hint="setting spin averaging according to dftSpinpol",calledby="hub1data_init")
+                  WRITE(*,*) "No previous density matrix distances found"
+                  WRITE(*,*) "setting spin averaging according to dftSpinpol"
                ENDIF
             ENDIF
          ENDIF

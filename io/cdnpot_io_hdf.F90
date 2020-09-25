@@ -1609,7 +1609,6 @@ MODULE m_cdnpot_io_hdf
 
       COMPLEX, ALLOCATABLE         :: cdomvz(:,:)
 
-
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
       CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
@@ -1734,6 +1733,7 @@ MODULE m_cdnpot_io_hdf
          l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
 
          IF(l_exist) THEN
+
             CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
             CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
@@ -1939,6 +1939,15 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'time',time)
          CALL io_write_attreal0(archiveID,'distance',distance)
 
+         IF(n_u.GT.0) THEN
+            IF(mmpmatDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'mmpmatDistance',mmpmatDistance)
+            ENDIF
+            IF(occDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'occDistance',occDistance)
+            ENDIF
+         ENDIF
+
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
          CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
@@ -2052,7 +2061,6 @@ MODULE m_cdnpot_io_hdf
 
          CALL h5gclose_f(archiveID, hdfError)
       END IF
-
    END SUBROUTINE writeDensityHDF
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
@@ -2696,7 +2704,7 @@ MODULE m_cdnpot_io_hdf
 
          den%mmpMat = cmplx_0
          IF(l_mmpMatDimEquals) THEN
-            den%mmpMat = mmpMatTemp
+            den%mmpMat(:,:,:,1:jspinsmmp) = mmpMatTemp(:,:,:,1:jspinsmmp)
          ELSE
             DO i = 1, n_u
                DO j = 1, atoms%n_u+atoms%n_hia
@@ -2992,11 +3000,32 @@ MODULE m_cdnpot_io_hdf
       INTEGER hdfError
       INTEGER(HID_T) cdncGroupID, rhcsSpaceID, rhcsSetID
       INTEGER(HID_T) tecsSpaceID, tecsSetID, qintsSpaceID, qintsSetID
-      LOGICAL l_exist
+      INTEGER jspdTemp, ntypeTemp, jmtdTemp
+      LOGICAL l_exist, l_delete
       INTEGER(HSIZE_T) :: dims(7)
       INTEGER          :: dimsInt(7)
 
+      l_delete = .FALSE.
       l_exist = io_groupexists(fileID,'/cdnc')
+
+      IF(l_exist) THEN
+         CALL h5gopen_f(fileID, '/cdnc', cdncGroupID, hdfError)
+
+         CALL io_read_attint0(cdncGroupID,'jspd',jspdTemp)
+         CALL io_read_attint0(cdncGroupID,'ntype',ntypeTemp)
+         CALL io_read_attint0(cdncGroupID,'jmtd',jmtdTemp)
+
+         CALL h5gclose_f(cdncGroupID, hdfError)
+
+         IF (jspdTemp.NE.input%jspins) l_delete = .TRUE.
+         IF (ntypeTemp.NE.atoms%ntype) l_delete = .TRUE.
+         IF (jmtdTemp.NE.atoms%jmtd) l_delete = .TRUE.
+         
+         IF(l_delete) THEN
+            CALL h5ldelete_f(fileID, '/cdnc', hdfError)
+            l_exist = .FALSE.
+         END IF
+      END IF
 
       IF(l_exist) THEN ! replace current core density
          CALL h5gopen_f(fileID, '/cdnc', cdncGroupID, hdfError)
@@ -3054,7 +3083,6 @@ MODULE m_cdnpot_io_hdf
 
          CALL h5gclose_f(cdncGroupID, hdfError)
       END IF
-
    END SUBROUTINE writeCoreDensityHDF
 
    SUBROUTINE readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)

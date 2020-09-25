@@ -147,7 +147,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    END IF
 
    !Do we need to consider the unoccupied states
-   l_empty = banddos%dos
+   l_empty = banddos%dos.or.banddos%band
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       l_empty = l_empty.OR.greensfImagPart%l_calc
    ENDIF
