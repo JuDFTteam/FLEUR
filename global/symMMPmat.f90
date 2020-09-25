@@ -50,13 +50,11 @@ MODULE m_symMMPmat
          ENDIF
 
          IF(PRESENT(atomDiff).AND.PRESENT(bk)) THEN
-            symPhase = symPhase * exp(ImagUnit*dot_product(bk,matmul(TRANSPOSE(sym%mrot(:,:,isi)),atomDiff)))
-            mmpmatSym = mmpmatSym + symFac * symPhase * conjg(rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,l    ,isi),&
-                                                                               dwgnp=sym%d_wgn(:,:,lpArg,isi)))
-         ELSE
-            mmpmatSym = mmpmatSym + symFac * symPhase * rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,l    ,isi),&
-                                                                      dwgnp=sym%d_wgn(:,:,lpArg,isi))
+            symPhase = symPhase * exp(-tpi_const*ImagUnit*dot_product(bk,matmul(TRANSPOSE(sym%mrot(:,:,isi)),atomDiff)))
          ENDIF
+
+         mmpmatSym = mmpmatSym + symFac * symPhase * rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,l    ,isi),&
+                                                                      dwgnp=sym%d_wgn(:,:,lpArg,isi))
 
       ENDDO
 

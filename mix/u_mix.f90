@@ -138,5 +138,14 @@ MODULE m_umix
          DEALLOCATE(n_mmp)
       ENDIF
 
+      CALL openXMLElementNoAttributes('ldaUDensityMatrixConvergence')
+      DO jsp = 1, SIZE(dist)
+         attributes = ''
+         WRITE(attributes(1),'(i0)') jsp
+         WRITE(attributes(2),'(f13.6)') dist(jsp)
+         CALL writeXMLElementForm('distance',['spin    ','distance'],attributes(:2),reshape([4,8,1,13],[2,2]))
+      ENDDO
+      CALL closeXMLElement('ldaUDensityMatrixConvergence')
+
    END SUBROUTINE u_mix
 END MODULE m_umix

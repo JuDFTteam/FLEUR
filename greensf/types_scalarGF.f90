@@ -129,12 +129,12 @@ MODULE m_types_scalarGF
 
                DO ilo = 1, atoms%nlo(atomType)
                   IF(atoms%llo(ilo,atomType).NE.lp) CYCLE
-                  uu_tmp(:atoms%jri(atomType)) = flo(:atoms%jri(atomType),1,ilo,j1,atomTypep)*flo(:atoms%jri(atomType),1,l,j2,atomType)&
-                                               + flo(:atoms%jri(atomType),2,ilo,j1,atomTypep)*flo(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp(:atoms%jri(atomType)) = flo(:atoms%jri(atomType),1,ilo,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
+                                               + flo(:atoms%jri(atomType),2,ilo,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),&
                               this%uloun(ilo,j1,j2))
-                  uu_tmp(:atoms%jri(atomType)) = flo(:atoms%jri(atomType),1,ilo,j1,atomTypep)*flo(:atoms%jri(atomType),1,l,j2,atomType)&
-                                               + flo(:atoms%jri(atomType),2,ilo,j1,atomTypep)*flo(:atoms%jri(atomType),2,l,j2,atomType)
+                  uu_tmp(:atoms%jri(atomType)) = flo(:atoms%jri(atomType),1,ilo,j1,atomTypep)*g(:atoms%jri(atomType),1,l,j2,atomType)&
+                                               + flo(:atoms%jri(atomType),2,ilo,j1,atomTypep)*g(:atoms%jri(atomType),2,l,j2,atomType)
                   CALL intgr3(uu_tmp,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),&
                               this%ulodn(ilo,j1,j2))
                ENDDO

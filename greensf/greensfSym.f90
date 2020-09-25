@@ -8,8 +8,8 @@ MODULE m_greensfSym
 
    CONTAINS
 
-   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_intersite,l_sphavg,ispin,&
-                         sym,atomFactor,atomDiff,bk,numDiffElems,addPhase,im,greensfBZintCoeffs)
+   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,l_intersite,l_sphavg,ispin,&
+                         sym,atomFactor,atomDiff,bk,addPhase,im,greensfBZintCoeffs)
 
       INTEGER,                      INTENT(IN)     :: ikpt_i
       INTEGER,                      INTENT(IN)     :: i_elem
@@ -17,7 +17,7 @@ MODULE m_greensfSym
       INTEGER,                      INTENT(IN)     :: nLO
       INTEGER,                      INTENT(IN)     :: natom
       INTEGER,                      INTENT(IN)     :: l
-      LOGICAL,                      INTENT(IN)     :: l_diagonal
+      INTEGER,                      INTENT(IN)     :: lp
       LOGICAL,                      INTENT(IN)     :: l_intersite
       LOGICAL,                      INTENT(IN)     :: l_sphavg
       INTEGER,                      INTENT(IN)     :: ispin
@@ -25,7 +25,6 @@ MODULE m_greensfSym
       REAL,                         INTENT(IN)     :: atomFactor
       REAL,                         INTENT(IN)     :: atomDiff(:)
       REAL,                         INTENT(IN)     :: bk(:)
-      INTEGER,                      INTENT(IN)     :: numDiffElems
       COMPLEX,                      INTENT(IN)     :: addPhase
       COMPLEX,                      INTENT(IN)     :: im(-lmaxU_const:,-lmaxU_const:,:,:)
       TYPE(t_greensfBZintCoeffs),   INTENT(INOUT)  :: greensfBZintCoeffs
@@ -34,20 +33,18 @@ MODULE m_greensfSym
       COMPLEX, ALLOCATABLE :: imSym(:,:)
 
       !$OMP parallel default(none) &
-      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,l_diagonal,l_intersite,l_sphavg)&
-      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,numDiffElems,im,greensfBZintCoeffs)&
+      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,l_intersite,l_sphavg)&
+      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs)&
       !$OMP private(imat,iBand,imSym,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
       !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
-            IF(l_diagonal.AND.l_intersite) THEN !These rotations are only available for the onsite elements
-               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,&
+            IF(l_intersite) THEN
+               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,&
                                                          bk=bk,atomDiff=atomDiff,phase=(ispin.EQ.3))
-            ELSE IF (l_diagonal) THEN
-               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,phase=(ispin.EQ.3))
             ELSE
-               imSym = atomFactor * addPhase * conjg(im(:,:,iBand,imat))
+               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
             ENDIF
             IF(l_sphavg) THEN
                !Spherically averaged (already multiplied with scalar products)

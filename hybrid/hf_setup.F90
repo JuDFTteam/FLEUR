@@ -158,8 +158,8 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          ! This routine actually does nothing.
-         CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
-                        fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
+         ! CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
+         !                fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
 
          ! set up pointer pntgpt
 

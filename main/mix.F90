@@ -16,7 +16,7 @@ MODULE m_mix
 contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
-       stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+       stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
        oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
 
     use m_juDFT
@@ -34,6 +34,7 @@ contains
     use m_types_mixvector
     USE m_distance
     use m_mixing_history
+    use m_RelaxSpinAxisMagn
     USE m_plot
     implicit none
 
@@ -41,13 +42,14 @@ contains
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
+    type(t_nococonv),  intent(in)    :: nococonv
     TYPE(t_sym),TARGET,INTENT(in)    :: sym
     TYPE(t_stars),TARGET,INTENT(in)  :: stars
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
     TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-    
+
     type(t_mpi),       intent(in)    :: fmpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
     class(t_xcpot), intent(in)       :: xcpot
@@ -75,7 +77,7 @@ contains
     ! 1:atoms%n_u Are the elements for normal DFT+U
     ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
     !The latter are never mixed and held constant
-    indStartHIA = atoms%n_u + 1 
+    indStartHIA = atoms%n_u + 1
     indEndHIA = atoms%n_u + atoms%n_hia
 
     IF (atoms%n_u>0) THEN
@@ -94,6 +96,10 @@ contains
 
     CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
     CALL timestop("Reading of distances")
+
+    ! Preconditioner for relaxation of Magnetic moments
+    call precond_noco(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
+
 
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN
@@ -178,7 +184,7 @@ contains
        ENDIF
     ENDIF
 
-    if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then 
+    if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then
        CALL mixing_history_reset(fmpi)
        CALL mixvector_reset()
     endif
