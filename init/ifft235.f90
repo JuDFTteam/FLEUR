@@ -139,4 +139,32 @@ CONTAINS
 
    END FUNCTION i2357
 
+
+   function next_optimal_fft_size(n) result(fft_size)
+      implicit none 
+      integer, intent(in) :: n
+      integer             :: fft_size 
+
+      fft_size = n
+      do while(.not. is_optimal_fft_size(fft_size))
+         fft_size = fft_size + 1
+      enddo
+   end function next_optimal_fft_size
+
+   logical function is_optimal_fft_size(n) 
+      implicit none 
+      integer, intent(in) :: n 
+      integer :: i, cnt, divisor
+      integer, parameter :: primes(4) = [2,3,5,7]
+
+      i = n 
+      do cnt =1,4 
+         divisor = primes(cnt)
+         do while(mod(i,divisor) == 0)
+            i = i / divisor
+         enddo
+      enddo 
+
+      is_optimal_fft_size = (i == 1)
+   end function is_optimal_fft_size
 END MODULE m_ifft
