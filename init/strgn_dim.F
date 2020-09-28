@@ -267,19 +267,10 @@ c
 c
       n2d = 2
       n3d = ng3
-! #ifdef CPP_AIX
+
       k1d = next_optimal_fft_size(mxx1)
-      write (*,*) "mxx1=", mxx1, "k1d", k1d
       k2d = next_optimal_fft_size(mxx2)
-      write (*,*) "mxx2=", mxx2, "k2d", k2d
       k3d = next_optimal_fft_size(mxx3)
-      write (*,*) "mxx3=", mxx3, "k3d", k3d
-      !write(*,*) k1d,mxx1
-! #else
-!       k1d = mxx1
-!       k2d = mxx2
-!       k3d = mxx3
-! #endif
 c
 c     listing
       if (l_write) WRITE (oUnit,8000) gmax,n3d,n2d,k1d,k2d,k3d
