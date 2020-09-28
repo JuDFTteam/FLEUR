@@ -126,8 +126,8 @@ CONTAINS
 
       thisResults%tote            = 0.0
       thisResults%last_distance   = -1.0
-      thisResults%last_mmpMatdistance = 1.0
-      thisResults%last_occdistance    = 1.0
+      thisResults%last_mmpMatdistance = -1.0
+      thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
 

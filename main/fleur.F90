@@ -132,6 +132,19 @@ CONTAINS
       iterHF = 0
       l_cont = (iter < fi%input%itmax)
 
+      !Read in last Hubbard 1 distances
+      l_error = .TRUE.
+      IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
+      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
+         !Set the current HIA distance to the read in value
+         !Prevents too many HIA iterations after restart
+         results%last_mmpmatDistance = mmpmatDistancePrev
+         results%last_occDistance = occDistancePrev
+      ENDIF
+      CALL mpi_bc(results%last_mmpmatDistance,0,fmpi%mpi_comm)
+      CALL mpi_bc(results%last_occDistance,0,fmpi%mpi_comm)
+
       IF (fmpi%irank .EQ. 0) CALL openXMLElementNoAttributes('scfLoop')
 
       ! Initialize and load inDen density (start)
@@ -160,7 +173,7 @@ CONTAINS
             CALL toGlobalRelax(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen)
          END IF
          CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
-                           0, -1.0, results%ef, -1.0, -1.0, .FALSE., inDen)
+                           0, -1.0, results%ef, results%last_mmpmatDistance, results%last_occDistance, .FALSE., inDen)
       END IF
       IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) CALL fromGlobalRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
       ! Initialize and load inDen density (end)
@@ -179,19 +192,6 @@ CONTAINS
          ENDDO
       ENDIF
       ! Initialize Green's function (end)
-
-      l_error = .FALSE.
-      IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
-      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
-      IF(.NOT.l_error) THEN
-         !Set the current HIA distance to the read in value
-         !Prevents too many HIA iterations after restart
-         results%last_mmpmatDistance = mmpmatDistancePrev
-         results%last_occDistance = occDistancePrev
-      ENDIF
-      CALL mpi_bc(results%last_mmpmatDistance,0,fmpi%mpi_comm)
-      CALL mpi_bc(results%last_occDistance,0,fmpi%mpi_comm)
-
 
       ! Open/allocate eigenvector storage (start)
       l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u + fi%atoms%n_hia > 0)
@@ -611,10 +611,11 @@ CONTAINS
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
             !If we have converged run hia if the density matrix has not converged
             hub1data%l_runthisiter = .NOT. l_cont .AND. (fi%hub1inp%minoccDistance <= results%last_occdistance &
+                                                         .OR. results%last_occdistance <= 0.0 .OR. results%last_mmpMatdistance <= 0.0 &
                                                          .OR. fi%hub1inp%minmatDistance <= results%last_mmpMatdistance)
             !Run after first overall iteration to generate a starting density matrix
             hub1data%l_runthisiter = hub1data%l_runthisiter .OR. (iter == 1 .AND. (hub1data%iter == 0 &
-                                                                                   .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
+                                                            .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
             hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (iter < fi%input%itmax)
             hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
             !Prevent that the scf loop terminates

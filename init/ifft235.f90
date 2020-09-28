@@ -129,7 +129,7 @@ CONTAINS
                DO i = 0, 1
                   DO h = 1, 25
                      n = 2**h*3**i*5**j*7**k*11**m
-                     IF ((n > ii) .AND. (n < nn)) nn = n
+                     IF ((n >= ii) .AND. (n < nn)) nn = n
                   ENDDO
                ENDDO
             ENDDO
