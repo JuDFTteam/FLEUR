@@ -289,8 +289,6 @@ CONTAINS
 !!$                END IF
          !---< gwf
 
-         IF(ANY(fi%atoms%l_outputCFpot(:))) vCoul%potdenType = POTDEN_TYPE_CRYSTALFIELD !Excludes external potential
-
          IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
             sfscale = fi%noco%mag_scale
             CALL inDen%SpinsToChargeAndMagnetisation()
@@ -345,13 +343,6 @@ CONTAINS
             CALL timestart("Updating energy parameters")
             CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
-
-            !CRYSTAL FIELD OUTPUT: POTENTIAL
-            IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
-               IF(fmpi%irank==0) CALL writeCFOutput(fi%atoms,fi%input,fi%sym,sphhar,fi%noco,vTot,hub1data,enpara,fmpi)
-               CALL juDFT_end("Crystal Field Output written",fmpi%irank)
-            ENDIF
-
             IF (.not. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                           enpara, nococonv, mpdata, hybdat, &
@@ -535,6 +526,15 @@ CONTAINS
             ENDIF
 #endif
             CALL timestop("generation of new charge density (total)")
+
+
+            !CRYSTAL FIELD OUTPUT
+            IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
+               CALL hub1data%mpi_bc(0,fmpi%mpi_comm)
+               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,inDen,hub1data,nococonv,enpara,fmpi)
+               CALL juDFT_end("Crystal Field Output written",fmpi%irank)
+            ENDIF
+
 
 !!$             !----> output potential and potential difference
 !!$             IF (disp) THEN
