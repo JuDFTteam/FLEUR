@@ -136,7 +136,7 @@ CONTAINS
       l_error = .TRUE.
       IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
       CALL hub1data%init(fi%atoms, fi%input, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
-      CALL hub1data%mpi_bc(0,fmpi%mpi_comm)
+      CALL hub1data%mpi_bc(fmpi%mpi_comm)
       IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
          !Set the current HIA distance to the read in value
          !Prevents too many HIA iterations after restart
@@ -530,7 +530,7 @@ CONTAINS
 
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
-               CALL hub1data%mpi_bc(0,fmpi%mpi_comm)
+               CALL hub1data%mpi_bc(fmpi%mpi_comm)
                CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,inDen,hub1data,nococonv,enpara,fmpi)
                CALL juDFT_end("Crystal Field Output written",fmpi%irank)
             ENDIF

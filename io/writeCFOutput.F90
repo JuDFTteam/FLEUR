@@ -93,7 +93,7 @@ MODULE m_writeCFOutput
 
             inDenCF = inDen
 
-            IF(fi%atoms%l_outputCFcdn(iType)) THEN
+            IF(fi%atoms%l_outputCFcdn(iType).AND.fi%atoms%l_outputCFremove4f(iType)) THEN
                !Remove atomic 4f density before vgen
                DO ispin = 1, fi%input%jspins
                   inDenCF%mt(:,0,iType,ispin) = inDenCF%mt(:,0,iType,ispin) - hub1data%cdn_atomic(:,lcf,iType,ispin)
