@@ -172,6 +172,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN
       hub1data%mag_mom = 0.0
+      hub1data%cdn_atomic = 0.0
    ENDIF
 
 

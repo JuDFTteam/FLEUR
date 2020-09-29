@@ -78,10 +78,7 @@ CONTAINS
     ENDIF
 
     l_performSpinavg = .FALSE.
-    IF(PRESENT(hub1data)) THEN
-      l_performSpinavg = hub1data%l_performSpinavg
-      hub1data%cdn_atomic = 0.0
-    ENDIF
+    IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
 
     qmtl = 0
     !$OMP PARALLEL DEFAULT(none) &
