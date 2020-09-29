@@ -42,7 +42,6 @@ MODULE m_writeCFOutput
       TYPE(t_nococonv)  :: nococonv_dummy
       TYPE(t_potden)    :: inDenCF
       TYPE(t_potden)    :: vCF,vCoul,vx
-      TYPE(t_usdus)     :: usdus
 
       CALL timestart("Crystal Field Output")
 
@@ -56,10 +55,9 @@ MODULE m_writeCFOutput
       ALLOCATE (f(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
       ALLOCATE (g(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
       ALLOCATE (flo(fi%atoms%jmtd,2,fi%atoms%nlod),source=0.0)
-      CALL usdus%init(fi%atoms,fi%input%jspins)
 
 #ifdef CPP_HDF
-      CALL opencfFile(cfFileID, fi%atoms, l_create = .TRUE.)
+      IF(fmpi%irank==0) CALL opencfFile(cfFileID, fi%atoms, l_create = .TRUE.)
 #endif
       DO iType = 1, fi%atoms%ntype
 
@@ -140,7 +138,7 @@ MODULE m_writeCFOutput
       ENDDO
 
 #ifdef CPP_HDF
-      CALL closecfFile(cfFileID)
+      IF(fmpi%irank==0) CALL closecfFile(cfFileID)
 #endif
       CALL timestop("Crystal Field Output")
 
