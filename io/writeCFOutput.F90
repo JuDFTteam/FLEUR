@@ -98,7 +98,7 @@ MODULE m_writeCFOutput
                DO ispin = 1, fi%input%jspins
                   inDenCF%mt(:,0,iType,ispin) = inDenCF%mt(:,0,iType,ispin) - hub1data%cdn_atomic(:,lcf,iType,ispin)
                ENDDO
-               atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - NINT(n_0Norm)
+               atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - NINT(n_0Norm*sfp_const*atoms_dummy%neq(iType))
             ENDIF
 
             nococonv_dummy = nococonv
