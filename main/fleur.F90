@@ -531,7 +531,7 @@ CONTAINS
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
                CALL hub1data%mpi_bc(fmpi%mpi_comm)
-               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,inDen,hub1data,nococonv,enpara,fmpi)
+               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
                CALL juDFT_end("Crystal Field Output written",fmpi%irank)
             ENDIF
 
