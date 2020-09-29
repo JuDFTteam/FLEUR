@@ -117,7 +117,6 @@ contains
 
     l_subtractCoreCharge = .TRUE.
     if ( potdenType == POTDEN_TYPE_POTYUK ) l_subtractCoreCharge = .FALSE.
-    if ( potdenType == POTDEN_TYPE_CRYSTALFIELD ) l_subtractCoreCharge = .FALSE.
     IF(PRESENT(l_coreCharge)) l_subtractCoreCharge = l_coreCharge
 
     qlmo = 0.0

@@ -40,6 +40,7 @@ MODULE m_writeCFOutput
 
       TYPE(t_results)   :: results_dummy
       TYPE(t_nococonv)  :: nococonv_dummy
+      TYPE(t_atoms)     :: atoms_dummy
       TYPE(t_potden)    :: inDenCF
       TYPE(t_potden)    :: vCF,vCoul,vx
 
@@ -90,16 +91,18 @@ MODULE m_writeCFOutput
             !Run vgen again to obtain the right potential
 
             inDenCF = inDen
+            atoms_dummy = fi%atoms
 
             IF(fi%atoms%l_outputCFcdn(iType).AND.fi%atoms%l_outputCFremove4f(iType)) THEN
                !Remove atomic 4f density before vgen
                DO ispin = 1, fi%input%jspins
                   inDenCF%mt(:,0,iType,ispin) = inDenCF%mt(:,0,iType,ispin) - hub1data%cdn_atomic(:,lcf,iType,ispin)
                ENDDO
+               atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - NINT(n_0Norm)
             ENDIF
 
             nococonv_dummy = nococonv
-            CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+            CALL vgen(hybdat, fi%field, fi%input, xcpot, atoms_dummy, sphhar, stars, fi%vacuum, fi%sym, &
                       fi%cell, fi%oneD, fi%sliceplot, fmpi, results_dummy, fi%noco, nococonv_dummy,&
                       EnergyDen, inDenCF, vCF, vx, vCoul)
 
