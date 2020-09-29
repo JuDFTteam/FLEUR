@@ -40,6 +40,8 @@ CONTAINS
     TYPE(t_jDOS), OPTIONAL, INTENT(IN) :: jDOS
     TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
+
+    INTEGER, PARAMETER :: lcf=3
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
 
@@ -190,6 +192,7 @@ CONTAINS
              DO l = 0,atoms%lmax(itype)
                 DO lp = 0,l
                    llp = (l* (l+1))/2 + lp
+                   IF(atoms%l_outputCFpot(itype).AND.l.EQ.lcf.AND.lp.EQ.lcf) CYCLE
                    DO j = 1,atoms%jri(itype)
                       s = denCoeffs%uunmt(llp,lh,itype,ispin)*( &
                            f(j,1,l,ispin)*f(j,1,lp,ispin)+ f(j,2,l,ispin)*f(j,2,lp,ispin) )&
