@@ -135,7 +135,8 @@ CONTAINS
       !Read in last Hubbard 1 distances
       l_error = .TRUE.
       IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
-      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      CALL hub1data%init(fi%atoms, fi%input, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      CALL hub1data%mpi_bc(0,fmpi%mpi_comm)
       IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
          !Set the current HIA distance to the read in value
          !Prevents too many HIA iterations after restart

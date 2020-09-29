@@ -78,7 +78,10 @@ CONTAINS
     ENDIF
 
     l_performSpinavg = .FALSE.
-    IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
+    IF(PRESENT(hub1data)) THEN
+      l_performSpinavg = hub1data%l_performSpinavg
+      hub1data%cdn_atomic = 0.0
+    ENDIF
 
     qmtl = 0
     !$OMP PARALLEL DEFAULT(none) &
@@ -131,6 +134,11 @@ CONTAINS
                 IF (l.LE.input%lResMax) THEN
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
+                IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
+                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%uu(l,itype,ispin)&
+                                                        *( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) ) &
+                                                        *1.0/(atoms%neq(itype)*sfp_const)
+                ENDIF
              ENDDO
           ENDDO
 

@@ -25,9 +25,13 @@ MODULE m_types_hub1data
       REAL, ALLOCATABLE :: xi(:)           !Spin-orbit coupling parameter
       REAL, ALLOCATABLE :: ccfmat(:,:,:)   !crystal field splitting matrix
 
+      REAL, ALLOCATABLE :: cdn_atomic(:,:,:,:) !atomic contribution to the charge density
+                                               !is used to calculate CF coefficients in writeCFoutput
+
       CONTAINS
 
-      PROCEDURE, PASS :: init => hub1data_init
+      PROCEDURE, PASS :: init   => hub1data_init
+      PROCEDURE, PASS :: mpi_bc => hub1data_mpi_bc
 
    END TYPE t_hub1data
 
@@ -35,15 +39,16 @@ MODULE m_types_hub1data
 
    CONTAINS
 
-   SUBROUTINE hub1data_init(this,atoms,hub1inp,fmpi,mmpmatDistancePrev,occDistancePrev,l_error)
+   SUBROUTINE hub1data_init(this,atoms,input,hub1inp,fmpi,mmpmatDistancePrev,occDistancePrev,l_error)
 
       USE m_types_mpi
       USE m_types_atoms
+      USE m_types_input
       USE m_types_hub1inp
-      USE m_mpi_bc_tool
 
       CLASS(t_hub1data),   INTENT(INOUT) :: this
       TYPE(t_atoms),       INTENT(IN)    :: atoms
+      TYPE(t_input),       INTENT(IN)    :: input
       TYPE(t_hub1inp),     INTENT(IN)    :: hub1inp
       TYPE(t_mpi),         INTENT(IN)    :: fmpi
       REAL,                INTENT(IN)    :: mmpmatDistancePrev,occDistancePrev
@@ -75,7 +80,6 @@ MODULE m_types_hub1data
                ENDIF
             ENDIF
          ENDIF
-         CALL mpi_bc(this%l_performSpinavg,0,fmpi%mpi_comm)
       ENDIF
 
 
@@ -88,6 +92,29 @@ MODULE m_types_hub1data
          ENDIF
       ENDDO
 
+      ALLOCATE (this%cdn_atomic(atoms%jmtd,0:lmaxU_const,atoms%ntype,input%jspins),source=0.0)
+
    END SUBROUTINE hub1data_init
+
+   SUBROUTINE hub1data_mpi_bc(this, mpi_comm, irank)
+      USE m_mpi_bc_tool
+      CLASS(t_hub1data), INTENT(INOUT)::this
+      INTEGER, INTENT(IN):: mpi_comm
+      INTEGER, INTENT(IN), OPTIONAL::irank
+      INTEGER ::rank,myrank,n,ierr
+      IF (PRESENT(irank)) THEN
+         rank = irank
+      ELSE
+         rank = 0
+      END IF
+      CALL mpi_bc(this%iter,rank,mpi_comm)
+      CALL mpi_bc(this%l_runthisiter,rank,mpi_comm)
+      CALL mpi_bc(this%l_performSpinavg,rank,mpi_comm)
+      CALL mpi_bc(this%mag_mom,rank,mpi_comm)
+      CALL mpi_bc(this%xi,rank,mpi_comm)
+      CALL mpi_bc(this%ccfmat,rank,mpi_comm)
+      CALL mpi_bc(this%cdn_atomic,rank,mpi_comm)
+
+   END SUBROUTINE hub1data_mpi_bc
 
 END MODULE m_types_hub1data
