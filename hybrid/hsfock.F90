@@ -159,7 +159,7 @@ CONTAINS
          call judft_error('HSE not implemented in hsfock')
       ELSE
          CALL exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, &
-                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, ex)
+                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, ex)
 
          if(k_pack%submpi%root()) then
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)

@@ -567,7 +567,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                                      fmpi, cmt_nk, exMat)
             deallocate(cmt_nk)
             CALL exchange_vccv1(ikpt,fi, nococonv,mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
-                                1.0,results,exMat)
+                                1.0,results,cmt_nk,exMat)
 
             DEALLOCATE(indx_sest)
 
