@@ -51,7 +51,7 @@ CONTAINS
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
       call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                 ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                 ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                 ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
@@ -61,7 +61,7 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv
 
    subroutine wavefproducts_inv_IS(fi, jsp, lapw, ik, iq, bandoi, bandof, g_t, hybdat, mpdata, &
-                                   nococonv, ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                   nococonv, ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       implicit NONE
       type(t_fleurinput), intent(in):: fi
@@ -76,7 +76,7 @@ CONTAINS
       INTEGER, INTENT(IN)      :: ikqpt
 
       ! - arrays -
-      complex, intent(inout)   :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)   :: c_phase_kqpt(hybdat%nbands(ikqpt))
 
       ! - local scalars -
       INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm, psize, b_idx
