@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, mat_ex)
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, cmt_nk, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -101,6 +101,8 @@ CONTAINS
       INTEGER, INTENT(IN)    ::  n_q(:)
       INTEGER, INTENT(IN)    ::  nsest(:)
       INTEGER, INTENT(IN)    ::  indx_sest(:, :)
+
+      complex, intent(in)    :: cmt_nk(:,:,:)
 
       REAL, INTENT(IN)    ::  eig_irr(:, :)
       REAL, INTENT(IN)    ::  wl_iks(:, :)
@@ -170,9 +172,11 @@ CONTAINS
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik))
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
+                                      hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             ELSE
-               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod_vv)
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
+                                        hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             END IF
 
             cnt_read_z = cnt_read_z - 1

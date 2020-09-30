@@ -74,7 +74,7 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, lapw, nococonv, zmat, c_phase, jsp, &
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, lapw, nococonv, zmat, cmt, jsp, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       USE m_olap
@@ -98,7 +98,7 @@ CONTAINS
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
-      complex, intent(in)              :: c_phase(hybdat%nbands(nk))
+      COMPLEX , intent(in)             :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
       INTEGER, INTENT(IN)              :: rrot(:, :, :)
       INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(INOUT)           :: parent(fi%kpts%nkptf)
@@ -133,7 +133,6 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX                         :: carr1(hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
@@ -248,9 +247,6 @@ CONTAINS
          WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
       END DO
 #endif
-      ! read in cmt and z at current k-point (nk)
-      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                          fi%sym, fi%oned, zmat, jsp, nk, c_phase, cmt)
 
       IF(allocated(olapmt)) deallocate(olapmt)
       allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:fi%atoms%lmaxd, fi%atoms%ntype), stat=ok)

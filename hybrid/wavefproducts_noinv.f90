@@ -2,7 +2,7 @@ module m_wavefproducts_noinv
    USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod)
+   SUBROUTINE wavefproducts_noinv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod)
       USE m_types
       use m_juDFT
       use m_wavefproducts_aux
@@ -22,9 +22,10 @@ CONTAINS
       INTEGER, INTENT(IN)        ::  ik, iq, jsp, bandoi, bandof
       INTEGER, INTENT(INOUT)     ::  ikqpt
 
+      complex, intent(in)  :: cmt_nk(:,:,:)
+
       INTEGER              :: g_t(3), psize
       REAL                 :: kqpt(3), kqpthlp(3)
-      complex              :: c_phase_k(hybdat%nbands(ik))
       complex, allocatable :: c_phase_kqpt(:)
       type(t_mat)          :: z_kqpt_p, cprod_tmp
 
@@ -51,18 +52,18 @@ CONTAINS
                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       ! call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-      !                             ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !                             ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
 
       call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
-                                  jsp, ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                  jsp, ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
 
       call timestop("wavefproducts_noinv")
 
    END SUBROUTINE wavefproducts_noinv
 
    subroutine wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-                                     ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                     ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
@@ -82,7 +83,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  ikqpt
 
 !     - arrays -
-      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2, iob, iband, ok
@@ -218,7 +219,7 @@ CONTAINS
    end subroutine wavefproducts_noinv_IS
 
    subroutine wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, jsp, ikqpt, &
-                                     z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                     z_k_p, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
       use m_types
       USE m_constants
       use m_io_hybinp
@@ -238,8 +239,9 @@ CONTAINS
       INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
-      complex, intent(in)     :: c_phase_k(hybdat%nbands(ik))
       complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
+
+      complex, intent(in)    :: cmt_nk(:,:,:)
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
@@ -255,7 +257,6 @@ CONTAINS
 
       COMPLEX, allocatable    ::  carr(:,:)
       COMPLEX                 ::  cmt_ikqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
-      COMPLEX                 ::  cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
       allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
@@ -272,8 +273,8 @@ CONTAINS
       call timestop("set lmstart")
 
       ! read in cmt coefficients from direct access file cmt
-      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                    fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, cmt_nk)
+      ! call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+      !               fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, cmt_nk)
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 

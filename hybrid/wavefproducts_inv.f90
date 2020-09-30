@@ -13,7 +13,7 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cprod)
+   SUBROUTINE wavefproducts_inv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod)
       IMPLICIT NONE
       type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata
@@ -27,6 +27,7 @@ CONTAINS
       ! - scalars -
       INTEGER, INTENT(IN)      :: jsp, ik, iq, bandoi, bandof
       INTEGER, INTENT(INOUT)   :: ikqpt
+      complex, intent(in)  :: cmt_nk(:,:,:)
 
 
       ! - local scalars -
@@ -34,7 +35,7 @@ CONTAINS
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       type(t_mat) ::  z_kqpt_p
-      complex, allocatable :: c_phase_k(:), c_phase_kqpt(:)
+      complex, allocatable :: c_phase_kqpt(:)
 
       CALL timestart("wavefproducts_inv5")
       cprod%data_r = 0.0
@@ -46,7 +47,6 @@ CONTAINS
 
       ! determine number of kqpt
       ikqpt = fi%kpts%get_nk(kqpt)
-      allocate (c_phase_k(hybdat%nbands(ik)))
       allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(ikqpt))))
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
@@ -54,7 +54,7 @@ CONTAINS
                                  ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
@@ -183,7 +183,7 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                   ikqpt, z_k_p, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                   ikqpt, z_k_p, z_kqpt_p, c_phase_kqpt, ccmt_nk, cprod)
       use m_calc_cmt
       implicit NONE
       type(t_fleurinput), intent(in):: fi
@@ -199,7 +199,7 @@ CONTAINS
       INTEGER, INTENT(IN)      :: ikqpt
 
       ! - arrays -
-      complex, intent(in)        :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(in)        :: c_phase_kqpt(hybdat%nbands(ikqpt)), ccmt_nk(:,:,:)
 
       ! - local scalars -
       INTEGER                 ::    i, iband, psize, iob
@@ -224,7 +224,7 @@ CONTAINS
       REAL, allocatable       ::    rarr2(:,:),rarr3(:,:,:)
 
       COMPLEX                 ::    cmplx_exp(fi%atoms%nat), cexp_nk(fi%atoms%nat)
-      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :), ccmt_nk2(:, :, :)
+      COMPLEX, ALLOCATABLE    ::    ccmt_nk2(:, :, :)
       COMPLEX, ALLOCATABLE    ::    ccmt_nkqpt(:, :, :)
 
 
@@ -243,14 +243,13 @@ CONTAINS
 
       ! read in cmt coefficient at k-point ik
       !ccmt_nkqpt(input%neig, hybdat%maxlmindx, fi%atoms%nat), &
-      allocate (ccmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
-                ccmt_nk2(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
+      allocate (ccmt_nk2(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
                 ccmt_nkqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat), &
                 source=cmplx(0.0, 0.0), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
 
-      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                    fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, ccmt_nk)
+      ! call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+      !               fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, ccmt_nk)
 
       !read in cmt coefficients at k+q point
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
@@ -329,7 +328,7 @@ CONTAINS
 
          END DO
       END DO
-      deallocate (ccmt_nk, ccmt_nkqpt)
+      deallocate (ccmt_nkqpt)
 
       lm_0 = 0
       lm_00 = 0
