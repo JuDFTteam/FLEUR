@@ -120,10 +120,9 @@ CONTAINS
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
 
       nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
-      call z_kqpt%alloc(z_k%l_real, nbasfcn, fi%input%neig)
+      call z_kqpt%alloc(z_k%l_real, nbasfcn, hybdat%nbands(ikqpt))
       call z_kqpt_p%init(z_kqpt)
       
-
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
 

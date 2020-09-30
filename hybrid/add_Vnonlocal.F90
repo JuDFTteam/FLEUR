@@ -99,7 +99,7 @@ CONTAINS
          enddo
       endif
 
-      CALL z%init(hmat%l_real, nbasfcn, fi%input%neig)
+      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk))
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
 
 #ifdef CPP_MPI

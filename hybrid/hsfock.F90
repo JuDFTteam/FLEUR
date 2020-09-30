@@ -118,7 +118,7 @@ CONTAINS
       parent = 0
 
       nbasfcn = lapw%hyb_num_bas_fun(fi)
-      call z_k%init(fi%sym%invs, nbasfcn, fi%input%neig)
+      call z_k%init(fi%sym%invs, nbasfcn, hybdat%nbands(nk))
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)  
 #ifdef CPP_MPI

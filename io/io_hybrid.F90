@@ -14,7 +14,7 @@ module m_io_hybinp
    !public:: open_hybinp_io,read_cmt,write_cmt
 contains
    subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
-                     jsp, z_out, parent_z, c_phase, list)
+                     jsp, z_out, parent_z, c_phase, p_list)
       USE m_eig66_io
       use m_types
       use m_trafo
@@ -32,25 +32,30 @@ contains
 
       type(t_mat), intent(inout), target, optional :: parent_z
       complex, intent(inout), optional             :: c_phase(:)
-      integer, intent(in), optional                :: list(:)
+      integer, intent(in), optional                :: p_list(:)
 
       INTEGER              :: ikp, iop, i
       type(t_mat), pointer :: ptr_mat
       type(t_mat), target  :: tmp_mat
-      complex              :: cmt(input%neig,hybdat%maxlmindx,atoms%nat)
-      complex              :: cmthlp(input%neig,hybdat%maxlmindx,atoms%nat)
       type(t_lapw)         :: lapw_ik, lapw_ikp
-
-      cmt=0;cmthlp=0
+      integer, allocatable :: list(:)
 
       call timestart("read_z")
 
+      if(present(p_list)) then 
+         list = p_list 
+      else
+         list = [(i, i=1,hybdat%nbands(ik))]
+      endif
+
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=list)
-         z_out%matsize2 = hybdat%nbands(ik)
+         if(size(list) /= z_out%matsize2) then
+            write (*,*)  size(list), z_out%matsize1, z_out%matsize2
+            call judft_error("this doesn't match")
+         endif
          if(present(parent_z)) then
             call parent_z%copy(z_out,1,1)
-            parent_z%matsize2=z_out%matsize2
          endif
       else
          if(present(parent_z)) then
@@ -63,12 +68,17 @@ contains
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=list)
-         ptr_mat%matsize2 = hybdat%nbands(ik)
-
+         if(size(list) /= ptr_mat%matsize2) then
+            write (*,*) "list:", size(list)
+            write (*,*) "ptr_mat", ptr_mat%matsize1, ptr_mat%matsize2
+            write (*,*) "z_out", z_out%matsize1, z_out%matsize2
+            call judft_error("this doesn't match ptr mat")
+         endif 
+         
          CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
          CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
          call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, input, &
-                                  hybdat%nbands(ikp), lapw_ikp, lapw_ik, z_out, &
+                                  size(list), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
       endif
       call timestop("read_z")
