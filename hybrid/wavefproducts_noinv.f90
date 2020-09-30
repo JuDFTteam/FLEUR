@@ -256,11 +256,14 @@ CONTAINS
       INTEGER                 ::  lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
       COMPLEX, allocatable    ::  carr(:,:)
-      COMPLEX                 ::  cmt_ikqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
+      COMPLEX, allocatable    ::  cmt_ikqpt(:,:,:)
 
       call timestart("wavefproducts_noinv5 MT")
       allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
+
+      allocate(cmt_ikqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), stat=ok, source=cmplx_0)
+      if(ok /= 0) call juDFT_error("alloc cmt_ikqpt")
       
       psize = bandof-bandoi+1
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)

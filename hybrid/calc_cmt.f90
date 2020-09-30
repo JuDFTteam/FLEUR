@@ -45,7 +45,7 @@ contains
       call timestart("calc_cmt")
 
       ikp = kpts%bkp(ik)
-      nbands = hybdat%nbands(ikp)
+      nbands = zmat_ikp%matsize2
 
       allocate(acof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1))
       allocate(bcof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2))

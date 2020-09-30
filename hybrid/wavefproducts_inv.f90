@@ -220,7 +220,7 @@ CONTAINS
       INTEGER                 ::    lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
       REAL                    ::    cmt_nk(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat)
-      REAL                    ::    cmt_nkqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
+      REAL, allocatable       ::    cmt_nkqpt(:,:,:)
       REAL, allocatable       ::    rarr2(:,:),rarr3(:,:,:)
 
       COMPLEX                 ::    cmplx_exp(fi%atoms%nat), cexp_nk(fi%atoms%nat)
@@ -244,9 +244,11 @@ CONTAINS
       ! read in cmt coefficient at k-point ik
       !ccmt_nkqpt(input%neig, hybdat%maxlmindx, fi%atoms%nat), &
       allocate (ccmt_nk2(hybdat%nbands(ik), hybdat%maxlmindx, fi%atoms%nat), &
-                ccmt_nkqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat), &
+                ccmt_nkqpt(psize, hybdat%maxlmindx, fi%atoms%nat), &
                 source=cmplx(0.0, 0.0), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
+      allocate(cmt_nkqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), source=0.0, stat=ok)
+      if (ok /= 0) call juDFT_error("error allocating cmt_nkqpt")
 
       !read in cmt coefficients at k+q point
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
