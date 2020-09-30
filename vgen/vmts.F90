@@ -185,7 +185,7 @@ contains
       deallocate( il, kl )
     end if
 
-    if ( potdenType /= POTDEN_TYPE_POTYUK) then
+    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
       do n = 1, atoms%ntype
         vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
       end do

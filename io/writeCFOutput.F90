@@ -38,9 +38,12 @@ MODULE m_writeCFOutput
       REAL,    ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
       REAL :: n_0(fi%atoms%jmtd)
 
+      !Dummy variables to avoid accidental changes to them in vgen
       TYPE(t_results)   :: results_dummy
       TYPE(t_nococonv)  :: nococonv_dummy
       TYPE(t_atoms)     :: atoms_dummy
+
+      !Modified densities and potentials for crystalfield
       TYPE(t_potden)    :: inDenCF
       TYPE(t_potden)    :: vCF,vCoul,vx
 
@@ -88,8 +91,7 @@ MODULE m_writeCFOutput
          ENDIF
 
          IF(fi%atoms%l_outputCFpot(iType)) THEN
-            !Run vgen again to obtain the right potential
-
+            !Run vgen again to obtain the right potential (without external and 4f)
             inDenCF = inDen
             atoms_dummy = fi%atoms
 
@@ -98,6 +100,7 @@ MODULE m_writeCFOutput
                DO ispin = 1, fi%input%jspins
                   inDenCF%mt(:,0,iType,ispin) = inDenCF%mt(:,0,iType,ispin) - hub1data%cdn_atomic(:,lcf,iType,ispin)
                ENDDO
+               !Remove the same amount of protons from the core to keep everything charge neutral for vgen
                atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - NINT(n_0Norm*sfp_const*atoms_dummy%neq(iType))
             ENDIF
 
