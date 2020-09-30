@@ -59,7 +59,7 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, mat_ex)
 
       USE m_wrapper
@@ -104,7 +104,6 @@ CONTAINS
 
       REAL, INTENT(IN)    ::  eig_irr(:, :)
       REAL, INTENT(IN)    ::  wl_iks(:, :)
-      complex, intent(in) :: c_phase_k(hybdat%nbands(k_pack%nk))
 
       ! local scalars
       INTEGER                 ::  iband, jband, iband1, jq, iq

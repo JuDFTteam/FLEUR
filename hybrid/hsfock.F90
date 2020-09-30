@@ -119,6 +119,8 @@ CONTAINS
       call z_k%init(fi%sym%invs, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)    
+      ! call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+      !              fi%sym, fi%oneD, z_k, jsp, nk, c_phase_k, cmt_nk)
 #ifdef CPP_MPI
       call timestart("Post read_z Barrier: hsfock")
       call MPI_Barrier(MPI_COMM_WORLD, ok)
@@ -141,7 +143,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))

@@ -556,7 +556,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
+            CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, mpdata,jspin,hybdat,lapw,&
                                      eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
                                      fmpi,exMat)
             CALL exchange_vccv1(ikpt,fi, nococonv,mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
