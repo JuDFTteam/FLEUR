@@ -248,9 +248,6 @@ CONTAINS
                 source=cmplx(0.0, 0.0), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt_nkqpt')
 
-      ! call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-      !               fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, ccmt_nk)
-
       !read in cmt coefficients at k+q point
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, ccmt_nkqpt)

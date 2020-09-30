@@ -273,8 +273,6 @@ CONTAINS
       call timestop("set lmstart")
 
       ! read in cmt coefficients from direct access file cmt
-      ! call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-      !               fi%sym, fi%oneD, z_k_p, jsp, ik, c_phase_k, cmt_nk)
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
