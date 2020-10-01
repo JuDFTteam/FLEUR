@@ -14,19 +14,23 @@ MODULE m_ptdos
 
    CONTAINS
 
-   SUBROUTINE ptdos(jspins,kpts,eGrid,ev,qal,g)
+   SUBROUTINE ptdos(jspins,kpts,eGrid,eig,qal,g,energyShift)
 
       INTEGER,       INTENT(IN)  :: jspins
       TYPE(t_kpts),  INTENT(IN)  :: kpts
       REAL,          INTENT(IN)  :: qal(:,:,:)  !(nbands,nkpt,jspins)
       REAL,          INTENT(IN)  :: eGrid(:)
-      REAL,          INTENT(IN)  :: ev(:,:,:)   !(nbands,nkpt,jspins)
+      REAL,          INTENT(IN)  :: eig(:,:,:)   !(nbands,nkpt,jspins)
       REAL,          INTENT(OUT) :: g(:,:)      !(ne,jspins)
+      REAL, OPTIONAL, INTENT(IN) :: energyShift
 
       INTEGER :: iBand,itria,iGrid,ispin
       INTEGER :: ind(3),k(3)
-      REAL    :: sfac,fa
+      REAL    :: sfac,fa,shift
       REAL    :: ei(3)
+
+      shift = 0.0
+      IF(PRESENT(energyShift)) shift = energyShift
 
       !Spin-degeneracy factor
       sfac = 2.0*(3.0-jspins)
@@ -36,12 +40,12 @@ MODULE m_ptdos
          DO itria = 1 , kpts%ntet
             fa = sfac*kpts%voltet(itria)/kpts%ntet
             k = kpts%ntetra(:,itria)
-            DO iBand = 1 , SIZE(ev,1)
+            DO iBand = 1 , SIZE(eig,1)
                !---------------------------
                !eigenvalues at the corners
                !of the current triangle
                !---------------------------
-               ei = ev(iBand,k,ispin)
+               ei = eig(iBand,k,ispin) - shift
 
                !sort in ascending order
                ind = tetsrt(ei)
