@@ -28,7 +28,7 @@ module m_work_package
    end type t_k_package 
 
    type t_work_package 
-      integer :: rank, size, n_kpacks
+      integer :: rank, size, n_kpacks, max_kpacks
       type(t_k_package), allocatable :: k_packs(:)
       type(t_hybmpi) :: submpi
    contains
@@ -186,22 +186,24 @@ contains
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
       integer, intent(in)                  :: jsp
-      integer :: k_cnt, i, min_nk, max_nk, ierr
+      integer :: k_cnt, i, ierr
       
       if(work_pack%rank < modulo(fi%kpts%nkpt, work_pack%size)) then
          work_pack%n_kpacks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
       else 
          work_pack%n_kpacks = floor(1.0*fi%kpts%nkpt / work_pack%size)
       endif
+      allocate(work_pack%k_packs(work_pack%n_kpacks))
 
 #ifdef CPP_MPI
-      call MPI_AllReduce(work_pack%n_kpacks, min_nk, 1, MPI_INTEGER, MPI_MIN, MPI_COMM_WORLD, ierr)
-      call MPI_AllReduce(work_pack%n_kpacks, max_nk, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+      call MPI_AllReduce(work_pack%n_kpacks, work_pack%max_kpacks, 1, MPI_INTEGER, MPI_MIN, MPI_COMM_WORLD, ierr)
 #else    
-      min_nk = 0; max_nk = 0;
+      work_pack%max_kpacks = work_pack%n_kpacks
 #endif
-      if(min_nk /= max_nk) call judft_warn("Your parallization is not efficient. Make sure that nkpts%pe == 0 or nkpts <= pe")
-      allocate(work_pack%k_packs(work_pack%n_kpacks))
+      if(work_pack%n_kpacks /= work_pack%max_kpacks) then
+         call judft_warn("Your parallization is not efficient. Make sure that nkpts%pe == 0 or nkpts <= pe")
+      endif 
+
       
       ! get my k-list
       k_cnt = 1
