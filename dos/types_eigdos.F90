@@ -134,23 +134,23 @@ subroutine write_dos(eigdos,hdf_id)
 #else
     integer,intent(in):: hdf_id !not used
     integer:: jspin,i,ind,id
-    character(len=100)::file
+    character(len=100)::filename
     real,allocatable:: dos_grid(:)
 
     if (.not.allocated(eigdos%dos)) return
     if (size(eigdos%dos)==0) return
 
     DO jspin=1,size(eigdos%dos,2)
-      write(file,"(a,a,i0)") trim(eigdos%name_of_dos),".",jspin
-      open(999,file=file)
+      write(filename,"(a,a,i0)") trim(eigdos%name_of_dos),".",jspin
+      open(999,file=filename)
       write(999,"(999a21)") "#energy",(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
-      write(*,"(999a21)") file,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
+      write(*,"(999a21)") filename,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
       dos_grid=eigdos%get_dos_grid()
       DO i=1,size(dos_grid)
         write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id),id=1,eigdos%get_num_weights())
       ENDDO
       close(999)
-      write(*,*) "done:",file
+      write(*,*) "done:",filename
     ENDDO
 #endif
   END subroutine
@@ -250,13 +250,13 @@ subroutine write_dos(eigdos,hdf_id)
       SELECT CASE(input%bz_integration)
 
       CASE(BZINT_METHOD_HIST, BZINT_METHOD_GAUSS)
-        call dos_bin(input%jspins,kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        call dos_bin(input%jspins,kpts%wtkpt,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n),efermi)
       CASE(BZINT_METHOD_TRIA)
         IF(input%film) THEN
-          CALL ptdos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+          CALL ptdos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n),efermi)
         ELSE
           CALL tetra_dos(input%jspins,kpts,eigdos%dos_grid,eigdos%get_neig(),eigdos%get_eig(),&
-                         eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+                         eigdos%get_weight_eig(n),eigdos%dos(:,:,n),efermi)
         ENDIF
       CASE(BZINT_METHOD_TETRA)
         CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))

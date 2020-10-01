@@ -40,6 +40,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    USE m_bfgs_b2
    USE m_xmlOutput
    USE m_types_dos
+   use m_calc_cmt
 
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -78,7 +79,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    type(t_work_package)                 :: work_pack
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, na, itype, lh, iGrid
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
-   INTEGER                              :: nsymop, ikptf, iterHF
+   INTEGER                              :: nsymop, ikptf, iterHF, ierr
    INTEGER                              :: iState, jState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
    INTEGER                              :: lastGroupEnd, currentGroupEnd
@@ -133,6 +134,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    INTEGER, ALLOCATABLE                 :: parent(:)
    INTEGER, ALLOCATABLE                 :: pointer_EIBZ(:)
    INTEGER, ALLOCATABLE                 :: n_q(:)
+   complex, allocatable                 :: cmt_nk(:,:,:)
 
    LOGICAL, ALLOCATABLE                 :: enabledConstraints(:)
    type(t_hybmpi)    :: glob_mpi
@@ -547,6 +549,10 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
             if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
             call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
+            allocate(cmt_nk(hybdat%nbands(ikpt), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
+            if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
+            call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+                        fi%sym, fi%oneD, zMat, jsp, ikpt, c_phase, cmt_nk)
 
             ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
             indx_sest = 0
@@ -556,11 +562,12 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
-            CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, c_phase,mpdata,jspin,hybdat,lapw,&
+            CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, mpdata,jspin,hybdat,lapw,&
                                      eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
-                                     fmpi,exMat)
+                                     fmpi, cmt_nk, exMat)
+            deallocate(cmt_nk)
             CALL exchange_vccv1(ikpt,fi, nococonv,mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
-                                1.0,results,exMat)
+                                1.0,results,cmt_nk,exMat)
 
             DEALLOCATE(indx_sest)
 

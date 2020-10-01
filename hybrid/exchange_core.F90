@@ -23,7 +23,7 @@ MODULE m_exchange_core
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, lapw, submpi,&
-                             nsymop, nsest, indx_sest, a_ex, results, mat_ex)
+                             nsymop, nsest, indx_sest, a_ex, results, cmt, mat_ex)
       use m_juDFT
       USE m_types
       USE m_constants
@@ -50,7 +50,7 @@ CONTAINS
       REAL, INTENT(IN)         ::  a_ex
       !     - arays -
       INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
-
+      complex, intent(in)      :: cmt(:,:,:)
 
       TYPE(t_mat), INTENT(INOUT):: mat_ex
       !     - local scalars -
@@ -70,28 +70,16 @@ CONTAINS
       REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
 
-      COMPLEX                 ::  cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
       complex                 :: c_phase(hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
-      type(t_mat)             :: zmat, integral, carr, tmp, dot_result, exchange
+      type(t_mat)             :: integral, carr, tmp, dot_result, exchange, zcmt
 
       complex, external   :: zdotc
 
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
-      CALL zmat%init(fi%sym%invs, nbasfcn, fi%input%neig)
       
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, fi%kpts%bkp(nk), jsp, zmat, c_phase=c_phase)
-#ifdef CPP_MPI 
-      call timestart("post read_z barrier core")
-      call MPI_Barrier(MPI_COMM_WORLD, ierr) 
-      call timestop("post read_z barrier core")
-#endif
-      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco,nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                          fi%sym, fi%oneD, zmat, jsp, nk, c_phase, cmt)
-      call zmat%free()
-
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk), hybdat%nbands(nk))
 
       allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))

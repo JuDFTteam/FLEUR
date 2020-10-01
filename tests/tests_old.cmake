@@ -1,7 +1,7 @@
 enable_testing()
 
 set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
-    Fe_bctXML  PTOXML Fe_1l_SOCXML
+    Fe_bctXML  PTOXML Fe_1l_SOCXML CuBandXML CuDOSXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO
@@ -41,7 +41,7 @@ set(FFNTests
 
 
 if (FLEUR_USE_HDF5)
-    set(SerialParallelTests ${SerialParallelTests} CuBandXML CuDOSXML CrystalFieldOutput ${FFNTests})
+    set(SerialParallelTests ${SerialParallelTests} CrystalFieldOutput ${FFNTests})
 endif()
 
 #Check if all tests (including those running for a long time) should be executed

@@ -67,7 +67,7 @@ CONTAINS
    end function outer_prod
 
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-      ikqpt, z_k, c_phase_k, z_kqpt_p, c_phase_kqpt, cprod)
+      ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
       !$ use omp_lib
       use m_types
       use m_constants
@@ -91,7 +91,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
       INTEGER, INTENT(IN)      ::  ikqpt
       !     - arrays -
-      complex, intent(inout)    :: c_phase_k(hybdat%nbands(ik)), c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
       
       complex, allocatable  :: prod(:), psi_k(:,:)
       

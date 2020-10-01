@@ -60,6 +60,7 @@ CONTAINS
       use m_work_package
       USE m_eig66_data
       use m_eig66_mpi
+      use m_calc_cmt
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -91,14 +92,15 @@ CONTAINS
 
       ! local arrays
       INTEGER                 ::  nsest(hybdat%nbands(k_pack%nk )), indx_sest(hybdat%nbands(k_pack%nk ), hybdat%nbands(k_pack%nk ))
-      INTEGER                 ::  rrot(3, 3, fi%sym%nsym)
+      INTEGER                 ::  rrot(3, 3, fi%sym%nsym), ierr
       INTEGER                 ::  psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
 
-      INTEGER, ALLOCATABLE     ::  parent(:)
-      INTEGER, ALLOCATABLE     ::  n_q(:)
+      INTEGER, ALLOCATABLE    :: parent(:)
+      INTEGER, ALLOCATABLE    :: n_q(:)
+      complex, allocatable    :: cmt_nk(:,:,:) 
 
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
-      REAL                     ::  wl_iks(fi%input%neig, fi%kpts%nkptf)
+      REAL                     :: wl_iks(fi%input%neig, fi%kpts%nkptf)
       TYPE(t_mat)              :: ex, z_k
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
 
@@ -118,16 +120,21 @@ CONTAINS
       nbasfcn = lapw%hyb_num_bas_fun(fi)
       call z_k%init(fi%sym%invs, nbasfcn, fi%input%neig)
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
-                   c_phase=c_phase_k)    
+                   c_phase=c_phase_k)  
 #ifdef CPP_MPI
       call timestart("Post read_z Barrier: hsfock")
       call MPI_Barrier(MPI_COMM_WORLD, ok)
       call timestop("Post read_z Barrier: hsfock")
-#endif
+#endif  
+      allocate(cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
+      if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
+      call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
+                   fi%sym, fi%oneD, z_k, jsp, nk, c_phase_k, cmt_nk)
+
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, lapw, nococonv, z_k, c_phase_k, jsp, &
+      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, lapw, nococonv, z_k, cmt_nk, jsp, &
                    rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks
@@ -141,8 +148,8 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(k_pack, fi, z_k, c_phase_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, ex)
+      CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, cmt_nk, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
@@ -153,7 +160,7 @@ CONTAINS
          call judft_error('HSE not implemented in hsfock')
       ELSE
          CALL exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, &
-                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, ex)
+                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, ex)
 
          if(k_pack%submpi%root()) then
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
@@ -165,7 +172,6 @@ CONTAINS
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
-      call hybdat%v_x(nk,jsp)%bcast(0, k_pack%submpi%comm)
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
