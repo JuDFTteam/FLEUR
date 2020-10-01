@@ -178,12 +178,15 @@ contains
    end subroutine t_k_package_print
 
    subroutine split_into_work_packages(work_pack, fi, hybdat, jsp)
+#ifdef CPP_MPI
+      use mpi 
+#endif
       implicit none 
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
       integer, intent(in)                  :: jsp
-      integer :: k_cnt, i 
+      integer :: k_cnt, i, min_nk, max_nk, ierr
       
       if(work_pack%rank < modulo(fi%kpts%nkpt, work_pack%size)) then
          work_pack%n_kpacks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
@@ -191,6 +194,13 @@ contains
          work_pack%n_kpacks = floor(1.0*fi%kpts%nkpt / work_pack%size)
       endif
 
+#ifdef CPP_MPI
+      call MPI_AllReduce(work_pack%n_kpacks, min_nk, 1, MPI_INTEGER, MPI_MIN, MPI_COMM_WORLD, ierr)
+      call MPI_AllReduce(work_pack%n_kpacks, max_nk, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+#else    
+      min_nk = 0; max_nk = 0;
+#endif
+      if(min_nk /= max_nk) call judft_warn("Your parallization is not efficient. Make sure that nkpts%pe == 0 or nkpts <= pe")
       allocate(work_pack%k_packs(work_pack%n_kpacks))
       
       ! get my k-list
