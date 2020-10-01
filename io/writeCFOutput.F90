@@ -78,7 +78,8 @@ MODULE m_writeCFOutput
                CALL writeCFcdn(cfFileID, fi%atoms, iType, n_0)
 #else
                !Stupid text output
-               OPEN(unit=29,file='n4f.'//int2str(iType)//'.dat',status='replace',action='write',iostat=io_error)
+               OPEN(unit=29,file='n4f.'//int2str(iType)//'.dat',status='replace',&
+                    action='write',iostat=io_error)
                IF(io_error/=0) CALL juDFT_error("IO error", calledby="writeCFOutput")
                DO iGrid = 1, fi%atoms%jri(iType)
                   WRITE(29,'(2e20.8)') fi%atoms%rmsh(iGrid,iType), n_0(iGrid)

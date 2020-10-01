@@ -1,0 +1,11 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+
+jt::testrun("$executable ",$workdir);
+
+#Check that the ouput for crystalfield calculations is written
+$result =jt::test_fileexists("$workdir/out");
+$result+=jt::test_fileexists("$workdir/CFdata.hdf");
+
+jt::stageresult($workdir,$result,"1");

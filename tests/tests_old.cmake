@@ -41,7 +41,7 @@ set(FFNTests
 
 
 if (FLEUR_USE_HDF5)
-    set(SerialParallelTests ${SerialParallelTests} CuBandXML CuDOSXML ${FFNTests})
+    set(SerialParallelTests ${SerialParallelTests} CuBandXML CuDOSXML CrystalFieldOutput ${FFNTests})
 endif()
 
 #Check if all tests (including those running for a long time) should be executed
