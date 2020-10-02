@@ -118,7 +118,7 @@ MODULE m_greensfPostProcess
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,input,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
+      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 

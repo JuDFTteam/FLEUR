@@ -22,7 +22,7 @@ MODULE m_exchange_core
 #endif
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, lapw, submpi,&
+   SUBROUTINE exchange_vccv1(nk, fi, mpdata, hybdat, jsp, lapw, submpi,&
                              nsymop, nsest, indx_sest, a_ex, results, cmt, mat_ex)
       use m_juDFT
       USE m_types
@@ -39,7 +39,6 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)     :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_mpdata), intent(in)     :: mpdata
-      type(t_nococonv), intent(in)   :: nococonv
       TYPE(t_lapw), INTENT(IN)       :: lapw
       type(t_hybmpi), intent(in)     :: submpi
 
@@ -54,12 +53,11 @@ CONTAINS
 
       TYPE(t_mat), INTENT(INOUT):: mat_ex
       !     - local scalars -
-      INTEGER                 ::  iatom, ieq, itype, ic, l, l1, l2
+      INTEGER                 ::  iatom, itype, l, l1, l2
       INTEGER                 ::  ll, lm, m1, m2, p1, p2, n, n1, n2, nn2, i, j
       INTEGER                 ::  m
 
       REAL                    ::  rdum
-      REAL                    ::  sum_offdia
 
       !     - local arrays -
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
@@ -70,9 +68,8 @@ CONTAINS
       REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
 
-      complex                 :: c_phase(hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
-      type(t_mat)             :: integral, carr, tmp, dot_result, exchange, zcmt
+      type(t_mat)             :: integral, carr, tmp, dot_result, exchange
 
       complex, external   :: zdotc
 

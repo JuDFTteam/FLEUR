@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, cmt_nk, mat_ex)
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
 
       USE m_wrapper
       USE m_trafo
@@ -82,7 +82,6 @@ CONTAINS
       type(t_mat), intent(in)           :: z_k
       TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
-      TYPE(t_mpi), INTENT(IN)           :: fmpi
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       TYPE(t_lapw), INTENT(IN)          :: lapw
@@ -108,16 +107,16 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:, :)
 
       ! local scalars
-      INTEGER                 ::  iband, jband, iband1, jq, iq
+      INTEGER                 ::  iband, jq, iq
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
-      INTEGER                 ::  n1, n2, nn2, cnt_read_z
+      INTEGER                 ::  n1, n2, nn2
       INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
       REAL, SAVE             ::  divergence
 
-      COMPLEX                 ::  cdum, cdum2
+      COMPLEX                 ::  cdum2
       COMPLEX                 ::  exch0
 
       LOGICAL, SAVE           ::  initialize = .true.
@@ -126,14 +125,13 @@ CONTAINS
       COMPLEX              :: exchcorrect(fi%kpts%nkptf)
       COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk), 3)
       COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk))
-      COMPLEX              :: hessian(3, 3), ctmp
+      COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL                 :: kqpt(3), kqpthlp(3),  rtmp
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
-      character(len=300)   :: errmsg
+
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
@@ -153,9 +151,7 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
-#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
-      cnt_read_z = predict_max_read_z(fi, hybdat, jsp)
-#endif
+      
       DO jq = 1, fi%kpts%EIBZ(ik)%nkpt
          iq = k_pack%q_packs(jq)%ptr
          iq_p = fi%kpts%bkp(iq)
@@ -178,8 +174,6 @@ CONTAINS
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
                                         hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             END IF
-
-            cnt_read_z = cnt_read_z - 1
 
             ! The sparse matrix technique is not feasible for the HSE
             ! functional. Thus, a dynamic adjustment is implemented
@@ -206,7 +200,7 @@ CONTAINS
 
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv)
-               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, jsp, psize, phase_vv, cprod_vv, carr3_vv)
+               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, psize, phase_vv, cprod_vv, carr3_vv)
                call cprod_vv%copy(carr3_vv, 1, 1)
                call carr3_vv%free()
             ELSE
@@ -230,13 +224,15 @@ CONTAINS
                if (mat_ex%l_real) then
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        carr1_v%data_r(i, iob + psize*(iband - 1)) = carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
+                        carr1_v%data_r(i, iob + psize*(iband - 1)) &
+                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq))
                      enddo
                   enddo
                else
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        carr1_v%data_c(i, iob + psize*(iband - 1)) = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
+                        carr1_v%data_c(i, iob + psize*(iband - 1)) &
+                           = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
                      enddo
                   enddo
                endif
@@ -282,23 +278,7 @@ CONTAINS
          enddo
       END DO  !jq
 
-#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
-      call timestart("dangeling MPI_barriers")
-      do while (cnt_read_z > 0)
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         cnt_read_z = cnt_read_z - 1
-      enddo
-      call timestop("dangeling MPI_barriers")
-#endif
-      !call judft_error("stopit")
       call dot_result%free()
-
-!   WRITE(7001,'(a,i7)') 'ik: ', ik
-!   DO n1=1,hybdat%nbands(ik)
-!      DO n2=1,n1
-!         WRITE(7001,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
-!     END DO
-!   END DO
 
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 
@@ -458,7 +438,7 @@ CONTAINS
       expo = 5e-3
       rrad = sqrt(-log(5e-3)/expo)
       cdum = sqrt(expo)*rrad
-      divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
+      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
       rrad = rrad**2
       nkpt3 = kpts%calcNkpt3()
       kv1 = cell%bmat(1, :)/nkpt3(1)
@@ -502,12 +482,12 @@ CONTAINS
 
       INTEGER :: ikpt
       REAL, PARAMETER :: expo = 5e-3
-      REAL    :: rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2
+      REAL    :: rrad, k(3), knorm2
       COMPLEX :: cdum
 
       rrad = sqrt(-log(5e-3)/expo)
       cdum = sqrt(expo)*rrad
-      divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
+      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
       rrad = rrad**2
 
       do ikpt = 1, kpts%nkptf
@@ -548,36 +528,4 @@ CONTAINS
          enddo
       enddo
    end subroutine recombine_parts
-
-   function predict_max_read_z(fi, hybdat, jsp) result(max_count)
-      implicit none
-
-      type(t_fleurinput), intent(in) :: fi
-      type(t_hybdat), intent(in)     :: hybdat
-      integer, intent(in)            :: jsp
-
-      integer :: max_count
-      integer :: ik, iq, jq, ikqpt, n_parts, my_count
-      real    :: target_psize
-      max_count = 0
-      do ik = 1, fi%kpts%nkpt
-         !my_count = 0
-         DO jq = 1, fi%kpts%EIBZ(ik)%nkpt
-            iq = fi%kpts%EIBZ(ik)%pointer(jq)
-            ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
-            ! arrays should be less than 5 gb
-
-            if (fi%sym%invs) then
-               target_psize = 5e9/(8.0*maxval(hybdat%nbasm)*hybdat%nbands(ik))
-            else
-               target_psize = 5e9/(16.0*maxval(hybdat%nbasm)*hybdat%nbands(ik))
-            endif
-
-            n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
-            max_count = max_count + n_parts
-            ! my_count = my_count + n_parts
-         enddo
-         !max_count = max(max_count, my_count)
-      enddo
-   end function predict_max_read_z
 END MODULE m_exchange_valence_hf

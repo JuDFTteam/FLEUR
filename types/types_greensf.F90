@@ -65,6 +65,7 @@ MODULE m_types_greensf
          PROCEDURE       :: getRadialRadialSpin => getRadialRadialSpin_gf
          PROCEDURE       :: integrateOverMT     => integrateOverMT_greensf
          PROCEDURE       :: set                 => set_gf
+         PROCEDURE       :: rotate              => rotate_gf
          PROCEDURE       :: reset               => reset_gf
          PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
          PROCEDURE       :: checkEmpty          => checkEmpty_greensf
@@ -897,6 +898,103 @@ MODULE m_types_greensf
          ENDDO
 
       END SUBROUTINE set_gf
+
+      SUBROUTINE rotate_gf(this,sym,atoms)
+
+         !Applies the given symmetry operation to the greens function
+         CLASS(t_greensf),    INTENT(INOUT)  :: this
+         TYPE(t_sym),         INTENT(IN)     :: sym
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
+
+         INTEGER :: l,lp,iop,atomType,atomTypep,nspins
+         INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
+
+         IF(this%elem%representative_elem<0) RETURN !Nothing to be done
+
+         CALL timestart("Green's Function: Rotate")
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType = this%elem%atomType
+         atomTypep = this%elem%atomTypep
+         iop = this%elem%representative_op
+
+         nspins = 0
+         IF(ALLOCATED(this%gmmpMat)) nspins = SIZE(this%gmmpMat,4)
+         IF(ALLOCATED(this%uu)) nspins = SIZE(this%uu,4)
+
+         DO ipm = 1, 2
+            DO ispin = 1, nspins
+               DO iz = 1, this%contour%nz
+                  IF(ALLOCATED(this%gmmpMat)) THEN
+                     this%gmmpMat(iz,:,:,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                             this%gmmpMat(iz,:,:,ispin,ipm))
+                     this%gmmpMat(iz,:,:,ispin,ipm) = matmul(this%gmmpMat(iz,:,:,ispin,ipm),&
+                                                             sym%d_wgn(:,:,lp,iop))
+                  ELSE IF(ALLOCATED(this%uu)) THEN
+                     this%uu(iz,:,:,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                        this%uu(iz,:,:,ispin,ipm))
+                     this%uu(iz,:,:,ispin,ipm) = matmul(this%uu(iz,:,:,ispin,ipm),&
+                                                        sym%d_wgn(:,:,lp,iop))
+                     this%dd(iz,:,:,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                        this%dd(iz,:,:,ispin,ipm))
+                     this%dd(iz,:,:,ispin,ipm) = matmul(this%dd(iz,:,:,ispin,ipm),&
+                                                        sym%d_wgn(:,:,lp,iop))
+                     this%ud(iz,:,:,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                        this%ud(iz,:,:,ispin,ipm))
+                     this%ud(iz,:,:,ispin,ipm) = matmul(this%ud(iz,:,:,ispin,ipm),&
+                                                        sym%d_wgn(:,:,lp,iop))
+                     this%du(iz,:,:,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                        this%du(iz,:,:,ispin,ipm))
+                     this%du(iz,:,:,ispin,ipm) = matmul(this%du(iz,:,:,ispin,ipm),&
+                                                        sym%d_wgn(:,:,lp,iop))
+
+                     IF(ALLOCATED(this%uulo)) THEN
+                        iLO_ind = 0
+                        DO ilo = 1, atoms%nlo(atomType)
+                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                           iLO_ind = iLO_ind + 1
+                           this%uulo(iz,:,:,iLO_ind,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                                        this%uulo(iz,:,:,iLO_ind,ispin,ipm))
+                           this%uulo(iz,:,:,iLO_ind,ispin,ipm) = matmul(this%uulo(iz,:,:,iLO_ind,ispin,ipm),&
+                                                                        sym%d_wgn(:,:,lp,iop))
+                           this%dulo(iz,:,:,iLO_ind,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                                        this%dulo(iz,:,:,iLO_ind,ispin,ipm))
+                           this%dulo(iz,:,:,iLO_ind,ispin,ipm) = matmul(this%dulo(iz,:,:,iLO_ind,ispin,ipm),&
+                                                                        sym%d_wgn(:,:,lp,iop))
+                        ENDDO
+                        iLO_ind = 0
+                        DO ilo = 1, atoms%nlo(atomTypep)
+                           IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                           iLO_ind = iLO_ind + 1
+                           this%ulou(iz,:,:,iLO_ind,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                                        this%ulou(iz,:,:,iLO_ind,ispin,ipm))
+                           this%ulou(iz,:,:,iLO_ind,ispin,ipm) = matmul(this%ulou(iz,:,:,iLO_ind,ispin,ipm),&
+                                                                        sym%d_wgn(:,:,lp,iop))
+                           this%ulod(iz,:,:,iLO_ind,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                                        this%ulod(iz,:,:,iLO_ind,ispin,ipm))
+                           this%ulod(iz,:,:,iLO_ind,ispin,ipm) = matmul(this%ulod(iz,:,:,iLO_ind,ispin,ipm),&
+                                                                        sym%d_wgn(:,:,lp,iop))
+                        ENDDO
+                        iLO_ind = 0
+                        DO ilo = 1, atoms%nlo(atomType)
+                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                           iLOp_ind = 0
+                           DO ilop = 1, atoms%nlo(atomTypep)
+                              IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                              iLOp_ind = iLOp_ind + 1
+                              this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm) = matmul(conjg(transpose(sym%d_wgn(:,:,l,iop))),&
+                                                                                       this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm))
+                              this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm) = matmul(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm) ,&
+                                                                                       sym%d_wgn(:,:,lp,iop))
+                           ENDDO
+                        ENDDO
+                     ENDIF
+                  ENDIF
+               ENDDO
+            ENDDO
+         ENDDO
+         CALL timestart("Green's Function: Rotate")
+      END SUBROUTINE rotate_gf
 
       SUBROUTINE reset_gf(this)
 

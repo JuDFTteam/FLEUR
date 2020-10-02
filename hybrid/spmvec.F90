@@ -240,7 +240,7 @@ CONTAINS
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
       INTEGER             ::  ibasm
       INTEGER             ::  l, lm
-      INTEGER             ::  n, m, test_idx, iatom2, l1, idx_start, idx_stop
+      INTEGER             ::  n, m, iatom2, l1, idx_start, idx_stop
 
       ! - local arrays -
 
