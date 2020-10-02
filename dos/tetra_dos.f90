@@ -48,7 +48,7 @@ MODULE m_tetra_dos
       ALLOCATE(wpar,mold=qal)
       wpar = 0.0
 
-      sfac = 3.0 - 2.0*jspins
+      sfac = 2.0/jspins
 
       DO ispin = 1, jspins
          DO iBand = 1,SIZE(eig,1)

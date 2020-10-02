@@ -33,7 +33,7 @@ MODULE m_ptdos
       IF(PRESENT(energyShift)) shift = energyShift
 
       !Spin-degeneracy factor
-      sfac = 2.0*(3.0-jspins)
+      sfac = 2.0/jspins
 
       g = 0.0
       DO ispin = 1, jspins
@@ -91,8 +91,8 @@ MODULE m_ptdos
          IF ( e21.LT.tol ) RETURN
          e31 = ei(3) - ei(1)
          IF ( e31.LT.tol ) RETURN
-         dostet = ee/(e21*e31)*(q(1) &
-                                +0.5*(ee/e21*(q(2)-q(1)) &
+         dostet = ee/(e21*e31)*(2.0*q(1) &
+                                + (ee/e21*(q(2)-q(1)) &
                                 + ee/e31*(q(3)-q(1))))
       ELSE
          IF ( e.GT.ei(3) ) RETURN
@@ -103,7 +103,7 @@ MODULE m_ptdos
          IF ( e31.LT.tol ) RETURN
          e32 = ei(3) - ei(2)
          IF ( e32.LT.tol ) RETURN
-         dostet = (ei(3)-e)/(e31*e32)*0.5*(q(1)+q(2) &
+         dostet = (ei(3)-e)/(e31*e32)*(q(1)+q(2) &
                                         +(e-ei(1))/e31*(q(3)-q(1)) &
                                         +(e-ei(2))/e32*(q(3)-q(2)))
          RETURN

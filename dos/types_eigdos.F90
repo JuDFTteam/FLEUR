@@ -147,7 +147,7 @@ subroutine write_dos(eigdos,hdf_id)
       write(*,"(999a21)") filename,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
       dos_grid=eigdos%get_dos_grid()
       DO i=1,size(dos_grid)
-        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id),id=1,eigdos%get_num_weights())
+        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id)/hartree_to_ev_const,id=1,eigdos%get_num_weights())
       ENDDO
       close(999)
       write(*,*) "done:",filename
