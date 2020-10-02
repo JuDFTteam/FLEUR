@@ -259,7 +259,7 @@ subroutine write_dos(eigdos,hdf_id)
                          eigdos%get_weight_eig(n),eigdos%dos(:,:,n),efermi)
         ENDIF
       CASE(BZINT_METHOD_TETRA)
-        CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n))
+        CALL dostetra(kpts,input,eigdos%dos_grid,eigdos%get_eig(),eigdos%get_weight_eig(n),eigdos%dos(:,:,n),efermi)
       END SELECT
 
     end do
