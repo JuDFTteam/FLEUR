@@ -8,4 +8,10 @@ jt::testrun("$executable ",$workdir);
 $result =jt::test_fileexists("$workdir/out");
 $result+=jt::test_fileexists("$workdir/CFdata.hdf");
 
+#Test that there was a second vgen call with modified potential
+#Here the big multipole moments are grepped (Maybe not the best way)
+$result+=jt::grep_exists("$workdir/out"," 0    0          -0.14208E+01")
+$result+=jt::grep_exists("$workdir/out"," 2    0          -0.58864E+00")
+$result+=jt::grep_exists("$workdir/out"," 4    0           0.72534E+00")
+$result+=jt::grep_exists("$workdir/out"," 6    0          -0.61349E+01")
 jt::stageresult($workdir,$result,"1");
