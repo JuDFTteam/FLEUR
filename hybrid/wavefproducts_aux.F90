@@ -97,10 +97,10 @@ CONTAINS
 
       type(t_mat)               :: z_kqpt
       type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, gshift(3), iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
-      integer :: ok, ne, nbasfcn, fftd, psize, iband, irs, ob, iv, ierr, i
-      integer, allocatable :: iob_arr(:), iband_arr(:), band_list(:)
-      real    :: q(3), inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
+      integer :: length_zfft(3), g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
+      integer :: ok, nbasfcn, fftd, psize, iband, ierr, i
+      integer, allocatable :: band_list(:)
+      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
       type(t_mat)  :: psi_kqpt
       type(t_fft)  :: fft
       logical :: real_warned
@@ -136,7 +136,7 @@ CONTAINS
       call psi_kqpt%alloc(.false., fftd, psize)
 
       call timestart("1st wavef2rs")
-      call wavef2rs(fi, lapw_ikqpt, stars, z_kqpt, length_zfft, 1, psize, jsp, psi_kqpt%data_c)
+      call wavef2rs(lapw_ikqpt, z_kqpt, length_zfft, 1, psize, jsp, psi_kqpt%data_c)
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
@@ -157,7 +157,7 @@ CONTAINS
       call fft%init(length_zfft, .true.)
       !$OMP DO
       do iband = 1, hybdat%nbands(ik)
-         call wavef2rs(fi, lapw, stars, z_k, length_zfft, iband, iband, jsp, psi_k)
+         call wavef2rs(lapw, z_k, length_zfft, iband, iband, jsp, psi_k)
          psi_k(:, 1) = conjg(psi_k(:, 1))*stars%ufft*inv_vol
 
          do iob = 1, psize
@@ -200,15 +200,13 @@ CONTAINS
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
-   subroutine wavef2rs(fi, lapw, stars, zmat, length_zfft, bandoi, bandof, jspin, psi)
+   subroutine wavef2rs(lapw, zmat, length_zfft, bandoi, bandof, jspin, psi)
 !$    use omp_lib
       use m_types
       use m_fft_interface
       implicit none
-      type(t_fleurinput), intent(in) :: fi
       type(t_lapw), intent(in)       :: lapw
       type(t_mat), intent(in)        :: zmat
-      type(t_stars), intent(in)      :: stars
       integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 

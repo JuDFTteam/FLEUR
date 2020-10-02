@@ -43,7 +43,7 @@ contains
       CALL timestop("T^-1*mat_ex*T^-1*")
 
       call timestart("symmetrizeh")
-      CALL symmetrizeh(fi%atoms, fi%kpts%bkf(:, nk), jsp, lapw, fi%sym, hybdat%kveclo_eig, fi%cell, nsymop, psym, v_x)
+      CALL symmetrizeh(fi%atoms, fi%kpts%bkf(:, nk), jsp, lapw, fi%sym, fi%cell, nsymop, psym, v_x)
       call timestop("symmetrizeh")
    end subroutine ex_to_vx
 end module

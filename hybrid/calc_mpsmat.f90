@@ -9,7 +9,7 @@ contains
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpdata), intent(in)        :: mpdata
 
-      integer :: igpt2, igpt1, ic, itype, ineq, g(3)
+      integer :: igpt2, igpt1, ic, itype, g(3)
       real    :: gnorm, rdum
 
       call timestart("calc smat")

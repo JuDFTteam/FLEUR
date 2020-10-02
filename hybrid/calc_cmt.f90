@@ -37,10 +37,8 @@ contains
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
 
-      complex :: cdum, cmt_comp(input%neig, hybdat%maxlmindx, atoms%nat)
+      complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
-
-      real :: diff
 
       call timestart("calc_cmt")
 

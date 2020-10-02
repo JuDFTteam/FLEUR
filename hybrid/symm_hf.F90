@@ -74,7 +74,7 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, lapw, nococonv, zmat, cmt, jsp, &
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, cmt, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       USE m_olap
@@ -88,13 +88,9 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN) :: hybdat
       type(t_hybmpi), intent(in) :: submpi
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_lapw), INTENT(IN)   :: lapw
-      type(t_nococonv), intent(in):: nococonv
-      type(t_mat), intent(in)    :: zmat
 
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
-      INTEGER, INTENT(IN)              :: jsp
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
@@ -109,14 +105,14 @@ CONTAINS
       REAL, INTENT(IN)                 :: eig_irr(:, :)
 
 !     - local scalars -
-      INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
+      INTEGER                         :: ikpt, iop, isym, iisym, m
       INTEGER                         :: itype, ieq, iatom, ratom, ierr
-      INTEGER                         :: iband, iband1, iband2, iatom0
+      INTEGER                         ::  iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
       INTEGER                         :: ok
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
-      INTEGER                         :: ndb, ndb1, ndb2
+      INTEGER                         :: ndb1, ndb2
       INTEGER                         :: nrkpt
       INTEGER                         :: maxndb, nddb
 
@@ -133,14 +129,8 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: carr1(hybdat%maxlmindx, fi%atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
-      COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
-      COMPLEX, ALLOCATABLE             :: trace(:, :)
-
-      TYPE(t_mat)                      :: olappw, z
-      COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
       CALL timestart("symm_hf")

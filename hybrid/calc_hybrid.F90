@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
+   SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
       USE m_types_hybdat
@@ -29,7 +29,6 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN)               :: eig_id
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
@@ -43,9 +42,9 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm, ierr
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, ierr
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -112,7 +111,7 @@ CONTAINS
             call hybdat%coul(i)%mpi_bc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
          enddo
 
-         CALL hf_init(eig_id, mpdata, fi, hybdat)
+         CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
          call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)

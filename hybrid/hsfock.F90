@@ -102,7 +102,6 @@ CONTAINS
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
       REAL                     :: wl_iks(fi%input%neig, fi%kpts%nkptf)
       TYPE(t_mat)              :: ex, z_k
-      TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -134,7 +133,7 @@ CONTAINS
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, lapw, nococonv, z_k, cmt_nk, jsp, &
+      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, cmt_nk,&
                    rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
       ! remove weights(wtkpt) in w_iks
@@ -149,7 +148,7 @@ CONTAINS
       ! HF exchange
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, fmpi, cmt_nk, ex)
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
@@ -159,7 +158,7 @@ CONTAINS
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          call judft_error('HSE not implemented in hsfock')
       ELSE
-         CALL exchange_vccv1(nk, fi, nococonv, mpdata, hybdat, jsp, &
+         CALL exchange_vccv1(nk, fi, mpdata, hybdat, jsp, &
                            lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, ex)
 
          if(k_pack%submpi%root()) then
