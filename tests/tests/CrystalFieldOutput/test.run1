@@ -6,7 +6,21 @@ jt::testrun("$executable ",$workdir);
 
 #Check that the ouput for crystalfield calculations is written
 $result =jt::test_fileexists("$workdir/out");
-$result+=jt::test_fileexists("$workdir/CFdata.hdf");
+
+
+if(jt::test_fileexists("$workdir/cdn.hdf") == 0){
+   #Test for some of the text output files
+   $result+=jt::test_fileexists("$workdir/n4f.1.dat");
+   $result+=jt::test_fileexists("$workdir/V_20.1.dat");
+   $result+=jt::test_fileexists("$workdir/V_40.1.dat");
+   $result+=jt::test_fileexists("$workdir/V_60.1.dat");
+   $result+=jt::test_fileexists("$workdir/V_66.1.dat");
+}else{
+   $result+=jt::test_fileexists("$workdir/CFdata.hdf");
+}
+
+
+
 
 #Test that there was a second vgen call with modified potential
 #Here the big multipole moments are grepped (Maybe not the best way)
