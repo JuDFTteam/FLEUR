@@ -8,7 +8,7 @@ MODULE m_dostetra
 
    CONTAINS
 
-   SUBROUTINE dostetra(kpts,input,eMesh,eig,qal,g)
+   SUBROUTINE dostetra(kpts,input,eMesh,eig,qal,g,energyShift)
 
       TYPE(t_kpts),        INTENT(IN)     :: kpts
       TYPE(t_input),       INTENT(IN)     :: input
@@ -16,9 +16,17 @@ MODULE m_dostetra
       REAL,                INTENT(IN)     :: eig(:,:,:)
       REAL,                INTENT(IN)     :: qal(:,:,:)
       REAL,                INTENT(INOUT)  :: g(:,:)
+      REAL, OPTIONAL,      INTENT(IN)     :: energyShift
 
       INTEGER :: ikpt,iBand,ie,ispin,neig(kpts%nkpt)
       REAL    :: w(size(eMesh),size(qal,1))
+      REAL    :: shift
+      REAL, ALLOCATABLE :: eig_shifted(:,:,:)
+
+      shift = 0.0
+      IF(PRESENT(energyShift)) shift = energyShift
+
+      eig_shifted = eig - shift
 
       g = 0.0
       DO ispin = 1, size(qal,3)
@@ -29,7 +37,7 @@ MODULE m_dostetra
             !------------------------------------------------------
             ! Calculate the weights for the DOS on the energy Grid
             !------------------------------------------------------
-            CALL tetrahedronInit(kpts,input,ikpt,eig(:,:,ispin),MINVAL(neig),eMesh,&
+            CALL tetrahedronInit(kpts,input,ikpt,eig_shifted(:,:,ispin),MINVAL(neig),eMesh,&
                                  w,dos=.TRUE.)
             DO iBand = 1, neig(ikpt)
                DO ie = 1, SIZE(eMesh)

@@ -14,4 +14,4 @@ $result+=jt::test_grepnumber("$workdir/out","l--> 2 Contour(default)    Spin-Dow
 $result+=jt::test_grepnumber("$workdir/out","l--> 1 Contour(default)    Spin-Up trace:",": *([^ ]*)",3.1921,0.0005);
 $result+=jt::test_grepnumber("$workdir/out","l--> 1 Contour(default)    Spin-Down trace:",": *([^ ]*)",3.2135,0.0005);
 
-jt::stageresult($workdir,$result,"1");
+jt::stageresult($workdir,$result,"2");

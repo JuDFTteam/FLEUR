@@ -24,7 +24,6 @@ MODULE m_types_gfinp
       INTEGER :: atomType  = 0
       INTEGER :: atomTypep = 0
       REAL    :: atomDiff(3)  = [0.0,0.0,0.0] !Distance between atoms (lattice coordinates) for intersite phase
-      INTEGER :: numDiffElems = 0!Elements equivalent by Symmetry
 
       INTEGER :: iContour = 0      !Which energy contour is used
       LOGICAL :: l_sphavg = .TRUE. !Is this element calculated with or without radial dependence
@@ -152,7 +151,6 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%refCutoff,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
-         CALL mpi_bc(this%elem(n)%numDiffElems,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -1028,7 +1026,6 @@ CONTAINS
                           fixedCutoff=fixedCutoff)
 
          this%elem(i_gf)%refCutoff = refCutoff
-         this%elem(i_gf)%numDiffElems = numshellAtoms(ishell)
 
          IF(l_write) THEN
             WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
@@ -1044,7 +1041,6 @@ CONTAINS
                           fixedCutoff=fixedCutoff)
 
          this%elem(i_gf)%refCutoff = refCutoff
-         this%elem(i_gf)%numDiffElems = numshellAtoms(ishell)
 
          IF(l_write) THEN
             WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', shellAtom(ishell), refAtom, &
