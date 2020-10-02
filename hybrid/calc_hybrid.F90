@@ -126,8 +126,6 @@ CONTAINS
 
             call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
             call wavef_bal%init(fi, work_pack)
-
-            write (*,*) fmpi%irank, "wavef_bal%remaining_barries", wavef_bal%remaining_barries
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
