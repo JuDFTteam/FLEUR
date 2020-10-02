@@ -32,6 +32,10 @@ MODULE m_types_gfinp
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
       INTEGER :: refCutoff   = -1 !Choose cutoff to be the same as another
+
+      !Symmetry relations to other gf element (only intersite)
+      INTEGER :: representative_elem = -1
+      INTEGER :: representative_op = -1
    CONTAINS
       PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
       PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
@@ -151,6 +155,8 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%refCutoff,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -638,6 +644,9 @@ CONTAINS
          atomDiff(:) = this%elem(i_gf)%atomDiff(:)
 
          IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
+
+         !If the element has a representative element set it can not be unique
+         IF(this%elem(i_gf)%representative_elem>0) CYCLE
          iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                atomDiff=atomDiff,uniqueMax=i_gf)
 
@@ -668,8 +677,14 @@ CONTAINS
          l_sphavgElem = this%elem(ind)%l_sphavg
          atomDiff(:) = this%elem(ind)%atomDiff(:)
 
-         indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                               atomDiff=atomDiff,uniqueMax=ind)
+         IF(this%elem(ind)%representative_elem>0) THEN
+            !The given element is related to a representative_elem by Symmetry
+            !Therefore the unique element is given in representative_elem
+            indUnique = this%elem(ind)%representative_elem
+         ELSE
+            indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
+                                  atomDiff=atomDiff,uniqueMax=ind)
+         ENDIF
       ENDIF
 
    END FUNCTION uniqueElements_gfinp
