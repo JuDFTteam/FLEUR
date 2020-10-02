@@ -282,23 +282,7 @@ CONTAINS
          enddo
       END DO  !jq
 
-#if defined(CPP_MPI) || defined(CPP_BARRIER_FOR_RMA)
-      call timestart("dangeling MPI_barriers")
-      do while (cnt_read_z > 0)
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         cnt_read_z = cnt_read_z - 1
-      enddo
-      call timestop("dangeling MPI_barriers")
-#endif
-      !call judft_error("stopit")
       call dot_result%free()
-
-!   WRITE(7001,'(a,i7)') 'ik: ', ik
-!   DO n1=1,hybdat%nbands(ik)
-!      DO n2=1,n1
-!         WRITE(7001,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
-!     END DO
-!   END DO
 
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 

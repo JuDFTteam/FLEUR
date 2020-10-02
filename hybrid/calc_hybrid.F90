@@ -22,6 +22,7 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
+      use m_balance_barriers
 #ifdef CPP_MPI 
       use mpi 
 #endif
@@ -51,6 +52,7 @@ CONTAINS
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
       integer, allocatable :: v_x_loc(:,:)
+      type(t_balance_wavef) :: wavef_bal
 
       CALL timestart("hybrid code")
 
@@ -124,6 +126,9 @@ CONTAINS
             call timestop("HF_setup")
 
             call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
+            call wavef_bal%init(fi, work_pack)
+
+            write (*,*) fmpi%irank, "wavef_bal%remaining_barries", wavef_bal%remaining_barries
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
@@ -132,6 +137,9 @@ CONTAINS
                            nococonv, stars, results, xcpot, fmpi)
                if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
+
+            call wavef_bal%balance()
+            call balance_hsfock(work_pack)
             call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")

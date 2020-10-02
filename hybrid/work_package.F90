@@ -196,7 +196,7 @@ contains
       allocate(work_pack%k_packs(work_pack%n_kpacks))
 
 #ifdef CPP_MPI
-      call MPI_AllReduce(work_pack%n_kpacks, work_pack%max_kpacks, 1, MPI_INTEGER, MPI_MIN, MPI_COMM_WORLD, ierr)
+      call MPI_AllReduce(work_pack%n_kpacks, work_pack%max_kpacks, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
 #else    
       work_pack%max_kpacks = work_pack%n_kpacks
 #endif
