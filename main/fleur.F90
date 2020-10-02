@@ -264,7 +264,7 @@ CONTAINS
          IF (fi%hybinp%l_hybrid) THEN
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
-               CALL calc_hybrid(eig_id, fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
+               CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
                                 results, xcpot, vTot, iterHF)
             END SELECT
 #ifdef CPP_MPI

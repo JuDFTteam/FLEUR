@@ -37,15 +37,13 @@ contains
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
 
-      complex :: cdum, cmt_comp(input%neig, hybdat%maxlmindx, atoms%nat)
+      complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
-
-      real :: diff
 
       call timestart("calc_cmt")
 
       ikp = kpts%bkp(ik)
-      nbands = hybdat%nbands(ikp)
+      nbands = zmat_ikp%matsize2
 
       allocate(acof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1))
       allocate(bcof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2))

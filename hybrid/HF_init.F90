@@ -3,14 +3,13 @@ MODULE m_hf_init
    !     preparations for HF and fi%hybinp functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(eig_id, mpdata,fi, hybdat)
+   SUBROUTINE hf_init(mpdata,fi, hybdat)
       USE m_types
       USE m_hybrid_core
       USE m_util
       use m_intgrf
       USE m_types_hybdat
       IMPLICIT NONE
-      integer, intent(in)               :: eig_id
       TYPE(t_mpdata), intent(inout)     :: mpdata
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat

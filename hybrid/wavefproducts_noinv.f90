@@ -24,7 +24,7 @@ CONTAINS
 
       complex, intent(in)  :: cmt_nk(:,:,:)
 
-      INTEGER              :: g_t(3), psize
+      INTEGER              :: g_t(3)
       REAL                 :: kqpt(3), kqpthlp(3)
       complex, allocatable :: c_phase_kqpt(:)
       type(t_mat)          :: z_kqpt_p, cprod_tmp
@@ -56,7 +56,7 @@ CONTAINS
 
 
       call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
-                                  jsp, ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
+                                  jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
 
       call timestop("wavefproducts_noinv")
 
@@ -90,7 +90,7 @@ CONTAINS
       INTEGER                 :: ig1, ig2, ig, psize, b_idx
       INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
-      COMPLEX                 ::  cdum, cdum1
+      COMPLEX                 ::  cdum
 
       TYPE(t_lapw)            ::  lapw_ikqpt
 
@@ -219,7 +219,7 @@ CONTAINS
    end subroutine wavefproducts_noinv_IS
 
    subroutine wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, jsp, ikqpt, &
-                                     z_k_p, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
+                                     z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
       use m_types
       USE m_constants
       use m_io_hybinp
@@ -231,7 +231,7 @@ CONTAINS
       type(t_nococonv), intent(in)    :: nococonv
       TYPE(t_mpdata), INTENT(IN)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
-      type(t_mat), intent(in)         :: z_k_p, z_kqpt_p
+      type(t_mat), intent(in)         :: z_kqpt_p
       type(t_mat), intent(inout)      :: cprod
 
       !     - scalars -
@@ -246,7 +246,7 @@ CONTAINS
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
-      INTEGER                 ::  itype, ieq, ic1, m, iob, iband, psize
+      INTEGER                 ::  itype, ieq, ic1, m, psize
 
       COMPLEX                 ::  atom_phase
 
@@ -256,11 +256,14 @@ CONTAINS
       INTEGER                 ::  lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
       COMPLEX, allocatable    ::  carr(:,:)
-      COMPLEX                 ::  cmt_ikqpt(hybdat%nbands(ikqpt), hybdat%maxlmindx, fi%atoms%nat)
+      COMPLEX, allocatable    ::  cmt_ikqpt(:,:,:)
 
       call timestart("wavefproducts_noinv5 MT")
       allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
+
+      allocate(cmt_ikqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), stat=ok, source=cmplx_0)
+      if(ok /= 0) call juDFT_error("alloc cmt_ikqpt")
       
       psize = bandof-bandoi+1
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)

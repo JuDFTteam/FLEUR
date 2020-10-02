@@ -30,7 +30,7 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   :: lmaxc(:)
       REAL, ALLOCATABLE      :: core1(:, :, :, :), core2(:, :, :, :)
       REAL, ALLOCATABLE      :: eig_c(:, :, :)
-      INTEGER, ALLOCATABLE   :: kveclo_eig(:, :)
+      !INTEGER, ALLOCATABLE   :: kveclo_eig(:, :)
       REAL, ALLOCATABLE      :: sfac(:), fac(:)
       REAL, ALLOCATABLE      :: gauntarr(:, :, :, :, :, :)
       REAL, ALLOCATABLE      :: bas1(:, :, :, :), bas2(:, :, :, :)

@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id,fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
+   SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
       USE m_types_hybdat
@@ -22,13 +22,13 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
+      use m_balance_barriers
 #ifdef CPP_MPI 
       use mpi 
 #endif
 
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN)               :: eig_id
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
@@ -42,15 +42,16 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi, wp_mpi, tmp_mpi
+      type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, tmp_comm, ierr
+      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, ierr
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
       integer, allocatable :: v_x_loc(:,:)
+      type(t_balance_wavef) :: wavef_bal
 
       CALL timestart("hybrid code")
 
@@ -110,7 +111,7 @@ CONTAINS
             call hybdat%coul(i)%mpi_bc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
          enddo
 
-         CALL hf_init(eig_id, mpdata, fi, hybdat)
+         CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
          call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
@@ -124,6 +125,9 @@ CONTAINS
             call timestop("HF_setup")
 
             call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
+            call wavef_bal%init(fi, work_pack)
+
+            write (*,*) fmpi%irank, "wavef_bal%remaining_barries", wavef_bal%remaining_barries
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
@@ -132,6 +136,9 @@ CONTAINS
                            nococonv, stars, results, xcpot, fmpi)
                if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
+
+            call wavef_bal%balance()
+            call balance_hsfock(work_pack)
             call work_pack%free()
          END DO
          CALL timestop("Calculation of non-local HF potential")

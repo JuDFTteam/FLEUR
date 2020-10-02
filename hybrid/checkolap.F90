@@ -51,7 +51,7 @@ CONTAINS
       COMPLEX, PARAMETER     ::  img = (0.0, 1.0)
 
       ! -local arrays -
-      INTEGER                 ::  iarr(2), gpt(3), idum, ierr
+      INTEGER                 ::  iarr(2), gpt(3), ierr
       INTEGER, ALLOCATABLE   ::  olapcv_loc(:, :, :, :, :)
 
       REAL                    ::  sphbes(0:atoms%lmaxd)

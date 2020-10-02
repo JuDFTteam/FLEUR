@@ -407,7 +407,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL hybdat%coul(ikpt)%mpi_bc(fi, fmpi%mpi_comm, 0)
    END DO
 
-   CALL hf_init(eig_id,mpdata,fi,hybdat)
+   CALL hf_init(mpdata,fi,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -520,7 +520,6 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
          END DO
 
          IF(ALLOCATED(eig_irr)) DEALLOCATE (eig_irr)
-         IF(ALLOCATED(hybdat%kveclo_eig)) DEALLOCATE (hybdat%kveclo_eig)
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE (hybdat%pntgptd)
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
@@ -558,15 +557,15 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata,lapw,nococonv, zMat, c_phase,jspin,&
+            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
 
             exMat%l_real=fi%sym%invs
             CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,zMat, mpdata,jspin,hybdat,lapw,&
                                      eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
-                                     fmpi, cmt_nk, exMat)
+                                     cmt_nk, exMat)
             deallocate(cmt_nk)
-            CALL exchange_vccv1(ikpt,fi, nococonv,mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
+            CALL exchange_vccv1(ikpt,fi, mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
                                 1.0,results,cmt_nk,exMat)
 
             DEALLOCATE(indx_sest)
@@ -597,7 +596,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             CALL exMat%multiply(invtrafo,tmpMat)
             CALL trafo%multiply(tmpMat,exMatLAPW)
 
-            call symmetrizeh(fi%atoms,fi%kpts%bkf(:,ikpt),jspin,lapw,fi%sym,hybdat%kveclo_eig,fi%cell,nsymop,psym,exMatLAPW)
+            call symmetrizeh(fi%atoms,fi%kpts%bkf(:,ikpt),jspin,lapw,fi%sym,fi%cell,nsymop,psym,exMatLAPW)
 
             IF (.NOT.exMatLAPW%l_real) exMatLAPW%data_c=conjg(exMatLAPW%data_c)
             zMat%matsize1=MIN(zMat%matsize1,exMatLAPW%matsize2)

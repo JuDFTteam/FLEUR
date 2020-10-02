@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybdat,&
-                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx, nk)
+                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
 
       USE m_judft
       USE m_types
@@ -41,7 +41,7 @@ CONTAINS
       TYPE(t_mat), INTENT(INOUT) :: hmat
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN) :: jsp, nk
+      INTEGER, INTENT(IN) :: jsp
 
       ! Array Arguments
       REAL, INTENT(IN) :: vr0(:,:,:)               ! just for radial functions

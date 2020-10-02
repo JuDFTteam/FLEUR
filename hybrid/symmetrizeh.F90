@@ -10,7 +10,7 @@ MODULE m_symmetrizeh
 
 CONTAINS
 
-   SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
+   SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, cell, nsymop, psym, hmat)
 
       USE m_juDFT
       USE m_types
@@ -28,7 +28,6 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nsymop, jsp
 
       ! arrays
-      INTEGER, INTENT(IN)    :: kveclo(atoms%nlotot)
       INTEGER, INTENT(IN)    :: psym(:)
       REAL, INTENT(IN)    :: bk(:)
 
@@ -201,10 +200,10 @@ CONTAINS
                IF (ldum(igpt, igpt1)) THEN
                   IF (hmat%l_real) THEN
                      IF (iop <= sym%nop) THEN
-                        hmat%data_r(igpt1, igpt) = cdum/(CONJG(cfac(i, isym))*cfac(j, isym))
+                        hmat%data_r(igpt1, igpt) = real(cdum/(CONJG(cfac(i, isym))*cfac(j, isym)))
                         ldum(igpt, igpt1) = .FALSE.
                      ELSE
-                        hmat%data_r(igpt1, igpt) = CONJG(cdum/(CONJG(cfac(i, isym))*cfac(j, isym)))
+                        hmat%data_r(igpt1, igpt) = real(CONJG(cdum/(CONJG(cfac(i, isym))*cfac(j, isym))))
                         ldum(igpt, igpt1) = .FALSE.
                      END IF
                      hmat%data_r(igpt, igpt1) = hmat%data_r(igpt1, igpt)
@@ -430,8 +429,8 @@ CONTAINS
                               END IF
                            END DO
                            IF (hmat%l_real) THEN
-                              hmat%data_r(j, lapw%nv(jsp) + i) = cdum!/ic
-                              hmat%data_r(lapw%nv(jsp) + i,j) = cdum!/ic
+                              hmat%data_r(j, lapw%nv(jsp) + i) = real(cdum)!/ic
+                              hmat%data_r(lapw%nv(jsp) + i,j) = real(cdum)!/ic
                            ELSE
                               hmat%data_c(j, lapw%nv(jsp) + i) = cdum!/ic
                               hmat%data_c(lapw%nv(jsp) + i,j) = CONJG(cdum)!/ic
@@ -523,7 +522,7 @@ CONTAINS
                                           END IF
                                        END DO
                                        IF (hmat%l_real) THEN
-                                          hmat%data_r(lapw%nv(jsp) + j, lapw%nv(jsp) + i) = cdum!/ic
+                                          hmat%data_r(lapw%nv(jsp) + j, lapw%nv(jsp) + i) = real(cdum)!/ic
                                        ELSE
                                           hmat%data_c(lapw%nv(jsp) + j, lapw%nv(jsp) + i) = cdum!/ic
                                        END IF
@@ -578,7 +577,7 @@ CONTAINS
          END IF
 
          ! define Y,l,-l and Y,l,l
-         r = Y(1)
+         r = real(Y(1))
          c = 1
          DO l = 1, ll
             r = r*stheta*SQRT(1.0 + 1.0/(2*l))
