@@ -1066,8 +1066,9 @@ CONTAINS
 
 
             IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                               shellDiff(:,1,ishell), diff(:)
+               WRITE(oUnit,'(A,I6,I6,6f14.8,i0)') 'GF Element: ', refAtom, shellAtom(ishell),&
+                                               shellDiff(:,ishellAtom,ishell), diff(:), &
+                                               shellop(ishellAtom,ishell)
             ENDIF
          ENDDO
 
