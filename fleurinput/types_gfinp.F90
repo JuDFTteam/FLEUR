@@ -481,11 +481,13 @@ CONTAINS
       TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
+      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
+      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -505,9 +507,25 @@ CONTAINS
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff,&
-                                           atoms,cell,sym,.NOT.written(atomType))
+                                           this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
+                                           .NOT.written(atomType),nOtherAtoms,atomTypepList)
             written(atomType) = .TRUE.
+
+            !Add the other atomtypes (i,j) -> (j,i)
+            DO iOtherAtom = 1, nOtherAtoms
+               atomType = atomTypepList(iOtherAtom)
+               !First add the reference cutoff element
+               lref = this%elem(refCutoff)%l
+               refCutoff1 =  this%add(lref,atomType,iContour,.FALSE.,l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
+                                      fixedCutoff=this%elem(i_gf)%fixedCutoff)
+
+               WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
+
+               CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+                                              this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
+                                              .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+
+            ENDDO
          ENDIF
       ENDDO
 
@@ -763,7 +781,7 @@ CONTAINS
    END FUNCTION add_gfelem
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,l_write)
+                                          refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
       USE m_types_cell
@@ -774,25 +792,27 @@ CONTAINS
       !This is essentially a simplified version of chkmt, because we have a given
       !reference atom and do not need to consider all distances between all atoms
 
-      CLASS(t_gfinp),   INTENT(INOUT)  :: this
-      INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
-      INTEGER,          INTENT(IN)     :: l
-      INTEGER,          INTENT(IN)     :: lp
-      INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
-      INTEGER,          INTENT(IN)     :: iContour
-      LOGICAL,          INTENT(IN)     :: l_fixedCutoffset
-      REAL,             INTENT(IN)     :: fixedCutoff
-      INTEGER,          INTENT(IN)     :: refCutoff
-      TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_cell),     INTENT(IN)     :: cell
-      TYPE(t_sym),      INTENT(IN)     :: sym
-      LOGICAL,          INTENT(IN)     :: l_write
+      CLASS(t_gfinp),      INTENT(INOUT)  :: this
+      INTEGER,             INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
+      INTEGER,             INTENT(IN)     :: l
+      INTEGER,             INTENT(IN)     :: lp
+      INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
+      INTEGER,             INTENT(IN)     :: iContour
+      LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
+      REAL,                INTENT(IN)     :: fixedCutoff
+      INTEGER,             INTENT(IN)     :: refCutoff
+      TYPE(t_atoms),       INTENT(IN)     :: atoms
+      TYPE(t_cell),        INTENT(IN)     :: cell
+      TYPE(t_sym),         INTENT(IN)     :: sym
+      LOGICAL,             INTENT(IN)     :: l_write
+      INTEGER,             INTENT(OUT)    :: nOtherAtoms
+      INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
 
       REAL,    PARAMETER :: tol = 1e-7
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
-      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf,nOtherAtoms,iOtherAtom
-      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,refCutoff1,repr,lref
+      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -806,7 +826,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: nearestNeighborDiffs(:,:)
       REAL,    ALLOCATABLE :: neighborAtomsDiff(:,:)
       REAL,    ALLOCATABLE :: sqrDistances(:)
-      INTEGER, ALLOCATABLE :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
 
       REAL,    ALLOCATABLE :: shellDistance(:)
       REAL,    ALLOCATABLE :: shellDiff(:,:,:)
@@ -1071,21 +1090,6 @@ CONTAINS
                                                shellop(ishellAtom,ishell)
             ENDIF
          ENDDO
-
-      ENDDO
-
-      !Recursive call to add the other atomtypes (i,j) -> (j,i)
-      DO iOtherAtom = 1, nOtherAtoms
-         iAtom = atomTypepList(iOtherAtom)
-         !First add the reference cutoff element
-         lref = this%elem(refCutoff)%l
-         refCutoff1 =  this%add(lref,iAtom,iContour,.FALSE.,l_fixedCutoffset=l_fixedCutoffset,&
-                                fixedCutoff=fixedCutoff)
-
-         WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', iAtom
-
-         CALL this%addNearestNeighbours(nshells,l,lp,iAtom,iContour,l_fixedCutoffset,&
-                                        fixedCutoff,refCutoff1,atoms,cell,sym,.FALSE.)
 
       ENDDO
 
