@@ -292,37 +292,34 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpaths=xml%speciesPath(n)
     this%speciesname(n)=TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/@species')))
     this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
+    this%zatom(n) = this%nz(n)
     IF (this%nz(n).EQ.0) THEN
        WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
        this%zatom(n) = 1.0e-10
     END IF
-    this%zatom(n) = this%nz(n)
-    if (xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/modInitDen').EQ.1) THEN
-      this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/modInitDen/@flipSpinPhi'))
-      this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinTheta'))
-      this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@flipSpinScale'))
-      this%bmu(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/modInitDen/@magMom'))
-    END IF
+
+    CALL readAtomAttribute(xml,n,'/modInitDen/@flipSpinPhi',this%flipSpinPhi(n))
+    CALL readAtomAttribute(xml,n,'/modInitDen/@flipSpinTheta',this%flipSpinTheta(n))
+    CALL readAtomAttribute(xml,n,'/modInitDen/@flipSpinScale',this%flipSpinScale(n))
+    CALL readAtomAttribute(xml,n,'/modInitDen/@magMom',this%bmu(n))
     IF (xml%versionNumber<32) THEN
        this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
     END IF
+
     !Now the xml elements
     !mtSphere
-    xpath=xpaths
-    this%rmt(n) =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@radius'))
-    this%jri(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@gridPoints'))
-    this%dx(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@logIncrement'))
+    CALL readAtomAttribute(xml,n,'/mtSphere/@radius',this%rmt(n))
+    CALL readAtomAttribute(xml,n,'/mtSphere/@gridPoints',this%jri(n))
+    CALL readAtomAttribute(xml,n,'/mtSphere/@logIncrement',this%dx(n))
     !atomicCuttoffs
-    xpath=xpaths
-    this%lmax(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmax'))
-    this%lnonsph(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lnonsphr'))
+    CALL readAtomAttribute(xml,n,'/atomicCutoffs/@lmax',this%lmax(n))
+    CALL readAtomAttribute(xml,n,'/atomicCutoffs/@lnonsphr',this%lnonsph(n))
     IF (this%lmax(n)<this%lnonsph(n)) THEN
       this%lnonsph(n)=this%lmax(n)
       call judft_warn("lnonsph cannot be larger than lmax")
     ENDIF
     this%lapw_l(n) = -1
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW').EQ.1) &
-         this%lapw_l(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW'))
+    CALL readAtomAttribute(xml,n,'/atomicCutoffs/@lmaxAPW',this%lapw_l(n))
     !force type
     xpath=''
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
@@ -389,9 +386,9 @@ SUBROUTINE read_xml_atoms(this,xml)
              CALL this%econf(n)%set_occupation(state,up,down)
           END DO
        END IF
-     ELSEIF (xml%versionNumber<32) then
+    ELSE IF (xml%versionNumber<32) then
        CALL this%econf(n)%init_num(evaluateFirstIntOnly(xml%getAttributeValue(TRIM(xpaths)//'/@coreStates')),this%nz(n))
-       call this%econf(n)%set_initial_moment(evaluateFirstOnly(xml%getAttributeValue(TRIM(xpaths)//'/@magMom')))
+       CALL this%econf(n)%set_initial_moment(evaluateFirstOnly(xml%getAttributeValue(TRIM(xpaths)//'/@magMom')))
     END IF
     !crystalField output
     numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/cFCoeffs')
@@ -441,9 +438,6 @@ SUBROUTINE read_xml_atoms(this,xml)
        this%pos(1:2,na)=this%taual(1:2,na) !Use as flag that no rescaling is needed in init
        this%pos(3,na)=this%taual(3,na)+1
     END DO
-
-
-
 
  END DO
 
@@ -582,23 +576,94 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
 END SUBROUTINE read_xml_atoms
 
-SUBROUTINE init_atoms(this,cell)
- USE m_types_cell
- CLASS(t_atoms),INTENT(inout):: this
- TYPE(t_cell),INTENT(IN)   :: cell
- integer :: it, ineq, ic
 
- WHERE (ABS(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
- this%pos(:,:) = MATMUL(cell%amat,this%taual(:,:))
- 
- allocate(this%itype(this%nat))
- ic=0
- DO it = 1, this%ntype
-   DO ineq = 1, this%neq(it)
-      ic = ic + 1
-      this%itype(ic) = it
-   enddo 
-enddo
+SUBROUTINE readAtomAttributeString(xml, atomType, relAttPath, outString, l_error)
+
+   USE m_types_xml
+
+   IMPLICIT NONE
+
+   TYPE(t_xml), INTENT(IN)           :: xml
+   INTEGER, INTENT(IN)               :: atomType
+   CHARACTER(LEN=*), INTENT(IN)      :: relAttPath
+   CHARACTER(LEN=200), INTENT(INOUT) :: outString
+   LOGICAL, INTENT(INOUT)            :: l_error
+
+   CHARACTER(LEN=200) :: path, groupPath, speciesPath
+
+   l_error = .FALSE.
+   groupPath = xml%groupPath(atomType)
+   speciesPath = xml%speciesPath(atomType)
+
+   path = TRIM(groupPath)//TRIM(relAttPath)
+   IF (xml%getNumberOfNodes(TRIM(PATH)).NE.1) THEN
+      path = TRIM(speciesPath)//TRIM(relAttPath)
+   END IF
+   IF (xml%getNumberOfNodes(TRIM(PATH)).NE.1) THEN
+      l_error = .TRUE.
+      RETURN
+   END IF
+
+   outString = xml%getAttributeValue(TRIM(path))
+
+END SUBROUTINE readAtomAttributeString
+
+
+SUBROUTINE readAtomAttribute(xml, atomType, relAttPath, outValue)
+
+   USE m_types_xml
+   USE m_juDFT
+
+   IMPLICIT NONE
+
+   TYPE(t_xml), INTENT(IN)           :: xml
+   INTEGER, INTENT(IN)               :: atomType
+   CHARACTER(LEN=*), INTENT(IN)      :: relAttPath
+   CLASS(*), INTENT(INOUT)           :: outValue
+
+   LOGICAL            :: l_error
+   CHARACTER(LEN=200) :: valueString
+
+   l_error = .FALSE.
+
+   CALL readAtomAttributeString(xml, atomType, relAttPath, valueString, l_error)
+   IF (l_error) RETURN
+   SELECT TYPE(outValue)
+      TYPE IS(INTEGER)
+         outValue = evaluateFirstIntOnly(valueString)
+      TYPE IS(REAL)
+         outValue = evaluatefirstOnly(valueString)
+      TYPE IS(LOGICAL)
+         outValue = evaluateFirstBoolOnly(valueString)
+      CLASS DEFAULT
+         CALL juDFT_error("unknown type passed to readAttribute", calledby = "types_atomes - readAttribute")
+   END SELECT
+
+END SUBROUTINE readAtomAttribute
+
+
+SUBROUTINE init_atoms(this,cell)
+
+   USE m_types_cell
+
+   IMPLICIT NONE
+
+   CLASS(t_atoms),INTENT(inout):: this
+   TYPE(t_cell),INTENT(IN)   :: cell
+   integer :: it, ineq, ic
+
+   WHERE (ABS(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
+   this%pos(:,:) = MATMUL(cell%amat,this%taual(:,:))
+
+   allocate(this%itype(this%nat))
+   ic=0
+   DO it = 1, this%ntype
+      DO ineq = 1, this%neq(it)
+         ic = ic + 1
+         this%itype(ic) = it
+      END DO
+   END DO
 
 END SUBROUTINE init_atoms
+
 END MODULE m_types_atoms

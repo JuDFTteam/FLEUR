@@ -429,7 +429,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
-      <xsd:attribute name="element" type="xsd:string" use="required"/>
+      <xsd:attribute name="element" type="xsd:string" use="optional"/>
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
@@ -451,6 +451,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="modInitDen" type="ModInitDenType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="greensfCalculation" type="GFcalcType"/>
