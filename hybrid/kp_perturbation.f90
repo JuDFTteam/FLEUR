@@ -166,7 +166,8 @@ CONTAINS
                   DO ikvec = 1, invsfct*(2*l + 1)
                      ic = ic + 1
                      ibas = ibas + 1
-                     kvec = kpts%bk(:, nk) + lapw%gvec(:, hybdat%kveclo_eig(ic, nk), jsp)
+                     call judft_error("this line has to be re-enabled, but kveclo_eig is never set")
+                     !kvec = kpts%bk(:, nk) + lapw%gvec(:, hybdat%kveclo_eig(ic, nk), jsp)
 
                      phase = exp(img*tpi_const*dot_product(atoms%taual(:, iatom), kvec))
                      cdum1 = cdum*phase

@@ -26,11 +26,6 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)       :: gpt(:, :)
       TYPE(t_mat)              :: olap
-!     - local -
-      INTEGER                  :: i, j, itype, icent, ineq
-      REAL                     :: g, r, fgr
-      COMPLEX, PARAMETER       :: img = (0.0, 1.0)
-      INTEGER                  :: dg(3)
 
       if (olap%l_real) then
          call olap_pw_real(olap, gpt, ngpt, atoms, cell, fmpi)
@@ -54,7 +49,7 @@ CONTAINS
       INTEGER, INTENT(IN)       :: gpt(:, :)
       TYPE(t_mat)              :: olap
       !     - local -
-      INTEGER                  :: i, j, itype, icent, ineq, ierr, root
+      INTEGER                  :: i, j, itype, icent, ierr, root
       REAL                     :: g, r, fgr
       COMPLEX, PARAMETER       :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
@@ -118,7 +113,7 @@ CONTAINS
       INTEGER, INTENT(IN)       :: gpt(:, :)
       TYPE(t_mat)              :: olap
 !     - local -
-      INTEGER                  :: i, j, itype, icent, ineq
+      INTEGER                  :: i, j, itype, icent
       REAL                     :: g, r, fgr
       COMPLEX, PARAMETER       :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)

@@ -56,7 +56,8 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
 
-      integer :: i
+      integer :: i,n,na
+      real :: maxpos,minpos
 
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
@@ -97,6 +98,18 @@ MODULE m_checks
      END IF
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
+
+     !In film case check centering of film
+     if ( input%film ) then
+       maxpos=0.0;minpos=0.0
+       DO n=1,atoms%ntype
+         na=sum(atoms%neq(:n-1))
+         maxpos=max(maxpos,maxval(atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
+         minpos=max(minpos,maxval(-1.*atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
+       ENDDO
+       if (abs(maxpos-minpos)>2.0) call judft_warn("Your film setup is not centered around zero",hint="Using a non-centred setup can lead to numerical problems. Please check your setup an try to ensure that the center of your film is at z=0")
+     endif
+
    END SUBROUTINE check_input_switches
 
   END MODULE m_checks

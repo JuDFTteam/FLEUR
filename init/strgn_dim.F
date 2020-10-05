@@ -185,7 +185,7 @@ c     *********************************************************
       USE m_constants
       USE m_boxdim
       USE m_spgrot
-      USE m_ifft, ONLY : i2357
+      USE m_ifft, ONLY : next_optimal_fft_size
       IMPLICIT NONE
 
       LOGICAL,INTENT(IN)    :: l_write
@@ -267,16 +267,10 @@ c
 c
       n2d = 2
       n3d = ng3
-#ifdef CPP_AIX
-      k1d = i2357(mxx1)
-      k2d = i2357(mxx2)
-      k3d = i2357(mxx3)
-      !write(*,*) k1d,mxx1
-#else
-      k1d = mxx1
-      k2d = mxx2
-      k3d = mxx3
-#endif
+
+      k1d = next_optimal_fft_size(mxx1)
+      k2d = next_optimal_fft_size(mxx2)
+      k3d = next_optimal_fft_size(mxx3)
 c
 c     listing
       if (l_write) WRITE (oUnit,8000) gmax,n3d,n2d,k1d,k2d,k3d

@@ -1939,6 +1939,15 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'time',time)
          CALL io_write_attreal0(archiveID,'distance',distance)
 
+         IF(n_u.GT.0) THEN
+            IF(mmpmatDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'mmpmatDistance',mmpmatDistance)
+            ENDIF
+            IF(occDistance.GE.-1e-10) THEN
+               CALL io_write_attreal0(archiveID,'occDistance',occDistance)
+            ENDIF
+         ENDIF
+
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
          CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)

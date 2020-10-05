@@ -27,10 +27,11 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,input,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
+      TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_noco),              INTENT(IN)     :: noco
       TYPE(t_usdus),             INTENT(IN)     :: usdus
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
@@ -250,6 +251,14 @@ MODULE m_greensfCalcRealPart
             ENDDO
          ENDDO
          CALL timestop("Green's Function: Kramer-Kronigs-Integration")
+      ENDDO
+
+
+      !perform rotations for intersite elements
+      DO i_gf = i_gf_start, i_gf_end
+         IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
+
+         CALL g(i_gf)%rotate(sym,atoms)
       ENDDO
 
 #ifdef CPP_MPI

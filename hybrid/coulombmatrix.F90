@@ -67,18 +67,18 @@ CONTAINS
       INTEGER                    :: inviop
       INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2, iqnrmstart, iqnrmstep
       INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, idum, ikpt
-      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2, ng
+      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2
       INTEGER                    :: ic, ic1, ic2, ic3, ic4
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
       INTEGER                    :: isym, isym1, isym2, igpt0
-      INTEGER                    :: ok, iatm1, iatm2
+      INTEGER                    :: iatm1, iatm2
       INTEGER                    :: m, im
       INTEGER                    :: maxfac
 
       LOGICAL                    :: lsym
 
       REAL                       :: rdum, rdum1, rdum2
-      REAL                       :: svol, qnorm, qnorm1, qnorm2, gnorm
+      REAL                       :: svol, qnorm1, qnorm2
       REAL                       :: fcoulfac
 
       COMPLEX                    :: cdum, cexp, csum
@@ -115,7 +115,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
       INTEGER                    :: ishift, ishift1, ierr
-      INTEGER                    :: iatom, iatom1, entry_len
+      INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
       TYPE(t_mat)                :: coul_mtmt, mat, coulmat, smat
       type(t_mat), allocatable   :: coulomb(:)
@@ -867,7 +867,7 @@ CONTAINS
       call timestop("gap 1:")
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
-         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, fi%kpts, ikpt, coulomb(ikpt))
+         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coulomb(ikpt))
          call coulomb(ikpt)%u2l()
       enddo
 
@@ -1269,7 +1269,7 @@ CONTAINS
 
    END SUBROUTINE getnorm
 
-   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, kpts, ikpt, coulomb)
+   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, ikpt, coulomb)
       USE m_olap, ONLY: olap_pw
       USE m_types
       use m_judft
@@ -1280,11 +1280,10 @@ CONTAINS
       type(t_hybdat), intent(in) :: hybdat
       type(t_mpi), intent(in)    :: fmpi
       type(t_sym), intent(in)    :: sym
-      type(t_kpts), intent(in)   :: kpts
       type(t_mat), intent(inout) :: coulomb
       integer, intent(in)        :: ikpt
 
-      type(t_mat)     :: olap, coulhlp, coul_submtx
+      type(t_mat)     :: olap, coul_submtx
       integer         :: nbasm, loc_size, i, i_loc, root, ierr
       complex, allocatable :: tmp(:)
 
@@ -1420,7 +1419,7 @@ CONTAINS
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr
-      integer  :: l2, m2, lm2, n, i, idum, iatm, j_type, j_l, iy_start, j_m, j_lm
+      integer  :: l2, m2, lm2, n, i, iatm, j_type, j_l, iy_start, j_m, j_lm
       real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
@@ -1577,7 +1576,7 @@ CONTAINS
       type(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, lm, m, idum, l, i, ierr, root
+      integer :: ic, itype, lm, m, l, ierr, root
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
