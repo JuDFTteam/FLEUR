@@ -52,26 +52,28 @@ CONTAINS
 
     eFermi = results%ef
 
-    IF(results%bandgap.GE.8.0*input%tkb*hartree_to_ev_const) THEN
-       WRITE(*,*) 'Fermi energy correction for insulators:'
-       IF(.NOT.l_error) THEN
-          eFermi = MAX(eFermi,eFermiPrev)
-          WRITE(*,*) 'Fermi energy in bands.* files has been set to the maximal'
-          WRITE(*,*) 'value determined in the band structure calculation and'
-          WRITE(*,*) 'the calculation of the underlying density, respectively.'
+    IF(banddos%band) THEN
+       IF(results%bandgap.GE.8.0*input%tkb*hartree_to_ev_const) THEN
+          WRITE(*,*) 'Fermi energy correction for insulators:'
+          IF(.NOT.l_error) THEN
+             eFermi = MAX(eFermi,eFermiPrev)
+             WRITE(*,*) 'Fermi energy in bands.* files has been set to the maximal'
+             WRITE(*,*) 'value determined in the band structure calculation and'
+             WRITE(*,*) 'the calculation of the underlying density, respectively.'
+          ELSE
+             WRITE(*,*) 'No automatic correction of the Fermi energy has been performed.'
+          END IF
        ELSE
-          WRITE(*,*) 'No automatic correction of the Fermi energy has been performed.'
-       END IF
-    ELSE
-       WRITE(*,*) 'Fermi energy correction for metals:'
-       IF(.NOT.l_error) THEN
-          eFermi = eFermiPrev
-          WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
-          WRITE(*,*) 'It is consistent with last calculated density!'
-          WRITE(*,*) 'No manual correction (e.g. in band.gnu file) required.'
-       ELSE
-          WRITE(*,*) 'Fermi energy in bands.* files may not be consistent with last density.'
-          WRITE(*,*) 'Please correct it manually (e.g. in band.gnu file).'
+          WRITE(*,*) 'Fermi energy correction for metals:'
+          IF(.NOT.l_error) THEN
+             eFermi = eFermiPrev
+             WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
+             WRITE(*,*) 'It is consistent with last calculated density!'
+             WRITE(*,*) 'No manual correction (e.g. in band.gnu file) required.'
+          ELSE
+             WRITE(*,*) 'Fermi energy in bands.* files may not be consistent with last density.'
+             WRITE(*,*) 'Please correct it manually (e.g. in band.gnu file).'
+          END IF
        END IF
     END IF
 

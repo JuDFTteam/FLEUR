@@ -62,6 +62,14 @@ CONTAINS
 
            IF ( vx.LT.0 ) phi = pi - phi
            IF ( vy.LT.0 ) phi = -phi
+
+
+           !Make phi and theta minimal
+           if (abs(phi)>pi/2) THEN
+             phi=phi-sign(pi,phi)
+             theta=-theta
+           endif
+
         END IF
 
 

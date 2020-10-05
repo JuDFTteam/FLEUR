@@ -15,8 +15,8 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
-                       hybdat, noco,nococonv, oneD, fmpi, input, jsp)
+   SUBROUTINE gen_wavf(kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, vr0, &
+                       hybdat, noco,nococonv, fmpi, input, jsp)
 
       ! nkpt       ::     number of all k-points
       USE m_types
@@ -33,9 +33,7 @@ CONTAINS
 
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_mpi), INTENT(IN)    :: fmpi
-      TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -44,29 +42,23 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
-      INTEGER, INTENT(IN)    :: jsp, nkpti
+      INTEGER, INTENT(IN)    :: jsp
 
       REAL, INTENT(IN)    :: vr0(:, :, :)!(jmtd,ntype,jspd)
       REAL, INTENT(IN)    :: el_eig(0:atoms%lmaxd, atoms%ntype)
       REAL, INTENT(IN)    :: ello_eig(:,:)
 
       ! local scalars
-      INTEGER                 :: ilo, idum, m
-      COMPLEX                 :: cdum
-      INTEGER                 :: ikpt0, ikpt, itype, iop, ieq, indx, iatom
-      INTEGER                 :: i, j, l, ll, lm, ng, ok
-      COMPLEX, PARAMETER      :: img = (0.0, 1.0)
+      INTEGER                 :: ilo
+      INTEGER                 :: ikpt, itype, iop
+      INTEGER                 :: l, ng
 
       INTEGER                 :: nodem, noded
       REAL                    :: wronk
 
       ! local arrays
       INTEGER                 :: rrot(3, 3, sym%nsym)
-      INTEGER                 :: map_lo(atoms%nlod)
       INTEGER                 :: iarr(0:atoms%lmaxd, atoms%ntype)
-      COMPLEX, ALLOCATABLE     :: acof(:, :, :), bcof(:, :, :), ccof(:, :, :, :)
-
-      COMPLEX, ALLOCATABLE     :: cmt(:, :, :), cmthlp(:, :, :), c_phase(:)
 
       REAL                    :: vr(atoms%jmtd, atoms%ntype, input%jspins)
       REAL, ALLOCATABLE        :: u(:, :, :), du(:, :, :)

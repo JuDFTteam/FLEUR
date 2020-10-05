@@ -24,7 +24,6 @@ MODULE m_types_gfinp
       INTEGER :: atomType  = 0
       INTEGER :: atomTypep = 0
       REAL    :: atomDiff(3)  = [0.0,0.0,0.0] !Distance between atoms (lattice coordinates) for intersite phase
-      INTEGER :: numDiffElems = 0!Elements equivalent by Symmetry
 
       INTEGER :: iContour = 0      !Which energy contour is used
       LOGICAL :: l_sphavg = .TRUE. !Is this element calculated with or without radial dependence
@@ -33,6 +32,10 @@ MODULE m_types_gfinp
       LOGICAL :: l_fixedCutoffset = .FALSE.
       REAL    :: fixedCutoff = 0.0
       INTEGER :: refCutoff   = -1 !Choose cutoff to be the same as another
+
+      !Symmetry relations to other gf element (only intersite)
+      INTEGER :: representative_elem = -1
+      INTEGER :: representative_op = -1
    CONTAINS
       PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
       PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
@@ -152,7 +155,8 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%refCutoff,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%atomDiff)
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
-         CALL mpi_bc(this%elem(n)%numDiffElems,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -477,11 +481,13 @@ CONTAINS
       TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
+      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref
       LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
+      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -501,9 +507,25 @@ CONTAINS
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
             CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff,&
-                                           atoms,cell,sym,.NOT.written(atomType))
+                                           this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
+                                           .NOT.written(atomType),nOtherAtoms,atomTypepList)
             written(atomType) = .TRUE.
+
+            !Add the other atomtypes (i,j) -> (j,i)
+            DO iOtherAtom = 1, nOtherAtoms
+               atomType = atomTypepList(iOtherAtom)
+               !First add the reference cutoff element
+               lref = this%elem(refCutoff)%l
+               refCutoff1 =  this%add(lref,atomType,iContour,.FALSE.,l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
+                                      fixedCutoff=this%elem(i_gf)%fixedCutoff)
+
+               WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
+
+               CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+                                              this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
+                                              .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+
+            ENDDO
          ENDIF
       ENDDO
 
@@ -640,6 +662,9 @@ CONTAINS
          atomDiff(:) = this%elem(i_gf)%atomDiff(:)
 
          IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
+
+         !If the element has a representative element set it can not be unique
+         IF(this%elem(i_gf)%representative_elem>0) CYCLE
          iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
                                atomDiff=atomDiff,uniqueMax=i_gf)
 
@@ -670,8 +695,14 @@ CONTAINS
          l_sphavgElem = this%elem(ind)%l_sphavg
          atomDiff(:) = this%elem(ind)%atomDiff(:)
 
-         indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                               atomDiff=atomDiff,uniqueMax=ind)
+         IF(this%elem(ind)%representative_elem>0) THEN
+            !The given element is related to a representative_elem by Symmetry
+            !Therefore the unique element is given in representative_elem
+            indUnique = this%elem(ind)%representative_elem
+         ELSE
+            indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
+                                  atomDiff=atomDiff,uniqueMax=ind)
+         ENDIF
       ENDIF
 
    END FUNCTION uniqueElements_gfinp
@@ -750,7 +781,7 @@ CONTAINS
    END FUNCTION add_gfelem
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,l_write)
+                                          refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
       USE m_types_cell
@@ -761,25 +792,27 @@ CONTAINS
       !This is essentially a simplified version of chkmt, because we have a given
       !reference atom and do not need to consider all distances between all atoms
 
-      CLASS(t_gfinp),   INTENT(INOUT)  :: this
-      INTEGER,          INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
-      INTEGER,          INTENT(IN)     :: l
-      INTEGER,          INTENT(IN)     :: lp
-      INTEGER,          INTENT(IN)     :: refAtom !which is the reference atom
-      INTEGER,          INTENT(IN)     :: iContour
-      LOGICAL,          INTENT(IN)     :: l_fixedCutoffset
-      REAL,             INTENT(IN)     :: fixedCutoff
-      INTEGER,          INTENT(IN)     :: refCutoff
-      TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_cell),     INTENT(IN)     :: cell
-      TYPE(t_sym),      INTENT(IN)     :: sym
-      LOGICAL,          INTENT(IN)     :: l_write
+      CLASS(t_gfinp),      INTENT(INOUT)  :: this
+      INTEGER,             INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
+      INTEGER,             INTENT(IN)     :: l
+      INTEGER,             INTENT(IN)     :: lp
+      INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
+      INTEGER,             INTENT(IN)     :: iContour
+      LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
+      REAL,                INTENT(IN)     :: fixedCutoff
+      INTEGER,             INTENT(IN)     :: refCutoff
+      TYPE(t_atoms),       INTENT(IN)     :: atoms
+      TYPE(t_cell),        INTENT(IN)     :: cell
+      TYPE(t_sym),         INTENT(IN)     :: sym
+      LOGICAL,             INTENT(IN)     :: l_write
+      INTEGER,             INTENT(OUT)    :: nOtherAtoms
+      INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
 
       REAL,    PARAMETER :: tol = 1e-7
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -797,6 +830,8 @@ CONTAINS
       REAL,    ALLOCATABLE :: shellDistance(:)
       REAL,    ALLOCATABLE :: shellDiff(:,:,:)
       INTEGER, ALLOCATABLE :: shellAtom(:)
+      INTEGER, ALLOCATABLE :: shellop(:,:)
+      INTEGER, ALLOCATABLE :: shellopAux(:)
       INTEGER, ALLOCATABLE :: numshellAtoms(:)
       REAL,    ALLOCATABLE :: shellAux(:,:)
       REAL,    ALLOCATABLE :: shellAux1(:,:)
@@ -901,6 +936,7 @@ CONTAINS
       ALLOCATE(shellDiff(3,maxAtoms,maxAtoms),source = 0.0)
       ALLOCATE(shellAtom(maxAtoms),source=0)
       ALLOCATE(numshellAtoms(maxAtoms),source=0)
+      ALLOCATE(shellop(maxAtoms,maxAtoms),source=-1)
 
       !Sort the nearestNeighbours into shells
       lastIndex = 1 !Skip the first element (onsite)
@@ -933,6 +969,7 @@ CONTAINS
 
 
       ALLOCATE(shellAux(3,maxAtoms),source=0.0)
+      ALLOCATE(shellopAux(maxAtoms),source=-1)
       ALLOCATE(shellAux1(3,maxAtoms),source=0.0)
       nshellsFound = ishell !We only want to consider nshells
       !Symmetry reduction (modernized and modified version of nshell.f from v26)
@@ -948,6 +985,7 @@ CONTAINS
          !Take the representative element of the shell
          shellAux = 0.0
          shellAux(:,1) = shellDiff(:,1,ishell)
+         shellopAux(1) = 1 !Identity operation
 
          nshellAtom = 1
          symLoop: DO iop = 1, sym%nop
@@ -960,6 +998,7 @@ CONTAINS
 
             nshellAtom = nshellAtom + 1
             shellAux(:,nshellAtom) = diffRot
+            shellopAux(nshellAtom) = iop
          ENDDO symLoop
 
          IF(nshellAtom < numshellAtoms(ishell)) THEN  !Not all elements can be constructed from the representative element
@@ -993,6 +1032,7 @@ CONTAINS
             numshellAtoms(ishell) = nshellAtom
             DO ishellAtom = 1, nshellAtom
                shellDiff(:,ishellAtom,ishell) = shellAux(:,ishellAtom)
+               shellop(ishellAtom,ishell) = shellopAux(ishellAtom)
             ENDDO
 
             !Insert Element at ishell+1 (This way it will be the next element in the
@@ -1008,6 +1048,10 @@ CONTAINS
 
       ENDDO
 
+
+
+      ALLOCATE(atomTypepList(maxAtoms),source=0)
+      nOtherAtoms = 0
       nshellsFound = ishell - 1
 
       DO ishell = 1, nshellsFound
@@ -1016,42 +1060,39 @@ CONTAINS
 
             WRITE(oUnit,'(/,A)') ' Contains the following atom pairs:'
             DO ishellAtom = 1, numshellAtoms(ishell)
-               WRITE(oUnit,'(3f14.8)') shellDiff(:,ishellAtom,ishell)
+               WRITE(oUnit,'(3f14.8,i0)') shellDiff(:,ishellAtom,ishell), shellop(ishellAtom,ishell)
             ENDDO
          ENDIF
 
-         !Transform represenative element to lattice coordinates
-         diff = MATMUL(invAmatAux,shellDiff(:,1,ishell))
-         !l_sphavg has to be false
-         i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
-                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
-                          fixedCutoff=fixedCutoff)
+         DO ishellAtom = 1, numshellAtoms(ishell)
+            !Transform representative element to lattice coordinates
+            diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
+            !l_sphavg has to be false
+            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+                             atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
+                             fixedCutoff=fixedCutoff)
+            IF(repr == 0) repr = i_gf
 
-         this%elem(i_gf)%refCutoff = refCutoff
-         this%elem(i_gf)%numDiffElems = numshellAtoms(ishell)
+            this%elem(i_gf)%refCutoff = refCutoff
+            this%elem(i_gf)%representative_elem = repr
+            this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
 
-         IF(l_write) THEN
-            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            shellDiff(:,1,ishell), diff(:)
-         ENDIF
+            IF(shellAtom(ishell).NE.refAtom) THEN
+               !Other atomtype
+               nOtherAtoms = nOtherAtoms + 1
+               atomTypepList(nOtherAtoms) = shellAtom(ishell)
+            ENDIF
 
-         !Add negative of diff (for Jij we need Gij and Gji (could maybe be done with conjugation))
-         !This should not produce problems if symmertry is reduced because add makes sure that there
-         !are no duplicates in this%elem
-         diff = -1.0 * diff
-         i_gf =  this%add(l,shellAtom(ishell),iContour,.FALSE.,lp=lp,nTypep=refAtom,&
-                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
-                          fixedCutoff=fixedCutoff)
 
-         this%elem(i_gf)%refCutoff = refCutoff
-         this%elem(i_gf)%numDiffElems = numshellAtoms(ishell)
-
-         IF(l_write) THEN
-            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            shellDiff(:,1,ishell), diff(:)
-         ENDIF
+            IF(l_write) THEN
+               WRITE(oUnit,'(A,I6,I6,6f14.8,i0)') 'GF Element: ', refAtom, shellAtom(ishell),&
+                                               shellDiff(:,ishellAtom,ishell), diff(:), &
+                                               shellop(ishellAtom,ishell)
+            ENDIF
+         ENDDO
 
       ENDDO
+
 
    CALL timestop("Green's Function: Add nearest Neighbors")
 

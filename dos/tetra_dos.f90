@@ -23,7 +23,7 @@ MODULE m_tetra_dos
 
    CONTAINS
 
-   SUBROUTINE tetra_dos(jspins,kpts,eGrid,neig,eig,qal,g)
+   SUBROUTINE tetra_dos(jspins,kpts,eGrid,neig,eig,qal,g,energyShift)
 
       INTEGER,       INTENT(IN)    :: jspins
       TYPE(t_kpts),  INTENT(IN)    :: kpts
@@ -32,25 +32,29 @@ MODULE m_tetra_dos
       REAL,          INTENT(IN)    :: qal(:,:,:)  !(neigd,nkpt,jspins)
       REAL,          INTENT(IN)    :: eig(:,:,:)  !(neigd,nkpt,jspins)
       REAL,          INTENT(OUT)   :: g(:,:)      !(ned,jspins)
+      REAL, OPTIONAL, INTENT(IN)   :: energyShift
 
       INTEGER :: i,j,iBand,ikpt,ie,idim,itet,icorn,jcorn,ispin
-      REAL    :: ener,w,sfac
+      REAL    :: ener,w,sfac, shift
       REAL    :: weight(4),eval(4),ecmax(SIZE(eig,1),jspins),term(SIZE(eGrid))
       REAL, ALLOCATABLE :: wpar(:,:,:)
       REAL, ALLOCATABLE :: eig_nondeg(:,:,:)
 
-      eig_nondeg = eig
+      shift = 0.0
+      IF(PRESENT(energyShift)) shift = energyShift
+
+      eig_nondeg = eig - shift
 
       ALLOCATE(wpar,mold=qal)
       wpar = 0.0
 
-      sfac = 3.0 - 2.0*jspins
+      sfac = 2.0/jspins
 
       DO ispin = 1, jspins
          DO iBand = 1,SIZE(eig,1)
             ecmax(iBand,ispin) = -1.0e25
             DO ikpt = 1,kpts%nkpt
-               IF(eig(iBand,ikpt,ispin).GT.ecmax(iBand,ispin)) ecmax(iBand,ispin) = eig(iBand,ikpt,ispin)
+               IF(eig_nondeg(iBand,ikpt,ispin).GT.ecmax(iBand,ispin)) ecmax(iBand,ispin) = eig_nondeg(iBand,ikpt,ispin)
             ENDDO
          ENDDO
       ENDDO

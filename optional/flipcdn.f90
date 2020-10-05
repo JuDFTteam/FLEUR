@@ -58,7 +58,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype),opt
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
-
+   REAL,ALLOCATABLE          :: mt_tmp(:,:,:,:)
    zeros=0.0
 
 !Flipcdn by optional given angle if lflip is false but routine is called.
@@ -88,7 +88,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
       archiveType=CDN_ARCHIVE_TYPE_FFN_const
    ELSE IF (noco%l_noco) THEN
       archiveType=CDN_ARCHIVE_TYPE_NOCO_const
-   ELSE 
+   ELSE
       archiveType=CDN_ARCHIVE_TYPE_CDN1_const
    END IF
 
@@ -106,6 +106,13 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! flip cdn for each atom with rotation angles given
    na = 1
+   if (noco%l_mtNocoPot.and.size(den%mt,4)<4) then
+     !So far the density was collinear in spheres, now we make it FFN ready
+     CALL move_alloc(den%mt,mt_tmp)
+     allocate(den%mt(size(mt_tmp,1),0:size(mt_tmp,2)-1,size(mt_tmp,3),4))
+     den%mt(:,:,:,1:2)=mt_tmp
+     den%mt(:,:,:,3:)=0.0
+   endif
 !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
 !$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin) &
 !$OMP FIRSTPRIVATE(na,rotAngleTheta,rotAnglePhi)

@@ -10,25 +10,28 @@ MODULE m_types_noco
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_fleurinput_base):: t_noco
-    LOGICAL:: l_ss= .FALSE.
     LOGICAL:: l_soc= .FALSE.
+    LOGICAL:: l_spav= .FALSE.
+
     LOGICAL:: l_noco = .FALSE.
+    LOGICAL:: l_ss= .FALSE.
     LOGICAL:: l_mperp = .FALSE.
     LOGICAL:: l_constr = .FALSE.
     LOGICAL:: l_mtNocoPot = .FALSE.
     LOGICAL:: l_alignMT = .FALSE.
+    INTEGER:: mag_mixing_sheme=1
+
     LOGICAL:: l_sourceFree = .FALSE.
     LOGICAL:: l_scaleMag = .FALSE.
-    LOGICAL:: l_RelaxAlpha=.FALSE.
-    LOGICAL:: l_RelaxBeta=.FALSE.
+
     REAL   :: mag_scale=1.0
     REAL   :: mix_b=0.0
-    REAL   :: mix_RelaxWeightOffD=1.0
-    LOGICAL:: l_spav= .FALSE.
+
     REAL   :: theta_inp=0.0
     REAL   :: phi_inp=0.0
     REAL   :: qss_inp(3)=[0.0,0.0,0.0]
 
+    REAL, ALLOCATABLE   :: mix_RelaxWeightOffD(:)
     LOGICAL, ALLOCATABLE :: l_relax(:)
     REAL, ALLOCATABLE    :: alph_inp(:)
     REAL, ALLOCATABLE    :: beta_inp(:)
@@ -66,8 +69,6 @@ MODULE m_types_noco
      CALL mpi_bc(this%mag_scale ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss_inp)
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
-     CALL mpi_bc(this%l_RelaxAlpha,rank,mpi_comm)
-     CALL mpi_bc(this%l_RelaxBeta,rank,mpi_comm)
      CALL mpi_bc(this%mix_RelaxWeightOffD,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta_inp,rank,mpi_comm)
@@ -116,7 +117,18 @@ MODULE m_types_noco
          CALL juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
       END IF
 
-      this%qss_inp = 0.0
+
+      this%qss=0.0
+      ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
+      ALLOCATE(this%l_relax(ntype),this%mix_RelaxWeightOffD(ntype))
+      this%l_relax=.false.
+      this%mix_RelaxWeightOffD=1.0
+      ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
+      this%alph_inp=0.0;this%beta_inp=0.0
+      ALLOCATE(this%socscale(ntype))
+      this%socscale=0.0
+
+
       IF (numberNodes.EQ.1) THEN
          this%l_mperp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          this%l_constr = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
@@ -159,13 +171,7 @@ MODULE m_types_noco
          this%mag_scale = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_scale'))
       END IF
 
-      ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-      ALLOCATE(this%l_relax(ntype))
-      this%l_relax=.false.
-      ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
-      this%alph_inp=0.0;this%beta_inp=0.0
-      ALLOCATE(this%socscale(ntype))
-      this%socscale=0.0
+
 
       DO itype=1,ntype
         this%socscale(Itype)=1.0
@@ -182,7 +188,6 @@ MODULE m_types_noco
             !this%b_con(2,iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
          END IF
       ENDDO
-
 
     END SUBROUTINE read_xml_noco
 

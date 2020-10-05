@@ -23,7 +23,7 @@ MODULE m_plot
    !
    ! Added OMP+MPI Parallelization, R. Hilgers March 2020
    !
-   ! Added 3D vectorplot option and plotting only MT option as well as  
+   ! Added 3D vectorplot option and plotting only MT option as well as
    ! single MT only plots,  A. Neukirchen and R. Hilgers April 2020
    !
    !-----------------------------------------------------------------------------
@@ -1245,9 +1245,9 @@ CONTAINS
 
    END SUBROUTINE procplot
 
-   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, mpi, oneD, sym, cell, &
+   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi, oneD, sym, cell, &
                         noco, nococonv,denmat, plot_const, sliceplot)
-
+      USE m_Relaxspinaxismagn
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there or an oldform is given. Both are outdated.
@@ -1258,13 +1258,13 @@ CONTAINS
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
+      TYPE(t_mpi),       INTENT(IN)    :: fmpi
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_nococonv),  INTENT(IN)    :: nococonv
-      TYPE(t_potden),    INTENT(IN)    :: denmat
+      TYPE(t_nococonv),  INTENT(INOUT) :: nococonv
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 #ifdef CPP_MPI
@@ -1273,7 +1273,7 @@ INCLUDE 'mpif.h'
       LOGICAL :: allowplot
       INTEGER :: ierr
 #ifdef CPP_MPI
-      CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
       ! The check is done via bitwise operations. If the i-th position of iplot
       ! in binary representation (2^n == n-th position) has a 1, the correspon-
@@ -1286,9 +1286,11 @@ INCLUDE 'mpif.h'
       CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
-         CALL checkplotinp(mpi)
-         CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,mpi, oneD, sym, cell, &
+         CALL toGlobalSpinFrame(fmpi,noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Denmat,.true.)
+         CALL checkplotinp(fmpi)
+         CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi, oneD, sym, cell, &
                        noco, nococonv, denmat, plot_const)
+         CALL toLocalSpinFrame(fmpi,vacuum, sphhar, stars, sym, oneD, cell, noco, nococonv, input, atoms,.false., denmat,.true.)
       END IF
       CALL timestop("Plotting iplot plots")
 

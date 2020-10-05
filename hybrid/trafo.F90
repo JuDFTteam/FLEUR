@@ -423,7 +423,7 @@ CONTAINS
    END SUBROUTINE waveftrafo_genwavf
 
    SUBROUTINE waveftrafo_gen_zmat(z_in, nk, iop, &
-                                  kpts, sym, jsp, input, nbands, &
+                                  kpts, sym, jsp, nbands, &
                                   lapw_nk, lapw_rkpt, z_out, c_phase)
 
       use m_juDFT
@@ -433,7 +433,6 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
-      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)     :: sym
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
@@ -722,7 +721,7 @@ CONTAINS
    ! symmetrie equivalent one
    ! isym maps kpts%bkp(ikpt) on ikpt
 
-   subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, jsp, psize,  phase, vecin, vecout)
+   subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize,  phase, vecin, vecout)
       use m_types
       use m_constants
       use m_judft
@@ -730,20 +729,20 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
-      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       type(t_mat), INTENT(IN)           :: vecin
       type(t_mat), INTENT(INOUT)        :: vecout
       COMPLEX, INTENT(INOUT)            :: phase(:, :)
 
       if(vecin%l_real) then 
-         call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin%data_r, vecout%data_r)
+         call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_r, vecout%data_r)
       else
-         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin%data_c, vecout%data_c)
+         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_c, vecout%data_c)
       endif
 
    end subroutine bra_trafo
 
-   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, jsp, psize, phase, vecin_r, vecout_r)
+   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin_r, vecout_r)
       use m_types
       use m_constants
       use m_judft
@@ -751,7 +750,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
-      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       REAL, INTENT(IN)                  ::  vecin_r(:,:)
       REAL, INTENT(INOUT)               ::  vecout_r(:,:)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
@@ -776,7 +775,7 @@ CONTAINS
                            fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       END DO
 
-      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, psize, fi%sym, mpdata, &
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, &
                           fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
       deallocate (vecin1)
 
@@ -802,7 +801,7 @@ CONTAINS
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
-   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, jsp,psize, phase, vecin_c, vecout_c)
+   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin_c, vecout_c)
       use m_types
       use m_constants
       use m_judft
@@ -810,7 +809,7 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
-      INTEGER, INTENT(IN)               :: ikpt, nbands, jsp, psize
+      INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
@@ -832,7 +831,7 @@ CONTAINS
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       vecin1 = vecin_c
 
-      call bra_trafo_core(MAXVAL(hybdat%nobd(:, jsp)), nbands, ikpt, psize,&
+      call bra_trafo_core(nbands, ikpt, psize,&
                           fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
 
       phase = cmplx_1
@@ -841,7 +840,7 @@ CONTAINS
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
-   subroutine bra_trafo_core(nobd, nbands, ikpt, psize, sym, &
+   subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
                              mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
       use m_types
       use m_constants
@@ -853,12 +852,12 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
-      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands, psize
+      INTEGER, INTENT(IN)      ::  ikpt, nbands, psize
 
       COMPLEX, intent(in)     :: vecin1(:, :)
       complex, intent(inout)  :: vecout1(:, :)
 
-      INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2
+      INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
       INTEGER                 :: igptm, igptm2, igptp, iiatom, iiop, inviop
       COMPLEX                 :: cexp, cdum
 

@@ -59,9 +59,8 @@ contains
       COMPLEX                   ::  y((2*hybinp%lexp + 1)**2)
       REAL, PARAMETER           :: CONVPARAM = 1e-18
       ! Do some additional shells ( real-space and Fourier-space sum )
-      INTEGER, PARAMETER        :: ADDSHELL1 = 40
       INTEGER, PARAMETER        :: ADDSHELL2 = 0
-
+      
       call timestart("calc struc_const.")
 
       IF (fmpi%irank /= 0) first = .FALSE.
@@ -401,7 +400,6 @@ contains
       integer ::  conv(0:2*hybinp%lexp)
       integer, allocatable ::  pnt(:), ptsh(:,:)
       INTEGER, PARAMETER        :: ADDSHELL1 = 40
-      INTEGER, PARAMETER        :: ADDSHELL2 = 0
 
       real :: rdum, rexp, ra(3),  rc(3), tmp_vec(3)
       real, allocatable    ::  radsh(:)

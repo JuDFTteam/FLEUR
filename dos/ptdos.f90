@@ -14,34 +14,38 @@ MODULE m_ptdos
 
    CONTAINS
 
-   SUBROUTINE ptdos(jspins,kpts,eGrid,ev,qal,g)
+   SUBROUTINE ptdos(jspins,kpts,eGrid,eig,qal,g,energyShift)
 
       INTEGER,       INTENT(IN)  :: jspins
       TYPE(t_kpts),  INTENT(IN)  :: kpts
       REAL,          INTENT(IN)  :: qal(:,:,:)  !(nbands,nkpt,jspins)
       REAL,          INTENT(IN)  :: eGrid(:)
-      REAL,          INTENT(IN)  :: ev(:,:,:)   !(nbands,nkpt,jspins)
+      REAL,          INTENT(IN)  :: eig(:,:,:)   !(nbands,nkpt,jspins)
       REAL,          INTENT(OUT) :: g(:,:)      !(ne,jspins)
+      REAL, OPTIONAL, INTENT(IN) :: energyShift
 
       INTEGER :: iBand,itria,iGrid,ispin
       INTEGER :: ind(3),k(3)
-      REAL    :: sfac,fa
+      REAL    :: sfac,fa,shift
       REAL    :: ei(3)
 
+      shift = 0.0
+      IF(PRESENT(energyShift)) shift = energyShift
+
       !Spin-degeneracy factor
-      sfac = 2.0*(3.0-jspins)
+      sfac = 2.0/jspins
 
       g = 0.0
       DO ispin = 1, jspins
          DO itria = 1 , kpts%ntet
             fa = sfac*kpts%voltet(itria)/kpts%ntet
             k = kpts%ntetra(:,itria)
-            DO iBand = 1 , SIZE(ev,1)
+            DO iBand = 1 , SIZE(eig,1)
                !---------------------------
                !eigenvalues at the corners
                !of the current triangle
                !---------------------------
-               ei = ev(iBand,k,ispin)
+               ei = eig(iBand,k,ispin) - shift
 
                !sort in ascending order
                ind = tetsrt(ei)
@@ -87,8 +91,8 @@ MODULE m_ptdos
          IF ( e21.LT.tol ) RETURN
          e31 = ei(3) - ei(1)
          IF ( e31.LT.tol ) RETURN
-         dostet = ee/(e21*e31)*(q(1) &
-                                +0.5*(ee/e21*(q(2)-q(1)) &
+         dostet = ee/(e21*e31)*(2.0*q(1) &
+                                + (ee/e21*(q(2)-q(1)) &
                                 + ee/e31*(q(3)-q(1))))
       ELSE
          IF ( e.GT.ei(3) ) RETURN
@@ -99,7 +103,7 @@ MODULE m_ptdos
          IF ( e31.LT.tol ) RETURN
          e32 = ei(3) - ei(2)
          IF ( e32.LT.tol ) RETURN
-         dostet = (ei(3)-e)/(e31*e32)*0.5*(q(1)+q(2) &
+         dostet = (ei(3)-e)/(e31*e32)*(q(1)+q(2) &
                                         +(e-ei(1))/e31*(q(3)-q(1)) &
                                         +(e-ei(2))/e32*(q(3)-q(2)))
          RETURN

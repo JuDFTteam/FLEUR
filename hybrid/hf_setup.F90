@@ -40,18 +40,13 @@ CONTAINS
       TYPE(t_lapw)             :: lapw
 
       ! local scalars
-      INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
+      INTEGER :: ok, nk, nrec1, i, j, l1, l2, ng, itype, n, l, n1, n2, nn
       INTEGER :: nbasfcn, n_dim
-      LOGICAL :: l_exist
 
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
-
-      REAL :: zDebug_r(lapw_dim_nbasfcn,fi%input%neig)
-      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,fi%input%neig)
-
 
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
@@ -62,12 +57,6 @@ CONTAINS
             IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          endif
          eig_irr = 0.0
-
-         if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
-         allocate(hybdat%kveclo_eig(fi%atoms%nlotot, fi%kpts%nkpt), stat=ok)
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
-         hybdat%kveclo_eig = 0
-
 
          ! Reading the eig file
          call timestart("eig stuff")
@@ -149,8 +138,8 @@ CONTAINS
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(fi%kpts%nkpt, fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
-                       mpdata, fi%hybinp, vr0, hybdat, fi%noco, nococonv,fi%oneD, fmpi, fi%input, jsp)
+         CALL gen_wavf(fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
+                       mpdata, vr0, hybdat, fi%noco, nococonv, fmpi, fi%input, jsp)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, fmpi, &
@@ -158,8 +147,8 @@ CONTAINS
 
          ! check olap between core-basis/core-valence/basis-basis
          ! This routine actually does nothing.
-         CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
-                        fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
+         ! CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
+         !                fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
 
          ! set up pointer pntgpt
 

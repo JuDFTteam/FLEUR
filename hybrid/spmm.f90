@@ -18,7 +18,7 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat
-      type(t_mat) :: mat_hlp, test_hlp, test_out
+      type(t_mat) :: mat_hlp
 
       call timestart("spmm_invs")
       call mat_hlp%init(mat_in)
@@ -230,9 +230,9 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4, iatom2, l1, lm, idx1_start, idx3_start
+      integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat
-      type(t_mat) :: mat_hlp, test_hlp, test_out
+      type(t_mat) :: mat_hlp
 
       call timestart("spmm_noinvs")
       call mat_hlp%init(mat_in)
