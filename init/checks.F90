@@ -103,7 +103,7 @@ MODULE m_checks
      if ( input%film ) then
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
-         na=sum(atoms%neq(:n))
+         na=sum(atoms%neq(:n-1))
          maxpos=max(maxpos,maxval(atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
          minpos=max(minpos,maxval(-1.*atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
        ENDDO

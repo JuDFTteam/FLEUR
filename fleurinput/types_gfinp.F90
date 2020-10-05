@@ -791,8 +791,8 @@ CONTAINS
       REAL,    PARAMETER :: tol = 1e-7
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
-      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound
+      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf,nOtherAtoms,iOtherAtom
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,refCutoff1,repr,lref
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -806,10 +806,13 @@ CONTAINS
       REAL,    ALLOCATABLE :: nearestNeighborDiffs(:,:)
       REAL,    ALLOCATABLE :: neighborAtomsDiff(:,:)
       REAL,    ALLOCATABLE :: sqrDistances(:)
+      INTEGER, ALLOCATABLE :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
 
       REAL,    ALLOCATABLE :: shellDistance(:)
       REAL,    ALLOCATABLE :: shellDiff(:,:,:)
       INTEGER, ALLOCATABLE :: shellAtom(:)
+      INTEGER, ALLOCATABLE :: shellop(:,:)
+      INTEGER, ALLOCATABLE :: shellopAux(:)
       INTEGER, ALLOCATABLE :: numshellAtoms(:)
       REAL,    ALLOCATABLE :: shellAux(:,:)
       REAL,    ALLOCATABLE :: shellAux1(:,:)
@@ -914,6 +917,7 @@ CONTAINS
       ALLOCATE(shellDiff(3,maxAtoms,maxAtoms),source = 0.0)
       ALLOCATE(shellAtom(maxAtoms),source=0)
       ALLOCATE(numshellAtoms(maxAtoms),source=0)
+      ALLOCATE(shellop(maxAtoms,maxAtoms),source=-1)
 
       !Sort the nearestNeighbours into shells
       lastIndex = 1 !Skip the first element (onsite)
@@ -946,6 +950,7 @@ CONTAINS
 
 
       ALLOCATE(shellAux(3,maxAtoms),source=0.0)
+      ALLOCATE(shellopAux(maxAtoms),source=-1)
       ALLOCATE(shellAux1(3,maxAtoms),source=0.0)
       nshellsFound = ishell !We only want to consider nshells
       !Symmetry reduction (modernized and modified version of nshell.f from v26)
@@ -961,6 +966,7 @@ CONTAINS
          !Take the representative element of the shell
          shellAux = 0.0
          shellAux(:,1) = shellDiff(:,1,ishell)
+         shellopAux(1) = 1 !Identity operation
 
          nshellAtom = 1
          symLoop: DO iop = 1, sym%nop
@@ -973,6 +979,7 @@ CONTAINS
 
             nshellAtom = nshellAtom + 1
             shellAux(:,nshellAtom) = diffRot
+            shellopAux(nshellAtom) = iop
          ENDDO symLoop
 
          IF(nshellAtom < numshellAtoms(ishell)) THEN  !Not all elements can be constructed from the representative element
@@ -1006,6 +1013,7 @@ CONTAINS
             numshellAtoms(ishell) = nshellAtom
             DO ishellAtom = 1, nshellAtom
                shellDiff(:,ishellAtom,ishell) = shellAux(:,ishellAtom)
+               shellop(ishellAtom,ishell) = shellopAux(ishellAtom)
             ENDDO
 
             !Insert Element at ishell+1 (This way it will be the next element in the
@@ -1021,6 +1029,10 @@ CONTAINS
 
       ENDDO
 
+
+
+      ALLOCATE(atomTypepList(maxAtoms),source=0)
+      nOtherAtoms = 0
       nshellsFound = ishell - 1
 
       DO ishell = 1, nshellsFound
@@ -1029,40 +1041,54 @@ CONTAINS
 
             WRITE(oUnit,'(/,A)') ' Contains the following atom pairs:'
             DO ishellAtom = 1, numshellAtoms(ishell)
-               WRITE(oUnit,'(3f14.8)') shellDiff(:,ishellAtom,ishell)
+               WRITE(oUnit,'(3f14.8,i0)') shellDiff(:,ishellAtom,ishell), shellop(ishellAtom,ishell)
             ENDDO
          ENDIF
 
-         !Transform represenative element to lattice coordinates
-         diff = MATMUL(invAmatAux,shellDiff(:,1,ishell))
-         !l_sphavg has to be false
-         i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
-                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
-                          fixedCutoff=fixedCutoff)
+         DO ishellAtom = 1, numshellAtoms(ishell)
+            !Transform representative element to lattice coordinates
+            diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
+            !l_sphavg has to be false
+            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+                             atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
+                             fixedCutoff=fixedCutoff)
+            IF(repr == 0) repr = i_gf
 
-         this%elem(i_gf)%refCutoff = refCutoff
+            this%elem(i_gf)%refCutoff = refCutoff
+            this%elem(i_gf)%representative_elem = repr
+            this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
 
-         IF(l_write) THEN
-            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', refAtom, shellAtom(ishell),&
-                                            shellDiff(:,1,ishell), diff(:)
-         ENDIF
+            IF(shellAtom(ishell).NE.refAtom) THEN
+               !Other atomtype
+               nOtherAtoms = nOtherAtoms + 1
+               atomTypepList(nOtherAtoms) = shellAtom(ishell)
+            ENDIF
 
-         !Add negative of diff (for Jij we need Gij and Gji (could maybe be done with conjugation))
-         !This should not produce problems if symmertry is reduced because add makes sure that there
-         !are no duplicates in this%elem
-         diff = -1.0 * diff
-         i_gf =  this%add(l,shellAtom(ishell),iContour,.FALSE.,lp=lp,nTypep=refAtom,&
-                          atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
-                          fixedCutoff=fixedCutoff)
 
-         this%elem(i_gf)%refCutoff = refCutoff
-
-         IF(l_write) THEN
-            WRITE(oUnit,'(A,I6,I6,6f14.8)') 'GF Element: ', shellAtom(ishell), refAtom, &
-                                            -1.0 * shellDiff(:,1,ishell), diff(:)
-         ENDIF
+            IF(l_write) THEN
+               WRITE(oUnit,'(A,I6,I6,6f14.8,i0)') 'GF Element: ', refAtom, shellAtom(ishell),&
+                                               shellDiff(:,ishellAtom,ishell), diff(:), &
+                                               shellop(ishellAtom,ishell)
+            ENDIF
+         ENDDO
 
       ENDDO
+
+      !Recursive call to add the other atomtypes (i,j) -> (j,i)
+      DO iOtherAtom = 1, nOtherAtoms
+         iAtom = atomTypepList(iOtherAtom)
+         !First add the reference cutoff element
+         lref = this%elem(refCutoff)%l
+         refCutoff1 =  this%add(lref,iAtom,iContour,.FALSE.,l_fixedCutoffset=l_fixedCutoffset,&
+                                fixedCutoff=fixedCutoff)
+
+         WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', iAtom
+
+         CALL this%addNearestNeighbours(nshells,l,lp,iAtom,iContour,l_fixedCutoffset,&
+                                        fixedCutoff,refCutoff1,atoms,cell,sym,.FALSE.)
+
+      ENDDO
+
 
    CALL timestop("Green's Function: Add nearest Neighbors")
 
