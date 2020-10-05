@@ -38,7 +38,7 @@ CONTAINS
       TYPE(t_cell),     INTENT(IN)    :: cell
       TYPE(t_vacuum),   INTENT(IN)    :: vacuum
       TYPE(t_noco),     INTENT(IN)    :: noco
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_nococonv), INTENT(INOUT) :: nococonv
       TYPE(t_sym),      INTENT(IN)    :: sym
       TYPE(t_stars),    INTENT(IN)    :: stars
       TYPE(t_atoms),    INTENT(IN)    :: atoms

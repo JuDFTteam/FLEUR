@@ -150,8 +150,7 @@ MODULE m_types_noco
             !this%b_con(2,iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
          END IF
       ENDDO
-
-
+      
     END SUBROUTINE read_xml_noco
 
 
