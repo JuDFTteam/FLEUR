@@ -32,6 +32,7 @@ MODULE m_cfOutput_hdf
 
       INTEGER(HID_T)   :: metaGroupID
       INTEGER(HID_T)   :: generalGroupID
+      INTEGER(HID_T)   :: bravaisMatrixSpaceID,bravaisMatrixSetID
 
       l_createIn = .TRUE.
       IF(PRESENT(l_create)) l_createIn = l_create
