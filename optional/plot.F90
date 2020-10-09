@@ -511,7 +511,9 @@ CONTAINS
                      noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
       USE m_xsf_io
-
+#ifdef CPP_MPI
+      USE mpi
+#endif
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
       ! according to a scheme given in plot_inp.
@@ -578,9 +580,6 @@ CONTAINS
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
       integer:: ierr
-#ifdef CPP_MPI
-   INCLUDE 'mpif.h'
-#endif
 
       nfile = 120
 
@@ -952,7 +951,7 @@ CONTAINS
    SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi ,oneD, sym, cell, &
                          noco,nococonv, factor, score, potnorm, denmat, denName)
 #ifdef CPP_MPI
-  INCLUDE 'mpif.h'
+      USE mpi
 #endif
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
@@ -987,7 +986,7 @@ CONTAINS
    SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi ,oneD, sym, cell, &
                          noco, nococonv,factor, score, potnorm, denmat, denName)
 #ifdef CPP_MPI
-  INCLUDE 'mpif.h'
+      USE mpi
 #endif
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
@@ -1025,6 +1024,9 @@ CONTAINS
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1039,9 +1041,6 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_potden),    INTENT(IN)    :: denmat
-#ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-#endif
       INTEGER,           INTENT(IN)    :: plot_const
 
       INTEGER            :: i
@@ -1252,6 +1251,9 @@ CONTAINS
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there or an oldform is given. Both are outdated.
       ! If that is not the case, we start plotting.
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1267,9 +1269,6 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-#ifdef CPP_MPI
-INCLUDE 'mpif.h'
-#endif
       LOGICAL :: allowplot
       INTEGER :: ierr
 #ifdef CPP_MPI
