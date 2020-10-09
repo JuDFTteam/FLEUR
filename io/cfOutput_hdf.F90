@@ -10,12 +10,13 @@ MODULE m_cfOutput_hdf
 
    CONTAINS
 
-   SUBROUTINE opencfFile(fileID, atoms, inFilename, l_create)
+   SUBROUTINE opencfFile(fileID, atoms, cell, inFilename, l_create)
 
       USE m_types_atoms
       USE m_juDFT
 
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_cell),                 INTENT(IN)  :: cell
       INTEGER(HID_T),               INTENT(OUT) :: fileID
       CHARACTER(len=:), OPTIONAL, ALLOCATABLE,   INTENT(IN)  :: inFilename
       LOGICAL, OPTIONAL,            INTENT(IN)  :: l_create
@@ -25,6 +26,8 @@ MODULE m_cfOutput_hdf
       LOGICAL          :: l_exist
       LOGICAL          :: l_error,l_createIn
       INTEGER          :: hdfError
+      INTEGER(HSIZE_T) :: dims(2)
+      INTEGER          :: dimsInt(2)
 
       INTEGER(HID_T)   :: metaGroupID
       INTEGER(HID_T)   :: generalGroupID
@@ -57,6 +60,16 @@ MODULE m_cfOutput_hdf
          CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
          CALL io_write_attint0(generalGroupID,'numPOT',COUNT(atoms%l_outputCFpot(:)))
          CALL io_write_attint0(generalGroupID,'numCDN',COUNT(atoms%l_outputCFcdn(:)))
+
+         !Write out the Bravais Matrix (important to keep track of phase differences for coefficients with m != 0)
+         dims(:2)=(/3,3/)
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
+         CALL h5dcreate_f(generalGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
+         CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
+         CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+         CALL h5dclose_f(bravaisMatrixSetID, hdfError)
+
          CALL h5gclose_f(generalGroupID, hdfError)
       ELSE IF(l_exist) THEN
          !Only open file

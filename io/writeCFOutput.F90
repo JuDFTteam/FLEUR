@@ -61,7 +61,7 @@ MODULE m_writeCFOutput
       ALLOCATE (flo(fi%atoms%jmtd,2,fi%atoms%nlod),source=0.0)
 
 #ifdef CPP_HDF
-      IF(fmpi%irank==0) CALL opencfFile(cfFileID, fi%atoms, l_create = .TRUE.)
+      IF(fmpi%irank==0) CALL opencfFile(cfFileID, fi%atoms, fi%cell, l_create = .TRUE.)
 #endif
       DO iType = 1, fi%atoms%ntype
 
