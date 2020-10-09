@@ -185,11 +185,11 @@ CONTAINS
       IF(l_explicit.OR.l_nocoOpt) THEN
          WRITE (fileNum, 140) input%jspins, noco%l_noco, noco%l_ss
 160      FORMAT('         <nocoParams l_mperp="', l1, '" l_constr="', l1, '" mix_b="', f0.8,'"/>')
-         WRITE (fileNum, 160) noco%l_mperp, noco%l_constr, noco%mix_b
+         WRITE (fileNum, 160) noco%l_mperp, any(noco%l_constrained), noco%mix_b
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
          WRITE (fileNum, 162) noco%qss_inp
-164      FORMAT('         <mtNocoParams l_mtNocoPot="', l1,'" l_RelaxMT="', l1, '" l_RelaxAlpha="',l1, '" l_RelaxBeta="',l1,'" mix_RelaxWeightOffD="',f0.8,'"/>')
-         WRITE (fileNum, 164) noco%l_mtNocoPot, noco%l_alignMT, noco%l_RelaxAlpha, noco%l_RelaxBeta, noco%mix_RelaxWeightOffD
+164      FORMAT('         <mtNocoParams l_mtNocoPot="', l1,'" l_RelaxMT="', l1,'" precond_magmix="', i1, '" mix_RelaxWeightOffD="',f0.8,'"/>')
+         WRITE (fileNum, 164) any(noco%l_unrestrictMT), noco%l_alignMT, noco%mag_mixing_scheme, noco%mix_RelaxWeightOffD
 166      FORMAT('         <sourceFreeMag l_sourceFree="', l1, '" l_scaleMag="', l1, '" mag_scale="', f0.8,'"/>')
          WRITE (fileNum, 166) noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale
          WRITE (fileNum, '(a)') '      </magnetism>'
@@ -559,9 +559,9 @@ CONTAINS
          WRITE (fileNum, 360) atoms%l_geo(iAtomType), atoms%relax(1, iAtomType), atoms%relax(2, iAtomType), atoms%relax(3, iAtomType)
 
          IF (l_nocoOpt .OR. l_explicit) THEN
-362         FORMAT('         <nocoParams l_relax="', l1, '" alpha="', f0.8, '" beta="', &
+362         FORMAT('         <nocoParams  alpha="', f0.8, '" beta="', &
                    f0.8,  '"/>')
-            WRITE (fileNum, 362) noco%l_relax(iAtomType), noco%alph_inp(iAtomType), &
+            WRITE (fileNum, 362)  noco%alph_inp(iAtomType), &
                noco%beta_inp(iAtomType)
          END IF
 

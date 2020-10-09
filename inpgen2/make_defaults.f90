@@ -133,10 +133,9 @@ CONTAINS
     !
     !noco
     !
-    ALLOCATE (noco%l_relax(atoms%ntype))
+
     ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
     noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
-    noco%l_relax(:) = .FALSE.
     noco%alph_inp(:) = 0.0
     noco%beta_inp(:) = 0.0
 

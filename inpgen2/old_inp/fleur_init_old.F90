@@ -110,7 +110,7 @@ CONTAINS
     ALLOCATE ( atoms%l_geo(atoms%ntype) )
     ALLOCATE ( atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype) )
     ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
-    ALLOCATE ( noco%alph_inp(atoms%ntype),noco%beta_inp(atoms%ntype),noco%l_relax(atoms%ntype) )
+    ALLOCATE ( noco%alph_inp(atoms%ntype),noco%beta_inp(atoms%ntype))
     ALLOCATE ( atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
     ALLOCATE ( sym%d_wgn(-3:3,-3:3,3,sym%nop) )
     ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )

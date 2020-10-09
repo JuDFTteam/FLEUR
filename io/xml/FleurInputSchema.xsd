@@ -77,22 +77,16 @@
       <xsd:attribute default="F" name="eV" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="NocoParamsType">
-      <xsd:attribute default="F" name="l_mperp" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_constr" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_disp" type="FleurBool" use="optional"/>
-      <xsd:attribute name="sso_opt" type="TripleFleurBool"/>
-      <xsd:attribute name="mix_b" type="xsd:string"/>
-      <xsd:attribute default="0.0" name="thetaJ" type="xsd:string" use="optional"/>
-      <xsd:attribute default="0" name="nsh" type="xsd:nonNegativeInteger" use="optional"/>
-   </xsd:complexType>
+
 
    <xsd:complexType name="MTNocoParamsType">
       <xsd:attribute default="F" name="l_mtNocoPot" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_RelaxMT" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_RelaxAlpha" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="l_RelaxBeta" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_mperp" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_constrained" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_relaxSQA" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0" name="mag_mixing_scheme" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="1.0" name="mix_RelaxWeightOffD" type="xsd:string" use="optional"/>
+      <xsd:attribute default="1.0" name="mix_constr" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SourceFreeMagType">
@@ -139,7 +133,6 @@
 
    <xsd:complexType name="MagnetismType">
       <xsd:all>
-         <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="NocoParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="qss" type="String3DVecType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="qsc" type="String3DVecType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="mtNocoParams" type="MTNocoParamsType"/>
@@ -478,7 +471,9 @@
    </xsd:complexType>
 
    <xsd:complexType name="AtomicNocoParamsType">
-      <xsd:attribute name="l_relax" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_constrained" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_mtNocoPot" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_relaxSQA" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_magn" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="M" type="xsd:string" use="optional"/>
       <xsd:attribute name="alpha" type="xsd:string" use="required"/>

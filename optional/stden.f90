@@ -203,7 +203,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    ! Check the normalization of total density
    CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
    !Rotate density into global frame if l_alignSQA
-   IF (noco%l_alignMT) then
+   IF (any(noco%l_alignMT)) then
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
      nococonv%beta=noco%beta_inp
      nococonv%alph=noco%alph_inp
@@ -224,7 +224,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       den%iter = 0
 
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
-          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_alignMT),&
+          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
           CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN

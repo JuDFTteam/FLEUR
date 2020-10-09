@@ -16,23 +16,22 @@ MODULE m_types_noco
     LOGICAL:: l_noco = .FALSE.
     LOGICAL:: l_ss= .FALSE.
     LOGICAL:: l_mperp = .FALSE.
-    LOGICAL:: l_constr = .FALSE.
-    LOGICAL:: l_mtNocoPot = .FALSE.
-    LOGICAL:: l_alignMT = .FALSE.
-    INTEGER:: mag_mixing_sheme=1
+    INTEGER:: mag_mixing_scheme=0
 
     LOGICAL:: l_sourceFree = .FALSE.
     LOGICAL:: l_scaleMag = .FALSE.
-
     REAL   :: mag_scale=1.0
-    REAL   :: mix_b=0.0
+    REAL   :: mix_b=1.0
+
 
     REAL   :: theta_inp=0.0
     REAL   :: phi_inp=0.0
     REAL   :: qss_inp(3)=[0.0,0.0,0.0]
 
     REAL, ALLOCATABLE   :: mix_RelaxWeightOffD(:)
-    LOGICAL, ALLOCATABLE :: l_relax(:)
+    LOGICAL, ALLOCATABLE :: l_constrained(:)
+    LOGICAL, ALLOCATABLE :: l_unrestrictMT(:)
+    LOGICAL,allocatable  :: l_alignMT(:)
     REAL, ALLOCATABLE    :: alph_inp(:)
     REAL, ALLOCATABLE    :: beta_inp(:)
     REAL, ALLOCATABLE    :: socscale(:)
@@ -61,22 +60,21 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_soc,rank,mpi_comm)
      CALL mpi_bc(this%l_noco ,rank,mpi_comm)
      CALL mpi_bc(this%l_mperp ,rank,mpi_comm)
-     CALL mpi_bc(this%l_constr ,rank,mpi_comm)
-     CALL mpi_bc(this%l_mtNocoPot ,rank,mpi_comm)
      CALL mpi_bc(this%l_alignMT ,rank,mpi_comm)
      CALL mpi_bc(this%l_sourceFree ,rank,mpi_comm)
      CALL mpi_bc(this%l_scaleMag ,rank,mpi_comm)
      CALL mpi_bc(this%mag_scale ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss_inp)
-     CALL mpi_bc(this%mix_b,rank,mpi_comm)
+     call mpi_bc(rank,mpi_comm,this%mag_mixing_scheme)
      CALL mpi_bc(this%mix_RelaxWeightOffD,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta_inp,rank,mpi_comm)
      CALL mpi_bc(this%phi_inp,rank,mpi_comm)
-     CALL mpi_bc(this%l_relax,rank,mpi_comm)
      CALL mpi_bc(this%alph_inp,rank,mpi_comm)
      CALL mpi_bc(this%beta_inp,rank,mpi_comm)
-     !CALL mpi_bc(this%b_con,rank,mpi_comm)
+     CALL mpi_bc(this%l_constrained,rank,mpi_comm)
+     CALL mpi_bc(this%l_unrestrictMT,rank,mpi_comm)
+     CALL mpi_bc(this%mix_b,rank,mpi_comm)
      CALL mpi_bc(this%socscale,rank,mpi_comm)
 
 
@@ -107,22 +105,25 @@ MODULE m_types_noco
       END IF
 
       ! Read in optional noco parameters if present
-      IF (xml%versionNumber > 31) THEN
-         xPathA = '/fleurInput/calculationSetup/magnetism/nocoParams'
-      ELSE
-         xPathA = '/fleurInput/calculationSetup/nocoParams'
-      END IF
-      numberNodes = xml%GetNumberOfNodes(xPathA)
-      IF ((this%l_noco).AND.(numberNodes.EQ.0)) THEN
-         CALL juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
-      END IF
+      !IF (xml%versionNumber > 31) THEN
+      !   xPathA = '/fleurInput/calculationSetup/magnetism/nocoParams'
+      !ELSE
+      !   xPathA = '/fleurInput/calculationSetup/nocoParams'
+      !END IF
+      !numberNodes = xml%GetNumberOfNodes(xPathA)
+      !IF ((this%l_noco).AND.(numberNodes.EQ.0)) THEN
+      !   CALL juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
+      !END IF
 
 
-      this%qss=0.0
+      this%qss_inp=0.0
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-      ALLOCATE(this%l_relax(ntype),this%mix_RelaxWeightOffD(ntype))
-      this%l_relax=.false.
+      ALLOCATE(this%l_constrained(ntype),this%mix_RelaxWeightOffD(ntype))
+      ALLOCATE(this%l_unrestrictMT(ntype),this%l_alignMT(ntype))
+      this%l_unrestrictMT=.false.
+      this%l_constrained=.false.
       this%mix_RelaxWeightOffD=1.0
+      this%l_alignMT=.false.
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
@@ -130,10 +131,8 @@ MODULE m_types_noco
 
 
       IF (numberNodes.EQ.1) THEN
-         this%l_mperp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
-         this%l_constr = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
-         this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
          IF (.NOT.(xml%versionNumber > 31)) THEN
+            this%l_mperp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
             this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
             valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
             READ(valueString,*) this%qss_inp
@@ -155,11 +154,13 @@ MODULE m_types_noco
       xPathA = '/fleurInput/calculationSetup/magnetism/mtNocoParams'
       numberNodes = xml%GetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
-         this%l_mtNocoPot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
-         this%l_alignMT = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxMT'))
-         this%l_RelaxBeta = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxBeta'))
-         this%l_RelaxAlpha = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_RelaxAlpha'))
+         this%l_alignMT   = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_relaxSQA'))
+         this%l_constrained = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constrained'))
+         this%l_mperp= evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
+         this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_constr'))
+         this%mag_mixing_scheme= evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mag_mixing_scheme'))
          this%mix_RelaxWeightOffD = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_RelaxWeightOffD'))
+         this%l_unrestrictMT=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
       END IF
 
       ! Read in optional source free magnetism parameters if present
@@ -181,13 +182,14 @@ MODULE m_types_noco
          xPathB = TRIM(ADJUSTL(xml%groupPath(itype)))//'/nocoParams'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
          IF (numberNodes.GE.1) THEN
-            this%l_relax(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relax'))
-            this%alph_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
-            this%beta_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
-            !this%b_con(1,iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_x'))
-            !this%b_con(2,iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
+           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_constrained')>0) this%l_constrained(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_constrained'))
+           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot')>0) this%l_unrestrictMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot'))
+           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA')>0) this%l_alignMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA'))
+           this%alph_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+           this%beta_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
          END IF
       ENDDO
+      if (any(this%l_unrestrictMT)) this%l_mperp=.true.
 
     END SUBROUTINE read_xml_noco
 

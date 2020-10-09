@@ -104,7 +104,7 @@ MODULE m_pot_io
                              currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
-                                  iter,fr,fpw,fz,fzxy,noco%l_mtNocoPot)
+                                  iter,fr,fpw,fz,fzxy,any(noco%l_unrestrictMT))
 
             CALL closeCDNPOT_HDF(fileID)
          ELSE
@@ -227,7 +227,7 @@ MODULE m_pot_io
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                currentStepfunctionIndex,iter,pot,fpw,noco%l_mtNocoPot)
+                                currentStepfunctionIndex,iter,pot,fpw,any(noco%l_unrestrictMT))
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&

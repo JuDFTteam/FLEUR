@@ -115,9 +115,8 @@
           ELSE
              noco%l_ss = .FALSE.
              noco%l_mperp = .FALSE.
-             noco%l_constr = .FALSE.
+             noco%l_constrained = .FALSE.
              noco%mix_b = 0.0
-             noco%l_relax(:) = .FALSE.
              noco%alph_inp(:) = 0.0
              noco%beta_inp(:) = 0.0
           ENDIF

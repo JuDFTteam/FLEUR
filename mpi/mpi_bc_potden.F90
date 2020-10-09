@@ -50,7 +50,7 @@ CONTAINS
    IF((fmpi%irank.NE.0).AND.l_denMatAlloc) THEN
       IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
          ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mtNocoPot.OR.noco%l_mperp)))
+                                MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,any(noco%l_unrestrictMT).OR.noco%l_mperp)))
       END IF
    END IF
 

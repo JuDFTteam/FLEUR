@@ -275,7 +275,7 @@ CONTAINS
     END IF
 
     IF (mode.EQ.CDN_DIRECT_MODE) THEN
-      if (noco%l_mtNocoPot) call judft_error("the mtNocoPot switch requires HDF5 for the charge density IO")
+      if (any(noco%l_unrestrictMT)) call judft_error("the mtNocoPot switch requires HDF5 for the charge density IO")
        filename = 'cdn1'
        l_rhomatFile = .FALSE.
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -1067,7 +1067,7 @@ CONTAINS
           shifts=atomsTemp%taual-atoms%taual
 
           !Determine type of charge
-          IF(noco%l_mtNocoPot) THEN
+          IF(any(noco%l_unrestrictMT)) THEN
           archiveType=CDN_ARCHIVE_TYPE_FFN_const
           ELSE IF (noco%l_noco) THEN
           archiveType=CDN_ARCHIVE_TYPE_NOCO_const

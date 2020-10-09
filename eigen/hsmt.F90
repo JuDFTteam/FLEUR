@@ -103,8 +103,8 @@ CONTAINS
                 CALL hsmt_distspins(chi,hmat_tmp,hmat)
                 CALL timestop("hsmt_distspins")
               ELSE !Add off-diagonal contributions to Hamiltonian if needed
-                IF (noco%l_mtNocoPot) CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
-                IF (noco%l_constr) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
+                IF (noco%l_unrestrictMT(n)) CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
+                IF (noco%l_constrained(n)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
                 IF (noco%l_soc) CALL hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
               ENDIF
             ELSE
@@ -121,8 +121,8 @@ CONTAINS
                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,&
                     n,chi(iintsp,jintsp),ispin,jspin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
                   ELSE
-                    IF (noco%l_mtNocoPot) call hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
-                    IF (noco%l_constr) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
+                    IF (any(noco%l_unrestrictMT)) call hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
+                    IF (any(noco%l_constrained)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
                   ENDIF
                 ENDDO
               ENDDO
@@ -133,7 +133,7 @@ CONTAINS
       !$acc end data
       if (noco%l_noco.AND..NOT.noco%l_ss) then
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
-         !$acc exit data delete(smat_tmp,hmat_tmp) 
+         !$acc exit data delete(smat_tmp,hmat_tmp)
       endif
       RETURN
     END SUBROUTINE hsmt

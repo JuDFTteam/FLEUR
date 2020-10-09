@@ -149,7 +149,7 @@ CONTAINS
       ! Initialize and load inDen density (start)
 
       !Warning on strange choice of switches before starting density is generated.
-      IF (fi%input%l_onlyMtStDen .AND. .NOT. fi%noco%l_mtNocoPot) THEN
+      IF (fi%input%l_onlyMtStDen .AND. .NOT. any(fi%noco%l_unrestrictMT)) THEN
          CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.", calledby='types_input')
       END IF
 
@@ -157,7 +157,7 @@ CONTAINS
 
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-      IF (fi%noco%l_mtNocoPot) archiveType = CDN_ARCHIVE_TYPE_FFN_const
+      IF (any(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
                                               0, results%ef, l_qfix, inDen)
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
@@ -172,7 +172,7 @@ CONTAINS
                            0, -1.0, results%ef, results%last_mmpmatDistance, results%last_occDistance, .FALSE., inDen)
       END IF
 
-      IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
+      IF (any(fi%noco%l_alignMT) .AND. fmpi%irank .EQ. 0) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
       ! Initialize potentials (start)
@@ -272,7 +272,7 @@ CONTAINS
 !!$                END IF
          !---< gwf
 
-         IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
+         IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
             sfscale = fi%noco%mag_scale
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = sfscale*inDen%mt(:, 0:, :, 2:4)
@@ -287,7 +287,7 @@ CONTAINS
                    fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul)
          CALL timestop("generation of potential")
 
-         IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
+         IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = inDen%mt(:, 0:, :, 2:4)/sfscale
             inDen%pw(:, 2:3) = inDen%pw(:, 2:3)/sfscale
@@ -492,7 +492,7 @@ CONTAINS
                      CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
                   ENDIF
                ENDDO
-               IF (fi%noco%l_constr) THEN
+               IF (any(fi%noco%l_constrained)) THEN
                   CALL MPI_BCAST(nococonv%b_con, SIZE(nococonv%b_con), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
                ENDIF
             ENDIF

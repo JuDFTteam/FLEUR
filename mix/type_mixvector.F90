@@ -460,7 +460,7 @@ CONTAINS
       nvac = vacuum%nvac
       l_noco = noco%l_noco
       l_mperp = noco%l_mperp
-      l_mtnocopot = noco%l_mtnocopot
+      l_mtnocopot = any(noco%l_unrestrictMT)
       stars => stars_i; cell => cell_i; sphhar => sphhar_i; atoms => atoms_i; sym => sym_i
 
       vac_here = input%film
@@ -482,7 +482,7 @@ CONTAINS
             ENDIF
             pw_stop(js) = pw_length
             IF (mt_here) THEN
-               IF (js < 3 .OR. noco%l_mtnocopot) mt_start(js) = mt_length + 1
+               IF (js < 3 .OR. any(noco%l_unrestrictMT)) mt_start(js) = mt_length + 1
                len = 0
                !This PE stores some(or all) MT data
                DO n = mt_rank + 1, atoms%ntype, mt_size
@@ -495,7 +495,7 @@ CONTAINS
                      len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
                   ENDDO
                ENDIF
-               IF (js < 3 .OR. noco%l_mtnocopot) mt_length = mt_length + len
+               IF (js < 3 .OR. any(noco%l_unrestrictMT)) mt_length = mt_length + len
                mt_stop(js) = mt_length
             END IF
             IF (vac_here) THEN

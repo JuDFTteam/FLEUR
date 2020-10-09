@@ -21,11 +21,12 @@
           INTEGER :: itype, j, fileend
           REAL    :: qsc(3),rdum
           CHARACTER(len=8) :: inpchar
+          logical          :: ldum
 
 
 
           DO itype = 1,atoms%ntype
-             READ (24,'(22x,l1)') noco%l_relax(itype)
+             READ (24,'(22x,l1)') ldum
 
              inpchar(1:2)= 'XX'
              READ (24,fmt='(19x,a2)') inpchar(1:2)
@@ -51,7 +52,7 @@
              ENDIF
 
              READ (24,*)
-                WRITE (oUnit,8010)        itype,noco%l_relax(itype)
+                WRITE (oUnit,8010)        itype,.false.
                 WRITE (oUnit,8020)        noco%alph_inp(itype)
                 WRITE (oUnit,8025)         noco%beta_inp(itype)
                 WRITE (oUnit,*)
@@ -63,7 +64,7 @@
 8026      FORMAT ('Total number of magnetic atoms',i4,',magnetic types',i4)
 
           READ (24,*)
-          READ (24,8036) noco%l_ss,noco%l_mperp,noco%l_constr
+          READ (24,8036) noco%l_ss,noco%l_mperp,ldum
 !!$          IF ( (inpchar(1:8)=='sso_opt=') .OR. (noco%l_ss .AND. noco%l_soc) ) THEN
 !!$             BACKSPACE (24)
 !!$             READ (24,fmt='(45x,2l1)') input%sso_opt(1),input%sso_opt(2)
@@ -74,7 +75,7 @@
           READ (24,8046) noco%mix_b
 
           WRITE (oUnit,fmt='(5(A,l1),l1)') &
-               & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',noco%l_constr
+               & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',any(noco%l_constrained)
           WRITE (oUnit,8040) noco%mix_b
 8030      FORMAT ('l_ss=',l1,',l_mperp=',l1,',l_constr=',l1,',l_disp=',l1)
 8035      FORMAT (5x,l1,9x,l1,10x,l1,8x,l1)
@@ -128,7 +129,7 @@
       CHARACTER(len=8) :: inpchar
 
       DO itype = 1,atoms%ntype
-         WRITE (24,8010) itype,noco%l_relax(itype)
+         WRITE (24,8010) itype,.false.
          WRITE (24,8020) noco%alph_inp(itype),0.0
          WRITE (24,8025)  noco%beta_inp(itype),0.0
          WRITE (24,*)
@@ -136,7 +137,7 @@
 
       WRITE (24,*) '-- logical parameters --'
       WRITE (24,fmt='(5(A,l1),l1)') &
-     & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',noco%l_constr
+     & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',any(noco%l_constrained)
       WRITE (24,8040) noco%mix_b
 
       IF (noco%l_ss) THEN

@@ -118,7 +118,7 @@
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%alph_inp(atoms%ntype),noco%beta_inp(atoms%ntype),&
-     & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),&
+     & atoms%lda_u(atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
      & hybinp%select1(4,atoms%ntype),hybinp%lcutm1(atoms%ntype),&
      & hybinp%lcutwf(atoms%ntype), STAT=ok)
