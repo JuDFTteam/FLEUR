@@ -13,6 +13,7 @@ MODULE m_cfOutput_hdf
    SUBROUTINE opencfFile(fileID, atoms, cell, inFilename, l_create)
 
       USE m_types_atoms
+      USE m_types_cell
       USE m_juDFT
 
       TYPE(t_atoms),                INTENT(IN)  :: atoms
