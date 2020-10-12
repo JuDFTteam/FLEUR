@@ -93,6 +93,8 @@ CONTAINS
       ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
       vCoul%pw_w = CMPLX(0.0,0.0)
 
+      results%force=0.0
+
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
       
       ! a)
@@ -120,6 +122,19 @@ CONTAINS
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
+
+! AARONSTUFF
+!            IF (l_f.and.(f_level.ge.3)) THEN
+!        CALL cpu_time(time1)
+!        DO js = 1,jspins
+!          CALL force_sf_is(
+!     >                    lmaxd,n3d,ntypd,ntype,nq3,natd,nop,js,symor,
+!     >                    neq,lmax,kv3,mrot,invtab,nstr,sk3,rmt,taual,
+!     >                    bmat,tau,qpw,vpw,excpw_uw,vxcpw,jspd )
+!        END DO
+!        CALL cpu_time(time2)
+!        CALL outtime('surface force from interstitial:',time2-time1)
+!      END IF
 
       CALL bfield(input,noco,atoms,field,vTot)
 
