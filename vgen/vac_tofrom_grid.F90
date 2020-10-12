@@ -96,10 +96,12 @@ CONTAINS
       ALLOCATE ( mx(0:ifftd2-1),my(0:ifftd2-1) )
       ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
       ALLOCATE ( ddxmagmom(0:ifftd2-1,2),ddymagmom(0:ifftd2-1,2) )
+    ENDIF
+    IF ( noco%l_noco .OR. dograds ) THEN
       ALLOCATE ( rhtxyr(vacuum%nmzxy)  )
       ALLOCATE ( rxydzr(vacuum%nmzxy),rxydzzr(vacuum%nmzxy) )
     ENDIF
-    if (dograds) THEN
+    IF (dograds) THEN
       ALLOCATE ( rhtxyi(vacuum%nmzxy) )
       ALLOCATE ( rxydzi(vacuum%nmzxy) )
       ALLOCATE ( rxydzzi(vacuum%nmzxy) )
