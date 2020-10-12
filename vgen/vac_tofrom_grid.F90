@@ -100,9 +100,9 @@ CONTAINS
       ALLOCATE ( rxydzr(vacuum%nmzxy),rxydzzr(vacuum%nmzxy) )
     ENDIF
     if (dograds) THEN
-      ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy) )
-      ALLOCATE ( rxydzr(vacuum%nmzxy), rxydzi(vacuum%nmzxy) )
-      ALLOCATE ( rxydzzr(vacuum%nmzxy),rxydzzi(vacuum%nmzxy) )
+      ALLOCATE ( rhtxyi(vacuum%nmzxy) )
+      ALLOCATE ( rxydzi(vacuum%nmzxy) )
+      ALLOCATE ( rxydzzi(vacuum%nmzxy) )
     ENDIF
     DO ivac=1,vacuum%nvac
 
