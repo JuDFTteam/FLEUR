@@ -90,7 +90,7 @@ CONTAINS
 !     .. Local Scalars ..
       COMPLEX sf,csf
       REAL x
-      INTEGER j,l,m,n,na,lm,ll1,dir
+      INTEGER j,l,m,n,lm,ll1,dir
 
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
