@@ -109,8 +109,8 @@ CONTAINS
       ALLOCATE ( ylm( (atoms%lmaxd+1)**2, sym%nop ) )
       ylm = cmplx(0.,0.)
       DO j = 1,sym%nop
-          rg=matmul(kr(:,j),cell%bmat)
-          CALL ylm4(atoms%lmaxd, rg, ylm(:,j))!keep
+          rg(j)=matmul(kr(:,j),cell%bmat)
+          CALL ylm4(atoms%lmaxd, rg(j), ylm(:,j))!keep
       ENDDO
       ylm = conjg( ylm )
 
