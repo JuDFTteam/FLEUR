@@ -85,7 +85,7 @@ CONTAINS
       INTEGER, INTENT (IN) :: k, n, na
 
 !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT):: pylm2(:,:)
+      COMPLEX, INTENT (OUT):: pylm2(:,:,:)
 
 !     .. Local Scalars ..
       COMPLEX sf,csf
@@ -95,7 +95,7 @@ CONTAINS
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
       COMPLEX phas(sym%nop)
-      REAL rg(3)
+      REAL rg(3,sym%nop)
       INTEGER kr(3,sym%nop)
       COMPLEX, ALLOCATABLE :: ylm(:,:)
 
