@@ -23,6 +23,7 @@ CONTAINS
       USE m_eig66_io
       use m_eig66_mpi
       use m_balance_barriers
+      use m_distribute_mpi 
 #ifdef CPP_MPI 
       use mpi 
 #endif
@@ -44,13 +45,13 @@ CONTAINS
       ! local variables
       type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, ierr
+      INTEGER           :: jsp, nk, err, i, wp_rank, ierr, ik, j_wp, n_wps
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
-      integer, allocatable :: v_x_loc(:,:)
+      integer, allocatable :: v_x_loc(:,:), weights(:)
       type(t_balance_wavef) :: wavef_bal
 
       CALL timestart("hybrid code")
@@ -114,7 +115,14 @@ CONTAINS
          CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
-         call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
+         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
+         allocate(weights(n_wps), source=0)
+         do j_wp = 1, n_wps
+            do ik = j_wp, fi%kpts%nkpt, n_wps
+               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
+            enddo
+         enddo
+         call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
 
          CALL timestart("Calculation of non-local HF potential")
          allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
@@ -124,7 +132,7 @@ CONTAINS
                         hybdat, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
-            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
+            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
             call wavef_bal%init(fi, work_pack)
             
             DO i = 1,work_pack%k_packs(1)%size
@@ -189,49 +197,5 @@ CONTAINS
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
-
-      subroutine distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
-         USE m_types
-         implicit none 
-         type(t_fleurinput), intent(in)    :: fi
-         type(t_hybmpi), intent(in)        :: glob_mpi
-         type(t_hybmpi), intent(inout)     :: wp_mpi
-         integer, intent(inout)            :: wp_rank, wp_size
-   
-         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm
-         integer, allocatable :: nprocs(:), weights(:), color(:)
-   
-   
-         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
-         allocate(nprocs(n_wps), source=0)
-         allocate(weights(n_wps), source=0)
-         allocate(color(glob_mpi%size), source=0)
-   
-         do j_wp = 1, n_wps
-            do ik = j_wp, fi%kpts%nkpt, n_wps
-               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
-            enddo
-         enddo
-   
-         do i = 1,glob_mpi%size 
-            idx = minloc(1.0*nprocs/weights)
-            nprocs(idx(1)) = nprocs(idx(1)) + 1
-         enddo
-   
-         cnt = 1
-         do i = 1,n_wps 
-            do j = 1,nprocs(i)
-               color(cnt) = i - 1
-               cnt = cnt + 1 
-            enddo 
-         enddo
-   
-         wp_rank = color(glob_mpi%rank+1) 
-         wp_size = n_wps
-         
-         call judft_comm_split(glob_mpi%comm, wp_rank, glob_mpi%rank, new_comm)
-   
-         call wp_mpi%init(new_comm)
-      end subroutine distrib_mpis
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

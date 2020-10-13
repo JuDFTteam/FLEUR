@@ -9,7 +9,7 @@ contains
       integer, intent(inout)        :: group_rank 
 
       integer, allocatable :: nprocs(:), color(:)
-      integer              :: idx(1), i, j, cnt, n_grps
+      integer              :: idx(1), i, j, cnt, n_grps, new_comm
 
 
       n_grps = size(weights)
@@ -28,5 +28,10 @@ contains
             cnt = cnt + 1 
          enddo 
       enddo
+
+      group_rank = color(glob_mpi%rank+1) 
+      call judft_comm_split(glob_mpi%comm, group_rank, glob_mpi%rank, new_comm)
+
+      call group_mpi%init(new_comm)
    end subroutine distribute_mpi
 end module m_distribute_mpi
