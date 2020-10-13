@@ -150,33 +150,21 @@ CONTAINS
 
 
     IF (.NOT.input%l_useapw) THEN
-       CALL force_a12(atoms,noccbd,sym,cell,oneD,&
-            we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
-            thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
-! AARONSTUFF
-!                  CALL cpu_time(time1)
-!                  IF (f_level.lt.2) THEN
-!                    CALL force_a12(
-!     >                lmaxd,ntypd,noccbd,natd,nop,
-!     >                jspd,mrot,ngopr,lmax,invarop,invarind,
-!     >                ntype,neq,rmt,invtab,multab,amat,bmat,
-!     >                we,ispin,noccbd,us,uds,acof(1,0,1,ispin),
-!     >                bcof(1,0,1,ispin),e1cof,e2cof,
-!     >                lmd,nlod,llod,nlo,llo,acoflo,bcoflo,l_geo,
-!     >                odi,ods,
-!     X                force,f_a12)
-!                  ELSE
-!                    IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
-!                    CALL test3(
+
+       IF (input%f_level.lt.2) THEN
+          CALL force_a12(atoms,noccbd,sym,cell,oneD,&
+               we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
+               thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
+!       ELSE AARONSTUFF
+!          IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
+!             CALL force_a12_lv2(
 !     >                jspin,jspd,noccbd,neigd,ntypd,ntype,natd,nbasfcn, ! or ispin?
 !     >                nop,nvd,lmaxd,omtil,
 !     >                nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,
 !     >                ngopr,amat,bmat,eig,rmt,taual,we,bkpt,z,
 !     X                f_a12,force )
-!                    END IF
-!                  END IF
-!                  CALL cpu_time(time2)
-!                  cp_time(10) = cp_time(10) + time2 - time1
+!          END IF
+       END IF
     END IF
     CALL force_a21(input,atoms,sym,oneD,cell,we,ispin,&
          enpara%el0(0:,:,ispin),noccbd,eig,usdus,tlmplm,vtot,eigVecCoeffs,&
