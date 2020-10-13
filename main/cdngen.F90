@@ -55,6 +55,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
+!      USE m_force_sf AARONSTUFF
+!      USE m_force_a4_add, ONLY : f_level
 
    IMPLICIT NONE
 
@@ -182,7 +184,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
-   results%force=0.0
+   results%force=0.0 ! AARONSTUFF
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
@@ -214,6 +216,20 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF (fmpi%irank.EQ.0) THEN
       CALL closeXMLElement('valenceDensity')
    END IF ! fmpi%irank = 0
+
+!      IF (l_f.and.(f_level.ge.3)) THEN AARONSTUFF
+!        CALL cpu_time(time1)
+!        DO jspin = 1,jspins!jsp_start,jsp_end
+!          CALL force_sf_mt(
+!     >                 ntype,ntypd,ntypsd,nlhd,jmtd,jspd,jspin,
+!     >                 memd,natd,lmaxd,jspin,irank,
+!     >            ntypsy,neq,lmax,nlh,llh,nmem,mlh,vr(1,0,1,jspin),excr,
+!     >                 vxcr,rmt,jri,rho,clnu,
+!     >                 nop,mrot,bmat)
+!        END DO
+!        CALL cpu_time(time2)
+!        CALL outtime('surface force from muffin-tins:',time2-time1)
+!      END IF
 
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN

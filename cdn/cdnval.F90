@@ -42,6 +42,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_vacden
    USE m_pwden
    USE m_forcea8
+!   USE m_force_sf AARONSTUFF
    USE m_checkdopall
    USE m_greensfBZint
    USE m_greensfCalcImagPart
@@ -133,6 +134,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    call timestart("init")
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
+! AARONSTUFF
+!      IF (l_f) THEN
+!        CALL init_sf(nop,mrot,bmat,lmaxd,ntypd)
+!      END IF
 
    IF (noco%l_mperp.OR.banddos%l_jDOS) THEN
       ! when the off-diag. part of the desinsity matrix, i.e. m_x and

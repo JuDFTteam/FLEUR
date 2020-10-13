@@ -33,6 +33,8 @@ CONTAINS
       USE m_vgen_finalize
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
+!      USE m_force_sf AARONSTUFF
+!      USE m_force_a4_add, ONLY : f_level
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
 #endif

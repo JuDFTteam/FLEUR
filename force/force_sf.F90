@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_force_sf
+      MODULE m_force_sf ! AARONSTUFF
 !     *****************************************************************
 !     This routine calculates a contribution to the forces stemming
 !     from the discontinuity of density and potential at the muffin-tin
@@ -69,7 +69,7 @@
       INTEGER :: lmaxb(atoms_in%ntype)
       COMPLEX :: coeff(3,-1:1),qpw2(stars%ng3,size(qpw,2)),qpwcalc(stars%ng3,size(qpw,2))
       REAL   , ALLOCATABLE :: bsl(:,:,:)
-      COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:,:)
+      COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:)
 !       COMPLEX, ALLOCATABLE :: qpw2(:,:),qpwcalc(:,:)
 #ifdef debug
       REAL    :: vec(3)
@@ -86,7 +86,7 @@
 
       ALLOCATE ( bsl(stars%ng3,0:atoms%lmaxd,atoms%ntype) )
 
-      ALLOCATE ( pylm2((atoms%lmaxd+1)**2,atoms%ntype ))
+      ALLOCATE ( pylm2((atoms%lmaxd+1)**2 ))
       ALLOCATE ( rho((atoms%lmaxd+1)**2),V((atoms%lmaxd+1)**2) )
 
 #ifdef debug
@@ -196,7 +196,7 @@
 !         but this loop sequence is more convenient.
 !         allocating pylm as pylm(lm,s,itype) and precalculating it
 !         leads to exhaustive use of memory in larger systems
-          CALL phasy1(atoms,stars,sym,cell,s,pylm2(:,:))
+          CALL phasy1(atoms,stars,sym,cell,s,pylm2(:))
 
           DO l = 0,atoms%lmax(itype)-1 !s = 1,stars%ng3
 !           calculate phase factors for the current atom type to prevent

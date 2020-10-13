@@ -42,8 +42,10 @@ CONTAINS
     !
     USE m_intgr    , ONLY : intgr3
     USE m_constants
+    !USE m_force_a4_add AARONSTUFF
     USE m_force_a4
     USE m_force_a3
+    !USE m_force_sf
     USE m_forcew
     USE m_cdn_io
     USE m_types
@@ -140,6 +142,26 @@ CONTAINS
 
        IF (input%l_f) THEN
           ! core contribution to force: needs TOTAL POTENTIAL and core charge
+
+!        IF (ctail.and.(f_level.ge.1)) THEN AARONSTUFF
+!         Add core correction to forces from tails of core states
+!         Klueppelberg, Sep'12
+!          CALL cpu_time(time1)
+!          CALL force_a4_add(
+!     >                      ntypd,ntype,jspd,jspins,l_geo,
+!     X                      force)
+!          CALL cpu_time(time2)
+!          time_a4 = time2-time1
+
+!           CALL testofmagnitude(
+!      >                         ntypd,ntype,jspd,n3d,odi%n2d,nmzxyd,
+!      >                         nmzd,jmtd,nlhd,jspins,nq3,odi%nq2,nvac,
+!      >                         ntypsd,natd,memd,nop,n3d,!vmax,
+!      >                         invs,invs2,film,symor,nstr,
+!      >                         nlh,jri,ntypsy,neq,llh,kv3,nmem,mrot,
+!      >                         mlh,invtab,bmat,rmt,taual,tau,clnu)
+!        END IF
+
           CALL force_a4(atoms,sym,sphhar,input, vTot%mt, results%force)
 
        ENDIF
@@ -243,6 +265,9 @@ CONTAINS
             /,' ----> HF total electron energy=',t40,f20.10,' htr')
 8090   FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
     ENDIF
+!      IF (l_f) THEN AARONSTUFF
+!        CALL exit_sf(ntypd,ntype,force)
+!      END IF
     CALL force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
 
   END SUBROUTINE totale

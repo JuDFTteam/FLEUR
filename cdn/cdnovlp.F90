@@ -165,6 +165,156 @@
           !
 
           ALLOCATE (qpwc(stars%ng3))
+
+!      l_f2 = l_f.and.(f_level.ge.1) ! f_level >= 1: coretails completely contained in force calculation AARONSTUFF
+!      IF (l_f2) THEN
+
+!       Allocate the force arrays in the routine force_a4_add.f
+!        CALL alloc_fa4_arrays(ntypd,jspd)
+!        force_a4_mt(:,:,jspin) =  zero
+!        force_a4_is(:,:,jspin) = czero
+
+!       Calculate the distribution of Tasks onto processors
+!       Agenda here: every processor in general gets the same number of tasks,
+!       but if there are some left, distribute them on the last processors
+!       reason for that is that within the first few stars, the length of the
+!       stars will change rapidly, while for the last few stars, many will have
+!       the same length. Hence, the first few processors, which will calculate
+!       the spherical Bessel functions quite often, don't get as many stars to
+!       calculate as the last few processors
+!       the first star is \vec{0} and will not contribute to the core forces
+!       thereforce, stars are only considered starting from the second star.
+!       the number of stars is then nq3-1
+!        ioffset_pT = 0
+!        minpar = (nq3-1)/isize       ! MINimal number of elements calculated in each PARallel rank
+!        nkpt_pT = minpar
+!        left = (nq3-1) - minpar * isize
+!        do j=1,left
+!          nkpt_pT(isize-j) = nkpt_pT(isize-j)+1
+!        end do!j
+!        do j=1,isize-1
+!          ioffset_pT(j) = sum(nkpt_pT(0:j-1))
+!        end do!j
+!        ioffset_pT = ioffset_pT+1
+!        ALLOCATE ( ffonat_pT(3,nkpt_pT(irank)*nop) )
+!        ffonat_pT = 0
+
+!       lattice/spherical harmonics related variables
+!        s13 = sqrt(1.0/3.0)
+!        s23 = sqrt(2.0/3.0)
+!        ycomp1(1,0) = czero
+!        ycomp1(2,0) = czero
+!        ycomp1(3,0) = cmplx(2.0*s13,0.0)
+!        ycomp1(1,-1) = cmplx(s23,0.0)
+!        ycomp1(2,-1) = cmplx(0.0,-s23)
+!        ycomp1(3,-1) = czero
+!        ycomp1(1,1) = cmplx(-s23,0.0)
+!        ycomp1(2,1) = cmplx(0.0,-s23)
+!        ycomp1(3,1) = czero
+
+!       read in effective potential
+!        ALLOCATE ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
+!        ALLOCATE ( vz(nmzd,2,4),vr(jmtd,0:nlhd,ntypd,jspd) )
+!        ALLOCATE ( vr0(jmtd,ntypd,jspd),vr2(jmtd,0:nlhd,ntypd) )
+!        nu=10
+!        OPEN (nu,file='pottot',form='unformatted',status='old')
+!        CALL loddop(
+!     >            jspd,n3d,odi%n2d,nmzxyd,nmzd,jmtd,nlhd,ntypd,
+!     >            jspin,nq3,odi%nq2,nvac,ntype,invs,invs2,film,
+!     >            nlh,jri,ntypsd,ntypsy,nu,natd,neq,
+!     <            iop,dop,iter,vr,vpw,vz,vzxy,name)
+!        CLOSE(nu)
+
+!       the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
+!       for simple use, this is corrected here
+!        DO n = 1,ntype
+!          vr2(:,0,n) = sfp*vr(:,0,n,jspin)/rmsh(:,n)
+!          vr2(:,1:,n) = vr(:,1:,n,jspin)
+!        END DO ! n
+
+!        ALLOCATE ( ffonat(3,n3d*nop),integrandr(jmtd) )
+!        ALLOCATE ( pylm2( (lmaxd+1)**2,3,nop ) )
+!        ALLOCATE ( vrrgrid(jmtd),vrigrid(jmtd) )
+
+!       (f)orce(f)actor(on)(at)oms calculation, parallelization in k
+!        ffonat = czero
+!        nat = 1
+!        DO n = 1,ntypd
+!          nd = ntypsy(nat)
+!         find maximal l of the potential for atom (type) n
+!         directly reading max(llh(:,nd)) is only possible if llh is initialized to zero
+!         otherwise, there can be random numbers in it for high lh that are not used by each atom
+!          maxl = 0
+!          DO lh = 0,nlh(nd)
+!            maxl = max(maxl,llh(lh,nd))
+!          END DO ! lh
+!          ALLOCATE ( bsl(jmtd,0:maxl),integrand(jmtd,0:maxl) )
+!          g = -0.1 ! g is the norm of a star and can't be negative, this is to initialize a check if the norm between stars has changed
+
+!       on each processor, calculate a certain consecutive set of k
+!        kp = 0
+!        DO k = ioffset_pT(irank)+1,ioffset_pT(irank)+nkpt_pT(irank) ! for k = 1 (G = 0), grad rho_core^alpha is zero
+!          IF (abs(g-sk3(k)).gt.tol_14) THEN ! only calculate new spherical Bessel functions if the length of the star vector has changed
+!            g = sk3(k)
+
+!           generate spherical Bessel functions up to maxl for the radial grid
+!            DO j = 1,jri(n)
+!              gr = g * rmsh(j,n)
+!              CALL sphbes(maxl,gr,bsl(j,:))
+!              bsl(j,:) = bsl(j,:) * rmsh(j,n)**2
+!            END DO ! j
+!          END IF
+
+!         as phasy1, but with i\vec{G} in it, i.e. gradient of plane wave, only for atom n and star k
+!          CALL phasy2(
+!     >                nop,lmaxd,lmax(n),fpi,taual(:,nat),
+!     >                bmat,kv3(:,k),tau,mrot,symor,invtab,
+!     <                pylm2)
+
+
+!         construct and evaluate radial integral int_0^R_{beta} r^2 j_{l}(Gr) V_{eff,l}^{beta}(r) dr
+!         then, multiply by pylm2 times clnu
+!          DO lh = 0,nlh(nd)
+!            l = llh(lh,nd)
+!            integrandr(:) = bsl(:,l) * vr2(:,lh,n)
+!            CALL intgr3(integrandr,rmsh(1,n),dx(n),jri(n),factor)
+!            DO j = 1,nop
+!              sym = kp*nop + j
+!            DO dir = 1,3
+!              sm = czero
+!              DO jm = 1,nmem(lh,nd)
+!                lm = l*(l+1) + mlh(jm,lh,nd) + 1
+!                sm = sm + conjg(clnu(jm,lh,nd)) * pylm2(lm,dir,j)
+!              END DO ! jm
+!              ffonat_pT(dir,sym) = ffonat_pT(dir,sym) + factor * sm
+!            END DO ! dir
+!            END DO ! sym
+!          END DO ! lh
+
+!          kp = kp+1
+!        END DO ! k stars
+!          DEALLOCATE ( bsl,integrand )
+!          nat = nat+neq(n)
+!        END DO ! n atom type
+
+!       collect the entries of ffonat calculated by the different processors
+!       could be all collapsed to irank 0, but if the later part also gets
+!       parallelized over k at some point, now all iranks have ffonat available
+!#ifdef CPP_MPI
+!        ALLOCATE( n1(0:isize-1),n2(0:isize-1) )
+!        n1(:) = 3*nkpt_pT(:)*nop
+!        n2(:) = 3*ioffset_pT(:)*nop
+!        CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(irank),CPP_MPI_COMPLEX,
+!     +                             ffonat(1,1),n1,n2,CPP_MPI_COMPLEX,
+!     +                                              MPI_COMM_WORLD,ierr)
+!        DEALLOCATE(ffonat_pT,n1,n2)
+!#else
+!        ffonat = ffonat_pT
+!        DEALLOCATE(ffonat_pT)
+!#endif
+
+!      END IF ! l_f2
+
           !
           !----> prepare local array to store pw-expansion of pseudo core charge
           !
@@ -230,6 +380,45 @@
                       rh(j,n) = acoff(n) * EXP( -alpha(n)*rat(j,n)**2 )
                    ENDDO
 
+!           Subtract pseudo density contribution from own mt sphere from mt forces AARONSTUFF
+!            IF (l_f2) THEN
+!              ALLOCATE ( integrand(jmtd,3) )
+!              integrandr = zero
+!              integrand  = zero
+!              DO j = 1,jri(n)
+!                integrandr(j) = -alpha(n) * acoff(n) * rmsh(j,n)**3 *sfp
+!     *                               * exp(-alpha(n) * rmsh(j,n)**2) !*2 ! factor of two missing? grad e^{-alpha*r^2} = -2alpha\vec{r}e^{-alpha*r^2}
+!              END DO ! j radial mesh
+
+!              DO lh = 0,nlh(ntypsy(nat))
+ !               IF (llh(lh,ntypsy(nat)).ne.1) CYCLE
+
+!                gv = czero
+!                DO jm = 1,nmem(lh,ntypsy(nat))
+!                  m = mlh(jm,lh,ntypsy(nat))
+
+!                  DO dir = 1,3
+!                    gv(dir) = gv(dir) + ycomp1(dir,m)
+!     +                      * clnu(jm,lh,ntypsy(nat)) ! why not conjg?
+!                  END DO ! dir ection
+
+!                END DO ! jm
+
+!                DO dir = 1,3
+!                DO j = 1,jri(n)
+!                  integrand(j,dir) = integrand(j,dir) - integrandr(j)
+!     *                                  * vr2(j,lh,n) * real(gv(dir))
+!                END DO ! j radial mesh
+!                END DO ! dir ection
+
+!              END DO ! lh lattice harmonics
+
+!              DO dir = 1,3
+!                CALL intgr3(integrand(:,dir),rmsh(1,n),dx(n),jri(n),
+!     <                                        force_a4_mt(dir,n,jspin))
+!              END DO ! dir ection
+!              DEALLOCATE ( integrand )
+!            END IF
                 ELSE
                    alpha(n) = 0.0
               ENDIF
@@ -472,6 +661,12 @@
 #endif
 
           DEALLOCATE (qpwc)
+!      IF (l_f2) THEN AARONSTUFF
+!       Deallocate arrays used specifically during force calculation
+!        DEALLOCATE ( vpw,vzxy,vz,vr,vr0 )
+!        DEALLOCATE ( vr2,ffonat,integrandr,pylm2 )
+!        DEALLOCATE ( vrrgrid,vrigrid )
+!      END IF
 
         END SUBROUTINE cdnovlp
 
@@ -631,6 +826,25 @@
               !
               ! ----> start loop over equivalent atoms
               !
+
+!             IF (l_f2) THEN AARONSTUFF
+!              generate phase factors for each G, not only for each star, to incorporate the atomic phase factors
+!               kcmplx = cmplx(0.0,0.0)
+!               DO j = 1,nop
+!                 x = -tpi* ( kr(1,j) * taual(1,nat1)
+!     +                     + kr(2,j) * taual(2,nat1)
+!     +                     + kr(3,j) * taual(3,nat1) )
+!                 phase = cmplx(cos(x),sin(x))
+!                generate muffin-tin part of core force component
+!                 force_a4_mt(:,n,jspin) = force_a4_mt(:,n,jspin)
+!     +                 + qf(k) * phase * nstr(k) * ffonat(:,(k-1)*nop+j)
+!                 kcmplx(:) = kcmplx(:) + kr(:,j) * phase * phas(j) ! should be conjg(phas(j)), but in FLEUR, only real phas(j) are accepted
+!               END DO ! j
+!               kcmplx = matmul(kcmplx,bmat) * nstr(k) / nop
+!              generate interstitial part of core force component
+!               force_a4_is(:,n,jspin) = force_a4_is(:,n,jspin)
+!     +           + qf(k) * conjg(vpw(k,jspin))*omtil*ci*kcmplx(:)
+!             END IF
                nat2 = nat1 + neq - 1
                DO  nat = nat1,nat2
                    sf = czero

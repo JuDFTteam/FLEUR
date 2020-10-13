@@ -11,7 +11,7 @@
      X                          acoflo,bcoflo,aveccof,bveccof,cveccof)
 c
 c*********************************************************************
-c for details see abclocdn; calles by to_pulay
+c for details see abclocdn; called by to_pulay
 c*********************************************************************
 c
       IMPLICIT NONE

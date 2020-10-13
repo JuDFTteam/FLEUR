@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_force_a4_add
+MODULE m_force_a4_add ! AARONSTUFF
   USE m_juDFT
   !     *****************************************************************
   !     calculates the force contribution from core-tails in addition
