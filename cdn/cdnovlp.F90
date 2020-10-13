@@ -139,6 +139,7 @@ CONTAINS
           INTEGER mshc(atoms%ntype),ioffset_pT(0:fmpi%isize-1),nkpt_pT(0:fmpi%isize-1)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           LOGICAL l_f2
+          INTEGER, ALLOCATABLE :: n1(:),n2(:)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
 #ifdef CPP_MPI
@@ -294,7 +295,7 @@ CONTAINS
              ! could be all collapsed to irank 0, but if the later part also gets
              ! parallelized over k at some point, now all iranks have ffonat available
 #ifdef CPP_MPI
-             ALLOCATE( n1(0:isize-1),n2(0:isize-1) )
+             ALLOCATE( n1(0:fmpi%isize-1),n2(0:fmpi%isize-1) )
              n1(:) = 3*nkpt_pT(:)*nop
              n2(:) = 3*ioffset_pT(:)*nop
              CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),CPP_MPI_COMPLEX,ffonat(1,1),n1,n2,CPP_MPI_COMPLEX,MPI_COMM_WORLD,ierr)
