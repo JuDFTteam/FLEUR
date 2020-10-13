@@ -8,7 +8,7 @@ force/force_a21_U.f90
 force/force_a21_lo.f90
 force/force_a3.f90
 force/force_a4.f90
-#force/force_a4_add.f90
+force/force_a4_add.f90
 force/force_a8.F90
 force/force_b8.f90
 #force/force_sf.F90

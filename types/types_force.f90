@@ -151,19 +151,15 @@ CONTAINS
 
     IF (.NOT.input%l_useapw) THEN
 
-       IF (input%f_level.lt.2) THEN
+       IF (input%f_level.LT.2) THEN
           CALL force_a12(atoms,noccbd,sym,cell,oneD,&
                we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
                thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
-!       ELSE AARONSTUFF
-!          IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
-!             CALL force_a12_lv2(
-!     >                jspin,jspd,noccbd,neigd,ntypd,ntype,natd,nbasfcn, ! or ispin?
-!     >                nop,nvd,lmaxd,omtil,
-!     >                nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,
-!     >                ngopr,amat,bmat,eig,rmt,taual,we,bkpt,z,
-!     X                f_a12,force )
-!          END IF
+       !ELSE AARONSTUFF
+       !   IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
+       !      CALL force_a12_lv2(jspin,jspd,noccbd,neigd,ntypd,ntype,natd,nbasfcn, &! or ispin?
+       !           nop,nvd,lmaxd,omtil,nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,ngopr,amat,bmat,eig,rmt,taual,we,bkpt,z,f_a12,force )
+       !   END IF
        END IF
     END IF
     CALL force_a21(input,atoms,sym,oneD,cell,we,ispin,&

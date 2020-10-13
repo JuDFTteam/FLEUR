@@ -24,6 +24,11 @@ MODULE m_types_input
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
   INTEGER :: f_level = 0
+  !     f_level == 0: Original force calculation
+  !     f_level == 1: Forces from coretails calculated over whole unit cell
+  !     f_level == 2: Kinetic energy surface term evaluated with IR functions
+  !     f_level == 3: Surface term for density and potential discontinuity at the MT boundaries
+  !     level 3 needs a large gmax cutoff, which backfires at the rest of the calculation
   LOGICAL :: eonly =.FALSE.
   LOGICAL :: ctail =.TRUE.
   INTEGER :: coretail_lmax =0
