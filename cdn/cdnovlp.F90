@@ -296,8 +296,8 @@ CONTAINS
              ! parallelized over k at some point, now all iranks have ffonat available
 #ifdef CPP_MPI
              ALLOCATE( n1(0:fmpi%isize-1),n2(0:fmpi%isize-1) )
-             n1(:) = 3*nkpt_pT(:)*nop
-             n2(:) = 3*ioffset_pT(:)*nop
+             n1(:) = 3*nkpt_pT(:)*sym%nop
+             n2(:) = 3*ioffset_pT(:)*sym%nop
              CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),CPP_MPI_COMPLEX,ffonat(1,1),n1,n2,CPP_MPI_COMPLEX,MPI_COMM_WORLD,ierr)
              DEALLOCATE(ffonat_pT,n1,n2)
 #else
