@@ -17,6 +17,10 @@ module m_work_package
       procedure :: free => t_q_package_free
    end type t_q_package 
 
+   type t_qwps
+      type(t_q_package), allocatable(:) :: q_packs 
+   end type t_qwps
+
    type t_k_package
       integer :: nk, rank, size
       type(t_hybmpi) :: submpi
@@ -97,6 +101,15 @@ contains
       type(t_hybmpi), intent(in)        :: k_wide_mpi
       integer, intent(in) :: nk, jsp
       integer             :: iq, jq
+
+      n_groups = min(k_wide_mpi%size, fi%kpts%EIBZ(nk)%nkpt)
+      allocate(weights(n_groups), source=0)
+      do i =1,fi%kpts%EIBZ(nk)%nkpt
+         idx = mod(i,n_groups) + 1
+         weights(idx) = weights(idx) + 1
+      enddo
+      
+      call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
 
       k_pack%submpi = k_wide_mpi
       k_pack%nk = nk
