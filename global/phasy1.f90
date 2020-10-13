@@ -73,7 +73,7 @@ CONTAINS
 
    END SUBROUTINE phasy1
 
-   SUBROUTINE phasy2(atoms, stars, sym, cell, k, na, pylm2)
+   SUBROUTINE phasy2(atoms, stars, sym, cell, k, n, na, pylm2)
       ! phasy2 has i*RG in the sum of phasy1 and produces a vector
       ! routine built to be called with a specific atom (type)
 
@@ -82,25 +82,25 @@ CONTAINS
       TYPE(t_stars),INTENT(IN)::stars
       TYPE(t_sym),INTENT(IN)  ::sym
       TYPE(t_cell),INTENT(IN) ::cell
-      INTEGER, INTENT (IN) :: k, na
+      INTEGER, INTENT (IN) :: k, n, na
 
 !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT):: pylm2(:,:)
+      COMPLEX, INTENT (OUT):: pylm2(:,:,:)
 
 !     .. Local Scalars ..
       COMPLEX sf,csf
       REAL x
-      INTEGER j,l,m,n,lm,ll1,dir
+      INTEGER j,l,m,lm,ll1,dir
 
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
       COMPLEX phas(sym%nop)
-      REAL rg(3)
+      REAL rg(3,sym%nop)
       INTEGER kr(3,sym%nop)
       COMPLEX, ALLOCATABLE :: ylm(:,:)
 
       ciall(0) = fpi_const/sym%nop
-      DO l = 1, atoms%lmax
+      DO l = 1, atoms%lmax(n)
          ciall(l) = ciall(0)*ImagUnit**l
       ENDDO
 
@@ -109,8 +109,8 @@ CONTAINS
       ALLOCATE ( ylm( (atoms%lmaxd+1)**2, sym%nop ) )
       ylm = cmplx(0.,0.)
       DO j = 1,sym%nop
-          rg=matmul(kr(:,j),cell%bmat)
-          CALL ylm4(atoms%lmaxd, rg, ylm(:,j))!keep
+          rg(:,j)=matmul(kr(:,j),cell%bmat)
+          CALL ylm4(atoms%lmaxd, rg(:,j), ylm(:,j))!keep
       ENDDO
       ylm = conjg( ylm )
 
