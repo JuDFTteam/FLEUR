@@ -23,6 +23,7 @@ MODULE m_types_input
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
+  INTEGER :: f_level = 0
   LOGICAL :: eonly =.FALSE.
   LOGICAL :: ctail =.TRUE.
   INTEGER :: coretail_lmax =0
@@ -105,6 +106,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
  CALL mpi_bc(this%cdinf,rank,mpi_comm)
  CALL mpi_bc(this%vchk,rank,mpi_comm)
  CALL mpi_bc(this%l_f,rank,mpi_comm)
+ CALL mpi_bc(this%f_level,rank,mpi_comm)
  CALL mpi_bc(this%eonly,rank,mpi_comm)
  CALL mpi_bc(this%ctail,rank,mpi_comm)
  CALL mpi_bc(this%coretail_lmax,rank,mpi_comm)
@@ -283,6 +285,7 @@ SUBROUTINE read_xml_input(this,xml)
  numberNodes = xml%GetNumberOfNodes(xPathA)
  IF (numberNodes.EQ.1) THEN
     this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
+    this%f_level = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@f_level'))
     this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
     this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
     this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
