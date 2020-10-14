@@ -42,10 +42,10 @@ CONTAINS
     !
     USE m_intgr    , ONLY : intgr3
     USE m_constants
-    !USE m_force_a4_add AARONSTUFF
     USE m_force_a4
     USE m_force_a3
-    !USE m_force_sf
+    USE m_force_a4_add ! Klueppelberg (force level 1)
+    !USE m_force_sf ! Klueppelberg (force level 3)
     USE m_forcew
     USE m_cdn_io
     USE m_types
@@ -143,28 +143,15 @@ CONTAINS
        IF (input%l_f) THEN
           ! core contribution to force: needs TOTAL POTENTIAL and core charge
 
-!        IF (ctail.and.(f_level.ge.1)) THEN AARONSTUFF
-!         Add core correction to forces from tails of core states
-!         Klueppelberg, Sep'12
-!          CALL cpu_time(time1)
-!          CALL force_a4_add(
-!     >                      ntypd,ntype,jspd,jspins,l_geo,
-!     X                      force)
-!          CALL cpu_time(time2)
-!          time_a4 = time2-time1
-
-!           CALL testofmagnitude(
-!      >                         ntypd,ntype,jspd,n3d,odi%n2d,nmzxyd,
-!      >                         nmzd,jmtd,nlhd,jspins,nq3,odi%nq2,nvac,
-!      >                         ntypsd,natd,memd,nop,n3d,!vmax,
-!      >                         invs,invs2,film,symor,nstr,
-!      >                         nlh,jri,ntypsy,neq,llh,kv3,nmem,mrot,
-!      >                         mlh,invtab,bmat,rmt,taual,tau,clnu)
-!        END IF
+          IF (input%ctail.AND.(input%f_level.GE.1)) THEN
+             ! Add core correction to forces from tails of core states
+             ! Klueppelberg, Sep'12 (force level 1)
+             CALL force_a4_add(atoms,input,results)
+          END IF
 
           CALL force_a4(atoms,sym,sphhar,input, vTot%mt, results%force)
 
-       ENDIF
+       END IF
 
        !-for
        !     ---> add spin-up and spin-down charge density for lh=0

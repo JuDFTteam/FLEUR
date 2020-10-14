@@ -56,7 +56,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_mpi_bc_potden
 #endif
 !      USE m_force_sf AARONSTUFF
-!      USE m_force_a4_add, ONLY : f_level
 
    IMPLICIT NONE
 
