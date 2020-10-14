@@ -1,5 +1,6 @@
 module m_work_package
    use m_types
+   use m_distribute_mpi
    implicit none
 
    type t_band_package  
@@ -18,7 +19,7 @@ module m_work_package
    end type t_q_package 
 
    type t_qwps
-      type(t_q_package), allocatable(:) :: q_packs 
+      type(t_q_package), allocatable :: q_packs 
    end type t_qwps
 
    type t_k_package
@@ -99,24 +100,36 @@ contains
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_hybmpi), intent(in)        :: k_wide_mpi
-      integer, intent(in) :: nk, jsp
-      integer             :: iq, jq
+      type(t_hybmpi)                    :: q_wide_mpi
+
+      integer, intent(in)  :: nk, jsp
+      integer              :: iq, jq, loc_num_qs, i, cnt, n_groups, idx, q_rank
+      integer, allocatable :: weights(:)
 
       n_groups = min(k_wide_mpi%size, fi%kpts%EIBZ(nk)%nkpt)
       allocate(weights(n_groups), source=0)
-      do i =1,fi%kpts%EIBZ(nk)%nkpt
+      do i = 1,fi%kpts%EIBZ(nk)%nkpt
          idx = mod(i,n_groups) + 1
          weights(idx) = weights(idx) + 1
       enddo
       
-      call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
+      call distribute_mpi(weights, k_wide_mpi, q_wide_mpi, q_rank)
 
       k_pack%submpi = k_wide_mpi
       k_pack%nk = nk
-      allocate(k_pack%q_packs(fi%kpts%EIBZ(nk)%nkpt)) 
-      do iq = 1,fi%kpts%EIBZ(nk)%nkpt
+
+      loc_num_qs = 0
+      do i = 1,fi%kpts%EIBZ(nk)%nkpt
+         idx = mod(i,n_groups) + 1
+         if(idx == q_rank) loc_num_qs = loc_num_qs + 1
+      enddo
+      
+      allocate(k_pack%q_packs(loc_num_qs))
+      cnt = 0
+      do iq = 1,fi%kpts%EIBZ(nk)%nkpt, n_groups
+         cnt = cnt + 1
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
-         call k_pack%q_packs(iq)%init(fi, hybdat, k_pack%submpi, jsp, nk, iq, jq)
+         call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
       enddo
    end subroutine t_k_package_init
 
