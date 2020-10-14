@@ -70,8 +70,8 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    END IF
       moments(3,i)=dummyResults(i,1)-dummyResults(i,2)
    END DO
-   
-   
+
+
 
 DEALLOCATE(dummyResults)
 
@@ -87,7 +87,7 @@ END IF
       my=moments(2,i)
       mz=moments(3,i)
       IF (den%potdenType>1000) THEN
-         CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
+         CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i),.true.)
       END IF
    ENDDO
 
