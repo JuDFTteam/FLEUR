@@ -114,6 +114,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
+   REAL :: bkpt(3)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
@@ -218,6 +219,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
+      bkpt=kpts%bk(:,ikpt_i)! or kpts%bk(:,ikpt)?
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., fmpi)
       skip_t = skip_tt
@@ -293,7 +295,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
            CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,input,hub1inp,hub1data,tlmplm,usdus)
            CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
-           usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
+           usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)

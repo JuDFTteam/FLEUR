@@ -1,19 +1,11 @@
-MODULE m_force_a12_lv2
+MODULE m_force_a12_lv2 ! Klueppelberg (force level 2)
 CONTAINS
-
-
-      SUBROUTINE force_a12_lv2(
-     >                 jsp,jspd,nobd,neigd,ntypd,ntype,natd,nbasfcn,
-     >                 nop,nvd,lmaxd,omtil,
-     >                 nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,
-     >                 ngopr,amat,bmat,eig,rmt,taual,we,bkpt,z,
-     X                 f_a12,force )
-!     same as above, but this time, the plane waves are expanded in Y
-
+   SUBROUTINE force_a12_lv2(jsp,jspd,nobd,neigd,ntypd,ntype,natd,nbasfcn,nop,nvd,lmaxd,omtil,nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,ngopr,amat,bmat,eig,rmt,taual,we,bkpt,zMat,f_a12,force )
       USE m_constants, ONLY : pimach
       USE m_ylm
       USE m_sphbes
       USE m_gaunt
+      USE m_types_mat
 
       IMPLICIT NONE
 
@@ -29,11 +21,7 @@ CONTAINS
       INTEGER, INTENT (IN) :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       REAL   , INTENT (IN) :: amat(3,3),bmat(3,3),eig(neigd),rmt(ntypd)
       REAL   , INTENT (IN) :: taual(3,natd),we(nobd),bkpt(3)
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-      REAL   , INTENT (IN) :: z(nbasfcn,neigd)
-#else
-      COMPLEX, INTENT (IN) :: z(nbasfcn,neigd)
-#endif
+      TYPE(t_mat), INTENT(IN)             :: zMat
       COMPLEX, INTENT (INOUT) :: f_a12(3,ntypd)
       REAL   , INTENT (INOUT) :: force(3,ntypd,jspd)
 
@@ -51,6 +39,14 @@ CONTAINS
       REAL   , ALLOCATABLE :: bsl(:,:,:),G(:,:),kG(:,:),kGreal(:,:)
       REAL   , ALLOCATABLE :: kineticfactor(:,:)
       COMPLEX, ALLOCATABLE :: ylm(:,:),ppw(:,:),fpw(:,:),expf(:,:)
+      REAL :: zr(nbasfcn,neigd)
+      COMPLEX :: zc(nbasfcn,neigd)
+
+      IF (zMat%l_real) THEN
+        zr=zMat%data_r 
+      ELSE
+        zc=zMat%data_c 
+      END IF
 
       lmax = 2*lmaxd
       tpi = 2.0 * pimach()
@@ -95,8 +91,7 @@ CONTAINS
 !      ,                                 matmul(G(:,kn),bmat)))*rmt(itype)
           CALL sphbes(lmax,r,bsl(kn,:,itype))
           DO ieq = 1,neq(itype)
-            expf(kn,iatom) =
-     =                 exp(tpi*img*dot_product(kG(:,kn),taual(:,iatom)))
+            expf(kn,iatom) = exp(tpi*img*dot_product(kG(:,kn),taual(:,iatom)))
 !      =                 exp(tpi*img*dot_product(G(:,kn),taual(:,iatom)))
             iatom = iatom + 1
           END DO ! ieq
@@ -121,23 +116,29 @@ CONTAINS
           DO kn = 1,nv(jsp)
             DO m = -l,l
               lm = l*(l+1) + m + 1
-              noband = expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l,itype)
-     *               * fpil
+              noband = expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l,itype) * fpil
               DO iband = 1,nobd
-                ppw(iband,lm) = ppw(iband,lm) + z(kn,iband) * noband
-                IF (l.gt.0) CYCLE
-                fpw(iband,lm) = fpw(iband,lm) + z(kn,iband) * noband
-     *                                        * kineticfactor(iband,kn)
+                IF (zMat%l_real) THEN
+                   ppw(iband,lm) = ppw(iband,lm) + zr(kn,iband) * noband
+                   IF (l.gt.0) CYCLE
+                   fpw(iband,lm) = fpw(iband,lm) + zr(kn,iband) * noband * kineticfactor(iband,kn)
+                ELSE
+                   ppw(iband,lm) = ppw(iband,lm) + zc(kn,iband) * noband
+                   IF (l.gt.0) CYCLE
+                   fpw(iband,lm) = fpw(iband,lm) + zc(kn,iband) * noband * kineticfactor(iband,kn)                   
+                END IF
               END DO ! iband
             END DO ! m
 !           If ppw is used with l, one needs fpw with l-1 (already calculated) and l+1 (calculated now)
             DO m = -l-1,l+1
               lm = (l+1)*(l+2) + m + 1
-              noband =expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l+1,itype)
-     *               * fpil * img
+              noband =expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l+1,itype) * fpil * img
               DO iband = 1,nobd
-                fpw(iband,lm) = fpw(iband,lm) + z(kn,iband) * noband
-     *                                        * kineticfactor(iband,kn)
+                IF (zMat%l_real) THEN
+                   fpw(iband,lm) = fpw(iband,lm) + zr(kn,iband) * noband * kineticfactor(iband,kn)
+                ELSE
+                   fpw(iband,lm) = fpw(iband,lm) + zc(kn,iband) * noband * kineticfactor(iband,kn)
+                END IF
               END DO ! iband
             END DO ! m
           END DO ! kn
@@ -151,8 +152,7 @@ CONTAINS
                 lmp = lp*(lp+1) + mp + 1
                 Ygaunt(:) = gaunt1(l,1,lp,m,t,mp,lmax)*coeff(:,t)
                 DO iband = 1,nobd
-                  gv(:) = gv(:) + we(iband) * r2vol * Ygaunt(:)
-     *                  * conjg(ppw(iband,lm)) * fpw(iband,lmp)
+                  gv(:) = gv(:) + we(iband) * r2vol * Ygaunt(:) * conjg(ppw(iband,lm)) * fpw(iband,lmp)
                 END DO ! iband
               END DO ! t
             END DO ! lp
@@ -200,8 +200,7 @@ CONTAINS
 !         starsum = matmul(amat,
 !      &    matmul(mrot(:,:,invtab(ngopr(iatom))),vecsum))
         starsum = matmul(amat,vecsum)
-        force_a12(:,itype) = force_a12(:,itype)
-     +                     + real(starsum(:))/invarind(iatom)
+        force_a12(:,itype) = force_a12(:,itype) + real(starsum(:))/invarind(iatom)
 
         iatom = iatom + 1
       END DO ! ieq

@@ -173,7 +173,8 @@ CONTAINS
 
           ALLOCATE (qpwc(stars%ng3))
 
-          l_f2 = input%l_f.AND.(input%f_level.GE.1).AND.(.NOT.l_st) ! f_level >= 1: coretails completely contained in force calculation (force level 1)
+          l_f2 = input%l_f.AND.(input%f_level.GE.1).AND.(.NOT.l_st) ! f_level >= 1: coretails completely contained in force calculation
+                                                                    ! Klueppelberg (force level 1)
           IF (l_f2) THEN
           ! Allocate the force arrays in the routine force_a4_add.f
              CALL alloc_fa4_arrays(atoms,input)

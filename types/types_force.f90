@@ -112,9 +112,12 @@ CONTAINS
   END SUBROUTINE force_init2
 
   SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell,oneD,enpara,&
-       usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results)
+       usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,k1,k2,k3,bkpt)
 
     USE m_types_setup
+    USE m_types_lapw
+    USE m_types_mat
+    USE m_types_sphhar
     USE m_types_usdus
     USE m_types_tlmplm
     USE m_types_enpara
@@ -123,8 +126,7 @@ CONTAINS
     USE m_types_potden
     USE m_forcea12
     USE m_forcea21
-!   USE m_force_a4_add, ONLY : f_level AARONSTUFF
-!   USE m_test?
+    USE m_force_a12_lv2
 
     IMPLICIT NONE
 
@@ -141,11 +143,14 @@ CONTAINS
     TYPE(t_potden),       INTENT(IN)    :: vtot
     TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
     TYPE(t_results),      INTENT(INOUT) :: results
+    TYPE(t_lapw), INTENT(IN)            :: lapw
+    TYPE(t_mat), INTENT(IN)             :: zMat
+    TYPE(t_sphhar), INTENT(IN)          :: sphhar
 
-    INTEGER,              INTENT(IN)    :: noccbd
-    INTEGER,              INTENT(IN)    :: ispin
+    INTEGER,              INTENT(IN)    :: noccbd,k1(:,:),k2(:,:),k3(:,:)
+    INTEGER,              INTENT(IN)    :: ispin,jsp_start,jspin,nbasfcn
 
-    REAL,                 INTENT(IN)    :: eig(noccbd)
+    REAL,                 INTENT(IN)    :: eig(noccbd),bkpt(3)
     REAL,                 INTENT(IN)    :: we(noccbd)
 
 
@@ -155,11 +160,12 @@ CONTAINS
           CALL force_a12(atoms,noccbd,sym,cell,oneD,&
                we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
                thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
-       !ELSE AARONSTUFF
-       !   IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
-       !      CALL force_a12_lv2(jspin,jspd,noccbd,neigd,ntypd,ntype,natd,nbasfcn, &! or ispin?
-       !           nop,nvd,lmaxd,omtil,nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,ngopr,amat,bmat,eig,rmt,taual,we,bkpt,z,f_a12,force )
-       !   END IF
+       ELSE ! Klueppelberg (force level 2)
+          IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
+             CALL force_a12_lv2(jspin,input%jspins,noccbd,noccbd,sphhar%ntypsd,atoms%ntype,atoms%nat,nbasfcn, &! or ispin?
+                  sym%nop,lapw%dim_nvd(),atoms%lmaxd,cell%omtil,lapw%nv,atoms%neq,k1,k2,k3, &
+                  sym%invarind,sym%invarop,sym%invtab,sym%mrot,sym%ngopr,cell%amat,cell%bmat,eig,atoms%rmt,atoms%taual,we,bkpt,zMat,thisForce%f_a12,results%force )
+          END IF
        END IF
     END IF
     CALL force_a21(input,atoms,sym,oneD,cell,we,ispin,&
