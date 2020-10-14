@@ -219,7 +219,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
-      bkpt=kpts%bk(:,ikpt_i)! or kpts%bk(:,ikpt)?
+      bkpt=kpts%bk(:,ikpt)
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., fmpi)
       skip_t = skip_tt
