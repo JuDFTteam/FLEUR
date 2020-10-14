@@ -17,7 +17,7 @@ MODULE m_vis_xc
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc,vxc)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -44,7 +44,7 @@ CONTAINS
       TYPE(t_stars),INTENT(IN)      :: stars
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
-      TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc
+      TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
       TYPE(t_kinED),INTENT(IN)      ::kinED
 
       TYPE(t_gradients) :: grad, tmp_grad
@@ -81,6 +81,7 @@ CONTAINS
       ENDIF
       !Put the potentials in rez. space.
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_xc,vTot%pw,vTot%pw_w)
+      CALL  pw_from_grid(xcpot%needs_grad(),stars,.false.,v_xc,vxc%pw)
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_x,vx%pw,vx%pw_w)
 
       !calculate the ex.-cor energy density

@@ -4,13 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_force_sf ! AARONSTUFF
-!     *****************************************************************
-!     This routine calculates a contribution to the forces stemming
-!     from the discontinuity of density and potential at the muffin-tin
-!     boundary oint n [ rho V (IS) - rho V (MT) ] dS
-!     Klueppelberg May 13
-!     *****************************************************************
+MODULE m_force_sf ! Klueppelberg (force level 3)
+      USE m_constants
+   !-----------------------------------------------------------------------------
+   ! This routine calculates a contribution to the forces stemming
+   ! from the discontinuity of density and potential at the muffin-tin
+   ! boundary oint n [ rho V (IS) - rho V (MT) ] dS
+   ! Klueppelberg May 13
+   !-----------------------------------------------------------------------------
 
 !     To enable debug code that compares potential and density on the
 !     muffin-tin boundary, uncomment the following line:
@@ -22,9 +23,8 @@
       COMPLEX, PRIVATE, SAVE, ALLOCATABLE :: force_is(:,:)
       LOGICAL, PRIVATE, SAVE :: isdone=.false.,mtdone=.false.
 
-      CONTAINS
-
-      SUBROUTINE force_sf_is(atoms_in,stars,sym,jsp,cell,qpw,vpw,excpw,vxcpw )
+CONTAINS
+   SUBROUTINE force_sf_is(atoms_in,stars,sym,jsp,cell,qpw,vpw,excpw,vxcpw)
 !     *****************************************************************
 !     This subroutine calculates the contribution evaluated with
 !     quantities from the interstital oint n rho V dS
@@ -36,13 +36,12 @@
 !     *****************************************************************
 
       USE m_types
-      USE m_constants
       USE m_sphbes
       USE m_phasy1
       USE m_gaunt
-#ifdef debug
-      USE m_ylm
-#endif
+!#ifdef debug
+!      USE m_ylm
+!#endif
     
       IMPLICIT NONE
       TYPE(t_sym),INTENT(IN)     :: sym
@@ -69,7 +68,7 @@
       INTEGER :: lmaxb(atoms_in%ntype)
       COMPLEX :: coeff(3,-1:1),qpw2(stars%ng3,size(qpw,2)),qpwcalc(stars%ng3,size(qpw,2))
       REAL   , ALLOCATABLE :: bsl(:,:,:)
-      COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:)
+      COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:,:)
 !       COMPLEX, ALLOCATABLE :: qpw2(:,:),qpwcalc(:,:)
 #ifdef debug
       REAL    :: vec(3)
@@ -86,7 +85,7 @@
 
       ALLOCATE ( bsl(stars%ng3,0:atoms%lmaxd,atoms%ntype) )
 
-      ALLOCATE ( pylm2((atoms%lmaxd+1)**2 ))
+      ALLOCATE ( pylm2((atoms%lmaxd+1)**2,atoms%ntype ))
       ALLOCATE ( rho((atoms%lmaxd+1)**2),V((atoms%lmaxd+1)**2) )
 
 #ifdef debug
@@ -196,7 +195,7 @@
 !         but this loop sequence is more convenient.
 !         allocating pylm as pylm(lm,s,itype) and precalculating it
 !         leads to exhaustive use of memory in larger systems
-          CALL phasy1(atoms,stars,sym,cell,s,pylm2(:))
+          CALL phasy1(atoms,stars,sym,cell,s,pylm2(:,:))
 
           DO l = 0,atoms%lmax(itype)-1 !s = 1,stars%ng3
 !           calculate phase factors for the current atom type to prevent
@@ -301,12 +300,7 @@
 
 
 
-      SUBROUTINE force_sf_mt(&
-                            atoms,sphhar,jspin,&
-                            ispin,mpi,&
-                            vr,excr,&
-                            vxcr,rho,&
-                            sym,cell )
+      SUBROUTINE force_sf_mt(atoms,sphhar,jspin,ispin,mpi,vr,excr,vxcr,rho,sym,cell )
 !     *****************************************************************
 !     This subroutine calculates the contribution evaluated with
 !     quantities from the muffin tin

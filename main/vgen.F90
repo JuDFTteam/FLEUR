@@ -9,7 +9,7 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul)
+                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)                          
       ! 
@@ -33,8 +33,7 @@ CONTAINS
       USE m_vgen_finalize
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
-!      USE m_force_sf AARONSTUFF
-!      USE m_force_a4_add, ONLY : f_level
+      USE m_force_sf ! Klueppelberg (force level 3)
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
 #endif
@@ -59,11 +58,11 @@ CONTAINS
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_potden),    INTENT(IN)    :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT) :: den
-      TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul
+      TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul, vxc, exc
 
       TYPE(t_potden)                   :: workden, denRot
 
-      INTEGER :: i
+      INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
       IF (fmpi%irank == 0) THEN
@@ -82,9 +81,15 @@ CONTAINS
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
+      CALL vxc%resetPotDen()
+      CALL exc%resetPotDen()
 
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
+      ALLOCATE(vxc%pw_w,mold=vTot%pw)
+      vxc%pw_w = 0.0
+      CALL exc%init(stars, atoms, sphhar, vacuum, noco, 1, 1) !one spin only
+      ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
 
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
@@ -118,25 +123,20 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,results)
+                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results)
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
-! AARONSTUFF
-!            IF (l_f.and.(f_level.ge.3)) THEN
-!        CALL cpu_time(time1)
-!        DO js = 1,jspins
-!          CALL force_sf_is(
-!     >                    lmaxd,n3d,ntypd,ntype,nq3,natd,nop,js,symor,
-!     >                    neq,lmax,kv3,mrot,invtab,nstr,sk3,rmt,taual,
-!     >                    bmat,tau,qpw,vpw,excpw_uw,vxcpw,jspd )
-!        END DO
-!        CALL cpu_time(time2)
-!        CALL outtime('surface force from interstitial:',time2-time1)
-!      END IF
+      ! Klueppelberg (force level 3)
+      IF (input%l_f.AND.(input%f_level.GE.3)) THEN
+         DO js = 1,input%jspins
+            CALL force_sf_is(atoms,stars,sym,js,cell,den%pw,vTot%pw,exc%pw(:,1),vxc%pw)
+         END DO
+
+      END IF
 
       CALL bfield(input,noco,atoms,field,vTot)
 
