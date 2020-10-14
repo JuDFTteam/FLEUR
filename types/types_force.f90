@@ -162,7 +162,7 @@ CONTAINS
                thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
        ELSE ! Klueppelberg (force level 2)
           IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
-             CALL force_a12_lv2(jspin,input%jspins,noccbd,noccbd,sphhar%ntypsd,atoms%ntype,atoms%nat,nbasfcn, &! or ispin?
+             CALL force_a12_lv2(jspin,input%jspins,noccbd,input%neig,sphhar%ntypsd,atoms%ntype,atoms%nat,nbasfcn, &! or ispin?
                   sym%nop,lapw%dim_nvd(),atoms%lmaxd,cell%omtil,lapw%nv,atoms%neq,k1,k2,k3, &
                   sym%invarind,sym%invarop,sym%invtab,sym%mrot,sym%ngopr,cell%amat,cell%bmat,eig,atoms%rmt,atoms%taual,we,bkpt,zMat,thisForce%f_a12,results%force )
           END IF
