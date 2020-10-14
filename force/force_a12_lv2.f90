@@ -1,7 +1,7 @@
 MODULE m_force_a12_lv2 ! Klueppelberg (force level 2)
 CONTAINS
    SUBROUTINE force_a12_lv2(jsp,jspd,nobd,neigd,ntypd,ntype,natd,nbasfcn,nop,nvd,lmaxd,omtil,nv,neq,k1,k2,k3,invarind,invarop,invtab,mrot,ngopr,amat,bmat,eig,rmt,taual,we,bkpt,zMat,f_a12,force )
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_ylm
       USE m_sphbes
       USE m_gaunt
@@ -28,7 +28,7 @@ CONTAINS
 !     .. Local Scalars ..
       INTEGER :: lmax,kn,iband,iatom,itype,ieq,l,m,lm,t,lp,mp,lmp,it,is
       INTEGER :: isinv,i
-      REAL    :: tpi,normsq,r,r2vol
+      REAL    :: normsq,r,r2vol
       COMPLEX :: img,noband,fpil
 
 !     .. Local Arrays ..
@@ -49,7 +49,6 @@ CONTAINS
       END IF
 
       lmax = 2*lmaxd
-      tpi = 2.0 * pimach()
       img = cmplx(0.0,1.0)
 
       ALLOCATE ( bsl(nvd,0:lmax,ntypd),ylm((lmax+1)**2,nvd) )
@@ -58,11 +57,11 @@ CONTAINS
       ALLOCATE ( kineticfactor(nobd,nvd) )
 
       coeff(:, :) =   cmplx(0.0,0.0)
-      coeff(1,-1) =     sqrt(tpi/3.)
-      coeff(1, 1) =    -sqrt(tpi/3.)
-      coeff(2,-1) = img*sqrt(tpi/3.)
-      coeff(2, 1) = img*sqrt(tpi/3.)
-      coeff(3, 0) =  sqrt(2.*tpi/3.)
+      coeff(1,-1) =     sqrt(tpi_const/3.)
+      coeff(1, 1) =    -sqrt(tpi_const/3.)
+      coeff(2,-1) = img*sqrt(tpi_const/3.)
+      coeff(2, 1) = img*sqrt(tpi_const/3.)
+      coeff(3, 0) =  sqrt(2.*tpi_const/3.)
 
 !       WRITE (5555,*) 'kpt',bkpt(1),bkpt(2),bkpt(3)
 !       WRITE (5556,*) 'kpt',bkpt(1),bkpt(2),bkpt(3)
@@ -91,7 +90,7 @@ CONTAINS
 !      ,                                 matmul(G(:,kn),bmat)))*rmt(itype)
           CALL sphbes(lmax,r,bsl(kn,:,itype))
           DO ieq = 1,neq(itype)
-            expf(kn,iatom) = exp(tpi*img*dot_product(kG(:,kn),taual(:,iatom)))
+            expf(kn,iatom) = exp(tpi_const*img*dot_product(kG(:,kn),taual(:,iatom)))
 !      =                 exp(tpi*img*dot_product(G(:,kn),taual(:,iatom)))
             iatom = iatom + 1
           END DO ! ieq
@@ -111,7 +110,7 @@ CONTAINS
         fpw = 0.0
 
         DO l = 0,lmax-1 ! (arrays run to lmax, l+1 can only be supported til lmax-1)
-          fpil = 2.*tpi*img**l
+          fpil = 2.*tpi_const*img**l
 !         Calculate ppw and fpw
           DO kn = 1,nv(jsp)
             DO m = -l,l
@@ -170,7 +169,7 @@ CONTAINS
 !       specific atom, not considering such a rotation. To do so, the
 !       resulting forces have to be rotated back to the representative
 !       atom. This is done in the next 6 lines.
-        vecsum = matmul(bmat,gv)/tpi/neq(itype)
+        vecsum = matmul(bmat,gv)/tpi_const/neq(itype)
 
 !         is = ngopr(iatom)
 !         it = invtab(is)
