@@ -300,7 +300,7 @@ CONTAINS
 
 
 
-      SUBROUTINE force_sf_mt(atoms,sphhar,jspin,ispin,mpi,vr,excr,vxcr,rho,sym,cell )
+      SUBROUTINE force_sf_mt(atoms,sphhar,jspin,ispin,fmpi,vr,excr,vxcr,rho,sym,cell )
 !     *****************************************************************
 !     This subroutine calculates the contribution evaluated with
 !     quantities from the muffin tin
@@ -314,7 +314,7 @@ CONTAINS
       USE m_ylm
       USE m_types
       IMPLICIT NONE
-      TYPE(t_mpi),INTENT(IN)   :: mpi
+      TYPE(t_mpi),INTENT(IN)   :: fmpi
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_sphhar),INTENT(IN):: sphhar
@@ -452,7 +452,7 @@ CONTAINS
         END DO ! m
         END DO ! l
 
-        IF (mpi%irank.eq.0) THEN
+        IF (fmpi%irank.eq.0) THEN
           WRITE (850,'(3(2(f20.14),1x))') (force_mt(t,itype),t=1,3)
         END IF
         natom = natom + atoms%neq(itype)
