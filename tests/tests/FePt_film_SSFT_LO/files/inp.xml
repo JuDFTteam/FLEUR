@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      A Fleur input generator calculation with aiida                                  
+      A Fleur input generator calculation with aiida
    </comment>
    <calculationSetup>
       <cutoffs Kmax="4.00000000" Gmax="10.00000000" GmaxXC="8.70000000" numbands="0"/>
@@ -9,7 +9,6 @@
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="vwn" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="F" l_ss="F" swsp="F" lflip="F">
-         <nocoParams l_mperp="F" l_constr="F" mix_b=".00000000"/>
          <qss>.0000000000 .0000000000 .0000000000</qss>
       </magnetism>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
@@ -81,12 +80,12 @@
       <atomGroup species="Fe-1">
          <filmPos label="                 222">.0000000000 .0000000000 -.9964250044</filmPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta="1.570796326" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta="1.570796326"/>
       </atomGroup>
       <atomGroup species="Pt-1">
          <filmPos label="                   2">1.000/2.000 1.000/2.000 .9964250044</filmPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta="1.570796326" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta="1.570796326" />
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >
