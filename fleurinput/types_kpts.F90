@@ -257,7 +257,6 @@ CONTAINS
             this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
             this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
 
-            print *,n,this%voltet(n),this%ntetra(1,n)
                         !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
             !READ (str,*) this%ntetra(:,n)
          ENDDO

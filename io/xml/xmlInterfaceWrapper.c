@@ -27,6 +27,7 @@ static xmlSchemaPtr schema;
 static xmlSchemaValidCtxtPtr schemaValidCtxt;
 static xmlXPathContextPtr xPathCtxt;
 static xmlXPathObjectPtr xPathObj;
+static xmlChar * xmldata;
 
 int initializeXMLInterface()
 {
@@ -38,6 +39,7 @@ int initializeXMLInterface()
 
    xPathCtxt = NULL;
    xPathObj = NULL;
+   xmldata=NULL;
    xmlInitParser();
    return 0;
 }
@@ -171,7 +173,10 @@ extern const unsigned char* getXMLAttributeValue(const unsigned char* xPathExpre
    }
 
 /*   return NULL;*/
-   return xmlNodeGetContent(nodes->nodeTab[0]);
+   if (xmldata) xmlFree(xmldata);
+   xmldata=xmlNodeGetContent(nodes->nodeTab[0]);
+
+   return xmldata;
 
 }
 
@@ -183,7 +188,10 @@ extern const unsigned char* getXMLAttributeValueNode(xmlNodePtr node)
   if (node==NULL) {
     fprintf(stderr, "Error: node is null??");
   }
-  return xmlNodeGetContent(node);
+  if (xmldata) xmlFree(xmldata);
+
+  xmldata=xmlNodeGetContent(node);
+  return xmldata;
 }
 
 extern const xmlNodePtr getXMLNode(const unsigned char* xPathExpression)
@@ -245,6 +253,7 @@ int freeXMLResources()
    if(schemaParserCtxt) xmlSchemaFreeParserCtxt(schemaParserCtxt);
    if(schema) xmlSchemaFree(schema);
    if(schemaValidCtxt) xmlSchemaFreeValidCtxt(schemaValidCtxt);
+   if (xmldata) xmlFree(xmldata);
    return 0;
 }
 

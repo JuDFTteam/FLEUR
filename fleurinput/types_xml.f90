@@ -588,12 +588,7 @@ CONTAINS
        END FUNCTION getXMLAttributeValue
     END INTERFACE
 
-    INTERFACE
-      subroutine xmlFree(ptr) BIND (C,name="xmlFree")
-        use iso_c_binding
-        TYPE(c_ptr):: ptr
-      end subroutine
-    end interface
+
     l_docheck=.not.present(l_nocheck)
     if (.not.l_docheck) l_docheck=.not.l_nocheck
 
@@ -622,7 +617,6 @@ CONTAINS
     length = i-1
 
     GetAttributeValue = TRIM(ADJUSTL(VALUE(1:length)))
-    !call xmlFree(c_string)
 
   END FUNCTION GetAttributeValue
 
@@ -673,13 +667,6 @@ CONTAINS
        END FUNCTION getXMLAttributeValue
     END INTERFACE
 
-    INTERFACE
-      subroutine xmlFree(ptr) BIND (C,name="xmlFree")
-        use iso_c_binding
-        TYPE(c_ptr):: ptr
-      end subroutine
-    end interface
-
     DO n=1,size(List)
       if (n==1) THEN
         node=getXMLNode(xPath//'[1]'//C_NULL_CHAR)
@@ -704,7 +691,7 @@ CONTAINS
 
       List(n) = TRIM(ADJUSTL(VALUE(1:length)))
     enddo
-    !call xmlFree(c_string)
+
 
   END subroutine GetAttributeValue_List
 
