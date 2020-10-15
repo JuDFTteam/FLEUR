@@ -22,7 +22,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
-    TYPE(t_kpts),INTENT(IN)     ::kpts
+    TYPE(t_kpts),INTENT(INOUT)     ::kpts
     TYPE(t_gfinp),INTENT(IN)    ::gfinp
 
     call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
@@ -39,7 +39,18 @@ CONTAINS
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.)
     !adjust positions by displacements
     CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms,gfinp)
-
-
+!---------------band unfolding ---------------------
+    IF (banddos%unfoldband) THEN
+      write (*,*) 'input switch unfolding read'
+      write (*,*) 'before', kpts%specialPoints(:,2)
+      kpts%bk(1,:)=kpts%bk(1,:)*banddos%s_cell_x
+      kpts%bk(2,:)=kpts%bk(2,:)*banddos%s_cell_y
+      kpts%bk(3,:)=kpts%bk(3,:)*banddos%s_cell_z
+      kpts%specialPoints(1,:)=kpts%specialPoints(1,:)*banddos%s_cell_x
+      kpts%specialPoints(2,:)=kpts%specialPoints(2,:)*banddos%s_cell_y
+      kpts%specialPoints(3,:)=kpts%specialPoints(3,:)*banddos%s_cell_z
+      write (*,*) 'after', kpts%specialPoints(:,2)
+    END IF
+!--------------------------------------------------    
   END SUBROUTINE fleurinput_postprocess
 END MODULE m_fleurinput_postprocess

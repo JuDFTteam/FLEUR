@@ -27,6 +27,7 @@ static xmlSchemaPtr schema;
 static xmlSchemaValidCtxtPtr schemaValidCtxt;
 static xmlXPathContextPtr xPathCtxt;
 static xmlXPathObjectPtr xPathObj;
+static xmlChar * xmldata;
 
 int initializeXMLInterface()
 {
@@ -38,6 +39,7 @@ int initializeXMLInterface()
 
    xPathCtxt = NULL;
    xPathObj = NULL;
+   xmldata=NULL;
    xmlInitParser();
    return 0;
 }
@@ -171,8 +173,49 @@ extern const unsigned char* getXMLAttributeValue(const unsigned char* xPathExpre
    }
 
 /*   return NULL;*/
-   return xmlNodeGetContent(nodes->nodeTab[0]);
+   if (xmldata) xmlFree(xmldata);
+   xmldata=xmlNodeGetContent(nodes->nodeTab[0]);
 
+   return xmldata;
+
+}
+
+extern const xmlNodePtr getXMLNextNode(xmlNodePtr node){
+  return node->next->next;
+}
+extern const unsigned char* getXMLAttributeValueNode(xmlNodePtr node)
+{
+  if (node==NULL) {
+    fprintf(stderr, "Error: node is null??");
+  }
+  if (xmldata) xmlFree(xmldata);
+
+  xmldata=xmlNodeGetContent(node);
+  return xmldata;
+}
+
+extern const xmlNodePtr getXMLNode(const unsigned char* xPathExpression)
+{
+  if (xPathCtxt == NULL)
+   {
+      fprintf(stderr, "Error: xPathCtxt is null in getAttributeValue(...)");
+      return NULL;
+   }
+   xPathObj = xmlXPathEvalExpression(xPathExpression, xPathCtxt);
+   if (xPathObj == NULL)
+   {
+      fprintf(stderr, "Error: xPathObj is null in getAttributeValue(...)");
+      return NULL;
+   }
+   xmlNodeSetPtr nodes = xPathObj->nodesetval;
+   if (nodes == NULL)
+   {
+      fprintf(stderr, "Error: nodes is null in getAttributeValue(...)");
+      return NULL;
+   }
+
+/*   return NULL;*/
+   return nodes->nodeTab[0];
 }
 
 int setXMLAttributeValue(const unsigned char* xPathExpression,const unsigned char * value)
@@ -210,6 +253,7 @@ int freeXMLResources()
    if(schemaParserCtxt) xmlSchemaFreeParserCtxt(schemaParserCtxt);
    if(schema) xmlSchemaFree(schema);
    if(schemaValidCtxt) xmlSchemaFreeValidCtxt(schemaValidCtxt);
+   if (xmldata) xmlFree(xmldata);
    return 0;
 }
 

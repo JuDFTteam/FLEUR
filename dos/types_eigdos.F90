@@ -155,16 +155,18 @@ subroutine write_dos(eigdos,hdf_id)
 #endif
   END subroutine
 
-  subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi)
+  subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi,banddos)
     use m_types_kpts
     use m_types_cell
     use m_gnuplot_BS
+    use m_types_banddos
 #ifdef CPP_HDF
      use HDF5
      use m_banddos_io
 #endif
     class(t_eigdos),INTENT(INOUT):: eigdos
     type(t_kpts),intent(in)      :: kpts
+    type(t_banddos),INTENT(IN)   :: banddos
     type(t_cell),intent(in)      :: cell
     CHARACTER(LEN=*), INTENT(IN) :: title
     real,intent(in)              :: efermi
@@ -212,7 +214,7 @@ subroutine write_dos(eigdos,hdf_id)
       CLOSE (18)
     enddo
     call gnuplot_bs(kpts,title,cell,eigdos%get_spins())
-
+    IF (banddos%unfoldband) call write_gnu_sc(banddos,kpts,title,cell,eigdos%get_spins())
   end subroutine
 
   subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
