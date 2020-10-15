@@ -145,6 +145,7 @@ CONTAINS
       LOGICAL :: foundList, l_band
       CHARACTER(len=200)::str, path, path2, label, altPurpose
       CHARACTER(LEN=40) :: listName, typeString
+      CHARACTER(LEN=255),ALLOCATABLE :: tetra_string(:)
       IF (xml%versionNumber > 31) then
         WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
       ELSE
@@ -232,36 +233,48 @@ CONTAINS
 
       ALLOCATE (this%bk(3, this%nkpt))
       ALLOCATE (this%wtkpt(this%nkpt))
-
       DO i = 1, this%nkpt
          WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
-         this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight'))
-         str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
+         this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight',.true.))
+         str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
          this%bk(1, i) = evaluatefirst(str)
          this%bk(2, i) = evaluatefirst(str)
          this%bk(3, i) = evaluatefirst(str)
       END DO
 
+
       n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
       IF (n .EQ. 1) THEN
          this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
+         ALLOCATE(tetra_string(this%ntet))
+         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/tetraeder/tet',tetra_string)
          ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
          DO n = 1, this%ntet
             WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
-            this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@vol'))
-            str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
-            READ (str,*) this%ntetra(:,n)
+            this%voltet(n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
+
+            print *,n,this%voltet(n),this%ntetra(1,n)
+                        !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
+            !READ (str,*) this%ntetra(:,n)
          ENDDO
+         deallocate(tetra_string)
       ENDIF
+
       n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles')
       IF (n .EQ. 1) THEN
          this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
+         ALLOCATE(tetra_string(this%ntet))
+         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/triangles/tria',tetra_string)
          ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
          DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/triangles/tria[", n, "]"
-            this%voltet(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@vol'))
-            str = xml%getAttributeValue(TRIM(ADJUSTL(path2)))
-            READ (str,*) this%ntetra(:,n)
+            this%voltet(n) = evaluateFirst(Tetra_string(n))
+            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
          ENDDO
       ENDIF
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
@@ -405,7 +418,7 @@ CONTAINS
             WRITE (kptsUnit, 207) kpts%ntet
 207         FORMAT('               <tetraeder ntet="', i0, '">')
             DO n = 1, kpts%ntet
-208            FORMAT('                  <tet vol="', f20.13, '">', i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
+208            FORMAT('                  <tet> ', f20.13, i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
                WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
             WRITE (kptsUnit, '(a)') '               </tetraeder>'
@@ -414,7 +427,7 @@ CONTAINS
             WRITE (kptsUnit, 209) kpts%ntet
 209         FORMAT('               <triangles ntria="', i0, '">')
             DO n = 1, kpts%ntet
-210            FORMAT('                  <tria vol="', f20.13, '">', i0, ' ', i0, ' ', i0, '</tria>')
+210            FORMAT('                  <tria>', f20.13, i0, ' ', i0, ' ', i0, '</tria>')
                WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
             END DO
             WRITE (kptsUnit, '(a)') '               </triangles>'

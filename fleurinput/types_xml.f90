@@ -26,6 +26,7 @@ MODULE m_types_xml
      PROCEDURE        :: GetNumberOfNodes
      PROCEDURE,NOPASS :: SetAttributeValue
      PROCEDURE        :: GetAttributeValue
+     PROCEDURE        :: GetAttributeValue_List
      PROCEDURE,NOPASS :: getIntegerSequenceFromString
      PROCEDURE        :: read_q_list
      PROCEDURE,NOPASS :: popFirstStringToken
@@ -562,7 +563,7 @@ CONTAINS
 
   END FUNCTION GetNumberOfNodes
 
-  FUNCTION GetAttributeValue(xml,xPath)
+  FUNCTION GetAttributeValue(xml,xPath,l_nocheck)
 
     USE iso_c_binding
 
@@ -571,11 +572,13 @@ CONTAINS
     CHARACTER(LEN=:),ALLOCATABLE :: GetAttributeValue
     CLASS(t_xml),INTENT(IN):: xml
     CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
+    LOGICAL,INTENT(IN),OPTIONAL :: l_nocheck
 
     CHARACTER (LEN=1, KIND=c_char), POINTER, DIMENSION (:) :: valueFromC => NULL()
     CHARACTER*255 :: VALUE
     INTEGER :: length, errorStatus, i
     TYPE(c_ptr) :: c_string
+    logical :: l_docheck
 
     INTERFACE
        FUNCTION getXMLAttributeValue(xPathExpression) BIND(C, name="getXMLAttributeValue")
@@ -585,12 +588,22 @@ CONTAINS
        END FUNCTION getXMLAttributeValue
     END INTERFACE
 
-    IF (xml%GetNumberOfNodes(xPath)<1) THEN
-      call judft_warn("Invalid xPath:"//xPath)
-      GetAttributeValue=""
-      RETURN
-    ENDIF
+    INTERFACE
+      subroutine xmlFree(ptr) BIND (C,name="xmlFree")
+        use iso_c_binding
+        TYPE(c_ptr):: ptr
+      end subroutine
+    end interface
+    l_docheck=.not.present(l_nocheck)
+    if (.not.l_docheck) l_docheck=.not.l_nocheck
 
+    if (l_docheck) then
+      IF (xml%GetNumberOfNodes(xPath)<1) THEN
+        call judft_warn("Invalid xPath:"//xPath)
+        GetAttributeValue=""
+        RETURN
+      ENDIF
+    endif
     c_string = getXMLAttributeValue(trim(adjustl(xml%basepath))//TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
     CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
@@ -609,8 +622,91 @@ CONTAINS
     length = i-1
 
     GetAttributeValue = TRIM(ADJUSTL(VALUE(1:length)))
+    !call xmlFree(c_string)
 
   END FUNCTION GetAttributeValue
+
+
+  subroutine GetAttributeValue_List(xml,xPath,list)
+
+    USE iso_c_binding
+
+    IMPLICIT NONE
+
+    CHARACTER(LEN=255),intent(out) :: List(:)
+    CLASS(t_xml),INTENT(IN):: xml
+    CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
+
+    CHARACTER (LEN=1, KIND=c_char), POINTER, DIMENSION (:) :: valueFromC => NULL()
+    CHARACTER*255 :: VALUE
+    INTEGER :: length, errorStatus, i,n
+    TYPE(c_ptr) :: c_string,node
+    logical :: l_docheck
+
+    INTERFACE
+       FUNCTION getXMLAttributeValueNode(node) BIND(C, name="getXMLAttributeValueNode")
+         USE iso_c_binding
+         type(c_ptr),VALUE :: node
+         TYPE(c_ptr) :: getXMLAttributeValueNode
+       END FUNCTION getXMLAttributeValueNode
+    END INTERFACE
+
+    INTERFACE
+       FUNCTION getXMLNextNode(node) BIND(C, name="getXMLNextNode")
+         USE iso_c_binding
+         type(c_ptr),VALUE :: node
+         TYPE(c_ptr) :: getXMLNextNode
+       END FUNCTION getXMLNextNode
+    END INTERFACE
+    INTERFACE
+      FUNCTION getXMLNode(xPathExpression) BIND(C, name="getXMLNode")
+         USE iso_c_binding
+         CHARACTER(KIND=c_char) :: xPathExpression(*)
+         TYPE(c_ptr) :: getXMLNode
+       END FUNCTION getXMLNode
+    END INTERFACE
+    INTERFACE
+      FUNCTION getXMLAttributeValue(xPathExpression) BIND(C, name="getXMLAttributeValue")
+         USE iso_c_binding
+         CHARACTER(KIND=c_char) :: xPathExpression(*)
+         TYPE(c_ptr) :: getXMLAttributeValue
+       END FUNCTION getXMLAttributeValue
+    END INTERFACE
+
+    INTERFACE
+      subroutine xmlFree(ptr) BIND (C,name="xmlFree")
+        use iso_c_binding
+        TYPE(c_ptr):: ptr
+      end subroutine
+    end interface
+
+    DO n=1,size(List)
+      if (n==1) THEN
+        node=getXMLNode(xPath//'[1]'//C_NULL_CHAR)
+      else
+        node=getXMLNextNode(node)
+      endif
+      c_string = getXMLAttributeValueNode(node)
+      !c_string = getXMLAttributeValue(xPath//'[1]'//C_NULL_CHAR)
+      CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
+      IF (.NOT.C_ASSOCIATED(c_string)) THEN
+        WRITE(*,*) 'Error in trying to obtain attribute value from XPath:'
+        WRITE(*,*) TRIM(ADJUSTL(xPath)),":",n
+        CALL juDFT_error("Attribute value could not be obtained.",calledby="xml%getAttributeValue_List")
+      END IF
+      VALUE = ''
+      i = 1
+      DO WHILE ((valueFromC(i).NE.C_NULL_CHAR).AND.(i.LE.255))
+        VALUE(i:i) = valueFromC(i)
+        i = i + 1
+      END DO
+      length = i-1
+
+      List(n) = TRIM(ADJUSTL(VALUE(1:length)))
+    enddo
+    !call xmlFree(c_string)
+
+  END subroutine GetAttributeValue_List
 
 
   SUBROUTINE SetAttributeValue(xPath,VALUE)
