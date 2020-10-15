@@ -22,14 +22,11 @@ CONTAINS
 	p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
 	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
 	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
-!	p_cell%amat(i,1)=cell%amat(i,1)/banddos%s_cell_x
-!	p_cell%amat(i,2)=cell%amat(i,2)/banddos%s_cell_y
-!	p_cell%amat(i,3)=cell%amat(i,3)/banddos%s_cell_z
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
   END SUBROUTINE  build_primitive_cell
-
+!---------- the following routines are not used anymore (but instructive)-----
   SUBROUTINE unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
     USE m_types
     USE m_inv3
@@ -101,9 +98,6 @@ CONTAINS
     !write(333,'(3f15.8)')p_kpts%bk
     kpt_dist=0
     DO i= 1,size(list,2)
-	!        pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(1,2)+p_kpts%bk(3,i)*p_cell%bmat(1,3)
-	!        pc_kpoint_c(2)=p_kpts%bk(1,i)*p_cell%bmat(2,1)+p_kpts%bk(2,i)*p_cell%bmat(2,2)+p_kpts%bk(3,i)*p_cell%bmat(2,3)
-	!        pc_kpoint_c(3)=p_kpts%bk(1,i)*p_cell%bmat(3,1)+p_kpts%bk(2,i)*p_cell%bmat(3,2)+p_kpts%bk(3,i)*p_cell%bmat(3,3)
 		pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(2,1)+p_kpts%bk(3,i)*p_cell%bmat(3,1)
 		pc_kpoint_c(2)=p_kpts%bk(1,i)*p_cell%bmat(1,2)+p_kpts%bk(2,i)*p_cell%bmat(2,2)+p_kpts%bk(3,i)*p_cell%bmat(3,2)
 		pc_kpoint_c(3)=p_kpts%bk(1,i)*p_cell%bmat(1,3)+p_kpts%bk(2,i)*p_cell%bmat(2,3)+p_kpts%bk(3,i)*p_cell%bmat(3,3)
@@ -174,19 +168,19 @@ CONTAINS
     ALLOCATE (kpts%sc_list(13,p_kpts%nkpt))
     kpts%specialPointIndices(:) = p_kpts%specialPointIndices(:)
     kpts%sc_list=list
-    !write(90,'(10f15.8)') kpts%sc_list
+    write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
-
+!----------------------------------------------------------------
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
 	USE m_types_mpimat
-        USE m_constants
+    USE m_constants
 	implicit none
 
-        TYPE(t_input),INTENT(IN) :: input
-        TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_input),INTENT(IN) :: input
+    TYPE(t_atoms),INTENT(IN)     :: atoms
 	TYPE(t_banddos),INTENT(IN)  :: banddos
 	TYPE(t_results),INTENT(INOUT)  :: results
 	TYPE(t_cell),INTENT(IN)     :: cell
@@ -208,10 +202,8 @@ CONTAINS
         LOGICAL :: method_rubel=.false.
         LOGICAL :: write_to_file=.false.
         CLASS(t_mat), ALLOCATABLE :: zMat_s
-
-!	method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
-
 	CALL build_primitive_cell(banddos,p_cell,cell)
+
 	IF (.not. method_rubel) THEN
 		DO j = 1, lapw%nv(jsp)
 		  DO i = 1, j-1
@@ -230,12 +222,6 @@ CONTAINS
 			IF (jsp==2) OPEN (680,file='bands_sc_old.2',status='unknown')
 		END IF
 	END IF
-
-!		write(*,*) 'real zmat size dim 1:', size(zMat%data_r,1), 'dim2:', size(zMat%data_r,2)
-!		write(*,*) 'smat dim1', size(smat_unfold%data_r,1), 'dim2', size(smat_unfold%data_r,2),'data',smat_unfold%data_r(2,2)
-!		write(222,'(234f15.8)') zMat%data_r
-!		write(223,'(234f15.8)') smat_unfold%data_r
-
 
 	IF (zmat%l_real) THEN
 		ALLOCATE(w_n(zMat%matsize2))
@@ -281,19 +267,26 @@ CONTAINS
         END IF
        !$omp parallel private(j,n_i,nn,na,lo,nk,nki,gi)
        !$omp do
-	DO i=1,zMat%matsize2
-		IF (method_rubel) THEN
-			DO j=1,lapw%nv(jsp)
+        DO i=1,zMat%matsize2
+!	        write (*,*) 'here i work 1 -', i
+        	IF (method_rubel) THEN
+!			write (*,*) 'here i work in loop rubel'
+                        DO j=1,lapw%nv(jsp)
 				IF (zmat%l_real) THEN
 					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 !						write(*,*) 'zMat is real'
 				ELSE
+!                write (*,*) 'here i work in loop 1'
 					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 !						write(*,*) 'zMat is complex'
 				END IF
-				IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-				     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-				     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+!				write (*,*) 'here i work 2'
+! with moving     IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+!				     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+!					 &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+			IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+				&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+				&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 !							write(*,*) 'zMat is real'
@@ -318,9 +311,12 @@ CONTAINS
 							ELSE
 								w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 							END IF
-							IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
+							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
+							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+!								IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+!								&(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+!								&(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 								IF (zmat%l_real) THEN
 									w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 								ELSE
@@ -333,27 +329,42 @@ CONTAINS
 			END DO
 !--------------------------LO's finished----------------
 		ELSE
+		    !write (*,*) 'start else'
+!            write (*,*) 'lapw%nv',lapw%nv(jsp),'j',j
+			!DO j=1,lapw%nv(jsp)
+				!        write (*,*) 'test loop', j
+				!END DO
 			DO j=1,lapw%nv(jsp)
+!				write (*,*) 'start do',j
 !				DO k=1,zMat%matsize1
-					IF (zmat%l_real) THEN
+				IF (zmat%l_real) THEN
 !						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
-					ELSE
+					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
+!					write (*,*) 'weight sum real'
+				ELSE
 !						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
-					END IF
+					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
+				END IF
 !				END DO
-				IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-				   &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-				   &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+!				write (*,*) lapw%gvec(:,j,jsp)
+!				write (*,*) kpts%sc_list(:,i_kpt)
+!				write (*,*) banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z
+				!CALL juDFT_error('debugging stop, unfolding')
+				IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+					&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+					&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
 !					DO k=1,zMat%matsize1
-						IF (zmat%l_real) THEN
-!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
-						ELSE
-!							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
-						END IF
+					IF (zmat%l_real) THEN
+!						write (*,*) 'weight sum real if'
+!						write(90,'(3f15.8)') kpts%bk(:,:)
+!						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+						!write (*,*) 'real, if loop'
+						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
+!				CALL juDFT_error('debugging stop, unfolding')
+					ELSE
+!						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
+					END IF
 !					END DO
 				END IF
 			END DO
@@ -377,9 +388,9 @@ CONTAINS
 									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 								END IF
 				!			END DO
-							IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
+							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
+							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
 			!					DO k=1,zMat%matsize1
 									IF (zmat%l_real) THEN
 			!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
@@ -408,8 +419,8 @@ CONTAINS
 				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
-		        END IF
-                END IF
+		    END IF
+        END IF
 		IF (zmat%l_real) THEN
 			IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
 			unfoldingBuffer(i,i_kpt,jsp)=w_n(i)/w_n_sum(i)
@@ -418,7 +429,7 @@ CONTAINS
 			IF (real(w_n_c(i))<0) w_n_c(i)=0    ! delete negative entries
 			unfoldingBuffer(i,i_kpt,jsp)=w_n_c(i)/w_n_c_sum(i)
 			IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
-	        END IF
+	    END IF
 !		ELSE
 !			IF (zmat%l_real) THEN
 !				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
@@ -446,24 +457,52 @@ CONTAINS
 	END IF
  END SUBROUTINE
 
-
-SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
+SUBROUTINE write_band_sc(banddos,cell,kpts,results,eFermiPrev)
      USE m_types
      USE m_juDFT
-     USE m_constants
+	 USE m_constants
+	 USE m_inv3
      IMPLICIT NONE
 	TYPE(t_results),INTENT(IN)  :: results
+	TYPE(t_banddos),INTENT(IN)  :: banddos
 	TYPE(t_kpts),INTENT(IN)     :: kpts
-        REAL, INTENT(IN) :: eFermiPrev
+    REAL, INTENT(IN) :: eFermiPrev
 	INTEGER :: i,i_kpt,jsp
+	TYPE(t_cell),INTENT(IN)     :: cell
+	TYPE(t_cell) :: p_cell
 
+
+	REAL    :: kpt_dist
+	REAL    :: list(4,kpts%nkpt)
+!-------------build primitive cell ----------
+	p_cell=cell
+	DO i =1,3
+		p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
+		p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
+		p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
+	END DO
+		CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
+		p_cell%bmat=p_cell%bmat*tpi_const
+
+!-------------- calculate distance ------------
+	kpt_dist=0
+	DO i=1,size(list,2)
+		list(1,i)=kpts%bk(1,i)*p_cell%bmat(1,1)+kpts%bk(2,i)*p_cell%bmat(2,1)+kpts%bk(3,i)*p_cell%bmat(3,1)
+		list(2,i)=kpts%bk(1,i)*p_cell%bmat(1,2)+kpts%bk(2,i)*p_cell%bmat(2,2)+kpts%bk(3,i)*p_cell%bmat(3,2)
+		list(3,i)=kpts%bk(1,i)*p_cell%bmat(1,3)+kpts%bk(2,i)*p_cell%bmat(2,3)+kpts%bk(3,i)*p_cell%bmat(3,3)
+		IF (i>1) THEN
+			kpt_dist=kpt_dist+sqrt(dot_product(list(1:3,i)-list(1:3,i-1),list(1:3,i)-list(1:3,i-1)))
+		END IF
+		list(4,i)=kpt_dist
+	END DO
+!--------------------------------------
 	OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
 	IF (SIZE(results%unfolding_weights,3)==2) OPEN (680,file='bands_sc.2',status='unknown')
         DO jsp=1,SIZE(results%unfolding_weights,3)
 		DO i_kpt=1,SIZE(results%unfolding_weights,2)
 			DO i=1,results%neig(i_kpt,jsp)
-				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((results%eig(i,i_kpt,1)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,1)
-				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((results%eig(i,i_kpt,2)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,2)
+				IF (jsp==1) write(679,'(4f15.8)') list(4,i_kpt), ((results%eig(i,i_kpt,1)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,1)
+				IF (jsp==2) write(680,'(4f15.8)') list(4,i_kpt), ((results%eig(i,i_kpt,2)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,2)
 			END DO
 		END DO
 	END DO
@@ -472,104 +511,105 @@ SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
 	write(*,*) 'Unfolded Bandstructure written succesfully - use band_sc.gnu to plot, calledby=write_band_sc',eFermiPrev
 END SUBROUTINE
 
-      SUBROUTINE write_gnu_sc(nosyp,d,ssy,input)
-      	USE m_types
-	USE m_juDFT
-      IMPLICIT NONE
-
-      TYPE(t_input),INTENT(IN) :: input
-      INTEGER, INTENT (IN) :: nosyp
-      REAL,    INTENT (IN) :: d(nosyp)
-      CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
-
-      INTEGER n,aoff,adel
-      CHARACTER(LEN=200) tempTitle
-      aoff = iachar('a')-1
-      adel = iachar('a')-iachar('A')
-      !write(*,*) aoff,adel
-
-      OPEN (27,file='band_sc.gnu',status='unknown')
-      WRITE (27,*) 'reset'
-      WRITE (27,900)
-      WRITE (27,901)
-      WRITE (27,902)
-      WRITE (27,903)
-      WRITE(tempTitle,'(10a)') input%comment
-      IF(TRIM(ADJUSTL(tempTitle)).EQ.'') THEN
-         tempTitle = "Fleur Bandstructure"
-      END IF
-      WRITE (27,904) TRIM(ADJUSTL(tempTitle))
-      DO n = 1, nosyp
-        WRITE (27,905) d(n),d(n)
-      ENDDO
-      WRITE (27,906) d(1),d(nosyp)
+!---- new subroutine in gnuplot.F90
+!    SUBROUTINE write_gnu_sc_old(nosyp,d,ssy,input)
+!    USE m_types
+!	USE m_juDFT
+!      IMPLICIT NONE
 !
-! nomal labels
+!      TYPE(t_input),INTENT(IN) :: input
+!      INTEGER, INTENT (IN) :: nosyp
+!      REAL,    INTENT (IN) :: d(nosyp)
+!      CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
 !
-      IF (iachar(ssy(1)) < aoff ) THEN
-        WRITE (27,907) ssy(1),d(1),achar(92)
-      ELSE
-        WRITE (27,907) " ",d(1),achar(92)
-      ENDIF
-      DO n = 2, nosyp-1
-        IF (iachar(ssy(n)) < aoff ) THEN
-          WRITE (27,908) ssy(n),d(n),achar(92)
-        ELSE
-          WRITE (27,908) " ",d(n),achar(92)
-        ENDIF
-      ENDDO
-      IF (iachar(ssy(nosyp)) < aoff ) THEN
-        WRITE (27,909) ssy(nosyp),d(nosyp)
-      ELSE
-        WRITE (27,909) " ",d(nosyp)
-      ENDIF
+!      INTEGER n,aoff,adel
+!      CHARACTER(LEN=200) tempTitle
+!      aoff = iachar('a')-1
+!      adel = iachar('a')-iachar('A')
+!      !write(*,*) aoff,adel
 !
-! greek labels
+!      OPEN (27,file='band_sc.gnu',status='unknown')
+!      WRITE (27,*) 'reset'
+!      WRITE (27,900)
+!      WRITE (27,901)
+!      WRITE (27,902)
+!      WRITE (27,903)
+!      WRITE(tempTitle,'(10a)') input%comment
+!      IF(TRIM(ADJUSTL(tempTitle)).EQ.'') THEN
+!         tempTitle = "Fleur Bandstructure"
+!      END IF
+!      WRITE (27,904) TRIM(ADJUSTL(tempTitle))
+!      DO n = 1, nosyp
+!        WRITE (27,905) d(n),d(n)
+!      ENDDO
+!      WRITE (27,906) d(1),d(nosyp)
+!!
+!! nomal labels
+!!
+!      IF (iachar(ssy(1)) < aoff ) THEN
+!        WRITE (27,907) ssy(1),d(1),achar(92)
+!      ELSE
+!        WRITE (27,907) " ",d(1),achar(92)
+!      ENDIF
+!      DO n = 2, nosyp-1
+!        IF (iachar(ssy(n)) < aoff ) THEN
+!          WRITE (27,908) ssy(n),d(n),achar(92)
+!        ELSE
+!          WRITE (27,908) " ",d(n),achar(92)
+!        ENDIF
+!      ENDDO
+!      IF (iachar(ssy(nosyp)) < aoff ) THEN
+!        WRITE (27,909) ssy(nosyp),d(nosyp)
+!      ELSE
+!        WRITE (27,909) " ",d(nosyp)
+!      ENDIF
+!!
+!! greek labels
+!!
+!      DO n = 1, nosyp
+!        IF (iachar(ssy(n)) > aoff ) THEN
+!          WRITE (27,914) achar(iachar(ssy(n))-adel),d(n)
+!        ENDIF
+!      ENDDO
+!!
+!! now write the rest
+!!
+!      WRITE (27,910)
+!      WRITE (27,*) 'set palette model RGB'
+!      WRITE (27,*) 'set palette defined (-2 "black", -1 "white" ,0 "white",',achar(92)
+!      WRITE (27,*) '0.67 "light-blue",1 "blue")'
+!      WRITE (27,*) 'set cbrange [-2:1]'
+!      WRITE (27,*) 'unset colorbox'
+!      WRITE (27,*) 'size1(x)=0.9*x**(0.4)'
+!      WRITE (27,*) 'color1(x)=0.3+x/2.4'
+!      WRITE (27,*) 'size2(x)=0.35*(1-x**(0.01))'
+!      WRITE (27,*) 'color2(x)=1.15*(x-1)'
+!      WRITE (27,*) 'e_f=0.000000 #fermi energy is already corrected when using hdf5'
+!      WRITE (27,911) d(nosyp)+0.00001,achar(92)
+!      IF (input%jspins == 2) THEN
+!	WRITE (27,912) achar(92)
+!	WRITE (27,916) achar(92)
+!      END IF
+!      WRITE (27,913) achar(92)
+!      WRITE (27,915)
+!      CLOSE (27)
 !
-      DO n = 1, nosyp
-        IF (iachar(ssy(n)) > aoff ) THEN
-          WRITE (27,914) achar(iachar(ssy(n))-adel),d(n)
-        ENDIF
-      ENDDO
-!
-! now write the rest
-!
-      WRITE (27,910)
-      WRITE (27,*) 'set palette model RGB'
-      WRITE (27,*) 'set palette defined (-2 "black", -1 "white" ,0 "white",',achar(92)
-      WRITE (27,*) '0.67 "light-blue",1 "blue")'
-      WRITE (27,*) 'set cbrange [-2:1]'
-      WRITE (27,*) 'unset colorbox'
-      WRITE (27,*) 'size1(x)=0.9*x**(0.4)'
-      WRITE (27,*) 'color1(x)=0.3+x/2.4'
-      WRITE (27,*) 'size2(x)=0.35*(1-x**(0.01))'
-      WRITE (27,*) 'color2(x)=1.15*(x-1)'
-      WRITE (27,*) 'e_f=0.000000 #fermi energy is already corrected when using hdf5'
-      WRITE (27,911) d(nosyp)+0.00001,achar(92)
-      IF (input%jspins == 2) THEN
-	WRITE (27,912) achar(92)
-	WRITE (27,916) achar(92)
-      END IF
-      WRITE (27,913) achar(92)
-      WRITE (27,915)
-      CLOSE (27)
-
- 900  FORMAT ('set terminal postscript enhanced color "Times-Roman" 20')
- 901  FORMAT ('set xlabel ""')
- 902  FORMAT ('set ylabel "E - E_F (eV)"')
- 903  FORMAT ('set nokey')
- 904  FORMAT ('set title "',a,'"')
- 905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
- 906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
- 907  FORMAT ('set xtics ("',a1,'"',f9.5,', ',a)
- 908  FORMAT ('           "',a1,'"',f9.5,', ',a)
- 909  FORMAT ('           "',a1,'"',f9.5,'  )')
- 910  FORMAT ('set ytics -8,2,4')
- 911  FORMAT ('plot [0:',f9.5,'] [-9:5] ',a)
- 912  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
- 916  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
- 913  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
- 915  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette')
- 914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')
-      END SUBROUTINE write_gnu_sc
+! 900  FORMAT ('set terminal postscript enhanced color "Times-Roman" 20')
+! 901  FORMAT ('set xlabel ""')
+! 902  FORMAT ('set ylabel "E - E_F (eV)"')
+! 903  FORMAT ('set nokey')
+! 904  FORMAT ('set title "',a,'"')
+! 905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
+! 906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
+! 907  FORMAT ('set xtics ("',a1,'"',f9.5,', ',a)
+! 908  FORMAT ('           "',a1,'"',f9.5,', ',a)
+! 909  FORMAT ('           "',a1,'"',f9.5,'  )')
+! 910  FORMAT ('set ytics -8,2,4')
+! 911  FORMAT ('plot [0:',f9.5,'] [-9:5] ',a)
+! 912  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
+! 916  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
+! 913  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
+! 915  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette')
+! 914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')
+!      END SUBROUTINE write_gnu_sc_old
 END MODULE m_unfold_band_kpts

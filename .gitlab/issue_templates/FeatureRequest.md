@@ -8,6 +8,6 @@
 
 ## Implementation ideas
 
-<!-- If yoy have ideas how the feature should be realized share them. -->
+<!-- If you have ideas how the feature should be realized share them. -->
 
 \label ~"Feature Request"
