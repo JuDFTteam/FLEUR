@@ -31,10 +31,10 @@ CONTAINS
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_atoms), INTENT(IN) :: atoms
 
-      IF (.NOT.ALLOCATED(force_a4_mt)) THEN
+      !IF (.NOT.ALLOCATED(force_a4_mt)) THEN
          ALLOCATE ( force_a4_mt(3,atoms%ntype,input%jspins), &
                     force_a4_is(3,atoms%ntype,input%jspins) )
-      END IF
+      !END IF
    END SUBROUTINE alloc_fa4_arrays
 
    SUBROUTINE force_a4_add(atoms,input,results)
@@ -143,7 +143,7 @@ CONTAINS
                ! + real(force_a4_2d(:,n,jsp)) ! is calculated only if film.and..not.odi%d1, otherwise 0
                ! + real(force_a4_1d(:,n,jsp)) ! is calculated only if odi%d1, otherwise 0
 
-               ! Write force contibutions to out file.
+               ! Write force contributions to out file.
                WRITE (oUnit,FMT=8010) n
                WRITE (oUnit,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
                WRITE (oUnit,FMT=8015) n
@@ -160,7 +160,7 @@ CONTAINS
          END DO ! n types of atoms
       END DO ! jsp spins
     
-      !DEALLOCATE ( force_a4_mt, force_a4_is )
+      DEALLOCATE ( force_a4_mt, force_a4_is )
       CALL timestop("force_a4_add")
 
    END SUBROUTINE force_a4_add

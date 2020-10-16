@@ -424,9 +424,13 @@ CONTAINS
           END IF          
           !
           !=====> calculate the fourier transform of the core-pseudocharge
-
-          CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
-                          acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw)
+          IF (l_f2) THEN
+             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw)
+          ELSE
+             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
+          END IF
 
           DO k = 1 , stars%ng3    
               qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
@@ -691,7 +695,7 @@ CONTAINS
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
-      COMPLEX,       INTENT(IN)    :: vpw(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN)    :: vpw(:,:)
       complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
@@ -737,10 +741,17 @@ CONTAINS
                  DO k = 1, n-1
                     nat1 = nat1 + atoms%neq(k)
                  END DO
-              END IF       
-              CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
-                                 atoms%neq(n),atoms%nat,atoms%taual,&
-                                 cell,qf,qpwc_at,jspin,l_f2,n,vpw)
+              END IF  
+              
+              IF (l_f2) THEN     
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                                    cell,qf,qpwc_at,jspin,l_f2,n,vpw)
+              ELSE
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                                    cell,qf,qpwc_at,jspin,l_f2,n)              
+              END IF
 #ifdef CPP_MPI
               DO k = 1, stars%ng3
                  qpwc_loc(k) = qpwc_loc(k)  + qpwc_at(k)
@@ -778,7 +789,7 @@ CONTAINS
       type(t_cell),  intent(in)  :: cell
       real,          intent(in)  :: qf(stars%ng3)
       LOGICAL,       INTENT(IN)  :: l_f2
-      COMPLEX,       INTENT(IN)  :: vpw(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:)
       complex,       intent(out) :: qpwc_at(stars%ng3)
 
       ! ..Local variables
