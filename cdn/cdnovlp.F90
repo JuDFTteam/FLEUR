@@ -385,16 +385,16 @@ CONTAINS
                       ! factor of two missing? grad e^{-alpha*r^2} = -2alpha\vec{r}e^{-alpha*r^2}
                       END DO ! j radial mesh
 
-                      DO lh = 0,sphhar%nlh(sym%ntypsy(nat))
-                         IF (sphhar%llh(lh,sym%ntypsy(nat)).ne.1) CYCLE
+                      DO lh = 0,sphhar%nlh(sym%ntypsy(n))
+                         IF (sphhar%llh(lh,sym%ntypsy(n)).ne.1) CYCLE
 
                          gv = czero
-                         DO jm = 1,sphhar%nmem(lh,sym%ntypsy(nat))
-                            m = sphhar%mlh(jm,lh,sym%ntypsy(nat))
+                         DO jm = 1,sphhar%nmem(lh,sym%ntypsy(n))
+                            m = sphhar%mlh(jm,lh,sym%ntypsy(n))
 
                             DO dir = 1,3
-                               gv(dir) = gv(dir) + ycomp1(dir,m)* sphhar%clnu(jm,lh,sym%ntypsy(nat)) ! why not conjg?
-                            END DO ! dir ection
+                               gv(dir) = gv(dir) + ycomp1(dir,m)* sphhar%clnu(jm,lh,sym%ntypsy(n)) ! why not conjg?
+                            END DO ! direction
 
                          END DO ! jm
 
