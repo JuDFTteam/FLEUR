@@ -222,7 +222,7 @@ CONTAINS
              ycomp1(2,1) = cmplx(0.0,-s23)
              ycomp1(3,1) = czero
 
-             ALLOCATE ( vr2(atoms%jmtd,0:sphhar%nlhd,sphhar%ntypsd) )
+             ALLOCATE ( vr2(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
 
              ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
              ! for simple use, this is corrected here

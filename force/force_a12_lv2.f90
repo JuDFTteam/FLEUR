@@ -39,8 +39,8 @@ CONTAINS
       REAL   , ALLOCATABLE :: bsl(:,:,:),G(:,:),kG(:,:),kGreal(:,:)
       REAL   , ALLOCATABLE :: kineticfactor(:,:)
       COMPLEX, ALLOCATABLE :: ylm(:,:),ppw(:,:),fpw(:,:),expf(:,:)
-      REAL :: zr(nbasfcn,neigd)
-      COMPLEX :: zc(nbasfcn,neigd)
+      REAL :: zr(nbasfcn,nobd)
+      COMPLEX :: zc(nbasfcn,nobd)
 
       IF (zMat%l_real) THEN
         zr=zMat%data_r 
@@ -149,7 +149,7 @@ CONTAINS
                 mp = m-t
                 IF (lp.lt.abs(mp)) CYCLE
                 lmp = lp*(lp+1) + mp + 1
-                Ygaunt(:) = gaunt1(l,1,lp,m,t,mp,lmax)*coeff(:,t)
+                Ygaunt(:) = gaunt2(l,1,lp,m,t,mp,lmax)*coeff(:,t)
                 DO iband = 1,nobd
                   gv(:) = gv(:) + we(iband) * r2vol * Ygaunt(:) * conjg(ppw(iband,lm)) * fpw(iband,lmp)
                 END DO ! iband
