@@ -76,7 +76,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: ylm(:),testrho(:,:),testV(:,:)
 #endif
       atoms=atoms_in
-      atoms%lmax = 2*atoms_in%lmaxd!60!
+      atoms%lmax = 2*atoms_in%lmax!60!
+      atoms%lmaxd = 2*atoms_in%lmaxd!60!
       lmaxb = atoms%lmax
       img = cmplx(0.0,1.0)
 
