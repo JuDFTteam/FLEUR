@@ -251,7 +251,7 @@ CONTAINS
                 IF (lp.lt.abs(mp)) CYCLE
                 lmp = lp*(lp+1) + mp + 1
                 force_is(:,itype) = force_is(:,itype) + r2&
-                     * rho(lm) * V(lmp) * conjg(coeff(:,t)) * gaunt1(1,l,lp,t,m,mp,atoms%lmax(itype))
+                     * rho(lm) * V(lmp) * conjg(coeff(:,t)) * gaunt2(1,l,lp,t,m,mp,atoms%lmax(itype))
               END DO ! t
             END DO ! lp
           END DO ! m
