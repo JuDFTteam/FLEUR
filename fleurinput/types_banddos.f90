@@ -48,6 +48,9 @@ MODULE m_types_banddos
      LOGICAL :: l_slab=.false.
 
      LOGICAL,ALLOCATABLE :: dos_atom(:) ! for each atom (not type) switch on DOS
+     INTEGER,ALLOCATABLE :: dos_typelist(:) !list of types for which DOS is calculated
+     INTEGER,ALLOCATABLE :: dos_atomlist(:) !list of atoms for which DOS is calculated
+     INTEGER,ALLOCATABLE  :: map_atomtype(:) !map an atomtype to corresponding entry in DOS
      !INTEGER :: ndir =0
      !INTEGER :: orbCompAtom=0
      !INTEGER :: jDOSAtom=0
@@ -99,6 +102,10 @@ CONTAINS
     CALL mpi_bc(this%locy(2),rank,mpi_comm)
     CALL mpi_bc(this%starcoeff,rank,mpi_comm)
     CALL mpi_bc(this%izlay,rank,mpi_comm)
+    CALL mpi_bc(this%dos_atom,rank,mpi_comm)
+    CALL mpi_bc(this%dos_atomlist,rank,mpi_comm)
+    CALL mpi_bc(this%dos_typelist,rank,mpi_comm)
+    CALL mpi_bc(this%map_atomtype,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -107,8 +114,10 @@ CONTAINS
     TYPE(t_xml),INTENT(INOUT)::xml
 
     CHARACTER(len=300) :: xPathA, xPathB,str
-    INTEGER::numberNodes,iType,i,na,n
-    LOGICAL::l_orbcomp,l_jDOS,all_atoms
+    INTEGER::numberNodes,iType,i,na,n,n_dos_atom,n_dos_type
+    LOGICAL::l_orbcomp,l_jDOS,all_atoms,dos_atom_found
+    integer,allocatable:: dos_atomlist(:),dos_typelist(:),neq(:)
+
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     !this%l_slab = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@slab'))
@@ -131,14 +140,18 @@ CONTAINS
     END IF
 
     allocate(this%dos_atom(xml%get_nat()))
-    this%dos_atom=all_atoms
+    allocate(neq(xml%get_ntype()))
+
+    this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
     na = 0
     IF (xml%versionNumber > 31) then
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
-       DO i = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
+       neq(itype)= xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
+       DO i = 1, neq(itype)
           na = na + 1
           WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/relPos[',i,']'
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@banddos')==1) &
           this%dos_atom(na) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@banddos'))
         ENDDO
     ENDDO
@@ -175,6 +188,39 @@ CONTAINS
      ELSE
        allocate(this%izlay(0,2))
     END IF
+
+    !Create a list of all atoms and all types for which the DOS is calculated
+    ALLOCATE(dos_atomlist(xml%get_nat()))
+    allocate(dos_typelist(xml%get_ntype()))
+
+    na=0
+    n_dos_atom=0
+    n_dos_type=0
+    DO itype=1,xml%get_ntype()
+      dos_atom_found=.false.
+      DO n=1,neq(itype)
+        na=na+1
+        if (this%dos_atom(na)) then
+          dos_atom_found=.true.
+          n_dos_atom=n_dos_atom+1
+          dos_atomlist(n_dos_atom)=na
+        endif
+      enddo
+      if (dos_atom_found)then
+        n_dos_type=n_dos_type+1
+        dos_typelist(n_dos_type)=iType
+      ENDIF
+    ENDDO
+    this%dos_atomlist=dos_atomlist(:n_dos_atom)
+    this%dos_typelist=dos_typelist(:n_dos_type)
+    !create map
+    allocate(this%map_atomtype(size(neq)))
+    this%map_atomtype=0
+    DO itype=1,size(neq)
+      DO n=1,size(dos_typelist)
+        if (dos_typelist(n)==itype) this%map_atomtype(itype)=n
+      ENDDO
+    ENDDO
 
 
 

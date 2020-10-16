@@ -95,26 +95,26 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   INTEGER :: ntype,l,i,ind
   character :: spdfg(0:4)=["s","p","d","f","g"]
   thisDOS%name_of_dos="Local"
-  thisDOS%neq=atoms%neq
+  thisDOS%neq=atoms%neq(banddos%dos_typelist)
   thisDOS%eig=eig
   ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%ksym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qal(0:3,atoms%ntype,input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qal(0:3,size(banddos%dos_typelist),input%neig,kpts%nkpt,input%jspins))
 
   thisDOS%jsym = 0
   thisDOS%ksym = 0
   thisDOS%qis = 0.0
   thisDOS%qal = 0.0
 
-  allocate(thisDOS%weight_names(2+4*atoms%ntype))
+  allocate(thisDOS%weight_names(2+4*size(banddos%dos_typelist)))
   thisDOS%weight_names(1)="Total"
   thisDOS%weight_names(2)="INT"
   ind=2
-  DO ntype=1,atoms%ntype
+  DO ntype=1,size(banddos%dos_typelist)
     DO l=0,3
       ind=ind+1
-      write(thisDOS%weight_names(ind),"(a,i0,a)") "MT:",ntype,spdfg(l)
+      write(thisDOS%weight_names(ind),"(a,i0,a)") "MT:",banddos%dos_typelist(ntype),spdfg(l)
     ENDDO
   ENDDO
 
