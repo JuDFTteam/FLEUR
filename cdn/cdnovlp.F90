@@ -131,11 +131,11 @@ CONTAINS
                &        irec2,irec3,irec1,m,gzi,dir,jm,lh,nat,left,minpar,kp,l,lm,maxl,nd,symint
           !     ..
           !     .. Local Arrays ..
-          COMPLEX, ALLOCATABLE :: qpwc(:),ffonat_pT(:,:),ffonat(:,:),pylm2(:,:,:)
+          COMPLEX, ALLOCATABLE :: qpwc(:),ffonat_pT(:,:),pylm2(:,:,:)
           REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:)
           REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
           REAL    rat(atoms%msh,atoms%ntype)
-          COMPLEX gv(3),ycomp1(3,-1:1)
+          COMPLEX gv(3),ycomp1(3,-1:1),ffonat(3,stars%ng3*sym%nop)
           INTEGER mshc(atoms%ntype),ioffset_pT(0:fmpi%isize-1),nkpt_pT(0:fmpi%isize-1)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           LOGICAL l_f2
@@ -231,7 +231,7 @@ CONTAINS
                 vr2(:,1:,n) = vr(:,1:,n,jspin)
              END DO ! n
 
-             ALLOCATE ( ffonat(3,stars%ng3*sym%nop),integrandr(atoms%jmtd) )
+             ALLOCATE ( integrandr(atoms%jmtd) )
              ALLOCATE ( pylm2( (atoms%lmaxd+1)**2,3,sym%nop ) )
              ALLOCATE ( vrrgrid(atoms%jmtd),vrigrid(atoms%jmtd) )
 
@@ -302,7 +302,7 @@ CONTAINS
              CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),MPI_COMPLEX,ffonat(1,1),n1,n2,MPI_COMPLEX,MPI_COMM_WORLD,ierr)
              DEALLOCATE(ffonat_pT,n1,n2)
 #else
-             ffonat = ffonat_pT
+             !ffonat = ffonat_pT
              DEALLOCATE(ffonat_pT)
 #endif
 
@@ -659,7 +659,7 @@ CONTAINS
           DEALLOCATE (qpwc)
           IF (l_f2) THEN ! Klueppelberg (force level 1)
              ! Deallocate arrays used specifically during force calculation
-             DEALLOCATE ( vr2,ffonat,integrandr,pylm2 )
+             DEALLOCATE ( vr2,integrandr,pylm2 )
              DEALLOCATE ( vrrgrid,vrigrid )
           END IF
 
@@ -834,6 +834,10 @@ CONTAINS
                                    + kr(3,j) * taual(3,nat1) )
                   phase = cmplx(cos(x),sin(x))
                   ! generate muffin-tin part of core force component
+                  write(*,*) 'sym%nop is:',sym%nop
+                  write(*,*) 'stars%ng3 is:',stars%ng3
+                  write(*,*) 'k is:',k
+                  write(*,*) 'j is:',j
                   force_a4_mt(:,n,jspin) = force_a4_mt(:,n,jspin) + qf(k) * &
                                            phase * stars%nstr(k) * ffonat(:,(k-1)*sym%nop+j)
                   kcmplx(:) = kcmplx(:) + kr(:,j) * phase * phas(j) ! should be conjg(phas(j)), but in FLEUR, only real phas(j) are accepted
