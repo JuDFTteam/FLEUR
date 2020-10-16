@@ -426,7 +426,7 @@ CONTAINS
           !=====> calculate the fourier transform of the core-pseudocharge
           IF (l_f2) THEN
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
-                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw)
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
           ELSE
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
@@ -670,7 +670,7 @@ CONTAINS
 !***********************************************************************
 
       subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
-            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw)
+            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
 
       !=====> calculate the fourier transform of the core-pseudocharge
       !
@@ -695,7 +695,7 @@ CONTAINS
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
-      COMPLEX,OPTIONAL,INTENT(IN)    :: vpw(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
       complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
@@ -746,7 +746,7 @@ CONTAINS
               IF (l_f2) THEN     
                  CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
-                                    cell,qf,qpwc_at,jspin,l_f2,n,vpw)
+                                    cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
               ELSE
                  CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
@@ -772,7 +772,7 @@ CONTAINS
       end subroutine ft_of_CorePseudocharge
 
    SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,&
-                          neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw)
+                          neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
       ! Calculates the structure constant for each atom of atom type
 
       USE m_types
@@ -789,7 +789,7 @@ CONTAINS
       type(t_cell),  intent(in)  :: cell
       real,          intent(in)  :: qf(stars%ng3)
       LOGICAL,       INTENT(IN)  :: l_f2
-      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:)
+      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:),ffonat(:,:)
       complex,       intent(out) :: qpwc_at(stars%ng3)
 
       ! ..Local variables
@@ -802,9 +802,6 @@ CONTAINS
       real    kro(3,oneD%ods%nop)
       complex phas(sym%nop), phase
       complex phaso(oneD%ods%nop), kcmplx(3)
-      COMPLEX, ALLOCATABLE :: ffonat(:,:)
-
-      ALLOCATE ( ffonat(3,stars%ng3*sym%nop) )
 
       czero = (0.0,0.0)
       DO k = 1 , stars%ng3    
