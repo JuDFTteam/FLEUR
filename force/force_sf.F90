@@ -460,9 +460,9 @@ CONTAINS
       END DO ! itype
 
 !     debug
-      WRITE (*,*) 'sanity check'
-      WRITE (*,*) 'look is',force_is
-      WRITE (*,*) 'look mt',force_mt
+!      WRITE (*,*) 'sanity check'
+!      WRITE (*,*) 'look is',force_is
+!      WRITE (*,*) 'look mt',force_mt
 
 #ifdef debug
 !     test output
@@ -506,12 +506,12 @@ CONTAINS
       TYPE(t_atoms),INTENT(IN) :: atoms
 
 !     debug
-      IF (ALLOCATED(force_is)) THEN
-        WRITE (*,*) 'init is:',force_is
-        WRITE (*,*) 'init mt:',force_mt
-      ELSE
-        WRITE (*,*) 'init: not initialized'
-      END IF
+!      IF (ALLOCATED(force_is)) THEN
+!        WRITE (*,*) 'init is:',force_is
+!        WRITE (*,*) 'init mt:',force_mt
+!      ELSE
+!        WRITE (*,*) 'init: not initialized'
+!      END IF
 
       IF (isdone.OR.mtdone) RETURN
       IF (.not.ALLOCATED(force_is)) THEN
@@ -539,12 +539,12 @@ CONTAINS
       COMPLEX :: force_sf(3,atoms%ntype)
 
 !     debug
-      IF (ALLOCATED(force_is)) THEN
-        WRITE (*,*) 'exit is:',force_is
-        WRITE (*,*) 'exit mt:',force_mt
-      ELSE
-        WRITE (*,*) 'exit: not initialized'
-      END IF
+!      IF (ALLOCATED(force_is)) THEN
+!        WRITE (*,*) 'exit is:',force_is
+!        WRITE (*,*) 'exit mt:',force_mt
+!      ELSE
+!        WRITE (*,*) 'exit: not initialized'
+!      END IF
 
       IF (isdone.AND.mtdone) THEN
         force_sf(:,:) = force_is(:,:) - force_mt(:,:)

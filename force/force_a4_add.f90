@@ -160,7 +160,7 @@ CONTAINS
          END DO ! n types of atoms
       END DO ! jsp spins
     
-      DEALLOCATE ( force_a4_mt, force_a4_is )
+      !DEALLOCATE ( force_a4_mt, force_a4_is )
       CALL timestop("force_a4_add")
 
    END SUBROUTINE force_a4_add
