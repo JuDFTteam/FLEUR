@@ -836,6 +836,7 @@
 
    <xsd:complexType name="DOSOutputType">
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
+      <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="minEnergy" type="xsd:string" use="optional" default="-0.5"/>
       <xsd:attribute name="maxEnergy" type="xsd:string" use="optional" default="0.5"/>
       <xsd:attribute name="sigma" type="xsd:string" use="optional" default="0.01"/>

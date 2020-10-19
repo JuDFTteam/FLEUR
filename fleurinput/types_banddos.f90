@@ -41,7 +41,6 @@ MODULE m_types_banddos
      REAL    :: e_mcd_up= 0.0
 
      LOGICAL :: l_orb =.FALSE.
-     REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
 
      LOGICAL :: l_jDOS = .FALSE.
 
@@ -51,6 +50,7 @@ MODULE m_types_banddos
      INTEGER,ALLOCATABLE :: dos_typelist(:) !list of types for which DOS is calculated
      INTEGER,ALLOCATABLE :: dos_atomlist(:) !list of atoms for which DOS is calculated
      INTEGER,ALLOCATABLE  :: map_atomtype(:) !map an atomtype to corresponding entry in DOS
+     real,allocatable    :: alpha(:),beta(:),gamma(:)
      !INTEGER :: ndir =0
      !INTEGER :: orbCompAtom=0
      !INTEGER :: jDOSAtom=0
@@ -115,7 +115,7 @@ CONTAINS
 
     CHARACTER(len=300) :: xPathA, xPathB,str
     INTEGER::numberNodes,iType,i,na,n,n_dos_atom,n_dos_type
-    LOGICAL::l_orbcomp,l_jDOS,all_atoms,dos_atom_found
+    LOGICAL::l_jDOS,all_atoms,dos_atom_found
     integer,allocatable:: dos_atomlist(:),dos_typelist(:),neq(:)
 
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
@@ -124,6 +124,7 @@ CONTAINS
     all_atoms=.true.
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
+       this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))
@@ -140,6 +141,9 @@ CONTAINS
     END IF
 
     allocate(this%dos_atom(xml%get_nat()))
+    allocate(this%alpha(size(this%dos_atom)));this%alpha=0.0
+    allocate(this%beta(size(this%dos_atom)));this%beta=0.0
+    allocate(this%gamma(size(this%dos_atom)));this%gamma=0.0
     allocate(neq(xml%get_ntype()))
 
     this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
@@ -147,12 +151,27 @@ CONTAINS
     IF (xml%versionNumber > 31) then
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
-       neq(itype)= xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
+       if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')>0) THEN
+         neq(itype)= xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/relPos')
+         xPathA=TRIM(ADJUSTL(xPathA))//'/relPos'
+       elseif(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')>0) THEN
+         neq(itype)= xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
+         xPathA=TRIM(ADJUSTL(xPathA))//'/absPos'
+       else
+         neq(itype)= xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/filmPos')
+         xPathA=TRIM(ADJUSTL(xPathA))//'/filmPos'
+      endif
        DO i = 1, neq(itype)
           na = na + 1
-          WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/relPos[',i,']'
+          WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'[',i,']'
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@banddos')==1) &
           this%dos_atom(na) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@banddos'))
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@alpha')==1) &
+          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@beta')==1) &
+          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@gamma')==1) &
+          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
         ENDDO
     ENDDO
     endif

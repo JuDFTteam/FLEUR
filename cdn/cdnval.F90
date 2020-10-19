@@ -199,7 +199,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                          hub1data=hub1data)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
-      IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
+      IF (banddos%l_mcd) CALL mcd_init(atoms,banddos,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
    END DO
@@ -256,13 +256,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          call timestart("eparas")
-         CALL eparas(ispin,atoms,noccbd,ev_list,fmpi,ikpt,noccbd,we,eig,&
-                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
+         CALL eparas(ispin,atoms,banddos,noccbd,ev_list,fmpi,ikpt,noccbd,we,eig,&
+                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd)
 
          call timestop("eparas")
          IF (noco%l_mperp.AND.(ispin==jsp_end)) then
            call timestart("qal_21")
-           CALL qal_21(atoms,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+           CALL qal_21(atoms,banddos,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
            call timestop("qal_21")
          endif
 
@@ -270,10 +270,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (PRESENT(slab).and.banddos%l_slab) CALL q_mt_sl(ispin,atoms,sym,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
          IF(banddos%l_orb) THEN
-           IF (ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
-             CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-           END IF
-           IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+
+           IF (PRESENT(orbcomp)) CALL orb_comp(banddos,ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
          ENDIF
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN

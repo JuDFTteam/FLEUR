@@ -97,6 +97,9 @@ MODULE m_rhonmt21
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
                                  temp(:) = coef * we(:) * eigVecCoeffs%acof(:,lm,nt,1)
+                                 print *,eigVecCoeffs%acof(:,lmp,nt,2)
+                                 print *,temp
+                                 print *,uunmt21(llp,lh,nn)
                                  uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
                                  dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
                                  temp(:) = coef * we(:) * eigVecCoeffs%bcof(:,lm,nt,1)

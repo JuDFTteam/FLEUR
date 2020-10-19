@@ -13,7 +13,7 @@ MODULE m_types_orbcomp
 
       REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
       REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
-
+      INTEGER,ALLOCATABLE  :: n_dos_to_na(:)
       CONTAINS
          PROCEDURE,PASS :: init => orbcomp_init
          PROCEDURE      :: get_num_weights
@@ -37,7 +37,7 @@ CONTAINS
       DO nc=1,23
         ind=ind+1
         if (ind==id) THEN
-          write(get_weight_name,"(a,i0,a,i0)") "ORB:",na,",ind:",nc
+          write(get_weight_name,"(a,i0,a,i0)") "ORB:",this%n_dos_to_na(na),",ind:",nc
           RETURN
         ELSE IF(ind>id) then
           CALL judft_error("Types_mcd: data not found")
@@ -78,10 +78,10 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts,eig)
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    REAL,INTENT(IN)                      :: eig(:,:,:)
-
+   thisOrbcomp%n_dos_to_na=banddos%dos_atomlist
    IF ((banddos%l_orb).AND.banddos%dos) THEN
-      ALLOCATE(thisOrbcomp%comp(input%neig,23,atoms%nat,kpts%nkpt,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(input%neig,atoms%nat,kpts%nkpt,input%jspins))
+      ALLOCATE(thisOrbcomp%comp(input%neig,23,size(banddos%dos_atomlist),kpts%nkpt,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(input%neig,size(banddos%dos_atomlist),kpts%nkpt,input%jspins))
       thisOrbcomp%eig=eig
    ELSE
       ALLOCATE(thisOrbcomp%dos(0,0,0))
