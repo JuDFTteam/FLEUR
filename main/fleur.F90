@@ -485,17 +485,17 @@ CONTAINS
             CALL MPI_BCAST(enpara%el0, SIZE(enpara%el0), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(enpara%ello0, SIZE(enpara%ello0), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 
-            IF (fi%noco%l_noco) THEN
-               DO n = 1, fi%atoms%ntype
-                  IF (fi%noco%l_relax(n)) THEN
-                     CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                     CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  ENDIF
-               ENDDO
-               IF (any(fi%noco%l_constrained)) THEN
-                  CALL MPI_BCAST(nococonv%b_con, SIZE(nococonv%b_con), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               ENDIF
-            ENDIF
+            !IF (fi%noco%l_noco) THEN
+            !   DO n = 1, fi%atoms%ntype
+            !      IF (fi%noco%l_relax(n)) THEN
+            !         CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !         CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !      ENDIF
+            !   ENDDO
+            !   IF (any(fi%noco%l_constrained)) THEN
+            !      CALL MPI_BCAST(nococonv%b_con, SIZE(nococonv%b_con), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !   ENDIF
+            !ENDIF
 #endif
             CALL timestop("generation of new charge density (total)")
 
