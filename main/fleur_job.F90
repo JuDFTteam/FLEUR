@@ -145,7 +145,7 @@ CONTAINS
           print *,"MPI thread serialized supported"
         CASE(MPI_THREAD_MULTIPLE)
           print *,"MPI thread multiple supported"
-
+        END SELECT
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
