@@ -177,6 +177,10 @@ CONTAINS
        ENDDO
     ENDIF
 
+    DO i = 1, 3
+       IF (SCALE(i).LT.0.0) SCALE(i) = SQRT(-SCALE(i))
+    END DO
+
     !set the cell
     cell%amat(:,1) = aa*SCALE(:)*a1(:)
     cell%amat(:,2) = aa*SCALE(:)*a2(:)
