@@ -97,14 +97,18 @@ MODULE m_rhonmt21
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
                                  temp(:) = coef * we(:) * eigVecCoeffs%acof(:,lm,nt,1)
-                                 print *,eigVecCoeffs%acof(:,lmp,nt,2)
-                                 print *,temp
-                                 print *,uunmt21(llp,lh,nn)
-                                 uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
-                                 dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+                                 !uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                 !dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+
+                                 uunmt21(llp,lh,nn) = uunmt21(llp,lh,nn) + dot_product(eigVecCoeffs%acof(:ne,lmp,nt,2),temp(:ne))
+                                 dunmt21(llp,lh,nn) = dunmt21(llp,lh,nn) + dot_product(eigVecCoeffs%bcof(:ne,lmp,nt,2),temp(:ne))
+
                                  temp(:) = coef * we(:) * eigVecCoeffs%bcof(:,lm,nt,1)
-                                 udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
-                                 ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+                                 !udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%acof(:,lmp,nt,2),1,temp,1)
+                                 !ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + CPP_BLAS_cdotc(ne,eigVecCoeffs%bcof(:,lmp,nt,2),1,temp,1)
+
+                                 udnmt21(llp,lh,nn) = udnmt21(llp,lh,nn) + dot_product(eigVecCoeffs%acof(:ne,lmp,nt,2),temp(:ne))
+                                 ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + dot_product(eigVecCoeffs%bcof(:ne,lmp,nt,2),temp(:ne))
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
                            natom= natom + atoms%neq(nn)

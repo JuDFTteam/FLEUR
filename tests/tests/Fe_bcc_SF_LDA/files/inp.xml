@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      bcc Fe  
+      bcc Fe
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
@@ -9,9 +9,8 @@
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="pz" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="T" swsp="F" lflip="F">
-         <nocoParams l_mperp="T" l_constr="F" mix_b=".00000000"/>
          <qss>.0000000000 .0000000000 .0000000000</qss>
-         <mtNocoParams l_mtNocoPot="T"/>
+         <mtNocoParams  l_mperp="T" l_mtNocoPot="T"/>
          <sourceFreeMag l_sourceFree="T" l_scaleMag="T" mag_scale="1.12"/>
       </magnetism>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
@@ -53,12 +52,12 @@
       <atomGroup species="Fe-1">
          <relPos label="                   2">-1.000/4.000 -1.000/4.000 -1.000/4.000</relPos>
          <force calculate="F" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000"/>
       </atomGroup>
       <atomGroup species="Fe-1">
          <relPos label="                   2">1.000/4.000 1.000/4.000 1.000/4.000</relPos>
          <force calculate="F" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000" />
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F" slice="F" >

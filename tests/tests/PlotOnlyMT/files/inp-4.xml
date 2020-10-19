@@ -9,9 +9,8 @@
       <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="vwn" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="t" swsp="F" lflip="f">
-         <nocoParams l_mperp="t" l_constr="F" mix_b=".00000000"/>
          <qss>.0000000000 .0000000000 .0000000000</qss>
-         <mtNocoParams l_mtNocoPot="t"/>
+         <mtNocoParams l_mperp="t" l_mtNocoPot="t"/>
       </magnetism>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
@@ -109,12 +108,12 @@
       <atomGroup species="Fe-1">
          <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000"/>
       </atomGroup>
       <atomGroup species="Fe-2">
          <relPos label="                   2">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha="Pi*.500000000" beta="Pi*.500000000"/>
+         <nocoParams alpha="Pi*.500000000" beta="Pi*.500000000"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >
