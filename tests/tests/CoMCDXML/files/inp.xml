@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      hcp Cobalt                                                                      
+      hcp Cobalt
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="8.70000000" numbands="0"/>
@@ -97,12 +97,10 @@
       <atomGroup species="Co-1">
          <relPos label="                   1">1.000/3.000 1.000/3.000 1.000/4.000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
       </atomGroup>
       <atomGroup species="Co-2">
          <relPos label="                   2">-1.000/3.000 -1.000/3.000 -1.000/4.000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >
