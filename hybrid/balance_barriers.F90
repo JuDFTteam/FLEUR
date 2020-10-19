@@ -40,7 +40,7 @@ contains
 #ifdef CPP_MPI 
       DO i = 1,work_pack%n_kpacks
          ik = work_pack%k_packs(i)%nk
-         DO jq = 1, fi%kpts%EIBZ(ik)%nkpt
+         DO jq = 1, size(work_pack%k_packs(i)%q_packs)
             n_parts = size(work_pack%k_packs(i)%q_packs(jq)%band_packs)
             start  = work_pack%k_packs(i)%q_packs(jq)%submpi%rank + 1
             stride = work_pack%k_packs(i)%q_packs(jq)%submpi%size

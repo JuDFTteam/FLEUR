@@ -103,34 +103,39 @@ contains
       type(t_hybmpi)                    :: q_wide_mpi
 
       integer, intent(in)  :: nk, jsp
-      integer              :: iq, jq, loc_num_qs, i, cnt, n_groups, idx, q_rank
-      integer, allocatable :: weights(:)
+      integer              :: iq, jq, loc_num_qs, i, cnt, n_groups, idx, q_rank, w_cnt
+      integer, allocatable :: loc_qs(:)
 
       n_groups = min(k_wide_mpi%size, fi%kpts%EIBZ(nk)%nkpt)
-      allocate(weights(n_groups), source=0)
-      do i = 1,fi%kpts%EIBZ(nk)%nkpt
-         idx = mod(i,n_groups) + 1
-         weights(idx) = weights(idx) + 1
+      allocate(loc_qs(n_groups), source=0)
+      do w_cnt = 1, n_groups 
+         do i = w_cnt, fi%kpts%EIBZ(nk)%nkpt, n_groups 
+            loc_qs(w_cnt) = loc_qs(w_cnt) + 1 
+         enddo
       enddo
-      
-      call distribute_mpi(weights, k_wide_mpi, q_wide_mpi, q_rank)
+
+      call distribute_mpi(loc_qs, k_wide_mpi, q_wide_mpi, q_rank)
 
       k_pack%submpi = k_wide_mpi
       k_pack%nk = nk
 
-      loc_num_qs = 0
-      do i = 1,fi%kpts%EIBZ(nk)%nkpt
-         idx = mod(i,n_groups) + 1
-         if(idx == q_rank) loc_num_qs = loc_num_qs + 1
-      enddo
+      write (*,*) "q_distrib = ", loc_qs
+      write (*,*) "my_num_qs", loc_qs(q_rank+1)
+      write (*,*) "n_groups", n_groups
+      write (*,*) "q_rank", q_rank
       
-      allocate(k_pack%q_packs(loc_num_qs))
+      allocate(k_pack%q_packs(loc_qs(q_rank+1)))
       cnt = 0
-      do iq = 1,fi%kpts%EIBZ(nk)%nkpt, n_groups
+      do iq = q_rank+1,fi%kpts%EIBZ(nk)%nkpt, n_groups
          cnt = cnt + 1
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
+         write (*,*) "cnt, iq", cnt, iq
          call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
       enddo
+
+
+
+      write (*,*) new_line("a")
    end subroutine t_k_package_init
 
    subroutine t_q_package_init(q_pack, fi, hybdat, q_wide_mpi, jsp, nk, rank, ptr)
