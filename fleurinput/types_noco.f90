@@ -65,7 +65,7 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_scaleMag ,rank,mpi_comm)
      CALL mpi_bc(this%mag_scale ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss_inp)
-     call mpi_bc(rank,mpi_comm,this%mag_mixing_scheme)
+     call mpi_bc(this%mag_mixing_scheme,rank,mpi_comm)
      CALL mpi_bc(this%mix_RelaxWeightOffD,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta_inp,rank,mpi_comm)
