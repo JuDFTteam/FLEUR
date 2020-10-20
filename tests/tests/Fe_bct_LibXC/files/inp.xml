@@ -11,7 +11,6 @@
          <LibXCName  exchange="gga_x_pbe" correlation="gga_c_pbe" />
       </xcFunctional>
       <magnetism jspins="2" l_noco="T" swsp="F" lflip="F">
-         <nocoParams l_mperp="F" l_constr="F" mix_b=".50000000"/>
          <qss>.0000000000 .0000000000 .0000000000</qss>
       </magnetism>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
@@ -139,12 +138,12 @@
       <atomGroup species="Fe-1">
          <relPos label="                    ">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams alpha=".00000000" beta=".00000000"/>
       </atomGroup>
       <atomGroup species="Fe-1">
          <relPos label="                    ">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta="3.14159265" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams alpha=".00000000" beta="3.14159265"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F" >
