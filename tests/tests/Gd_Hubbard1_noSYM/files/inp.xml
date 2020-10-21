@@ -16,10 +16,14 @@
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" et="0.0" alpha="1.0"/>
       </greensFunction>
+      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="36.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="75" type="tetra">
+         <kPointList name="default" count="75" type="mesh" nx="5" ny="5" nz="3">
             <kPoint weight="     1.0000000000000">-0.4000000000000 -0.4000000000000 -0.3333333333333</kPoint>
             <kPoint weight="     1.0000000000000">-0.2000000000000 -0.4000000000000 -0.3333333333333</kPoint>
             <kPoint weight="     1.0000000000000"> 0.0000000000000 -0.4000000000000 -0.3333333333333</kPoint>
@@ -550,7 +554,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -558,8 +561,6 @@
             <row-3>0 0 1 .0000000000</row-3>
          </symOp>
       </symmetryOperations>
-   </calculationSetup>
-   <cell>
       <bulkLattice scale="1.0000000000">
          <bravaisMatrix>
             <row-1>   -5.9406819509     3.4298543235     0.0000000000</row-1>
@@ -568,9 +569,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Gd-1" element="Gd" atomicNumber="64" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Gd-1" element="Gd" atomicNumber="64">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01400000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>

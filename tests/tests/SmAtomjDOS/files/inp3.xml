@@ -9,12 +9,13 @@
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="T" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
-      <nocoParams l_ss="F" l_mperp="F" l_mtNocoPot="F" l_constr="F" l_sourceFree="F" l_scaleMag="F" mag_scale="1.00000000" mix_b=".00000000">
-         <qss>.0000000000 .0000000000 .0000000000</qss>
-      </nocoParams>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="14.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -23,7 +24,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -31,8 +31,6 @@
             <row-3>0 0 1 .0000000000</row-3>
          </symOp>
       </symmetryOperations>
-   </calculationSetup>
-   <cell>
       <bulkLattice scale="1.0000000000">
          <bravaisMatrix>
             <row-1>    0.0000000000     9.4486345000     9.4486345000</row-1>
@@ -41,9 +39,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Sm-1" element="Sm" atomicNumber="62" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Sm-1" element="Sm" atomicNumber="62">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01400000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig>
@@ -58,14 +55,14 @@
    </atomSpecies>
    <atomGroups>
       <atomGroup species="Sm-1">
-         <relPos label="                   1" jDOS="T">.0000000000 .0000000000 .0000000000</relPos>
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000"/>
+         <nocoParams alpha=".00000000" beta=".00000000"/>
       </atomGroup>
    </atomGroups>
    <output dos="T" band="F"  slice="F" >
       <checks vchk="F" cdinf="F"/>
-      <bandDOS  minEnergy="-.10000000" maxEnergy="-.050000000" sigma=".00100000"/>
+      <bandDOS jDOS="T" minEnergy="-.10000000" maxEnergy="-.050000000" sigma=".00100000"/>
       <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
