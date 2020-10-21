@@ -172,7 +172,7 @@ CONTAINS
                            0, -1.0, results%ef, results%last_mmpmatDistance, results%last_occDistance, .FALSE., inDen)
       END IF
 
-      IF (any(fi%noco%l_alignMT) .AND. fmpi%irank .EQ. 0) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
+      IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
       ! Initialize potentials (start)
