@@ -281,9 +281,13 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    REAL                                  :: zeros(atoms%ntype)
 
+   LOGICAL l_irank0
    if (.not.any(noco%l_alignMT)) RETURN
 
-   if (fmpi%irank==0) then
+   l_irank0=.true.
+   if (present(fmpi)) l_irank0=fmpi%irank==0
+
+   if (l_irank0) then
      zeros(:)=0.0
      CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
