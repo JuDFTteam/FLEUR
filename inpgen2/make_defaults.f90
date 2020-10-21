@@ -144,7 +144,8 @@ CONTAINS
     noco%l_unrestrictMT(:) = .FALSE.
     ALLOCATE(noco%l_alignMT(atoms%ntype))
     noco%l_alignMT(:)=.false.
-    noco%mix_RelaxWeightOffD=1.0
+    ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
+    noco%mix_RelaxWeightOffD(:)=1.0
     noco%mag_mixing_scheme=0
 
     !
