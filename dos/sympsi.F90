@@ -18,7 +18,7 @@ MODULE m_sympsi
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(lapw,jspin,sym,ne,cell,eig,noco, ksym,jsym,zMat)
+  SUBROUTINE sympsi(lapw,jspin,sym,ne,cell,eig,noco, jsym,zMat)
 
     USE m_constants
     USE m_grp_k
@@ -28,7 +28,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)        :: lapw
-    
+
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
@@ -40,7 +40,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: eig(:)
 
-    INTEGER, INTENT (OUT):: jsym(:),ksym(:)
+    INTEGER, INTENT (OUT):: jsym(:)
     !     ..
     !     .. Local Scalars ..
     REAL degthre
@@ -69,7 +69,6 @@ CONTAINS
 
     soc=noco%l_soc.AND.noco%l_noco
     jsym=0
-    ksym=0
     IF (noco%l_soc.AND.(.NOT.noco%l_noco)) RETURN
 
     CALL timestart("sympsi")

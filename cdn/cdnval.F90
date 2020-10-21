@@ -323,7 +323,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
+         CALL sympsi(lapw,jspin,sym,noccbd,cell,eig,noco,dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 
