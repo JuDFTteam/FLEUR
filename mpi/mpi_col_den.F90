@@ -150,16 +150,6 @@ CONTAINS
     END IF
     DEALLOCATE (i_b)
 
-    n = SIZE(dos%ksym,1)*SIZE(dos%ksym,2)
-    ALLOCATE(i_b(n))
-    CALL MPI_REDUCE(dos%ksym(:,:,jspin),i_b,n,MPI_INTEGER,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) THEN
-       DO i = 1, SIZE(dos%ksym,2)
-          dos%ksym(:,i,jspin) = i_b((i-1)*SIZE(dos%ksym,1)+1:i*SIZE(dos%ksym,1))
-       END DO
-    END IF
-    DEALLOCATE (i_b)
-
     n = SIZE(dos%qis,1)*SIZE(dos%qis,2)
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(dos%qis(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
