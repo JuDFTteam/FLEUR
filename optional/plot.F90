@@ -1285,7 +1285,7 @@ CONTAINS
       CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
-         CALL toGlobalSpinFrame(fmpi,noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Denmat,.true.)
+         CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Denmat,fmpi,.true.)
          CALL checkplotinp(fmpi)
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi, oneD, sym, cell, &
                        noco, nococonv, denmat, plot_const)

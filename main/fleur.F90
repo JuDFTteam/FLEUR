@@ -513,8 +513,8 @@ CONTAINS
             ! total energy
 
             !Rotating from local MT frame in global frame for mixing
-            CALL toGlobalSpinFrame(fmpi,fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen)
-            CALL toGlobalSpinFrame(fmpi,fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen,.true.)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen,fmpi)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen,fmpi,.true.)
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell, fi%oneD, &
                         xcpot, hybdat, vTot, vCoul, iter, inDen, results)

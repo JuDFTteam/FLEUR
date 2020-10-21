@@ -207,7 +207,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
      nococonv%beta=noco%beta_inp
      nococonv%alph=noco%alph_inp
-     CALL toGlobalSpinFrame(fmpi,noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
+     CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
      Allocate(pw_tmp(size(den%pw,1),3))
      pw_tmp=0.0
      pw_tmp(:,:size(den%pw,2))=den%pw

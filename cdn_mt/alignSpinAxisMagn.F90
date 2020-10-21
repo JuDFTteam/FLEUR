@@ -262,10 +262,10 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
 END SUBROUTINE
 
 !Rotates into the global frame so mixing can be performed without any restrictions. => Compatible with anderson mixing scheme.
-SUBROUTINE toGlobalSpinFrame(fmpi,noco,nococonv,vacuum,sphhar,stars&
-,sym,oneD,cell,input,atoms, den,l_update_nococonv)
+SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
+,sym,oneD,cell,input,atoms, den,fmpi,l_update_nococonv)
    USE m_mpi_bc_potden
-   TYPE(t_mpi),INTENT(IN)                :: fmpi
+   TYPE(t_mpi),INTENT(IN),OPTIONAL       :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
    TYPE(t_noco), INTENT(IN)              :: noco
@@ -297,8 +297,7 @@ SUBROUTINE toGlobalSpinFrame(fmpi,noco,nococonv,vacuum,sphhar,stars&
        ENDIF
      ENDIF
    ENDIF
-
-   call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
+   if (present(fmpi)) call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
 
 END SUBROUTINE
 
