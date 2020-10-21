@@ -162,7 +162,6 @@ CONTAINS
            !$       WRITE(*,*) ""
            !$       CALL juDFT_error("MPI not usable with OpenMP")
            !$    END IF
-           !Select the io-mode from the command-line
         END IF
 #endif
         IF (irank==0) THEN
