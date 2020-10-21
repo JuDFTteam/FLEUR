@@ -115,7 +115,7 @@ CONTAINS
 
     CHARACTER(len=300) :: xPathA, xPathB,str
     INTEGER::numberNodes,iType,i,na,n,n_dos_atom,n_dos_type
-    LOGICAL::l_jDOS,all_atoms,dos_atom_found
+    LOGICAL::all_atoms,dos_atom_found
     integer,allocatable:: dos_atomlist(:),dos_typelist(:),neq(:)
 
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
@@ -125,6 +125,7 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
        this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
+       this%l_jDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jDOS'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))

@@ -464,7 +464,6 @@
          <xsd:extension base="String3DVecType">
             <xsd:attribute default=" " name="label" type="xsd:string" use="optional"/>
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
-            <xsd:attribute default="F" name="jDOS"    type="FleurBool" use="optional"/>
             <xsd:attribute name="banddos"    type="FleurBool" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
@@ -837,6 +836,7 @@
    <xsd:complexType name="DOSOutputType">
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
+      <xsd:attribute name="jDOS" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="minEnergy" type="xsd:string" use="optional" default="-0.5"/>
       <xsd:attribute name="maxEnergy" type="xsd:string" use="optional" default="0.5"/>
       <xsd:attribute name="sigma" type="xsd:string" use="optional" default="0.01"/>

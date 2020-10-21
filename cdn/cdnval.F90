@@ -276,7 +276,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
-               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
+                              denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
