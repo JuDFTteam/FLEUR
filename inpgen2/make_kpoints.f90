@@ -312,7 +312,6 @@ CONTAINS
     USE m_types_cell
     USE m_types_sym
     USE m_kptgen_hybrid
-    USE m_tetrahedron_regular
     USE m_triang
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
@@ -503,26 +502,16 @@ CONTAINS
           !Match normalisation of other methods
           voltet = voltet/as*kpts%ntet
        ENDIF
-
     ENDIF
 
-    IF(bz_integration==BZINT_METHOD_TETRA) THEN
-       !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
-       CALL kpts%init(cell, sym, film, .false.) !To generate the full grid
-       IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
-                                              "needs a gamma centered kpoint grid",&
-                                              calledby="init_by_grid")
-       CALL tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
-    ENDIF
-
-    IF (bz_integration==BZINT_METHOD_TRIA .AND.random .OR. bz_integration==BZINT_METHOD_TETRA .AND..NOT.film) THEN
+    IF (bz_integration==BZINT_METHOD_TRIA .AND.random) THEN
        ALLOCATE(kpts%ntetra(4,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
           kpts%ntetra(:,j) = ntetra(:,j)
           kpts%voltet(j) = ABS(voltet(j))
        END DO
-    ELSE IF( (bz_integration==BZINT_METHOD_TRIA .OR. bz_integration==BZINT_METHOD_TETRA) .AND. film) THEN
+    ELSE IF(bz_integration==BZINT_METHOD_TRIA.AND.film) THEN
        ALLOCATE(kpts%ntetra(3,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet
@@ -533,9 +522,7 @@ CONTAINS
 
     IF(bz_integration==BZINT_METHOD_TRIA) THEN
        kpts%kptsKind = KPTS_KIND_TRIA
-    ELSE IF(bz_integration==BZINT_METHOD_TETRA) THEN
-       kpts%kptsKind = KPTS_KIND_TETRA
-    ENDIF
+    END IF
 
     kpts%nkpt3(:) = grid(:)
 

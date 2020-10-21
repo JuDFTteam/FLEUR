@@ -18,7 +18,7 @@
       <bzIntegration valenceElectrons="16.00000000" mode="tetra" fermiSmearingEnergy=".00100000" l_bloechl="T">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="64" type="tetra">
+         <kPointList name="default" count="64" nx="4" ny="4" nz="4" type="mesh">
             <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
             <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.2500000000000</kPoint>
             <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.5000000000000</kPoint>

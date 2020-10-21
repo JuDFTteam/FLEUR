@@ -159,7 +159,8 @@ CONTAINS
     CALL input%init(noco,hybinp%l_hybrid,lapw_dim_nbasfcn)
     CALL oned%init(atoms) !call again, because make_stars modified it :-)
     CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
-    CALL kpts%init(cell, sym, input%film, hybinp%l_hybrid .or. input%l_rdmft)
+    CALL kpts%init(sym, input%film, hybinp%l_hybrid .or. input%l_rdmft)
+    CALL kpts%initTetra(input, cell)
     IF(fmpi%irank==0)CALL gfinp%init(atoms, sym, noco, cell, input)
     CALL gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
     CALL prp_xcfft(fmpi,stars,input,cell,xcpot)

@@ -876,7 +876,6 @@
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="mesh"/>
          <xsd:enumeration value="path"/>
-         <xsd:enumeration value="tetra"/>
          <xsd:enumeration value="tria"/>
          <xsd:enumeration value="SPEX-mesh"/>
          <xsd:enumeration value="unspecified"/>
