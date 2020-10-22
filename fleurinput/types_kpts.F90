@@ -506,7 +506,9 @@ CONTAINS
             CALL juDFT_error("Regular tetrahedron decomposition needs a gamma centered kpoint grid",&
                              calledby="initTetra")
          END IF
+         CALL timestart('Tetrahedron decomposition')
          CALL kpts%tetrahedron_regular(input%film,cell,kpts%nkpt3,ntetra,voltet)
+         CALL timestop('Tetrahedron decomposition')
 
          IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
          IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
@@ -557,13 +559,16 @@ CONTAINS
       REAL,    ALLOCATABLE,   INTENT(INOUT)  :: voltet(:)
 
 
-      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,jtet,icorn,jcorn
+      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,j,k,l
+      INTEGER :: jtet,icorn,startIndex,itet,iperm
       REAL    :: vol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
-      LOGICAL :: l_new,l_found(MERGE(3,4,film)),l_used(MERGE(3,4,film))
+      LOGICAL :: l_new,l_equal_kpoints
       INTEGER, ALLOCATABLE :: tetra(:,:)
+      INTEGER, ALLOCATABLE :: ntetraAll(:,:)
       INTEGER, ALLOCATABLE :: kcorn(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
+      INTEGER, ALLOCATABLE :: perm(:,:)
 
       !Determine the decomposition of each individual cube
       ! and the total volume of the brillouin zone
@@ -575,12 +580,39 @@ CONTAINS
          tetra = reshape ( [ 1,2,3, 2,3,4], [ 3,2 ] )
          diag = cell%bmat(:2,2)/grid(:2) - cell%bmat(:2,1) / grid(:2)
          vol =  sum(diag*diag)/4.0
+         ALLOCATE(perm(3,6))
+         iperm = 0
+         DO i = 1, 3
+            DO j = 1, 3
+               IF(j.EQ.i) CYCLE
+               DO k = 1, 3
+                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
+                  iperm = iperm + 1
+                  perm(:,iperm) = [i,j,k]
+               ENDDO
+            ENDDO
+         ENDDO
       ELSE
          volbz = ABS(det(cell%bmat))
          ALLOCATE(tetra(4,24),source=0)
          ALLOCATE(kcorn(8),source=0)
          !Choose the tetrahedra decomposition along the shortest diagonal
          CALL get_tetra(cell,grid,ntetraCube,vol,tetra)
+         ALLOCATE(perm(4,24))
+         iperm = 0
+         DO i = 1, 4
+            DO j = 1, 4
+               IF(j.EQ.i) CYCLE
+               DO k = 1, 4
+                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
+                  DO l = 1, 4
+                     IF(l.EQ.k.OR.l.EQ.j.OR.l.EQ.i) CYCLE
+                     iperm = iperm + 1
+                     perm(:,iperm) = [i,j,k,l]
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
       ENDIF
 
       !We shift the k-points by this vector only for the pointer array
@@ -608,17 +640,23 @@ CONTAINS
       !Temporary Size
       IF(film) THEN
          ALLOCATE(ntetra(3,kpts%nkptf*2),source=0)
+         ALLOCATE(ntetraAll(3,kpts%nkptf*2),source=0)
          ALLOCATE(voltet(kpts%nkptf*2),source=0.0)
       ELSE
          ALLOCATE(ntetra(4,kpts%nkptf*6),source=0)
+         ALLOCATE(ntetraAll(4,kpts%nkptf*6),source=0)
          ALLOCATE(voltet(kpts%nkptf*6),source=0.0)
       ENDIF
 
-      kpts%ntet = 0
       !Set up the tetrahedrons
+      !$omp parallel do default(none) &
+      !$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
+      !$omp private(k1,k2,k3,kcorn,itetra,startIndex) &
+      !$omp collapse(3)
       DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
             DO k1 = 0, grid(1)-1
+
                !Corners of the current cube
                kcorn(1) = p(k1  ,k2  ,k3  )
                kcorn(2) = p(k1+1,k2  ,k3  )
@@ -632,35 +670,40 @@ CONTAINS
                ENDIF
 
                !Now divide the cube into tetrahedra
+               startIndex = (k3*grid(2)*grid(1)+k2*grid(1)+k1) * ntetraCube
                DO itetra = 1, ntetraCube
-                  l_new = .TRUE.
-                  !Check for symmetry equivalent tetrahedra
-                  DO jtet = 1, kpts%ntet
-                     l_found = .FALSE.
-                     l_used = .FALSE.
-                     DO icorn = 1, SIZE(ntetra,1)
-                        DO jcorn = 1, SIZE(ntetra,1)
-                           IF(.NOT.l_used(jcorn).AND..NOT.l_found(icorn).AND.&
-                              kpts%bkp(kcorn(tetra(icorn,itetra))).EQ.ntetra(jcorn,jtet)) THEN
-                                 l_found(icorn) = .TRUE.
-                                 l_used(jcorn) = .TRUE.
-                           ENDIF
-                        ENDDO
-                     ENDDO
-                     IF(ALL(l_found)) THEN
-                        l_new = .FALSE.
-                        voltet(jtet) = voltet(jtet) + vol
-                        EXIT
-                     ENDIF
-                  ENDDO
-                  IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
-                     kpts%ntet = kpts%ntet+1
-                     ntetra(:,kpts%ntet) = kpts%bkp(kcorn(tetra(:,itetra)))
-                     voltet(kpts%ntet) = vol
-                  ENDIF
+                  ntetraAll(:,startIndex + itetra) = kpts%bkp(kcorn(tetra(:,itetra)))
                ENDDO
             ENDDO
          ENDDO
+      ENDDO
+      !$omp end parallel do
+
+      !Check for symmetry equivalent tetrahedra
+      kpts%ntet = 0
+      DO itet = 1, ntetraCube*PRODUCT(grid(:MERGE(2,3,film)))
+         l_new = .TRUE.
+         tetraLoop: DO jtet = 1, kpts%ntet
+            l_equal_kpoints = .TRUE.
+            DO icorn = 1, SIZE(ntetra,1)
+               IF(ALL(ntetra(:,jtet).NE.ntetraAll(icorn,itet))) THEN
+                  l_equal_kpoints = .FALSE.
+               ENDIF
+            ENDDO
+            IF(.NOT.l_equal_kpoints) CYCLE !There is at least one kpoint completely different
+            DO iperm = 1, SIZE(perm,2)
+               IF(ALL(ntetraAll(perm(:,iperm),itet)-ntetra(:,jtet).EQ.0)) THEN
+                  voltet(jtet) = voltet(jtet) + vol
+                  l_new = .FALSE.
+                  EXIT tetraLoop
+               ENDIF
+            ENDDO
+         ENDDO tetraLoop
+         IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
+            kpts%ntet = kpts%ntet+1
+            ntetra(:,kpts%ntet) = ntetraAll(:,itet)
+            voltet(kpts%ntet) = vol
+         ENDIF
       ENDDO
 
       !Has the whole brillouin zone been covered?
