@@ -483,16 +483,18 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE initTetra(kpts,input,cell)
+   SUBROUTINE initTetra(kpts,input,cell,sym)
       USE m_juDFT
       USE m_constants
       USE m_types_input
       USE m_types_cell
+      USE m_types_sym
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
+      TYPE(t_sym),      INTENT(IN)    :: sym
 
-      INTEGER :: j
+      INTEGER :: j, ikpt, ntet, itet
 
       INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
       REAL,    ALLOCATABLE :: voltet(:)   ! voulmes of the tetrahedrons
@@ -523,6 +525,22 @@ CONTAINS
                kpts%voltet(j) = ABS(voltet(j))
             END DO
          END IF
+
+         CALL timestart("setup tetraList")
+         allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
+                                 *MERGE(6,24,input%film),kpts%nkpt),source=0)
+         !$OMP parallel do default(none) private(ikpt,ntet,itet) shared(kpts)
+         do ikpt = 1, kpts%nkpt
+            ntet = 0
+            do itet = 1, kpts%ntet
+               IF(ANY(kpts%ntetra(:,itet).EQ.ikpt))THEN
+                  ntet = ntet + 1
+                  kpts%tetraList(ntet,ikpt) = itet
+               ENDIF
+            enddo
+         enddo
+         !$OMP end parallel do
+         CALL timestop("setup tetraList")
       END IF
 
    END SUBROUTINE initTetra
@@ -741,22 +759,6 @@ CONTAINS
          !$OMP END PARALLEL DO
       end if
 
-      if(kpts%ntet>0) then
-         CALL timestart("setup tetraList")
-         allocate(kpts%tetraList(MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)*MERGE(6,24,film),kpts%nkpt),source=0)
-         !$OMP parallel do default(none) private(n,ntet,itet) shared(kpts)
-         do n = 1, kpts%nkpt
-            ntet = 0
-            do itet = 1, kpts%ntet
-               IF(ANY(kpts%ntetra(:,itet).EQ.n))THEN
-                  ntet = ntet + 1
-                  kpts%tetraList(ntet,n) = itet
-               ENDIF
-            enddo
-         enddo
-         !$OMP end parallel do
-         CALL timestop("setup tetraList")
-      endif
       call timestop("init_kpts")
    END SUBROUTINE init_kpts
 
