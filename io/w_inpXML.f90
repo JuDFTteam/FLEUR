@@ -18,8 +18,8 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, gfinp, &
-      l_explicitIn, l_includeIn, filename)
+      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, &
+      gfinp, hub1inp, l_explicitIn, l_includeIn, filename)
 
       use m_types_input
       use m_types_sym
@@ -31,6 +31,7 @@ CONTAINS
       use m_types_mpinp
       use m_types_hybinp
       use m_types_gfinp
+      use m_types_hub1inp
       use m_types_cell
       use m_types_banddos
       use m_types_sliceplot
@@ -64,6 +65,7 @@ CONTAINS
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
       TYPE(t_gfinp), INTENT(IN)    :: gfinp
+      TYPE(t_hub1inp), INTENT(IN)  :: hub1inp
       CLASS(t_enparaxml), INTENT(IN)   :: enpara
       CLASS(t_forcetheo), INTENT(IN):: forcetheo !nothing is done here so far....
       CHARACTER(LEN=40)          :: kptsSelection(3) ! 1: default selection, 2: alternative for band structures, alternative for GW
@@ -187,7 +189,7 @@ CONTAINS
 162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
          WRITE (fileNum, 162) noco%qss_inp
 164      FORMAT('         <mtNocoParams l_mperp="', l1, '" l_mtNocoPot="', l1,'" l_relaxSQA="', l1,'" mag_mixing_scheme="', i1, '" mix_RelaxWeightOffD="',f0.8,'" l_constrained="', l1,'" mix_constr="', f0.8,'"/>')
-         WRITE (fileNum, 164) noco%l_mperp,any(noco%l_unrestrictMT), any(noco%l_alignMT), noco%mag_mixing_scheme, min(noco%mix_RelaxWeightOffD), any(noco%l_constrained), noco%mix_b
+         WRITE (fileNum, 164) noco%l_mperp,any(noco%l_unrestrictMT), any(noco%l_alignMT), noco%mag_mixing_scheme, minval(noco%mix_RelaxWeightOffD), any(noco%l_constrained), noco%mix_b
 166      FORMAT('         <sourceFreeMag l_sourceFree="', l1, '" l_scaleMag="', l1, '" mag_scale="', f0.8,'"/>')
          WRITE (fileNum, 166) noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale
          WRITE (fileNum, '(a)') '      </magnetism>'
@@ -243,6 +245,11 @@ CONTAINS
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
 195   FORMAT('      <ldaU l_linMix="', l1, '" mixParam="', f0.6, '" spinf="', f0.6, '"/>')
       WRITE (fileNum, 195) input%ldauLinMix, input%ldauMixParam, input%ldauSpinf
+
+      IF(atoms%n_hia>0 .OR. l_explicit) THEN
+196      FORMAT('      <ldaHIA itmaxHubbard1="', i0, '" minoccDistance="', f0.6, '" minmatDistance="', f0.6, '" beta="', f0.1, '" dftspinpol="', l1, '"/>')
+         WRITE (fileNum, 196) hub1inp%itmax, hub1inp%minoccDistance, hub1inp%minmatDistance, hub1inp%beta, hub1inp%l_dftspinpol
+      ENDIF
 
       IF(l_gfOpt) THEN
 205      FORMAT('      <greensFunction l_mperp="', l1'">')
