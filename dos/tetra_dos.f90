@@ -50,7 +50,7 @@ MODULE m_tetra_dos
 
       sfac = 2.0/jspins
 
-      DO ispin = 1, jspins
+      DO ispin = 1, SIZE(qal,3)
          DO iBand = 1,SIZE(eig,1)
             ecmax(iBand,ispin) = -1.0e25
             DO ikpt = 1,kpts%nkpt
@@ -61,7 +61,7 @@ MODULE m_tetra_dos
       !
       !  check for energy degeneracies in tetrahedrons
       !
-      DO ispin = 1, jspins
+      DO ispin = 1, SIZE(qal,3)
          DO itet = 1,kpts%ntet
             DO iBand = 1,SIZE(eig_nondeg,1)
                DO i = 1,3
@@ -83,7 +83,7 @@ MODULE m_tetra_dos
       !
       ! calculate partial weights
       !
-      DO ispin = 1, jspins
+      DO ispin = 1, SIZE(qal,3)
          DO ikpt=1,kpts%nkpt
             DO iBand = 1,neig(ikpt,ispin)
                DO itet = 1,kpts%ntet
@@ -117,7 +117,7 @@ MODULE m_tetra_dos
       !
       g = 0.0
 
-      DO ispin = 1, jspins
+      DO ispin = 1, SIZE(qal,3)
          DO ikpt = 1,kpts%nkpt
             DO iBand = 1,neig(ikpt,ispin)
 

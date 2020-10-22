@@ -464,7 +464,6 @@
          <xsd:extension base="String3DVecType">
             <xsd:attribute default=" " name="label" type="xsd:string" use="optional"/>
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
-            <xsd:attribute default="F" name="jDOS"    type="FleurBool" use="optional"/>
             <xsd:attribute name="banddos"    type="FleurBool" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
@@ -741,6 +740,7 @@
 
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
+      <xsd:attribute name="f_level" type="xsd:nonNegativeInteger" use="optional" default="0"/>
       <xsd:attribute name="forcealpha" type="xsd:string" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="xsd:string" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="xsd:string" use="optional" default="0.001"/>
@@ -757,7 +757,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
-      <xsd:attribute name="itmax" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="itmaxHubbard1" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
@@ -837,6 +837,7 @@
    <xsd:complexType name="DOSOutputType">
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
+      <xsd:attribute name="jDOS" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="minEnergy" type="xsd:string" use="optional" default="-0.5"/>
       <xsd:attribute name="maxEnergy" type="xsd:string" use="optional" default="0.5"/>
       <xsd:attribute name="sigma" type="xsd:string" use="optional" default="0.01"/>

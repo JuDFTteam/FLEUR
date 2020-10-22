@@ -276,7 +276,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
-               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
+                              denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -323,7 +324,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
+         CALL sympsi(lapw,jspin,sym,noccbd,cell,eig,noco,dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 

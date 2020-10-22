@@ -51,7 +51,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
-    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj
+    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
     INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
@@ -319,22 +319,27 @@ CONTAINS
                    t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
          DO itype = 1, atoms%ntype
             natom = SUM(atoms%neq(:itype-1)) + 1
+            if(.not.banddos%dos_atom(natom)) cycle
+            !find index for dos
+            DO n_dos=1,size(banddos%dos_atomlist)
+               if (banddos%dos_atomlist(n_dos)==natom) exit
+            ENDDO
 
-            WRITE(oUnit,8300) itype, jDOS%occ(0,1,natom), ((jDOS%occ(l,jj,natom),jj = 1, 2),l = 1, 3)
+            WRITE(oUnit,8300) itype, jDOS%occ(0,1,n_dos), ((jDOS%occ(l,jj,n_dos),jj = 1, 2),l = 1, 3)
 8300        FORMAT(' -->',i3,2x,f9.5,2x,6f9.5,/)
 
             CALL openXMLElementPoly('mtJcharge',['atomType'],[itype])
 
             attributes = ''
-            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,1,natom)
-            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,1,natom)
-            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,1,natom)
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,1,n_dos)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,1,n_dos)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,1,n_dos)
             CALL writeXMLElementForm('lowJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
 
             attributes = ''
-            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,2,natom)
-            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,2,natom)
-            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,2,natom)
+            WRITE(attributes(1),'(f12.7)') jDOS%occ(1,2,n_dos)
+            WRITE(attributes(2),'(f12.7)') jDOS%occ(2,2,n_dos)
+            WRITE(attributes(3),'(f12.7)') jDOS%occ(3,2,n_dos)
             CALL writeXMLElementForm('highJ',['p','d','f'],attributes(:3),reshape([1,1,1,12,12,12],[3,2]))
 
             CALL closeXMLElement('mtJcharge')

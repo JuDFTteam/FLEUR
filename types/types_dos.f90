@@ -12,7 +12,6 @@ MODULE m_types_dos
   TYPE,extends(t_eigdos):: t_dos
      INTEGER,ALLOCATABLE :: neq(:)
      INTEGER, ALLOCATABLE :: jsym(:,:,:)
-     INTEGER, ALLOCATABLE :: ksym(:,:,:)
      REAL,    ALLOCATABLE :: qis(:,:,:)
      REAL,    ALLOCATABLE :: qal(:,:,:,:,:)
      CHARACTER(len=20),ALLOCATABLE:: weight_names(:)!This must be allocated in init of derived type
@@ -70,7 +69,8 @@ CONTAINS
         ENDDO
       endif
     endif
-    ind=2
+    if (id==3) get_weight_eig=1.*this%jsym
+    ind=3
     DO ntype=1,size(this%qal,2)
       DO l=0,3
         ind=ind+1
@@ -98,19 +98,18 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   thisDOS%neq=atoms%neq(banddos%dos_typelist)
   thisDOS%eig=eig
   ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%ksym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qal(0:3,size(banddos%dos_typelist),input%neig,kpts%nkpt,input%jspins))
 
   thisDOS%jsym = 0
-  thisDOS%ksym = 0
   thisDOS%qis = 0.0
   thisDOS%qal = 0.0
 
-  allocate(thisDOS%weight_names(2+4*size(banddos%dos_typelist)))
+  allocate(thisDOS%weight_names(3+4*size(banddos%dos_typelist)))
   thisDOS%weight_names(1)="Total"
   thisDOS%weight_names(2)="INT"
-  ind=2
+  thisDOS%weight_names(3)="Sym"
+  ind=3
   DO ntype=1,size(banddos%dos_typelist)
     DO l=0,3
       ind=ind+1
