@@ -83,7 +83,7 @@ CONTAINS
     ALLOCATE(chars(ne,nclass))
     chars=0.0
     !>
-
+    char_written=.TRUE.
     IF (ALLOCATED(char_table)) THEN
        IF (SIZE(char_table,2).NE.nclass) THEN
           DEALLOCATE(char_table)

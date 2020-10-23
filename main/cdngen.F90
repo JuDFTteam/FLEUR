@@ -84,7 +84,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: greensFunction(:)
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
-   TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen  
+   TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
 
    !Scalar Arguments
@@ -122,6 +122,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL regCharges%init(input,atoms)
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
+   if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
    CALL dos%init(input,atoms,kpts,banddos,results%eig)
    CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
    CALL mcd%init(banddos,input,atoms,kpts,results%eig)
