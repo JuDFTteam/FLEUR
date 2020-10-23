@@ -41,7 +41,7 @@ contains
     !sphhar%nlhd = maxval(sphhar%nlh(:))
 
     CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    IF(noco%l_mtNocoPot) THEN
+    IF(any(noco%l_unrestrictMT)) THEN
        archiveType=CDN_ARCHIVE_TYPE_FFN_const
     ELSE IF(noco%l_noco) THEN
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const

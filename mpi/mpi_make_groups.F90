@@ -229,7 +229,7 @@ CONTAINS
       m_h = m_h + 2 * (2*atoms%llod+1)**2 * atoms%nlod * 3 * 2   ! alo,blo,clo
       IF (noco%l_ss) m_h = m_h * 2
       m_h = m_h + lapw_dim_nvd*(5+atoms%lmaxd)                      ! axr, ... plegend
-      IF (noco%l_ss.OR.noco%l_constr.OR.(noco%l_noco.AND.noco%l_soc)) THEN
+      IF (noco%l_ss.OR.any(noco%l_constrained).OR.(noco%l_noco.AND.noco%l_soc)) THEN
         m_h = m_h + lapw_dim_nvd*(atoms%lmaxd+1)*atoms%ntype*2*2          ! fj,gj
       ELSE
         m_h = m_h + lapw_dim_nvd*(atoms%lmaxd+1)*atoms%ntype*2            ! fj,gj
@@ -237,7 +237,7 @@ CONTAINS
       IF (noco%l_noco.AND.noco%l_soc) THEN
         m_h = m_h + lapw_dim_nvd*(atoms%lmaxd+4)
       ENDIF
-      IF (noco%l_constr) THEN
+      IF (any(noco%l_constrained)) THEN
         m_h = m_h + (atoms%lmaxd+1)*atoms%ntype
       ENDIF
       IF (noco%l_noco.AND.(.NOT.noco%l_ss)) THEN

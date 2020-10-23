@@ -117,7 +117,7 @@ CONTAINS
     ENDDO
     DO intspin=1,MERGE(2,1,noco%l_noco)
 
-       CALL synth_fjgj(lapw%nv(intspin),ispin,input%jspins,atoms%lmax(n),atoms%lmaxd,apw,noco%l_constr.or.l_socfirst,&
+       CALL synth_fjgj(lapw%nv(intspin),ispin,input%jspins,atoms%lmax(n),atoms%lmaxd,apw,any(noco%l_constrained).or.l_socfirst,&
             lapw%rk(:,intspin),atoms%rmt(n),con1,usdus%uds(:,n,:),usdus%dus(:,n,:),usdus%us(:,n,:),usdus%duds(:,n,:),&
             fj(:,0:,:,intspin),gj(:,0:,:,intspin))
 
@@ -168,7 +168,7 @@ CONTAINS
 
     jspinStart = ispin
     jspinEnd = ispin
-    IF (noco%l_constr.or.l_socfirst.OR.noco%l_mtNocoPot) THEN
+    IF (any(noco%l_constrained).or.l_socfirst.OR.any(noco%l_unrestrictMT)) THEN
        jspinStart = 1
        jspinEnd = input%jspins
     END IF

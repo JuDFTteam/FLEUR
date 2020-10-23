@@ -7,9 +7,12 @@
       <cutoffs Kmax="3.60000000" Gmax="11.00000000" GmaxXC="9.20000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F"/>
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="24.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -20,9 +23,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
      <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -84,9 +84,8 @@
          <vacuumEnergyParameters vacuum="1" spinUp="-.25000000" spinDown="-.25000000"/>
       </filmLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Si-1" element="Si" atomicNumber="14"  magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
+      <species name="Si-1" element="Si" atomicNumber="14">
          <mtSphere radius="2.16000000" gridPoints="521" logIncrement=".02200000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
           <electronConfig>

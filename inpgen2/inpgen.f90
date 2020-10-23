@@ -35,6 +35,7 @@ PROGRAM inpgen
   USE m_types_forcetheo
   USE m_types_kpts
   USE m_types_gfinp
+  USE m_types_hub1inp
   USE m_types_enpara
   USE m_types_oneD
   USE m_types_sliceplot
@@ -68,6 +69,7 @@ PROGRAM inpgen
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
+      TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios
@@ -116,10 +118,10 @@ PROGRAM inpgen
          !not yet
          l_fullinput = .TRUE.
          CALL xml%init(l_fullinput)
-         numKpts = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+         numKpts = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
          DO iKpts = 1, numKpts
             xPath = ''
-            WRITE (xPath, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', iKpts, ']/@type'
+            WRITE (xPath, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', iKpts, ']/@type'
             numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath)))
             IF(numNodes.EQ.1) THEN
                IF(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))).EQ.'path') numKptsPath = numKptsPath + 1
@@ -267,7 +269,7 @@ PROGRAM inpgen
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
-              l_explicit,l_include,filename)
+              hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
       IF (.NOT.l_include(1)) THEN

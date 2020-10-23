@@ -7,25 +7,24 @@
       <cutoffs Kmax="3.40000000" Gmax="10.20000000" GmaxXC="8.50000000" numbands="0"/>
       <scfLoop itmax="20" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="99"/>
-      <magnetism jspins="2" l_noco="T" swsp="F" lflip="F"/>
-      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
-      <nocoParams l_ss="T" l_mperp="F" l_constr="F" mix_b=".50000000">
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="T" l_ss="T" swsp="F" lflip="F">
          <qss>.3000000000 .1000000000 .0000000000</qss>
-      </nocoParams>
+      </magnetism>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="1">
-            <kPoint weight="    1.000000">    0.000000     0.000000     0.000000</kPoint>
-         </kPointList>
+            <kPointList name="default" count="1">
+               <kPoint weight="    1.000000">    0.000000     0.000000     0.000000</kPoint>
+            </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -41,7 +40,6 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
       <species name="Fe-1" element="Fe" atomicNumber="26" >
          <mtSphere radius="2.35000000" gridPoints="565" logIncrement=".02100000"/>
@@ -59,7 +57,7 @@
       <atomGroup species="Fe-1">
          <relPos label="                    ">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta="1.57079633" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta="1.57079633" />
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F" >

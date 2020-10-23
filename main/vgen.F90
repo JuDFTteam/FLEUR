@@ -119,7 +119,7 @@ CONTAINS
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
          CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
-         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
+         IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&

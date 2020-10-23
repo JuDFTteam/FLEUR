@@ -41,7 +41,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
 
   ALLOCATE(dummyResults(SIZE(den%mt,3),SIZE(den%mt,4)))
 
-  IF(noco%l_mtNocoPot) THEN
+  IF(any(noco%l_unrestrictMT)) THEN
      jsp=4
   ELSE
      jsp=input%jspins
@@ -65,7 +65,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    END DO
 !!Assign results
    DO i=1 , atoms%ntype
-   IF (noco%l_mtNocoPot) THEN
+   IF (any(noco%l_unrestrictMT)) THEN
       moments(1:2,i)=2*dummyResults(i,3:4)
    END IF
       moments(3,i)=dummyResults(i,1)-dummyResults(i,2)

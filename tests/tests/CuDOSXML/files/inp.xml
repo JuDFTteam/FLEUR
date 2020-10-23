@@ -7,11 +7,14 @@
       <cutoffs Kmax="3.50000000" Gmax="15.00000000" GmaxXC="10.00000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="pz" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="22.00000000" mode="tria" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -37,57 +40,54 @@
             <kPoint weight="    1.000000">    0.250000     0.000000     0.117647</kPoint>
             <kPoint weight="    1.000000">    0.247059     0.247059     0.247059</kPoint>
             <tetraeder ntet="44">
-          <tet vol="    1.150327">1 11 13 18</tet>
-          <tet vol="    0.744893">8 11 13 18</tet>
-          <tet vol="    0.575163">1 10 13 18</tet>
-          <tet vol="    1.222222">1 11 2 18</tet>
-          <tet vol="    0.996950">8 20 13 18</tet>
-          <tet vol="    0.758708">8 11 16 18</tet>
-          <tet vol="    0.680540">12 10 13 18</tet>
-          <tet vol="    0.862745">1 10 4 18</tet>
-          <tet vol="    0.934641">16 11 2 18</tet>
-          <tet vol="    0.812576">12 20 13 18</tet>
-          <tet vol="    0.774016">8 20 12 18</tet>
-          <tet vol="    1.459096">8 12 16 18</tet>
-          <tet vol="    0.803255">8 11 16 2</tet>
-          <tet vol="    0.736928">12 10 4 18</tet>
-          <tet vol="    0.627041">12 10 13 20</tet>
-          <tet vol="    1.040933">8 20 12 7</tet>
-          <tet vol="    1.127067">3 12 16 18</tet>
-          <tet vol="    1.204953">8 12 16 7</tet>
-          <tet vol="    0.553595">8 7 16 2</tet>
-          <tet vol="    1.473856">12 3 4 18</tet>
-          <tet vol="    0.736928">12 10 4 19</tet>
-          <tet vol="    1.207843">14 10 13 20</tet>
-          <tet vol="    0.912562">12 10 19 20</tet>
-          <tet vol="    0.400288">9 20 12 7</tet>
-          <tet vol="    0.872331">8 20 9 7</tet>
-          <tet vol="    1.096405">3 12 16 7</tet>
-          <tet vol="    1.291721">8 7 9 2</tet>
-          <tet vol="    1.473856">12 3 4 19</tet>
-          <tet vol="    0.287582">14 10 4 19</tet>
-          <tet vol="    1.183314">14 10 19 20</tet>
-          <tet vol="    0.470687">12 15 19 20</tet>
-          <tet vol="    1.096405">9 17 12 7</tet>
-          <tet vol="    0.709016">9 20 12 17</tet>
-          <tet vol="    1.096405">3 12 17 7</tet>
-          <tet vol="    1.127067">12 3 17 19</tet>
-          <tet vol="    1.150327">14 5 4 19</tet>
-          <tet vol="    1.158785">14 15 19 20</tet>
-          <tet vol="    1.725664">12 15 17 20</tet>
-          <tet vol="    1.310329">12 15 19 17</tet>
-          <tet vol="    1.228143">9 20 15 17</tet>
-          <tet vol="    1.150327">14 5 15 19</tet>
-          <tet vol="    0.934641">6 15 19 17</tet>
-          <tet vol="    1.617647">9 6 15 17</tet>
-          <tet vol="    1.222222">6 5 15 19</tet>
+          <tet>  1.150327  1 11 13 18</tet>
+          <tet>  0.744893  8 11 13 18</tet>
+          <tet>  0.575163  1 10 13 18</tet>
+          <tet>  1.222222  1 11 2 18</tet>
+          <tet>  0.996950  8 20 13 18</tet>
+          <tet>  0.758708  8 11 16 18</tet>
+          <tet>  0.680540  12 10 13 18</tet>
+          <tet>  0.862745  1 10 4 18</tet>
+          <tet>  0.934641  16 11 2 18</tet>
+          <tet>  0.812576  12 20 13 18</tet>
+          <tet>  0.774016  8 20 12 18</tet>
+          <tet>  1.459096  8 12 16 18</tet>
+          <tet>  0.803255  8 11 16 2</tet>
+          <tet>  0.736928  12 10 4 18</tet>
+          <tet>  0.627041  12 10 13 20</tet>
+          <tet>  1.040933  8 20 12 7</tet>
+          <tet>  1.127067  3 12 16 18</tet>
+          <tet>  1.204953  8 12 16 7</tet>
+          <tet>  0.553595  8 7 16 2</tet>
+          <tet>  1.473856  12 3 4 18</tet>
+          <tet>  0.736928  12 10 4 19</tet>
+          <tet>  1.207843  14 10 13 20</tet>
+          <tet>  0.912562  12 10 19 20</tet>
+          <tet>  0.400288  9 20 12 7</tet>
+          <tet>  0.872331  8 20 9 7</tet>
+          <tet>  1.096405  3 12 16 7</tet>
+          <tet>  1.291721  8 7 9 2</tet>
+          <tet>  1.473856  12 3 4 19</tet>
+          <tet>  0.287582  14 10 4 19</tet>
+          <tet>  1.183314  14 10 19 20</tet>
+          <tet>  0.470687  12 15 19 20</tet>
+          <tet>  1.096405  9 17 12 7</tet>
+          <tet>  0.709016  9 20 12 17</tet>
+          <tet>  1.096405  3 12 17 7</tet>
+          <tet>  1.127067  12 3 17 19</tet>
+          <tet>  1.150327  14 5 4 19</tet>
+          <tet>  1.158785  14 15 19 20</tet>
+          <tet>  1.725664  12 15 17 20</tet>
+          <tet>  1.310329  12 15 19 17</tet>
+          <tet>  1.228143  9 20 15 17</tet>
+          <tet>  1.150327  14 5 15 19</tet>
+          <tet>  0.934641  6 15 19 17</tet>
+          <tet>  1.617647  9 6 15 17</tet>
+          <tet>  1.222222  6 5 15 19</tet>
             </tetraeder>
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -178,7 +178,6 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pz" relativisticCorrections="F"/>
    <atomSpecies>
       <species name="Cu-1" element="Cu" atomicNumber="29" >
          <mtSphere radius="2.20000000" gridPoints="935" logIncrement=".01300000"/>

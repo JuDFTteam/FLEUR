@@ -4,8 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_jobs
-#ifdef CPP_MPI 
-    use mpi 
+#ifdef CPP_MPI
+    use mpi
 #endif
     USE m_juDFT
     IMPLICIT NONE
@@ -138,6 +138,14 @@ CONTAINS
 #ifdef CPP_MPI
         INTEGER ierr, i
         CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
+        SELECT CASE(i)
+        CASE(MPI_THREAD_FUNNELED)
+          print *,"MPI thread funneled supported"
+        CASE(MPI_THREAD_SERIALIZED)
+          print *,"MPI thread serialized supported"
+        CASE(MPI_THREAD_MULTIPLE)
+          print *,"MPI thread multiple supported"
+        END SELECT
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
@@ -154,7 +162,6 @@ CONTAINS
            !$       WRITE(*,*) ""
            !$       CALL juDFT_error("MPI not usable with OpenMP")
            !$    END IF
-           !Select the io-mode from the command-line
         END IF
 #endif
         IF (irank==0) THEN

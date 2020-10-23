@@ -287,7 +287,7 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
 
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
@@ -361,7 +361,7 @@ CONTAINS
 !!$
 !!$    !Calculation of size
 !!$    i=SIZE(den%mt)+MERGE(SIZE(den%pw),2*SIZE(den%pw),sym%invs)+SIZE(den%vacxz)+MERGE(SIZE(den%vacz)*2,SIZE(den%vacz),sym%invs)
-!!$    IF (noco%l_mtnocopot.AND.sym%invs) i=i+
+!!$    IF (any(noco%l_unrestrictMT).AND.sym%invs) i=i+
 !!$
 !!$
 !!$

@@ -168,7 +168,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
    ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
    ! density without the atomic sphere approximation for the magnet. density. It is not completely implemented (lo's missing).
-   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,noco%l_mtnocopot.OR.noco%l_mperp)
+   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
@@ -206,7 +206,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                          hub1data=hub1data)
       END DO
       IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
-      IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
+      IF (banddos%l_mcd) CALL mcd_init(atoms,banddos,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
    END DO
@@ -264,13 +264,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          call timestart("eparas")
-         CALL eparas(ispin,atoms,noccbd,ev_list,fmpi,ikpt,noccbd,we,eig,&
-                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
+         CALL eparas(ispin,atoms,banddos,noccbd,ev_list,fmpi,ikpt,noccbd,we,eig,&
+                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd)
 
          call timestop("eparas")
          IF (noco%l_mperp.AND.(ispin==jsp_end)) then
            call timestart("qal_21")
-           CALL qal_21(atoms,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+           CALL qal_21(atoms,banddos,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
            call timestop("qal_21")
          endif
 
@@ -278,15 +278,14 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (PRESENT(slab).and.banddos%l_slab) CALL q_mt_sl(ispin,atoms,sym,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
          IF(banddos%l_orb) THEN
-           IF (ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
-             CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-           END IF
-           IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+
+           IF (PRESENT(orbcomp)) CALL orb_comp(banddos,ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
          ENDIF
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
-               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
+                              denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -333,7 +332,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
+         CALL sympsi(lapw,jspin,sym,noccbd,cell,eig,noco,dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 

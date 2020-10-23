@@ -81,7 +81,7 @@ CONTAINS
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
 
       !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.)
-      IF (noco%l_mtNocoPot) THEN
+      IF (any(noco%l_unrestrictMT)) THEN
          jspV=4
       ELSE
          jspV=jspins
@@ -104,7 +104,7 @@ CONTAINS
       ENDIF
 
       !Allocations in mtNoco case
-      IF (noco%l_mtNocoPot) THEN
+      IF (any(noco%l_unrestrictMT)) THEN
          !General Noco Allocations
          ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
 
@@ -116,7 +116,7 @@ CONTAINS
       END IF
 
       !Calc magnetization (This is necessary only in mtNoco case)
-      IF(noco%l_mtNocoPot) mm(:,:)=SQRT((0.5*(den_mt(:,:,1)-den_mt(:,:,2)))**2+4*den_mt(:,:,3)**2+4*den_mt(:,:,4)**2)
+      IF(any(noco%l_unrestrictMT)) mm(:,:)=SQRT((0.5*(den_mt(:,:,1)-den_mt(:,:,2)))**2+4*den_mt(:,:,3)**2+4*den_mt(:,:,4)**2)
 
 
       !Loop to calculate chlh and necessary gradients (if needed)
@@ -127,7 +127,7 @@ CONTAINS
          !         chlhdr=d(chlh)/dr, chlhdrr=dd(chlh)/drr.
 
          !Scaling of the magnetic moments in the same way the charge density is scaled in chlh.
-         IF(noco%l_mtNocoPot) mm(:,lh)=0.5*mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
+         IF(any(noco%l_unrestrictMT)) mm(:,lh)=0.5*mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
 
          DO js = 1, jspV
             chlh(1:atoms%jri(n), lh, js) = den_mt(1:atoms%jri(n), lh, js) / &
@@ -138,7 +138,7 @@ CONTAINS
                !Colinear case only needs radial derivatives of chlh
                CALL grdchlh( atoms%dx(n), &
                             chlh(1:atoms%jri(n), lh, js),  chlhdr(1:, lh, js), chlhdrr(1:, lh,js),atoms%rmsh(:,n))
-               IF (noco%l_mtNocoPot) THEN
+               IF (any(noco%l_unrestrictMT)) THEN
                !Noco case also needs radial derivatives of mm
                   CALL grdchlh(atoms%dx(n), &
                                mm(:atoms%jri(n),lh),  drm(:,lh), drrm(:,lh), atoms%rmsh(:, n))
@@ -179,7 +179,7 @@ CONTAINS
 
                   !The following snippet maps chlh and its radial derivatives on a colinear system
                   !using mm and its radial derivatives.
-                  IF (noco%l_mtNocoPot) THEN
+                  IF (any(noco%l_unrestrictMT)) THEN
                       IF (js.EQ.1) THEN
                          chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
                          chlhdrtot(jr,lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
@@ -234,7 +234,7 @@ CONTAINS
       END DO
       IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
-      IF (rotch.AND.noco%l_mtNocoPot) THEN
+      IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
           DO jr = 1,nsp*atoms%jri(n)
              rho_11  = ch_calc(jr,1)
              rho_22  = ch_calc(jr,2)

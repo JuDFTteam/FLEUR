@@ -1,28 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.32">
    <comment>
-      bcc Fe  
+      bcc Fe
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <magnetism jspins="2" l_noco="T" swsp="F" lflip="F"/>
-      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
-      <nocoParams l_ss="F" l_mperp="T" l_constr="F" l_mtNocoPot="T" mix_b=".00000000" l_sourceFree="T" l_scaleMag="T" mag_scale="1.12">
+      <xcFunctional name="pz" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="T" swsp="F" lflip="F">
          <qss>.0000000000 .0000000000 .0000000000</qss>
-      </nocoParams>
+         <mtNocoParams  l_mperp="T" l_mtNocoPot="T"/>
+         <sourceFreeMag l_sourceFree="T" l_scaleMag="T" mag_scale="1.12"/>
+      </magnetism>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <!-- k-points included here -->
          <kPointListSelection listName="default" />
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <!-- symmetry operations included here -->
       <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
       <bulkLattice scale="1.0000000000">
@@ -33,9 +35,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pz" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" flipSpinPhi=".00000000" flipSpinTheta="Pi*.500000000" flipSpinScale="F">
+      <species name="Fe-1" element="Fe" atomicNumber="26">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -51,12 +52,12 @@
       <atomGroup species="Fe-1">
          <relPos label="                   2">-1.000/4.000 -1.000/4.000 -1.000/4.000</relPos>
          <force calculate="F" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000"/>
       </atomGroup>
       <atomGroup species="Fe-1">
          <relPos label="                   2">1.000/4.000 1.000/4.000 1.000/4.000</relPos>
          <force calculate="F" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000" />
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F" slice="F" >
