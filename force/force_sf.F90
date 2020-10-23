@@ -4,13 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_force_sf
-!     *****************************************************************
-!     This routine calculates a contribution to the forces stemming
-!     from the discontinuity of density and potential at the muffin-tin
-!     boundary oint n [ rho V (IS) - rho V (MT) ] dS
-!     Klueppelberg May 13
-!     *****************************************************************
+MODULE m_force_sf ! Klueppelberg (force level 3)
+      USE m_constants
+   !-----------------------------------------------------------------------------
+   ! This routine calculates a contribution to the forces stemming
+   ! from the discontinuity of density and potential at the muffin-tin
+   ! boundary oint n [ rho V (IS) - rho V (MT) ] dS
+   ! Klueppelberg May 13
+   !-----------------------------------------------------------------------------
 
 !     To enable debug code that compares potential and density on the
 !     muffin-tin boundary, uncomment the following line:
@@ -22,9 +23,8 @@
       COMPLEX, PRIVATE, SAVE, ALLOCATABLE :: force_is(:,:)
       LOGICAL, PRIVATE, SAVE :: isdone=.false.,mtdone=.false.
 
-      CONTAINS
-
-      SUBROUTINE force_sf_is(atoms_in,stars,sym,jsp,cell,qpw,vpw,excpw,vxcpw )
+CONTAINS
+   SUBROUTINE force_sf_is(atoms_in,stars,sym,jsp,cell,qpw,vpw,excpw,vxcpw)
 !     *****************************************************************
 !     This subroutine calculates the contribution evaluated with
 !     quantities from the interstital oint n rho V dS
@@ -36,13 +36,12 @@
 !     *****************************************************************
 
       USE m_types
-      USE m_constants
       USE m_sphbes
       USE m_phasy1
       USE m_gaunt
-#ifdef debug
-      USE m_ylm
-#endif
+!#ifdef debug
+!      USE m_ylm
+!#endif
     
       IMPLICIT NONE
       TYPE(t_sym),INTENT(IN)     :: sym
@@ -77,7 +76,8 @@
       COMPLEX, ALLOCATABLE :: ylm(:),testrho(:,:),testV(:,:)
 #endif
       atoms=atoms_in
-      atoms%lmax = 2*atoms_in%lmaxd!60!
+      atoms%lmax = 2*atoms_in%lmax!60!
+      atoms%lmaxd = 2*atoms_in%lmaxd!60!
       lmaxb = atoms%lmax
       img = cmplx(0.0,1.0)
 
@@ -251,7 +251,7 @@
                 IF (lp.lt.abs(mp)) CYCLE
                 lmp = lp*(lp+1) + mp + 1
                 force_is(:,itype) = force_is(:,itype) + r2&
-                     * rho(lm) * V(lmp) * conjg(coeff(:,t)) * gaunt1(1,l,lp,t,m,mp,atoms%lmax(itype))
+                     * rho(lm) * V(lmp) * conjg(coeff(:,t)) * gaunt2(1,l,lp,t,m,mp,atoms%lmax(itype))
               END DO ! t
             END DO ! lp
           END DO ! m
@@ -301,12 +301,7 @@
 
 
 
-      SUBROUTINE force_sf_mt(&
-                            atoms,sphhar,jspin,&
-                            ispin,mpi,&
-                            vr,excr,&
-                            vxcr,rho,&
-                            sym,cell )
+      SUBROUTINE force_sf_mt(atoms,sphhar,jspin,ispin,fmpi,vr,excr,vxcr,rho,sym,cell )
 !     *****************************************************************
 !     This subroutine calculates the contribution evaluated with
 !     quantities from the muffin tin
@@ -320,7 +315,7 @@
       USE m_ylm
       USE m_types
       IMPLICIT NONE
-      TYPE(t_mpi),INTENT(IN)   :: mpi
+      TYPE(t_mpi),INTENT(IN)   :: fmpi
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_sphhar),INTENT(IN):: sphhar
@@ -458,16 +453,16 @@
         END DO ! m
         END DO ! l
 
-        IF (mpi%irank.eq.0) THEN
+        IF (fmpi%irank.eq.0) THEN
           WRITE (850,'(3(2(f20.14),1x))') (force_mt(t,itype),t=1,3)
         END IF
         natom = natom + atoms%neq(itype)
       END DO ! itype
 
 !     debug
-      WRITE (*,*) 'sanity check'
-      WRITE (*,*) 'look is',force_is
-      WRITE (*,*) 'look mt',force_mt
+!      WRITE (*,*) 'sanity check'
+!      WRITE (*,*) 'look is',force_is
+!      WRITE (*,*) 'look mt',force_mt
 
 #ifdef debug
 !     test output
@@ -511,12 +506,12 @@
       TYPE(t_atoms),INTENT(IN) :: atoms
 
 !     debug
-      IF (ALLOCATED(force_is)) THEN
-        WRITE (*,*) 'init is:',force_is
-        WRITE (*,*) 'init mt:',force_mt
-      ELSE
-        WRITE (*,*) 'init: not initialized'
-      END IF
+!      IF (ALLOCATED(force_is)) THEN
+!        WRITE (*,*) 'init is:',force_is
+!        WRITE (*,*) 'init mt:',force_mt
+!      ELSE
+!        WRITE (*,*) 'init: not initialized'
+!      END IF
 
       IF (isdone.OR.mtdone) RETURN
       IF (.not.ALLOCATED(force_is)) THEN
@@ -544,12 +539,12 @@
       COMPLEX :: force_sf(3,atoms%ntype)
 
 !     debug
-      IF (ALLOCATED(force_is)) THEN
-        WRITE (*,*) 'exit is:',force_is
-        WRITE (*,*) 'exit mt:',force_mt
-      ELSE
-        WRITE (*,*) 'exit: not initialized'
-      END IF
+!      IF (ALLOCATED(force_is)) THEN
+!        WRITE (*,*) 'exit is:',force_is
+!        WRITE (*,*) 'exit mt:',force_mt
+!      ELSE
+!        WRITE (*,*) 'exit: not initialized'
+!      END IF
 
       IF (isdone.AND.mtdone) THEN
         force_sf(:,:) = force_is(:,:) - force_mt(:,:)

@@ -27,7 +27,7 @@ MODULE m_vmt_xc
 
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc)
+                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -45,7 +45,7 @@ MODULE m_vmt_xc
          TYPE(t_atoms),INTENT(IN)       :: atoms
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
-         TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc
+         TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
          TYPE(t_kinED),INTENT(IN)       :: kinED
          !     ..
          !     .. Local Scalars ..
@@ -147,6 +147,7 @@ MODULE m_vmt_xc
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num=n)
 
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
             IF (ALLOCATED(exc%mt)) THEN

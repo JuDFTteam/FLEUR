@@ -95,7 +95,7 @@ CONTAINS
       TYPE(t_hybdat)                  :: hybdat
       TYPE(t_mpdata)                  :: mpdata
 
-      TYPE(t_potden)                  :: vTot, vx, vCoul, vxcForPlotting
+      TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
       TYPE(t_hub1data)                :: hub1data
@@ -178,7 +178,9 @@ CONTAINS
       ! Initialize potentials (start)
       CALL vTot%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vCoul%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
-      CALL vx%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
+      CALL vx%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL vxc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL exc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       ! Initialize potentials (end)
 
       ! Initialize Green's function (start)
@@ -284,7 +286,7 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul)
+                   fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
          IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
@@ -454,7 +456,7 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%noco, nococonv, vTot, results, fi%oneD, fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data)
+                        archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
             !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 

@@ -118,11 +118,20 @@ CONTAINS
                 !
                 CALL intgr3(rhoaux,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),w)
                 a4_2 = w/sfp_const
-                !
+
+                ! Surface contribution from non-confined core-states
+                ! Klueppelberg Sep'12 (force level 1)
+                IF (input%ctail.AND.(input%f_level.GE.1)) THEN
+                   w = rhoc(atoms%jri(n),n,jsp)*vr(atoms%jri(n),lh,n,jsp)
+                   w = 0.5*w/sfp_const
+                ELSE
+                   w = 0
+                END IF
+
                 DO i = 1,3
-                   forc_a4(i) = forc_a4(i) - (a4_1+a4_2)*gv(i)
+                   forc_a4(i) = forc_a4(i) - (a4_1+a4_2-w)*gv(i)
                 END DO
-                !
+                
                 !  lh loop ends
              ENDDO lh_loop
              !
