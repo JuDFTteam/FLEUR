@@ -126,6 +126,8 @@ CONTAINS
       DO n = 1,atoms%ntype
         if (banddos%map_atomtype(n)==0) then
           DO i = (skip_t+1),noccbd
+            suma = CMPLX(0.,0.)
+            sumb = CMPLX(0.,0.)
             DO natom = sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
               suma=suma+dot_product(eigVecCoeffs%acof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp),eigVecCoeffs%acof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp))
               sumb=sumb+dot_product(eigVecCoeffs%bcof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp),eigVecCoeffs%bcof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp))
