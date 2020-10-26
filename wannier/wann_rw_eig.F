@@ -84,11 +84,11 @@ c****************************************************************
       zMat%l_real = l_real
       zMat%matsize1 = nbasfcn
       zMat%matsize2 = neigd
-      IF(l_real) THEN
-         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-      ELSE
-         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-      END IF
+!      IF(l_real) THEN  !allocates not needed, due to zmat%init further below
+!         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!      ELSE
+!         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!      END IF
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
 !      WRITE(*,*)'wann_rw_eig: neigd',neigd
