@@ -117,19 +117,13 @@ contains
       call distribute_mpi(loc_qs, k_wide_mpi, q_wide_mpi, q_rank)
 
       k_pack%submpi = k_wide_mpi
-      k_pack%nk = nk
-
-      write (*,*) "q_distrib = ", loc_qs
-      write (*,*) "my_num_qs", loc_qs(q_rank+1)
-      write (*,*) "n_groups", n_groups
-      write (*,*) "q_rank", q_rank
+      k_pack%nk = nk 
       
       allocate(k_pack%q_packs(loc_qs(q_rank+1)))
       cnt = 0
       do iq = q_rank+1,fi%kpts%EIBZ(nk)%nkpt, n_groups
          cnt = cnt + 1
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
-         write (*,*) "cnt, iq", cnt, iq
          call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
       enddo
 
