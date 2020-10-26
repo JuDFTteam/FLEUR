@@ -45,7 +45,8 @@ CONTAINS
       ! local variables
       type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, ierr, ik, j_wp, n_wps
+      INTEGER           :: jsp, nk, err, i, wp_rank, ierr, ik
+      integer           :: j_wp, n_wps, root_comm
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -123,6 +124,7 @@ CONTAINS
             enddo
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
+         call judft_comm_split(glob_mpi%comm, wp_mpi%rank, 0, root_comm)
 
          CALL timestart("Calculation of non-local HF potential")
          allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
@@ -147,6 +149,8 @@ CONTAINS
             call balance_hsfock(work_pack)
             call work_pack%free()
          END DO
+
+         if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
          CALL timestop("Calculation of non-local HF potential")
 
          call timestart("BCast v_x")
