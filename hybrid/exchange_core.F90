@@ -45,8 +45,8 @@ CONTAINS
       !     -scalars -
       INTEGER, INTENT(IN)      :: jsp
       INTEGER, INTENT(IN)      :: nk
-      INTEGER, INTENT(IN)      ::  nsymop
-      REAL, INTENT(IN)         ::  a_ex
+      INTEGER, INTENT(IN)      :: nsymop
+      REAL, INTENT(IN)         :: a_ex
       !     - arays -
       INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
       complex, intent(in)      :: cmt(:,:,:)
