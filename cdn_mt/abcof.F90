@@ -60,7 +60,7 @@ CONTAINS
     ! Local scalars
     INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size
     INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
-    REAL    :: tmk, qss(3), s2h 
+    REAL    :: tmk, qss(3), s2h
     COMPLEX :: phase, c_1, c_2
     LOGICAL :: l_force
 
@@ -77,7 +77,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: abTemp(:,:)
     COMPLEX, ALLOCATABLE :: helpMat_c(:,:), helpMat_force(:,:)
-     
+
 
     CALL timestart("abcof")
 
@@ -290,6 +290,7 @@ CONTAINS
                 CALL timestop("invsym atoms")
              END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
 
+#ifndef _OPENACC
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
                 CALL timestart("force contributions")
@@ -325,7 +326,7 @@ CONTAINS
                       ENDDO
                    ELSE
                       DO iLAPW = 1,nvmax
-                         workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)  
+                         workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)
                       ENDDO
                    ENDIF
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
@@ -359,7 +360,7 @@ CONTAINS
                 END IF
                 CALL timestop("force contributions")
              END IF
-
+#endif
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
                 IF (zmat%l_real) THEN
                    DEALLOCATE (workTrans_r)
@@ -379,7 +380,7 @@ CONTAINS
        DEALLOCATE(workTrans_cf)
        DEALLOCATE(s2h_e)
     ENDIF
-  
+
     ! Treatment of atoms inversion symmetric to others
     IF (noco%l_soc.AND.sym%invs) THEN
 
