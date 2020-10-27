@@ -137,7 +137,7 @@ CONTAINS
     CLASS(t_xml),INTENT(IN)::xml
     INTEGER :: n
     get_lmaxd=0
-    DO n=1,xml%GetNumberOfNodes('/fleurInput/atomSpecies/species')
+    DO n=1,xml%get_ntype()
        get_lmaxd = MAX(get_lmaxd,evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xml%speciesPath(n))//'/atomicCutoffs/@lmax')))
     ENDDO
   END FUNCTION get_lmaxd
