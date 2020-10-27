@@ -64,7 +64,7 @@ c****************************************************************
       real             :: wk, bkpt(3),eig(neigd),cp_time(9)
       integer          :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer          :: nkbnd,i
-      integer          :: n_start,n_end,co
+      integer          :: co
       integer          :: bnd1,bnd2,kpt
       complex, allocatable :: paulimat(:,:,:,:) 
       real             :: sum1,sum2,sum3
@@ -81,9 +81,9 @@ c****************************************************************
       TYPE(t_lapw)  :: lapw
 
 
-      zMat%l_real = l_real
-      zMat%matsize1 = nbasfcn
-      zMat%matsize2 = neigd
+!      zMat%l_real = l_real
+!      zMat%matsize1 = nbasfcn
+!      zMat%matsize2 = neigd
 !      IF(l_real) THEN  !allocates not needed, due to zmat%init further below
 !         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
 !      ELSE
@@ -92,8 +92,8 @@ c****************************************************************
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
 !      WRITE(*,*)'wann_rw_eig: neigd',neigd
-      n_start=1
-      n_end=neigd
+!      n_start=1
+!      n_end=neigd
       IF (l_gwf) THEN
          WRITE(fname,'("_",i4.4,".eig")')iqpt
          fname=spin12(jspin)//trim(fname)
