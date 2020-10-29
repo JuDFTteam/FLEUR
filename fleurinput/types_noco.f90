@@ -88,7 +88,7 @@ MODULE m_types_noco
      INTEGER:: numberNodes,ntype,itype
      CHARACTER(len=100)::xpathA,xpathB,valueString
 
-     if (xml.versionNumber<33) THEN
+     if (xml%versionNumber<33) THEN
        call read_xml_noco_old(this,xml)
        RETURN
      endif
