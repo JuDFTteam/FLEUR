@@ -137,7 +137,7 @@ CONTAINS
       this%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
 
       xPathC = ''
-      IF (xml%versionNumber > 31) THEN
+      IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/xcFunctional') > 0) THEN
          xPathC = '/fleurInput/calculationSetup/xcFunctional'
       ELSE
          xPathC = '/fleurInput/xcFunctional'
@@ -157,8 +157,8 @@ CONTAINS
       !Input for libxc
       ! Read in xc functional parameters
       !Read in libxc parameters if present
-      xPathA = '/fleurInput/calculationSetup/xcFunctional/LibXCID'
-      xPathB = '/fleurInput/calculationSetup/xcFunctional/LibXCName'
+      xPathA = trim(xpathC)//'/LibXCID'
+      xPathB = trim(xpathC)//'/LibXCName'
 
       if(xml%GetNumberOfNodes(xPathA) == 1 .and. xml%GetNumberOfNodes(xPathB) == 1) then
          CALL judft_error("You specified libxc by name and id, please choose only one option")

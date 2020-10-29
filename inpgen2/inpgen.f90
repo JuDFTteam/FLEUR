@@ -168,13 +168,12 @@ PROGRAM inpgen
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_fullinput)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_inpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
          CALL xcpot%init(atoms%ntype)
          CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-         l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
          l_kptsInitialized(:) = .FALSE.
@@ -266,6 +265,8 @@ PROGRAM inpgen
          !CALL dump_FleurInputSchema()
          filename="inp.xml"
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
+         INQUIRE(file=filename,exist=l_exist)
+         IF(l_exist) CALL system('mv '//filename//' '//filename//'_old')
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
