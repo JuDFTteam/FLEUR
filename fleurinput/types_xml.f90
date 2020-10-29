@@ -16,12 +16,14 @@ MODULE m_types_xml
   USE m_calculator
   IMPLICIT NONE
   PRIVATE
+
   LOGICAL :: INITIALIZED=.false.
   TYPE t_xml
      INTEGER:: id
      character(len=200):: basepath=""
      integer           :: versionNumber=0
-   CONTAINS
+     INTEGER           :: currentversionNumber=33 !parameters are not allowed here
+ CONTAINS
      PROCEDURE        :: init
      PROCEDURE        :: GetNumberOfNodes
      PROCEDURE,NOPASS :: SetAttributeValue
@@ -113,8 +115,7 @@ CONTAINS
     versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
     read(versionString,*) tempReal
     xml%versionNumber=nint(tempReal*100)
-    IF(versionString.NE.'0.32') THEN
-      if (versionString=='0.30') call judft_error("Version number of inp.xml no longer supported. If you use the current development version try to simply replace 0.30 with 0.32 in inp.xml")
+    IF(xml%versionNumber.NE.xml%currentversionNumber) THEN
       if (.not.l_allow_old) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
       old_version=.true.
     END IF
