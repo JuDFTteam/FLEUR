@@ -8,6 +8,7 @@ module m_io_hybinp
    use m_io_matrix
    use m_judft
    use m_types
+   use m_unify_zmat
    implicit none
    !private
    integer, save :: id_olap, id_z, id_v_x
@@ -40,6 +41,8 @@ contains
       type(t_lapw)         :: lapw_ik, lapw_ikp
       integer, allocatable :: p_list(:)
 
+      REAL :: eig(input%neig)
+
       call timestart("read_z")
 
       if(present(list)) then 
@@ -49,7 +52,10 @@ contains
       endif
 
       if(ik <= kpts%nkpt) then
-         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=p_list)
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=p_list, eig=eig)
+         call check_p_list(p_list, eig)
+         call unify_zmat(eig, z_out)
+
          if(size(p_list) /= z_out%matsize2) then
             write (*,*)  size(p_list), z_out%matsize1, z_out%matsize2
             call judft_error("this doesn't match")
@@ -67,7 +73,11 @@ contains
 
          ikp = kpts%bkp(ik) ! parrent k-point
          iop = kpts%bksym(ik) ! connecting symm
-         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=p_list)
+
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=p_list, eig=eig)
+         call check_p_list(p_list, eig)
+         call unify_zmat(eig, ptr_mat)
+
          if(size(p_list) /= ptr_mat%matsize2) then
             write (*,*) "list:", size(p_list)
             write (*,*) "ptr_mat", ptr_mat%matsize1, ptr_mat%matsize2
@@ -81,6 +91,29 @@ contains
                                   size(p_list), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
       endif
+
+      call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
       call timestop("read_z")
    END subroutine read_z
+
+   subroutine check_p_list(p_list, eig)
+      implicit none 
+      integer, intent(in) :: p_list(:)
+      real, intent(in)    :: eig(:) 
+
+      integer, allocatable :: groups(:)
+      logical :: succ
+      integer :: n_g, end_group
+
+      groups = make_groups(eig)
+      succ = .false.
+
+      do n_g = 1, size(groups)
+         end_group = sum(groups(1:n_g))
+         if(end_group == maxval(p_list)) then 
+            succ = .True.
+         endif 
+      enddo
+      if(.not. succ) call judft_error("You can't cut in the middle of deg eigenvals")
+   end subroutine check_p_list
 end module m_io_hybinp

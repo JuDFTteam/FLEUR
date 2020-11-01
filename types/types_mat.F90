@@ -46,9 +46,67 @@ MODULE m_types_mat
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
+      procedure        :: leastsq => t_mat_leastsq
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_leastsq(A, b)
+      use m_constants
+      implicit none 
+      class(t_mat), intent(inout) :: A
+      type(t_mat), intent(inout)  :: b 
+
+      type(t_mat) :: tmp
+      integer              :: m, n, nrhs, lda, ldb, info, lwork
+
+      real    :: rwork_req(1)
+      complex :: cwork_req(1)
+
+      real, allocatable    :: rwork(:)
+      complex, allocatable :: cwork(:)
+
+      if(A%matsize2 /= b%matsize2) call judft_error("least-squares dimension problem")
+      if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
+
+      m = A%matsize1
+      n = A%matsize2 
+      nrhs = b%matsize2
+      if(A%l_real) then 
+         lda = size(A%data_r,1)
+         ldb = size(b%data_r,1)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork_req, -1, info)
+         lwork = int(rwork_req(1))
+         allocate(rwork(lwork), source=0.0)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork, lwork, info)
+      else
+         lda = size(A%data_c,1)
+         ldb = size(b%data_c,1)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork_req, -1, info)
+         lwork = int(cwork_req(1))
+         allocate(cwork(lwork), source=cmplx_0)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork, lwork, info)
+      endif
+
+      if(info /= 0) call judft_error("least squares failed.")
+
+      call tmp%init(A%l_real, n, nrhs)
+
+      if(tmp%l_real) then
+         tmp%data_r = b%data_r(:n,:)
+      else
+         tmp%data_c = b%data_c(:n,:)
+      endif
+
+      call b%free()
+      call b%init(tmp)
+      call b%copy(tmp, 1,1)
+      call tmp%free()
+   end subroutine t_mat_leastsq
+
    subroutine t_mat_pos_eigvec_sum(mat)
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
