@@ -107,7 +107,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:, :)
 
       ! local scalars
-      INTEGER                 ::  iband, jq, iq
+      INTEGER                 ::  iband, jq, iq, nq_idx
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, me
@@ -135,8 +135,10 @@ CONTAINS
 
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
+
       call MPI_Comm_Rank(MPI_COMM_WORLD, me, ierr)
       call z_k%save_npy("z_k=" // int2str(ik) // "_rank=" // int2str(me) // ".npy")
+      call save_npy("n_q_ik=" // int2str(ik) //  "_rank=" // int2str(me) // ".npy", n_q)
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
@@ -177,6 +179,8 @@ CONTAINS
                                         hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             END IF
 
+            call cprod_vv%save_npy("cprod_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
+
             ! The sparse matrix technique is not feasible for the HSE
             ! functional. Thus, a dynamic adjustment is implemented
             ! The mixed basis functions and the potential difference
@@ -209,6 +213,8 @@ CONTAINS
                phase_vv(:, :) = cmplx_1
             END IF
 
+            call cprod_vv%save_npy("bratra_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
+
             call carr1_v%init(cprod_vv)
             ! calculate exchange matrix at iq
             call timestart("exchange matrix")
@@ -221,25 +227,30 @@ CONTAINS
             END IF
             call timestop("sparse matrix products")
 
+            call carr1_v%save_npy("carr1_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
+
+            nq_idx = k_pack%q_packs(jq)%rank
             DO iband = 1, hybdat%nbands(ik)
                call timestart("apply prefactors carr1_v")
                if (mat_ex%l_real) then
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         carr1_v%data_r(i, iob + psize*(iband - 1)) &
-                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq))
+                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))
                      enddo
                   enddo
                else
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         carr1_v%data_c(i, iob + psize*(iband - 1)) &
-                           = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(jq)
+                           = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
                      enddo
                   enddo
                endif
                call timestop("apply prefactors carr1_v")
             enddo
+
+            call carr1_v%save_npy("carr2_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
 
             call timestart("exch_vv dot prod")
             m = hybdat%nbands(ik)
@@ -277,8 +288,11 @@ CONTAINS
 
             call cprod_vv%free()
             call carr1_v%free()
+            call save_npy("exch" // int2str(ik) // "_iq=" // int2str(iq) // ".npy", exch_vv)
          enddo
       END DO  !jq
+
+      call save_npy("exch_sum_ik=" // int2str(ik) // "_rank=" // int2str(me) // ".npy", exch_vv)
 
       call dot_result%free()
 
