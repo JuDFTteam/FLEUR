@@ -40,6 +40,7 @@ contains
       type(t_mat), target  :: tmp_mat
       type(t_lapw)         :: lapw_ik, lapw_ikp
       integer, allocatable :: p_list(:)
+      logical, parameter   :: unify_z = .False.
 
       REAL :: eig(input%neig)
 
@@ -53,8 +54,10 @@ contains
 
       if(ik <= kpts%nkpt) then
          call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=p_list, eig=eig)
-         call check_p_list(p_list, eig)
-         call unify_zmat(eig, z_out)
+         if(unify_z) then 
+            call check_p_list(p_list, eig)
+            call unify_zmat(eig, z_out)
+         endif 
 
          if(size(p_list) /= z_out%matsize2) then
             write (*,*)  size(p_list), z_out%matsize1, z_out%matsize2
@@ -75,8 +78,10 @@ contains
          iop = kpts%bksym(ik) ! connecting symm
 
          call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=p_list, eig=eig)
-         call check_p_list(p_list, eig)
-         call unify_zmat(eig, ptr_mat)
+         if(unify_z) then 
+            call check_p_list(p_list, eig)
+            call unify_zmat(eig, ptr_mat)
+         endif
 
          if(size(p_list) /= ptr_mat%matsize2) then
             write (*,*) "list:", size(p_list)
