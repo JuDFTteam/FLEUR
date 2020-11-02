@@ -149,8 +149,9 @@ CONTAINS
             call balance_hsfock(work_pack)
             call work_pack%free()
          END DO
-
+#ifdef CPP_MPI
          if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
+#endif
          CALL timestop("Calculation of non-local HF potential")
 
          call timestart("BCast v_x")
