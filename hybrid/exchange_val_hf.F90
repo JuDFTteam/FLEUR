@@ -136,7 +136,11 @@ CONTAINS
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
+#ifdef CPP_MPI
       call MPI_Comm_Rank(MPI_COMM_WORLD, me, ierr)
+#else 
+      me = 0 
+#endif
       call z_k%save_npy("z_k=" // int2str(ik) // "_rank=" // int2str(me) // ".npy")
       call save_npy("n_q_ik=" // int2str(ik) //  "_rank=" // int2str(me) // ".npy", n_q)
 
@@ -236,7 +240,7 @@ CONTAINS
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         carr1_v%data_r(i, iob + psize*(iband - 1)) &
-                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))
+                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))                        
                      enddo
                   enddo
                else
