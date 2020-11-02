@@ -91,8 +91,6 @@ contains
                                   size(p_list), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)
       endif
-
-      call z_out%save_npy("z_ik=" // int2str(ik) // ".npy")
       call timestop("read_z")
    END subroutine read_z
 

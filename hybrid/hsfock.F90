@@ -150,8 +150,6 @@ CONTAINS
       CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
 
-      call ex%save_npy("pre_core_mat_ex_nk=" // int2str(nk) // "_k-rank=" // int2str(k_pack%submpi%rank) // ".npy")
-
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
       
@@ -168,13 +166,10 @@ CONTAINS
          endif
       END IF
 
-      call ex%save_npy("post_core_mat_ex_nk=" // int2str(nk) // "_k-rank=" // int2str(k_pack%submpi%rank) // ".npy")
-
       CALL timestop("core exchange calculation")
       if(k_pack%submpi%root()) then
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
-         call hybdat%v_x(nk, jsp)%save_npy("v_x=" // int2str(nk) // "_k-rank=" // int2str(k_pack%submpi%rank) // ".npy")
       endif
 
       hybdat%l_addhf = .True.
