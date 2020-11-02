@@ -33,17 +33,17 @@ contains
       ! leg poly can be symmetric and we don't want that
       x = linspace(-1.1, 1.0, z%matsize1)
 
-      call targ%init(z%l_real, z%matsize1, nrhs+1 )
+      call targ%init(z%l_real, z%matsize1, nrhs+2 )
       call legendre_poly(x, targ)
 
-      ! we have to drop the n = 0 leg poly, 
+      ! we have to drop the n = 0&1 leg poly, 
       ! because it's just constant some eigvec have 2 solutions
       if(targ%l_real) then 
-         targ%data_r = targ%data_r(:,2:)
+         targ%data_r = targ%data_r(:,3:)
       else
-         targ%data_c = targ%data_c(:,2:)
+         targ%data_c = targ%data_c(:,3:)
       endif
-      targ%matsize2 = targ%matsize2 - 1
+      targ%matsize2 = targ%matsize2 - 2
 
 
       call lhs%init(z%l_real, z%matsize1, nrhs )
