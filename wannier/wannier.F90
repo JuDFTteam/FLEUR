@@ -897,9 +897,9 @@ CONTAINS
              CALL wann_write_eig(&
                   fmpi,cell,noco,nococonv,input,kpts,sym,atoms,  &
                   eig_id,l_real,&
-                  atoms%ntype,input%neig,&
+                  atoms%ntype,&
                   lapw%dim_nvd(),wannierspin,&
-                  fmpi%isize,jspin,lapw%dim_nbasfcn(),&
+                  fmpi%isize,jspin,&
                   noco%l_ss,noco%l_noco,nrec,fullnkpts,&
                   wann%l_bzsym,wann%l_byindex,wann%l_bynumber,&
                   wann%l_byenergy,&
