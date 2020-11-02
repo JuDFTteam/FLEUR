@@ -136,14 +136,6 @@ CONTAINS
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
-#ifdef CPP_MPI
-      call MPI_Comm_Rank(MPI_COMM_WORLD, me, ierr)
-#else 
-      me = 0 
-#endif
-      call z_k%save_npy("z_k=" // int2str(ik) // "_rank=" // int2str(me) // ".npy")
-      call save_npy("n_q_ik=" // int2str(ik) //  "_rank=" // int2str(me) // ".npy", n_q)
-
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
          PRINT *, "Divergence:", divergence
@@ -183,8 +175,6 @@ CONTAINS
                                         hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             END IF
 
-            call cprod_vv%save_npy("cprod_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
-
             ! The sparse matrix technique is not feasible for the HSE
             ! functional. Thus, a dynamic adjustment is implemented
             ! The mixed basis functions and the potential difference
@@ -217,8 +207,6 @@ CONTAINS
                phase_vv(:, :) = cmplx_1
             END IF
 
-            call cprod_vv%save_npy("bratra_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
-
             call carr1_v%init(cprod_vv)
             ! calculate exchange matrix at iq
             call timestart("exchange matrix")
@@ -230,8 +218,6 @@ CONTAINS
                call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
             END IF
             call timestop("sparse matrix products")
-
-            call carr1_v%save_npy("carr1_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
 
             nq_idx = k_pack%q_packs(jq)%rank
             DO iband = 1, hybdat%nbands(ik)
@@ -253,8 +239,6 @@ CONTAINS
                endif
                call timestop("apply prefactors carr1_v")
             enddo
-
-            call carr1_v%save_npy("carr2_ik=" // int2str(ik) // "_iq=" // int2str(iq) // ".npy")
 
             call timestart("exch_vv dot prod")
             m = hybdat%nbands(ik)
@@ -292,11 +276,8 @@ CONTAINS
 
             call cprod_vv%free()
             call carr1_v%free()
-            call save_npy("exch" // int2str(ik) // "_iq=" // int2str(iq) // ".npy", exch_vv)
          enddo
       END DO  !jq
-
-      call save_npy("exch_sum_ik=" // int2str(ik) // "_rank=" // int2str(me) // ".npy", exch_vv)
 
       call dot_result%free()
 
