@@ -110,7 +110,7 @@ CONTAINS
       INTEGER                 ::  iband, jq, iq
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
-      INTEGER                 ::  n1, n2, nn2
+      INTEGER                 ::  n1, n2, nn2, me
       INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
@@ -132,8 +132,11 @@ CONTAINS
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
 
+
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
+      call MPI_Comm_Rank(MPI_COMM_WORLD, me, ierr)
+      call z_k%save_npy("z_k=" // int2str(ik) // "_rank=" // int2str(me) // ".npy")
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
