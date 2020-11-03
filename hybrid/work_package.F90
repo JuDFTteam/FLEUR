@@ -126,10 +126,6 @@ contains
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
          call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
       enddo
-
-
-
-      write (*,*) new_line("a")
    end subroutine t_k_package_init
 
    subroutine t_q_package_init(q_pack, fi, hybdat, q_wide_mpi, jsp, nk, rank, ptr)
