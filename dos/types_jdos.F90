@@ -69,7 +69,7 @@ MODULE m_types_jdos
          DO l= 0, 3
             DO jj = -1, MERGE(-1,1,l==0), 2
                i = i+1
-               WRITE(jname,'(i1,a,i1)') INT(2*l+jj),'/',2
+               WRITE(jname,'(i1,a,i1)') INT(2*l+jj),'-',2
                if (i==id) THEN
                   IF(l.EQ.0) write(get_weight_name,"(a,i0,a)") "jDOS:",this%n_dos_to_na(na),spdfg(l)
                   IF(l.NE.0) write(get_weight_name,"(a,i0,a,a)") "jDOS:",this%n_dos_to_na(na),spdfg(l),jname
