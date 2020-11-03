@@ -71,6 +71,7 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
+      TYPE(t_juPhon)  :: juPhon
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -267,7 +268,7 @@ PROGRAM inpgen
          filename="inp.xml"
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          CALL w_inpxml(&
-              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
