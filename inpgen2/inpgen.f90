@@ -84,7 +84,7 @@ PROGRAM inpgen
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
       INTEGER, ALLOCATABLE :: kptsBZintegration(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
-      LOGICAL            :: l_exist, l_addPath, l_check
+      LOGICAL            :: l_exist, l_addPath, l_check, l_oldinpXML
 
       TYPE(t_xml)::xml
 
@@ -167,8 +167,9 @@ PROGRAM inpgen
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
+         l_oldinpXML=.true.
          call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_inpXML)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
@@ -259,14 +260,14 @@ PROGRAM inpgen
       !
       !Now the IO-section
       !
-      IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite")) THEN
+      IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite").or.l_oldinpXML) THEN
          call determine_includes(l_include)
          !the inp.xml file
          !CALL dump_FleurInputSchema()
          filename="inp.xml"
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          INQUIRE(file=filename,exist=l_exist)
-         IF(l_exist) CALL system('mv '//filename//' '//filename//'_old')
+         IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
