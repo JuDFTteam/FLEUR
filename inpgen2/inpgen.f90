@@ -45,6 +45,7 @@ PROGRAM inpgen
   USE m_types_mpinp
   USE m_constants
   USE m_types_xml
+  USE m_types_juPhon
 
       IMPLICIT NONE
 
