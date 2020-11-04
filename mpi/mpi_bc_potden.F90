@@ -81,6 +81,8 @@ CONTAINS
    IF (present(nococonv)) THEN
      CALL MPI_BCAST(nococonv%alph, size(nococonv%alph), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
      CALL MPI_BCAST(nococonv%beta, size(nococonv%beta), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+     CALL MPI_BCAST(nococonv%alphprev, size(nococonv%alph), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+     CALL MPI_BCAST(nococonv%betaprev, size(nococonv%beta), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
    ENDIF
 #endif
 
