@@ -295,16 +295,16 @@ CONTAINS
              ! collect the entries of ffonat calculated by the different processors
              ! could be all collapsed to irank 0, but if the later part also gets
              ! parallelized over k at some point, now all iranks have ffonat available
-#ifdef CPP_MPI
-             ALLOCATE( n1(0:fmpi%isize-1),n2(0:fmpi%isize-1) )
-             n1(:) = 3*nkpt_pT(:)*sym%nop
-             n2(:) = 3*ioffset_pT(:)*sym%nop
-             CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),MPI_COMPLEX,ffonat(1,1),n1,n2,MPI_COMPLEX,MPI_COMM_WORLD,ierr)
-             DEALLOCATE(ffonat_pT,n1,n2)
-#else
+!#ifdef CPP_MPI
+!             ALLOCATE( n1(0:fmpi%isize-1),n2(0:fmpi%isize-1) )
+!             n1(:) = 3*nkpt_pT(:)*sym%nop
+!             n2(:) = 3*ioffset_pT(:)*sym%nop
+!             CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),MPI_COMPLEX,ffonat(1,1),n1,n2,MPI_COMPLEX,MPI_COMM_WORLD,ierr)
+!             DEALLOCATE(ffonat_pT,n1,n2)
+!#else
              !ffonat = ffonat_pT
              DEALLOCATE(ffonat_pT)
-#endif
+!#endif
 
           END IF ! l_f2
 
