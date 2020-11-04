@@ -41,6 +41,7 @@ CONTAINS
     if (allocated(this%b_con)) deallocate(this%b_con)
     allocate(this%b_con(2,size(this%alph)))
     this%b_con=0.0
+    allocate(this%alphprev(size(this%alph)),this%betaprev(size(this%beta)))
   end subroutine
 
   subroutine t_nococonv_initss(nococonv,noco,atoms,qss)
@@ -73,7 +74,7 @@ CONTAINS
             END DO
          END IF
       ELSE
-        
+
          IF (noco%l_ss) THEN
             CALL judft_error("l_noco=F and l_ss=T is meaningless.")
          END IF

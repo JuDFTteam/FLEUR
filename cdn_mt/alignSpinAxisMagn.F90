@@ -242,7 +242,7 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
      zeros(:) = 0.0
 
      if (l_adjust) then
-       if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
+       !if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
        call Gimmeangles(input,atoms,noco,vacuum,sphhar,stars,den,nococonv%alphPrev,nococonv%betaPrev)
      endif
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
