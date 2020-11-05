@@ -45,6 +45,7 @@ PROGRAM inpgen
   USE m_types_mpinp
   USE m_constants
   USE m_types_xml
+  USE m_types_juPhon
 
       IMPLICIT NONE
 
@@ -71,6 +72,7 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
+      TYPE(t_juPhon)  :: juPhon
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -269,7 +271,7 @@ PROGRAM inpgen
          INQUIRE(file=filename,exist=l_exist)
          IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
-              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")

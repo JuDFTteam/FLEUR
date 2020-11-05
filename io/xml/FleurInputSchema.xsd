@@ -111,6 +111,7 @@
       <xsd:attribute default="F" name="frcor" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="kcrel" type="xsd:integer" use="optional"/>
       <xsd:attribute default="0" name="coretail_lmax" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="T" name="l_core_confpot" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="CellType">
@@ -1081,6 +1082,10 @@
       <xsd:attribute name="supercellZ" type="xsd:positiveInteger" use="required"/>
    </xsd:complexType>
 
+   <xsd:complexType name="JuPhonType">
+      <xsd:attribute name="l_potout" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_eigout" type="FleurBool" use="required"/>
+   </xsd:complexType>
 
    <xsd:complexType name="OutputType">
       <xsd:all>
@@ -1094,6 +1099,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="wannier" type="WannierOutputType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticCircularDichroism" type="MagneticCircularDichroismType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="unfoldingBand" type="UnfoldingBandType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="juPhon" type="JuPhonType"/>
       </xsd:all>
       <xsd:attribute default="F" name="dos" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="band" type="FleurBool" use="optional"/>
