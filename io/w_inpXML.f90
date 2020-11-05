@@ -172,9 +172,9 @@ CONTAINS
       END SELECT
       WRITE (fileNum, 120) input%itmax, input%minDistance, input%maxiter, TRIM(mixingScheme), input%alpha, input%preconditioning_param, input%spinf
 
-!      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
-130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
-      WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax
+!      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '" l_core_confpot="', l1, '"/>')
+      WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax, input%l_core_confpot
 
       SELECT TYPE (xcpot)
       CLASS IS (t_xcpot_inbuild_nf)

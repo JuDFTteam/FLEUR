@@ -111,6 +111,7 @@
       <xsd:attribute default="F" name="frcor" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="kcrel" type="xsd:integer" use="optional"/>
       <xsd:attribute default="0" name="coretail_lmax" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="T" name="l_core_confpot" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="CellType">
