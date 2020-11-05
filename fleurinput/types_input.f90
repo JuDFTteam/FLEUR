@@ -173,7 +173,7 @@ SUBROUTINE read_xml_input(this,xml)
    INTEGER:: numberNodes,nodeSum, i
 
    !TODO! these switches should be in the inp-file
-   this%l_core_confpot=.TRUE. !former CPP_CORE
+   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
    this%l_useapw=.FALSE.   !former CPP_APW
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
@@ -228,7 +228,9 @@ SUBROUTINE read_xml_input(this,xml)
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
-   this%l_core_confpot = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot'))
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot')==1) THEN 
+      this%l_core_confpot = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot'))
+   END IF
    this%frcor = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
    this%kcrel = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
    ! Read in magnetism parameters
