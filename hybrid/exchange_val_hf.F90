@@ -138,7 +138,7 @@ CONTAINS
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
-         PRINT *, "Divergence:", divergence
+         if(k_pack%submpi%root()) PRINT *, "Divergence:", divergence
          initialize = .false.
       END IF
 
