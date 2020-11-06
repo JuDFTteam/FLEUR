@@ -134,8 +134,8 @@
 
    <xsd:complexType name="MagnetismType">
       <xsd:all>
-         <xsd:element maxOccurs="1" minOccurs="0" name="qss" type="String3DVecType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="qsc" type="String3DVecType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="qss" type="FleurDouble3DVecType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="qsc" type="FleurDouble3DVecType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="mtNocoParams" type="MTNocoParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="sourceFreeMag" type="SourceFreeMagType"/>
       </xsd:all>
@@ -165,8 +165,8 @@
                <xsd:element name="c" type="LatticeParameterType"/>
             </xsd:sequence>
             <xsd:sequence>
-               <xsd:element name="row-1" type="String2DVecType"/>
-               <xsd:element name="row-2" type="String2DVecType"/>
+               <xsd:element name="row-1" type="FleurDouble2DVecType"/>
+               <xsd:element name="row-2" type="FleurDouble2DVecType"/>
                <xsd:element name="c" type="LatticeParameterType"/>
             </xsd:sequence>
             <xsd:element name="bravaisMatrix" type="BravaisMatrixType"/>
@@ -183,8 +183,8 @@
                <xsd:element minOccurs="0" name="a2" type="LatticeParameterType"/>
             </xsd:sequence>
             <xsd:sequence>
-               <xsd:element name="row-1" type="String2DVecType"/>
-               <xsd:element name="row-2" type="String2DVecType"/>
+               <xsd:element name="row-1" type="FleurDouble2DVecType"/>
+               <xsd:element name="row-2" type="FleurDouble2DVecType"/>
             </xsd:sequence>
             <xsd:element name="bravaisMatrix" type="BravaisMatrixType"/>
          </xsd:choice>
@@ -211,9 +211,9 @@
 
    <xsd:complexType name="BravaisMatrixType">
       <xsd:sequence>
-         <xsd:element name="row-1" type="String3DVecType"/>
-         <xsd:element name="row-2" type="String3DVecType"/>
-         <xsd:element name="row-3" type="String3DVecType"/>
+         <xsd:element name="row-1" type="FleurDouble3DVecType"/>
+         <xsd:element name="row-2" type="FleurDouble3DVecType"/>
+         <xsd:element name="row-3" type="FleurDouble3DVecType"/>
       </xsd:sequence>
    </xsd:complexType>
 
@@ -229,6 +229,22 @@
 
    <xsd:simpleType name="String3DVecType">
       <xsd:restriction base="StringVecType">
+         <xsd:length value="3"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FleurDoubleVecType">
+      <xsd:list itemType="FleurDouble"/>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FleurDouble2DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="2"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FleurDouble3DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
          <xsd:length value="3"/>
       </xsd:restriction>
    </xsd:simpleType>
@@ -462,7 +478,7 @@
 
    <xsd:complexType name="AtomPosType">
       <xsd:simpleContent>
-         <xsd:extension base="String3DVecType">
+         <xsd:extension base="FleurDouble3DVecType">
             <xsd:attribute default=" " name="label" type="xsd:string" use="optional"/>
             <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
             <xsd:attribute name="banddos"    type="FleurBool" use="optional"/>
@@ -918,7 +934,7 @@
 
    <xsd:complexType name="SpecialPointType">
       <xsd:simpleContent>
-         <xsd:extension base="String3DVecType">
+         <xsd:extension base="FleurDouble3DVecType">
             <xsd:attribute name="name" type="xsd:string" use="required"/>
          </xsd:extension>
       </xsd:simpleContent>
@@ -926,7 +942,7 @@
 
    <xsd:complexType name="KPointType">
       <xsd:simpleContent>
-         <xsd:extension base="String3DVecType">
+         <xsd:extension base="FleurDouble3DVecType">
             <xsd:attribute name="weight" type="FleurDouble" use="required"/>
             <xsd:attribute default="" name="label" type="xsd:string" use="optional"/>
          </xsd:extension>
