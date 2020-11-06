@@ -336,7 +336,6 @@ CONTAINS
     REAL, ALLOCATABLE    :: wghtkp(:)   !   associated with k-points for BZ integration
     INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
     REAL, ALLOCATABLE    :: voltet(:)   ! voulmes of the tetrahedrons
-    REAL, ALLOCATABLE    :: vktet(:,:)
 
     REAL    divis(4)           ! Used to find more accurate representation of k-points
     ! vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
@@ -359,8 +358,6 @@ CONTAINS
     INTEGER nreg     ! 1 kpoints in full BZ; 0 kpoints in irrBZ
     INTEGER nfulst   ! 1 kpoints ordered in full stars
     !    (meaningful only for nreg =1; full BZ)
-    INTEGER nbound   ! 0 no primary points on BZ boundary;
-    ! 1 with boundary points (not for BZ integration!!!)
     INTEGER ikzero   ! 0 no shift of k-points;
     ! 1 shift of k-points for better use of sym in irrBZ
     REAL    kzero(3) ! shifting vector to bring one k-point to or
@@ -369,7 +366,7 @@ CONTAINS
     INTEGER i,j,k,l,mkpt,addSym,nsym
     LOGICAL random,l_tria
     REAL as
-    REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
+    REAL binv(3,3)
 
     kpts%kptsKind = KPTS_KIND_MESH
 
@@ -409,27 +406,18 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       !nbound  = MERGE(1,0,film.AND.bz_integration==BZINT_METHOD_TRIA)
-       nbound = 0
        random  = bz_integration==BZINT_METHOD_TRIA.AND..NOT.film
-       idimens = MERGE(2,3,film)
 
        ! Lattice information
 
        bltv=TRANSPOSE(cell%amat)
        binv=TRANSPOSE(cell%bmat)/tpi_const
-       rltv=TRANSPOSE(cell%bmat)
-       DO i=1,nsym
-          rlsymr(:,:,i)=REAL(TRANSPOSE(sym%mrot(:,:,i)))
-       ENDDO
 
        talfa(:,:nsym)=MATMUL(bltv,sym%tau(:,:nsym))
+
        DO i = 1, nsym
-          ccr(:,:,i) = MATMUL(MATMUL(binv(:,:),rlsymr(:,:,i)),bltv(:,:))
-       END DO
-       DO i = 1, nsym
-          rlsymr(:,:,i)=TRANSPOSE(rlsymr(:,:,i))
-          ccr(:,:,i)=TRANSPOSE(ccr(:,:,i))
+          rlsymr(:,:,i)=REAL(sym%mrot(:,:,i))
+          ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
        END DO
 
        IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
@@ -453,29 +441,27 @@ CONTAINS
 
        ! brzone and brzone2 find the corner-points, the edges, and the
        ! faces of the irreducible wedge of the brillouin zone (IBZ).
+       rltv=TRANSPOSE(cell%bmat)
        CALL brzone2(rltv,nsym,ccr,mface,nbsz,nv48,cpoint,xvec,ncorn,nedge,nface,fnorm,fdist)
 
-       IF (nbound.EQ.1) THEN
-          mkpt = PRODUCT((2*grid(:idimens)+1))
-       ELSE
-          mkpt=PRODUCT(grid(:idimens))
-       END IF
-       ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
+       idimens = MERGE(2,3,film)
+       mkpt=PRODUCT(grid(:idimens))
 
+       ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt))
 
        IF (bz_integration==BZINT_METHOD_TRIA.AND.random) THEN
           ! Calculate the points for tetrahedron method
           ndiv3 = 6*(mkpt+1)
-          ALLOCATE (voltet(ndiv3),vktet(3,mkpt),ntetra(4,ndiv3))
+          ALLOCATE (voltet(ndiv3),ntetra(4,ndiv3))
           kpts%nkpt=mkpt
-          CALL kpttet(0,mkpt,ndiv3,&
+          CALL kpttet(kpts%nkpt,ndiv3,&
                rltv,cell%omtil,nsym,ccr,mdir,mface,&
-               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,vktet,&
-               kpts%nkpt,vkxyz,wghtkp)
+               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,&
+               vkxyz,wghtkp)
        ELSE
           ! Now calculate Monkhorst-Pack k-points:
           CALL kptmop(idsyst,idtype,grid,&
-               rltv,bltv,nbound,idimens,xvec,fnorm,fdist,ncorn,nface,&
+               rltv,bltv,0,idimens,xvec,fnorm,fdist,ncorn,nface,&
                nedge,cpoint,nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
        END IF
@@ -511,7 +497,8 @@ CONTAINS
           kpts%ntetra(:,j) = ntetra(:,j)
           kpts%voltet(j) = ABS(voltet(j))
        END DO
-    ELSE IF(bz_integration==BZINT_METHOD_TRIA.AND.film) THEN
+    END IF
+    IF(bz_integration==BZINT_METHOD_TRIA.AND.film) THEN
        ALLOCATE(kpts%ntetra(3,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
        DO j = 1, kpts%ntet

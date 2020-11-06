@@ -7,26 +7,26 @@
 !
       CONTAINS
       SUBROUTINE tetcon(
-     >                  mkpt,ndiv3,
-     >                  nkpt,omega,kvc,nsym,
+     >                  nkpt,ndiv3,
+     >                  omega,kvc,nsym,
      <                  nt,voltet,ntetra)
 
       IMPLICIT NONE
 c
-      INTEGER, INTENT (IN) :: mkpt,ndiv3,nkpt,nsym
+      INTEGER, INTENT (IN) :: ndiv3,nkpt,nsym
       REAL,    INTENT (IN) :: omega
-      REAL,    INTENT (IN) :: kvc(3,mkpt)
+      REAL,    INTENT (IN) :: kvc(3,nkpt)
       INTEGER, INTENT (OUT) :: nt
       INTEGER, INTENT (OUT) :: ntetra(4,ndiv3)
       REAL,    INTENT (OUT) :: voltet(ndiv3)
 
       INTEGER i,it,j,ic,icom,ik,nkp,jj,nnt,nsid,nkq
       INTEGER i2,i3,i4,nk2,k,l,kk,is1,is2,is3,js1,js2,js3
-      INTEGER nside(4),nside2(4),nkadd(mkpt)
+      INTEGER nside(4),nside2(4),nkadd(nkpt)
       REAL dnorm,pi,vav,vsq,sav,ssq,dm,dist,dl,vect
       REAL vol,vt,length,minlen,eps,eps1
       REAL vmin,vmax,smin,smax,volnew,sum,sss
-      REAL ddist(mkpt),kcorn(3,4),norm(3),d(3,16),dnm(3),cn(3)
+      REAL ddist(nkpt),kcorn(3,4),norm(3),d(3,16),dnm(3),cn(3)
 C
 C----->  Intrinsic Functions
 C

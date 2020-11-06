@@ -483,21 +483,104 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE initTetra(kpts,input,cell,sym)
+   SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss)
       USE m_juDFT
       USE m_constants
       USE m_types_input
       USE m_types_cell
       USE m_types_sym
+      USE m_tetcon
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
       TYPE(t_sym),      INTENT(IN)    :: sym
+      LOGICAL,          INTENT(IN)    :: l_soc_or_ss
 
-      INTEGER :: j, ikpt, ntet, itet
+      INTEGER, PARAMETER :: nop48  = 48
+
+      INTEGER :: i, j, ikpt, ntet, itet
+      INTEGER :: ndiv3,nsym,addSym
+      REAL    :: vkxyz(3,kpts%nkpt)
+
+      REAL    :: bltv(3,3)          ! cartesian Bravais lattice basis (a.u.)
+      REAL    :: rltv(3,3)          ! reciprocal lattice basis (2\pi/a.u.)
+      REAL    :: ccr(3,3,nop48)     ! rotation matrices in cartesian repr.
+      REAL    :: rlsymr(3,3,nop48)  ! rotation matrices in reciprocal lattice basis representation
+      REAL    :: binv(3,3)
 
       INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
       REAL,    ALLOCATABLE :: voltet(:)   ! voulmes of the tetrahedrons
+
+      nsym = MERGE(sym%nop2,sym%nop,input%film)
+      bltv=TRANSPOSE(cell%amat)
+      binv=TRANSPOSE(cell%bmat)/tpi_const
+
+      DO i = 1, nsym
+         rlsymr(:,:,i)=REAL(sym%mrot(:,:,i))
+         ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
+      END DO
+
+      WRITE(4251,*) 'POINT A-1'
+      IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
+         WRITE(4251,*) 'POINT A-2'
+         IF ((input%film.AND.(.NOT.sym%invs2)).OR.((.NOT.input%film).AND.(.NOT.sym%invs))) THEN
+            WRITE(4251,*) 'POINT A-3'
+            addSym = 0
+            ! Note: We have to add the negative of each symmetry operation
+            !       to exploit time reversal symmetry. However, if the new
+            !       symmetry operation is the identity matrix it is excluded.
+            !       This is the case iff it is (-Id) + a translation vector.
+            DO i = 1, nsym
+               ! This test assumes that ccr(:,:,1) is the identity matrix.
+               IF(.NOT.ALL(ABS(ccr(:,:,1)+ccr(:,:,i)).LT.10e-10) ) THEN
+                  ccr(:,:,nsym+addSym+1 ) = -ccr(:,:,i)
+                  rlsymr(:,:,nsym+addSym+1 ) = -rlsymr(:,:,i)
+                  addSym = addSym + 1
+               END IF
+            END DO
+            nsym = nsym + addSym
+         END IF
+      END IF
+
+      IF ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film)) THEN
+
+         DO j=1,kpts%nkpt
+            vkxyz(:,j)=MATMUL(kpts%bk(:,j),cell%bmat)
+            WRITE(4251,'(6f15.8)') MATMUL(vkxyz(:,j),cell%amat)/tpi_const, kpts%bk(:,j)
+         END DO
+         WRITE(4251,*) 'cell%omtil: ', cell%omtil
+         WRITE(4251,*) 'nsym: ', nsym
+         FLUSH(4251)
+         ndiv3 = 6*(kpts%nkpt+1)
+
+         ALLOCATE (ntetra(4,ndiv3))
+         ALLOCATE (voltet(ndiv3))
+
+         CALL tetcon(kpts%nkpt,ndiv3,cell%omtil,vkxyz,nsym, kpts%ntet,voltet,ntetra)
+
+         WRITE (oUnit,'('' the number of tetrahedra '')')
+         WRITE (oUnit,*) kpts%ntet
+         WRITE (oUnit,'('' volumes of the tetrahedra '')')
+         WRITE (oUnit,'(e19.12,1x,i5,5x,''voltet(i),i'')') (voltet(i),i,i=1,kpts%ntet)
+         WRITE (oUnit,'('' corners of the tetrahedra '')')
+         WRITE (oUnit, '(4(3x,4i4))') ((ntetra(j,i),j=1,4),i=1,kpts%ntet)
+         WRITE (oUnit,'('' the # of different k-points '')')
+         WRITE (oUnit,*) kpts%nkpt
+         WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
+         WRITE (oUnit,'(3(4x,f10.6))') ((vkxyz(i,j),i=1,3),j=1,kpts%nkpt)
+
+         IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+         IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+         ALLOCATE(kpts%ntetra(4,kpts%ntet))
+         ALLOCATE(kpts%voltet(kpts%ntet))
+         DO j = 1, kpts%ntet
+            kpts%ntetra(:,j) = ntetra(1:4,j)
+            kpts%voltet(j) = ABS(voltet(j))
+            WRITE(4253,'(f15.8,4i6)') kpts%voltet(j), kpts%ntetra(1:4,j)
+         END DO
+         FLUSH(4253)
+
+      END IF
 
       IF(input%bz_integration.EQ.BZINT_METHOD_TETRA) THEN
          !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
@@ -527,7 +610,10 @@ CONTAINS
                kpts%voltet(j) = ABS(voltet(j))
             END DO
          END IF
+      END IF
 
+      IF((input%bz_integration.EQ.BZINT_METHOD_TETRA).OR.&
+         ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film))) THEN
          CALL timestart("setup tetraList")
          allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
                                  *MERGE(6,24,input%film),kpts%nkpt),source=0)

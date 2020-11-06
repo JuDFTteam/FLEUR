@@ -331,8 +331,8 @@ PROGRAM inpgen
                   kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
                END DO
                WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
-            CASE (KPTS_KIND_TETRA)
-               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TETRA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_TRIA_BULK)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA-BULK', kpts(ikpts)%nkpt, ''
             CASE (KPTS_KIND_TRIA)
                WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA', kpts(ikpts)%nkpt, ''
             CASE (KPTS_KIND_SPEX_MESH)
