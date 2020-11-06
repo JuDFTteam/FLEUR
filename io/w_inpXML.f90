@@ -17,7 +17,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE w_inpXML( &
-      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
+      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
       cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename)
 
@@ -40,6 +40,7 @@ CONTAINS
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
+      USE m_types_juPhon
 
       USE m_juDFT
       USE m_constants
@@ -61,6 +62,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
+      TYPE(t_juPhon), INTENT(IN)   :: juPhon
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
@@ -138,7 +140,7 @@ CONTAINS
          filenum = 98
          OPEN (fileNum, file=TRIM(ADJUSTL(filename)), form='formatted', status='replace')
          WRITE (fileNum, '(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.32">'
+         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.33">'
       ELSE
          fileNum = getXMLOutputUnitNumber()
          CALL openXMLElementNoAttributes('inputData')
@@ -170,7 +172,7 @@ CONTAINS
       END SELECT
       WRITE (fileNum, 120) input%itmax, input%minDistance, input%maxiter, TRIM(mixingScheme), input%alpha, input%preconditioning_param, input%spinf
 
-!      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
+!      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
       WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax
 
@@ -596,6 +598,10 @@ CONTAINS
 !      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
 395   FORMAT('      <unfoldingBand unfoldBand="', l1, '" supercellX="', i0, '" supercellY="', i0, '" supercellZ="', i0, '"/>')
       WRITE (fileNum, 395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
+
+!!      <juPhon l_potout="F" l_eigout="F"/>
+!396   FORMAT('      <juPhon l_potout="', l1, '" l_eigout="', l1, '"/>')
+!      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
 
 !      <plotting iplot="0" />
 400   FORMAT('      <plotting iplot="', i0, '"/>')

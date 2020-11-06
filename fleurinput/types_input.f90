@@ -173,7 +173,7 @@ SUBROUTINE read_xml_input(this,xml)
    INTEGER:: numberNodes,nodeSum, i
 
    !TODO! these switches should be in the inp-file
-   this%l_core_confpot=.TRUE. !former CPP_CORE
+   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
    this%l_useapw=.FALSE.   !former CPP_APW
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
@@ -228,6 +228,9 @@ SUBROUTINE read_xml_input(this,xml)
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot')==1) THEN 
+      this%l_core_confpot = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot'))
+   END IF
    this%frcor = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
    this%kcrel = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
    ! Read in magnetism parameters
@@ -244,7 +247,7 @@ SUBROUTINE read_xml_input(this,xml)
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
    END IF
    ! Read in Brillouin zone integration parameters
-   IF (xml%versionNumber > 31) THEN
+   IF (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/@mode')> 0) THEN
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/@mode')))
    ELSE
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
@@ -262,21 +265,18 @@ SUBROUTINE read_xml_input(this,xml)
          CALL juDFT_error('Invalid bzIntegration mode selected!')
    END SELECT
    nodeSum = 0
-   IF (xml%versionNumber > 31) THEN
-      xPathA = '/fleurInput/cell/bzIntegration/@fermiSmearingEnergy'
-   ELSE
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingEnergy'
-   END IF
+   if (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration')>0) THEN
+     xpathb='/fleurInput/cell/bzIntegration'
+   else
+     xpathb='/fleurInput/calculationSetup/bzIntegration'
+   endif
+   xpathA=trim(xpathb)//'/@fermiSmearingEnergy'
    numberNodes = xml%GetNumberOfNodes(xPathA)
    nodeSum = nodeSum + numberNodes
    IF (numberNodes.EQ.1) THEN
       this%tkb = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
    END IF
-   IF (xml%versionNumber > 31) THEN
-      xPathA = '/fleurInput/cell/bzIntegration/@fermiSmearingTemp'
-   ELSE
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingTemp'
-   END IF
+   xpathA=trim(xpathb)//'/@fermiSmearingTemp'
    numberNodes = xml%GetNumberOfNodes(xPathA)
    nodeSum = nodeSum + numberNodes
    IF (numberNodes.EQ.1) THEN
@@ -286,18 +286,14 @@ SUBROUTINE read_xml_input(this,xml)
    IF(nodeSum>1) THEN
       CALL juDFT_error('Error: Multiple fermi Smearing parameters provided in input file!')
    END IF
-   IF (xml%versionNumber > 31) THEN
-      xPathA = '/fleurInput/cell/bzIntegration/@valenceElectrons'
-   ELSE
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/@valenceElectrons'
-   END IF
+   xpathA=trim(xpathb)//'/@valenceElectrons'
    numberNodes = xml%GetNumberOfNodes(xPathA)
    IF (numberNodes.EQ.1) THEN
       this%zelec = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
    ELSE
       CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
    END IF
-   xPathA = '/fleurInput/cell/bzIntegration/@l_bloechl'
+   xPathA = trim(xpathb)//'/@l_bloechl'
    IF (xml%versionNumber > 31) this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
 
    this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
@@ -306,7 +302,7 @@ SUBROUTINE read_xml_input(this,xml)
    numberNodes = xml%GetNumberOfNodes(xPathA)
    IF (numberNodes.EQ.1) THEN
       this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
-      this%f_level = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@f_level'))
+      if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@f_level')>0) this%f_level = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@f_level'))
       this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
       this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
       this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
