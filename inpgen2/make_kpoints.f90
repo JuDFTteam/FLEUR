@@ -301,14 +301,14 @@ CONTAINS
     !----------------------------------------------------------------------+
     ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
     ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
-    ! and kpttet routines of the MD-programm.                              |
+    ! and kvecon routines of the MD-programm.                              |
     !                                                          G.B. 07/01  |
     !----------------------------------------------------------------------+
     USE m_constants
     USE m_bravais
     USE m_brzone2
     USE m_kptmop
-    USE m_kpttet
+    USE m_kvecon
     USE m_types_cell
     USE m_types_sym
     USE m_kptgen_hybrid
@@ -454,10 +454,24 @@ CONTAINS
           ndiv3 = 6*(mkpt+1)
           ALLOCATE (voltet(ndiv3),ntetra(4,ndiv3))
           kpts%nkpt=mkpt
-          CALL kpttet(kpts%nkpt,ndiv3,&
-               rltv,cell%omtil,nsym,ccr,mdir,mface,&
-               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,&
-               vkxyz,wghtkp)
+
+          WRITE (oUnit,'('' k-points generated with tetrahedron '',''method'')')
+          WRITE (oUnit,'(''# k-points generated with tetrahedron '',''method'')')
+          WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
+          WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
+
+          CALL kvecon(kpts%nkpt,mface,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,&
+                      vkxyz)
+
+          DO i = 1, kpts%nkpt
+             wghtkp(i) = 1.0 / kpts%nkpt
+             WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,''vkxyz, wghtkp'')') (vkxyz(j,i),j=1,3),wghtkp(i),i
+          END DO
+
+!          CALL kpttet(kpts%nkpt,ndiv3,&
+!               rltv,cell%omtil,nsym,ccr,mdir,mface,&
+!               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,&
+!               vkxyz,wghtkp)
        ELSE
           ! Now calculate Monkhorst-Pack k-points:
           CALL kptmop(idsyst,idtype,grid,&
@@ -490,14 +504,6 @@ CONTAINS
        ENDIF
     ENDIF
 
-    IF (bz_integration==BZINT_METHOD_TRIA .AND.random) THEN
-       ALLOCATE(kpts%ntetra(4,kpts%ntet))
-       ALLOCATE(kpts%voltet(kpts%ntet))
-       DO j = 1, kpts%ntet
-          kpts%ntetra(:,j) = ntetra(:,j)
-          kpts%voltet(j) = ABS(voltet(j))
-       END DO
-    END IF
     IF(bz_integration==BZINT_METHOD_TRIA.AND.film) THEN
        ALLOCATE(kpts%ntetra(3,kpts%ntet))
        ALLOCATE(kpts%voltet(kpts%ntet))
@@ -509,6 +515,9 @@ CONTAINS
 
     IF(bz_integration==BZINT_METHOD_TRIA) THEN
        kpts%kptsKind = KPTS_KIND_TRIA
+       IF(.NOT.film) THEN
+          kpts%kptsKind = KPTS_KIND_TRIA_BULK
+       END IF
     END IF
 
     kpts%nkpt3(:) = grid(:)

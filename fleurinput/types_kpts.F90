@@ -184,6 +184,8 @@ CONTAINS
                this%kptsKind = KPTS_KIND_PATH
             CASE ('tria')
                this%kptsKind = KPTS_KIND_TRIA
+            CASE ('tria-bulk')
+               this%kptsKind = KPTS_KIND_TRIA_BULK
             CASE ('SPEX-mesh')
                this%kptsKind = KPTS_KIND_SPEX_MESH
                numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
@@ -414,16 +416,7 @@ CONTAINS
          label = ''
       END DO
       IF (kpts%ntet > 0) THEN
-         IF (SIZE(kpts%ntetra, 1).EQ.4) THEN
-            !Bulk --> Tetrahedrons
-            WRITE (kptsUnit, 207) kpts%ntet
-207         FORMAT('               <tetraeder ntet="', i0, '">')
-            DO n = 1, kpts%ntet
-208            FORMAT('                  <tet> ', f20.13, i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
-               WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
-            END DO
-            WRITE (kptsUnit, '(a)') '               </tetraeder>'
-         ELSE IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
+         IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
             !Film --> Triangles
             WRITE (kptsUnit, 209) kpts%ntet
 209         FORMAT('               <triangles ntria="', i0, '">')
@@ -500,6 +493,7 @@ CONTAINS
 
       INTEGER :: i, j, ikpt, ntet, itet
       INTEGER :: ndiv3,nsym,addSym
+      REAL    :: volirbz
       REAL    :: vkxyz(3,kpts%nkpt)
 
       REAL    :: bltv(3,3)          ! cartesian Bravais lattice basis (a.u.)
@@ -520,11 +514,8 @@ CONTAINS
          ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
       END DO
 
-      WRITE(4251,*) 'POINT A-1'
       IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
-         WRITE(4251,*) 'POINT A-2'
          IF ((input%film.AND.(.NOT.sym%invs2)).OR.((.NOT.input%film).AND.(.NOT.sym%invs))) THEN
-            WRITE(4251,*) 'POINT A-3'
             addSym = 0
             ! Note: We have to add the negative of each symmetry operation
             !       to exploit time reversal symmetry. However, if the new
@@ -544,13 +535,14 @@ CONTAINS
 
       IF ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film)) THEN
 
+         IF(kpts%kptsKind.NE.KPTS_KIND_TRIA_BULK) THEN
+            CALL juDFT_error("'tria' tetrahedron decomposition for bulk systems needs a tria-bulk k-point set",&
+                             calledby="initTetra")
+         END IF
+
          DO j=1,kpts%nkpt
             vkxyz(:,j)=MATMUL(kpts%bk(:,j),cell%bmat)
-            WRITE(4251,'(6f15.8)') MATMUL(vkxyz(:,j),cell%amat)/tpi_const, kpts%bk(:,j)
          END DO
-         WRITE(4251,*) 'cell%omtil: ', cell%omtil
-         WRITE(4251,*) 'nsym: ', nsym
-         FLUSH(4251)
          ndiv3 = 6*(kpts%nkpt+1)
 
          ALLOCATE (ntetra(4,ndiv3))
@@ -569,6 +561,11 @@ CONTAINS
          WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
          WRITE (oUnit,'(3(4x,f10.6))') ((vkxyz(i,j),i=1,3),j=1,kpts%nkpt)
 
+         volirbz =  tpi_const**3 /(real(nsym)*cell%omtil)
+         DO i = 1, kpts%ntet
+            voltet(i) = kpts%ntet * voltet(i) / volirbz 
+         END DO
+
          IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
          IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
          ALLOCATE(kpts%ntetra(4,kpts%ntet))
@@ -576,9 +573,7 @@ CONTAINS
          DO j = 1, kpts%ntet
             kpts%ntetra(:,j) = ntetra(1:4,j)
             kpts%voltet(j) = ABS(voltet(j))
-            WRITE(4253,'(f15.8,4i6)') kpts%voltet(j), kpts%ntetra(1:4,j)
          END DO
-         FLUSH(4253)
 
       END IF
 

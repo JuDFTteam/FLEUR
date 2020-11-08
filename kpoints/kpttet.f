@@ -97,19 +97,17 @@ C
 C --->  local variables
 c
       INTEGER   i,j,ii
-      REAL      eps,one,tpi,sumvol,volirbz
+      REAL      eps,sumvol,volirbz
 
       REAL :: vktet(3,nkpt)
 
 C
 C --->  set local constants
 c
-      SAVE      eps,one
-      DATA      eps/1.0e-9/,one/1.0/
+      SAVE      eps
+      DATA      eps/1.0e-9/
 c
 c======================================================================
-c
-      tpi = 2.0 * pimach()
 c
 
       WRITE (oUnit,'('' k-points generated with tetrahedron '',
@@ -155,7 +153,7 @@ c
 c
 c --->   calculate weights from volume of tetrahedra
 c
-      volirbz =  tpi**3 /(real(nsym)*voluni)
+      volirbz =  tpi_const**3 /(real(nsym)*voluni)
       sumvol = 0.0
       DO i = 1, ntet
          sumvol = sumvol + voltet(i)
