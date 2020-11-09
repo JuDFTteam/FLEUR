@@ -262,8 +262,8 @@ PROGRAM inpgen
       !
       !Now the IO-section
       !
+      call determine_includes(l_include)
       IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite").or.l_oldinpXML) THEN
-         call determine_includes(l_include)
          !the inp.xml file
          !CALL dump_FleurInputSchema()
          filename="inp.xml"
