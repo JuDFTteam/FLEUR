@@ -147,12 +147,15 @@ CONTAINS
       ! the sum over the inner occupied valence states is restricted to the EIBZ(k)
       ! the contribution of the Gamma-point is treated separately (see below)
 
+      call timestart("alloc phase_vv & dot_res")
       allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, source=cmplx_0)
       call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik), hybdat%nbands(ik))
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
+      call timestop("alloc phase_vv & dot_res")
 
+      call timestart("q_loop")
       DO jq = 1, size(k_pack%q_packs)
          iq = k_pack%q_packs(jq)%ptr
          iq_p = fi%kpts%bkp(iq)
@@ -279,12 +282,14 @@ CONTAINS
          enddo
       END DO  !jq
 
+      call timestop("q_loop")
+
       call dot_result%free()
 
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 
       ! valence-valence-valence-valence exchange
-
+      call timestart("gamma point treatment")
       IF ((.not. xcpot%is_name("hse")) .AND. &
           (.not. xcpot%is_name("vhse")) .AND. &
           k_pack%submpi%root()) THEN ! no gamma point correction needed for HSE functional
@@ -391,6 +396,7 @@ CONTAINS
             END DO !n2
          END DO !n1
       END IF ! xcpot%icorr .ne. icorr_hse
+      call timestop("gamma point treatment")
 
       IF (mat_ex%l_real) THEN
          IF (any(abs(aimag(exch_vv)) > 1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv', &
@@ -398,6 +404,7 @@ CONTAINS
       END IF
 
       ! write exch_vv in mat_ex
+      call timestart("alloc mat_ex")
       if (.not. mat_ex%allocated()) then
          if (k_pack%submpi%root()) then
             CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
@@ -405,7 +412,9 @@ CONTAINS
             CALL mat_ex%alloc(matsize1=1)
          endif
       endif
+      call timestop("alloc mat_ex")
 
+      call timestart("reduce exch_vv>mat_ex")
       IF (mat_ex%l_real) THEN
 #ifdef CPP_MPI
          call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%submpi%comm, ierr)
@@ -419,12 +428,12 @@ CONTAINS
          mat_ex%data_c = exch_vv
 #endif
       END IF
+      call timestop("reduce exch_vv>mat_ex")
       CALL timestop("valence exchange calculation")
 
    END SUBROUTINE exchange_valence_hf
 
    SUBROUTINE calc_divergence(cell, kpts, divergence)
-
       IMPLICIT NONE
 
       TYPE(t_cell), INTENT(IN)  :: cell
@@ -436,6 +445,7 @@ CONTAINS
       REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2, nkpt3(3)
       COMPLEX :: cdum
 
+      call timestart("calc_divergence")
       expo = 5e-3
       rrad = sqrt(-log(5e-3)/expo)
       cdum = sqrt(expo)*rrad
@@ -469,7 +479,7 @@ CONTAINS
          END DO
          n = n + 1
       END DO
-
+      call timestop("calc_divergence")
    END SUBROUTINE calc_divergence
 
    function calc_divergence2(cell, kpts) result(divergence)
