@@ -86,12 +86,14 @@ contains
       type(t_hybmpi), intent(in)           :: wp_mpi
       integer, intent(in)                  :: rank, size, jsp
 
+      call timestart("t_work_package_init")
       work_pack%rank    = rank
       work_pack%size    = size
       work_pack%submpi  = wp_mpi
 
       call split_into_work_packages(work_pack, fi, hybdat, jsp)
 
+      call timestop("t_work_package_init")
    end subroutine t_work_package_init
 
    subroutine t_k_package_init(k_pack, fi, hybdat, k_wide_mpi, jsp, nk)

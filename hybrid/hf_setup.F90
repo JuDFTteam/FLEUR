@@ -48,6 +48,8 @@ CONTAINS
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
 
+
+      call timestart("HF_setup")
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
@@ -240,6 +242,7 @@ CONTAINS
 
       ENDIF ! hybdat%l_calhf
 
+      call timestop("HF_setup")
    END SUBROUTINE hf_setup
 
 END MODULE m_hf_setup

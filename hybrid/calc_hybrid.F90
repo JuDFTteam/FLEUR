@@ -138,13 +138,10 @@ CONTAINS
          CALL timestart("Calculation of non-local HF potential")
          allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
          DO jsp = 1, fi%input%jspins
-            call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            call timestop("HF_setup")
 
             call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
-            call wavef_bal%init(fi, work_pack)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
@@ -153,13 +150,13 @@ CONTAINS
                            nococonv, stars, results, xcpot, fmpi)
                if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
-
-            call wavef_bal%balance()
-            call balance_hsfock(work_pack)
+            
             call work_pack%free()
          END DO
 #ifdef CPP_MPI
+         call timestart("MPI_Allred te_hfex%core")
          if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
+         call timestop("MPI_Allred te_hfex%core")
 #endif
          CALL timestop("Calculation of non-local HF potential")
 
