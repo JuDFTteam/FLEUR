@@ -42,4 +42,5 @@ set(fleur_F90 ${fleur_F90}
    hybrid/util/intgrf.f90
    hybrid/legendre_poly.f90 
    hybrid/unify_zmat.f90
+   hybrid/progress_thread/thread_lib.f90 
 )
