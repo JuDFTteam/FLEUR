@@ -59,7 +59,7 @@ MODULE m_exchange_valence_hf
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
 
       USE m_wrapper
@@ -77,8 +77,9 @@ CONTAINS
 #endif
       IMPLICIT NONE
 
-      type(t_fleurinput), intent(in)    :: fi
       type(t_k_package), intent(in)     :: k_pack
+      type(t_fleurinput), intent(in)    :: fi
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
       type(t_mat), intent(in)           :: z_k
       TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -138,7 +139,7 @@ CONTAINS
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
          call calc_divergence(fi%cell, fi%kpts, divergence)
-         if(k_pack%submpi%root()) PRINT *, "Divergence:", divergence
+         if(fmpi%irank == 0) write (*,*) "Divergence:", divergence
          initialize = .false.
       END IF
 

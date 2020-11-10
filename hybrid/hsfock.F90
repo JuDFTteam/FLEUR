@@ -147,7 +147,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
