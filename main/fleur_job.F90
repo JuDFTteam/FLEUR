@@ -137,12 +137,27 @@ CONTAINS
         INTEGER:: irank=0
 #ifdef CPP_MPI
         INTEGER ierr, i
-        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
+        CALL MPI_INIT_THREAD(MPI_THREAD_MULTIPLE,i,ierr)
+        if(ierr /= 0) call judft_error("MPI init failed.")
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
+           select case (i)
+              case (MPI_THREAD_SINGLE)
+                 write (*,*) "MPI_Thread lvl:  MPI_THREAD_SINGLE"
+              case (MPI_THREAD_FUNNELED )
+                 write (*,*) "MPI_Thread lvl:  MPI_THREAD_FUNNELED"
+              case (MPI_THREAD_SERIALIZED)
+                 write (*,*) "MPI_Thread lvl:  MPI_THREAD_SERIALIZED"
+              case (MPI_THREAD_MULTIPLE)
+                 write (*,*) "MPI_Thread lvl:  MPI_THREAD_MULTIPLE"
+                 call judft_warn("MPI_THREAD_MULTIPLE is not avalible. This might lead to performance problems")
+              case default 
+                 call judft_error("Can't identify MPI_Thread lvl")
+           end select 
+
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "Linked MPI version does not support multithreading."
