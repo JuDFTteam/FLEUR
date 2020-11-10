@@ -707,6 +707,8 @@ CONTAINS
 
       INTEGER:: i1, i2
 
+      call timestart("t_mat_copy")
+
       select type (mat1)
       type is(t_mat)
           
@@ -723,6 +725,8 @@ CONTAINS
       ELSE
          call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
       END IF
+
+      call timestop("t_mat_copy")
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)
