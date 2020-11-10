@@ -156,6 +156,10 @@ CONTAINS
             case default 
                 call judft_error("Can't identify MPI_Thread lvl")
         end select 
+
+        if(judft_was_argument("-disable_progress_thread")) then 
+            l_mpi_multithreaded = .False.
+        endif
         
         IF(irank.EQ.0) THEN
            if(.not. l_mpi_multithreaded) then 
