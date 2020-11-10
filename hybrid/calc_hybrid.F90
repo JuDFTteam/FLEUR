@@ -12,6 +12,7 @@ CONTAINS
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
+      !use m_thread_lib
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -54,8 +55,10 @@ CONTAINS
       REAL, ALLOCATABLE :: eig_irr(:, :)
       integer, allocatable :: v_x_loc(:,:), weights(:)
       type(t_balance_wavef) :: wavef_bal
+      type(c_ptr)       :: threadId
 
       CALL timestart("hybrid code")
+      !if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
 
       IF (fi%kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -173,6 +176,7 @@ CONTAINS
 #endif
 
       ENDIF
+      ! if(fmpi%l_mpi_multithreaded) call stop_prog_thread(threadId)
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
