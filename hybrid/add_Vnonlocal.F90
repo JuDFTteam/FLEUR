@@ -74,10 +74,10 @@ CONTAINS
       INTEGER                 :: iband, nbasfcn, i, i0, j, ierr
       REAL                    :: a_ex
       TYPE(t_mat)             :: tmp, z
-      COMPLEX                 :: exch(fi%input%neig, fi%input%neig)
+      COMPLEX                 :: exch(fi%input%neig)
 
       call timestart("add_vnonlocal")
-
+      call timestart("apply v_x")
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
@@ -98,6 +98,7 @@ CONTAINS
             enddo
          enddo
       endif
+      call timestop("apply v_x")
 
       CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk))
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
@@ -120,21 +121,21 @@ CONTAINS
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp, transA="T")
       endif
 
-      WRITE (oUnit, '(A)') "          K-points,   iband,    exch - div (eV), div (eV),  exch (eV)"
+      ! WRITE (oUnit, '(A)') "          K-points,   iband,    exch - div (eV), div (eV),  exch (eV)"
       DO iband = 1, hybdat%nbands(nk)
          IF (z%l_real) THEN
-            exch(iband, iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
+            exch(iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
          ELSE
-            exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
+            exch(iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
          IF (iband <= hybdat%nobd(nk,jsp)) THEN
-            results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband))
+            results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband))
          END IF
-         IF (hybdat%l_calhf) THEN
-            WRITE (oUnit, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
-               fi%kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-hartree_to_ev_const), &
-               hybdat%div_vv(iband, nk, jsp)*(-hartree_to_ev_const), REAL(exch(iband, iband))*(-hartree_to_ev_const)
-         END IF
+         ! IF (hybdat%l_calhf) THEN
+         !    WRITE (oUnit, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
+         !       fi%kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-hartree_to_ev_const), &
+         !       hybdat%div_vv(iband, nk, jsp)*(-hartree_to_ev_const), REAL(exch(iband, iband))*(-hartree_to_ev_const)
+         ! END IF
       END DO
       call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
