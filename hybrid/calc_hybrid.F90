@@ -23,7 +23,6 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
-      use m_balance_barriers
       use m_distribute_mpi 
 #ifdef CPP_MPI 
       use mpi 
@@ -57,7 +56,6 @@ CONTAINS
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
       integer, allocatable :: v_x_loc(:,:), weights(:)
-      type(t_balance_wavef) :: wavef_bal
       type(c_ptr)       :: threadId
 
       CALL timestart("hybrid code")
