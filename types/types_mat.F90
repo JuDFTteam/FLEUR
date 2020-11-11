@@ -502,7 +502,19 @@ CONTAINS
       endif
 
       lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
+      if(transA_i == "N") then 
+         if(lda < max(1,m)) call judft_error("problem with lda")
+      else
+         if(lda < max(1,k)) call judft_error("problem with lda")
+      endif
+
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
+      if(transB_i == "N") then 
+         if(ldb < max(1,k)) call judft_error("problem with ldb")
+      else
+         if(ldb < max(1,n)) call judft_error("problem with ldb")
+      endif
+
       IF (present(res)) THEN
          ! prepare res matrix
          if(res%allocated()) then
@@ -531,6 +543,8 @@ CONTAINS
          if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          IF (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
@@ -542,7 +556,8 @@ CONTAINS
 
          call tmp%alloc(mat1%l_real, n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
-
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          if (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
