@@ -110,7 +110,7 @@ CONTAINS
 
          if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
+            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, fmpi%irank == 0)
          enddo
 
          ! use jsp=1 for coulomb work-planning
