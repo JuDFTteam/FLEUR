@@ -506,8 +506,8 @@ c*************************************************************
          call wann_write_eig(
      >           fmpi,cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
-     >            ntypd,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,
+     >            ntypd,nvd,wannierspin,
+     >            isize,jspin,
      >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,

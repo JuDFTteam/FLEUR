@@ -125,7 +125,7 @@ CONTAINS
        DO  k = 1,kpts%nkpt
           IF (fmpi%irank == 0) THEN
              if(input%eig66(1))CALL read_eig(eig_id,k,jsp,neig=results%neig(k,jsp),eig=results%eig(:,k,jsp))
-             WRITE (oUnit,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
+             WRITE (oUnit,'(a2,3f10.5,a12,f12.6)') 'at',kpts%bk(:,k), " k-weight:", kpts%wtkpt(k)
              WRITE (oUnit,'(i5,a14)') results%neig(k,jsp),' eigenvalues :'
              WRITE (oUnit,'(8f12.6)') (results%eig(i,k,jsp),i=1,results%neig(k,jsp))
              IF(.NOT.judft_was_argument("-minimalOutput")) THEN

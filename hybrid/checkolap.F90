@@ -97,9 +97,9 @@ CONTAINS
          call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv, input, ikpt, &
                      jsp, z(ikpt), c_phase=c_phase)
 #ifdef CPP_MPI
-         call timestart("Post read_z Barrier: checkolap")
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         call timestop("Post read_z Barrier: checkolap")
+         ! call timestart("Post read_z Barrier: checkolap")
+         ! call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         ! call timestop("Post read_z Barrier: checkolap")
 #endif
          call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
                        sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &

@@ -263,6 +263,7 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+
   <xsd:simpleType name="Integer4DVecType">
       <xsd:restriction base="IntegerVecType">
          <xsd:length value="4"/>
@@ -876,22 +877,16 @@
 
    <xsd:complexType name="TetraederType">
       <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="1" name="tet" type="TetType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="1" name="tet" type="StringVecType"/>
       </xsd:sequence>
       <xsd:attribute name="ntet" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
-     <xsd:complexType name="TetType">
-      <xsd:simpleContent>
-         <xsd:extension base="Integer4DVecType">
-            <xsd:attribute name="vol" type="xsd:string" use="required"/>
-         </xsd:extension>
-      </xsd:simpleContent>
-   </xsd:complexType>
+
 
    <xsd:complexType name="TrianglesType">
       <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="1" name="tria" type="TriaType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="1" name="tria" type="StringVecType"/>
       </xsd:sequence>
       <xsd:attribute name="ntria" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>

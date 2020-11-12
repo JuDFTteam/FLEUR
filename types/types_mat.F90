@@ -46,9 +46,67 @@ MODULE m_types_mat
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
+      procedure        :: leastsq => t_mat_leastsq
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_leastsq(A, b)
+      use m_constants
+      implicit none 
+      class(t_mat), intent(inout) :: A
+      type(t_mat), intent(inout)  :: b 
+
+      type(t_mat) :: tmp
+      integer              :: m, n, nrhs, lda, ldb, info, lwork
+
+      real    :: rwork_req(1)
+      complex :: cwork_req(1)
+
+      real, allocatable    :: rwork(:)
+      complex, allocatable :: cwork(:)
+
+      if(A%matsize2 /= b%matsize2) call judft_error("least-squares dimension problem")
+      if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
+
+      m = A%matsize1
+      n = A%matsize2 
+      nrhs = b%matsize2
+      if(A%l_real) then 
+         lda = size(A%data_r,1)
+         ldb = size(b%data_r,1)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork_req, -1, info)
+         lwork = int(rwork_req(1))
+         allocate(rwork(lwork), source=0.0)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork, lwork, info)
+      else
+         lda = size(A%data_c,1)
+         ldb = size(b%data_c,1)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork_req, -1, info)
+         lwork = int(cwork_req(1))
+         allocate(cwork(lwork), source=cmplx_0)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork, lwork, info)
+      endif
+
+      if(info /= 0) call judft_error("least squares failed.")
+
+      call tmp%init(A%l_real, n, nrhs)
+
+      if(tmp%l_real) then
+         tmp%data_r = b%data_r(:n,:)
+      else
+         tmp%data_c = b%data_c(:n,:)
+      endif
+
+      call b%free()
+      call b%init(tmp)
+      call b%copy(tmp, 1,1)
+      call tmp%free()
+   end subroutine t_mat_leastsq
+
    subroutine t_mat_pos_eigvec_sum(mat)
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
@@ -444,7 +502,19 @@ CONTAINS
       endif
 
       lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
+      if(transA_i == "N") then 
+         if(lda < max(1,m)) call judft_error("problem with lda")
+      else
+         if(lda < max(1,k)) call judft_error("problem with lda")
+      endif
+
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
+      if(transB_i == "N") then 
+         if(ldb < max(1,k)) call judft_error("problem with ldb")
+      else
+         if(ldb < max(1,n)) call judft_error("problem with ldb")
+      endif
+
       IF (present(res)) THEN
          ! prepare res matrix
          if(res%allocated()) then
@@ -473,6 +543,8 @@ CONTAINS
          if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          IF (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
@@ -484,7 +556,8 @@ CONTAINS
 
          call tmp%alloc(mat1%l_real, n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
-
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          if (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
@@ -649,6 +722,8 @@ CONTAINS
 
       INTEGER:: i1, i2
 
+      call timestart("t_mat_copy")
+
       select type (mat1)
       type is(t_mat)
           
@@ -665,6 +740,8 @@ CONTAINS
       ELSE
          call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
       END IF
+
+      call timestop("t_mat_copy")
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)

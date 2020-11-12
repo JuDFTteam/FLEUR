@@ -260,6 +260,7 @@ CONTAINS
 
       INTEGER:: i, ii, n_size, n_rank
 
+      call timestart("mpimat_add_transpose")
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
 #ifdef CPP_MPI
@@ -303,6 +304,7 @@ CONTAINS
          CALL judft_error("Inconsistent types in t_mpimat_add_transpose")
       END SELECT
 
+      call timestop("mpimat_add_transpose")
    END SUBROUTINE mpimat_add_transpose
 
    SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
@@ -310,6 +312,8 @@ CONTAINS
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
+
+      call timestart("mpimat_copy")
 
       select type (mat1)
       type is(t_mpimat)
@@ -330,6 +334,8 @@ CONTAINS
          CALL judft_error("Wrong datatype in copy")
       END SELECT
 #endif
+
+      call timestop("mpimat_copy")
    END SUBROUTINE mpimat_copy
 
    SUBROUTINE from_non_dist(mat, mat1)
@@ -430,14 +436,17 @@ CONTAINS
   !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
   !! as used in the parallel matrix setup of FLEUR
    SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+      use mpi
       IMPLICIT NONE
       CLASS(t_mpimat)             :: mat
       INTEGER, INTENT(IN), OPTIONAL :: matsize1, matsize2, mpi_subcom
       LOGICAL, INTENT(IN), OPTIONAL :: l_real, l_2d
       INTEGER, INTENT(IN), OPTIONAL :: nb_y, nb_x
+
 #ifdef CPP_SCALAPACK
-      INTEGER::nbx, nby, irank, ierr
-      include 'mpif.h'
+      INTEGER::nbx, nby, irank, ierr 
+
+      call timestart("mpimat_init")
       nbx = DEFAULT_BLOCKSIZE; nby = DEFAULT_BLOCKSIZE
       IF (PRESENT(nb_x)) nbx = nb_x
       IF (PRESENT(nb_y)) nby = nb_y
@@ -456,6 +465,8 @@ CONTAINS
          CALL MPI_COMM_RANK(mpi_subcom, irank, ierr)
          IF (irank > 0) mat%blacsdata%blacs_desc(2) = -1
       END IF
+
+      call timestop("mpimat_init")
 #endif
    END SUBROUTINE mpimat_init
 

@@ -55,6 +55,7 @@ CONTAINS
     CALL print_argument("-fft")
     CALL print_argument("-diag")
     CALL print_argument("-eig")
+    CALL print_argument("-disable_progress_thread")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Options useful for debugging:"
     CALL print_argument("-warn_only")
@@ -130,6 +131,8 @@ CONTAINS
          //",hdf"&
 #endif
          )
+
+    CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","") 
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")
