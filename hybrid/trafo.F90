@@ -626,9 +626,15 @@ CONTAINS
 
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
-         cfac = commonphase(mat(:dim1,:dim2), dim1*dim2)
-         mat(:dim1,:dim2) = mat(:dim1,:dim2)/cfac
-         IF (any(abs(aimag(mat(:dim1,:dim2))) > 1e-8)) call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
+         cfac = commonphase_mtx(mat, dim1, dim2)
+         do i = 1,dim1 
+            do j = 1,dim2 
+               mat(i,j) = mat(i,j) / cfac 
+               if(abs(aimag(mat(i,j))) > 1e-8 ) then
+                  call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
+               endif 
+            enddo
+         enddo
       END IF
 
    END SUBROUTINE symmetrize
@@ -1013,6 +1019,34 @@ CONTAINS
          call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
       END IF
    END function commonphase
+
+   function commonphase_mtx(mtx, dim1, dim2) result(cfac)
+      implicit none 
+
+      COMPLEX, INTENT(IN)      :: mtx(:,:)
+      integer, intent(in)      :: dim1, dim2
+      COMPLEX                  :: cfac
+      REAL                     :: rdum, rmax
+      INTEGER                  :: i,j
+
+      do j = 1,dim2 
+         do i = 1,dim1
+            rdum = abs(mtx(i,j))
+            IF (rdum > 1e-6) THEN
+               cfac = mtx(i,j)/rdum
+               EXIT
+            ELSE IF (rdum > rmax) THEN
+               cfac = mtx(i,j)/rdum
+               rmax = rdum
+            END IF
+         enddo 
+      enddo
+
+      IF (abs(cfac) < 1e-10 .and. all(abs(mtx(:dim1,:dim2)) > 1e-10)) THEN
+         WRITE (999, *) mtx(:dim1,:dim2)
+         call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
+      END IF
+   END function commonphase_mtx
 
    SUBROUTINE bramat_trafo(vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
                            rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, &
