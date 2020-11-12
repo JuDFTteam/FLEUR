@@ -27,7 +27,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
@@ -35,6 +35,7 @@ MODULE m_hubbard1_setup
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_mpi),      INTENT(IN)     :: fmpi
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_nococonv), INTENT(IN)     :: nococonv
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
       TYPE(t_hub1data), INTENT(INOUT)  :: hub1data
