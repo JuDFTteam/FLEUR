@@ -171,7 +171,7 @@ MODULE m_hubbard1_setup
             ! Write the main config files
             !-------------------------------------------------------
             CALL write_hubbard1_input(folder,i_hia,l,f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),&
-                                      hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist,l_firstIT_HIA)
+                                      hub1inp,hub1data,mu_dc(1),occDFT_INT,l_bathexist)
          ENDDO
       ENDIF !fmpi%irank == 0
 

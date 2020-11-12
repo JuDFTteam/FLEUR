@@ -45,6 +45,7 @@ MODULE m_types_hub1data
       USE m_types_atoms
       USE m_types_input
       USE m_types_hub1inp
+      USE m_gaunt
 
       CLASS(t_hub1data),   INTENT(INOUT) :: this
       TYPE(t_atoms),       INTENT(IN)    :: atoms
@@ -54,7 +55,8 @@ MODULE m_types_hub1data
       REAL,                INTENT(IN)    :: mmpmatDistancePrev,occDistancePrev
       LOGICAL,             INTENT(IN)    :: l_error
 
-      INTEGER :: i_hia
+      INTEGER :: i_hia, l, m, mp, lcoeff, mcoeff
+      REAL :: gaunt_coef
 
 
       this%l_performSpinavg = .FALSE.
@@ -85,7 +87,6 @@ MODULE m_types_hub1data
 
       ALLOCATE (this%mag_mom(MAX(1,atoms%n_hia),lmaxU_const-1),source=0.0)
       ALLOCATE (this%xi(MAX(1,atoms%n_hia)),source=0.0)
-      ALLOCATE (this%ccfmat(MAX(1,atoms%n_hia),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
       DO i_hia = 1, atoms%n_hia
          IF(hub1inp%l_soc_given(i_hia)) THEN
             this%xi(i_hia) = hub1inp%xi_par(i_hia)
@@ -93,6 +94,25 @@ MODULE m_types_hub1data
       ENDDO
 
       ALLOCATE (this%cdn_atomic(atoms%jmtd,0:lmaxU_const,atoms%ntype,input%jspins),source=0.0)
+
+      ALLOCATE (this%ccfmat(MAX(1,atoms%n_hia),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
+      IF(ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
+         DO i_hia = 1, atoms%n_hia
+            l = atoms%lda_u(atoms%n_u+i_hia)%l
+            DO lcoeff = 0, 6
+               DO mcoeff = -lcoeff,lcoeff
+                  IF(ABS(hub1inp%cfCoeffs(i_hia,lcoeff,mcoeff)).LT.1e-12) CYCLE
+                  DO m = -l,l
+                     DO mp = -l,l
+                        gaunt_coef = gaunt1(l,lcoeff,l,m,mcoeff,mp,6)
+                        IF(ABS(gaunt_coef).LT.1e-12) CYCLE
+                        this%ccfmat(i_hia,m,mp) = this%ccfmat(i_hia,m,mp) + gaunt_coef * hub1inp%cfCoeffs(i_hia,lcoeff,mcoeff) * boltzmann_const
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDIF
 
    END SUBROUTINE hub1data_init
 
