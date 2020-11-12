@@ -58,6 +58,16 @@ CONTAINS
     END DO
 
 
+    !Read in SOC-parameter for shell with hubbard 1
+    IF(PRESENT(hub1inp).AND.fmpi%irank.EQ.0) THEN
+      DO i_hia = 1, atoms%n_hia
+         IF(hub1inp%l_soc_given(i_hia)) CYCLE
+         n = atoms%lda_u(atoms%n_u+i_hia)%atomType
+         l = atoms%lda_u(atoms%n_u+i_hia)%l
+         IF(PRESENT(hub1data)) hub1data%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
+      ENDDO
+    ENDIF
+
     !
     !Scale SOC
     DO n= 1,atoms%ntype
@@ -74,16 +84,6 @@ CONTAINS
           rsoc%rsoploplop(n,:,:,:,:) = rsoc%rsoploplop(n,:,:,:,:)*noco%socscale(n)
        ENDIF
     ENDDO
-
-    !Read in SOC-parameter for shell with hubbard 1
-    IF(PRESENT(hub1inp).AND.fmpi%irank.EQ.0) THEN
-      DO i_hia = 1, atoms%n_hia
-         IF(hub1inp%l_soc_given(i_hia)) CYCLE
-         n = atoms%lda_u(atoms%n_u+i_hia)%atomType
-         l = atoms%lda_u(atoms%n_u+i_hia)%l
-         IF(PRESENT(hub1data)) hub1data%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
-      ENDDO
-    ENDIF
 
     !DO some IO into out file
       IF ((first_k).AND.(fmpi%irank.EQ.0)) THEN
