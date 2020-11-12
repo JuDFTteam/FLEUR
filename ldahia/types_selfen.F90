@@ -122,9 +122,9 @@ MODULE m_types_selfen
                !---------------------------------------------
                IF(noco%l_soc) THEN
                   IF(noco%l_noco) THEN
-                     this%data(:,:,iz,ipm) = rotMMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%beta(atomType),nococonv%alph(atomType),l)
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%beta(atomType),nococonv%alph(atomType),l)
                   ELSE
-                     this%data(:,:,iz,ipm) = rotMMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%theta,nococonv%phi,l)
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%theta,nococonv%phi,l)
                   ENDIF
                ENDIF
                !---------------------------------------------------------------------
