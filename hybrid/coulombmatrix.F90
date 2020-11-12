@@ -117,7 +117,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1, ierr
       INTEGER                    :: iatom, iatom1, mtmt_idx
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: mat, coulmat, smat
+      TYPE(t_mat)                :: mat, smat
       type(t_mat), allocatable   :: coulomb(:), mtmt_repl(:)
 
       CALL timestart("Coulomb matrix setup")
@@ -381,14 +381,12 @@ CONTAINS
       call mat%free()
       call timestop("loop 1")
 
-      call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
-
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
-         coulmat%data_c = 0.0
+         coulomb(ikpt)%data_c = 0.0
          ix = 0
          ic2 = 0
          mtmt_idx = 0
@@ -425,8 +423,8 @@ CONTAINS
                                        else 
                                           mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
                                        endif
-                                       
-                                       coulmat%data_c(iy, ix) = mtmt_term &
+                                    
+                                       coulomb(ikpt)%data_c(iy, ix) = mtmt_term &
                                                             + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                   dot_PRODUCT(fi%kpts%bk(:, ikpt), &
                                                                               fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
@@ -443,15 +441,15 @@ CONTAINS
             END DO
          END DO
          
-         call coulmat%u2l()
+         call coulomb(ikpt)%u2l()
+
          IF (fi%sym%invs) THEN
-            !symmetrize makes the Coulomb matrix real symmetric               
-            CALL symmetrize(coulmat%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
+            !symmetrize makes the Coulomb matrix real symmetric     
+                          
+            CALL symmetrize(coulomb(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
                fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
                mpdata%num_radbasfn, fi%sym)
          ENDIF
-
-         call coulomb(ikpt)%copy(coulmat, 1,1)
          call timestop("MT-MT part")
 
       END DO
