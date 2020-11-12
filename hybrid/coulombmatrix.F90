@@ -1146,7 +1146,7 @@ CONTAINS
       ! - local arrays -
       TYPE(t_mat) :: olap
       !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
-      COMPLEX      :: coeff(nbasm1(1)), cderiv(nbasm1(1), -1:1), claplace(nbasm1(1))
+      COMPLEX      :: coeff(1,nbasm1(1)), cderiv(-1:1, nbasm1(1)), claplace(1,nbasm1(1))
 
       call timestart("subtract_sphaverage")
       CALL olap%alloc(sym%invs, mpdata%n_g(1), mpdata%n_g(1), 0.)
@@ -1167,18 +1167,18 @@ CONTAINS
                   DO i = 1, mpdata%num_radbasfn(l, itype)
                      j = j + 1
                      IF (l == 0) THEN
-                        coeff(j) = SQRT(fpi_const) &
+                        coeff(1,j) = SQRT(fpi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, i, 0, itype), &
                                            atoms, itype, gridf) &
                                    /SQRT(cell%vol)
 
-                        claplace(j) = -SQRT(fpi_const) &
+                        claplace(1,j) = -SQRT(fpi_const) &
                                       *intgrf(atoms%rmsh(:, itype)**3*mpdata%radbasfn_mt(:, i, 0, itype), &
                                               atoms, itype, gridf) &
                                       /SQRT(cell%vol)
 
                      ELSE IF (l == 1) THEN
-                        cderiv(j, M) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
+                        cderiv(M,j) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*mpdata%radbasfn_mt(:, i, 1, itype), &
                                                atoms, itype, gridf) &
                                        /SQRT(cell%vol)
@@ -1189,9 +1189,9 @@ CONTAINS
          END DO
       END DO
       IF (olap%l_real) THEN
-         coeff(hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
       else
-         coeff(hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
       END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
@@ -1200,13 +1200,13 @@ CONTAINS
          CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, -1), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, 0), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, 1), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF
@@ -1216,9 +1216,9 @@ CONTAINS
          DO i = 1, j
             l = l + 1
             coulomb%data_c(i,j) = coulomb%data_c(i,j) - fpi_const/3 &
-                                       *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
-                                       + (CONJG(coeff(i))*claplace(j) &
-                                          + CONJG(claplace(i))*coeff(j))/2)
+                                       *(dot_PRODUCT(cderiv(:,i), cderiv(:,j)) &
+                                       + (CONJG(coeff(1,i))*claplace(1,j) &
+                                          + CONJG(claplace(1,i))*coeff(1,j))/2)
          END DO
       END DO
 
