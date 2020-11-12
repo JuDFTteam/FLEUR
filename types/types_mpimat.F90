@@ -436,7 +436,9 @@ CONTAINS
   !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
   !! as used in the parallel matrix setup of FLEUR
    SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+#ifdef CPP_MPI
       use mpi
+#endif
       IMPLICIT NONE
       CLASS(t_mpimat)             :: mat
       INTEGER, INTENT(IN), OPTIONAL :: matsize1, matsize2, mpi_subcom
