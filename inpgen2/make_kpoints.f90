@@ -312,7 +312,6 @@ CONTAINS
     USE m_types_cell
     USE m_types_sym
     USE m_kptgen_hybrid
-    USE m_triang
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -488,37 +487,7 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF(bz_integration==BZINT_METHOD_TRIA .AND. film) THEN
-          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
-          l_tria = .FALSE.
-          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
-          !IF (sym%invs) THEN
-          !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-          !ELSE
-          !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-          !ENDIF
-          !write(*,*) as,sym%nop2,l_tria
-
-          !Match normalisation of other methods
-          voltet = voltet/as*kpts%ntet
-       ENDIF
     ENDIF
-
-    IF(bz_integration==BZINT_METHOD_TRIA.AND.film) THEN
-       ALLOCATE(kpts%ntetra(3,kpts%ntet))
-       ALLOCATE(kpts%voltet(kpts%ntet))
-       DO j = 1, kpts%ntet
-          kpts%ntetra(:,j) = ntetra(:,j)
-          kpts%voltet(j) = ABS(voltet(j))
-       END DO
-    ENDIF
-
-    IF(bz_integration==BZINT_METHOD_TRIA) THEN
-       kpts%kptsKind = KPTS_KIND_TRIA
-       IF(.NOT.film) THEN
-          kpts%kptsKind = KPTS_KIND_TRIA_BULK
-       END IF
-    END IF
 
     kpts%nkpt3(:) = grid(:)
 

@@ -82,17 +82,6 @@ MODULE m_checks
         END DO
      END IF
 
-     SELECT CASE (input%bz_integration)
-        CASE (BZINT_METHOD_TRIA) !tria
-           IF ((kpts%kptsKind.NE.KPTS_KIND_TRIA).AND.(input%film)) THEN
-              CALL juDFT_warn('Chosen k-point set is not eligible for tria BZ integration for films.', calledby='check_input_switches')
-           END IF
-!        CASE (BZINT_METHOD_TETRA) !tetra
-!           IF (kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
-!              CALL juDFT_warn('Chosen k-point set is not eligible for tetra BZ integration.', calledby='check_input_switches')
-!           END IF
-     END SELECT
-
      IF((input%gw.EQ.2).AND.(kpts%kptsKind.NE.KPTS_KIND_SPEX_MESH)) THEN
         CALL juDFT_warn('Chosen k-point set is not eligible for this GW step.', calledby='check_input_switches')
      END IF

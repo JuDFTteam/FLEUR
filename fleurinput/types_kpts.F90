@@ -248,39 +248,39 @@ CONTAINS
          this%bk(3, i) = evaluatefirst(str)
       END DO
 
-      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
-      IF (n .EQ. 1) THEN
-         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
-         ALLOCATE(tetra_string(this%ntet))
-         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/tetraeder/tet',tetra_string)
-         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
-         DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
-            this%voltet(n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
-
-                        !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
-            !READ (str,*) this%ntetra(:,n)
-         ENDDO
-         deallocate(tetra_string)
-      ENDIF
-
-      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles')
-      IF (n .EQ. 1) THEN
-         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
-         ALLOCATE(tetra_string(this%ntet))
-         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/triangles/tria',tetra_string)
-         ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
-         DO n = 1, this%ntet
-            this%voltet(n) = evaluateFirst(Tetra_string(n))
-            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
-         ENDDO
-      ENDIF
+!      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
+!      IF (n .EQ. 1) THEN
+!         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
+!         ALLOCATE(tetra_string(this%ntet))
+!         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/tetraeder/tet',tetra_string)
+!         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
+!         DO n = 1, this%ntet
+!            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
+!            this%voltet(n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
+!
+!                        !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
+!            !READ (str,*) this%ntetra(:,n)
+!         ENDDO
+!         deallocate(tetra_string)
+!      ENDIF
+!
+!      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles')
+!      IF (n .EQ. 1) THEN
+!         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
+!         ALLOCATE(tetra_string(this%ntet))
+!         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/triangles/tria',tetra_string)
+!         ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
+!         DO n = 1, this%ntet
+!            this%voltet(n) = evaluateFirst(Tetra_string(n))
+!            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
+!         ENDDO
+!      ENDIF
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
    END SUBROUTINE read_xml_kptsByIndex
 
@@ -415,24 +415,23 @@ CONTAINS
          END IF
          label = ''
       END DO
-      IF (kpts%ntet > 0) THEN
-         IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
-            !Film --> Triangles
-            WRITE (kptsUnit, 209) kpts%ntet
-209         FORMAT('               <triangles ntria="', i0, '">')
-            DO n = 1, kpts%ntet
-210            FORMAT('                  <tria>', f20.13, i0, ' ', i0, ' ', i0, '</tria>')
-               WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
-            END DO
-            WRITE (kptsUnit, '(a)') '               </triangles>'
-         ENDIF
-      ELSE
+!      IF (kpts%ntet > 0) THEN
+!         IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
+!            !Film --> Triangles
+!            WRITE (kptsUnit, 209) kpts%ntet
+!209         FORMAT('               <triangles ntria="', i0, '">')
+!            DO n = 1, kpts%ntet
+!210            FORMAT('                  <tria>', f20.13, i0, ' ', i0, ' ', i0, '</tria>')
+!               WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
+!            END DO
+!            WRITE (kptsUnit, '(a)') '               </triangles>'
+!         ENDIF
+!      ELSE
 !         DO n = 1, kpts%numSpecialPoints
 !            WRITE (kptsUnit, 211) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
 !211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
 !         END DO
-      END IF
-      !END IF
+!      END IF
       WRITE (kptsUnit, '(a)') ('            </kPointList>')
       IF (PRESENT(filename)) CLOSE (kptsUnit)
    END SUBROUTINE print_xml
@@ -483,6 +482,7 @@ CONTAINS
       USE m_types_cell
       USE m_types_sym
       USE m_tetcon
+      USE m_triang
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -493,8 +493,9 @@ CONTAINS
 
       INTEGER :: i, j, ikpt, ntet, itet
       INTEGER :: ndiv3,nsym,addSym
-      REAL    :: volirbz
+      REAL    :: volirbz, as
       REAL    :: vkxyz(3,kpts%nkpt)
+      LOGICAL :: l_tria
 
       REAL    :: bltv(3,3)          ! cartesian Bravais lattice basis (a.u.)
       REAL    :: rltv(3,3)          ! reciprocal lattice basis (2\pi/a.u.)
@@ -571,10 +572,39 @@ CONTAINS
          ALLOCATE(kpts%ntetra(4,kpts%ntet))
          ALLOCATE(kpts%voltet(kpts%ntet))
          DO j = 1, kpts%ntet
-            kpts%ntetra(:,j) = ntetra(1:4,j)
+            kpts%ntetra(1:4,j) = ntetra(1:4,j)
             kpts%voltet(j) = ABS(voltet(j))
          END DO
+      END IF
 
+      IF(input%bz_integration==BZINT_METHOD_TRIA .AND. input%film) THEN
+
+         IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
+            CALL juDFT_error("'tria' tetrahedron decomposition for film systems needs a k-point mesh",&
+                             calledby="initTetra")
+         END IF
+
+         ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+         l_tria = .FALSE.
+         CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
+         !IF (sym%invs) THEN
+         !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
+         !ELSE
+         !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
+         !ENDIF
+         !write(*,*) as,sym%nop2,l_tria
+
+         !Match normalisation of other methods
+         voltet = voltet/as*kpts%ntet
+
+         IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+         IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+         ALLOCATE(kpts%ntetra(3,kpts%ntet))
+         ALLOCATE(kpts%voltet(kpts%ntet))
+         DO j = 1, kpts%ntet
+            kpts%ntetra(1:3,j) = ntetra(1:3,j)
+            kpts%voltet(j) = ABS(voltet(j))
+         END DO
       END IF
 
       IF(input%bz_integration.EQ.BZINT_METHOD_TETRA) THEN
@@ -608,7 +638,7 @@ CONTAINS
       END IF
 
       IF((input%bz_integration.EQ.BZINT_METHOD_TETRA).OR.&
-         ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film))) THEN
+         (input%bz_integration.EQ.BZINT_METHOD_TRIA)) THEN
          CALL timestart("setup tetraList")
          allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
                                  *MERGE(6,24,input%film),kpts%nkpt),source=0)
