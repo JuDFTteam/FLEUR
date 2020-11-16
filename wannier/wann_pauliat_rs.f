@@ -6,7 +6,7 @@ c     by wannier90.
 c     FF, January 2009
 c*************************************************
       module m_wann_pauliat_rs
-      USE m_fleurenv
+      USE m_juDFT
       contains 
       subroutine wann_pauliat_rs(
      >          rvecnum,rvec,kpoints,
