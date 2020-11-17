@@ -37,6 +37,7 @@ wannier/wann_maxbnd.F
 wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
+wannier/wann_mmk0_updown_sph_at.f
 wannier/wann_mmk0_vac.F
 #wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
