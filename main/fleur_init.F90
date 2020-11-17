@@ -147,7 +147,7 @@ CONTAINS
     call make_xcpot(fmpi,xcpot,atoms,input)
     CALL nococonv%init(noco)
     CALL nococonv%init_ss(noco,atoms)
-    CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
+    !CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(fmpi%irank==0,atoms,sphhar,sym,cell,oneD)

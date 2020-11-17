@@ -99,7 +99,7 @@ CONTAINS
           call timestart("hsmt_ab")
           CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
           call timestop("hsmt_ab")
-          !!$acc update device(ab)
+          !!$acc update device(abcoeffs)
           !$acc host_data use_device(abCoeffs,ab1,h_loc)
           CALL CPP_zgemm("T","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),abCoeffs,SIZE(abCoeffs,1),&
                      h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab)
@@ -175,8 +175,8 @@ CONTAINS
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        else
-          !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
-          hmat%data_r=hmat%data_r+real(data_c)
+          !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+          hmat%data_c=hmat%data_c+data_c
           !$acc end kernels
        endif
 #else

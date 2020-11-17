@@ -13,7 +13,9 @@ CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
                    noco,nococonv,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
 #ifdef _OPENACC
+#ifdef __PGI
     use cublas
+#endif
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm cublaszgemm
@@ -92,11 +94,15 @@ CONTAINS
     ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
     ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
+    ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
 
     ! Initializations
     acof_size=size(acof,1)
+    !$acc enter data create(acof,bcof,abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc kernels present(acof,bcof) default(none)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
+    !$acc end kernels
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
     l_force = .FALSE.
     IF(PRESENT(eig).AND.input%l_f) l_force = .TRUE.
@@ -114,8 +120,6 @@ CONTAINS
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
     ENDIF
 
-    ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
-    !$acc data create(fjgj,fjgj%fj,fjgj%gj,work_c)
     ! loop over atoms
     DO iAtom = 1, atoms%nat
        iType = atoms%itype(iAtom)
@@ -146,12 +150,11 @@ CONTAINS
 
           IF ((sym%invsat(iAtom).EQ.0) .OR. (sym%invsat(iAtom).EQ.1)) THEN
 
-             !$acc data create(abCoeffs)
              ! Filling of work array (modified zMat)
              CALL timestart("fill work array")
              IF (noco%l_noco) THEN
                 IF (noco%l_ss) THEN
-                   !$acc kernels copyin(zMat%data_c)
+                   !$acc kernels copyin(zmat,zMat%data_c,ccchi,atoms,lapw,lapw%nv) present(work_c)default(none)
                    ! the coefficients of the spin-down basis functions are
                    ! stored in the second half of the eigenvector
                    kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
@@ -161,7 +164,7 @@ CONTAINS
                    ! perform sum over the two interstitial spin directions
                    ! and take into account the spin boundary conditions
                    ! (jspin counts the local spin directions inside each MT)
-                   !$acc kernels copyin(zMat%data_c)
+                   !$acc kernels copyin(atoms,zMat,zMat%data_c,ccchi,lapw) present(work_c) default(none)
                    kspin = lapw%nv(1)+atoms%nlotot
                    work_c(:nvmax,:) = ccchi(1,jspin)*zMat%data_c(:nvmax,:ne) + ccchi(2,jspin)*zMat%data_c(kspin+1:kspin+nvmax,:ne)
                    !$acc end kernels
@@ -169,28 +172,39 @@ CONTAINS
              ELSE
                 IF (zmat%l_real) THEN
                    !$CPP_OMP PARALLEL DO default(shared) private(i)
-                   !$CPP_ACC parallel loop copyin(zMat%data_r)
+                   !$acc kernels copyin(zmat,zMat%data_r)present(work_c)default(none)
                    DO i = 1, ne
+#ifdef _OPENACC
+                      work_c(:nvmax,i) = zmat%data_r(:nvmax,i)
+#else
                       work_c(:nvmax,i) = 0.0
                       CALL dcopy(nvmax,zMat%data_r(:,i),1,work_c(:,i),2)
+#endif
                    END DO
-                   !$CPP_ACC end parallel loop
+                   !$acc end kernels
                    !$CPP_OMP END PARALLEL DO
                 ELSE
                    !$CPP_OMP PARALLEL DO default(shared) private(i)
-                   !$CPP_ACC parallel loop copyin(zMat%data_c)
+                   !$acc kernels copyin(zMat,zMat%data_c)present(work_c) default(none)
                    DO i = 1, ne
+#ifdef _OPENACC
+                      work_c(:nvmax,i) = zmat%data_c(:nvmax,i)
+#else
                       CALL zcopy(nvmax,zMat%data_c(:,i),1,work_c(:,i),1)
+#endif
                    END DO
-                   !$CPP_ACC end parallel loop
+                   !$acc end kernels
                    !$CPP_OMP END PARALLEL DO
                 END IF
              END IF
+
              CALL timestop("fill work array")
 
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
+             !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
+             !!$acc end data
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
 
@@ -198,17 +212,22 @@ CONTAINS
              CALL timestart("gemm")
 
              ! variant with zgemm
-             abTemp = CMPLX(0.0,0.0)
+
+
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(1.0,0.0),abTemp,acof_size)
+             CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
+             write(777,"(f20.5)") abTemp
+             !stop "DEBUG"
              !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
+             !$acc kernels present(acof,bcof,abTemp) default(none)
              DO lm = 0, absize-1
                 DO i = 1, ne
                    acof(i,lm,iAtom) = acof(i,lm,iAtom) + abTemp(i,lm)
                    bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,absize+lm)
                 END DO
              END DO
+             !$acc end kernels
              !$CPP_OMP END PARALLEL DO
 
              CALL timestop("gemm")
@@ -368,11 +387,12 @@ CONTAINS
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
-          !$acc end data
           END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc end data
+    !$acc exit data copyout(acof,bcof) delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data delete(acof,bcof,abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
     IF(l_force) THEN
        DEALLOCATE(helpMat_c)

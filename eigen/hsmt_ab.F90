@@ -13,7 +13,7 @@ CONTAINS
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
-    USE m_ylm 
+    USE m_ylm
     USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
@@ -35,13 +35,14 @@ CONTAINS
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
-    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax
+    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll
     COMPLEX :: term,tempA,tempB
     REAL    :: v(3),bmrot(3,3),gkrot(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT)))
-    LOGICAL :: l_apw
+    LOGICAL :: l_apw,l_abclo
 
+    l_abclo=present(abclo)
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
     ab_size = lmax*(lmax+2)+1
     ! replace APW+lo check (may actually be a broken trick) by something simpler
@@ -53,27 +54,37 @@ CONTAINS
 
     np = sym%invtab(sym%ngopr(na))
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
-    bmrot = MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
+    bmrot = transpose(MATMUL(1.*sym%mrot(:,:,np),cell%bmat))
 
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n,ispin,bmrot) &
+    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot) &
     !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
     !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
 #else
-    !$acc kernels present(abCoeffs)
+    !$acc kernels present(abCoeffs) default(none)
     abCoeffs(:,:)=0.0
     !$acc end kernels
+    if (l_abclo) THEN
+      !$acc enter data copyin(lapw,lapw%kvec(:,:,na),atoms%llo,atoms%nlo,cell%omtil,atoms%rmt)
+    ENDIF
 #endif
-    
-    !$acc parallel loop present(fjgj%fj,fjgj%gj,abCoeffs) private(k,ylm,lm,invsfct,lo,nkvec) 
+
+
+    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
+    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,bmrot,c_ph) &
+    !$acc present(abclo,alo1,blo1,clo1)&
+    !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)
        !-->  apply the rotation that brings this atom into the
        !-->  representative (this is the definition of ngopr(na)
        !-->  and transform to cartesian coordinates
-       v(:) = lapw%vk(:,k,iintsp)
-       gkrot(:) = MATMUL(TRANSPOSE(bmrot),v)
+       v=lapw%vk(:,k,iintsp)
+       !gkrot(:) = MATMUL(bmrot,v)
+       gkrot(1) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
+       gkrot(2) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
+       gkrot(3) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
 
        !-->    generate spherical harmonics
        CALL ylm4(lmax,gkrot,ylm)
@@ -88,12 +99,15 @@ CONTAINS
           facB(lmMin:lmMax) = tempB
        END DO
        !$acc end loop
+       !!$acc loop vector private(ll)
        abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
        abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       IF (PRESENT(abclo)) THEN
+       !!$acc end loop
+       IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
           term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
+          !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
           DO lo = 1,atoms%nlo(n)
              l = atoms%llo(lo,n)
              DO nkvec=1,invsfct*(2*l+1)
@@ -108,14 +122,18 @@ CONTAINS
                 END IF
              ENDDO
           ENDDO
+          !!$acc end loop
        ENDIF
 
     ENDDO !k-loop
     !$acc end parallel loop
+
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif
-
+  if (present(abclo)) THEN
+      !$acc exit data delete(lapw%kvec(:,:,na),atoms%llo,atoms%nlo,cell%omtil,atoms%rmt)
+    ENDIF
     IF (.NOT.l_apw) ab_size=ab_size*2
   END SUBROUTINE hsmt_ab
 END MODULE m_hsmt_ab
