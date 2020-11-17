@@ -280,9 +280,6 @@ CONTAINS
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
-      !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
-      !$OMP lm, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, itype, ieq, &
-      !$OMP ic, lm_0)
       lm_0 = 0
       ic = 0
       DO itype = 1, fi%atoms%ntype
@@ -305,64 +302,53 @@ CONTAINS
                      lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
                      lm = lm_0
-                     !$OMP DO
-                     DO m = -l, l
-                        carr = 0.0
+                     do k = 1, hybdat%nbands(ik)
+                        do j = bandoi, bandof 
+                           DO m = -l, l
+                              carr = 0.0
 
-                        lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
-                        DO m1 = -l1, l1
-                           m2 = m1 + m ! Gaunt condition -m1+m2-m=0
-                           do k = 1, hybdat%nbands(ik)
-                              do j = bandoi, bandof 
+                              lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
+                              DO m1 = -l1, l1
+                                 m2 = m1 + m ! Gaunt condition -m1+m2-m=0
+                                 
                                  IF (abs(m2) <= l2) THEN
                                     lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                     IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                        carr(j, k) = carr(j,k) + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                                                * cmt_ikqpt(j, lm2, ic) &
+                                                               * cmt_ikqpt(j, lm2, ic) &
                                                                   * conjg(cmt_nk(k, lm1, ic))
                                     END IF
                                  END IF
-                              enddo 
-                           enddo
 
-                           m2 = m1 - m ! switch role of b1 and b2
-
-                           do k = 1, hybdat%nbands(ik)
-                              do j = bandoi, bandof 
+                                 m2 = m1 - m ! switch role of b1 and b2
                                  IF (abs(m2) <= l2 .and. offdiag) THEN
                                     lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                     IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                        carr(j, k) = carr(j,k) + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                                                * cmt_ikqpt(j, lm1, ic) & 
+                                                               * cmt_ikqpt(j, lm1, ic) & 
                                                                   * conjg(cmt_nk(k, lm2, ic))
                                     END IF
                                  END IF
-                              enddo 
-                           enddo
 
-                           lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                                 lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
-                        END DO  !m1
+                              END DO  !m1
 
-                        lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
-                        do k = 1, hybdat%nbands(ik)
-                           do j = 1, psize
+                              lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
                               DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 cprod%data_c(i + lm, j + (k-1)*psize) &
-                                      = cprod%data_c(i + lm, j + (k-1)*psize) &
-                                          + hybdat%prodm(i, n, l, itype)*carr(j+bandoi-1, k)*atom_phase
+                                 cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                    = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                          + hybdat%prodm(i, n, l, itype)*carr(j, k)*atom_phase
                               ENDDO
-                           end do
-                        end do
-                     END DO
-                     !$OMP END  DO
+                           END DO
+                        enddo 
+                     enddo
                   ENDIF
                END DO
                lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
             END DO
          END DO
       END DO
-      !$OMP END PARALLEL
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
