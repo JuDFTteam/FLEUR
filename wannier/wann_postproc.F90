@@ -30,6 +30,7 @@ CONTAINS
     USE m_wann_plot_from_lapw
     USE m_wann_nabla_rs
     USE m_wann_pauli_rs
+    USE m_wann_pauliat_rs
     USE m_wann_nabla_pauli_rs
     USE m_wann_socmat_rs
     USE m_wann_perpmag_rs
@@ -185,7 +186,8 @@ CONTAINS
          wann%l_torquers.OR.wann%l_offdiposoprs.OR.&
          wann%l_socspicomrs.OR.wann%l_spindisprs.OR.&
          wann%l_anglmomrs .OR.wann%l_perturbrs.OR.&
-         wann%l_orbcomprs.OR.wann%l_rmat)l_need_fft=.TRUE.
+         wann%l_orbcomprs.OR.wann%l_rmat.OR.&
+         wann%l_pauliat)l_need_fft=.TRUE.
 
     IF(l_need_fft.AND.fmpi%irank==0)THEN
 
@@ -359,6 +361,15 @@ CONTAINS
             input%neig,.FALSE.,wann%l_ndegen,ndegen, &
             wann%wan90version,wann%l_unformatted)
     ENDIF
+
+     IF(wann%l_pauliat.AND.fmpi%irank==0) THEN
+         call wann_pauliat_rs(
+            rvecnum,rvec,kpoints,&
+            input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
+            (noco%l_soc.or.noco%l_noco),wann%band_min,wann%band_max,&
+            input%neigd,.false.,atoms%ntype,atoms%neq,wann%l_ndegen,ndegen,&
+            wann%wan90version,wann%l_unformatted)
+     ENDIF
 
     IF (wann%l_nablapaulirs.AND.fmpi%irank==0)THEN
        CALL wann_nabla_pauli_rs(&
