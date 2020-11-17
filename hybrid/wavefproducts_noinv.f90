@@ -279,70 +279,68 @@ CONTAINS
       call timestart("loop over l, l1, l2, n, n1, n2")
       lm_0 = 0
       ic = 0
-      DO itype = 1, fi%atoms%ntype
-         DO ieq = 1, fi%atoms%neq(itype)
-            ic = ic + 1
-            ic1 = 0
+      do ic = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(ic)
+         ic1 = 0
 
-            atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
+         atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
 
-            DO l = 0, fi%hybinp%lcutm1(itype)
-               DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-                  call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
+               call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
-                  IF (mod(l1 + l2 + l, 2) == 0) THEN
-                     offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
-                     !(leading to the same basis-function product)
+               IF (mod(l1 + l2 + l, 2) == 0) THEN
+                  offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
+                  !(leading to the same basis-function product)
 
-                     lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
-                     lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
+                  lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
+                  lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
-                     lm = lm_0
-                     do k = 1, hybdat%nbands(ik)
-                        do j = bandoi, bandof 
-                           DO m = -l, l
-                              cscal = 0.0
+                  lm = lm_0
+                  do k = 1, hybdat%nbands(ik)
+                     do j = bandoi, bandof 
+                        DO m = -l, l
+                           cscal = 0.0
 
-                              lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
-                              DO m1 = -l1, l1
-                                 m2 = m1 + m ! Gaunt condition -m1+m2-m=0
-                                 
-                                 IF (abs(m2) <= l2) THEN
-                                    lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                                    IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                                       cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                                               * cmt_ikqpt(j, lm2, ic) &
-                                                                  * conjg(cmt_nk(k, lm1, ic))
-                                    END IF
+                           lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
+                           DO m1 = -l1, l1
+                              m2 = m1 + m ! Gaunt condition -m1+m2-m=0
+                              
+                              IF (abs(m2) <= l2) THEN
+                                 lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
+                                    cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                                            * cmt_ikqpt(j, lm2, ic) &
+                                                               * conjg(cmt_nk(k, lm1, ic))
                                  END IF
+                              END IF
 
-                                 m2 = m1 - m ! switch role of b1 and b2
-                                 IF (abs(m2) <= l2 .and. offdiag) THEN
-                                    lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                                    IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                                       cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                                               * cmt_ikqpt(j, lm1, ic) & 
-                                                                  * conjg(cmt_nk(k, lm2, ic))
-                                    END IF
+                              m2 = m1 - m ! switch role of b1 and b2
+                              IF (abs(m2) <= l2 .and. offdiag) THEN
+                                 lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
+                                    cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                                            * cmt_ikqpt(j, lm1, ic) & 
+                                                               * conjg(cmt_nk(k, lm2, ic))
                                  END IF
+                              END IF
 
-                                 lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                              lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
-                              END DO  !m1
+                           END DO  !m1
 
-                              lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
-                                    = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
-                                          + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
-                              ENDDO
-                           END DO
-                        enddo 
-                     enddo
-                  ENDIF
-               END DO
-               lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+                           lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
+                           DO i = 1, mpdata%num_radbasfn(l, itype)
+                              cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                 = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                       + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
+                           ENDDO
+                        END DO
+                     enddo 
+                  enddo
+               ENDIF
             END DO
+            lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
       call timestop("loop over l, l1, l2, n, n1, n2")
