@@ -65,8 +65,6 @@ MODULE m_types_input
   LOGICAL:: secvar=.FALSE.
   LOGICAL:: evonly=.FALSE.
   !     LOGICAL:: l_inpXML=.TRUE.
-  REAL :: ellow=-1.8
-  REAL :: elup=1.0
   REAL :: fixed_moment = 0.0
   LOGICAL :: l_onlyMtStDen=.FALSE.
   CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
@@ -147,8 +145,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%evonly,rank,mpi_comm)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
    !    call mpi_bc(this%l_inpXML,rank,mpi_comm)
-   CALL mpi_bc(this%ellow,rank,mpi_comm)
-   CALL mpi_bc(this%elup,rank,mpi_comm)
    CALL mpi_bc(this%fixed_moment ,rank,mpi_comm)
    CALL mpi_bc(this%l_core_confpot,rank,mpi_comm)
    CALL mpi_bc(this%l_useapw,rank,mpi_comm)
@@ -228,7 +224,7 @@ SUBROUTINE read_xml_input(this,xml)
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
-   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot')==1) THEN 
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot')==1) THEN
       this%l_core_confpot = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@l_core_confpot'))
    END IF
    this%frcor = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
@@ -344,19 +340,6 @@ SUBROUTINE read_xml_input(this,xml)
       CASE DEFAULT
          STOP 'Error: unknown RDMFT functional selected!'
       END SELECT
-   END IF
-   ! Read in optional energy parameter limits
-   xPathA = '/fleurInput/calculationSetup/energyParameterLimits'
-   numberNodes = xml%GetNumberOfNodes(xPathA)
-   IF (numberNodes.EQ.1) THEN
-      this%ellow = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
-      this%elup = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@elup'))
-   ELSE
-      this%ellow = -1.8
-      this%elup = 1.0
-      IF (this%film) THEN
-         this%elup = 0.5
-      END IF
    END IF
    ! !! Start of output section
    xPathA = '/fleurInput/output'

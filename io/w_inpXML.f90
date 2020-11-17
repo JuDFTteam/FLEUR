@@ -288,11 +288,7 @@ CONTAINS
          WRITE(fileNum, '(a)') '      </greensFunction>'
       ENDIF
 
-!      IF(l_explicit.OR.l_hybrid) THEN
-!      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
-!220      FORMAT('      <energyParameterLimits ellow="', f0.8, '" elup="', f0.8, '"/>')
-!         WRITE (fileNum, 220) input%ellow, input%elup
-!      END IF
+! 
 
       WRITE (fileNum, '(a)') '   </calculationSetup>'
       WRITE (fileNum, '(a)') '   <cell>'

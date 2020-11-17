@@ -11,6 +11,8 @@ USE m_juDFT
 !     *************************************************************
 
 CONTAINS
+  REAL,PARAMETER :: input_ellow=-2.0
+  REAL,PARAMETER :: input_elup=1.0
 
 SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
@@ -267,11 +269,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   IF (.NOT.input%film) eig(i,ispin,n) = eig(i,ispin,n) + 0.4
                   IF (.NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)) THEN
                      enpara%el0(lnum(i,n),n,ispin) = eig(i,ispin,n)
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%ellow) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_ellow) THEN
                         enpara%el0(lnum(i,n),n,ispin) = vacpar(1)
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%elup) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_elup) THEN
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
                   ELSE
@@ -280,8 +282,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                            IF (atoms%llo(ilo,n).EQ.lnum(i,n)) THEN
                               IF (.NOT.llo_found(ilo)) THEN
                                  enpara%ello0(ilo,n,ispin) = eig(i,ispin,n)
-                                 IF ((enpara%ello0(ilo,n,ispin).GT.input%elup).OR.&
-                                     (enpara%ello0(ilo,n,ispin).LT.input%ellow)) THEN
+                                 IF ((enpara%ello0(ilo,n,ispin).GT.input_elup).OR.&
+                                     (enpara%ello0(ilo,n,ispin).LT.input_ellow)) THEN
                                     enpara%ello0(ilo,n,ispin)= vacpar(1)
                                  ELSE IF (atoms%l_dulo(ilo,n)) THEN
                                     enpara%ello0(ilo,n,ispin)= enpara%el0(atoms%llo(ilo,n),n,ispin)
