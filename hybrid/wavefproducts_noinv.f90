@@ -315,9 +315,13 @@ CONTAINS
                            IF (abs(m2) <= l2) THEN
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                                 carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                        *outer_prod(cmt_ikqpt(bandoi:bandof, lm2, ic), &
-                                                    conjg(cmt_nk(1:hybdat%nbands(ik), lm1, ic)))
+                                 do k = 1, hybdat%nbands(ik)
+                                    do j = bandoi, bandof 
+                                       carr(j, k) = carr(j,k) + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                                                * cmt_ikqpt(j, lm2, ic) &
+                                                                  * conjg(cmt_nk(k, lm1, ic))
+                                    enddo 
+                                 enddo
                               END IF
                            END IF
 
@@ -325,9 +329,16 @@ CONTAINS
                            IF (abs(m2) <= l2 .and. offdiag) THEN
                               lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                                 carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                        *outer_prod(cmt_ikqpt(bandoi:bandof, lm1, ic), &
-                                                    conjg(cmt_nk(1:hybdat%nbands(ik), lm2, ic)))
+                                 do k = 1, hybdat%nbands(ik)
+                                    do j = bandoi, bandof 
+                                       carr(j, k) = carr(j,k) + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                                                * cmt_ikqpt(j, lm1, ic) & 
+                                                                  * conjg(cmt_nk(k, lm2, ic))
+                                    enddo 
+                                 enddo
+                                 ! carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                 !        *outer_prod(cmt_ikqpt(bandoi:bandof, lm1, ic), &
+                                 !                    conjg(cmt_nk(1:hybdat%nbands(ik), lm2, ic)))
                               END IF
                            END IF
 
