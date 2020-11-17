@@ -248,19 +248,16 @@ CONTAINS
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
       INTEGER                 ::  itype, ieq, ic1, m, psize
 
-      COMPLEX                 ::  atom_phase
+      COMPLEX                 ::  atom_phase, cscal
 
       LOGICAL                 ::  offdiag
 
       !      - local arrays -
       INTEGER                 ::  lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
-      COMPLEX, allocatable    ::  carr(:,:)
       COMPLEX, allocatable    ::  cmt_ikqpt(:,:,:)
 
       call timestart("wavefproducts_noinv5 MT")
-      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
-      if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
 
       allocate(cmt_ikqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("alloc cmt_ikqpt")
@@ -290,7 +287,6 @@ CONTAINS
             atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
 
             DO l = 0, fi%hybinp%lcutm1(itype)
-
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                   call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
@@ -305,7 +301,7 @@ CONTAINS
                      do k = 1, hybdat%nbands(ik)
                         do j = bandoi, bandof 
                            DO m = -l, l
-                              carr = 0.0
+                              cscal = 0.0
 
                               lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
                               DO m1 = -l1, l1
@@ -314,7 +310,7 @@ CONTAINS
                                  IF (abs(m2) <= l2) THEN
                                     lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                     IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                                       carr(j, k) = carr(j,k) + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                       cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
                                                                * cmt_ikqpt(j, lm2, ic) &
                                                                   * conjg(cmt_nk(k, lm1, ic))
                                     END IF
@@ -324,7 +320,7 @@ CONTAINS
                                  IF (abs(m2) <= l2 .and. offdiag) THEN
                                     lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                     IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                                       carr(j, k) = carr(j,k) + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                       cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
                                                                * cmt_ikqpt(j, lm1, ic) & 
                                                                   * conjg(cmt_nk(k, lm2, ic))
                                     END IF
@@ -338,7 +334,7 @@ CONTAINS
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
                                     = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
-                                          + hybdat%prodm(i, n, l, itype)*carr(j, k)*atom_phase
+                                          + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
                               ENDDO
                            END DO
                         enddo 
