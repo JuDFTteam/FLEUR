@@ -246,7 +246,7 @@ CONTAINS
       !     - local scalars -
       INTEGER                 ::  iatm, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
-      INTEGER                 ::  itype, ieq, ic1, m, psize
+      INTEGER                 ::  itype, ieq, m, psize
 
       COMPLEX                 ::  atom_phase, cscal
 
@@ -280,24 +280,26 @@ CONTAINS
       lm_0 = 0
       do iatm = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatm)
-         ic1 = 0
-
          atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatm)))
 
          DO l = 0, fi%hybinp%lcutm1(itype)
-            DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-               call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
+            !$OMP PARALLEL DO default(none) collapse(2) schedule(dynamic) &
+            !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
+            !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
+            !$OMP shared(iatm, psize, atom_phase)
+            do k = 1, hybdat%nbands(ik)
+               do j = bandoi, bandof 
+                  DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
+                     call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
-               IF (mod(l1 + l2 + l, 2) == 0) THEN
-                  offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
-                  !(leading to the same basis-function product)
+                     IF (mod(l1 + l2 + l, 2) == 0) THEN
+                        offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
+                        !(leading to the same basis-function product)
 
-                  lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
-                  lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
+                        lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
+                        lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
-                  lm = lm_0
-                  do k = 1, hybdat%nbands(ik)
-                     do j = bandoi, bandof 
+                        lm = lm_0
                         DO m = -l, l
                            cscal = 0.0
 
@@ -335,10 +337,11 @@ CONTAINS
                                        + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
                            ENDDO
                         END DO
-                     enddo 
-                  enddo
-               ENDIF
-            END DO
+                     ENDIF
+                  END DO !n
+               enddo  !j
+            enddo !k
+            !$OMP END PARALLEL DO
             lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
