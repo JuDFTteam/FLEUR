@@ -244,7 +244,7 @@ CONTAINS
       complex, intent(in)    :: cmt_nk(:,:,:)
 
       !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
+      INTEGER                 ::  iatm, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
       INTEGER                 ::  itype, ieq, ic1, m, psize
 
@@ -278,12 +278,11 @@ CONTAINS
 
       call timestart("loop over l, l1, l2, n, n1, n2")
       lm_0 = 0
-      ic = 0
-      do ic = 1,fi%atoms%nat 
-         itype = fi%atoms%itype(ic)
+      do iatm = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatm)
          ic1 = 0
 
-         atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
+         atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatm)))
 
          DO l = 0, fi%hybinp%lcutm1(itype)
             DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
@@ -310,8 +309,8 @@ CONTAINS
                                  lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                  IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                     cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                                            * cmt_ikqpt(j, lm2, ic) &
-                                                               * conjg(cmt_nk(k, lm1, ic))
+                                                            * cmt_ikqpt(j, lm2, iatm) &
+                                                               * conjg(cmt_nk(k, lm1, iatm))
                                  END IF
                               END IF
 
@@ -320,8 +319,8 @@ CONTAINS
                                  lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                  IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                     cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                                            * cmt_ikqpt(j, lm1, ic) & 
-                                                               * conjg(cmt_nk(k, lm2, ic))
+                                                            * cmt_ikqpt(j, lm1, iatm) & 
+                                                               * conjg(cmt_nk(k, lm2, iatm))
                                  END IF
                               END IF
 
