@@ -363,7 +363,7 @@ CONTAINS
     ENDIF
 
      IF(wann%l_pauliat.AND.fmpi%irank==0) THEN
-         call wann_pauliat_rs(
+         call wann_pauliat_rs(&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             (noco%l_soc.or.noco%l_noco),wann%band_min,wann%band_max,&
