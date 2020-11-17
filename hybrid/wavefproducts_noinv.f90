@@ -286,7 +286,7 @@ CONTAINS
             !$OMP PARALLEL DO default(none) collapse(2) schedule(dynamic) &
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
-            !$OMP shared(iatm, psize, atom_phase)
+            !$OMP shared(iatm, psize, atom_phase, ik)
             do k = 1, hybdat%nbands(ik)
                do j = bandoi, bandof 
                   DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
