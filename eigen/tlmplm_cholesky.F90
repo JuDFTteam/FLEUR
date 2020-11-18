@@ -172,7 +172,7 @@ CONTAINS
           ENDIF
        ENDDO
        !$OMP END PARALLEL DO
-       IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,hub1data,ud,nococonv,td)
+       IF (any(noco%l_constrained)) CALL tlmplm_constrained(atoms,v,enpara,input,hub1data,ud,nococonv,td)
     ENDDO
 
 

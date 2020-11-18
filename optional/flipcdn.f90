@@ -84,7 +84,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    END DO
 
    !rot_den_mat(alph,beta,rho11,rho22,rho21)
-   IF (noco%l_mtNocoPot) THEN
+   IF (any(noco%l_unrestrictMT)) THEN
       archiveType=CDN_ARCHIVE_TYPE_FFN_const
    ELSE IF (noco%l_noco) THEN
       archiveType=CDN_ARCHIVE_TYPE_NOCO_const
@@ -106,7 +106,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    ! flip cdn for each atom with rotation angles given
    na = 1
-   if (noco%l_mtNocoPot.and.size(den%mt,4)<4) then
+   if (any(noco%l_unrestrictMT).and.size(den%mt,4)<4) then
      !So far the density was collinear in spheres, now we make it FFN ready
      CALL move_alloc(den%mt,mt_tmp)
      allocate(den%mt(size(mt_tmp,1),0:size(mt_tmp,2)-1,size(mt_tmp,3),4))
@@ -122,7 +122,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
          ! spherical and non-spherical m.t. charge density
 	DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-                IF (noco%l_mtNocoPot) THEN
+                IF (any(noco%l_unrestrictMT)) THEN
                    rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
                    CALL rot_den_mat(zeros(itype),rotAngleTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
                    CALL rot_den_mat(rotAnglePhi(itype),zeros(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
@@ -173,7 +173,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
         IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
             DO m = -3,3
                DO mp = -3,3
-                  IF (noco%l_mtNocoPot) THEN
+                  IF (any(noco%l_unrestrictMT)) THEN
 ! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
                     realPart1=REAL(den%mmpMat(m,mp,i_u,1))
                     realPart2=REAL(den%mmpMat(m,mp,i_u,2))

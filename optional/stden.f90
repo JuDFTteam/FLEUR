@@ -1,6 +1,7 @@
 MODULE m_stden
-
 USE m_juDFT
+  REAL,PARAMETER :: input_ellow=-2.0
+  REAL,PARAMETER :: input_elup=1.0
 !     ************************************************************
 !     generate flapw starting density by superposition of
 !     atomic densities. the non-spherical terms inside
@@ -11,6 +12,7 @@ USE m_juDFT
 !     *************************************************************
 
 CONTAINS
+
 
 SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
@@ -203,11 +205,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    ! Check the normalization of total density
    CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
    !Rotate density into global frame if l_alignSQA
-   IF (noco%l_alignMT) then
+   IF (any(noco%l_alignMT)) then
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
      nococonv%beta=noco%beta_inp
      nococonv%alph=noco%alph_inp
-     CALL toGlobalSpinFrame(fmpi,noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
+     CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
      Allocate(pw_tmp(size(den%pw,1),3))
      pw_tmp=0.0
      pw_tmp(:,:size(den%pw,2))=den%pw
@@ -224,7 +226,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       den%iter = 0
 
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
-          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_alignMT),&
+          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
           CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN
@@ -267,11 +269,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   IF (.NOT.input%film) eig(i,ispin,n) = eig(i,ispin,n) + 0.4
                   IF (.NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)) THEN
                      enpara%el0(lnum(i,n),n,ispin) = eig(i,ispin,n)
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%ellow) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_ellow) THEN
                         enpara%el0(lnum(i,n),n,ispin) = vacpar(1)
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%elup) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_elup) THEN
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
                   ELSE
@@ -280,8 +282,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                            IF (atoms%llo(ilo,n).EQ.lnum(i,n)) THEN
                               IF (.NOT.llo_found(ilo)) THEN
                                  enpara%ello0(ilo,n,ispin) = eig(i,ispin,n)
-                                 IF ((enpara%ello0(ilo,n,ispin).GT.input%elup).OR.&
-                                     (enpara%ello0(ilo,n,ispin).LT.input%ellow)) THEN
+                                 IF ((enpara%ello0(ilo,n,ispin).GT.input_elup).OR.&
+                                     (enpara%ello0(ilo,n,ispin).LT.input_ellow)) THEN
                                     enpara%ello0(ilo,n,ispin)= vacpar(1)
                                  ELSE IF (atoms%l_dulo(ilo,n)) THEN
                                     enpara%ello0(ilo,n,ispin)= enpara%el0(atoms%llo(ilo,n),n,ispin)

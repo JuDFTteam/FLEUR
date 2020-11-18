@@ -1,6 +1,6 @@
 MODULE m_mcdinit
 CONTAINS
-  SUBROUTINE mcd_init(atoms,input,vr,g,f,mcd,itype,jspin)
+  SUBROUTINE mcd_init(atoms,banddos,input,vr,g,f,mcd,itype,jspin)
 
     !-----------------------------------------------------------------------
     !
@@ -22,6 +22,7 @@ CONTAINS
 
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_mcd),INTENT(INOUT)    :: mcd
 
     INTEGER, PARAMETER :: l_max = 3
@@ -36,7 +37,7 @@ CONTAINS
 
     ! Locals ...
 
-    INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr
+    INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr,n_dos
     REAL  c,t2,e,fj,fl,fn ,d,ms,rn
     INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states)),l_core(maxval(atoms%econf%num_states))
     REAL vrd(atoms%msh),occ(maxval(atoms%econf%num_states),2),a(atoms%msh),b(atoms%msh),j_core(maxval(atoms%econf%num_states)),e_mcd1(maxval(atoms%econf%num_states))
@@ -46,13 +47,15 @@ CONTAINS
 
     !-----------------------------------------------------------------------
 
+    if (.not.any(banddos%dos_atom(sum(atoms%neq(:itype-1))+1:sum(atoms%neq(:itype))))) return
+
     c = c_light(1.0)
     ALLOCATE ( gc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )
     ALLOCATE ( fc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )
 
     ! core setup
-
-    mcd%ncore(itype) = 0
+    n_dos=banddos%map_atomtype(itype)
+    mcd%ncore(n_dos) = 0
     CALL atoms%econf(itype)%get_core(nst,nprnc,kappa,occ)
 
     DO ispin = jspin, jspin
@@ -105,7 +108,7 @@ CONTAINS
        ALLOCATE (dgv(atoms%jri(itype),0:l_max,input%jspins,2) )
        ALLOCATE ( fv(atoms%jri(itype),0:l_max,input%jspins,2) )
        DO i = 1, 2
-          DO iri = 3*(itype-1)+1 , 3*(itype-1)+3
+          DO iri = 3*(n_dos-1)+1 , 3*(n_dos-1)+3
              DO l = 1, (l_max+1)**2
                 DO icore = 1, maxval(atoms%econf%num_states)
                    mcd%m_mcd(icore,l,iri,i) = CMPLX(0.0,0.0)
@@ -139,15 +142,15 @@ CONTAINS
 
              DO i = 1, 2
                 !              write(*,*) j_core(icore),l_core(icore),l_max,ms
-                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),maxval(atoms%econf%num_states),atoms%ntype,&
+                CALL nabla(n_dos,icore,atoms%jri(itype),atoms%dx(itype),maxval(atoms%econf%num_states),atoms%ntype,&
                      j_core(icore),l_core(icore),l_max,ms,atoms%rmsh(:,itype),gc(:,icore,ispin),&
                      gv(:,0:,ispin,i),dgv(:,0:,ispin,i), mcd%m_mcd(:,:,:,i) )
              ENDDO
 
              DO i = 1, 2*icore*l_core(icore)
-                mcd%ncore(itype) = mcd%ncore(itype) + 1
-                IF (mcd%ncore(itype)>maxval(atoms%econf%num_states))  CALL juDFT_error("maxval(atoms%econf%num_states) too small" ,calledby ="mcd_init")
-                mcd%e_mcd(itype,ispin,mcd%ncore(itype)) = e_mcd1(icore)
+                mcd%ncore(n_dos) = mcd%ncore(n_dos) + 1
+                IF (mcd%ncore(n_dos)>maxval(atoms%econf%num_states))  CALL juDFT_error("maxval(atoms%econf%num_states) too small" ,calledby ="mcd_init")
+                mcd%e_mcd(n_dos,ispin,mcd%ncore(n_dos)) = e_mcd1(icore)
              ENDDO
           ENDDO
        ENDDO

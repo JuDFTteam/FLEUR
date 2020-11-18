@@ -107,21 +107,27 @@ CONTAINS
       INTEGER:: number_sets, n
       CHARACTER(len=200)::str, path, path2
 
-      IF (xml%versionNumber < 32) THEN
-         IF (xml%GetNumberOfNodes("/fleurInput/cell/symmetryFile") .NE. 1) CALL judft_error("For old inp.xml files only a sym.out is supported for conversion")
-         CALL read_sym_out(this%mrot, this%tau, this%nop)
-         RETURN
+      IF (xml%GetNumberOfNodes("/fleurInput/cell/symmetryFile") > 0) THEN
+        CALL read_sym_out(this%mrot, this%tau, this%nop)
+        RETURN
       ENDIF
 
-      this%nop = xml%GetNumberOfNodes('/fleurInput/cell/symmetryOperations/symOp')
+      if (xml%GetNumberOfNodes('/fleurInput/cell/symmetryOperations/symOp')>0) THEN
+        path2='/fleurInput/cell/symmetryOperations/symOp'
+      elseif(xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')>0) THEN
+        path2='/fleurInput/calculationSetup/symmetryOperations/symOp'
+      else
+        CALL judft_error("No symmetries in inp.xml")
+      endif
+
+      this%nop = xml%GetNumberOfNodes(path2)
       this%nop2 = this%nop !might be changed later in film case
       ALLOCATE (this%mrot(3, 3, this%nop))
       ALLOCATE (this%tau(3, this%nop))
 
-      IF (this%nop < 1) CALL judft_error("No symmetries in inp.xml")
 
       DO n = 1, this%nop
-         WRITE (path, "(a,i0,a)") '/fleurInput/cell/symmetryOperations/symOp[', n, ']'
+         WRITE (path, "(a,a,i0,a)") trim(path2),'[', n, ']'
          str = xml%GetAttributeValue(TRIM(path)//'/row-1')
          READ (str, *) this%mrot(1, :, n), this%tau(1, n)
          str = xml%GetAttributeValue(TRIM(path)//'/row-2')

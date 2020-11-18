@@ -50,7 +50,7 @@ CONTAINS
    IF((fmpi%irank.NE.0).AND.l_denMatAlloc) THEN
       IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
          ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mtNocoPot.OR.noco%l_mperp)))
+                                MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,any(noco%l_unrestrictMT).OR.noco%l_mperp)))
       END IF
    END IF
 
@@ -81,6 +81,8 @@ CONTAINS
    IF (present(nococonv)) THEN
      CALL MPI_BCAST(nococonv%alph, size(nococonv%alph), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
      CALL MPI_BCAST(nococonv%beta, size(nococonv%beta), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+     CALL MPI_BCAST(nococonv%alphprev, size(nococonv%alph), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+     CALL MPI_BCAST(nococonv%betaprev, size(nococonv%beta), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
    ENDIF
 #endif
 

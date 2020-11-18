@@ -1,77 +1,76 @@
 MODULE m_forcea21
 CONTAINS
-  SUBROUTINE force_a21(input,atoms,sym,oneD,cell,&
+   SUBROUTINE force_a21(input,atoms,sym,oneD,cell,&
        we,jsp,epar,ne,eig,usdus,tlmplm,vtot,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
+      !--------------------------------------------------------------------------
+      ! Pulay 2nd and 3rd term force contributions à la Rici et al.
+      ! 
+      ! Equation A17 and A20 combined, Phys. Rev. B 43, 6411 
+      ! 
+      ! NOTE: We do NOT include the i**l factors in the alm, blm coming from
+      ! to_pulay anymore. Therefore, we can use matrix elements from file 28, 38
+      ! DIRECTLY.
+      ! 
+      ! Note: The present version only yields forces for the highest energy window
+      ! (=valence states). If semicore forces are wanted as well the tmas and tmat
+      ! files have to be saved, indexed and properly used here in force_a21.
+      ! 
+      ! 22/june/97: Probably found symmetrization error replacing S^-1 by S 
+      ! (IS instead of isinv)
+      ! 
+      ! Force contribution B4 added following
+      ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
+      ! GMadsen FZJ 20/3-01
+      !--------------------------------------------------------------------------
+      USE m_forcea21lo
+      USE m_forcea21U
+      USE m_types_setup
+      USE m_types_misc
+      USE m_types_usdus
+      USE m_types_tlmplm
+      USE m_types_cdnval
+      USE m_types_potden
+      USE m_constants
+      USE m_juDFT
 
-    ! ************************************************************
-    ! Pulay 2nd and 3rd (A17+A20) term force contribution a la Rici
-    ! combined
-    ! NOTE: we do NOT include anymore  the i**l factors
-    ! in the alm,blm coming from to_pulay. Therefore, we can
-    ! use matrixelements from file 28,38 DIRECTLY
-    ! note: present version only yields forces for
-    ! highest energy window (=valence states)
-    ! if also semicore forces are wanted the tmas and tmat files
-    ! have to be saved, indexed and properly used here in force_a21
-    ! 22/june/97: probably we found symmetrization error replacing
-    ! now S^-1 by S (IS instead of isinv)
-    ! ************************************************************
-    !
-    ! Force contribution B4 added following
-    ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
-    ! GMadsen FZJ 20/3-01
-    !
-    USE m_forcea21lo
-    USE m_forcea21U
-    USE m_types_setup
-    USE m_types_misc
-    USE m_types_usdus
-    USE m_types_tlmplm
-    USE m_types_cdnval
-    USE m_types_potden
-    USE m_constants
-    USE m_juDFT
-    IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)        :: input
-    TYPE(t_results),INTENT(INOUT)   :: results
+      IMPLICIT NONE
 
-    TYPE(t_oneD),INTENT(IN)         :: oneD
-    TYPE(t_sym),INTENT(IN)          :: sym
-    TYPE(t_cell),INTENT(IN)         :: cell
-    TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_usdus),INTENT(IN)        :: usdus
-    TYPE(t_tlmplm),INTENT(IN)       :: tlmplm
-    TYPE(t_potden),INTENT(IN)       :: vtot
-    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne,jsp
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
-    REAL,    INTENT(IN)    :: eig(input%neig)
-    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
-    COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX dtd,dtu,utd,utu
-    INTEGER lo
-    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
-    INTEGER natrun,is,isinv,j,irinv,it,lmplmd
-    REAL   ,PARAMETER:: zero=0.0
-    COMPLEX,PARAMETER:: czero=CMPLX(0.,0.)
-    !     ..
-    !     .. Local Arrays ..
-    REAL,    ALLOCATABLE :: a21(:,:),b4(:,:)
-    COMPLEX forc_a21(3),forc_b4(3)
-    REAL starsum(3),starsum2(3),gvint(3),gvint2(3)
-    REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
+      TYPE(t_input),        INTENT(IN)    :: input
+      TYPE(t_atoms),        INTENT(IN)    :: atoms
+      TYPE(t_sym),          INTENT(IN)    :: sym
+      TYPE(t_oneD),         INTENT(IN)    :: oneD
+      TYPE(t_cell),         INTENT(IN)    :: cell
+      TYPE(t_usdus),        INTENT(IN)    :: usdus
+      TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
+      TYPE(t_potden),       INTENT(IN)    :: vtot
+      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+      TYPE(t_results),      INTENT(INOUT) :: results
 
+      INTEGER, INTENT(IN) :: jsp, ne
 
-    CALL timestart("force_a21")
+      REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
+      REAL,    INTENT(IN)    :: eig(input%neig)
+      COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+      COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+      COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+      COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
+      COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
+
+      ! Local scalars
+      REAL   , PARAMETER :: zero=0.0
+      COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
+      COMPLEX dtd,dtu,utd,utu
+      INTEGER lo
+      INTEGER i,ie,im,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
+      INTEGER natrun,is,isinv,j,irinv,it,lmplmd
+
+      ! Local arrays
+      REAL, ALLOCATABLE :: a21(:,:),b4(:,:)
+      COMPLEX forc_a21(3),forc_b4(3)
+      REAL starsum(3),starsum2(3),gvint(3),gvint2(3)
+      REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
+
+      CALL timestart("force_a21")
 
     lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
 
@@ -287,34 +286,33 @@ CONTAINS
              !
              !  natrun loop end
           END DO
-          !
-          !     sum to existing forces
-          !
-          !  NOTE: force() IS REAL AND THEREFORE TAKES ONLY THE
-          !  REAL PART OF forc_a21(). IN GENERAL, FORCE MUST BE
-          !  REAL AFTER k-STAR SUMMATION. NOW, WE PUT THE PROPER
-          !  OPERATIONS INTO REAL SPACE. PROBLEM: WHAT HAPPENS
-          !  IF IN REAL SPACE THERE IS NO INVERSION ANY MORE?
-          !  BUT WE HAVE INVERSION IN k-SPACE DUE TO TIME REVERSAL
-          !  SYMMETRY, E(k)=E(-k)
-          !  WE ARGUE THAT k-SPACE INVERSION IS AUTOMATICALLY TAKEN
-          !  INTO ACCOUNT IF FORCE = (1/2)(forc_a21+conjg(forc_a21))
-          !  BECAUSE TIME REVERSAL SYMMETRY MEANS THAT conjg(PSI)
-          !  IS ALSO A SOLUTION OF SCHR. EQU. IF PSI IS ONE.
-          DO i = 1,3
-             results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
-             f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
-             f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
-          END DO
-          !
-          !     write result moved to force_a8
-          !
-          !         write(*,*) a21(:,n)
-       ENDIF                                            !  IF (atoms%l_geo(n)) ...
-       natom = natom + atoms%neq(n)
-    ENDDO
 
-    CALL timestop("force_a21")
+            ! Add onto existing forces.
 
-  END SUBROUTINE force_a21
+            ! NOTE: results%force is real and therefore only the real part of
+            ! forc_a21 is added. In general, force must be real after the k-star
+            ! summation. Now, we put the proper operations into real space. 
+            ! Problem: What happens if in real space there is no inversion anymore?
+            ! But we have inversion in k-space due to time reversal symmetry:
+            ! E(k)=E(-k)
+            ! We argue that k-space inversion is automatically taken into account
+            ! if force = (1/2)(forc_a21+conjg(forc_a21)), because time reversal
+            ! symmetry means that conjg(PSI) is also a solution of Schrödinger eq.
+            ! if PSI is one.
+
+            DO i = 1, 3
+               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
+               f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
+               f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
+            END DO
+
+         END IF ! IF (atoms%l_geo(n)) ...
+         natom = natom + atoms%neq(n)
+      END DO
+
+      ! The result is written in force_a8.
+
+      CALL timestop("force_a21")
+
+   END SUBROUTINE force_a21
 END MODULE m_forcea21

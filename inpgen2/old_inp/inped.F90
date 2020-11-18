@@ -115,9 +115,8 @@
           ELSE
              noco%l_ss = .FALSE.
              noco%l_mperp = .FALSE.
-             noco%l_constr = .FALSE.
+             noco%l_constrained = .FALSE.
              noco%mix_b = 0.0
-             noco%l_relax(:) = .FALSE.
              noco%alph_inp(:) = 0.0
              noco%beta_inp(:) = 0.0
           ENDIF
@@ -399,7 +398,7 @@
           !--->    for floating energy parameters, the window will be given relative
           !--->    to the highest/lowest energy parameters. a sanity check is made here
           !
-          WRITE (oUnit,FMT=8350) input%ellow,input%elup,input%zelec
+          
 8350      FORMAT (1x,/,/,' energy window from',f8.3,' to', f8.3,' hartrees; nr. of electrons=',f6.1)
           !--->    input of wavefunction cutoffs: input is a scaled quantity
           !--->    related to the absolute value by rscale (e.g. a muffin-tin

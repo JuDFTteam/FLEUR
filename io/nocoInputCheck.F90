@@ -69,19 +69,15 @@ MODULE m_nocoInputCheck
       END IF
 
 !---> make sure that moments are not relaxed and constrained
-      l_relax_any = .FALSE.
-      DO itype = 1,atoms%ntype
-         l_relax_any = l_relax_any.OR.noco%l_relax(itype)
-      END DO
-      IF (l_relax_any.AND.noco%l_constr) THEN
+      l_relax_any = any(noco%l_alignMt.and.noco%l_constrained)
+      IF (l_relax_any) THEN
          WRITE (oUnit,*)'The relaxation of the moment is switched on for at'
          WRITE (oUnit,*)'least one atom. At the same time the constrained'
          WRITE (oUnit,*)'moment option has been switched on!!!'
-!          CALL juDFT_error("relaxation of moments and constraint are sw
+        CALL juDFT_error("You can not constrain and relax a magnetic moment simultaniously")
       ENDIF
-      if (l_relax_any.or.noco%l_constr) CALL judft_warn("Constraint moments and relaxations are untested in this version!")
 !---> make sure that perp. component of mag. is calculated if needed
-      IF ( (l_relax_any .or. noco%l_constr) .and. (.not. noco%l_mperp) ) THEN
+      IF ( (l_relax_any .or. any(noco%l_constrained)) .and. (.not. noco%l_mperp) ) THEN
          WRITE (oUnit,*)'The relaxation of the moment is switched on for at'
          WRITE (oUnit,*)'least one atom or the constrained moment option is'
          WRITE (oUnit,*)'switched on. In either case, you need to set'
@@ -89,30 +85,30 @@ MODULE m_nocoInputCheck
          CALL juDFT_error("Stop: Set l_mperp = T to relax or constrain the moments!!",calledby ="nocoInputCheck")
       ENDIF
 !---> make sure l_constr is switched off in the case of spin spirals
-      IF (noco%l_constr .and. noco%l_ss) THEN
+      IF (any(noco%l_constrained) .and. noco%l_ss) THEN
          WRITE (oUnit,*)'The constraint moment option is not implemeted'
          WRITE (oUnit,*)'for spin spirals.'
          CALL juDFT_error("Stop: constraint not implemented for spin spirals!!",calledby ="nocoInputCheck")
       ENDIF
 
-      IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.sym%nop.NE.1) THEN
+      IF(any(noco%l_unrestrictMT).AND.atoms%n_hia+atoms%n_u>0.AND.sym%nop.NE.1) THEN
          CALL juDFT_warn("LDA+U and FullyFullyNoco with symmetries is not correctly implemented at the moment",calledby="nocoInputCheck")
       ENDIF
 
-    IF(noco%l_mtnocoPot.AND.sym%nop.NE.1) THEN
+    IF(any(noco%l_unrestrictMT).AND.sym%nop.NE.1) THEN
        CALL juDFT_warn("FullyFullyNoco with symmetries might not deliver the desired results for you. This probably would require the implementation of magnetic space groups. ",calledby="nocoInputCheck")
     END IF
 
-    IF(noco%l_mtnocoPot.AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.noco%l_alignMT)) THEN
+    IF(any(noco%l_unrestrictMT).AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.any(noco%l_alignMT))) THEN
          CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxAlpha/Beta=T setting to achieve reasonable results.",calledby="nocoInputCheck")
       ENDIF
 
           !Warning on strange choice of switches
-    IF (noco%l_mtNocoPot.AND..NOT.noco%l_mperp) THEN
+    IF (any(noco%l_unrestrictMT).AND..NOT.noco%l_mperp) THEN
     	CALL juDFT_error("l_mperp='F' and l_mtNocoPot='T' makes no sense.",calledby='nocoInputCheck')
     END IF
 
-  
+
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

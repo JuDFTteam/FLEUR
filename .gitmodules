@@ -1,6 +1,3 @@
-[submodule "external/hdf5-git"]
-	path = external/hdf5-git
-	url = https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
 [submodule "external/libxc-git"]
 	path = external/libxc-git
 	url = https://gitlab.com/libxc/libxc.git
@@ -16,3 +13,6 @@
 [submodule "external/kplib/kplib"]
 	path = external/kplib/kplib
 	url = https://gitlab.com/muellergroup/kplib.git
+[submodule "external/hdf5-git"]
+	path = external/hdf5-git
+	url = https://github.com/HDFGroup/hdf5.git

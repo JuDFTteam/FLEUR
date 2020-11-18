@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       title   
    </comment>
@@ -7,19 +7,19 @@
       <cutoffs Kmax="4.20000000" Gmax="12.60000000" GmaxXC="12.60000000" numbands="0"/>
       <scfLoop itmax="1"  minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <!-- k-points included here -->
          <kPointListSelection listName="default" />
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <!-- symmetry operations included here -->
       <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
       <bulkLattice scale="1.0000000000">
@@ -30,9 +30,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="C-1" element="C" atomicNumber="6" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="C-1" element="C" atomicNumber="6">
          <mtSphere radius="1.42000000" gridPoints="471" logIncrement=".02200000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>

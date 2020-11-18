@@ -301,19 +301,17 @@ CONTAINS
     !----------------------------------------------------------------------+
     ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
     ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
-    ! and kpttet routines of the MD-programm.                              |
+    ! and kvecon routines of the MD-programm.                              |
     !                                                          G.B. 07/01  |
     !----------------------------------------------------------------------+
     USE m_constants
     USE m_bravais
     USE m_brzone2
     USE m_kptmop
-    USE m_kpttet
+    USE m_kvecon
     USE m_types_cell
     USE m_types_sym
     USE m_kptgen_hybrid
-    USE m_tetrahedron_regular
-    USE m_triang
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -337,7 +335,6 @@ CONTAINS
     REAL, ALLOCATABLE    :: wghtkp(:)   !   associated with k-points for BZ integration
     INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
     REAL, ALLOCATABLE    :: voltet(:)   ! voulmes of the tetrahedrons
-    REAL, ALLOCATABLE    :: vktet(:,:)
 
     REAL    divis(4)           ! Used to find more accurate representation of k-points
     ! vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
@@ -360,8 +357,6 @@ CONTAINS
     INTEGER nreg     ! 1 kpoints in full BZ; 0 kpoints in irrBZ
     INTEGER nfulst   ! 1 kpoints ordered in full stars
     !    (meaningful only for nreg =1; full BZ)
-    INTEGER nbound   ! 0 no primary points on BZ boundary;
-    ! 1 with boundary points (not for BZ integration!!!)
     INTEGER ikzero   ! 0 no shift of k-points;
     ! 1 shift of k-points for better use of sym in irrBZ
     REAL    kzero(3) ! shifting vector to bring one k-point to or
@@ -370,7 +365,7 @@ CONTAINS
     INTEGER i,j,k,l,mkpt,addSym,nsym
     LOGICAL random,l_tria
     REAL as
-    REAL help(3),binv(3,3),rlsymr1(3,3),ccr1(3,3)
+    REAL binv(3,3)
 
     kpts%kptsKind = KPTS_KIND_MESH
 
@@ -410,27 +405,18 @@ CONTAINS
        CALL bravais(cell%amat,idsyst,idtype)
 
        nsym = MERGE(sym%nop2,sym%nop,film)
-       !nbound  = MERGE(1,0,film.AND.bz_integration==BZINT_METHOD_TRIA)
-       nbound = 0
        random  = bz_integration==BZINT_METHOD_TRIA.AND..NOT.film
-       idimens = MERGE(2,3,film)
 
        ! Lattice information
 
        bltv=TRANSPOSE(cell%amat)
        binv=TRANSPOSE(cell%bmat)/tpi_const
-       rltv=TRANSPOSE(cell%bmat)
-       DO i=1,nsym
-          rlsymr(:,:,i)=REAL(TRANSPOSE(sym%mrot(:,:,i)))
-       ENDDO
 
        talfa(:,:nsym)=MATMUL(bltv,sym%tau(:,:nsym))
+
        DO i = 1, nsym
-          ccr(:,:,i) = MATMUL(MATMUL(binv(:,:),rlsymr(:,:,i)),bltv(:,:))
-       END DO
-       DO i = 1, nsym
-          rlsymr(:,:,i)=TRANSPOSE(rlsymr(:,:,i))
-          ccr(:,:,i)=TRANSPOSE(ccr(:,:,i))
+          rlsymr(:,:,i)=REAL(sym%mrot(:,:,i))
+          ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
        END DO
 
        IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
@@ -454,29 +440,41 @@ CONTAINS
 
        ! brzone and brzone2 find the corner-points, the edges, and the
        ! faces of the irreducible wedge of the brillouin zone (IBZ).
+       rltv=TRANSPOSE(cell%bmat)
        CALL brzone2(rltv,nsym,ccr,mface,nbsz,nv48,cpoint,xvec,ncorn,nedge,nface,fnorm,fdist)
 
-       IF (nbound.EQ.1) THEN
-          mkpt = PRODUCT((2*grid(:idimens)+1))
-       ELSE
-          mkpt=PRODUCT(grid(:idimens))
-       END IF
-       ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
+       idimens = MERGE(2,3,film)
+       mkpt=PRODUCT(grid(:idimens))
 
+       ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt))
 
        IF (bz_integration==BZINT_METHOD_TRIA.AND.random) THEN
           ! Calculate the points for tetrahedron method
           ndiv3 = 6*(mkpt+1)
-          ALLOCATE (voltet(ndiv3),vktet(3,mkpt),ntetra(4,ndiv3))
+          ALLOCATE (voltet(ndiv3),ntetra(4,ndiv3))
           kpts%nkpt=mkpt
-          CALL kpttet(0,mkpt,ndiv3,&
-               rltv,cell%omtil,nsym,ccr,mdir,mface,&
-               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,vktet,&
-               kpts%nkpt,vkxyz,wghtkp)
+
+          WRITE (oUnit,'('' k-points generated with tetrahedron '',''method'')')
+          WRITE (oUnit,'(''# k-points generated with tetrahedron '',''method'')')
+          WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
+          WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
+
+          CALL kvecon(kpts%nkpt,mface,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,&
+                      vkxyz)
+
+          DO i = 1, kpts%nkpt
+             wghtkp(i) = 1.0 / kpts%nkpt
+             WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,''vkxyz, wghtkp'')') (vkxyz(j,i),j=1,3),wghtkp(i),i
+          END DO
+
+!          CALL kpttet(kpts%nkpt,ndiv3,&
+!               rltv,cell%omtil,nsym,ccr,mdir,mface,&
+!               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,&
+!               vkxyz,wghtkp)
        ELSE
           ! Now calculate Monkhorst-Pack k-points:
           CALL kptmop(idsyst,idtype,grid,&
-               rltv,bltv,nbound,idimens,xvec,fnorm,fdist,ncorn,nface,&
+               rltv,bltv,0,idimens,xvec,fnorm,fdist,ncorn,nface,&
                nedge,cpoint,nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
        END IF
@@ -489,52 +487,6 @@ CONTAINS
        kpts%bk(:,:) = vkxyz(:,:kpts%nkpt)
        kpts%wtkpt(:) = wghtkp(:kpts%nkpt)
 
-       IF(bz_integration==BZINT_METHOD_TRIA .AND. film) THEN
-          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
-          l_tria = .FALSE.
-          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
-          !IF (sym%invs) THEN
-          !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-          !ELSE
-          !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-          !ENDIF
-          !write(*,*) as,sym%nop2,l_tria
-
-          !Match normalisation of other methods
-          voltet = voltet/as*kpts%ntet
-       ENDIF
-
-    ENDIF
-
-    IF(bz_integration==BZINT_METHOD_TETRA) THEN
-       !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
-       CALL kpts%init(cell, sym, film, .false.) !To generate the full grid
-       IF(.NOT.kpts%l_gamma) CALL juDFT_error("Regular tetrahedron decomposition" //&
-                                              "needs a gamma centered kpoint grid",&
-                                              calledby="init_by_grid")
-       CALL tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
-    ENDIF
-
-    IF (bz_integration==BZINT_METHOD_TRIA .AND.random .OR. bz_integration==BZINT_METHOD_TETRA .AND..NOT.film) THEN
-       ALLOCATE(kpts%ntetra(4,kpts%ntet))
-       ALLOCATE(kpts%voltet(kpts%ntet))
-       DO j = 1, kpts%ntet
-          kpts%ntetra(:,j) = ntetra(:,j)
-          kpts%voltet(j) = ABS(voltet(j))
-       END DO
-    ELSE IF( (bz_integration==BZINT_METHOD_TRIA .OR. bz_integration==BZINT_METHOD_TETRA) .AND. film) THEN
-       ALLOCATE(kpts%ntetra(3,kpts%ntet))
-       ALLOCATE(kpts%voltet(kpts%ntet))
-       DO j = 1, kpts%ntet
-          kpts%ntetra(:,j) = ntetra(:,j)
-          kpts%voltet(j) = ABS(voltet(j))
-       END DO
-    ENDIF
-
-    IF(bz_integration==BZINT_METHOD_TRIA) THEN
-       kpts%kptsKind = KPTS_KIND_TRIA
-    ELSE IF(bz_integration==BZINT_METHOD_TETRA) THEN
-       kpts%kptsKind = KPTS_KIND_TETRA
     ENDIF
 
     kpts%nkpt3(:) = grid(:)

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       KCl     
    </comment>
@@ -7,12 +7,15 @@
       <cutoffs Kmax="3.23300000" Gmax="11.73300000" GmaxXC="9.83300000" numbands="50"/>
       <scfLoop itmax="2" minDistance=".00001" maxIterBroyd="25" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="pbe0" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <prodBasis gcutm="3.10000000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="40"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -23,9 +26,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-3.80000000" elup="11.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -276,9 +276,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe0" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="K-1" element="K" atomicNumber="19" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="K-1" element="K" atomicNumber="19">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01300000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig>
@@ -291,7 +290,7 @@
          <lo type="SCLO" l="0" n="3" eDeriv="0"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-      <species name="Cl-1" element="Cl" atomicNumber="17" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Cl-1" element="Cl" atomicNumber="17">
          <mtSphere radius="2.54000000" gridPoints="841" logIncrement=".01400000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig>

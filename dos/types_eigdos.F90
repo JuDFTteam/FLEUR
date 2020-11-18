@@ -112,7 +112,7 @@ subroutine dosdata_smooth(eigdos,banddos)
   ENDIF
 
   DO i=1,size(eigdos%dos,3)
-    DO jspin=1,size(eigdos%dos,2)
+    DO jspin=1,eigdos%get_spins()
       CALL smooth(dos_grid,eigdos%dos(:,jspin,i),banddos%sig_dos,size(eigdos%dos_grid))
     ENDDO
   ENDDO
@@ -140,7 +140,7 @@ subroutine write_dos(eigdos,hdf_id)
     if (.not.allocated(eigdos%dos)) return
     if (size(eigdos%dos)==0) return
 
-    DO jspin=1,size(eigdos%dos,2)
+    DO jspin=1,eigdos%get_spins()
       write(filename,"(a,a,i0)") trim(eigdos%name_of_dos),".",jspin
       open(999,file=filename)
       write(999,"(999a21)") "#energy",(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())

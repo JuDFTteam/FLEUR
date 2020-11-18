@@ -1180,7 +1180,7 @@ CONTAINS
       ! No core subtraction done!
       ! Additive term for iplot: 4
       IF (plot_const.EQ.2) THEN
-         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         IF(any(noco%l_alignMT)) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.
@@ -1206,7 +1206,7 @@ CONTAINS
       ! No core subtraction done!
       ! Additive term for iplot: 8
       IF (plot_const.EQ.3) THEN
-         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         IF(any(noco%l_alignMT)) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 1.0
          denName = 'vCoul'
          score = .FALSE.
@@ -1221,7 +1221,7 @@ CONTAINS
       ! No core subtraction done!
       ! Additive term for iplot: 16
       IF (plot_const.EQ.4) THEN
-         IF(noco%l_alignMT) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         IF(any(noco%l_alignMT)) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vXc'
          score = .FALSE.
@@ -1285,7 +1285,7 @@ CONTAINS
       CALL timestart("Plotting iplot plots")
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN
-         CALL toGlobalSpinFrame(fmpi,noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Denmat,.true.)
+         CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Denmat,fmpi,.true.)
          CALL checkplotinp(fmpi)
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi, oneD, sym, cell, &
                        noco, nococonv, denmat, plot_const)

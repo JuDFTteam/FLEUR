@@ -17,9 +17,11 @@ MODULE m_jDOS
 
    CONTAINS
 
-   SUBROUTINE jDOS_comp(ikpt,noccbd,ev_list,we,atoms,input,usdus,denCoeffsOffdiag,eigVecCoeffs,jDOS)
+   SUBROUTINE jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
+                        denCoeffsOffdiag,eigVecCoeffs,jDOS)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_banddos),           INTENT(IN)     :: banddos
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_usdus),             INTENT(IN)     :: usdus
       TYPE(t_denCoeffsOffdiag),  INTENT(IN)     :: denCoeffsOffdiag
@@ -32,20 +34,25 @@ MODULE m_jDOS
 
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
 
+      INTEGER :: n_dos
       INTEGER :: iType,iBand,nn,natom,l,jj,j_ind,lmup,lmdown,spin,ilo,ilop
       REAL    :: j,mj,mup,mdown
-      REAL    :: facup,facdown,tot
+      REAL    :: facup,facdown,summed,cf
       COMPLEX :: aup,bup,cup,adown,bdown,cdown,cupp,cdownp
       REAL    :: c(0:lmax*2)
 
 
       DO iType = 1, atoms%ntype
          DO nn =1, atoms%neq(iType)
-            natom = SUM(atoms%neq(:iType-1)) + nn
+            natom = SUM(atoms%neq(:iType-1)) + 1 !Representative atom
+            if (.not.banddos%dos_atom(natom)) cycle
+            !find index for dos
+            DO n_dos=1,size(banddos%dos_atomlist)
+               if (banddos%dos_atomlist(n_dos)==natom) exit
+            ENDDO
             DO iBand = 1, noccbd
                j_ind = 0
                c = 0.0
-               tot = 0.0
                DO l = 0, lmax
                   IF(l == 0) THEN
                      !s-states (are not split up by SOC)
@@ -64,7 +71,6 @@ MODULE m_jDOS
                            ENDDO
                         ENDDO
                      ENDDO
-                     tot = tot + c(0)
                   ELSE
                      DO jj = 1, 2
                         j_ind = j_ind+1
@@ -169,17 +175,18 @@ MODULE m_jDOS
 
                            mj = mj + 1
                         ENDDO
-                        tot = tot + c(j_ind)
                      ENDDO
                   ENDIF
                ENDDO
+               summed = SUM(c(0:2*lmax))
+               cf = 100.0/summed
                j_ind=0
                DO l = 0, 3
                   DO jj = 1, 2
                      IF(l /= 0) j_ind = j_ind+1
-                     jDOS%comp(ev_list(iBand),l,jj,natom,ikpt) = c(j_ind)*100.0/tot
-                     jDOS%qmtp(ev_list(iBand),natom,ikpt) = 100.0*tot
-                     jDOS%occ(l,jj,natom) = jDOS%occ(l,jj,natom) + we(iBand) * c(j_ind)
+                     jDOS%comp(ev_list(iBand),l,jj,n_dos,ikpt) = c(j_ind)*cf
+                     jDOS%qmtp(ev_list(iBand),n_dos,ikpt) = 100.0*summed
+                     jDOS%occ(l,jj,natom) = jDOS%occ(l,jj,n_dos) + we(iBand) * c(j_ind)
                   ENDDO
                ENDDO
             ENDDO

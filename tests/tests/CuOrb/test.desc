@@ -1,0 +1,9 @@
+$test_name="Fleur Cu Bulk - XML";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur DOS calculation with XML input with one step:
+1.Generate a starting density, run 1 iteration, and generate DOS. Ensure that the files are created.
+EOF
+;

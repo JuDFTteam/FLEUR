@@ -33,9 +33,9 @@ CONTAINS
 
 
     CALL timestart("tlmplm")
-    CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
+    CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained))!l_offdiag
 
-    DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
+    DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT))
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,fmpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
        CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,input,hub1inp,hub1data,td,ud)
     END DO

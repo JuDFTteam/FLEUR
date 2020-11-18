@@ -345,15 +345,34 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
-      call timestart("ibasm+1->nbasm: zgemm")
+
+
+      
       if(conjg_mtir) then
-         call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, conjg(hybdat%coul(ikpt)%mtir_c), indx1, &
-                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
-      else
-         call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir_c, indx1, &
-                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
+         ! conjg and back so we don't make a copy 
+         call timestart("conjg mtir_c")
+         call zlacgv(size(hybdat%coul(ikpt)%mtir_c), hybdat%coul(ikpt)%mtir_c, 1)
+         call timestop("conjg mtir_c")
       endif
+
+      call timestart("ibasm+1->nbasm: zgemm")
+      if(indx1 /= size(hybdat%coul(ikpt)%mtir_c, 1) ) call judft_error("indx1 fails")
+      if(mat_hlp%matsize1 /= size(mat_hlp%data_c,1) ) call judft_error("mat_hlp fails")
+      if(mat_out%matsize1 /= size(mat_out%data_c,1) ) call judft_error("mat_out fails")
+
+      if(mat_hlp%matsize1 < max(1,indx1) ) call judft_error("ldb fail")
+      if(mat_out%matsize1 < max(1,indx1) ) call judft_error("ldc fail")
+      
+      call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir_c, indx1, &
+                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1->nbasm: zgemm")
+
+      if(conjg_mtir) then
+         call timestart("conjg mtir_c")
+         call zlacgv(size(hybdat%coul(ikpt)%mtir_c), hybdat%coul(ikpt)%mtir_c, 1)
+         call timestop("conjg mtir_c")
+      endif
+
 
       call timestart("dot prod")
       iatom = 0

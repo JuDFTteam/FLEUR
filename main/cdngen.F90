@@ -5,14 +5,14 @@
 !--------------------------------------------------------------------------------
 MODULE m_cdngen
 #ifdef CPP_MPI
-   use mpi
+   USE mpi
 #endif
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results,oneD,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data)
+                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data,vxc,exc)
 
    !*****************************************************
    !    Charge density generator
@@ -54,6 +54,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
+   USE m_force_sf ! Klueppelberg (force level 3)
 
    IMPLICIT NONE
 
@@ -83,6 +84,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
+   TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -119,12 +121,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL regCharges%init(input,atoms)
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
+   if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
    CALL dos%init(input,atoms,kpts,banddos,results%eig)
    CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
    CALL mcd%init(banddos,input,atoms,kpts,results%eig)
    CALL slab%init(banddos,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
-   CALL jDOS%init(input,banddos,atoms,kpts)
+   CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
 
    if (banddos%dos.or.banddos%band) then
      allocate(eigdos(count((/banddos%dos.or.banddos%band,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
@@ -149,7 +152,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
-   results%force=0.0
 
 
    IF(PRESENT(greensFunction).AND.gfinp%n.GT.0) THEN
@@ -182,7 +184,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
-   results%force=0.0
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
@@ -217,7 +218,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN
-         IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
+         IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,'cdn_slice')
       END IF
@@ -255,6 +256,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
+   ! Klueppelberg (force level 3)
+   IF (input%l_f.AND.(input%f_level.GE.3)) THEN
+      DO jspin = 1,input%jspins ! jsp_start, jsp_end
+         CALL force_sf_mt(atoms,sphhar,jspin,jspin,fmpi,vtot%mt(:,0:,:,jspin),exc%mt(:,0:,:,1),vxc%mt(:,0:,:,:),outDen%mt(:,0:,:,:),sym,cell )
+      END DO
+   END IF
+
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
@@ -273,7 +281,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
-         IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
+         IF (ANY(noco%l_alignMT).OR.any(noco%l_constrained)) THEN
           !  CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
          IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
@@ -282,7 +290,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then
-     IF(noco%l_alignMT) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
+     IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,core_den,'cdnc')
    endif

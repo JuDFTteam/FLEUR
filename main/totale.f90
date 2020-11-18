@@ -44,6 +44,8 @@ CONTAINS
     USE m_constants
     USE m_force_a4
     USE m_force_a3
+    USE m_force_a4_add ! Klueppelberg (force level 1)
+    USE m_force_sf ! Klueppelberg (force level 3)
     USE m_forcew
     USE m_cdn_io
     USE m_types
@@ -74,7 +76,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum, fermiEnergyTemp
-    INTEGER n,j,nt,i, archiveType
+    INTEGER n,j,nt,i, archiveType,jsp
     LOGICAL l_qfix
 
     !     .. Local Arrays ..
@@ -140,9 +142,16 @@ CONTAINS
 
        IF (input%l_f) THEN
           ! core contribution to force: needs TOTAL POTENTIAL and core charge
+
+          IF (input%ctail.AND.(input%f_level.GE.1)) THEN
+             ! Add core correction to forces from tails of core states
+             ! Klueppelberg, Sep'12 (force level 1)
+             CALL force_a4_add(atoms,input,results)
+          END IF
+
           CALL force_a4(atoms,sym,sphhar,input, vTot%mt, results%force)
 
-       ENDIF
+       END IF
 
        !-for
        !     ---> add spin-up and spin-down charge density for lh=0
@@ -243,6 +252,13 @@ CONTAINS
             /,' ----> HF total electron energy=',t40,f20.10,' htr')
 8090   FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
     ENDIF
+
+    ! Klueppelberg (force level 3)
+    IF (input%l_f.AND.(input%f_level.GE.3)) THEN 
+       DO jsp=1,input%jspins
+          CALL exit_sf(jsp,atoms,results%force)
+       END DO
+    END IF
     CALL force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
 
   END SUBROUTINE totale

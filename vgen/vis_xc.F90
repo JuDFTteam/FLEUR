@@ -17,7 +17,7 @@ MODULE m_vis_xc
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc,vxc)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -44,13 +44,13 @@ CONTAINS
       TYPE(t_stars),INTENT(IN)      :: stars
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
-      TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc
+      TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
       TYPE(t_kinED),INTENT(IN)      ::kinED
 
       TYPE(t_gradients) :: grad, tmp_grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
-      REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
+      REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
       INTEGER           :: jspin, i, js
       LOGICAL           :: perform_MetaGGA
 
@@ -62,6 +62,7 @@ CONTAINS
       CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,xcpot,rho)
 
       ALLOCATE(v_xc,mold=rho)
+      ALLOCATE(v_xc2,mold=rho)
       ALLOCATE(v_x,mold=rho)
       CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
 #ifdef CPP_LIBXC
@@ -79,8 +80,11 @@ CONTAINS
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
          END SELECT
       ENDIF
+
+      v_xc2=v_xc
       !Put the potentials in rez. space.
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_xc,vTot%pw,vTot%pw_w)
+      CALL  pw_from_grid(xcpot%needs_grad(),stars,.false.,v_xc2,vxc%pw)
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_x,vx%pw,vx%pw_w)
 
       !calculate the ex.-cor energy density

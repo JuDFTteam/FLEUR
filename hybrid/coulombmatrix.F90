@@ -94,7 +94,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   ::  ngptm1(:)
       INTEGER, ALLOCATABLE   ::  pgptm1(:, :)
 
-      REAL                       :: q(3), q1(3), q2(3)
+      REAL                       :: q(3), q1(3), q2(3), mtmt_term
       REAL                       :: integrand(fi%atoms%jmtd), primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), &
                                     moment2(maxval(mpdata%num_radbasfn), fi%atoms%ntype)
@@ -115,10 +115,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
       INTEGER                    :: ishift, ishift1, ierr
-      INTEGER                    :: iatom, iatom1
+      INTEGER                    :: iatom, iatom1, mtmt_idx
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: coul_mtmt, mat, coulmat, smat
-      type(t_mat), allocatable   :: coulomb(:)
+      TYPE(t_mat)                :: mat, smat
+      type(t_mat), allocatable   :: coulomb(:), mtmt_repl(:)
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -333,8 +333,10 @@ CONTAINS
 
 
       call mat%alloc(.True., maxval(mpdata%num_radbasfn), maxval(mpdata%num_radbasfn))
-      call coul_mtmt%alloc(.False., maxval(hybdat%nbasm), maxval(hybdat%nbasm))
 
+      allocate(mtmt_repl(calc_num_mtmts(fi)))
+
+      mtmt_idx = 0
       DO itype = 1, fi%atoms%ntype
          DO ineq = 1, fi%atoms%neq(itype)
             ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
@@ -362,17 +364,15 @@ CONTAINS
 
                ! distribute mat for m=-l,l on coulomb in block-matrix form
                DO M = -l, l
+                  mtmt_idx = mtmt_idx + 1
+                  call mtmt_repl(mtmt_idx)%alloc(.True., mpdata%num_radbasfn(l, itype), mpdata%num_radbasfn(l, itype))
+
                   DO n2 = 1, mpdata%num_radbasfn(l, itype)
-                     ix = ix + 1
-                     iy = iy0
                      DO n1 = 1, n2
-                        iy = iy + 1
-                        i = ix*(ix - 1)/2 + iy
-                        j = n2*(n2 - 1)/2 + n1
-                        coul_mtmt%data_c(iy, ix) = mat%data_r(n1, n2)
+                        mtmt_repl(mtmt_idx)%data_r(n1, n2) = mat%data_r(n1, n2)
                      END DO
                   END DO
-                  iy0 = ix
+                  call mtmt_repl(mtmt_idx)%u2l()
                END DO
 
             END DO
@@ -380,25 +380,23 @@ CONTAINS
       END DO
       call mat%free()
       call timestop("loop 1")
-      
-      call coul_mtmt%u2l()
-
-      call coulmat%alloc(.False., hybdat%nbasp, hybdat%nbasp)
 
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
-         coulmat%data_c = 0.0
+         coulomb(ikpt)%data_c = 0.0
          ix = 0
          ic2 = 0
+         mtmt_idx = 0
          DO itype2 = 1, fi%atoms%ntype
             DO ineq2 = 1, fi%atoms%neq(itype2)
                ic2 = ic2 + 1
                lm2 = 0
                DO l2 = 0, fi%hybinp%lcutm1(itype2)
                   DO m2 = -l2, l2
+                     mtmt_idx = mtmt_idx + 1
                      lm2 = lm2 + 1
                      DO n2 = 1, mpdata%num_radbasfn(l2, itype2)
                         ix = ix + 1
@@ -419,7 +417,14 @@ CONTAINS
                                        l = l1 + l2
                                        lm = l**2 + l + m1 - m2 + 1
                                        idum = ix*(ix - 1)/2 + iy
-                                       coulmat%data_c(iy, ix) = coul_mtmt%data_c(iy,ix) &
+
+                                       if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then 
+                                          mtmt_term = 0.0
+                                       else 
+                                          mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
+                                       endif
+                                    
+                                       coulomb(ikpt)%data_c(iy, ix) = mtmt_term &
                                                             + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                   dot_PRODUCT(fi%kpts%bk(:, ikpt), &
                                                                               fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
@@ -436,19 +441,18 @@ CONTAINS
             END DO
          END DO
          
-         call coulmat%u2l()
+         call coulomb(ikpt)%u2l()
+
          IF (fi%sym%invs) THEN
-            !symmetrize makes the Coulomb matrix real symmetric               
-            CALL symmetrize(coulmat%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
+            !symmetrize makes the Coulomb matrix real symmetric     
+                          
+            CALL symmetrize(coulomb(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
                fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
                mpdata%num_radbasfn, fi%sym)
          ENDIF
-
-         call coulomb(ikpt)%copy(coulmat, 1,1)
          call timestop("MT-MT part")
 
       END DO
-      call coul_mtmt%free()
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
@@ -1140,7 +1144,7 @@ CONTAINS
       ! - local arrays -
       TYPE(t_mat) :: olap
       !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
-      COMPLEX      :: coeff(nbasm1(1)), cderiv(nbasm1(1), -1:1), claplace(nbasm1(1))
+      COMPLEX      :: coeff(1,nbasm1(1)), cderiv(-1:1, nbasm1(1)), claplace(1,nbasm1(1))
 
       call timestart("subtract_sphaverage")
       CALL olap%alloc(sym%invs, mpdata%n_g(1), mpdata%n_g(1), 0.)
@@ -1161,18 +1165,18 @@ CONTAINS
                   DO i = 1, mpdata%num_radbasfn(l, itype)
                      j = j + 1
                      IF (l == 0) THEN
-                        coeff(j) = SQRT(fpi_const) &
+                        coeff(1,j) = SQRT(fpi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, i, 0, itype), &
                                            atoms, itype, gridf) &
                                    /SQRT(cell%vol)
 
-                        claplace(j) = -SQRT(fpi_const) &
+                        claplace(1,j) = -SQRT(fpi_const) &
                                       *intgrf(atoms%rmsh(:, itype)**3*mpdata%radbasfn_mt(:, i, 0, itype), &
                                               atoms, itype, gridf) &
                                       /SQRT(cell%vol)
 
                      ELSE IF (l == 1) THEN
-                        cderiv(j, M) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
+                        cderiv(M,j) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*mpdata%radbasfn_mt(:, i, 1, itype), &
                                                atoms, itype, gridf) &
                                        /SQRT(cell%vol)
@@ -1183,9 +1187,9 @@ CONTAINS
          END DO
       END DO
       IF (olap%l_real) THEN
-         coeff(hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
       else
-         coeff(hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
       END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
@@ -1194,13 +1198,13 @@ CONTAINS
          CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, -1), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, 0), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(:, 1), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF
@@ -1210,9 +1214,9 @@ CONTAINS
          DO i = 1, j
             l = l + 1
             coulomb%data_c(i,j) = coulomb%data_c(i,j) - fpi_const/3 &
-                                       *(dot_PRODUCT(cderiv(i, :), cderiv(j, :)) &
-                                       + (CONJG(coeff(i))*claplace(j) &
-                                          + CONJG(claplace(i))*coeff(j))/2)
+                                       *(dot_PRODUCT(cderiv(:,i), cderiv(:,j)) &
+                                       + (CONJG(coeff(1,i))*claplace(1,j) &
+                                          + CONJG(claplace(1,i))*coeff(1,j))/2)
          END DO
       END DO
 
@@ -1763,4 +1767,24 @@ CONTAINS
 #endif
       call timestop("Bessel calculation")
    end subroutine bessel_calculation
+
+   function calc_num_mtmts(fi) result(num_mtmt)
+      implicit none 
+      type(t_fleurinput), intent(in) :: fi
+      integer                        :: num_mtmt 
+
+      integer :: itype, ineq, l, m
+
+      num_mtmt = 0
+      DO itype = 1, fi%atoms%ntype
+         DO ineq = 1, fi%atoms%neq(itype)
+            DO l = 0, fi%hybinp%lcutm1(itype)
+               DO M = -l, l
+                  num_mtmt = num_mtmt + 1
+               enddo
+            enddo 
+         enddo 
+      enddo 
+   end function calc_num_mtmts
+   
 END MODULE m_coulombmatrix

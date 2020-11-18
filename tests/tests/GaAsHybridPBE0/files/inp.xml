@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       Ga1As1  
    </comment>
@@ -7,12 +7,15 @@
       <cutoffs Kmax="3.23330000" Gmax="10.73330000" GmaxXC="8.93330000" numbands="60"/>
       <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <xcFunctional name="pbe0" relativisticCorrections="F"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <prodBasis gcutm="3.09900000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="50"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -23,9 +26,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-3.80000000" elup="11.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -156,9 +156,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe0" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Ga-1" element="Ga" atomicNumber="31" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Ga-1" element="Ga" atomicNumber="31">
          <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="8"/>
          <electronConfig>
@@ -170,7 +169,7 @@
          <prodBasis lcutm="4" lcutwf="8" select="4 0 4 2"/>
          <lo type="SCLO" l="2" n="3" eDeriv="0"/>
       </species>
-      <species name="As-1" element="As" atomicNumber="33" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="As-1" element="As" atomicNumber="33">
          <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="8"/>
          <electronConfig>

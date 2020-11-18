@@ -32,7 +32,6 @@ MODULE m_tetraef
       REAL    :: weight(4),ecmax(2,size(w,1))
       REAL    :: wght(2,kpts%nkpt,size(w,1)),eval(4)
 
-
       DO iBand = 1,size(w,1)
          DO jspin = 1,jspins
             ecmax(jspin,iBand) = -1.0e25

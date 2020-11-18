@@ -56,6 +56,8 @@ MODULE m_types_kpts
       procedure :: to_first_bz => kpts_to_first_bz
       procedure :: is_kpt => kpts_is_kpt
       procedure :: init => init_kpts
+      procedure :: initTetra
+      PROCEDURE :: tetrahedron_regular
       procedure :: calcNkpt3 => nkpt3_kpts
 
    ENDTYPE t_kpts
@@ -117,6 +119,10 @@ CONTAINS
       END IF
 
       CALL mpi_bc(this%nkpt, rank, mpi_comm)
+      CALL mpi_bc(this%kptsKind, rank, mpi_comm)
+      CALL mpi_bc(this%nkpt3(1), rank, mpi_comm)
+      CALL mpi_bc(this%nkpt3(2), rank, mpi_comm)
+      CALL mpi_bc(this%nkpt3(3), rank, mpi_comm)
       CALL mpi_bc(this%ntet, rank, mpi_comm)
       CALL mpi_bc(this%l_gamma, rank, mpi_comm)
       CALL mpi_bc(this%bk, rank, mpi_comm)
@@ -147,7 +153,7 @@ CONTAINS
       CHARACTER(LEN=40) :: listName, typeString
       CHARACTER(LEN=255),ALLOCATABLE :: tetra_string(:)
       IF (xml%versionNumber > 31) then
-        WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
+        WRITE (path, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', kptsIndex, ']'
       ELSE
         path='/fleurInput/calculationSetup/bzIntegration/kPointList'
       endif
@@ -156,43 +162,43 @@ CONTAINS
          WRITE(*,*) 'kPointList index is ', kptsIndex
          CALL judft_error(("kPointList for index is not available."))
       END IF
-      IF (xml%versionNumber > 31) then
-        listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
-        this%kptsName = TRIM(ADJUSTL(listName))
+      IF (xml%versionNumber > 31) THEN
+         listName = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(path)//'/@name')))
+         this%kptsName = TRIM(ADJUSTL(listName))
 
-        this%kptsKind = 0
-        this%nkpt3(:) = 0
-        typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
-          SELECT CASE(typeString(1:11))
-          CASE ('unspecified')
-            this%kptsKind = KPTS_KIND_UNSPECIFIED
-          CASE ('mesh       ')
-            this%kptsKind = KPTS_KIND_MESH
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
-            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
-            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
-            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-          CASE ('path       ')
-            this%kptsKind = KPTS_KIND_PATH
-          CASE ('tetra      ')
-            this%kptsKind = KPTS_KIND_TETRA
-          CASE ('tria       ')
-            this%kptsKind = KPTS_KIND_TRIA
-          CASE ('SPEX-mesh  ')
-            this%kptsKind = KPTS_KIND_SPEX_MESH
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
-            IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
-            IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
-            numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
-            IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
-          CASE DEFAULT
-            this%kptsKind = KPTS_KIND_UNSPECIFIED
-            WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
-          END SELECT
-        endif
+         this%kptsKind = 0
+         this%nkpt3(:) = 0
+         typeString = xml%GetAttributeValue(TRIM(path)//'/@type')
+         SELECT CASE(TRIM(ADJUSTL(typeString)))
+            CASE ('unspecified')
+               this%kptsKind = KPTS_KIND_UNSPECIFIED
+            CASE ('mesh')
+               this%kptsKind = KPTS_KIND_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE ('path')
+               this%kptsKind = KPTS_KIND_PATH
+            CASE ('tria')
+               this%kptsKind = KPTS_KIND_TRIA
+            CASE ('tria-bulk')
+               this%kptsKind = KPTS_KIND_TRIA_BULK
+            CASE ('SPEX-mesh')
+               this%kptsKind = KPTS_KIND_SPEX_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE DEFAULT
+               this%kptsKind = KPTS_KIND_UNSPECIFIED
+               WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
+         END SELECT
+      END IF
       this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
       IF (numNodes.NE.this%nkpt) THEN
@@ -242,42 +248,40 @@ CONTAINS
          this%bk(3, i) = evaluatefirst(str)
       END DO
 
-
-      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
-      IF (n .EQ. 1) THEN
-         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
-         ALLOCATE(tetra_string(this%ntet))
-         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/tetraeder/tet',tetra_string)
-         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
-         DO n = 1, this%ntet
-            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
-            this%voltet(n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
-
-                        !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
-            !READ (str,*) this%ntetra(:,n)
-         ENDDO
-         deallocate(tetra_string)
-      ENDIF
-
-      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles')
-      IF (n .EQ. 1) THEN
-         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
-         ALLOCATE(tetra_string(this%ntet))
-         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/triangles/tria',tetra_string)
-         ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
-         DO n = 1, this%ntet
-            this%voltet(n) = evaluateFirst(Tetra_string(n))
-            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
-            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
-         ENDDO
-      ENDIF
+!      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
+!      IF (n .EQ. 1) THEN
+!         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder/tet')
+!         ALLOCATE(tetra_string(this%ntet))
+!         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/tetraeder/tet',tetra_string)
+!         ALLOCATE (this%voltet(this%ntet), this%ntetra(4, this%ntet))
+!         DO n = 1, this%ntet
+!            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/tetraeder/tet[", n, "]"
+!            this%voltet(n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(4,n) = Evaluatefirst(Tetra_string(N))
+!
+!                        !str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
+!            !READ (str,*) this%ntetra(:,n)
+!         ENDDO
+!         deallocate(tetra_string)
+!      ENDIF
+!
+!      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles')
+!      IF (n .EQ. 1) THEN
+!         this%ntet = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/triangles/tria')
+!         ALLOCATE(tetra_string(this%ntet))
+!         call xml%GetAttributeValue_List(TRIM(ADJUSTL(path))//'/triangles/tria',tetra_string)
+!         ALLOCATE (this%voltet(this%ntet), this%ntetra(3, this%ntet))
+!         DO n = 1, this%ntet
+!            this%voltet(n) = evaluateFirst(Tetra_string(n))
+!            this%ntetra(1,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(2,n) = Evaluatefirst(Tetra_string(N))
+!            this%ntetra(3,n) = Evaluatefirst(Tetra_string(N))
+!         ENDDO
+!      ENDIF
       this%wtkpt = this%wtkpt/sum(this%wtkpt) !Normalize k-point weight
-
    END SUBROUTINE read_xml_kptsByIndex
 
    SUBROUTINE read_xml_kpts(this, xml)
@@ -293,14 +297,14 @@ CONTAINS
 
 
       IF (xml%versionNumber > 31) then
-        listName = xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointListSelection/@listName')
+        listName = xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')
 
-        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/altKPointList')
+        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/altKPointList')
 
         l_band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
         IF (l_band) THEN
           DO i = 1 , numNodes
-            WRITE (path2, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/altKPointList[',i,']'
+            WRITE (path2, "(a,i0,a)") '/fleurInput/cell/bzIntegration/altKPointList[',i,']'
             altPurpose = ''
             altPurpose = xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@purpose')
             IF (TRIM(ADJUSTL(altPurpose)).EQ.'bands') THEN
@@ -311,12 +315,12 @@ CONTAINS
           END DO
         END IF
 
-        numNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList')
+        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
         foundList = .FALSE.
         kptsIndex = 0
         DO i = 1, numNodes
           path = ''
-          WRITE (path, "(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointLists/kPointList[', i, ']'
+          WRITE (path, "(a,i0,a)") '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', i, ']'
           IF (TRIM(ADJUSTL(listName)) == xml%GetAttributeValue(TRIM(path)//'/@name')) THEN
             kptsIndex = i
             foundList = .TRUE.
@@ -411,33 +415,23 @@ CONTAINS
          END IF
          label = ''
       END DO
-      IF (kpts%ntet > 0) THEN
-         IF (SIZE(kpts%ntetra, 1).EQ.4) THEN
-            !Bulk --> Tetrahedrons
-            WRITE (kptsUnit, 207) kpts%ntet
-207         FORMAT('               <tetraeder ntet="', i0, '">')
-            DO n = 1, kpts%ntet
-208            FORMAT('                  <tet> ', f20.13, i0, ' ', i0, ' ', i0, ' ', i0, '</tet>')
-               WRITE (kptsUnit, 208) kpts%voltet(n), kpts%ntetra(:, n)
-            END DO
-            WRITE (kptsUnit, '(a)') '               </tetraeder>'
-         ELSE IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
-            !Film --> Triangles
-            WRITE (kptsUnit, 209) kpts%ntet
-209         FORMAT('               <triangles ntria="', i0, '">')
-            DO n = 1, kpts%ntet
-210            FORMAT('                  <tria>', f20.13, i0, ' ', i0, ' ', i0, '</tria>')
-               WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
-            END DO
-            WRITE (kptsUnit, '(a)') '               </triangles>'
-         ENDIF
-      ELSE
+!      IF (kpts%ntet > 0) THEN
+!         IF (SIZE(kpts%ntetra, 1).EQ.3) THEN
+!            !Film --> Triangles
+!            WRITE (kptsUnit, 209) kpts%ntet
+!209         FORMAT('               <triangles ntria="', i0, '">')
+!            DO n = 1, kpts%ntet
+!210            FORMAT('                  <tria>', f20.13, i0, ' ', i0, ' ', i0, '</tria>')
+!               WRITE (kptsUnit, 210) kpts%voltet(n), kpts%ntetra(:, n)
+!            END DO
+!            WRITE (kptsUnit, '(a)') '               </triangles>'
+!         ENDIF
+!      ELSE
 !         DO n = 1, kpts%numSpecialPoints
 !            WRITE (kptsUnit, 211) TRIM(ADJUSTL(kpts%specialPointNames(n))), kpts%specialPoints(:, n)
 !211         FORMAT('            <specialPoint name="', a, '">', f10.6, ' ', f10.6, ' ', f10.6, '</specialPoint>')
 !         END DO
-      END IF
-      !END IF
+!      END IF
       WRITE (kptsUnit, '(a)') ('            </kPointList>')
       IF (PRESENT(filename)) CLOSE (kptsUnit)
    END SUBROUTINE print_xml
@@ -481,17 +475,430 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE init_kpts(kpts, cell, sym, film, l_eibz)
-      use m_juDFT
+   SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss)
+      USE m_juDFT
+      USE m_constants
+      USE m_types_input
       USE m_types_cell
       USE m_types_sym
+      USE m_tetcon
+      USE m_triang
+      CLASS(t_kpts),    INTENT(INOUT) :: kpts
+      TYPE(t_input),    INTENT(IN)    :: input
+      TYPE(t_cell),     INTENT(IN)    :: cell
+      TYPE(t_sym),      INTENT(IN)    :: sym
+      LOGICAL,          INTENT(IN)    :: l_soc_or_ss
+
+      INTEGER, PARAMETER :: nop48  = 48
+
+      INTEGER :: i, j, ikpt, ntet, itet
+      INTEGER :: ndiv3,nsym,addSym
+      REAL    :: volirbz, as
+      REAL    :: vkxyz(3,kpts%nkpt)
+      LOGICAL :: l_tria
+
+      REAL    :: bltv(3,3)          ! cartesian Bravais lattice basis (a.u.)
+      REAL    :: rltv(3,3)          ! reciprocal lattice basis (2\pi/a.u.)
+      REAL    :: ccr(3,3,nop48)     ! rotation matrices in cartesian repr.
+      REAL    :: rlsymr(3,3,nop48)  ! rotation matrices in reciprocal lattice basis representation
+      REAL    :: binv(3,3)
+
+      INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
+      REAL,    ALLOCATABLE :: voltet(:)   ! voulmes of the tetrahedrons
+
+      nsym = MERGE(sym%nop2,sym%nop,input%film)
+      bltv=TRANSPOSE(cell%amat)
+      binv=TRANSPOSE(cell%bmat)/tpi_const
+
+      DO i = 1, nsym
+         rlsymr(:,:,i)=REAL(sym%mrot(:,:,i))
+         ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
+      END DO
+
+      IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
+         IF ((input%film.AND.(.NOT.sym%invs2)).OR.((.NOT.input%film).AND.(.NOT.sym%invs))) THEN
+            addSym = 0
+            ! Note: We have to add the negative of each symmetry operation
+            !       to exploit time reversal symmetry. However, if the new
+            !       symmetry operation is the identity matrix it is excluded.
+            !       This is the case iff it is (-Id) + a translation vector.
+            DO i = 1, nsym
+               ! This test assumes that ccr(:,:,1) is the identity matrix.
+               IF(.NOT.ALL(ABS(ccr(:,:,1)+ccr(:,:,i)).LT.10e-10) ) THEN
+                  ccr(:,:,nsym+addSym+1 ) = -ccr(:,:,i)
+                  rlsymr(:,:,nsym+addSym+1 ) = -rlsymr(:,:,i)
+                  addSym = addSym + 1
+               END IF
+            END DO
+            nsym = nsym + addSym
+         END IF
+      END IF
+
+      IF ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film)) THEN
+
+         IF(kpts%kptsKind.NE.KPTS_KIND_TRIA_BULK) THEN
+            CALL juDFT_error("'tria' tetrahedron decomposition for bulk systems needs a tria-bulk k-point set",&
+                             calledby="initTetra")
+         END IF
+
+         DO j=1,kpts%nkpt
+            vkxyz(:,j)=MATMUL(kpts%bk(:,j),cell%bmat)
+         END DO
+         ndiv3 = 6*(kpts%nkpt+1)
+
+         ALLOCATE (ntetra(4,ndiv3))
+         ALLOCATE (voltet(ndiv3))
+
+         CALL tetcon(kpts%nkpt,ndiv3,cell%omtil,vkxyz,nsym, kpts%ntet,voltet,ntetra)
+
+         WRITE (oUnit,'('' the number of tetrahedra '')')
+         WRITE (oUnit,*) kpts%ntet
+         WRITE (oUnit,'('' volumes of the tetrahedra '')')
+         WRITE (oUnit,'(e19.12,1x,i5,5x,''voltet(i),i'')') (voltet(i),i,i=1,kpts%ntet)
+         WRITE (oUnit,'('' corners of the tetrahedra '')')
+         WRITE (oUnit, '(4(3x,4i4))') ((ntetra(j,i),j=1,4),i=1,kpts%ntet)
+         WRITE (oUnit,'('' the # of different k-points '')')
+         WRITE (oUnit,*) kpts%nkpt
+         WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
+         WRITE (oUnit,'(3(4x,f10.6))') ((vkxyz(i,j),i=1,3),j=1,kpts%nkpt)
+
+         volirbz =  tpi_const**3 /(real(nsym)*cell%omtil)
+         DO i = 1, kpts%ntet
+            voltet(i) = kpts%ntet * voltet(i) / volirbz 
+         END DO
+
+         IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+         IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+         ALLOCATE(kpts%ntetra(4,kpts%ntet))
+         ALLOCATE(kpts%voltet(kpts%ntet))
+         DO j = 1, kpts%ntet
+            kpts%ntetra(1:4,j) = ntetra(1:4,j)
+            kpts%voltet(j) = ABS(voltet(j))
+         END DO
+      END IF
+
+      IF(input%bz_integration==BZINT_METHOD_TRIA .AND. input%film) THEN
+
+         IF(kpts%kptsKind.NE.KPTS_KIND_MESH) THEN
+            CALL juDFT_error("'tria' tetrahedron decomposition for film systems needs a k-point mesh",&
+                             calledby="initTetra")
+         END IF
+
+         ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+         l_tria = .FALSE.
+         CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
+         !IF (sym%invs) THEN
+         !   IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
+         !ELSE
+         !   IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
+         !ENDIF
+         !write(*,*) as,sym%nop2,l_tria
+
+         !Match normalisation of other methods
+         voltet = voltet/as*kpts%ntet
+
+         IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+         IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+         ALLOCATE(kpts%ntetra(3,kpts%ntet))
+         ALLOCATE(kpts%voltet(kpts%ntet))
+         DO j = 1, kpts%ntet
+            kpts%ntetra(1:3,j) = ntetra(1:3,j)
+            kpts%voltet(j) = ABS(voltet(j))
+         END DO
+      END IF
+
+      IF(input%bz_integration.EQ.BZINT_METHOD_TETRA) THEN
+         !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
+         ! (kpts%init is supposed to be called before this point)
+         IF((kpts%kptsKind.NE.KPTS_KIND_MESH).OR.(.NOT.kpts%l_gamma)) THEN
+            CALL juDFT_error("Regular tetrahedron decomposition needs a gamma centered kpoint grid",&
+                             calledby="initTetra")
+         END IF
+         CALL timestart('Tetrahedron decomposition')
+         CALL kpts%tetrahedron_regular(input%film,cell,kpts%nkpt3,ntetra,voltet)
+         CALL timestop('Tetrahedron decomposition')
+
+         IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+         IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+         IF (.NOT.input%film) THEN
+            ALLOCATE(kpts%ntetra(4,kpts%ntet))
+            ALLOCATE(kpts%voltet(kpts%ntet))
+            DO j = 1, kpts%ntet
+               kpts%ntetra(:,j) = ntetra(1:4,j)
+               kpts%voltet(j) = ABS(voltet(j))
+            END DO
+         ELSE
+            ALLOCATE(kpts%ntetra(3,kpts%ntet))
+            ALLOCATE(kpts%voltet(kpts%ntet))
+            DO j = 1, kpts%ntet
+               kpts%ntetra(:,j) = ntetra(1:3,j)
+               kpts%voltet(j) = ABS(voltet(j))
+            END DO
+         END IF
+      END IF
+
+      IF((input%bz_integration.EQ.BZINT_METHOD_TETRA).OR.&
+         (input%bz_integration.EQ.BZINT_METHOD_TRIA)) THEN
+         CALL timestart("setup tetraList")
+         allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
+                                 *MERGE(6,24,input%film),kpts%nkpt),source=0)
+         !$OMP parallel do default(none) private(ikpt,ntet,itet) shared(kpts)
+         do ikpt = 1, kpts%nkpt
+            ntet = 0
+            do itet = 1, kpts%ntet
+               IF(ANY(kpts%ntetra(:,itet).EQ.ikpt))THEN
+                  ntet = ntet + 1
+                  kpts%tetraList(ntet,ikpt) = itet
+               ENDIF
+            enddo
+         enddo
+         !$OMP end parallel do
+         CALL timestop("setup tetraList")
+      END IF
+
+   END SUBROUTINE initTetra
+
+   SUBROUTINE tetrahedron_regular(kpts,film,cell,grid,ntetra,voltet)
+      USE m_types_cell
+      USE m_juDFT
+      USE m_constants
+      CLASS(t_kpts),          INTENT(INOUT)  :: kpts
+      LOGICAL,                INTENT(IN)     :: film
+      TYPE(t_cell),           INTENT(IN)     :: cell
+      INTEGER,                INTENT(IN)     :: grid(:)
+      INTEGER, ALLOCATABLE,   INTENT(INOUT)  :: ntetra(:,:)
+      REAL,    ALLOCATABLE,   INTENT(INOUT)  :: voltet(:)
+
+
+      INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,j,k,l
+      INTEGER :: jtet,icorn,startIndex,itet,iperm
+      REAL    :: vol,volbz,diag(2),minKpt(3)
+      INTEGER :: iarr(3)
+      LOGICAL :: l_new,l_equal_kpoints
+      INTEGER, ALLOCATABLE :: tetra(:,:)
+      INTEGER, ALLOCATABLE :: ntetraAll(:,:)
+      INTEGER, ALLOCATABLE :: kcorn(:)
+      INTEGER, ALLOCATABLE :: p(:,:,:)
+      INTEGER, ALLOCATABLE :: perm(:,:)
+
+      !Determine the decomposition of each individual cube
+      ! and the total volume of the brillouin zone
+      IF(film) THEN
+         volbz = cell%bmat(1,1)*cell%bmat(2,2)-cell%bmat(1,2)*cell%bmat(2,1)
+         ALLOCATE(tetra(3,2),source=0)
+         ALLOCATE(kcorn(4),source=0)
+         ntetraCube = 2
+         tetra = reshape ( [ 1,2,3, 2,3,4], [ 3,2 ] )
+         diag = cell%bmat(:2,2)/grid(:2) - cell%bmat(:2,1) / grid(:2)
+         vol =  sum(diag*diag)/4.0
+         ALLOCATE(perm(3,6))
+         iperm = 0
+         DO i = 1, 3
+            DO j = 1, 3
+               IF(j.EQ.i) CYCLE
+               DO k = 1, 3
+                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
+                  iperm = iperm + 1
+                  perm(:,iperm) = [i,j,k]
+               ENDDO
+            ENDDO
+         ENDDO
+      ELSE
+         volbz = ABS(det(cell%bmat))
+         ALLOCATE(tetra(4,24),source=0)
+         ALLOCATE(kcorn(8),source=0)
+         !Choose the tetrahedra decomposition along the shortest diagonal
+         CALL get_tetra(cell,grid,ntetraCube,vol,tetra)
+         ALLOCATE(perm(4,24))
+         iperm = 0
+         DO i = 1, 4
+            DO j = 1, 4
+               IF(j.EQ.i) CYCLE
+               DO k = 1, 4
+                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
+                  DO l = 1, 4
+                     IF(l.EQ.k.OR.l.EQ.j.OR.l.EQ.i) CYCLE
+                     iperm = iperm + 1
+                     perm(:,iperm) = [i,j,k,l]
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDIF
+
+      !We shift the k-points by this vector only for the pointer array
+      DO i = 1, 3
+         minKpt(i) = MINVAL(kpts%bkf(i,:))
+      ENDDO
+
+      !Set up pointer array for the kpts
+      ALLOCATE(p(0:grid(1),0:grid(2),0:grid(3)),source=0)
+      p = 0
+      DO ikpt = 1, kpts%nkptf
+         iarr = nint((kpts%bkf(:,ikpt)-minKpt(:))*grid)
+         p(iarr(1),iarr(2),iarr(3)) = ikpt
+      ENDDO
+      p(grid(1),:,:) = p(0,:,:)
+      p(:,grid(2),:) = p(:,0,:)
+      p(:,:,grid(3)) = p(:,:,0)
+
+
+      !Check for invalid indices
+      IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) THEN
+         CALL juDFT_error("Invalid kpoint index in pointer array",calledby="tetrahedron_regular")
+      ENDIF
+
+      !Temporary Size
+      IF(film) THEN
+         ALLOCATE(ntetra(3,kpts%nkptf*2),source=0)
+         ALLOCATE(ntetraAll(3,kpts%nkptf*2),source=0)
+         ALLOCATE(voltet(kpts%nkptf*2),source=0.0)
+      ELSE
+         ALLOCATE(ntetra(4,kpts%nkptf*6),source=0)
+         ALLOCATE(ntetraAll(4,kpts%nkptf*6),source=0)
+         ALLOCATE(voltet(kpts%nkptf*6),source=0.0)
+      ENDIF
+
+      !Set up the tetrahedrons
+      !$omp parallel do default(none) &
+      !$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
+      !$omp private(k1,k2,k3,kcorn,itetra,startIndex) &
+      !$omp collapse(3)
+      DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
+         DO k2 = 0, grid(2)-1
+            DO k1 = 0, grid(1)-1
+
+               !Corners of the current cube
+               kcorn(1) = p(k1  ,k2  ,k3  )
+               kcorn(2) = p(k1+1,k2  ,k3  )
+               kcorn(3) = p(k1  ,k2+1,k3  )
+               kcorn(4) = p(k1+1,k2+1,k3  )
+               IF(.NOT.film) THEN
+                  kcorn(5) = p(k1  ,k2  ,k3+1)
+                  kcorn(6) = p(k1+1,k2  ,k3+1)
+                  kcorn(7) = p(k1  ,k2+1,k3+1)
+                  kcorn(8) = p(k1+1,k2+1,k3+1)
+               ENDIF
+
+               !Now divide the cube into tetrahedra
+               startIndex = (k3*grid(2)*grid(1)+k2*grid(1)+k1) * ntetraCube
+               DO itetra = 1, ntetraCube
+                  ntetraAll(:,startIndex + itetra) = kpts%bkp(kcorn(tetra(:,itetra)))
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+      !$omp end parallel do
+
+      !Check for symmetry equivalent tetrahedra
+      kpts%ntet = 0
+      DO itet = 1, ntetraCube*PRODUCT(grid(:MERGE(2,3,film)))
+         l_new = .TRUE.
+         tetraLoop: DO jtet = 1, kpts%ntet
+            l_equal_kpoints = .TRUE.
+            DO icorn = 1, SIZE(ntetra,1)
+               IF(ALL(ntetra(:,jtet).NE.ntetraAll(icorn,itet))) THEN
+                  l_equal_kpoints = .FALSE.
+               ENDIF
+            ENDDO
+            IF(.NOT.l_equal_kpoints) CYCLE !There is at least one kpoint completely different
+            DO iperm = 1, SIZE(perm,2)
+               IF(ALL(ntetraAll(perm(:,iperm),itet)-ntetra(:,jtet).EQ.0)) THEN
+                  voltet(jtet) = voltet(jtet) + vol
+                  l_new = .FALSE.
+                  EXIT tetraLoop
+               ENDIF
+            ENDDO
+         ENDDO tetraLoop
+         IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
+            kpts%ntet = kpts%ntet+1
+            ntetra(:,kpts%ntet) = ntetraAll(:,itet)
+            voltet(kpts%ntet) = vol
+         ENDIF
+      ENDDO
+
+      !Has the whole brillouin zone been covered?
+      IF(ABS(SUM(voltet)-volbz).GT.1E-10) THEN
+         CALL juDFT_error("tetrahedron_regular failed", calledby="tetrahedron_regular")
+      ENDIF
+
+      !Normalize volumes
+      voltet = voltet/volbz
+
+      !Rescale volumes for IO to inp.xml
+      !(so weights dont get to small for IO with dense meshes)
+      voltet = voltet * kpts%ntet
+
+   END SUBROUTINE tetrahedron_regular
+
+   SUBROUTINE get_tetra(cell,grid,ntetra,vol,tetra)
+      USE m_types_cell
+      USE m_juDFT
+      USE m_constants
+      TYPE(t_cell),  INTENT(IN)     :: cell
+      INTEGER,       INTENT(IN)     :: grid(:)
+      INTEGER,       INTENT(INOUT)  :: ntetra
+      REAL,          INTENT(INOUT)  :: vol
+      INTEGER,       INTENT(INOUT)  :: tetra(:,:)
+
+      REAL rlv(3,3),diag(4),d(3)
+      INTEGER idmin
+
+      !Calculate the lengths of the three diagonals
+      rlv(:,1) = cell%bmat(:,1) / grid
+      rlv(:,2) = cell%bmat(:,2) / grid
+      rlv(:,3) = cell%bmat(:,3) / grid
+
+      vol = 1/6.0*ABS(det(rlv))
+      d = rlv(:,1) + rlv(:,3) - rlv(:,2)
+      diag(1) = sum(d*d)
+      d = rlv(:,2) + rlv(:,3) - rlv(:,1)
+      diag(2) = sum(d*d)
+      d = rlv(:,1) + rlv(:,2) + rlv(:,3)
+      diag(3) = sum(d*d)
+      d = rlv(:,1) + rlv(:,2) - rlv(:,3)
+      diag(4) = sum(d*d)
+      idmin = minloc(diag,1)
+
+      ntetra = 0
+      !From spex tetrahedron.f (For now we only choose one decomposition)
+      if(idmin==1) then
+        tetra(:,ntetra+1:ntetra+6) = reshape ( [ 1,2,3,6, 5,7,3,6, 1,5,3,6, 2,4,3,6, 4,8,3,6, 7,8,3,6 ], [ 4,6 ] )
+        ntetra                     = ntetra + 6
+      endif
+      if(idmin==2) then
+        tetra(:,ntetra+1:ntetra+6) = reshape ( [ 5,6,2,7, 1,5,2,7, 1,3,2,7, 8,6,2,7, 4,3,2,7, 8,4,2,7 ], [ 4,6 ] )
+        ntetra                     = ntetra + 6
+      endif
+      if(idmin==3) then
+        tetra(:,ntetra+1:ntetra+6) = reshape ( [ 2,6,1,8, 2,4,1,8, 3,4,1,8, 3,7,1,8, 5,7,1,8, 5,6,1,8 ], [ 4,6 ] )
+        ntetra                     = ntetra + 6
+      endif
+      if(idmin==4) then
+        tetra(:,ntetra+1:ntetra+6) = reshape ( [ 2,6,4,5, 1,2,4,5, 1,3,4,5, 3,7,4,5, 7,8,4,5, 6,8,4,5 ], [ 4,6 ] )
+        ntetra                     = ntetra + 6
+      endif
+
+   END SUBROUTINE get_tetra
+
+   REAL FUNCTION det(m)
+      REAL m(:,:)
+      det = m(1,1)*m(2,2)*m(3,3) + m(1,2)*m(2,3)*m(3,1) + &
+            m(2,1)*m(3,2)*m(1,3) - m(1,3)*m(2,2)*m(3,1) - &
+            m(2,3)*m(3,2)*m(1,1) - m(2,1)*m(1,2)*m(3,3)
+   END FUNCTION det
+
+
+   SUBROUTINE init_kpts(kpts, sym, film, l_eibz)
+      use m_juDFT
+      USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
-      TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film, l_eibz
 
       INTEGER :: n,itet,ntet
       call timestart("init_kpts")
+      kpts%l_gamma = .FALSE.
       DO n = 1, kpts%nkpt
          kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
       ENDDO
@@ -506,22 +913,6 @@ CONTAINS
          !$OMP END PARALLEL DO
       end if
 
-      if(kpts%ntet>0) then
-         CALL timestart("setup tetraList")
-         allocate(kpts%tetraList(MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)*MERGE(6,24,film),kpts%nkpt),source=0)
-         !$OMP parallel do default(none) private(n,ntet,itet) shared(kpts)
-         do n = 1, kpts%nkpt
-            ntet = 0
-            do itet = 1, kpts%ntet
-               IF(ANY(kpts%ntetra(:,itet).EQ.n))THEN
-                  ntet = ntet + 1
-                  kpts%tetraList(ntet,n) = itet
-               ENDIF
-            enddo
-         enddo
-         !$OMP end parallel do
-         CALL timestop("setup tetraList")
-      endif
       call timestop("init_kpts")
    END SUBROUTINE init_kpts
 
