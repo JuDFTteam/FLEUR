@@ -147,8 +147,9 @@
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="IterationType">
-      <xsd:sequence maxOccurs="unbounded">
+   <xsd:group name="GeneralIterationType">
+      <xsd:sequence>
+         <!--These tags can occur in a iteration/Forcetheorem iteration/!-->
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="OutEnergyParameterType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="eigenvalues" type="EigenvaluesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="bandgap" type="SingleValueType"/>
@@ -163,6 +164,14 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
+      </xsd:sequence>
+   </xsd:group>
+
+   <xsd:complexType name="IterationType">
+      <xsd:sequence>
+         <xsd:choice>
+            <xsd:group ref="GeneralIterationType"/>
+         <xsd:choice>
       </xsd:sequence>
       <xsd:attribute name="numberForCurrentRun" type="xsd:integer" use="required"/>
       <xsd:attribute name="overallNumber" type="xsd:integer" use="optional"/>
