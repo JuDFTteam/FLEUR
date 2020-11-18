@@ -8,9 +8,10 @@
    <xsd:complexType name="FleurOutputType">
       <xsd:all>
          <xsd:element maxOccurs="1" minOccurs="0" name="programVersion" type="ProgramVersionType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="parallelizationParameters" type="ParallelizationParametersType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="parallelSetup" type="ParallelSetupType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="startDateAndTime" type="DateAndTimeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fleurInput" type="FleurInputType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="numericalParameters" type="NumericalParametersType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="scfLoop" type="OutSCFLoopType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="endDateAndTime" type="DateAndTimeType"/>
       </xsd:all>
@@ -33,11 +34,14 @@
       <xsd:attribute name="date" type="xsd:string" use="required"/>
       <xsd:attribute name="user" type="xsd:string" use="required"/>
       <xsd:attribute name="host" type="xsd:string" use="required"/>
+      <xsd:attribute name="flag" type="xsd:string" use="required"/>
+      <xsd:attribute name="link" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="GitInfoType">
       <xsd:attribute name="version" type="xsd:string" use="required"/>
       <xsd:attribute name="lastCommitHash" type="xsd:string" use="required"/>
+      <xsd:attribute name="branch" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="PrecisionType">
@@ -52,14 +56,89 @@
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
 
-   <xsd:complexType name="ParallelizationParametersType">
-      <xsd:attribute name="mpiPEs" type="xsd:integer" use="required"/>
+   <xsd:complexType name="ParallelSetupType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="openMP" type="OMPSetupType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="mpi" type="MPISetupType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="mem" type="MemorySetupType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="OMPSetupType">
+      <xsd:attribute name="ompThreads" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MPISetupType">
+      <xsd:attribute name="mpiProcesses" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MemorySetupType">
+      <xsd:attribute name="memoryPerNode" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="DateAndTimeType">
       <xsd:attribute name="date" type="xsd:string" use="required"/>
       <xsd:attribute name="time" type="xsd:string" use="required"/>
       <xsd:attribute name="zone" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="NumericalParametersType">
+      <xsd:sequence>
+         <xsd:element name="atomsInCell" type="AtomsInCellType"/>
+         <xsd:element name="basis" type="BasisType"/>
+         <xsd:element name="density" type="DensityType"/>
+         <xsd:element name="bands" type="BandsType"/>
+         <xsd:element name="volumes" type="CellVolumesType"/>
+         <xsd:element name="kPointList" type="kPointListOutputType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="AtomsInCellType">
+      <xsd:attribute name="nat" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="ntype" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="jmtd" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="n_u" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="n_hia" type="xsd:nonNegativeInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="BasisType">
+      <xsd:attribute name="nvd" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="lmaxd" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="nlotot" type="xsd:nonNegativeInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DensityType">
+      <xsd:attribute name="ng3" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="ng2" type="xsd:positiveInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="BandsType">
+      <xsd:attribute name="numbands" type="xsd:positiveInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="CellVolumesType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtVolume" type="MTVolumeType"/>
+      </xsd:sequence>
+      <xsd:attribute name="unitCell" type="xsd:double" use="required"/>
+      <xsd:attribute name="interstitial" type="xsd:double" use="required"/>
+      <xsd:attribute name="omegaTilda" type="xsd:double" use="optional"/>
+      <xsd:attribute name="surfaceArea" type="xsd:double" use="optional"/>
+      <xsd:attribute name="z1" type="xsd:double" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MTVolumeType">
+      <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="mtRadius" type="xsd:double" use="required"/>
+      <xsd:attribute name="mtVolume" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="kPointListOutputType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="kPoint" type="KPointType"/>
+      </xsd:sequence>
+      <xsd:attribute name="weightScale" type="xsd:double" use="required"/>
+      <xsd:attribute name="count" type="xsd:positiveInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutSCFLoopType">
