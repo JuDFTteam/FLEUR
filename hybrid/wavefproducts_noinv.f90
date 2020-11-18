@@ -282,8 +282,9 @@ CONTAINS
          itype = fi%atoms%itype(iatm)
          atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatm)))
 
+         ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
          DO l = 0, fi%hybinp%lcutm1(itype)
-            !$OMP PARALLEL DO default(none) collapse(2) schedule(dynamic) &
+            !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
             !$OMP shared(iatm, psize, atom_phase, ik)
