@@ -170,21 +170,40 @@ contains
       if(allocated(coul%mtir_c)) deallocate(coul%mtir_c)
    end subroutine t_coul_free
 
-   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt)
+   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
       use m_types_fleurinput
       use m_judft
       implicit NONE 
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
+      logical, intent(in), optional :: l_print
       integer :: info, isize, l, itype
 
       isize = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)),&
                                                     itype=1, fi%atoms%ntype)]) &
                   + n_g(ikpt)
 
-
-
+      if(present(l_print)) then 
+         if(l_print) then 
+            write (*,*) "Coulomb dimensions:"
+            write (*,*) "real:", fi%sym%invs
+            write (*,*) "mt1 -> [" // int2str(maxval(num_radbasfn) - 1) //&
+                              ", "  // int2str(maxval(num_radbasfn) - 1) //&
+                              ", "  // int2str(maxval(fi%hybinp%lcutm1)+1)// &
+                              ", "  // int2str(fi%atoms%ntype) //  "]"
+            write (*,*) "mt2 -> [" // int2str(maxval(num_radbasfn) - 1) // &
+                              ", " // int2str(2*maxval(fi%hybinp%lcutm1)+1) // &
+                              ", " // int2str(maxval(fi%hybinp%lcutm1)+2) // &
+                              ", " // int2str(fi%atoms%nat) // "]"
+            write (*,*) "mt3 -> [" // int2str(maxval(num_radbasfn) - 1) // &
+                              ", " // int2str(fi%atoms%nat) // &
+                              ", " // int2str(fi%atoms%nat) // "]"
+            write (*,*) "mtir-> [" // int2str(isize) // &
+                              ", " // int2str(isize) // "]"
+         endif
+      endif
+ 
       if (fi%sym%invs) THEN      
          if(.not. allocated(coul%mt1_r)) then 
             allocate(coul%mt1_r(maxval(num_radbasfn) - 1,&

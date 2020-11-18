@@ -19,6 +19,7 @@ MODULE m_types_mpi
       !Communicator for PE on same node
       INTEGER :: mpi_comm_same_node
       logical :: l_set_root_comm = .false. ! only create root comm once
+      logical :: l_mpi_multithreaded = .false.
       integer :: root_comm ! communicator between all n_rank = 0
    CONTAINS
       procedure :: set_errhandler    => t_mpi_set_errhandler

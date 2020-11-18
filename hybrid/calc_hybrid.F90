@@ -12,6 +12,7 @@ CONTAINS
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
+
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -22,9 +23,12 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
-      use m_balance_barriers
+      use m_distribute_mpi 
 #ifdef CPP_MPI 
       use mpi 
+#endif
+#ifdef CPP_PROG_THREAD
+      use m_thread_lib
 #endif
 
       IMPLICIT NONE
@@ -44,16 +48,21 @@ CONTAINS
       ! local variables
       type(t_hybmpi)    :: glob_mpi, wp_mpi
       type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, wp_size, ierr
+      INTEGER           :: jsp, nk, err, i, wp_rank, ierr, ik
+      integer           :: j_wp, n_wps, root_comm
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
       character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
-      integer, allocatable :: v_x_loc(:,:)
-      type(t_balance_wavef) :: wavef_bal
+      integer, allocatable :: v_x_loc(:,:), weights(:)
+      type(c_ptr)       :: threadId
 
       CALL timestart("hybrid code")
+
+#ifdef CPP_PROG_THREAD
+      if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
+#endif
 
       IF (fi%kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -101,7 +110,7 @@ CONTAINS
 
          if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i)
+            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, fmpi%irank == 0)
          enddo
 
          ! use jsp=1 for coulomb work-planning
@@ -114,18 +123,23 @@ CONTAINS
          CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
-         call distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
+         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
+         allocate(weights(n_wps), source=0)
+         do j_wp = 1, n_wps
+            do ik = j_wp, fi%kpts%nkpt, n_wps
+               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
+            enddo
+         enddo
+         call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
+         call judft_comm_split(glob_mpi%comm, wp_mpi%rank, 0, root_comm)
 
          CALL timestart("Calculation of non-local HF potential")
          allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
          DO jsp = 1, fi%input%jspins
-            call timestart("HF_setup")
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            call timestop("HF_setup")
 
-            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, wp_size)
-            call wavef_bal%init(fi, work_pack)
+            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
             
             DO i = 1,work_pack%k_packs(1)%size
                nk = work_pack%k_packs(i)%nk
@@ -134,11 +148,14 @@ CONTAINS
                            nococonv, stars, results, xcpot, fmpi)
                if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
-
-            call wavef_bal%balance()
-            call balance_hsfock(work_pack)
+            
             call work_pack%free()
          END DO
+#ifdef CPP_MPI
+         call timestart("MPI_Allred te_hfex%core")
+         if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
+         call timestop("MPI_Allred te_hfex%core")
+#endif
          CALL timestop("Calculation of non-local HF potential")
 
          call timestart("BCast v_x")
@@ -160,6 +177,9 @@ CONTAINS
 #endif
 
       ENDIF
+#ifdef CPP_PROG_THREAD
+      if(fmpi%l_mpi_multithreaded) call stop_prog_thread(threadId)
+#endif
       CALL timestop("hybrid code")
    CONTAINS
       subroutine first_iteration_alloc(fi, hybdat)
@@ -189,49 +209,5 @@ CONTAINS
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
          allocate(hybdat%div_vv(fi%input%neig, fi%kpts%nkpt, fi%input%jspins), source=0.0)
       end subroutine first_iteration_alloc
-
-      subroutine distrib_mpis(fi, glob_mpi, wp_mpi, wp_rank, wp_size)
-         USE m_types
-         implicit none 
-         type(t_fleurinput), intent(in)    :: fi
-         type(t_hybmpi), intent(in)        :: glob_mpi
-         type(t_hybmpi), intent(inout)     :: wp_mpi
-         integer, intent(inout)            :: wp_rank, wp_size
-   
-         integer :: n_wps, i, j, cnt, j_wp, ik, idx(1), new_comm
-         integer, allocatable :: nprocs(:), weights(:), color(:)
-   
-   
-         n_wps = min(glob_mpi%size, fi%kpts%nkpt)
-         allocate(nprocs(n_wps), source=0)
-         allocate(weights(n_wps), source=0)
-         allocate(color(glob_mpi%size), source=0)
-   
-         do j_wp = 1, n_wps
-            do ik = j_wp, fi%kpts%nkpt, n_wps
-               weights(j_wp) =  weights(j_wp) + fi%kpts%eibz(ik)%nkpt
-            enddo
-         enddo
-   
-         do i = 1,glob_mpi%size 
-            idx = minloc(1.0*nprocs/weights)
-            nprocs(idx(1)) = nprocs(idx(1)) + 1
-         enddo
-   
-         cnt = 1
-         do i = 1,n_wps 
-            do j = 1,nprocs(i)
-               color(cnt) = i - 1
-               cnt = cnt + 1 
-            enddo 
-         enddo
-   
-         wp_rank = color(glob_mpi%rank+1) 
-         wp_size = n_wps
-         
-         call judft_comm_split(glob_mpi%comm, wp_rank, glob_mpi%rank, new_comm)
-   
-         call wp_mpi%init(new_comm)
-      end subroutine distrib_mpis
    END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid

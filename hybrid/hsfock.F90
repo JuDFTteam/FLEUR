@@ -121,9 +121,9 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
                    c_phase=c_phase_k)  
 #ifdef CPP_MPI
-      call timestart("Post read_z Barrier: hsfock")
-      call MPI_Barrier(MPI_COMM_WORLD, ok)
-      call timestop("Post read_z Barrier: hsfock")
+      ! call timestart("Post read_z Barrier: hsfock")
+      ! call MPI_Barrier(MPI_COMM_WORLD, ok)
+      ! call timestop("Post read_z Barrier: hsfock")
 #endif  
       allocate(cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
       if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
@@ -147,7 +147,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(k_pack, fi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
@@ -171,6 +171,7 @@ CONTAINS
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
+
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock

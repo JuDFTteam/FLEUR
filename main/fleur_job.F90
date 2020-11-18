@@ -130,27 +130,42 @@ CONTAINS
             CALL fleur_job_single(jobs)
     END SUBROUTINE
 
-    SUBROUTINE fleur_job_init()
+    SUBROUTINE fleur_job_init(l_mpi_multithreaded)
       USE m_fleur_help
       use m_judft
       USE m_constants
-        INTEGER:: irank=0
+        logical, intent(out) :: l_mpi_multithreaded
+        INTEGER :: irank=0
 #ifdef CPP_MPI
         INTEGER ierr, i
-        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
-        SELECT CASE(i)
-        CASE(MPI_THREAD_FUNNELED)
-          print *,"MPI thread funneled supported"
-        CASE(MPI_THREAD_SERIALIZED)
-          print *,"MPI thread serialized supported"
-        CASE(MPI_THREAD_MULTIPLE)
-          print *,"MPI thread multiple supported"
-        END SELECT
+        CALL MPI_INIT_THREAD(MPI_THREAD_MULTIPLE,i,ierr)
+        if(ierr /= 0) call judft_error("MPI init failed.")
 #endif
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+        select case (i)
+            case (MPI_THREAD_SINGLE)
+                l_mpi_multithreaded = .False.
+            case (MPI_THREAD_FUNNELED )
+                l_mpi_multithreaded = .False.
+            case (MPI_THREAD_SERIALIZED)
+                l_mpi_multithreaded = .False.
+            case (MPI_THREAD_MULTIPLE)
+                l_mpi_multithreaded = .True.
+            case default 
+                call judft_error("Can't identify MPI_Thread lvl")
+        end select 
+
+        if(judft_was_argument("-disable_progress_thread")) then 
+            l_mpi_multithreaded = .False.
+        endif
+        
         IF(irank.EQ.0) THEN
+           if(.not. l_mpi_multithreaded) then 
+            write (*,*) "MPI_THREAD_MULTIPLE is not avalible. This might lead to performance problems"
+           endif
+
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "Linked MPI version does not support multithreading."
@@ -169,12 +184,13 @@ CONTAINS
         END IF
     END SUBROUTINE
 
-    SUBROUTINE fleur_job_execute(jobs)
+    SUBROUTINE fleur_job_execute(jobs, l_mpi_multithreaded)
         USE m_fleur
         USE m_types
         USE m_fleur_init
 
         TYPE(t_job),INTENT(IN) ::jobs(:)
+        logical, intent(in)    :: l_mpi_multithreaded
 
         !local variables for FLEUR
         type(t_fleurinput) :: fi
@@ -210,6 +226,7 @@ CONTAINS
         !change directory
         CALL chdir(jobs(njob)%directory)
         !Call FLEUR
+        fmpi%l_mpi_multithreaded = l_mpi_multithreaded
         fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
         call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
@@ -284,8 +301,9 @@ PROGRAM fleurjob
     USE m_juDFT
     IMPLICIT NONE
     TYPE(t_job),ALLOCATABLE::jobs(:)
-    CALL fleur_job_init()
+    logical :: l_mpi_multithreaded
+    CALL fleur_job_init(l_mpi_multithreaded)
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)
-    CALL fleur_job_execute(jobs)
+    CALL fleur_job_execute(jobs, l_mpi_multithreaded)
 END

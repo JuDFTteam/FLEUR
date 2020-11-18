@@ -17,8 +17,8 @@ c****************************************************************
       SUBROUTINE wann_write_eig(
      >     fmpi,cell,noco,nococonv,input,kpts,sym,atoms,          
      >              eig_id,l_real,
-     >              ntypd,neigd,nvd,jspd,
-     >              isize,jspin,nbasfcn,
+     >              ntypd,nvd,jspd,
+     >              isize,jspin,
      >              l_ss,l_noco,nrec,fullnkpts,
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
      >              irreduc,odi,band_min,band_max,numbands,
@@ -39,8 +39,8 @@ c****************************************************************
       TYPE(t_sym),       INTENT(IN) :: sym
       TYPE(t_atoms),     INTENT(IN) :: atoms
       integer,intent(in) :: eig_id
-      integer,intent(in) :: ntypd,neigd,nvd,jspd
-      integer,intent(in) :: isize,jspin,nbasfcn
+      integer,intent(in) :: ntypd,nvd,jspd
+      integer,intent(in) :: isize,jspin
       logical,intent(in) :: l_ss,l_noco,l_real
       integer,intent(in) :: nrec,fullnkpts
 
@@ -61,10 +61,10 @@ c****************************************************************
       data spin12/'WF1' , 'WF2'/
       integer          :: ikpt,kptibz
       integer          :: nmat,nbands,nv(jspd)
-      real             :: wk, bkpt(3),eig(neigd),cp_time(9)
+      real             :: wk, bkpt(3),eig(input%neig),cp_time(9)
       integer          :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer          :: nkbnd,i
-      integer          :: n_start,n_end,co
+      integer          :: co
       integer          :: bnd1,bnd2,kpt
       complex, allocatable :: paulimat(:,:,:,:) 
       real             :: sum1,sum2,sum3
@@ -81,19 +81,19 @@ c****************************************************************
       TYPE(t_lapw)  :: lapw
 
 
-      zMat%l_real = l_real
-      zMat%matsize1 = nbasfcn
-      zMat%matsize2 = neigd
-      IF(l_real) THEN
-         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-      ELSE
-         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-      END IF
+!      zMat%l_real = l_real
+!      zMat%matsize1 = nbasfcn
+!      zMat%matsize2 = neigd
+!      IF(l_real) THEN  !allocates not needed, due to zmat%init further below
+!         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!      ELSE
+!         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!      END IF
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
 !      WRITE(*,*)'wann_rw_eig: neigd',neigd
-      n_start=1
-      n_end=neigd
+!      n_start=1
+!      n_end=neigd
       IF (l_gwf) THEN
          WRITE(fname,'("_",i4.4,".eig")')iqpt
          fname=spin12(jspin)//trim(fname)
@@ -158,8 +158,8 @@ c****************************************************************
         if(l_bzsym) kptibz=irreduc(ikpt)
             call wann_read_eig(
      >              eig_id,     
-     >              ntypd,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,
+     >              ntypd,input%neig,nvd,jspd,
+     >              0,isize,kptibz,jspin,numbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
@@ -205,8 +205,8 @@ c****************************************************************
             if(l_bzsym)kptibz=irreduc(ikpt)
             call wann_read_eig(     
      >              eig_id,       
-     >              ntypd,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,
+     >              ntypd,input%neig,nvd,jspd,
+     >              0,isize,kptibz,jspin,numbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)

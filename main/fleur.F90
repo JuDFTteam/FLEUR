@@ -342,11 +342,6 @@ CONTAINS
                call fmpi%set_root_comm()
                if (fmpi%n_rank == 0) then
                   IF (fmpi%irank == 0) THEN
-                     CALL MPI_Reduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)
-                  ELSE
-                     CALL MPI_Reduce(results%te_hfex%core, MPI_IN_PLACE, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)
-                  END IF
-                  IF (fmpi%irank == 0) THEN
                      CALL MPI_Reduce(MPI_IN_PLACE, results%te_hfex%valence, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)
                   ELSE
                      CALL MPI_Reduce(results%te_hfex%valence, MPI_IN_PLACE, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)

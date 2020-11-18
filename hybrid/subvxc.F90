@@ -100,17 +100,17 @@ CONTAINS
       DO itype = 1, atoms%ntype
 
          ! Generate the radial basis-functions for each l
-         WRITE (oUnit, '(a,i3,a)') new_LINE('n')//new_LINE('n')//' wavefunction parameters for atom type', itype, ':'
-         WRITE (oUnit, '(31x,a,32x,a)') 'radial function', 'energy derivative'
-         WRITE (oUnit, '(a)') '  l    energy            value        '// &
-            'derivative    nodes          value        derivative    nodes       norm        wronskian'
+         ! WRITE (oUnit, '(a,i3,a)') new_LINE('n')//new_LINE('n')//' wavefunction parameters for atom type', itype, ':'
+         ! WRITE (oUnit, '(31x,a,32x,a)') 'radial function', 'energy derivative'
+         ! WRITE (oUnit, '(a)') '  l    energy            value        '// &
+         !    'derivative    nodes          value        derivative    nodes       norm        wronskian'
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(:, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
-            WRITE (oUnit, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
-               usdus%dus(l, itype, jsp), nodeu, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, &
-               usdus%ddn(l, itype, jsp), wronk
+!             WRITE (oUnit, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
+!                usdus%dus(l, itype, jsp), nodeu, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, &
+!                usdus%ddn(l, itype, jsp), wronk
          END DO
-8010     FORMAT(i3, f10.5, 2(5x, 1p, 2e16.7, i5), 1p, 2e16.7)
+! 8010     FORMAT(i3, f10.5, 2(5x, 1p, 2e16.7, i5), 1p, 2e16.7)
 
          bas1(:, 1, :, itype) = f(:, 1, :)
          bas1(:, 2, :, itype) = g(:, 1, :)

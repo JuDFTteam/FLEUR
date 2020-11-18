@@ -35,8 +35,11 @@ set(fleur_F90 ${fleur_F90}
    hybrid/sphbessel_integral.f90
    hybrid/structureconstant.F90
    hybrid/work_package.F90
-   hybrid/balance_barriers.F90
+   hybrid/distribute_mpi.F90
    hybrid/util/util.f90
    hybrid/util/rorder.f90
    hybrid/util/intgrf.f90
+   hybrid/legendre_poly.f90 
+   hybrid/unify_zmat.f90
+   hybrid/progress_thread/thread_lib.f90 
 )
