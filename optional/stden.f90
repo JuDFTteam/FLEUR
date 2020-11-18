@@ -1,5 +1,6 @@
 MODULE m_stden
-
+  REAL,PARAMETER :: input_ellow=-2.0
+  REAL,PARAMETER :: input_elup=1.0
 USE m_juDFT
 !     ************************************************************
 !     generate flapw starting density by superposition of
@@ -11,8 +12,7 @@ USE m_juDFT
 !     *************************************************************
 
 CONTAINS
-  REAL,PARAMETER :: input_ellow=-2.0
-  REAL,PARAMETER :: input_elup=1.0
+
 
 SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
