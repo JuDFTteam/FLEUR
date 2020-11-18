@@ -47,6 +47,8 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT) :: results
 
       INTEGER :: jsp,n,dir
+
+      COMPLEX :: force_a4_mt_loc(3,atoms%ntype,input%jspins)
    
       CALL timestart("force_a4_add")
 
@@ -135,6 +137,7 @@ CONTAINS
       !      + time2-time1
 
       ! Add the results to the total force.
+      force_a4_mt_loc=force_a4_mt*CMPLX(1.0,0.0)
       DO jsp = 1, input%jspins
          DO n = 1, atoms%ntype
             IF (atoms%l_geo(n)) THEN
@@ -147,7 +150,7 @@ CONTAINS
                WRITE (oUnit,FMT=8010) n
                WRITE (oUnit,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
                WRITE (oUnit,FMT=8015) n
-               WRITE (oUnit,FMT=8070) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8070
+               WRITE (oUnit,FMT=8020) ((force_a4_mt_loc(dir,n,jsp)),dir=1,3) ! 8070
 8010           FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015           FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
                !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)

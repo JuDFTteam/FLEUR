@@ -217,13 +217,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL closeXMLElement('valenceDensity')
    END IF ! fmpi%irank = 0
 
-   ! Klueppelberg (force level 3)
-   IF (input%l_f.AND.(input%f_level.GE.3)) THEN
-      DO jspin = 1,input%jspins ! jsp_start, jsp_end
-         CALL force_sf_mt(atoms,sphhar,jspin,jspin,fmpi,vtot%mt(:,0:,:,jspin),exc%mt(:,0:,:,1),vxc%mt(:,0:,:,:),outDen%mt(:,0:,:,:),sym,cell )
-      END DO
-   END IF
-
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN
          IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
@@ -270,6 +263,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
+
+   ! Klueppelberg (force level 3)
+   IF (input%l_f.AND.(input%f_level.GE.3)) THEN
+      DO jspin = 1,input%jspins ! jsp_start, jsp_end
+         CALL force_sf_mt(atoms,sphhar,jspin,jspin,fmpi,vtot%mt(:,0:,:,jspin),exc%mt(:,0:,:,1),vxc%mt(:,0:,:,:),outDen%mt(:,0:,:,:),sym,cell )
+      END DO
+   END IF
 
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
