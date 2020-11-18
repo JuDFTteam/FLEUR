@@ -142,7 +142,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="OutSCFLoopType">
-      <xsd:sequence maxOccurs="unbounded">
+      <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="iteration" type="IterationType"/>
       </xsd:sequence>
    </xsd:complexType>
@@ -160,8 +160,10 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrix" type="LDAUDensityMatrixType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
       </xsd:sequence>
@@ -214,7 +216,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="EigenvaluesType">
-      <xsd:sequence maxOccurs="unbounded">
+      <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="1" name="eigenvaluesAt" type="EigenvaluesAtType"/>
       </xsd:sequence>
    </xsd:complexType>
@@ -239,7 +241,7 @@
    <xsd:complexType name="ChargeDensityType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtCharges" type="MTChargesType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="spinDependentCharge" type="SpinDependentChargeType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="spinDependentCharge" type="SpinDependentChargeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalCharge" type="SingleValueType"/>
       </xsd:sequence>
    </xsd:complexType>
@@ -369,6 +371,17 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="spinDensity" type="DensityDistanceType"/>
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LDAUDensityMatrixConvergenceType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="3" minOccurs="0" name="distance" type="DensityMatrixDistanceType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="DensityMatrixDistanceType">
+      <xsd:attribute name="spin" type="xsd:integer" use="required"/>
+      <xsd:attribute name="distance" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="DensityDistanceType">
