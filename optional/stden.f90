@@ -1,7 +1,7 @@
 MODULE m_stden
+USE m_juDFT
   REAL,PARAMETER :: input_ellow=-2.0
   REAL,PARAMETER :: input_elup=1.0
-USE m_juDFT
 !     ************************************************************
 !     generate flapw starting density by superposition of
 !     atomic densities. the non-spherical terms inside
