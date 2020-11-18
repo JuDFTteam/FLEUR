@@ -45,7 +45,7 @@ MODULE m_writeCFOutput
 
       !Modified densities and potentials for crystalfield
       TYPE(t_potden)    :: inDenCF
-      TYPE(t_potden)    :: vCF,vCoul,vx
+      TYPE(t_potden)    :: vCF,vCoul,vx,vxc,exc
 
       CALL timestart("Crystal Field Output")
 
@@ -55,6 +55,8 @@ MODULE m_writeCFOutput
       CALL vCF%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vCoul%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_CRYSTALFIELD)
       CALL vx%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
+      CALL vxc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL exc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
 
       ALLOCATE (f(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
       ALLOCATE (g(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
@@ -108,7 +110,7 @@ MODULE m_writeCFOutput
             nococonv_dummy = nococonv
             CALL vgen(hybdat, fi%field, fi%input, xcpot, atoms_dummy, sphhar, stars, fi%vacuum, fi%sym, &
                       fi%cell, fi%oneD, fi%sliceplot, fmpi, results_dummy, fi%noco, nococonv_dummy,&
-                      EnergyDen, inDenCF, vCF, vx, vCoul)
+                      EnergyDen, inDenCF, vCF, vx, vCoul, vxc, exc)
 
 
             IF(fmpi%irank==0) THEN
