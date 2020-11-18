@@ -59,7 +59,7 @@ MODULE m_greensfTorgue
       ENDDO
       !Get the Bxc part of the potential
       ALLOCATE(bxc(SIZE(vlm,1),SIZE(vlm,2)))
-      bxc = vlm(:,:,1) - vlm(:,:,2)
+      bxc = (vlm(:,:,1) - vlm(:,:,2))/2.0
       DEALLOCATE(vlm)
 
       !L=0 of potential has an additional rescaling of r/sqrt(4pi)
@@ -159,7 +159,11 @@ MODULE m_greensfTorgue
 
    END SUBROUTINE greensfTorgue
 
-   SUBROUTINE greensfSOTorgue(greensFunction,sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vso)
+   SUBROUTINE greensfSOTorgue(greensFunction,sphhar,atoms,sym,noco,nococonv,input,enpara,mpi,f,g,flo,atomType,torgue,vTot)
+
+      USE m_sointg
+      USE m_spnorb
+      USE m_fourProduct
 
       !--------------------------------------------------------------------------
       ! This Subroutine implements the formula:
@@ -177,21 +181,65 @@ MODULE m_greensfTorgue
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_nococonv),       INTENT(IN)     :: nococonv
       TYPE(t_input),          INTENT(IN)     :: input
+      TYPE(t_enpara),         INTENT(IN)     :: enpara
+      TYPE(t_mpi),            INTENT(IN)     :: mpi
       REAL,                   INTENT(IN)     :: f(:,:,0:,:,:)
       REAL,                   INTENT(IN)     :: g(:,:,0:,:,:)
       REAL,                   INTENT(IN)     :: flo(:,:,:,:,:)
       INTEGER,                INTENT(IN)     :: atomType
       REAL,                   INTENT(INOUT)  :: torgue(:)
-      REAL,                   INTENT(IN)     :: vso(:,0:)
+      TYPE(t_potden),         INTENT(IN)     :: vTot
 
-      INTEGER :: jspin,na,nsym,nh,i_gf,l,lp,spin,iContour
-      INTEGER :: lh,mh,m,mp,iz,ipm,jr,alpha
+      INTEGER :: jspin,na,nsym,nh,i_gf,l,lp,spin,iContour,i
+      INTEGER :: lh,mh,mhp,m,mp,iz,ipm,jr,alpha,jspin1,jspin2
       COMPLEX :: phaseFactor
-      REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3,2),g_Spin(2,2)
+      REAL    :: realIntegral, imagIntegral, e
+      COMPLEX :: sigma(2,2,3),chi(2,2),torgue_cmplx(3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
-      COMPLEX, ALLOCATABLE :: g_ii(:,:),g_iiSpin(:,:,:,:)
+      REAL :: v0(atoms%jmtd),vso_tmp(atoms%jmtd,2)
+      COMPLEX, ALLOCATABLE :: integrand(:),g_iiSpin(:,:,:,:)
+      COMPLEX,ALLOCATABLE :: soangl(:,:,:,:,:,:)
+      COMPLEX,ALLOCATABLE :: vso(:,:,:,:,:,:)
+
+
+      !
+      !---> common spin-orbit integrant V   (average spin directions)
+      !                                  SO
+      ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2))
+      ALLOCATE(vso(atoms%jmtd,2,2,-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd))
+      IF(.NOT.noco%l_noco) THEN
+         CALL spnorb_angles(atoms,mpi,nococonv%beta(atomType),nococonv%alph(atomType),soangl)
+      ELSE
+         CALL spnorb_angles(atoms,mpi,nococonv%theta,nococonv%phi,soangl)
+      ENDIF
+
+      DO l = 0, atoms%lmaxd
+         v0(:) = 0.0
+         DO i = 1,atoms%jri(atomType)
+            v0(i) = (vtot%mt(i,0,atomType,1)+vtot%mt(i,0,atomType,input%jspins))/2.
+         END DO
+         e = (enpara%el0(l,atomType,1)+enpara%el0(l,atomType,input%jspins))/2.
+
+         CALL sointg(atomType,e,vtot%mt(:,0,atomType,:),v0,atoms,input,vso_tmp)
+         IF (.TRUE.) THEN
+            DO i= 1,atoms%jmtd
+               vso_tmp(i,1)= (vso_tmp(i,1)+vso_tmp(i,2))/2.
+               vso_tmp(i,2)= vso_tmp(i,1)
+            ENDDO
+         ENDIF
+         DO m = -l, l
+            DO mp = -l,l
+               DO jspin1 = 1,2
+                  DO jspin2 = 1,2
+                     vso(:,jspin1,jspin2,m,mp,l) = vso_tmp(:,1) * soangl(l,m,jspin1,l,mp,jspin2)
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+
+
 
       na=SUM(atoms%neq(:atomType-1))+1
 
@@ -207,7 +255,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function SOTorgue: Integration")
       torgue_cmplx = cmplx_0
       iContour = -1
-      ALLOCATE(g_ii(atoms%jmtd,greensFunction(1)%contour%nz),source=cmplx_0)
+      ALLOCATE(integrand(atoms%jmtd),source=cmplx_0)
       DO i_gf = 1, SIZE(greensFunction)
 
          IF(greensFunction(i_gf)%elem%atomType.NE.atomType.OR.&
@@ -224,28 +272,33 @@ MODULE m_greensfTorgue
             CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
          ENDIF
 
-         DO lh = 0, SIZE(vso,2)-1
+         DO lh = 0, SIZE(vso,6)-1
             DO mh = -lh,lh
-               DO m = -l, l
-                  DO mp = -lp, lp
-                     phaseFactor = gaunt1(lp,lh,l,mp,mh,m,atoms%lmaxd)
-                     IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
-                     DO ipm = 1, 2
-                        CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
-                        DO iz = 1, SIZE(g_ii,2)
-                           DO alpha = 1, 3 !(x,y,z)
-                              DO jr = 1, atoms%jri(atomType)
-                                 IF(ipm==1) THEN
-                                    g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
-                                 ELSE
-                                    g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
-                                 ENDIF
-                                 g_ii(jr,iz) = g_Spin(1,1) + g_Spin(2,2)
+               DO mhp = -lh, lh
+                  IF(MAXVAL(ABS(vso(:,:,:,mh,mhp,lh))).LT.1e-12) CYCLE
+                  DO m = -l, l
+                     DO mp = -lp, lp
+                        phaseFactor = fourProduct(lp,lh,l,lh,mp,mh,m,mhp,atoms%lmaxd)
+                        IF(ABS(phaseFactor).LT.1e-12) CYCLE !Naive approach just skip all elements with zero gaunt coefficient
+                        DO ipm = 1, 2
+                           CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_iiSpin)
+                           DO iz = 1, SIZE(g_iiSpin,4)
+                              DO alpha = 1, 3 !(x,y,z)
+                                 DO jr = 1, atoms%jri(atomType)
+                                    IF(ipm==1) THEN
+                                       g_Spin = matmul(sigma(:,:,alpha),g_iiSpin(:,:,jr,iz))
+                                       g_Spin = matmul(vso(jr,:,:,mh,mhp,lh),g_Spin)
+                                    ELSE
+                                       g_Spin = matmul(conjg(sigma(:,:,alpha)),g_iiSpin(:,:,jr,iz))
+                                       g_Spin = matmul(conjg(vso(jr,:,:,mh,mhp,lh)),g_Spin)
+                                    ENDIF
+                                    integrand(jr) = g_Spin(1,1) + g_Spin(2,2)
+                                 ENDDO
+                                 CALL intgr3(REAL(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                                 CALL intgr3(AIMAG(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
+                                 torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
+                                                      * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                               ENDDO
-                              CALL intgr3(REAL(g_ii(:,iz)*vso(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                              CALL intgr3(AIMAG(g_ii(:,iz)*vso(:,lh)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                              torgue_cmplx(alpha,ipm) = torgue_cmplx(alpha,ipm) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                   * MERGE(phaseFactor*greensFunction(i_gf)%contour%de(iz),conjg(phaseFactor*greensFunction(i_gf)%contour%de(iz)),ipm.EQ.1)
                            ENDDO
                         ENDDO
                      ENDDO
@@ -255,9 +308,7 @@ MODULE m_greensfTorgue
          ENDDO
 
       ENDDO
-      WRITE(*,*) torgue_cmplx(:,1) * hartree_to_ev_const * 1000
-      WRITE(*,*) torgue_cmplx(:,2) * hartree_to_ev_const * 1000
-      torgue = REAL(torgue_cmplx(:,1)+torgue_cmplx(:,2))
+      torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function SOTorgue: Integration")
 
       WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
@@ -273,5 +324,4 @@ MODULE m_greensfTorgue
 
 
    END SUBROUTINE greensfSOTorgue
-
 END MODULE m_greensfTorgue

@@ -67,6 +67,7 @@ CONTAINS
       USE m_plot
       USE m_usetup
       USE m_hubbard1_setup
+      USE m_writeCFOutput
       USE m_mpi_bc_potden
       USE m_mpi_bc_tool
       USE m_eig66_io
@@ -134,7 +135,8 @@ CONTAINS
       !Read in last Hubbard 1 distances
       l_error = .TRUE.
       IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
-      CALL hub1data%init(fi%atoms, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      CALL hub1data%init(fi%atoms, fi%input, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
+      CALL hub1data%mpi_bc(fmpi%mpi_comm)
       IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
          !Set the current HIA distance to the read in value
          !Prevents too many HIA iterations after restart
@@ -298,13 +300,14 @@ CONTAINS
             CALL inDen%ChargeAndMagnetisationToSpins()
          END IF
 
+
          IF (hub1data%l_runthisiter .AND. fi%atoms%n_hia > 0) THEN
             DO i_gf = 1, fi%gfinp%n
                CALL greensFunction(i_gf)%mpi_bc(fmpi%mpi_comm)
             ENDDO
             IF (ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
                hub1data%iter = hub1data%iter + 1
-               CALL hubbard1_setup(fi%atoms, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, vTot, &
+               CALL hubbard1_setup(fi%atoms, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, nococonv, vTot, &
                                    greensFunction(fi%gfinp%hiaElem), hub1data, results, inDen)
             ELSE
                IF (fmpi%irank .EQ. 0) WRITE (*, *) 'Not all Greens Functions available: Running additional iteration'
@@ -495,6 +498,15 @@ CONTAINS
             !ENDIF
 #endif
             CALL timestop("generation of new charge density (total)")
+
+
+            !CRYSTAL FIELD OUTPUT
+            IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
+               CALL hub1data%mpi_bc(fmpi%mpi_comm)
+               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
+               CALL juDFT_end("Crystal Field Output written",fmpi%irank)
+            ENDIF
+
 
 !!$             !----> output potential and potential difference
 !!$             IF (disp) THEN

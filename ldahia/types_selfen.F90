@@ -75,9 +75,16 @@ MODULE m_types_selfen
 
       END SUBROUTINE collect_selfen
 
-      SUBROUTINE postProcess_selfen(this,jspins,vmmp)
+      SUBROUTINE postProcess_selfen(this,noco,nococonv,atomType,l,jspins,vmmp)
+
+         USE m_types_noco
+         USE m_types_nococonv
+         USE m_rotMMPmat
 
          CLASS(t_selfen), INTENT(INOUT) :: this
+         TYPE(t_noco),    INTENT(IN)    :: noco
+         TYPE(t_nococonv),INTENT(IN)    :: nococonv
+         INTEGER,         INTENT(IN)    :: atomType,l
          INTEGER,         INTENT(IN)    :: jspins
          COMPLEX,         INTENT(IN)    :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
 
@@ -109,6 +116,17 @@ MODULE m_types_selfen
                !---------------------------------------------
                this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),swapMat)
                this%data(:,:,iz,ipm) = matmul(swapMat,this%data(:,:,iz,ipm))
+               !---------------------------------------------
+               ! Rotate the selfenergy in real space to the
+               ! correct orientation in the SOC case
+               !---------------------------------------------
+               IF(noco%l_soc) THEN
+                  IF(noco%l_noco) THEN
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%beta(atomType),nococonv%alph(atomType),l)
+                  ELSE
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%theta,nococonv%phi,l)
+                  ENDIF
+               ENDIF
                !---------------------------------------------------------------------
                ! The DFT green's function also includes the previous DFT+U correction
                ! This is removed by substracting it from the selfenergy
