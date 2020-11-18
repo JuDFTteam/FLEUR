@@ -19,9 +19,9 @@ try:
             schema_path = os.path.join(root,'FleurOutputSchema.xsd')
             te.log_info(f"Testing {file_path}")
             try:
-               xmltree = etree.parse(outxml_path)
+               xmltree = etree.parse(file_path)
             except:
-               te.log_error(f'{file_path} cannot be parsed')
+               te.log_error(f'File not parsable, maybe something went wrong: {file_path}')
                te.errors += 1
                continue
 
@@ -31,13 +31,20 @@ try:
 
             xmlschema_doc = etree.parse(schema_path)
             xmlschema = etree.XMLSchema(xmlschema_doc)
-            try:
-               xmlschema.assertValid(xmltree)
-            except etree.DocumentInvalid as e:
-               te.log_error(f'{file_path} not validated against schema: {e}')
+
+            if not xmlschema.validate(xmltree):
+               # get more information on what does not validate
+               parser_on_fly = etree.XMLParser(attribute_defaults=True, schema=xmlschema, encoding='utf-8')
+               outxmlfile = etree.tostring(xmltree)
+               message = 'Reason is unknown'
+               try:
+                  tree_x = etree.fromstring(outxmlfile, parser_on_fly)
+               except etree.XMLSyntaxError as msg:
+                  message = msg
+               te.log_error(f'Output file does not validate against the schema: {message}')
                te.errors += 1
 
    sys.exit(te.errors)
 except Exception as e:
    te.log_error(f"Error: {e}")
-   sys.exit(1):
+   sys.exit(1)
