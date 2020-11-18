@@ -150,13 +150,13 @@ CONTAINS
                WRITE (oUnit,FMT=8010) n
                WRITE (oUnit,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
                WRITE (oUnit,FMT=8015) n
-               WRITE (oUnit,FMT=8020) ((force_a4_mt_loc(dir,n,jsp)),dir=1,3) ! 8070
+               WRITE (oUnit,FMT=8070) ((force_a4_mt_loc(dir,n,jsp)),dir=1,3) ! 8070
 8010           FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015           FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
                !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)
                !  8020   FORMAT (' FX_A4=',2f19.15,' FY_A4=',2f19.15,' FZ_A4=',2f19.15)
-8020           FORMAT (' FX_A4=',2f10.6,' FY_A4=',2f10.6,' FZ_A4=',2f10.6)
-8070           FORMAT (' FX_A4=',2f20.14,' FY_A4=',2f20.14,' FZ_A4=',2f20.14)
+8020           FORMAT (' FX_IS=',2f10.6,' FY_IS=',2f10.6,' FZ_IS=',2f10.6)
+8070           FORMAT (' FX_MT=',2f10.6,' FY_MT=',2f10.6,' FZ_MT=',2f10.6)
 
             END IF ! atoms%l_geo(n)
 
