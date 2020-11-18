@@ -238,7 +238,7 @@ CONTAINS
              ! (f)orce(f)actor(on)(at)oms calculation, parallelization in k
              ffonat = czero
              nat = 1
-             DO n = 1, sphhar%ntypsd
+             DO n = 1, atoms%ntype
                 nd = sym%ntypsy(nat)
                 ! find maximal l of the potential for atom (type) n
                 ! directly reading max(llh(:,nd)) is only possible if llh is initialized to zero
@@ -247,20 +247,20 @@ CONTAINS
                 DO lh = 0,sphhar%nlh(nd)
                    maxl = max(maxl,sphhar%llh(lh,nd))
                 END DO ! lh
-                ALLOCATE ( bsl(atoms%jmtd,0:maxl),integrand(atoms%jmtd,0:maxl) )
+                ALLOCATE ( bsl(0:maxl,atoms%jmtd),integrand(atoms%jmtd,0:maxl) )
                 g = -0.1 ! g is the norm of a star and can't be negative, this is to initialize a check if the norm between stars has changed
 
                 ! on each processor, calculate a certain consecutive set of k
                 kp = 0
-                DO k = ioffset_pT(fmpi%irank)+1,ioffset_pT(fmpi%irank)+nkpt_pT(fmpi%irank) ! for k = 1 (G = 0), grad rho_core^alpha is zero
+                DO k = 2,stars%ng3 ! for k = 1 (G = 0), grad rho_core^alpha is zero
                    IF (abs(g-stars%sk3(k)).gt.tol_14) THEN ! only calculate new spherical Bessel functions if the length of the star vector has changed
                       g = stars%sk3(k)
 
                       ! generate spherical Bessel functions up to maxl for the radial grid
                       DO j = 1,atoms%jri(n)
                          gr = g * atoms%rmsh(j,n)
-                         CALL sphbes(maxl,gr,bsl(j,:))
-                         bsl(j,:) = bsl(j,:) * atoms%rmsh(j,n)**2
+                         CALL sphbes(maxl,gr,bsl(:,j))
+                         bsl(:,j) = bsl(:,j) * atoms%rmsh(j,n)**2
                       END DO ! j
                    END IF
 
@@ -271,7 +271,7 @@ CONTAINS
                    !then, multiply by pylm2 times clnu
                    DO lh = 0,sphhar%nlh(nd)
                       l = sphhar%llh(lh,nd)
-                      integrandr(:) = bsl(:,l) * vr2(:,lh,n)
+                      integrandr(:) = bsl(l,:) * vr2(:,lh,n)
                       CALL intgr3(integrandr,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),factor)
                       DO j = 1,sym%nop
                          symint = kp*sym%nop + j
@@ -302,7 +302,7 @@ CONTAINS
 !             CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),MPI_COMPLEX,ffonat(1,1),n1,n2,MPI_COMPLEX,MPI_COMM_WORLD,ierr)
 !             DEALLOCATE(ffonat_pT,n1,n2)
 !#else
-             !ffonat = ffonat_pT
+             ffonat(:,(sym%nop+1):) = ffonat_pT
              DEALLOCATE(ffonat_pT)
 !#endif
 
@@ -799,8 +799,8 @@ CONTAINS
 
       ! ..Local arrays
       integer kr(3,sym%nop)
-      real    kro(3,oneD%ods%nop)
-      complex phas(sym%nop), phase
+      real    kro(3,oneD%ods%nop), force_mt_loc(3)
+      complex phas(sym%nop), phase, force_is_loc(3)
       complex phaso(oneD%ods%nop), kcmplx(3)
 
       czero = (0.0,0.0)
@@ -814,10 +814,13 @@ CONTAINS
 
       !    then  G>0
 
+      force_mt_loc=0.0
+      force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,force_a4_mt,ffonat,n,jspin,force_a4_is,vpw) &
+!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
 !$OMP FIRSTPRIVATE(czero) &
-!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso,kcmplx,phase)
+!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso,kcmplx,phase) &
+!$OMP REDUCTION(+:force_mt_loc,force_is_loc)
       DO  k = 2,stars%ng3
          IF (.NOT.oneD%odi%d1) THEN
             CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
@@ -834,19 +837,16 @@ CONTAINS
                                    + kr(3,j) * taual(3,nat1) )
                   phase = cmplx(cos(x),sin(x))
                   ! generate muffin-tin part of core force component
-                  write(*,*) 'sym%nop is:',sym%nop
-                  write(*,*) 'stars%ng3 is:',stars%ng3
-                  write(*,*) 'k is:',k
-                  write(*,*) 'j is:',j
-                  force_a4_mt(:,n,jspin) = force_a4_mt(:,n,jspin) + qf(k) * &
+                  force_mt_loc(:) = force_mt_loc(:) + qf(k) * &
                                            phase * stars%nstr(k) * ffonat(:,(k-1)*sym%nop+j)
                   kcmplx(:) = kcmplx(:) + kr(:,j) * phase * phas(j) ! should be conjg(phas(j)), but in FLEUR, only real phas(j) are accepted
                END DO !j
                kcmplx = matmul(kcmplx,cell%bmat) * stars%nstr(k) / sym%nop
                ! generate interstitial part of core force component
-               force_a4_is(:,n,jspin) = force_a4_is(:,n,jspin) + qf(k) * &
+               force_is_loc(:) = force_is_loc(:) + qf(k) * &
                                         conjg(vpw(k,jspin))*cell%omtil*ImagUnit*kcmplx(:)
             END IF
+
             nat2 = nat1 + neq - 1
             DO nat = nat1, nat2
                sf = czero
@@ -880,6 +880,11 @@ CONTAINS
           END IF
       ENDDO
 !$OMP END PARALLEL DO
+
+      IF (l_f2) THEN ! Klueppelberg (force level 1)
+         force_a4_mt(:,n,jspin) = force_a4_mt(:,n,jspin) + force_mt_loc
+         force_a4_is(:,n,jspin) = force_a4_is(:,n,jspin) + force_is_loc
+      END IF
    END SUBROUTINE StructureConst_forAtom
 
    SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, rmt, jri, dx, &
