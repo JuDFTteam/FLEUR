@@ -95,3 +95,7 @@ endif()
 foreach(test ${HybridTests})
    add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
 endforeach()
+
+#OutputSchema Test
+add_test("OutputSchema" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/OutputSchema/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/OutputSchema)
+
