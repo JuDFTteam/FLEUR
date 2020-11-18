@@ -16,7 +16,6 @@
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" et="0.0" alpha="1.0"/>
       </greensFunction>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
       <xcFunctional name="pbe" relativisticCorrections="F"/>
    </calculationSetup>
    <cell>
