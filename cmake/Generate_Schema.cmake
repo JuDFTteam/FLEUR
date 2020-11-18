@@ -6,7 +6,13 @@ if (XXD_PROG)
         COMMAND ${XXD_PROG} -i FleurInputSchema.xsd ${CMAKE_BINARY_DIR}/include/inputSchema.h
         DEPENDS ${CMAKE_SOURCE_DIR}/io/xml/FleurInputSchema.xsd
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/io/xml/
-        COMMENT "Putting current Schema into inputSchema.h")
+        COMMENT "Putting current inputSchema into inputSchema.h")
+  ADD_CUSTOM_COMMAND(
+        OUTPUT ${CMAKE_BINARY_DIR}/include/outputSchema.h
+        COMMAND ${XXD_PROG} -i FleurOutputSchema.xsd ${CMAKE_BINARY_DIR}/include/outputSchema.h
+        DEPENDS ${CMAKE_SOURCE_DIR}/io/xml/FleurOutputSchema.xsd
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/io/xml/
+        COMMENT "Putting current outputSchema into outputSchema.h")
 else()
   ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_BINARY_DIR}/include/inputSchema.h
