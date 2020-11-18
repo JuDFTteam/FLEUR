@@ -58,6 +58,8 @@ MODULE m_writeCFOutput
       CALL vxc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL exc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
 
+      CALL results_dummy%init(fi%input,fi%atoms,fi%kpts,fi%noco)
+
       ALLOCATE (f(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
       ALLOCATE (g(fi%atoms%jmtd,2,0:fi%atoms%lmaxd),source=0.0)
       ALLOCATE (flo(fi%atoms%jmtd,2,fi%atoms%nlod),source=0.0)
