@@ -12,19 +12,12 @@ $result+=jt::test_grepexists("$workdir/out","0.2073");
 $result+=jt::test_grepexists("$workdir/out","5.835");
 $result+=jt::test_grepexists("$workdir/out","0.020");
 
-$result+=jt::test_fileexists("$workdir/banddos.hdf");
-
-#How to check the DOS with HDF5?
-#5/2 peak line 365
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.0003");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.848E+02");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.845E+02");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.297E+00");
-
-#7/2 peak line 875
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.5340");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.988E+02");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.264E+00");
-#$result+=jt::test_grepexists("$workdir/DOS.1","0.986E+02");
+#How to do these checks (Depends on HDF5 how the data is written out)
+$result+=min(jt::test_fileexists("$workdir/jDOS.1")+
+     jt::test_grepexists("$workdir/jDOS.1","0.850633")+
+     jt::test_grepexists("$workdir/jDOS.1","0.300025")+
+     jt::test_grepexists("$workdir/jDOS.1","0.980324")+
+     jt::test_grepexists("$workdir/jDOS.1","0.263514"),
+     jt::test_fileexists("$workdir/banddos.hdf"));
 
 jt::stageresult($workdir,$result,"3");

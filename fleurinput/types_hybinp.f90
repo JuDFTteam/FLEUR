@@ -91,7 +91,12 @@ CONTAINS
          ENDIF
       END DO
 
-      xc_name = trim(xml%GetAttributeValue('/fleurInput/xcFunctional/@name'))
+      xc_name = ''
+      IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/xcFunctional') > 0) THEN
+         xc_name = trim(xml%GetAttributeValue('/fleurInput/calculationSetup/xcFunctional/@name'))
+      ELSE
+         xc_name = trim(xml%GetAttributeValue('/fleurInput/xcFunctional/@name'))
+      END IF
       if (trim(xc_name) == "pbe0") then
          this%l_hybrid = .True.
       else

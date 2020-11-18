@@ -95,7 +95,7 @@ CONTAINS
       TYPE(t_hybdat)                  :: hybdat
       TYPE(t_mpdata)                  :: mpdata
 
-      TYPE(t_potden)                  :: vTot, vx, vCoul, vxcForPlotting
+      TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
       TYPE(t_hub1data)                :: hub1data
@@ -149,7 +149,7 @@ CONTAINS
       ! Initialize and load inDen density (start)
 
       !Warning on strange choice of switches before starting density is generated.
-      IF (fi%input%l_onlyMtStDen .AND. .NOT. fi%noco%l_mtNocoPot) THEN
+      IF (fi%input%l_onlyMtStDen .AND. .NOT. any(fi%noco%l_unrestrictMT)) THEN
          CALL juDFT_warn("l_onlyMtStDen='T' and l_mtNocoPot='F' makes no sense.", calledby='types_input')
       END IF
 
@@ -157,7 +157,7 @@ CONTAINS
 
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-      IF (fi%noco%l_mtNocoPot) archiveType = CDN_ARCHIVE_TYPE_FFN_const
+      IF (any(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
                                               0, results%ef, l_qfix, inDen)
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
@@ -172,13 +172,15 @@ CONTAINS
                            0, -1.0, results%ef, results%last_mmpmatDistance, results%last_occDistance, .FALSE., inDen)
       END IF
 
-      IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
+      IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
       ! Initialize potentials (start)
       CALL vTot%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vCoul%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
-      CALL vx%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
+      CALL vx%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL vxc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL exc%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       ! Initialize potentials (end)
 
       ! Initialize Green's function (start)
@@ -272,7 +274,7 @@ CONTAINS
 !!$                END IF
          !---< gwf
 
-         IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
+         IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
             sfscale = fi%noco%mag_scale
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = sfscale*inDen%mt(:, 0:, :, 2:4)
@@ -284,10 +286,10 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul)
+                   fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
-         IF (fi%noco%l_mtnocoPot .AND. fi%noco%l_scaleMag) THEN
+         IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = inDen%mt(:, 0:, :, 2:4)/sfscale
             inDen%pw(:, 2:3) = inDen%pw(:, 2:3)/sfscale
@@ -449,7 +451,7 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%noco, nococonv, vTot, results, fi%oneD, fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data)
+                        archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
             !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -480,17 +482,17 @@ CONTAINS
             CALL MPI_BCAST(enpara%el0, SIZE(enpara%el0), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(enpara%ello0, SIZE(enpara%ello0), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 
-            IF (fi%noco%l_noco) THEN
-               DO n = 1, fi%atoms%ntype
-                  IF (fi%noco%l_relax(n)) THEN
-                     CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                     CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                  ENDIF
-               ENDDO
-               IF (fi%noco%l_constr) THEN
-                  CALL MPI_BCAST(nococonv%b_con, SIZE(nococonv%b_con), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               ENDIF
-            ENDIF
+            !IF (fi%noco%l_noco) THEN
+            !   DO n = 1, fi%atoms%ntype
+            !      IF (fi%noco%l_relax(n)) THEN
+            !         CALL MPI_BCAST(nococonv%alph(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !         CALL MPI_BCAST(nococonv%beta(n), 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !      ENDIF
+            !   ENDDO
+            !   IF (any(fi%noco%l_constrained)) THEN
+            !      CALL MPI_BCAST(nococonv%b_con, SIZE(nococonv%b_con), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            !   ENDIF
+            !ENDIF
 #endif
             CALL timestop("generation of new charge density (total)")
 
@@ -508,8 +510,8 @@ CONTAINS
             ! total energy
 
             !Rotating from local MT frame in global frame for mixing
-            CALL toGlobalSpinFrame(fmpi,fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen)
-            CALL toGlobalSpinFrame(fmpi,fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen,.true.)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen,fmpi)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen,fmpi,.true.)
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell, fi%oneD, &
                         xcpot, hybdat, vTot, vCoul, iter, inDen, results)

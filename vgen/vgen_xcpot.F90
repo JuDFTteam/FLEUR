@@ -13,7 +13,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, results)
+                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -55,11 +55,11 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)              :: sphhar
       TYPE(t_atoms), INTENT(IN)              :: atoms
       TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
-      TYPE(t_potden), INTENT(INOUT)           :: vTot, vx
+      TYPE(t_potden), INTENT(INOUT)           :: vTot, vx, vxc, exc
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
 
       ! Local type instances
-      TYPE(t_potden)    :: workDen, exc, veff
+      TYPE(t_potden)    :: workDen, veff
       Type(t_kinED)     :: kinED
       REAL, ALLOCATABLE :: tmp_mt(:,:,:), tmp_is(:,:)
       REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
@@ -70,9 +70,6 @@ CONTAINS
 #ifdef CPP_MPI
       integer:: ierr
 #endif
-
-      CALL exc%init(stars, atoms, sphhar, vacuum, noco, 1, 1) !one spin only
-      ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
 
       call set_kinED(fmpi, sphhar, atoms, sym,  xcpot, &
       input, noco, stars,vacuum,oned, cell, Den, EnergyDen, vTot,kinED)
@@ -123,7 +120,7 @@ CONTAINS
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc)
+            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
       CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
@@ -136,7 +133,7 @@ CONTAINS
       END IF
 
       CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen,kinED, noco,vTot, vx, exc)
+                  EnergyDen,kinED, noco,vTot, vx, exc, vxc)
 
       ! add MT EXX potential to vr
       IF (fmpi%irank == 0) THEN

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       bcc Fe  
    </comment>
@@ -7,6 +7,7 @@
       <cutoffs Kmax="3.0000000" Gmax="10.0000000" GmaxXC="8.00000000" numbands="all"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
@@ -16,10 +17,12 @@
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" eb="-0.99" et="0.0" alpha="0.25"/>
       </greensFunction>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="16.00000000" mode="tetra" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-            <kPointList name="default" count="10" type="tetra">
+            <kPointList name="default" count="10" nx="5" ny="5" nz="5" type="mesh">
                <kPoint weight="     1.0000000000000"> 0.0000000000000  0.0000000000000  0.0000000000000</kPoint>
                <kPoint weight="    12.0000000000000"> 0.0000000000000  0.0000000000000  0.2000000000000</kPoint>
                <kPoint weight="    12.0000000000000"> 0.0000000000000  0.0000000000000  0.4000000000000</kPoint>
@@ -142,9 +145,6 @@
             </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -395,9 +395,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Fe-1" element="Fe" atomicNumber="26">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>

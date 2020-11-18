@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       H2O Test
    </comment>
@@ -7,19 +7,19 @@
       <cutoffs Kmax="3.70000000" Gmax="13.10000000" GmaxXC="10.10000000" numbands="0"/>
       <scfLoop itmax="80" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="T" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <!-- k-points included here -->
          <kPointListSelection listName="default" />
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup=".50000000"/>
-   </calculationSetup>
-   <cell>
       <!-- symmetry operations included here -->
       <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
       <filmLattice scale="1.00000000" dVac="3.19000000" dTilda="5.13000000">
@@ -31,9 +31,8 @@
          <vacuumEnergyParameters vacuum="1" spinUp="-.25000000" spinDown="-.25000000"/>
       </filmLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="O-1" element="O" atomicNumber="8" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="O-1" element="O" atomicNumber="8">
          <mtSphere radius="1.05000000" gridPoints="429" logIncrement=".02400000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>
@@ -44,7 +43,7 @@
          </electronConfig>
          <energyParameters s="2" p="2" d="3" f="4"/>
       </species>
-      <species name="H-1" element="H" atomicNumber="1" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="H-1" element="H" atomicNumber="1">
          <mtSphere radius=".70000000" gridPoints="329" logIncrement=".02500000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>

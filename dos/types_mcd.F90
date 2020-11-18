@@ -12,6 +12,7 @@ MODULE m_types_mcd
   TYPE,extends(t_eigdos):: t_mcd
     REAL                 :: emcd_lo, emcd_up
     INTEGER, ALLOCATABLE :: ncore(:)
+    INTEGER,ALLOCATABLE  :: n_dos_to_type(:)
     REAL,    ALLOCATABLE :: e_mcd(:,:,:)
     REAL,    ALLOCATABLE :: mcd(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
@@ -126,10 +127,10 @@ end function
     INTEGER,intent(in)         :: id
 
     character(len=3):: c
-    INTEGER :: ind,ntype,nc,n
+    INTEGER :: ind,n_dos,nc,n
     ind=0
     DO n=1,size(this%mcd,1)
-      ntype=(n-1)/3+1
+      n_dos=(n-1)/3+1
       select case(mod(n,3))
       case(1)
         c="pos"
@@ -138,10 +139,10 @@ end function
       case(0)
         c="cir"
       end select
-      DO nc=1,this%ncore(ntype)
+      DO nc=1,this%ncore(n_dos)
         ind=ind+1
         if (ind==id) THEN
-          write(get_weight_name,"(a,i0,a,i0,a)") "At",ntype,"NC",nc,c
+          write(get_weight_name,"(a,i0,a,i0,a)") "At",this%n_dos_to_type(n_dos),"NC",nc,c
           RETURN
         ELSE IF(ind>id) then
           CALL judft_error("Types_mcd: data not found")
@@ -166,14 +167,18 @@ SUBROUTINE mcd_init(thisMCD,banddos,input,atoms,kpts,eig)
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    real,INTENT(IN)                      :: eig(:,:,:)
 
+   integer :: ntype !no of types for which MCD is calculated
+
+   thisMCD%n_dos_to_type=banddos%dos_typelist
+   ntype=size(banddos%dos_typelist)
    thisMCD%name_of_dos="MCD"
-   ALLOCATE (thisMCD%ncore(atoms%ntype))
-   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,29))
+   ALLOCATE (thisMCD%ncore(ntype))
+   ALLOCATE (thisMCD%e_mcd(ntype,input%jspins,29))
    IF (banddos%l_mcd) THEN
       thisMCD%emcd_lo = banddos%e_mcd_lo
       thisMCD%emcd_up = banddos%e_mcd_up
-      ALLOCATE (thisMCD%m_mcd(29,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,29,input%neig,kpts%nkpt,input%jspins) )
+      ALLOCATE (thisMCD%m_mcd(29,(3+1)**2,3*ntype,2))
+      ALLOCATE (thisMCD%mcd(3*ntype,29,input%neig,kpts%nkpt,input%jspins) )
       IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
    ELSE
       ALLOCATE(thisMCD%dos(0,0,0)) !indicated no DOS should be calculated

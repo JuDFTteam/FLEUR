@@ -65,9 +65,9 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      TYPE(t_potden),    INTENT(INOUT) :: outden
      TYPE(t_mixvector), INTENT(INOUT)   :: fsm
 
-     if (.not.(noco%l_noco.and.noco%l_alignMT)) return
+     if (.not.(noco%l_noco.and.any(noco%l_alignMT))) return
 
-     select case (noco%mag_mixing_sheme)
+     select case (noco%mag_mixing_scheme)
      case(1)
        if (it>1) return
        call precond_noco_anglerotate(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
@@ -237,20 +237,20 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
 
    REAL                                  :: zeros(atoms%ntype)
 
-   if (.not.noco%l_alignMT) RETURN
+   if (.not.any(noco%l_alignMT)) RETURN
    if (fmpi%irank==0) THEN
      zeros(:) = 0.0
 
      if (l_adjust) then
-       if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
+       !if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
        call Gimmeangles(input,atoms,noco,vacuum,sphhar,stars,den,nococonv%alphPrev,nococonv%betaPrev)
      endif
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-nococonv%alphPrev,zeros,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-nococonv%betaPreV,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
      if (present(l_update_nococonv)) then
        if (l_update_nococonv) THEN
-         nococonv%alph=nococonv%alphPrev
-         nococonv%beta=nococonv%betaPrev
+         nococonv%alph=merge(nococonv%alphPrev,nococonv%alph,noco%l_alignMT)
+         nococonv%beta=merge(nococonv%betaPrev,nococonv%beta,noco%l_alignMT)
          nococonv%alphPrev=0.0
          nococonv%betaPrev=0.0
        ENDIF
@@ -262,10 +262,10 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
 END SUBROUTINE
 
 !Rotates into the global frame so mixing can be performed without any restrictions. => Compatible with anderson mixing scheme.
-SUBROUTINE toGlobalSpinFrame(fmpi,noco,nococonv,vacuum,sphhar,stars&
-,sym,oneD,cell,input,atoms, den,l_update_nococonv)
+SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
+,sym,oneD,cell,input,atoms, den,fmpi,l_update_nococonv)
    USE m_mpi_bc_potden
-   TYPE(t_mpi),INTENT(IN)                :: fmpi
+   TYPE(t_mpi),INTENT(IN),OPTIONAL       :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
    TYPE(t_noco), INTENT(IN)              :: noco
@@ -281,24 +281,27 @@ SUBROUTINE toGlobalSpinFrame(fmpi,noco,nococonv,vacuum,sphhar,stars&
 
    REAL                                  :: zeros(atoms%ntype)
 
-   if (.not.noco%l_alignMT) RETURN
+   LOGICAL l_irank0
+   if (.not.any(noco%l_alignMT)) RETURN
 
-   if (fmpi%irank==0) then
+   l_irank0=.true.
+   if (present(fmpi)) l_irank0=fmpi%irank==0
+
+   if (l_irank0) then
      zeros(:)=0.0
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%beta,Den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alph,zeros,Den)
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
      ! Nococonv is zero now since rotation has been reverted.
      if (present(l_update_nococonv)) THEN
        if (l_update_nococonv) THEN
-         nococonv%alphPrev=nococonv%alph
-         nococonv%betaPrev=nococonv%beta
-         nococonv%alph=zeros
-         nococonv%beta=zeros
+         nococonv%alphPrev=merge(nococonv%alph,nococonv%alphPrev,noco%l_alignMT)
+         nococonv%betaPrev=merge(nococonv%beta,nococonv%betaPrev,noco%l_alignMT)
+         nococonv%alph=merge(zeros,nococonv%alph,noco%l_alignMT)
+         nococonv%beta=merge(zeros,nococonv%beta,noco%l_alignMT)
        ENDIF
      ENDIF
    ENDIF
-
-   call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
+   if (present(fmpi)) call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
 
 END SUBROUTINE
 

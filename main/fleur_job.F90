@@ -4,8 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_jobs
-#ifdef CPP_MPI 
-    use mpi 
+#ifdef CPP_MPI
+    use mpi
 #endif
     USE m_juDFT
     IMPLICIT NONE
@@ -177,7 +177,6 @@ CONTAINS
            !$       WRITE(*,*) ""
            !$       CALL juDFT_error("MPI not usable with OpenMP")
            !$    END IF
-           !Select the io-mode from the command-line
         END IF
 #endif
         IF (irank==0) THEN

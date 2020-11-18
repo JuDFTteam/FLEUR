@@ -39,7 +39,7 @@ CONTAINS
     COMPLEX :: term,tempA,tempB
     REAL    :: v(3),bmrot(3,3),gkrot(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
-    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.noco%l_mtNocoPot))
+    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT)))
     LOGICAL :: l_apw
 
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)

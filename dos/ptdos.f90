@@ -36,7 +36,7 @@ MODULE m_ptdos
       sfac = 2.0/jspins
 
       g = 0.0
-      DO ispin = 1, jspins
+      DO ispin = 1, SIZE(qal,3)
          DO itria = 1 , kpts%ntet
             fa = sfac*kpts%voltet(itria)/kpts%ntet
             k = kpts%ntetra(:,itria)

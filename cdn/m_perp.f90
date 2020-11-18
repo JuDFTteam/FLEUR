@@ -66,12 +66,12 @@ CONTAINS
 8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
-    IF(noco%l_alignMT) THEN
+    IF(noco%l_alignMT(itype)) THEN
       WRITE  (oUnit,8400) itype,nococonv%beta(itype),nococonv%alph(itype)
       8400   FORMAT(2x,'Atom:',I9.1,' -->',10x,'nococonv%beta=',f9.5, ' nococonv%alpha=',f9.5)
     END IF
 
-    IF (noco%l_relax(itype)) THEN
+    IF (noco%l_alignMT(itype).and..not.noco%l_unrestrictMT(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain
        !--->    it in the global spin coordinate frame
        rho11 = chmom(itype,1)
@@ -121,7 +121,7 @@ CONTAINS
        nococonv%beta(itype) = betah
     ENDIF
 
-    IF (noco%l_constr) THEN
+    IF (noco%l_constrained(itype)) THEN
        !--->    calculate the average value of B_xc (<B_xc>)
        DO iri = 1,atoms%jri(itype)
           b_xc_h(iri) = (  vr0(iri,itype,1) - vr0(iri,itype,2) )*atoms%rmsh(iri,itype)
@@ -141,8 +141,7 @@ CONTAINS
     ENDIF
 
 8100 FORMAT (2x,'-->',10x,' input B_con_x=',f12.6,&
-         &                    '  input B_con_y=',f12.6,&
-         &                    ' B_xc average=',f12.6)
+         &                    '  input B_con_y=',f12.6)
 8200 FORMAT (2x,'-->',10x,' delta B_con_x=',f12.6,&
          &                    ' delta B_con_y=',f12.6)
 

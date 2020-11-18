@@ -115,7 +115,7 @@ CONTAINS
       xPathA = '/fleurInput/calculationSetup/ldaHIA'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF(numberNodes==1) THEN
-         this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@itmax'))
+         this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@itmaxHubbard1'))
          this%minoccDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minoccDistance'))
          this%minmatDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minmatDistance'))
          this%beta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))

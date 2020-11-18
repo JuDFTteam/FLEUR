@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       bcc Fe
    </comment>
@@ -7,14 +7,17 @@
       <cutoffs Kmax="2.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <magnetism jspins="2" l_noco="t" swsp="F" lflip="f"/>
-      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
-      <nocoParams l_ss="F" l_mperp="t" l_mtNocoPot="t" l_constr="F" l_sourceFree="f" mix_b=".00000000">
+      <xcFunctional name="vwn" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="t" swsp="F" lflip="f">
          <qss>.0000000000 .0000000000 .0000000000</qss>
-      </nocoParams>
+         <mtNocoParams l_mperp="t"  l_mtNocoPot="t"/>
+      </magnetism>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
       <bzIntegration valenceElectrons="32.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
@@ -56,9 +59,6 @@
          </kPointList>
          </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
-   </calculationSetup>
-   <cell>
       <symmetryOperations>
          <symOp>
             <row-1>1 0 0 .0000000000</row-1>
@@ -75,9 +75,8 @@
          </bravaisMatrix>
       </bulkLattice>
    </cell>
-   <xcFunctional name="vwn" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F">
+      <species name="Fe-1" element="Fe" atomicNumber="26">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -90,7 +89,7 @@
          <lo type="SCLO" l="0" n="3" eDeriv="0"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-     <species name="Fe-2" element="Fe" atomicNumber="26" flipSpinPhi=".00000000" flipSpinTheta="0.0" flipSpinScale="F">
+     <species name="Fe-2" element="Fe" atomicNumber="26">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -108,12 +107,12 @@
       <atomGroup species="Fe-1">
          <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000"/>
+         <nocoParams  alpha=".00000000" beta=".00000000"/>
       </atomGroup>
       <atomGroup species="Fe-2">
          <relPos label="                   2">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams l_relax="F" alpha="Pi*.500000000" beta="Pi*.500000000"/>
+         <nocoParams  alpha="Pi*.500000000" beta="Pi*.500000000"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >

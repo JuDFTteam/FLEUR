@@ -125,7 +125,7 @@ MODULE m_types_selfen
                         ELSE
                            !----------------------------------------------------------------------------
                            ! The offdiagonal elements only have to be removed if they are actually added
-                           ! to the hamiltonian (so noco%l_mperp and noco%l_mtNocoPot)
+                           ! to the hamiltonian (so noco%l_mperp and any(noco%l_unrestrictMT))
                            !----------------------------------------------------------------------------
                            this%data(i+ns,j,iz,ipm) = this%data(i+ns,j,iz,ipm) - vmmp(m,mp,ispin)
                            this%data(i,j+ns,iz,ipm) = this%data(i,j+ns,iz,ipm) - conjg(vmmp(mp,m,ispin))

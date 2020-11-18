@@ -66,13 +66,13 @@ CONTAINS
       ELSE IF(noco%l_noco) THEN
          ! Rotate interstital potential back to global frame:
          CALL rotate_int_den_from_local(stars,atoms,vacuum,sym,input,denRot,vTot)
-         IF (noco%l_mtnocoPot) THEN
+         IF (any(noco%l_unrestrictMT)) THEN
             ! Rotate Muffin Tin potential back to global frame:
             CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,noco,vtot)
          END IF
       END IF
 
-      IF (noco%l_mtnocoPot.AND.noco%l_scaleMag) THEN
+      IF (any(noco%l_unrestrictMT).AND.noco%l_scaleMag) THEN
          sfscale=noco%mag_scale
          CALL vTot%SpinsToChargeAndMagnetisation()
          vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
@@ -82,7 +82,7 @@ CONTAINS
          CALL vTot%ChargeAndMagnetisationToSpins()
       END IF
 
-      IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN
+      IF (any(noco%l_unrestrictMT).AND.noco%l_sourceFree) THEN
 
          IF (fmpi%irank == 0) THEN
             CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)

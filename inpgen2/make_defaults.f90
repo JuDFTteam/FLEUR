@@ -56,19 +56,7 @@ CONTAINS
     ENDDO
     IF (input%jspins==0) input%jspins=1
 
-    IF (ANY(atoms%nlo(:) .NE. 0)) THEN
-       input%ellow = -1.8
-    ELSE
-       input%ellow = -0.8
-    ENDIF
-    IF (input%film) THEN
-       input%elup = 0.5
-    ELSE
-       input%elup = 1.0
-    ENDIF
     IF (hybinp%l_hybrid) THEN
-       input%ellow = input%ellow - 2.0
-       input%elup = input%elup + 10.0
        input%minDistance = 1.0e-5
        input%ctail = .FALSE.
     END IF
@@ -133,12 +121,20 @@ CONTAINS
     !
     !noco
     !
-    ALLOCATE (noco%l_relax(atoms%ntype))
+
     ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
     noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
-    noco%l_relax(:) = .FALSE.
     noco%alph_inp(:) = 0.0
     noco%beta_inp(:) = 0.0
+    ALLOCATE(noco%l_constrained(atoms%ntype))
+    noco%l_constrained(:) = .FALSE.
+    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
+    noco%l_unrestrictMT(:) = .FALSE.
+    ALLOCATE(noco%l_alignMT(atoms%ntype))
+    noco%l_alignMT(:)=.false.
+    ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
+    noco%mix_RelaxWeightOffD(:)=1.0
+    noco%mag_mixing_scheme=0
 
     !
     !hybinp

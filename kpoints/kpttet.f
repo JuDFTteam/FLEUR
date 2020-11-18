@@ -2,12 +2,11 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE kpttet(
-     >                  kmidtet,mkpt,ndiv3,
+     >                  nkpt,ndiv3,
      >                  rltv,voluni,
      >                  nsym,ccr,mdir,mface,
      >                  ncorn,nface,fdist,fnorm,cpoint,
-     <                  voltet,ntetra,ntet,vktet,
-     =                  nkpt,
+     <                  voltet,ntetra,ntet,
      <                  vkxyz,wghtkp)
 c
 c
@@ -53,9 +52,6 @@ c    ntetra   : list of four points for each tetrahedron
 c               containing the indices of the respective corner points
 c    vktet    : corner points of tetrahedra
 c
-c    kmidtet  : key to generate mid-tetrahedron k-points
-c               1 mid-points are generated; 0 not generated
-c
 c    OUTPUT: k-point set
 c    nkpt     : number of k-points generated in set
 c    vkxyz    : vector of kpoint generated; in cartesian representation
@@ -70,7 +66,7 @@ c-----------------------------------------------------------------------
 C
 C-----> PARAMETER STATEMENTS
 C
-      INTEGER, INTENT (IN) :: mkpt,ndiv3,mface,mdir
+      INTEGER, INTENT (IN) :: ndiv3,mface,mdir
 c
 c
 c ---> running mode parameter
@@ -92,27 +88,26 @@ C
 C
 C----->  BRILLOUINE ZONE INTEGRATION
 C
-      INTEGER, INTENT (IN) :: kmidtet
-      INTEGER, INTENT (INOUT) :: nkpt
+      INTEGER, INTENT (IN) :: nkpt
       INTEGER, INTENT (OUT) :: ntetra(4,ndiv3),ntet
-      REAL,    INTENT (OUT) :: voltet(ndiv3),vktet(3,mkpt)
-      REAL,    INTENT (OUT) :: vkxyz(3,mkpt),wghtkp(mkpt)
+      REAL,    INTENT (OUT) :: voltet(ndiv3)
+      REAL,    INTENT (OUT) :: vkxyz(3,nkpt),wghtkp(nkpt)
 
 C
 C --->  local variables
 c
-      INTEGER   i,j,ii, nkstar
-      REAL      sumwght,eps,one,tpi,sumvol,volirbz
-      REAL      vkmid(3,mkpt)
+      INTEGER   i,j,ii
+      REAL      eps,sumvol,volirbz
+
+      REAL :: vktet(3,nkpt)
+
 C
 C --->  set local constants
 c
-      SAVE      eps,one
-      DATA      eps/1.0e-9/,one/1.0/
+      SAVE      eps
+      DATA      eps/1.0e-9/
 c
 c======================================================================
-c
-      tpi = 2.0 * pimach()
 c
 
       WRITE (oUnit,'('' k-points generated with tetrahedron '',
@@ -123,8 +118,8 @@ c
       WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
 
       CALL kvecon(
-     >            mkpt,mface,
-     >            nkpt,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,
+     >            nkpt,mface,
+     >            ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,
      <            vktet )
 !
 ! --->  generate tetrahedra and mid-tetrahedron k-points
@@ -132,106 +127,46 @@ c
 ! --->  (a) Determine the corner K-POINTs for X number of Tetrahedra for
 !           doing a very pretty Brillouine zone Integration;
 ! --->      determine the volume of each tetrahedron
-!
+
+      DO i = 1, nkpt
+         wghtkp(i) = 1.0 / nkpt
+         vkxyz(:,i) = vktet(:,i)
+         WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
+     +          ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
+      END DO
+
       CALL tetcon(
-     >            mkpt,ndiv3,
-     >            nkpt,voluni,vktet,
-     =            nsym,
+     >            nkpt,ndiv3,voluni,vktet,nsym,
      <            ntet,voltet,ntetra)
-c
+
       WRITE (oUnit,'('' the number of tetrahedra '')')
       WRITE (oUnit,*) ntet
       WRITE (oUnit,'('' volumes of the tetrahedra '')')
       WRITE (oUnit,'(e19.12,1x,i5,5x,''voltet(i),i'')')
      >                               (voltet(i),i,i=1,ntet)
       WRITE (oUnit,'('' corners of the tetrahedra '')')
-      WRITE (oUnit, 999) ((ntetra(j,i),j=1,4),i=1,ntet)
+      WRITE (oUnit, '(4(3x,4i4))') ((ntetra(j,i),j=1,4),i=1,ntet)
       WRITE (oUnit,'('' the # of different k-points '')')
       WRITE (oUnit,*) nkpt
       WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
       WRITE (oUnit,'(3(4x,f10.6))') ((vktet(i,j),i=1,3),j=1,nkpt)
-  999 FORMAT (4(3x,4i4))
 c
 c --->   calculate weights from volume of tetrahedra
 c
-      volirbz =  tpi**3 /(real(nsym)*voluni)
+      volirbz =  tpi_const**3 /(real(nsym)*voluni)
       sumvol = 0.0
       DO i = 1, ntet
          sumvol = sumvol + voltet(i)
          voltet(i) = ntet * voltet(i) / volirbz 
       ENDDO
-c
-      IF ((sumvol-volirbz)/volirbz .LE. eps) THEN
-        IF (kmidtet.EQ.1) THEN
-          DO i = 1, ntet
-            wghtkp(i) = voltet(i)/sumvol
-          ENDDO
-        ELSE
-          DO i = 1, nkpt
-            wghtkp(i) = 1./nkpt
-          ENDDO
-        ENDIF
-      ELSE
-        WRITE (oUnit, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
+
+      IF ((sumvol-volirbz)/volirbz.GT. eps) THEN
+         WRITE (oUnit, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
      >                                     sumvol,volirbz
          CALL juDFT_error("sumvol =/= volirbz",calledby="kpttet")
       ENDIF
-c
-c --->  prepare the final set of kpoints in irrBZ (depending on kmidtet)
-c
-      IF ( kmidtet.EQ.0) THEN
-c
-        DO i = 1, nkpt
-           vkxyz(:,i) = vktet(:,i)
-           WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
-     +           ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
-        ENDDO
-        nkstar = nkpt
-
-      ELSEIF ( kmidtet.EQ.1) THEN
-c
-c --->  (b) calculate mid-tetrahedron k-points
-c
-         DO i=1,ntet
-            vkmid(:,i) = 0.0
-            DO j=1,4
-               vkmid(:,i) = vkmid(:,i) + vktet(:,ntetra(j,i))
-            ENDDO
-            vkmid(:,i) = vkmid(:,i) * 0.25
-         ENDDO
-
-         nkpt = ntet
-         WRITE (oUnit,'('' the new number of k-points is '',i4)') nkpt
-         WRITE (oUnit,'('' the new k-points are the '',
-     +                        ''mid-tetrahedron-points '')')
-         WRITE (oUnit,'(''# the new k-points are the '',
-     +                        ''mid-tetrahedron-points '')')
-         sumwght = 0.00
-         DO i=1,ntet
-           vkxyz(:,i) = vkmid(:,i)
-           sumwght = sumwght + wghtkp(i)
-         ENDDO
-!
-! ---> check sumwght; if abs(sumwght-1).lt.eps print kpoints and weights
-!
-         IF ( abs(sumwght - one).LT.eps) THEN
-            WRITE (oUnit,'(1x,f12.10,1x,'' sumwght .eq. one'')')
-     +                                                   sumwght
-            DO i=1,nkpt
-               WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
-     +            ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i), i
-            ENDDO
-            nkstar = ntet
-
-         ELSE
-            WRITE (oUnit,'(1x,f12.10,1x,'' sumwght .ne. one'')')
-     +                                                   sumwght
-             CALL juDFT_error("sumwght",calledby="kpttet")
-         ENDIF
-
-      END IF ! end of generation of mid-tetrahedron k-points
-
 
       RETURN
       END SUBROUTINE kpttet
       END MODULE m_kpttet
+
