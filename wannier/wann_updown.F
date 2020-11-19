@@ -49,6 +49,7 @@ c****************************************************************************
 !      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
+      use m_wann_mmk0_updown_sph_at
       use m_wann_abinv
       use m_wann_kptsrotate
       use m_wann_read_inp
@@ -181,6 +182,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
       complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
+      complex, allocatable :: mmn0at(:,:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
       complex, allocatable :: socamn(:,:,:)
@@ -541,6 +543,11 @@ c##################################################################
          if (alerr /= 0) call juDFT_error('alerr: 18',
      &         calledby='wann_updown')
       mmn(:,:,:) = cmplx(0.,0.)
+      if(wann%l_mmn0at)then
+         allocate( mmn0at(nbnd,nbnd,wann%atomlist_num,fullnkpts))
+                            mmn0at = cmplx(0.,0.)
+      endif ! wann%l_mmn0at
+
       if((l_soc.or.l_noco) .and. (jspin.eq.1))
      &   allocate( socmmn(nbnd,nbnd,fullnkpts),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 19',
@@ -608,7 +615,7 @@ c***********************************************************
 c****************************************************************
 c     Calculate the radial overlap integrals.
 c****************************************************************
-      if(wann%l_mmn0)then
+      if(wann%l_mmn0.or.wann%l_mmn0at)then
        allocate( radial1_ff(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 26',
      &         calledby='wann_updown')
@@ -1156,6 +1163,22 @@ c-->     determine index and phase factor
 c***************************************************
 c     Calculate matrix elements of the Pauli matrix.
 c***************************************************
+      if(wann%l_mmn0at)then
+        call wann_mmk0_updown_sph_at(
+     >      l_noco,alph,beta,
+     >      llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
+     >      ntype,neq,nlo,llo,
+     >      radial1_ff,radial1_gg,radial1_fg,radial1_gf,
+     >      acof(1:noccbd,:,:,:),
+     >      bcof(1:noccbd,:,:,:),ccof(:,1:noccbd,:,:,:),
+     >      usdus%ddn,usdus%uulon,usdus%dulon,usdus%uloulopn,
+     >      wann%atomlist_num,wann%atomlist(:),
+     =      mmn0at(:,:,:,ikpt))
+      endif
+
+
+
+
       if(wann%l_mmn0)then
 
 c------> interstitial contribution to updown.mmn0-matrix
@@ -1320,6 +1343,19 @@ c******************************************************
      >      irank,isize,.true.,.true.,
      <      perpmag,wann%perpmagfmt==2)
       endif !l_soc and l_mmn0
+
+      if(wann%l_mmn0at)then
+        do at=1,wann%atomlist_num
+         write(torquename,fmt='("mmn0up_",i3.3)')wann%atomlist(at)
+         call wann_write_amn(
+     >      mpi_communicatior,l_p0,torquename,
+     >      'Atom resolved overlap',
+     >      nbnd,fullnkpts,nbnd,
+     >      irank,isize,.true.,wann%l_unformatted,
+     <      mmn0at(:,:,at,:),wann%l_unformatted)
+        enddo
+      endif
+
 
       if(wann%l_surfcurr)then
         surfcurr=conjg(surfcurr/cmplx(0.0,2.0))
