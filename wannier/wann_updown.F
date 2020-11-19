@@ -543,6 +543,11 @@ c##################################################################
          if (alerr /= 0) call juDFT_error('alerr: 18',
      &         calledby='wann_updown')
       mmn(:,:,:) = cmplx(0.,0.)
+      if(wann%l_mmn0at)then
+                 allocate( mmn0at(nbnd,nbnd,wann%atomlist_num,fullnkpts))
+                            mmn0at = cmplx(0.,0.)
+      endif ! wann%l_mmn0at
+
       if((l_soc.or.l_noco) .and. (jspin.eq.1))
      &   allocate( socmmn(nbnd,nbnd,fullnkpts),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 19',
