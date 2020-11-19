@@ -182,9 +182,9 @@
    <xsd:complexType name="OutEnergyParameterType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="atomicEP" type="AtomicEPType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="heAtomicEP" type="HEAtomicEPType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="heAtomicEP" type="AtomicEPType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="loAtomicEP" type="AtomicEPType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="heloAtomicEP" type="HEAtomicEPType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="heloAtomicEP" type="AtomicEPType"/>
          <xsd:element maxOccurs="2" minOccurs="0" name="vacuumEP" type="VacuumEPType"/>
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
