@@ -156,6 +156,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="sumValenceSingleParticleEnergies" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
@@ -241,6 +242,7 @@
    <xsd:complexType name="ChargeDensityType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtCharges" type="MTChargesType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtJcharge" type="MTJChargeType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="spinDependentCharge" type="SpinDependentChargeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalCharge" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fixedCharges" type="FixedChargeDensityType">
@@ -266,6 +268,20 @@
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="total" type="xsd:double" use="required"/>
       <xsd:attribute name="s" type="xsd:double" use="required"/>
+      <xsd:attribute name="p" type="xsd:double" use="required"/>
+      <xsd:attribute name="d" type="xsd:double" use="required"/>
+      <xsd:attribute name="f" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MTJChargeType">
+      <xsd:sequence>
+         <xsd:element name="lowJ" type="JChargeType"/>
+         <xsd:element name="highJ" type="JChargeType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="JChargeType">
       <xsd:attribute name="p" type="xsd:double" use="required"/>
       <xsd:attribute name="d" type="xsd:double" use="required"/>
       <xsd:attribute name="f" type="xsd:double" use="required"/>
@@ -339,6 +355,19 @@
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
+   <xsd:complexType name="OnSiteExchangeSplittingType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="excSplit" type="ExcSplitType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="ExcSplitType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="l" type="xsd:integer" use="required"/>
+      <xsd:attribute name="Delta" type="xsd:double" use="required"/>
+      <xsd:attribute name="unit" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
    <xsd:complexType name="LDAUDensityMatrixType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="densityMatrixFor" type="DensityMatrixForType"/>
@@ -367,12 +396,14 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyValence" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyCore" type="SingleValueType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="atomTypeDependentContributions" type="AtomTypeDependentContributionsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="dftUCorrection" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="tkbTimesEntropy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="freeEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="extrapolationTo0K" type="SingleValueType"/>
       </xsd:sequence>
       <xsd:attribute name="value" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
+      <xsd:attribute name="comment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SumOfEigenvaluesType">
