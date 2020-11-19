@@ -16,7 +16,7 @@ if which('xmllint') is None:
    sys.exit(1)
 
 te.log_info("OutputSchema Test")
-with open(f"{te.workdir}/xmllint_out", "w") as f_stderr:
+with open(f"{te.workdir}/xmllintErrors", "w") as f_stderr:
    test_dir = os.path.abspath(os.path.join(te.workdir,'./../..'))
    te.log_info(f"Test directory: {test_dir}")
    for root, dirs, files in os.walk(test_dir):
@@ -28,11 +28,13 @@ with open(f"{te.workdir}/xmllint_out", "w") as f_stderr:
             if not os.path.isfile(schema_path):
                te.log_info("No OutputSchema found")
                continue
-            with open(f"{te.workdir}/last_stdout", "w") as f_stdout:
+            with open(f"{te.workdir}/last_xmllintOut", "w") as f_stdout:
+               arg_list = [te.command, '--schema', f'{schema_path}', f'{file_path}']
+               te.log_info(f"Running command: {' '.join(arg_list)}")
                try:
-                  subprocess.run(['xmllint', '--schema', f'{schema_path}', f'{file_path}'],
-                                 stdout=f_stdout, stderr=f_stderr, check=True)
+                  subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
                except Exception as e:
+                  te.log_error(f'Error: {e}')
                   test_name = root.replace(test_dir,'')
                   test_name = test_name.replace('work','')
                   test_name = test_name.replace('/','')

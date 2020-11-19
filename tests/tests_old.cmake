@@ -96,6 +96,8 @@ foreach(test ${HybridTests})
    add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
 endforeach()
 
-#OutputSchema Test
-add_test("ValidateOutFiles" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/ValidateOutFiles/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/ValidateOutFiles)
-
+#Add OutputSchema Test if xmllint is available
+find_program(XMLLINT_PROG xmllint)
+if (XMLLINT_PROG)
+   add_test("ValidateOutFiles" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/ValidateOutFiles/test.py --command ${XMLLINT_PROG} --testdir ${CMAKE_BINARY_DIR}/Testing/ValidateOutFiles)
+endif()
