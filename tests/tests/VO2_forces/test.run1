@@ -1,0 +1,22 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/kpts.xml",$workdir);
+jt::copyfile("files/sym.xml",$workdir);
+
+jt::testrun("$executable",$workdir);
+
+#now test output
+
+$result+=jt::test_grep_firstnumber("$workdir/out","FX_A8","FX_A8 *= *([^ ]*)",-0.000153,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","FX_A8","FX_A8 *= *([^ ]*)",-0.106870,0.0001);
+$result+=jt::test_grep_firstnumber("$workdir/out","FX_A12","FX_A12 *= *([^ ]*)",-0.002447,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","FX_A12","FX_A12 *= *([^ ]*)",0.119741,0.0001);
+$result+=jt::test_grep_firstnumber("$workdir/out","FX_A21","FX_A21 *= *([^ ]*)",0.002757,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","FX_A21","FX_A21 *= *([^ ]*)",0.004899,0.0001);
+$result+=jt::test_grep_firstnumber("$workdir/out","FX_A3","FX_A3 *= *([^ ]*)",-0.043394,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","FX_A3","FX_A3 *= *([^ ]*)",-0.181073,0.0001);
+$result+=jt::test_grep_firstnumber("$workdir/out","FX_A4","FX_A4 *= *([^ ]*)",0.018906,0.0001);
+$result+=jt::test_grep_lastnumber("$workdir/out","FX_A4","FX_A4 *= *([^ ]*)",0.045934,0.0001);
+
+jt::stageresult($workdir,$result,"1");
