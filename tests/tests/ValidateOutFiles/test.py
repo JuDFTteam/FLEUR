@@ -7,6 +7,11 @@ sys.path.insert(0, f"{test_loc}/../../")
 from libtest import TestEnv
 import os
 import subprocess
+from shutil import which
+
+if which('xmllint') is None:
+   te.log_error('Error: xmllint command is not available')
+   sys.exit(1)
 
 te = TestEnv()
 te.log_info("OutputSchema Test")
