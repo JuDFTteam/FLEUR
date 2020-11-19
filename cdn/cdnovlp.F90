@@ -227,7 +227,7 @@ CONTAINS
              ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
              ! for simple use, this is corrected here
              DO n = 1,atoms%ntype
-                vr2(:,0,n) = sfp_const*vr(:,0,n,jspin)/atoms%rmsh(:,n)
+                vr2(:atoms%jri(n),0,n) = sfp_const*vr(:atoms%jri(n),0,n,jspin)/atoms%rmsh(:atoms%jri(n),n)
                 vr2(:,1:,n) = vr(:,1:,n,jspin)
              END DO ! n
 
