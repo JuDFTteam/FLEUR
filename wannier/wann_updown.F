@@ -544,7 +544,7 @@ c##################################################################
      &         calledby='wann_updown')
       mmn(:,:,:) = cmplx(0.,0.)
       if(wann%l_mmn0at)then
-                 allocate( mmn0at(nbnd,nbnd,wann%atomlist_num,fullnkpts))
+         allocate( mmn0at(nbnd,nbnd,wann%atomlist_num,fullnkpts))
                             mmn0at = cmplx(0.,0.)
       endif ! wann%l_mmn0at
 
