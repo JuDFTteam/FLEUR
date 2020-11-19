@@ -19,6 +19,7 @@ CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
        ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
     !
+#include"cpp_double.h"
     USE m_hsmt_ab
     USE m_types
     USE m_hsmt_fjgj
@@ -67,8 +68,8 @@ CONTAINS
 
     CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
-       abCoeffs(:,:,2)=abCoeffs(:,:,1)
-       abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
+       CALL CPP_BLAS_ccopy(SIZE(abCoeffs,1)*SIZE(abCoeffs,2),abCoeffs(:,:,1),1,abCoeffs(:,:,2),1)
+       CALL CPP_BLAS_ccopy(SIZE(abclo,1)*SIZE(abclo,2)*SIZE(abclo,3)*SIZE(abclo,4),abclo(:,:,:,:,1),1,abclo(:,:,:,:,2),1)
     ELSE
        CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
@@ -81,8 +82,6 @@ CONTAINS
        mlolo=mlolo+atoms%nlo(m)*(atoms%nlo(m)+1)/2
     ENDDO
 
-
-    !CPP_OMP MASTER
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
@@ -110,32 +109,28 @@ CONTAINS
                 bx(kp) = CMPLX(0.0,0.0)
                 cx(kp) = CMPLX(0.0,0.0)
              END DO
-             DO lp = 0,atoms%lnonsph(ntyp)
-                DO mp = -lp,lp
-                   lmp = lp* (lp+1) + mp
-                   s=tlmplm%h_loc2(ntyp)
-                   utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
-                   dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
-                   utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
-                   dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
-                   utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
-                   dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
-                   !--->                   note, that utu,dtu... are the t-matrices and
-                   !--->                   not their complex conjugates as in hssphn
-                   !--->                   and that a,b,alo... are the complex
-                   !--->                   conjugates of the a,b...-coefficients
-                   !CPP_OMP PARALLEL DO DEFAULT(none) &
-                   !CPP_OMP& SHARED(ax,bx,cx) &
-                   !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,iintsp) &
-                   !CPP_OMP& SHARED(lmp,utu,dtu,utd,dtd,utulo,dtulo)
-                   DO kp = 1,lapw%nv(iintsp)
-                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)*utu + abCoeffs(ab_size/2+lmp,kp,1)*dtu
-                      bx(kp) = bx(kp) + abCoeffs(lmp,kp,1)*utd + abCoeffs(ab_size/2+lmp,kp,1)*dtd
-                      cx(kp) = cx(kp) + abCoeffs(lmp,kp,1)*utulo + abCoeffs(ab_size/2+lmp,kp,1)*dtulo
+             CALL timestart("hlomat11")
+             !CPP_OMP PARALLEL DO DEFAULT(none) &
+             !CPP_OMP& SHARED(ax,bx,cx,ntyp,isp,jsp,m,lm,lo,mlo) &
+             !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,iintsp) &
+             !CPP_OMP& SHARED(atoms,tlmplm) &
+             !CPP_OMP  PRIVATE(lp,mp,lmp,s)
+             DO kp = 1,lapw%nv(iintsp)
+                DO lp = 0,atoms%lnonsph(ntyp)
+                   DO mp = -lp,lp
+                      lmp = lp* (lp+1) + mp
+                      s=tlmplm%h_loc2(ntyp)
+                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,lm,ntyp,jsp,isp) 
+                      ax(kp) = ax(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,lm,ntyp,jsp,isp)
+                      bx(kp) = bx(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,s+lm,ntyp,jsp,isp)
+                      bx(kp) = bx(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,s+lm,ntyp,jsp,isp)
+                      cx(kp) = cx(kp) + abCoeffs(lmp,kp,1)          *tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                      cx(kp) = cx(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
                    END DO
-                   !CPP_OMP END PARALLEL DO
                 END DO
              END DO
+             !CPP_OMP END PARALLEL DO
+             CALL timestop("hlomat11")
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                 locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
@@ -199,6 +194,10 @@ CONTAINS
                          DO mp = -lp,lp
                             lmp = lp* (lp+1) + mp
                             s=tlmplm%h_loc2(ntyp)
+                            !--->                   note, that utu,dtu... are the t-matrices and
+                            !--->                   not their complex conjugates as in hssphn
+                            !--->                   and that a,b,alo... are the complex
+                            !--->                   conjugates of the a,b...-coefficients
                             utu=tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
                             dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
                             utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
@@ -294,7 +293,5 @@ CONTAINS
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels
     END IF
-    !CPP_OMP END MASTER
-    !CPP_OMP barrier
   END SUBROUTINE hlomat
 END MODULE m_hlomat
