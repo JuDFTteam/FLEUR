@@ -615,7 +615,7 @@ c***********************************************************
 c****************************************************************
 c     Calculate the radial overlap integrals.
 c****************************************************************
-      if(wann%l_mmn0)then
+      if(wann%l_mmn0.or.wann%l_mmn0at)then
        allocate( radial1_ff(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 26',
      &         calledby='wann_updown')
@@ -1343,6 +1343,19 @@ c******************************************************
      >      irank,isize,.true.,.true.,
      <      perpmag,wann%perpmagfmt==2)
       endif !l_soc and l_mmn0
+
+      if(wann%l_mmn0at)then
+        do at=1,wann%atomlist_num
+         write(torquename,fmt='("mmn0up_",i3.3)')wann%atomlist(at)
+         call wann_write_amn(
+     >      mpi_communicatior,l_p0,torquename,
+     >      'Atom resolved overlap',
+     >      nbnd,fullnkpts,nbnd,
+     >      irank,isize,.true.,wann%l_unformatted,
+     <      mmn0at(:,:,at,:),wann%l_unformatted)
+        enddo
+      endif
+
 
       if(wann%l_surfcurr)then
         surfcurr=conjg(surfcurr/cmplx(0.0,2.0))
