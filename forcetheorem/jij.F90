@@ -147,7 +147,7 @@ CONTAINS
 
     IF (.NOT.this%l_io) RETURN
     IF (this%loopindex.NE.1) CALL closeXMLElement('Forcetheorem_Loop_JIJ')
-    CALL openXMLElementPoly('Forcetheorem_Loop_JIJ',(/'Loop index:'/),(/this%loopindex/))
+    CALL openXMLElementPoly('Forcetheorem_Loop_JIJ',(/'No'/),(/this%loopindex/))
   END FUNCTION jij_next_job
 
   SUBROUTINE jij_postprocess(this)
