@@ -49,6 +49,7 @@ c****************************************************************************
 !      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
+      use m_wann_mmk0_updown_sph_at
       use m_wann_abinv
       use m_wann_kptsrotate
       use m_wann_read_inp
@@ -1156,6 +1157,22 @@ c-->     determine index and phase factor
 c***************************************************
 c     Calculate matrix elements of the Pauli matrix.
 c***************************************************
+      if(wann%l_mmn0at)then
+        call wann_mmk0_updown_sph_at(
+     >      l_noco,alph,beta,
+     >      llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
+     >      ntype,neq,nlo,llo,
+     >      radial1_ff,radial1_gg,radial1_fg,radial1_gf,
+     >      acof(1:noccbd,:,:,:),
+     >      bcof(1:noccbd,:,:,:),ccof(:,1:noccbd,:,:,:),
+     >      usdus%ddn,usdus%uulon,usdus%dulon,usdus%uloulopn,
+     >      wann%atomlist_num,wann%atomlist(:),
+     =      mmn0at(:,:,:,ikpt))
+      endif
+
+
+
+
       if(wann%l_mmn0)then
 
 c------> interstitial contribution to updown.mmn0-matrix
