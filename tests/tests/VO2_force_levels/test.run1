@@ -9,11 +9,7 @@ jt::testrun("$executable",$workdir);
 #now test output
 $result=jt::test_grepexists("$workdir/out","FORCES: SURFACE CORRECTION");
 
-$result+=jt::test_grep_firstnumber("$workdir/out","FX_IS","FX_IS *= *([^ ]*)",0,0.00001);
-$result+=jt::test_grep_lastnumber("$workdir/out","FX_IS","FX_IS *= *([^ ]*)",0,0.00001);
-$result+=jt::test_grep_firstnumber("$workdir/out","FY_IS","FY_IS *= *([^ ]*)",0.000000,0.00001);
 $result+=jt::test_grep_lastnumber("$workdir/out","FY_IS","FY_IS *= *([^ ]*)",-0.000021,0.00001);
-$result+=jt::test_grep_firstnumber("$workdir/out","FZ_IS","FZ_IS *= *([^ ]*)",0.000000,0.00001);
 $result+=jt::test_grep_lastnumber("$workdir/out","FZ_IS","FZ_IS *= *([^ ]*)",-0.000003,0.00001);
 $result+=jt::test_grep_firstnumber("$workdir/out","FX_MT","FX_MT *= *([^ ]*)",-0.000090,0.00001);
 $result+=jt::test_grep_lastnumber("$workdir/out","FX_MT","FX_MT *= *([^ ]*)",0.005375,0.00001);
