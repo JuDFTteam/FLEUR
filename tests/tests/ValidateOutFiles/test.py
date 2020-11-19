@@ -9,11 +9,12 @@ import os
 import subprocess
 from shutil import which
 
+te = TestEnv()
+
 if which('xmllint') is None:
    te.log_error('Error: xmllint command is not available')
    sys.exit(1)
 
-te = TestEnv()
 te.log_info("OutputSchema Test")
 with open(f"{te.workdir}/xmllint_out", "w") as f_stderr:
    test_dir = os.path.abspath(os.path.join(te.workdir,'./../..'))
