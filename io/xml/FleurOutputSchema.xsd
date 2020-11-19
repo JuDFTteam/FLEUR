@@ -242,7 +242,6 @@
    <xsd:complexType name="ChargeDensityType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtCharges" type="MTChargesType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtJcharge" type="MTJChargeType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="spinDependentCharge" type="SpinDependentChargeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalCharge" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fixedCharges" type="FixedChargeDensityType"/>
@@ -251,7 +250,6 @@
 
    <xsd:complexType name="FixedChargeDensityType">
       <xsd:sequence maxOccurs="unbounded">
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtCharges" type="MTChargesType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="spinDependentCharge" type="SpinDependentChargeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalCharge" type="SingleValueType"/>
       </xsd:sequence>
@@ -260,6 +258,7 @@
    <xsd:complexType name="MTChargesType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtCharge" type="MTChargeType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="mtJcharge" type="MTJChargeType"/>
       </xsd:sequence>
       <xsd:attribute default="1" name="spin" type="xsd:integer" use="optional"/>
    </xsd:complexType>
