@@ -182,6 +182,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
       complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
+      complex, allocatable :: mmn0at(:,:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
       complex, allocatable :: socamn(:,:,:)
