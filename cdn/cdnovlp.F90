@@ -193,20 +193,20 @@ CONTAINS
              ! thereforce, stars are only considered starting from the second star.
              ! the number of stars is then nq3-1
              
-             ioffset_pT = 0
-             minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank
-             nkpt_pT = minpar
-             left = (stars%ng3-1) - minpar * fmpi%isize
-             do j=1,left
-                nkpt_pT(fmpi%isize-j) = nkpt_pT(fmpi%isize-j)+1
-             end do !j
+             !ioffset_pT = 0
+             !minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank
+             !nkpt_pT = minpar
+             !left = (stars%ng3-1) - minpar * fmpi%isize
+             !do j=1,left
+             !   nkpt_pT(fmpi%isize-j) = nkpt_pT(fmpi%isize-j)+1
+             !end do !j
 
-             do j=1,fmpi%isize-1
-                ioffset_pT(j) = sum(nkpt_pT(0:j-1))
-             end do !j
+             !do j=1,fmpi%isize-1
+             !   ioffset_pT(j) = sum(nkpt_pT(0:j-1))
+             !end do !j
 
-             ioffset_pT = ioffset_pT+1
-             ALLOCATE ( ffonat_pT(3,nkpt_pT(fmpi%irank)*sym%nop) )
+             !ioffset_pT = ioffset_pT+1
+             ALLOCATE ( ffonat_pT(3,(stars%ng3-1)*sym%nop) )
              ffonat_pT = 0
 
              ! lattice/spherical harmonics related variables
@@ -227,7 +227,7 @@ CONTAINS
              ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
              ! for simple use, this is corrected here
              DO n = 1,atoms%ntype
-                vr2(:,0,n) = sfp_const*vr(:,0,n,jspin)/atoms%rmsh(:,n)
+                vr2(:atoms%jri(n),0,n) = sfp_const*vr(:atoms%jri(n),0,n,jspin)/atoms%rmsh(:atoms%jri(n),n)
                 vr2(:,1:,n) = vr(:,1:,n,jspin)
              END DO ! n
 
@@ -303,7 +303,9 @@ CONTAINS
 !             DEALLOCATE(ffonat_pT,n1,n2)
 !#else
              ffonat(:,(sym%nop+1):) = ffonat_pT
-             DEALLOCATE(ffonat_pT)
+             IF (fmpi%irank==0) THEN
+                DEALLOCATE(ffonat_pT)
+             END IF
 !#endif
 
           END IF ! l_f2

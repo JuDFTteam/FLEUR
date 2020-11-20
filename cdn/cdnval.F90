@@ -364,7 +364,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
             CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
          END IF
-         IF (input%l_f) CALL force_a8(input,atoms,sym,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
+         IF (input%l_f) CALL force_a8(input,atoms,sym,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,fmpi,results)
       END DO
       CALL closeXMLElement('mtCharges')
    END IF

@@ -69,9 +69,11 @@ CONTAINS
                      isp,ud, alo1(:,isp),blo1(:,isp),clo1(:,isp),fjgj,&
                      iintsp,jintsp,chi,smat)
              ENDIF
+             CALL timestart("hlomat")
              CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
                   n,na,fjgj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat)
 
+             CALL timestop("hlomat")
           ENDIF
        END IF
        !--->    end loop over equivalent atoms
