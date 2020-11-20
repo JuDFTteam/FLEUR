@@ -1034,101 +1034,84 @@ CONTAINS
          ! add the residual MT contributions, i.e. those functions with an moment,
          ! to the matrix coulomb_mtir, which is fully occupied
          !
-         call timestart("residual MT contributions")
-         ic = 0
-         DO itype = 1, fi%atoms%ntype
-            DO ineq = 1, fi%atoms%neq(itype)
-               DO l = 0, fi%hybinp%lcutm1(itype)
-                  DO M = -l, l
-                     ic = ic + 1
+         if(fmpi%n_rank == 0) then
+            call timestart("residual MT contributions")
+            ic = 0
+            DO itype = 1, fi%atoms%ntype
+               DO ineq = 1, fi%atoms%neq(itype)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     DO M = -l, l
+                        ic = ic + 1
+                     END DO
                   END DO
                END DO
             END DO
-         END DO
 
-         indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
-         DO itype = 1, fi%atoms%ntype
-            DO ineq = 1, fi%atoms%neq(itype)
-               DO l = 0, fi%hybinp%lcutm1(itype)
-                  DO M = -l, l
-                     indx1 = indx1 + 1
-                     indx3 = indx3 + mpdata%num_radbasfn(l, itype)
+            indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
 
-                     indx2 = 0
-                     indx4 = 0
-                     DO itype1 = 1, fi%atoms%ntype
-                        DO ineq1 = 1, fi%atoms%neq(itype1)
-                           DO l1 = 0, fi%hybinp%lcutm1(itype1)
-                              DO m1 = -l1, l1
-                                 indx2 = indx2 + 1
-                                 indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
-                                 IF (indx4 < indx3) CYCLE
-                                 IF (fi%sym%invs) THEN
-                                    if(fmpi%n_rank == 0) then
+            DO itype = 1, fi%atoms%ntype
+               DO ineq = 1, fi%atoms%neq(itype)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     DO M = -l, l
+                        indx1 = indx1 + 1
+                        indx3 = indx3 + mpdata%num_radbasfn(l, itype)
+
+                        indx2 = 0
+                        indx4 = 0
+
+                        DO itype1 = 1, fi%atoms%ntype
+                           DO ineq1 = 1, fi%atoms%neq(itype1)
+                              DO l1 = 0, fi%hybinp%lcutm1(itype1)
+                                 DO m1 = -l1, l1
+                                    indx2 = indx2 + 1
+                                    indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
+                                    IF (indx4 < indx3) CYCLE
+                                    IF (fi%sym%invs) THEN
                                        hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, indx4))
                                        hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
-                                    endif
-                                    hybdat%coul(ikpt)%mtir_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, indx4))
-                                    hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
-                                 ELSE
-                                    if(fmpi%n_rank == 0) then 
+                                    ELSE
                                        hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, indx4)
                                        hybdat%mtir%c(indx2, indx1, im) = CONJG(hybdat%mtir%c(indx1, indx2, im))
-                                    endif
-                                    hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, indx4)
-                                    hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
-                                 ENDIF
+                                    ENDIF
+                                 END DO
                               END DO
                            END DO
                         END DO
-                     END DO
 
-                     DO igpt = 1, mpdata%n_g(ikpt)
-                        indx2 = indx2 + 1
-                        IF (fi%sym%invs) THEN
-                           if(fmpi%n_rank == 0) then
+                        DO igpt = 1, mpdata%n_g(ikpt)
+                           indx2 = indx2 + 1
+                           IF (fi%sym%invs) THEN
                               hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
                               hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
-                           endif
-                           hybdat%coul(ikpt)%mtir_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
-                           hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
-                        ELSE
-                           if(fmpi%n_rank == 0) then
+                           ELSE
                               hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
                               hybdat%mtir%c(indx2, indx1, im) = conjg(hybdat%mtir%c(indx1, indx2, im)) 
-                           endif
-                           hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt)
-                           hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
-                        ENDIF
+                           ENDIF
+
+                        END DO
 
                      END DO
-
                   END DO
                END DO
-            END DO
-         END DO
-         call timestop("residual MT contributions")
+            END do
+            call timestop("residual MT contributions")
 
-         IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
+            IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
 
-         !
-         ! add ir part to the matrix coulomb_mtir
-         !
-         if (fi%sym%invs) THEN
-            hybdat%coul(ikpt)%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-               = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
-            !new method
-            hybdat%mtir%r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im) &
-               = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
-            ic2 = indx1 + mpdata%n_g(ikpt)
-         else
-            hybdat%coul(ikpt)%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-               = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
-            ! new method
-            hybdat%mtir%c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im)&
-               = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
-            ic2 = indx1 + mpdata%n_g(ikpt)
-         end if
+            !
+            ! add ir part to the matrix coulomb_mtir
+            !
+            if (fi%sym%invs) THEN
+               hybdat%mtir%r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im) &
+                  = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
+               ic2 = indx1 + mpdata%n_g(ikpt)
+            else
+               hybdat%mtir%c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im)&
+                  = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
+               ic2 = indx1 + mpdata%n_g(ikpt)
+            end if
+
+         endif
 
          call coulomb(ikpt)%free()
       END DO ! ikpt

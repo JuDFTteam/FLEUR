@@ -29,10 +29,8 @@ MODULE m_types_hybdat
    type t_coul
       REAL, ALLOCATABLE      :: mt1_r(:, :, :, :)
       REAL, ALLOCATABLE      :: mt2_r(:, :, :, :),   mt3_r(:, :, :)
-      REAL, ALLOCATABLE      :: mtir_r(:, :)
       COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
-      COMPLEX, ALLOCATABLE   :: mtir_c(:, :)
    contains 
       procedure :: init     => t_coul_init
       procedure :: alloc    => t_coul_alloc
@@ -306,13 +304,11 @@ contains
       if(allocated(coul%mt1_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt1_r) 
       if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
       if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
-      if(allocated(coul%mtir_r))  size_MB = size_MB + 8 * 1e-6 * size(coul%mtir_r) 
 
       ! complex parts
       if(allocated(coul%mt1_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt1_c) 
       if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
       if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
-      if(allocated(coul%mtir_c))  size_MB = size_MB + 16 * 1e-6 * size(coul%mtir_r) 
    end function
 
    subroutine t_coul_mpi_bc(coul, fi, communicator, root)
@@ -338,9 +334,6 @@ contains
 
          call MPI_Bcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
          if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
-
-         call MPI_Bcast(coul%mtir_r,  size(coul%mtir_r),  MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mtir_r failed")
       else 
          call MPI_Bcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, communicator, ierr)
          if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_c failed")
@@ -350,9 +343,6 @@ contains
 
          call MPI_Bcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
          if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
-
-         call MPI_Bcast(coul%mtir_c,  size(coul%mtir_c),  MPI_DOUBLE_COMPLEX , root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mtir_r failed")
       endif
 #endif
    end subroutine t_coul_mpi_bc
@@ -365,10 +355,8 @@ contains
       if(allocated(coul%mt1_c)) deallocate(coul%mt1_c)
       if(allocated(coul%mt2_r)) deallocate(coul%mt2_r)
       if(allocated(coul%mt3_r)) deallocate(coul%mt3_r)
-      if(allocated(coul%mtir_r)) deallocate(coul%mtir_r)
       if(allocated(coul%mt2_c)) deallocate(coul%mt2_c)
       if(allocated(coul%mt3_c)) deallocate(coul%mt3_c)
-      if(allocated(coul%mtir_c)) deallocate(coul%mtir_c)
    end subroutine t_coul_free
 
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
@@ -421,11 +409,6 @@ contains
              allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
             if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
          endif 
-
-         if(.not. allocated(coul%mtir_r)) then
-            allocate(coul%mtir_r(isize,isize), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mtir_r")
-         endif 
       else      
          if(.not. allocated(coul%mt1_c)) then 
             allocate(coul%mt1_c(maxval(num_radbasfn) - 1,&
@@ -443,11 +426,6 @@ contains
          if(.not. allocated(coul%mt3_c)) then
             allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
             if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
-         endif 
-
-         if(.not. allocated(coul%mtir_c)) then
-            allocate(coul%mtir_c(isize, isize), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mtir_c")
          endif 
       endif
    end subroutine t_coul_alloc
