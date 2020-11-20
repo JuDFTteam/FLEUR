@@ -1,6 +1,7 @@
 MODULE m_types_hybdat
    use m_types_usdus
    use m_types_mat
+   USE, INTRINSIC :: ISO_C_BINDING
 #ifdef CPP_MPI
    use mpi 
 #endif
@@ -13,6 +14,7 @@ MODULE m_types_hybdat
 #else 
       integer, allocatable :: slot(:) ! local slot where it's stored
 #endif
+      type(c_ptr)          :: mem_ptr = c_null_ptr
       logical              :: l_real  ! real or complex storage
 
       real, pointer    :: r(:,:,:) ! (:,:,i_slot)
@@ -188,7 +190,7 @@ contains
       TYPE(t_mpi), INTENT(IN)           :: fmpi
       integer, intent(in)               :: n_g(:), my_n_k
 
-      integer :: ikpt, max_coul_size, ierr, slot_size, irank, type_size
+      integer :: ikpt, max_coul_size, ierr, slot_size,  type_size
 #ifdef CPP_MPI 
       integer(kind=MPI_ADDRESS_KIND) :: win_size
 #endif
@@ -203,7 +205,6 @@ contains
       enddo
 
 #ifdef CPP_MPI 
-      call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
       if(mtir%l_real) then
          CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION, type_size, ierr)
       else
@@ -211,21 +212,27 @@ contains
       endif
       slot_size = type_size * max_coul_size**2
       win_size  = slot_size * my_n_k
-#else 
-      irank = 0
+
+      if(.not. C_ASSOCIATED(mtir%mem_ptr)) then
+         call timestart("MPI_alloc_mem")
+         call MPI_alloc_mem(win_size, MPI_INFO_NULL, mtir%mem_ptr, ierr)
+         if(ierr /= 0) call juDFT_error("mpi_alloc_mem failed")
+         call timestop("MPI_alloc_mem")
+      endif
 #endif
 
-      write (*,*) "max_coul_size on create", max_coul_size
-
-      if(mtir%l_real) then        
+      if(mtir%l_real) then       
          if(.not. associated(mtir%r)) then
+#ifdef CPP_MPI  
+            call c_f_pointer(mtir%mem_ptr, mtir%r, [max_coul_size, max_coul_size, my_n_k])
+#else
             allocate(mtir%r(max_coul_size, max_coul_size, my_n_k), stat=ierr)
             if(ierr /= 0) call juDFT_error("can't allocate mtir%r of size: " // &
                                               int2str(max_coul_size) // "^2 x " // int2str(my_n_k))
+#endif
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "[" // int2str(irank) //"]: slot_size, win_size", slot_size, win_size
                call judft_win_create_real(mtir%r, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
@@ -234,13 +241,16 @@ contains
 
       else
          if(.not. associated(mtir%c)) then
+#ifdef CPP_MPI  
+            call c_f_pointer(mtir%mem_ptr, mtir%c, [max_coul_size, max_coul_size, my_n_k])
+#else
             allocate(mtir%c(max_coul_size, max_coul_size, my_n_k), stat=ierr)
             if(ierr /= 0) call juDFT_error("can't allocate mtir%c of size: " // &
                                              int2str(max_coul_size) // "^2 x " // int2str(my_n_k)) 
+#endif
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "[" // int2str(irank) //"]: slot_size, win_size", slot_size, win_size
                call judft_win_create_cmplx(mtir%c, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
