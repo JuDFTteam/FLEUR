@@ -225,7 +225,6 @@ contains
       use m_reorder
       use m_constants
       use m_calc_l_m_from_lm
-      use mpi
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata

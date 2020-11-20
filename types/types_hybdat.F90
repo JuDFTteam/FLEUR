@@ -191,7 +191,9 @@ contains
       integer, intent(in)               :: n_g(:), my_n_k
 
       integer :: ikpt, max_coul_size, ierr, slot_size, irank, type_size
+#ifdef CPP_MPI 
       integer(kind=MPI_ADDRESS_KIND) :: win_size
+#endif
 
       call timestart("t_mtir_block_alloc")
 
