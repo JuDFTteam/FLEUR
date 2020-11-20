@@ -125,8 +125,8 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
-      call timestart("ibasm+1 -> dgemm")
 
+      call timestart("ibasm+1 -> dgemm")
       call hybdat%mtir%read(fi, mpdata%n_g, ikpt, mtir)
 
       ! only work on assigned submtx
@@ -134,6 +134,7 @@ contains
       call dgemm("N", "N", indx1, n_vec, indx1, 1.0, mtir%data_r, size(mtir%data_r,1), &
       !          b,                           ldb,              beta, c,                           ldc)
                  mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
+      call mtir%free()
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -372,15 +373,7 @@ contains
                     mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1->nbasm: zgemm")
 
-      if(conjg_mtir) then
-         call timestart("conjg mtir_c")
-         !$OMP PARALLEL DO default(none) schedule(static) private(i) shared(indx1, mtir)
-         do i = 1, indx1
-            call zlacgv(indx1, mtir%data_c(1,i), 1)
-         enddo
-         !$OMP END PARALLEL DO
-         call timestop("conjg mtir_c")
-      endif
+      call mtir%free()
 
 
       call timestart("dot prod")
