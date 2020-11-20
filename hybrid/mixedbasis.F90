@@ -377,8 +377,6 @@ CONTAINS
       END DO
       hybdat%nbasm = hybdat%nbasp + mpdata%n_g
 
-      if(fmpi%irank == 0) write (*,*) "hybdat%nbasm = ", hybdat%nbasm  
-
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype
          hybdat%maxlmindx = max(hybdat%maxlmindx,&

@@ -885,6 +885,9 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
       enddo
 
+      call hybdat%mtir%alloc(fi, fmpi,  mpdata%n_g, size(fmpi%k_list))
+      call hybdat%mtir%init(fi, fmpi)
+
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
@@ -1061,9 +1064,17 @@ CONTAINS
                                  indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
                                  IF (indx4 < indx3) CYCLE
                                  IF (fi%sym%invs) THEN
+                                    if(fmpi%n_rank == 0) then
+                                       hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, indx4))
+                                       hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                                    endif
                                     hybdat%coul(ikpt)%mtir_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, indx4))
                                     hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
                                  ELSE
+                                    if(fmpi%n_rank == 0) then 
+                                       hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, indx4)
+                                       hybdat%mtir%c(indx2, indx1, im) = CONJG(hybdat%mtir%c(indx1, indx2, im))
+                                    endif
                                     hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, indx4)
                                     hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
                                  ENDIF
@@ -1075,9 +1086,17 @@ CONTAINS
                      DO igpt = 1, mpdata%n_g(ikpt)
                         indx2 = indx2 + 1
                         IF (fi%sym%invs) THEN
+                           if(fmpi%n_rank == 0) then
+                              hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
+                              hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                           endif
                            hybdat%coul(ikpt)%mtir_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
                            hybdat%coul(ikpt)%mtir_r(indx2, indx1) = hybdat%coul(ikpt)%mtir_r(indx1, indx2)
                         ELSE
+                           if(fmpi%n_rank == 0) then
+                              hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
+                              hybdat%mtir%c(indx2, indx1, im) = conjg(hybdat%mtir%c(indx1, indx2, im)) 
+                           endif
                            hybdat%coul(ikpt)%mtir_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt)
                            hybdat%coul(ikpt)%mtir_c(indx2, indx1) = CONJG(hybdat%coul(ikpt)%mtir_c(indx1, indx2))
                         ENDIF
@@ -1098,9 +1117,15 @@ CONTAINS
          if (fi%sym%invs) THEN
             hybdat%coul(ikpt)%mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
+            !new method
+            hybdat%mtir%r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im) &
+               = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
             ic2 = indx1 + mpdata%n_g(ikpt)
          else
             hybdat%coul(ikpt)%mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
+               = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
+            ! new method
+            hybdat%mtir%c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im)&
                = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
          end if

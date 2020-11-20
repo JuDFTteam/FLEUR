@@ -17,8 +17,8 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat
-      type(t_mat) :: mat_hlp
+      integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
+      type(t_mat) :: mat_hlp, mtir
 
       call timestart("spmm_invs")
       call mat_hlp%init(mat_in)
@@ -126,8 +126,14 @@ contains
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
       call timestart("ibasm+1 -> dgemm")
-      ! call dgemm(transa, transb, m,   n,     k,  alpha,  a,          lda,   b,                         ldb,             beta,  c,                           ldc)
-      call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir_r, indx1, mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
+
+      call hybdat%mtir%read(fi, mpdata%n_g, ikpt, mtir)
+
+      ! only work on assigned submtx
+      ! call dgemm(transa, transb, m,   n, k,  alpha,  a,          lda,                
+      call dgemm("N", "N", indx1, n_vec, indx1, 1.0, mtir%data_r, size(mtir%data_r,1), &
+      !          b,                           ldb,              beta, c,                           ldc)
+                 mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -219,6 +225,7 @@ contains
       use m_reorder
       use m_constants
       use m_calc_l_m_from_lm
+      use mpi
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -231,8 +238,8 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
-      integer :: iat2, it2, l2, iat
-      type(t_mat) :: mat_hlp
+      integer :: iat2, it2, l2, iat, ierr, irank, i
+      type(t_mat) :: mat_hlp, mtir
 
       call timestart("spmm_noinvs")
       call mat_hlp%init(mat_in)
@@ -345,31 +352,34 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
-
-
+      
+      call hybdat%mtir%read(fi, mpdata%n_g, ikpt, mtir)
       
       if(conjg_mtir) then
          ! conjg and back so we don't make a copy 
          call timestart("conjg mtir_c")
-         call zlacgv(size(hybdat%coul(ikpt)%mtir_c), hybdat%coul(ikpt)%mtir_c, 1)
+         !$OMP PARALLEL DO default(none) schedule(static) private(i) shared(indx1, mtir)
+         do i = 1, indx1
+            call zlacgv(indx1, mtir%data_c(1,i), 1)
+         enddo
+         !$OMP END PARALLEL DO
          call timestop("conjg mtir_c")
       endif
 
       call timestart("ibasm+1->nbasm: zgemm")
-      if(indx1 /= size(hybdat%coul(ikpt)%mtir_c, 1) ) call judft_error("indx1 fails")
-      if(mat_hlp%matsize1 /= size(mat_hlp%data_c,1) ) call judft_error("mat_hlp fails")
-      if(mat_out%matsize1 /= size(mat_out%data_c,1) ) call judft_error("mat_out fails")
-
-      if(mat_hlp%matsize1 < max(1,indx1) ) call judft_error("ldb fail")
-      if(mat_out%matsize1 < max(1,indx1) ) call judft_error("ldc fail")
-      
-      call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir_c, indx1, &
+      !ZGEMM(TRANSA,TRANSB, M,    N,     K,     ALPHA,    A,          LDA,
+      call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir%data_c, size(mtir%data_c,1), &
+      !             B,                            LDB,              BETA,    C,                            LDC )
                     mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1->nbasm: zgemm")
 
       if(conjg_mtir) then
          call timestart("conjg mtir_c")
-         call zlacgv(size(hybdat%coul(ikpt)%mtir_c), hybdat%coul(ikpt)%mtir_c, 1)
+         !$OMP PARALLEL DO default(none) schedule(static) private(i) shared(indx1, mtir)
+         do i = 1, indx1
+            call zlacgv(indx1, mtir%data_c(1,i), 1)
+         enddo
+         !$OMP END PARALLEL DO
          call timestop("conjg mtir_c")
       endif
 
