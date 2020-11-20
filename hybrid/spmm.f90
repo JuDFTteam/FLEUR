@@ -375,7 +375,6 @@ contains
 
       call mtir%free()
 
-
       call timestart("dot prod")
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
