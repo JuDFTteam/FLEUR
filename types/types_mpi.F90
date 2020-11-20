@@ -32,7 +32,8 @@ MODULE m_types_mpi
    END INTERFACE juDFT_win_create
 
    PRIVATE
-   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm
+   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm, &
+             juDFT_win_create_real, juDFT_win_create_cmplx
 contains
    subroutine t_mpi_set_root_comm(fmpi)
       implicit none 
@@ -57,7 +58,7 @@ contains
       use mpi
 #endif
       implicit none 
-      real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
+      real, POINTER, ASYNCHRONOUS, intent(inout) :: base(..)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
@@ -65,14 +66,20 @@ contains
       INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
       integer                  :: err, err_handler
 
+      call timestart("MPI_WIN_CREATE")
       CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
       if(err /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
+      call timestop("MPI_WIN_CREATE")
 
+      call timestart("MPI_Win_create_errhandler")
       call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
       if(err /= 0) call judft_error("Can't create Error handler")
+      call timestop("MPI_Win_create_errhandler")
 
+      call timestart("MPI_WIN_SET_ERRHANDLER")
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
+      call timestop("MPI_WIN_SET_ERRHANDLER")
 #else 
    INTEGER :: SIZE 
 #endif
@@ -84,7 +91,7 @@ contains
       use mpi
 #endif
       implicit none 
-      complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:)
+      complex, POINTER, ASYNCHRONOUS, intent(inout):: base(..)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
