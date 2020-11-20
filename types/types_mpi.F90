@@ -32,8 +32,7 @@ MODULE m_types_mpi
    END INTERFACE juDFT_win_create
 
    PRIVATE
-   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm, &
-             juDFT_win_create_real, juDFT_win_create_cmplx
+   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm
 contains
    subroutine t_mpi_set_root_comm(fmpi)
       implicit none 
