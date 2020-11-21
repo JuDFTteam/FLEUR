@@ -214,9 +214,6 @@ contains
 #else 
       irank = 0
 #endif
-
-      write (*,*) "max_coul_size on create", max_coul_size
-
       if(mtir%l_real) then        
          if(.not. associated(mtir%r)) then
             allocate(mtir%r(max_coul_size, max_coul_size, my_n_k), stat=ierr)
@@ -225,7 +222,6 @@ contains
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "[" // int2str(irank) //"]: slot_size, win_size", slot_size, win_size
                call judft_win_create(mtir%r, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
@@ -240,7 +236,6 @@ contains
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "[" // int2str(irank) //"]: slot_size, win_size", slot_size, win_size
                call judft_win_create(mtir%c, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
