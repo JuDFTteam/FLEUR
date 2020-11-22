@@ -886,7 +886,6 @@ CONTAINS
       enddo
 
       call hybdat%mtir%alloc(fi, fmpi,  mpdata%n_g, size(fmpi%k_list))
-      call hybdat%mtir%init(fi, fmpi)
 
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
