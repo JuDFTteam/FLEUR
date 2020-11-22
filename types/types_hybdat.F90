@@ -174,9 +174,12 @@ contains
 
          ! get # of slots per mtx and #colums per slot 
          call calc_matrix_slots(mtir%l_real, max_coul_size, mtir%slots_per_mtx, mtir%col_in_slot)
-
+         
 #ifdef CPP_MPI 
          call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
+         if(irank == 0) write (*,*) "Coulomb_mtx cut into " // int2str(mtir%slots_per_mtx) // " slots with " &
+                                    // int2str(mtir%col_in_slot) // " columns"
+
          if(mtir%l_real) then
             CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION, type_size, ierr)
          else
