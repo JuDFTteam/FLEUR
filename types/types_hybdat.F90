@@ -201,7 +201,6 @@ contains
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "["// int2str(irank) //"]: create: ", win_size, slot_size
                call judft_win_create(mtir%r, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
@@ -214,7 +213,6 @@ contains
 
 #ifdef CPP_MPI 
             if(fmpi%isize > 1) then
-               write (*,*) "["// int2str(irank) //"]: create: ", win_size, slot_size
                call judft_win_create(mtir%c, win_size, slot_size, &
                                     MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
             endif
