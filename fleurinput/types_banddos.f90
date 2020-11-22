@@ -170,9 +170,9 @@ CONTAINS
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@alpha')==1) &
           this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@beta')==1) &
-          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
+          this%beta(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@gamma')==1) &
-          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
+          this%gamma(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
         ENDDO
     ENDDO
     endif
