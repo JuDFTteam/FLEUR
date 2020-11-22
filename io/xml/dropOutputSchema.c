@@ -3,8 +3,8 @@
 //#include "outputSchema_old.h"
 #include <string.h>
 /*
- * This method together with the variables defined in inputSchema.h
- * writes out the file FleurInputSchema.xsd.
+ * This method together with the variables defined in outputSchema.h
+ * writes out the file FleurOutputSchema.xsd.
  *                                            GM'16
  */
 int dropOutputSchema(char* version)
