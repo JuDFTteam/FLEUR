@@ -51,7 +51,7 @@ CONTAINS
       lmax = 2*lmaxd
       img = cmplx(0.0,1.0)
 
-      ALLOCATE ( bsl(nvd,0:lmax,ntypd),ylm((lmax+1)**2,nvd) )
+      ALLOCATE ( bsl(0:lmax,nvd,ntypd),ylm((lmax+1)**2,nvd) )
       ALLOCATE ( ppw(nobd,(lmax+1)**2),fpw(nobd,(lmax+1)**2) )
       ALLOCATE ( G(3,nvd),kG(3,nvd),kGreal(3,nvd),expf(nvd,natd) )
       ALLOCATE ( kineticfactor(nobd,nvd) )
@@ -88,7 +88,7 @@ CONTAINS
           r = sqrt(normsq)*rmt(itype)
 !           r = sqrt(dot_product(matmul(G(:,kn),bmat),
 !      ,                                 matmul(G(:,kn),bmat)))*rmt(itype)
-          CALL sphbes(lmax,r,bsl(kn,:,itype))
+          CALL sphbes(lmax,r,bsl(:,kn,itype))
           DO ieq = 1,neq(itype)
             expf(kn,iatom) = exp(tpi_const*img*dot_product(kG(:,kn),taual(:,iatom)))
 !      =                 exp(tpi*img*dot_product(G(:,kn),taual(:,iatom)))
@@ -115,7 +115,7 @@ CONTAINS
           DO kn = 1,nv(jsp)
             DO m = -l,l
               lm = l*(l+1) + m + 1
-              noband = expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l,itype) * fpil
+              noband = expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(l,kn,itype) * fpil
               DO iband = 1,nobd
                 IF (zMat%l_real) THEN
                    ppw(iband,lm) = ppw(iband,lm) + zr(kn,iband) * noband
@@ -131,7 +131,7 @@ CONTAINS
 !           If ppw is used with l, one needs fpw with l-1 (already calculated) and l+1 (calculated now)
             DO m = -l-1,l+1
               lm = (l+1)*(l+2) + m + 1
-              noband =expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(kn,l+1,itype) * fpil * img
+              noband =expf(kn,iatom)*conjg(ylm(lm,kn))*bsl(l+1,kn,itype) * fpil * img
               DO iband = 1,nobd
                 IF (zMat%l_real) THEN
                    fpw(iband,lm) = fpw(iband,lm) + zr(kn,iband) * noband * kineticfactor(iband,kn)

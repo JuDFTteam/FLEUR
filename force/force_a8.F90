@@ -261,7 +261,10 @@ CONTAINS
 8030          FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
 8040          FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
            END DO
-         END IF
+        ELSE
+           WRITE  (oUnit,"If this was a serial calculation, the A12 force component would be written out here. In parallel it holds
+           no meaning.")
+        END IF
       ELSE
 
          WRITE  (oUnit,*)
@@ -298,7 +301,11 @@ CONTAINS
 8050        FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060        FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
          END DO
+      ELSE
+         WRITE  (oUnit,"If this was a serial calculation, the A21 force component would be written out here. In parallel it holds
+           no meaning.")
       END IF
+
 
       CALL timestop("force_a8")
 
