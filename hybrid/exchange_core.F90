@@ -79,7 +79,10 @@ CONTAINS
       
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk), hybdat%nbands(nk))
 
-      allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))
+      allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)
+      if(ierr /= 0) call judft_error("alloc fprod failed")
+      
+      allocate(larr(5), parr(5))
 
       iatom = 0
       rdum = 0
