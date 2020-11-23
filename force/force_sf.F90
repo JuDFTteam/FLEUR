@@ -84,7 +84,7 @@ CONTAINS
       CALL init_sf(sym,cell,atoms)
       isdone = .true.
 
-      ALLOCATE ( bsl(stars%ng3,0:atoms%lmaxd,atoms%ntype) )
+      ALLOCATE ( bsl(0:atoms%lmaxd,stars%ng3,atoms%ntype) )
 
       ALLOCATE ( pylm2((atoms%lmaxd+1)**2,atoms%ntype ))
       ALLOCATE ( rho((atoms%lmaxd+1)**2),V((atoms%lmaxd+1)**2) )
@@ -130,14 +130,14 @@ CONTAINS
 !         END DO ! itype
 !       END DO ! s
       DO itype = 1,atoms%ntype
-        CALL sphbes(atoms%lmax(itype),0.0,bsl(1,:,itype))
+        CALL sphbes(atoms%lmax(itype),0.0,bsl(:,1,itype))
         DO s = 2,stars%ng3
 !         Only call sphbes if the length of the star changed
           IF (abs(stars%sk3(s)-stars%sk3(s-1)).gt.1.0e-14) THEN
             r = stars%sk3(s)*atoms%rmt(itype)
-            CALL sphbes(atoms%lmax(itype),r,bsl(s,:,itype))
+            CALL sphbes(atoms%lmax(itype),r,bsl(:,s,itype))
           ELSE
-            bsl(s,:,itype) = bsl(s-1,:,itype)
+            bsl(:,s,itype) = bsl(:,s-1,itype)
           END IF
         END DO ! s
       END DO ! itype
@@ -212,9 +212,9 @@ CONTAINS
 !      >              tau,mrot,symor,s,invtab,
 !      <              pylm2(:))
 !             IF ((s.eq.1).and.(l.eq.0)) WRITE (851,*) pylm2(:)
-            rhoprep = stars%nstr(s) * bsl(s,l,itype) * qpwcalc(s,jsp)
+            rhoprep = stars%nstr(s) * bsl(l,s,itype) * qpwcalc(s,jsp)
             IF (l.eq.0) THEN
-              Vprep = stars%nstr(s) * bsl(s,l,itype) * (1*vpw(s,jsp)-1*vxcpw(s,jsp)+1*excpw(s)) ! Switching between Veff and VCoul + exc
+              Vprep = stars%nstr(s) * bsl(l,s,itype) * (1*vpw(s,jsp)-1*vxcpw(s,jsp)+1*excpw(s)) ! Switching between Veff and VCoul + exc
 !      *              * vpw(s,jsp)
             END IF
 !           for l = 0 we calculate rho_00 and V_00...
@@ -225,7 +225,7 @@ CONTAINS
                 V(lm) =   V(lm) +   Vprep * pylm2(lm,itype)!pylm(lm,s,itype)!
             END DO ! m
 !           ... and V_1mp, for l > 0, we calculate rho_lm, V_l+1,mp ...
-              Vprep = stars%nstr(s) * bsl(s,l+1,itype) * (1*vpw(s,jsp)-1*vxcpw(s,jsp)+1*excpw(s))
+              Vprep = stars%nstr(s) * bsl(l+1,s,itype) * (1*vpw(s,jsp)-1*vxcpw(s,jsp)+1*excpw(s))
 !      *              * vpw(s,jsp)
             DO m = -l-1,l+1
               lm = (l+1)*(l+2) + m + 1

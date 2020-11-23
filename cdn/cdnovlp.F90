@@ -132,7 +132,7 @@ CONTAINS
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:),ffonat_pT(:,:),pylm2(:,:,:)
-          REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:)
+          REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:),force_a4_mt_loc(:,:)
           REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
           REAL    rat(atoms%msh,atoms%ntype)
           COMPLEX gv(3),ycomp1(3,-1:1),ffonat(3,stars%ng3*sym%nop)
@@ -178,7 +178,9 @@ CONTAINS
           IF (l_f2) THEN
           ! Allocate the force arrays in the routine force_a4_add.f
              CALL alloc_fa4_arrays(atoms,input)
+             ALLOCATE(force_a4_mt_loc,mold=force_a4_mt(:,:,jspin))
              force_a4_mt(:,:,jspin) =  zero
+             force_a4_mt_loc(:,:) =  zero
              force_a4_is(:,:,jspin) = czero
 
              ! Calculate the distribution of Tasks onto processors
@@ -207,7 +209,7 @@ CONTAINS
 
              !ioffset_pT = ioffset_pT+1
              ALLOCATE ( ffonat_pT(3,(stars%ng3-1)*sym%nop) )
-             ffonat_pT = 0
+             ffonat_pT = czero
 
              ! lattice/spherical harmonics related variables
              s13 = sqrt(1.0/3.0)
@@ -409,7 +411,7 @@ CONTAINS
                       END DO ! lh lattice harmonics
 
                       DO dir = 1,3
-                         CALL intgr3(integrand(:,dir),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),force_a4_mt(dir,n,jspin))
+                         CALL intgr3(integrand(:,dir),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),force_a4_mt_loc(dir,n))
                       END DO ! direction
                       DEALLOCATE ( integrand )
                    END IF !l_f2
@@ -428,7 +430,7 @@ CONTAINS
           !=====> calculate the fourier transform of the core-pseudocharge
           IF (l_f2) THEN
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
-                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
           ELSE
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
@@ -672,7 +674,7 @@ CONTAINS
 !***********************************************************************
 
       subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
-            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
+            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
       !
@@ -698,6 +700,7 @@ CONTAINS
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
       COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
+      REAL,OPTIONAL,INTENT(IN) :: force_a4_mt_loc(:,:)
       complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
@@ -769,8 +772,14 @@ CONTAINS
 #ifdef CPP_MPI
        CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,mpi_sum, &
                fmpi%mpi_comm,ierr)
+       IF (l_f2) THEN
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_mt,SIZE(force_a4_mt),MPI_DOUBLE,MPI_SUM,fmpi%mpi_comm,ierr)
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_is,SIZE(force_a4_is),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+       END IF
 #endif
-
+       IF (l_f2) THEN
+       force_a4_mt(:,:,jspin)=force_a4_mt(:,:,jspin)+force_a4_mt_loc(:,:)
+       END IF
       end subroutine ft_of_CorePseudocharge
 
    SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,&
