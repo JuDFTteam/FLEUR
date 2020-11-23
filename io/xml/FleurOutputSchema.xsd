@@ -13,7 +13,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="fleurInput" type="FleurInputType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="numericalParameters" type="NumericalParametersType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="scfLoop" type="OutSCFLoopType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="ERROR" type="ErrorType">
+         <xsd:element maxOccurs="1" minOccurs="0" name="ERROR" type="ErrorType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="endDateAndTime" type="DateAndTimeType"/>
       </xsd:all>
       <xsd:attribute name="fleurOutputVersion" type="FleurVersionType" use="required"/>
