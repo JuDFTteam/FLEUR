@@ -191,6 +191,7 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
          !
          RETURN
