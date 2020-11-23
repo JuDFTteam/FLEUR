@@ -71,8 +71,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
       type(t_mat)             :: integral, carr, tmp, dot_result, exchange
 
-      complex, external   :: zdotc
-
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
