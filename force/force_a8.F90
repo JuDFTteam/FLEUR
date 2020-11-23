@@ -262,7 +262,7 @@ CONTAINS
 8040           FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
             END DO
          ELSE
-            WRITE  (oUnit,"If this was a serial calculation, the A12 force component would be written out here. In parallel it holds no meaning.")
+            WRITE (oUnit,*) "If this was a serial calculation, the A12 force component would be written out here. In parallel it holds no meaning."
          END IF
       ELSE
 
@@ -301,7 +301,7 @@ CONTAINS
 8060        FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
          END DO
       ELSE
-         WRITE  (oUnit,"If this was a serial calculation, the A21 force component would be written out here. In parallel it holds no meaning.")
+         WRITE (oUnit,*) "If this was a serial calculation, the A21 force component would be written out here. In parallel it holds no meaning."
       END IF
 
 
