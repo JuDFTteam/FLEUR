@@ -92,7 +92,7 @@ MODULE m_judft_xmlOutput
 
       IMPLICIT NONE
 
-      CHARACTER(len=:), OPTIONAL , INTENT(IN) :: errmsg
+      CHARACTER(len=*), OPTIONAL , INTENT(IN) :: errmsg
 
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
