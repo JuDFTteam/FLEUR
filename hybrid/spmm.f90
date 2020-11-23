@@ -25,9 +25,11 @@ contains
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2
 
+      call timestart("reorder_forw")
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp%data_r(:, i_vec))
       enddo
+      call timestop("reorder_forw")
 
       ibasm = calc_ibasm(fi, mpdata)
 
@@ -214,9 +216,11 @@ contains
 
       END IF
 
+      call timestart("reorder_back")
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out%data_r(:, i_vec))
       enddo
+      call timestop("reorder_back")
       call timestop("spmm_invs")
    end subroutine spmm_invs
 
