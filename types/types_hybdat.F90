@@ -11,7 +11,7 @@ MODULE m_types_hybdat
 #ifdef CPP_MPI
       integer(MPI_ADDRESS_KIND), allocatable :: start_slot(:), end_slot(:) ! local slot where it's stored
 #else 
-      integer, allocatable :: slot(:) ! local slot where it's stored
+      integer, allocatable :: start_slot(:), end_slot(:) ! local slot where it's stored
 #endif
       logical              :: l_real  ! real or complex storage
       logical              :: allocated = .False.
@@ -96,7 +96,11 @@ contains
       type(t_mat), intent(inout)        :: out_mtx 
 
       integer :: isize, irank, ierr, max_size, i, loc_k_idx, start_col
+#ifdef CPP_MPI
       integer(MPI_ADDRESS_KIND) :: islot
+#else 
+      integer :: islot 
+#endif
 
       call timestart("t_mtir_block_read")
       isize = mtir_size(fi, n_g, ik)
@@ -257,7 +261,7 @@ contains
 #else 
          mtir%pe = 0 
          mtir%start_slot = [(i, i=1,fi%kpts%nkpt)]
-         mtir%end_slot   = start_slot
+         mtir%end_slot   = mtir%start_slot
 #endif
          call timestop("t_mtir_block_init")
       endif
