@@ -151,11 +151,10 @@ CONTAINS
              WRITE(juDFT_outUnit,*) "***************ERROR***************"
              WRITE(juDFT_outUnit,*) message
              WRITE(juDFT_outUnit,*) "***************ERROR***************"
-             CALL writeXMLElement('ERROR',(/"Message"/),(/message/))
              !try closing the out file
              CLOSE(juDFT_outUnit,iostat=e)
              !Try closing the xml-out
-             CALL endXMLOutput()
+             CALL endXMLOutput(errmsg=message)
           ENDIF
        END IF
     ELSE
