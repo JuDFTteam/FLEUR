@@ -40,7 +40,7 @@ MODULE m_checkMMPmat
          ENDDO
       ENDDO
 
-      IF(l_err) THEN
+      IF(.FALSE.) THEN
          WRITE(*,*) "-----------------------------------------------------------------"
          WRITE(*,*) "Using the Quasi-Newton methods for mixing and LDA+U"
          WRITE(*,*) "from the beginning of the SCF calculaion can be unstable."
