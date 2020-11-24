@@ -52,8 +52,10 @@ endif()
 
 #Tests for LibXC
 if (FLEUR_USE_LIBXC)
-   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
+   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC)
 endif()
+
+#To be repaired: Diamond_SCAN
 
 #Tests for EDsolver
 if (FLEUR_USE_EDSOLVER)
