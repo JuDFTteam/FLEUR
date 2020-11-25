@@ -78,6 +78,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)             :: noco
     !Stuff that might be modified...
     TYPE(t_nococonv),INTENT(INOUT) :: nococonv
+    CHARACTER(LEN=12):: attributes(2)
     INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
        ssdisp_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
@@ -95,8 +96,10 @@ CONTAINS
        nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
     END DO
     IF (.NOT.this%l_io) RETURN
-    IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
-    CALL openXMLElementPoly('Forcetheorem_Loop_SSDISP',(/'Q-vec'/),(/this%q_done/))
+    IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop')
+    WRITE(attributes(1),'(a)') 'SSDISP'
+    WRITE(attributes(2),'(i5)') this%q_done
+    CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
   END FUNCTION ssdisp_next_job
 
   SUBROUTINE ssdisp_postprocess(this)
@@ -110,7 +113,7 @@ CONTAINS
     IF (this%q_done==0) RETURN
     !Now output the results
     IF (this%l_io) THEN
-       CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
+       CALL closeXMLElement('Forcetheorem_Loop')
        CALL openXMLElementPoly('Forcetheorem_SSDISP',(/'qvectors'/),(/SIZE(this%evsum)/))
        DO q=1,SIZE(this%evsum)
           WRITE(attributes(1),'(i5)') q

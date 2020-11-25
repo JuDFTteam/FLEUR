@@ -76,6 +76,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)             :: noco
     !Stuff that might be modified...
     TYPE(t_nococonv),INTENT(INOUT) :: nococonv
+    CHARACTER(LEN=12):: attributes(2)
        IF (.NOT.lastiter) THEN
           mae_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
           RETURN
@@ -89,8 +90,10 @@ CONTAINS
        nococonv%phi=this%phi(this%directions_done)
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
-       IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop_MAE')
-       IF (this%l_io) CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
+       IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE(attributes(1),'(a)') 'MAE'
+       WRITE(attributes(2),'(i5)') this%directions_done
+       CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
@@ -136,7 +139,7 @@ CONTAINS
 
     IF (this%l_io) THEN
        !Now output the results
-       CALL closeXMLElement('Forcetheorem_Loop_MAE')
+       CALL closeXMLElement('Forcetheorem_Loop')
        CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
        DO n=1,SIZE(this%evsum)
           WRITE(attributes(1),'(f12.7)') this%theta(n)
