@@ -145,7 +145,7 @@ CONTAINS
     allocate(this%alpha(size(this%dos_atom)));this%alpha=0.0
     allocate(this%beta(size(this%dos_atom)));this%beta=0.0
     allocate(this%gamma(size(this%dos_atom)));this%gamma=0.0
-    allocate(neq(xml%get_ntype()))
+    allocate(neq(xml%get_ntype()), source=0)
 
     this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
     na = 0
@@ -210,8 +210,8 @@ CONTAINS
     END IF
 
     !Create a list of all atoms and all types for which the DOS is calculated
-    ALLOCATE(dos_atomlist(xml%get_nat()))
-    allocate(dos_typelist(xml%get_ntype()))
+    ALLOCATE(dos_atomlist(xml%get_nat()),source=0)
+    allocate(dos_typelist(xml%get_ntype()),source=0)
 
     na=0
     n_dos_atom=0
