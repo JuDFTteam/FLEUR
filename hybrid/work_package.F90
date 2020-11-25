@@ -286,7 +286,10 @@ contains
       end_idx = 0
       do i = 1,n_parts
          psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-         if(psize(i) == 0) call judft_warn("some band_packs have 0 bands")
+         if(psize(i) == 0) then
+            write (*,*) "n_total, n_parts", n_total, n_parts
+            call judft_warn("some band_packs have 0 bands")
+         endif
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo
