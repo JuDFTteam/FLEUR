@@ -153,7 +153,7 @@
    </xsd:complexType>
 
    <xsd:group name="GeneralIterationType">
-      <xsd:sequence>
+      <xsd:sequence maxOccurs="unbounded">
          <!--These tags can occur in a iteration/Forcetheorem iteration/!-->
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="OutEnergyParameterType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="eigenvalues" type="EigenvaluesType"/>
@@ -162,10 +162,13 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorgue" type="GFTorgueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="spinorbitTorgue" type="GFTorgueType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrix" type="LDAUDensityMatrixType"/>
@@ -445,11 +448,26 @@
       </xsd:sequence>
    </xsd:complexType>
 
+   <xsd:complexType name="GFTorgueType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="torgue" type="TorgueType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="TorgueType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="sigma_x" type="xsd:double" use="required"/>
+      <xsd:attribute name="sigma_y" type="xsd:double" use="required"/>
+      <xsd:attribute name="sigma_z" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
    <xsd:complexType name="ExcSplitType">
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="l" type="xsd:integer" use="required"/>
       <xsd:attribute name="Delta" type="xsd:double" use="required"/>
       <xsd:attribute name="unit" type="xsd:string" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="LDAUDensityMatrixType">
@@ -469,6 +487,27 @@
             <xsd:attribute name="J" type="xsd:double" use="required"/>
          </xsd:extension>
       </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="RDMFTType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="occupations" type="RDMFTOccupationsType"/>
+      </xsd:sequence>
+      <xsd:attribute name="energy" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="RDMFTOccupationsType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="state" type="RDMFTStateType"/>
+      </xsd:sequence>
+      <xsd:attribute name="spin" type="xsd:integer" use="required"/>
+      <xsd:attribute name="kpoint" type="xsd:integer" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="RDMFTStateType">
+      <xsd:attribute name="index" type="xsd:integer" use="required"/>
+      <xsd:attribute name="energy" type="xsd:double" use="required"/>
+      <xsd:attribute name="occupation" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="TotalEnergyType">

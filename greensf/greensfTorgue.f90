@@ -153,8 +153,8 @@ MODULE m_greensfTorgue
       WRITE(attributes(3),'(f14.8)') torgue(2) * hartree_to_ev_const * 1000
       WRITE(attributes(4),'(f14.8)') torgue(3) * hartree_to_ev_const * 1000
       WRITE(attributes(5),'(a3)') 'meV'
-      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
-                               attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','units   '],&
+                               attributes,reshape([8,7,7,7,5,6,14,14,14,3],[5,2]))
 
 
    END SUBROUTINE greensfTorgue
@@ -319,8 +319,8 @@ MODULE m_greensfTorgue
       WRITE(attributes(3),'(f14.8)') torgue(2) * hartree_to_ev_const * 1000
       WRITE(attributes(4),'(f14.8)') torgue(3) * hartree_to_ev_const * 1000
       WRITE(attributes(5),'(a3)') 'meV'
-      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
-                               attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','units   '],&
+                               attributes,reshape([8,7,7,7,5,6,14,14,14,3],[5,2]))
 
 
    END SUBROUTINE greensfSOTorgue

@@ -100,8 +100,8 @@ MODULE m_excSplitting
          WRITE(attributes(2),'(i0)') l
          WRITE(attributes(3),'(f12.7)') excSplit * hartree_to_ev_const
          WRITE(attributes(4),'(a2)') 'eV'
-         CALL writeXMLElementForm('excSplit',['atomType','l       ','Delta   ','unit    '],&
-                                  attributes,reshape([8,1,5,4,6,1,12,2],[4,2]))
+         CALL writeXMLElementForm('excSplit',['atomType','l       ','Delta   ','units   '],&
+                                  attributes,reshape([8,1,5,5,6,1,12,2],[4,2]))
 
       ENDDO
       WRITE(oUnit,'(/)')
