@@ -94,6 +94,9 @@ if (FLEUR_USE_MPI)
 endif()
 
 #Hybrid tests
-foreach(test ${HybridTests})
-   add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
-endforeach()
+
+if (FLEUR_USE_MPI)
+   foreach(test ${HybridTests})
+      add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
+   endforeach()
+endif()
