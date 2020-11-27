@@ -78,7 +78,14 @@ CONTAINS
       !
       !     coded                  Stefan Bl"ugel, IFF Nov. 1997
       !     tested                 RObert Abt    , IFF Dez. 1997
-      !*****************************************************************
+      !
+      !     Added calculation of force contributions from coretails
+      !     outside of their native muffin-tin spheres, i.e. in the
+      !     interstitial region and other muffin-tins; only for bulk.
+      !     Refer to Klüppelberg et al., PRB 91 035105 (2015)
+      !     Aaron Klueppelberg, Oct. 2015
+      ! 
+      !--------------------------------------------------------------------------
          
           USE m_constants
           USE m_qpwtonmt
@@ -176,7 +183,7 @@ CONTAINS
           l_f2 = input%l_f.AND.(input%f_level.GE.1).AND.(.NOT.l_st) ! f_level >= 1: coretails completely contained in force calculation
                                                                     ! Klueppelberg (force level 1)
           IF (l_f2) THEN
-          ! Allocate the force arrays in the routine force_a4_add.f
+          ! Allocate the force arrays in the routine force_a4_add.f90
              CALL alloc_fa4_arrays(atoms,input)
              ALLOCATE(force_a4_mt_loc,mold=force_a4_mt(:,:,jspin))
              force_a4_mt(:,:,jspin) =  zero
@@ -194,6 +201,8 @@ CONTAINS
              ! the first star is \vec{0} and will not contribute to the core forces
              ! thereforce, stars are only considered starting from the second star.
              ! the number of stars is then nq3-1
+
+             ! TODO: Proper parallelization of Klueppelberg force levels.
              
              !ioffset_pT = 0
              !minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank

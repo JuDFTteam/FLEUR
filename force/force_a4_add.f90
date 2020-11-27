@@ -5,23 +5,24 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_force_a4_add
-  USE m_juDFT
-  USE m_types
-  !------------------------------------------------------------------------------
-  ! calculates the force contribution from core-tails in addition
-  ! to formula A4 of Yu, Singh & Krakauer minus a surface term that
-  ! was included conveniently in force_a4.f
-  ! It evaluates for the core density of each atom the term
-  ! int [nabla rho_core]V d^3r in each region but the own muffin tin
-  ! (i.e. the interstitial, the other muffin tins and the vacuum)
-  ! (the corresponding formula is extended over the unit cell)
-  ! Klueppelberg Sep'12 (force level 1)
-  !------------------------------------------------------------------------------
+   USE m_juDFT
+   USE m_types
+   !------------------------------------------------------------------------------
+   ! Adds the force contribution from core-tails in addition to formula A4 of Yu, 
+   ! Singh & Krakauer minus a surface term that was included conveniently in
+   ! force_a4.f90. The contributions are calculated in cdnovlp.F90.
+   ! 
+   ! It evaluates the term int [nabla rho_core]V d^3r for the core density of each
+   ! atom in each region but its own Muffin Tin (i.e. the interstitial and the
+   ! other MT).
+   ! The corresponding formula is extended over the unit cell.
+   ! Klueppelberg Sep'12 (force level 1)
+   !------------------------------------------------------------------------------
 
-  IMPLICIT NONE
+   IMPLICIT NONE
 
-  REAL    , ALLOCATABLE, PUBLIC, SAVE :: force_a4_mt(:,:,:)
-  COMPLEX , ALLOCATABLE, PUBLIC, SAVE :: force_a4_is(:,:,:)
+   REAL   , ALLOCATABLE, PUBLIC, SAVE :: force_a4_mt(:,:,:)
+   COMPLEX, ALLOCATABLE, PUBLIC, SAVE :: force_a4_is(:,:,:)
 
 CONTAINS
    SUBROUTINE alloc_fa4_arrays(atoms,input)
@@ -31,14 +32,17 @@ CONTAINS
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_atoms), INTENT(IN) :: atoms
 
-      !IF (.NOT.ALLOCATED(force_a4_mt)) THEN
-         ALLOCATE ( force_a4_mt(3,atoms%ntype,input%jspins), &
-                    force_a4_is(3,atoms%ntype,input%jspins) )
-      !END IF
+      CALL timestart("force_a4_alloc")
+
+      ALLOCATE(force_a4_mt(3,atoms%ntype,input%jspins), &
+               force_a4_is(3,atoms%ntype,input%jspins))
+
+      CALL timestop("force_a4_alloc")
+
    END SUBROUTINE alloc_fa4_arrays
 
    SUBROUTINE force_a4_add(atoms,input,results)
-      ! This subroutine adds the coretail contribution to the atomic forces
+      ! This subroutine adds the coretail contribution to the atomic forces.
 
       USE m_constants
 
@@ -54,7 +58,7 @@ CONTAINS
 
       ! The following film part needs to be implemented into cdnovlp, since
       ! the coretail force contribution has been relocated to cdnovlp.F
-      !       CALL cpu_time(time1)
+      !       CALL cpu_time(time1) TODO: Readd this film part.
       ! !**********************************************************************
       ! !     in case of film calculations: calculate integral over vacuum
       ! !**********************************************************************
@@ -137,6 +141,7 @@ CONTAINS
       !      + time2-time1
 
       ! Add the results to the total force.
+
       force_a4_mt_loc=force_a4_mt*CMPLX(1.0,0.0)
       DO jsp = 1, input%jspins
          DO n = 1, atoms%ntype
@@ -153,8 +158,8 @@ CONTAINS
                WRITE (oUnit,FMT=8070) ((force_a4_mt_loc(dir,n,jsp)),dir=1,3) ! 8070
 8010           FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015           FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
-               !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)
-               !  8020   FORMAT (' FX_A4=',2f19.15,' FY_A4=',2f19.15,' FZ_A4=',2f19.15)
+!8025           FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)
+!8020           FORMAT (' FX_A4=',2f19.15,' FY_A4=',2f19.15,' FZ_A4=',2f19.15)
 8020           FORMAT (' FX_IS=',2f10.6,' FY_IS=',2f10.6,' FZ_IS=',2f10.6)
 8070           FORMAT (' FX_MT=',2f10.6,' FY_MT=',2f10.6,' FZ_MT=',2f10.6)
 
@@ -167,4 +172,5 @@ CONTAINS
       CALL timestop("force_a4_add")
 
    END SUBROUTINE force_a4_add
+
 END MODULE m_force_a4_add
