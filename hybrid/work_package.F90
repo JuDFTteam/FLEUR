@@ -147,16 +147,17 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-   ! arrays should be less than 50 gb
-      if(fi%sym%invs) then
-         target_psize = 5e10/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      else
-         target_psize = 5e10/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      endif
+   ! arrays should be less than 5 gb
+      ! if(fi%sym%invs) then
+      !    target_psize = 5e1/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      ! else
+      !    target_psize = 5e1/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      ! endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
 
-      n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      !remove splitting into multiple 
+      n_parts = 1 ! ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
