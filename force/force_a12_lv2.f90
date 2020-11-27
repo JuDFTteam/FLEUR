@@ -217,7 +217,7 @@ CONTAINS
       DEALLOCATE ( bsl,ylm,ppw,fpw )
       DEALLOCATE ( G,kG,kGreal,expf,kineticfactor )
 
-      CALL timestart("Force level 2")
+      CALL timestop("Force level 2")
 
    END SUBROUTINE force_a12_lv2
 END MODULE m_force_a12_lv2
