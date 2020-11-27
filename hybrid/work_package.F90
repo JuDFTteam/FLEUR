@@ -147,11 +147,11 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-   ! arrays should be less than 5 gb
+   ! arrays should be less than 50 gb
       if(fi%sym%invs) then
-         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = 5e10/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       else
-         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = 5e10/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
@@ -293,5 +293,7 @@ contains
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo
+
+      write (*,*) "n_tot, n_par, psize", n_total, n_parts, psize
    end subroutine split_band_loop
 end module m_work_package
