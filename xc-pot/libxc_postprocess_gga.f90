@@ -71,6 +71,45 @@ CONTAINS
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_pw
 
+   SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,oneD,v_xc,grad)
+      USE m_vac_tofrom_grid
+      USE m_types
+
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN)   :: xcpot
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_stars),INTENT(IN)   :: stars
+      TYPE(t_vacuum),INTENT(IN)   :: vacuum
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      REAL,INTENT(INOUT)          :: v_xc(:,:)
+      TYPE(t_gradients),INTENT(IN):: grad
+
+      COMPLEX,ALLOCATABLE:: vsigma_xy(:,:,:,:)
+      REAL,ALLOCATABLE:: vsigma(:,:), vsigma_z(:,:,:), rho_dummy(:,:),v_xc2(:,:)
+      TYPE(t_gradients)::grad_vsigma
+      INTEGER :: nsp,n_sigma,ifftd2
+
+      ifftd2 = 9*stars%mx1*stars%mx2
+      IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
+
+      nsp=SIZE(v_xc,1) !no of points
+      n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
+      ALLOCATE(rho_dummy(size(v_xc,1),n_sigma))
+      ALLOCATE(v_xc2,mold=v_xc)
+      ALLOCATE(vsigma_xy(vacuum%nmzxy,stars%ng2-1,vacuum%nvac,n_sigma),&
+               vsigma_z(max(vacuum%nmzxy,vacuum%nmz),vacuum%nvac,n_sigma),vsigma(nsp,n_sigma))
+      vsigma_z=0.0
+      vsigma_xy=CMPLX(0.0,0.0)
+      v_xc2=v_xc
+      vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
+      CALL vac_from_grid(stars,vacuum,v_xc2,ifftd2,vsigma_z,vsigma_xy)
+      ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma),grad_vsigma%sigma(n_sigma,nsp))
+      CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_xy,vsigma_z,stars,rho_dummy,grad_vsigma)
+
+      CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
+   END SUBROUTINE libxc_postprocess_gga_vac
+
    SUBROUTINE libxc_postprocess_gga(vsigma,grad,grad_vsigma,v_xc)
       USE m_types
       IMPLICIT NONE
