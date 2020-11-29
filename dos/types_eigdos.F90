@@ -124,7 +124,11 @@ subroutine write_dos(eigdos,hdf_id)
     use m_banddos_io
 #endif
     class(t_eigdos),INTENT(INOUT):: eigdos
+#ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
+#else
+    integer,       intent(in) ::hdf_id
+#endif
     integer:: jspin,i,ind,id, n
     character(len=100)::filename
     real,allocatable:: dos_grid(:)
