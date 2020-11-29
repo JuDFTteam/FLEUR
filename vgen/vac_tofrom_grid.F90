@@ -72,6 +72,9 @@ CONTAINS
     zro      = 0.0
     nt       = ifftd2
     idx=1
+
+    rho = 0.0
+
     ALLOCATE ( bf2(ifftd2) )
 
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
@@ -334,7 +337,7 @@ CONTAINS
           ! set minimal value of af2 to 1.0e-13
           !
 
-          rho=max(rho,1e-13)
+!          rho=max(rho,1e-13)
 
           idx=idx+ifftd2
        END DO ! ip=1,vacuum%nmzxy
