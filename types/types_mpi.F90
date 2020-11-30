@@ -28,7 +28,8 @@ MODULE m_types_mpi
    END TYPE t_mpi
 
    INTERFACE juDFT_win_create
-      MODULE PROCEDURE  juDFT_win_create_real, juDFT_win_create_cmplx, juDFT_win_create_int
+      MODULE PROCEDURE  juDFT_win_create_real, juDFT_win_create_cmplx, juDFT_win_create_int, &
+                        juDFT_win_create_real_3D, juDFT_win_create_cmplx_3D
    END INTERFACE juDFT_win_create
 
    PRIVATE
@@ -65,18 +66,57 @@ contains
       INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
       integer                  :: err, err_handler
 
+      call timestart("MPI_WIN_CREATE")
       CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
       if(err /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
+      call timestop("MPI_WIN_CREATE")
 
+      call timestart("MPI_Win_create_errhandler")
       call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
       if(err /= 0) call judft_error("Can't create Error handler")
+      call timestop("MPI_Win_create_errhandler")
 
+      call timestart("MPI_WIN_SET_ERRHANDLER")
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
+      call timestop("MPI_WIN_SET_ERRHANDLER")
 #else 
    INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_real
+
+   subroutine juDFT_win_create_real_3D(base, size, disp_unit, info, comm, win)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:,:,:)
+      integer, intent(in)      :: disp_unit, info, comm
+      integer, intent(inout)   :: win
+
+#ifdef CPP_MPI
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      integer                  :: err, err_handler
+
+      call timestart("MPI_WIN_CREATE")
+      CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
+      if(err /= 0) call judft_error("Can't create MPI_Win for real_data_ptr")
+      call timestop("MPI_WIN_CREATE")
+
+      call timestart("MPI_Win_create_errhandler")
+      call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
+      if(err /= 0) call judft_error("Can't create Error handler")
+      call timestop("MPI_Win_create_errhandler")
+
+      call timestart("MPI_WIN_SET_ERRHANDLER")
+      CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
+      if(err /= 0) call judft_error("Can't assign Error handler to Win")
+      call timestop("MPI_WIN_SET_ERRHANDLER")
+#else 
+   INTEGER :: SIZE 
+#endif
+   end subroutine juDFT_win_create_real_3D
 
    subroutine juDFT_win_create_cmplx(base, size, disp_unit, info, comm, win)
       use m_judft
@@ -104,6 +144,33 @@ contains
    INTEGER :: SIZE 
 #endif
    end subroutine juDFT_win_create_cmplx
+
+   subroutine juDFT_win_create_cmplx_3D(base, size, disp_unit, info, comm, win)
+      use m_judft
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:,:,:)
+      integer, intent(in)      :: disp_unit, info, comm
+      integer, intent(inout)   :: win
+
+#ifdef CPP_MPI
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      integer                  :: err, err_handler
+
+      CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
+      if(err /= 0) call judft_error("Can't create MPI_Win for cmplx_data_ptr")
+
+      call MPI_Win_create_errhandler(judft_mpi_error_handler, err_handler, err)
+      if(err /= 0) call judft_error("Can't create Error handler")
+
+      CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
+      if(err /= 0) call judft_error("Can't assign Error handler to Win")
+#else 
+   INTEGER :: SIZE 
+#endif
+   end subroutine juDFT_win_create_cmplx_3D
 
    subroutine juDFT_win_create_int(base, size, disp_unit, info, comm, win)
       use m_judft

@@ -37,8 +37,11 @@ CONTAINS
     !     cs_el,cr_el: send and receive elements                          |
     !     in_pos(xy,n,i): where to put in the n'th element sent by pe #i  |
     !                                                                     |
-    ! Based on the mingeselle.F90                                         |
-    !                                        Sept. 2020  U.Alekseeva      | 
+    !  ToDo: chop the send messages to the smaller chunks                 |
+    !                                                                     |
+    !  Based on the old mingeselle.                                       |
+    !                                    Okt. 2020                        |
+    !                                    U.Alekseeva                      |
     !---------------------------------------------------------------------+
 #include"./cpp_double.h"
     CLASS(t_mat), INTENT(INOUT) ::mat1
@@ -54,7 +57,7 @@ CONTAINS
     ! .. Local Arrays
     INTEGER ierr(3)
     INTEGER, ALLOCATABLE :: c_help_size(:,:)
-    INTEGER, ALLOCATABLE :: n_send(:),nsr(:),nsc(:)
+    INTEGER, ALLOCATABLE :: n_send(:),nsr(:)
     INTEGER, ALLOCATABLE :: n_recv(:),n_r(:)
     INTEGER, ALLOCATABLE :: in_pos(:,:,:)
     COMPLEX, ALLOCATABLE :: cs_el(:,:),cr_el(:),b_b(:),c_help(:,:)
@@ -63,6 +66,10 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER stt(MPI_STATUS_SIZE)
 
+    
+    ! check and initialize
+    
+    IF (mat%l_real .OR. mat1%l_real) CALL juDFT_error("Matrices should be complex",calledby ="mingeselle")
     SELECT TYPE (mat1)
     TYPE IS (t_mpimat)
        SELECT TYPE (mat)
@@ -89,22 +96,18 @@ CONTAINS
           ENDDO
        END SELECT
     END SELECT
-    !
-    ! initialize
-    !
-    ALLOCATE(n_send(0:n_size-1),n_recv(0:n_size-1),n_r(0:n_size-1),nsr(0:n_size-1),nsc(0:n_size-1))
+    ALLOCATE(n_send(0:n_size-1),n_recv(0:n_size-1),n_r(0:n_size-1),nsr(0:n_size-1))
     ALLOCATE(c_help_size(2,0:n_size-1),nsl(0:n_size-1))
     ns_tot = 0
     nr_tot = 0
     n_send = 0
     n_r = 0
-    nsc = 0
     c_help_size = 0
-    !
+    
     ! determine number of elements to send to other pe's
     ! and calculate the dimensions of c_helpi
     ! rows of c_help correspond to columns of mat1 and vice versa
-    !
+    
     DO ki = 1, mat1%matsize2
        kjj = n_rank + 1 + (ki-1)*n_size      ! global column index
        nsr = 0
@@ -118,13 +121,13 @@ CONTAINS
        ENDDO
        DO n_p = 0,n_size-1
           IF ( c_help_size(2,n_p) < nsr(n_p) ) c_help_size(2,n_p) = nsr(n_p)
-          IF ( nsl(n_p)==.TRUE. ) c_help_size(1,n_p) = c_help_size(1,n_p) + 1
+          IF ( nsl(n_p) ) c_help_size(1,n_p) = c_help_size(1,n_p) + 1
        ENDDO
     ENDDO
     !print*, "send", n_rank, ns_tot, n_send
-    !
+    
     ! determine number of elements to receive from other pe's
-    !
+    
     DO ki = 1, mat%matsize2
        kjj = n_rank + 1 + (ki-1)*n_size      ! global column index
        DO kj = kjj+1, mat%matsize1
@@ -134,9 +137,9 @@ CONTAINS
        ENDDO
     ENDDO
     !print*, "recv", n_rank, nr_tot, n_r
-    !
+    
     ! determine the maximal number of s/r-counts and allocate s/r-arrays
-    !
+    
     ns_max = 0
     nr_max = 0
     DO n_p = 0,n_size-1
@@ -146,11 +149,12 @@ CONTAINS
     !      WRITE (*,*) ns_max ,nr_max  , n_size, n_rank
     ALLOCATE ( cs_el(ns_max,0:n_size-1),cr_el(nr_max) )
     ALLOCATE ( in_pos(2,nr_max,0:n_size-1) )
-    !
-    ! sort the elements of the mat1 into the c_help,
+   
+    ! for every send destination: 
+    ! put the elements of the mat1 into the c_help,
     ! resorting them on the way: rows <-> columns
     ! then put them in the send buffers
-    !
+    
     ALLOCATE ( c_help(mat1%matsize2,ceiling(real(mat1%matsize1)/n_size)) )
     c_help = cmplx(0.0,0.0)
     DO n_p = 0,n_size-1
@@ -181,10 +185,9 @@ CONTAINS
    
     ENDDO
     DEALLOCATE ( c_help )
-    !CALL juDFT_error("stop",calledby ="mingeselle")
-    !
+    
     ! now we look where to put in the received elements
-    !
+    
     n_recv = 0
     DO ki = 1, mat%matsize2
        kjj = n_rank + 1 + (ki-1)*n_size      ! global column index
@@ -198,62 +201,41 @@ CONTAINS
     DO n_p = 0,n_size-1
        IF (n_recv(n_p)/=n_r(n_p))  CALL juDFT_error("n_recv.NE.n_s" ,calledby ="mingeselle")
     ENDDO
-    !
+    
     ! Mandaliet, mandaliet, min geselle kumme niet
-    !
+    
     ifront = ibefore(n_size,n_rank)
     inext  = iafter (n_size,n_rank)
     DO n_p = 0,n_size-1
-       !
+       
        ! determine pe's to send to and to receive from
-       !
+       
        np_s = MOD(inext +n_p,n_size)
        np_r = MOD(ifront-n_p,n_size)
        IF (np_r.LT.0) np_r = np_r + n_size
-       !
+       
        ! send section: local rows i with mod(i-1,np) = np_s will be sent to proc np_s
-       !
-
+       
        IF (np_s.NE.n_rank) THEN
           CALL MPI_ISEND(cs_el(1,np_s),n_send(np_s), CPP_MPI_COMPLEX,&
                np_s,n_rank,SUB_COMM,req_s,ierr)
-          !          write (*,*) n_rank,'sends',n_send(np_s),'to',np_s
-          !          write (*,'(i2,10f10.7)') n_rank,(real(cs_el(ki,np_s)),ki=1,10)
        ENDIF
-
-       !
+       
        ! receive section : local rows i  with mod(i-1,np) = np_r will be received from np_r
        ! ... skipped, if update matrix from local data:
-       !
+       
        IF (np_r.NE.n_rank) THEN
           CALL MPI_IRECV(cr_el,n_recv(np_r),CPP_MPI_COMPLEX, MPI_ANY_SOURCE,np_r,SUB_COMM,req_r,ierr)
           CALL MPI_WAIT(req_s,stt,ierr)
           CALL MPI_WAIT(req_r,stt,ierr)
-          !          write (*,*) n_rank,'recvs',ierr,n_p,np_r
-          !          write(*,*) n_rank,'receives',n_recv(np_r),'from',np_r
-          !          write (*,'(i2,10f10.7)') n_rank,(real(cr_el(ki)),ki=1,10)
-          !
-          ! now update the matrix aa()
-          !
-          !IF (l_real) THEN
-          !   aa_r(in_pos(:n_recv(np_r),np_r)) = aa_r(in_pos(:n_recv(np_r),np_r)) + cr_el(:n_recv(np_r))
-          !ELSE
-             !aa_c(in_pos(:n_recv(np_r),np_r)) = aa_c(in_pos(:n_recv(np_r),np_r)) + cr_el(:n_recv(np_r))
-             DO ki = 1,n_recv(np_r)
-                mat%data_c(in_pos(1,ki,np_r),in_pos(2,ki,np_r)) = cr_el(ki)
-             ENDDO
-          !ENDIF
+          DO ki = 1,n_recv(np_r)
+             mat%data_c(in_pos(1,ki,np_r),in_pos(2,ki,np_r)) = cr_el(ki)
+          ENDDO
        ELSE
-          !IF (l_real) THEN
-          !   aa_r(in_pos(:n_recv(np_r),np_r)) = aa_r(in_pos(:n_recv(np_r),np_r)) + cs_el(:n_recv(np_r),np_s)
-          !ELSE
-             !aa_c(in_pos(:n_recv(np_r),np_r)) = aa_c(in_pos(:n_recv(np_r),np_r)) + cs_el(:n_recv(np_r),np_s)
-             DO ki = 1,n_recv(np_r)
-                mat%data_c(in_pos(1,ki,np_r),in_pos(2,ki,np_r)) = cs_el(ki,np_s)
-             ENDDO
-          !ENDIF
+          DO ki = 1,n_recv(np_r)
+             mat%data_c(in_pos(1,ki,np_r),in_pos(2,ki,np_r)) = cs_el(ki,np_s)
+          ENDDO
        ENDIF
-       !         CALL MPI_BARRIER(SUB_COMM,ierr)
     ENDDO
 
     DEALLOCATE (cs_el,cr_el,in_pos)

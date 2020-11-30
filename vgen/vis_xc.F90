@@ -47,7 +47,7 @@ CONTAINS
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
       TYPE(t_kinED),INTENT(IN)      ::kinED
 
-      TYPE(t_gradients) :: grad, tmp_grad
+      TYPE(t_gradients) :: grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
@@ -78,6 +78,7 @@ CONTAINS
          SELECT TYPE(xcpot)
          TYPE IS (t_xcpot_libxc)
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
+            CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_x,grad)
          END SELECT
       ENDIF
 

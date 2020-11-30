@@ -35,6 +35,7 @@ CONTAINS
     USE m_od_mkgz
     USE m_fft2d
     use m_vac_tofrom_grid
+    USE m_libxc_postprocess_gga
     IMPLICIT NONE
 
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
@@ -65,7 +66,9 @@ CONTAINS
 
     SELECT TYPE(xcpot)
     TYPE IS (t_xcpot_libxc)
-       CALL judft_error("libxc GGA functionals not implemented in film setups")
+       IF (xcpot%needs_grad()) THEN
+          CALL judft_error("libxc GGA functionals not implemented in film setups")
+       END IF
     END SELECT
 
     ngrid=vacuum%nvac*(vacuum%nmzxy*ifftd2+vacuum%nmz)
@@ -73,7 +76,7 @@ CONTAINS
     if (xcpot%needs_grad()) CALL xcpot%alloc_gradients(ngrid,input%jspins,grad)
     allocate(rho(ngrid,input%jspins),v_xc(ngrid,input%jspins),v_x(ngrid,input%jspins))
 
-    call vac_to_grid(xcpot%needs_grad(),ifftd2,input,vacuum,noco,cell,den,stars,rho,grad)
+    call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
 
 
     !         calculate the exchange-correlation potential in  real space
@@ -83,7 +86,7 @@ CONTAINS
     IF (xcpot%needs_grad()) THEN
       SELECT TYPE(xcpot)
       TYPE IS (t_xcpot_libxc)
-        !CALL libxc_postprocess_gga_vac(xcpot,stars,cell,v_xc,grad)
+        CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,oneD,v_xc,grad)
       END SELECT
     ENDIF
 

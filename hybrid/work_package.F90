@@ -148,15 +148,16 @@ contains
       q_pack%ptr    = ptr
 
    ! arrays should be less than 5 gb
-      if(fi%sym%invs) then
-         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      else
-         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      endif
+      ! if(fi%sym%invs) then
+      !    target_psize = 5e1/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      ! else
+      !    target_psize = 5e1/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      ! endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
 
-      n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      !remove splitting into multiple 
+      n_parts = 1 ! ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
@@ -286,9 +287,14 @@ contains
       end_idx = 0
       do i = 1,n_parts
          psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-
+         if(psize(i) == 0) then
+            write (*,*) "n_total, n_parts", n_total, n_parts
+            call judft_warn("some band_packs have 0 bands")
+         endif
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo
+
+      write (*,*) "n_tot, n_par, psize", n_total, n_parts, psize
    end subroutine split_band_loop
 end module m_work_package

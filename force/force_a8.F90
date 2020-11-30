@@ -1,6 +1,6 @@
 MODULE m_forcea8
 CONTAINS
-   SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr,rho,force,results)
+   SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr,rho,force,fmpi,results)
       !--------------------------------------------------------------------------
       ! Pulay 1st term force contribution à la Rici et al. 
       ! 
@@ -20,6 +20,7 @@ CONTAINS
       TYPE(t_sym),     INTENT(IN)    :: sym
       TYPE(t_sphhar),  INTENT(IN)    :: sphhar
       TYPE(t_force),   INTENT(IN)    :: force
+      TYPE(t_mpi),     INTENT(IN)    :: fmpi
       TYPE(t_results), INTENT(INOUT) :: results
 
       INTEGER, INTENT(IN) :: jsp 
@@ -249,17 +250,20 @@ CONTAINS
 
       IF (.NOT.input%l_useapw) THEN
 
-        WRITE  (oUnit,*)
-
-        DO n=1, atoms%ntype
-           IF (atoms%l_geo(n)) THEN
-              WRITE  (oUnit,FMT=8030) n
-              WRITE  (oUnit,FMT=8040) (force%f_a12(i,n),i=1,3)
-           END IF
-8030       FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
-8040       FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
-        END DO
-
+         WRITE  (oUnit,*)
+        
+         IF (fmpi%isize.EQ.1) THEN
+            DO n=1, atoms%ntype
+               IF (atoms%l_geo(n)) THEN
+                  WRITE  (oUnit,FMT=8030) n
+                  WRITE  (oUnit,FMT=8040) (force%f_a12(i,n),i=1,3)
+               END IF
+8030           FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
+8040           FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
+            END DO
+         ELSE
+            WRITE (oUnit,*) "If this was a serial calculation, the A12 force component would be written out here. In parallel it holds no meaning."
+         END IF
       ELSE
 
          WRITE  (oUnit,*)
@@ -287,14 +291,19 @@ CONTAINS
 
       WRITE  (oUnit,*)
 
-      DO n=1,atoms%ntype
-         IF (atoms%l_geo(n)) THEN
-            WRITE  (oUnit,FMT=8050) n
-            WRITE  (oUnit,FMT=8060) (force%f_a21(i,n),i=1,3)
-         END IF
-8050     FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
-8060     FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
-      END DO
+      IF (fmpi%isize.EQ.1) THEN
+         DO n=1,atoms%ntype
+            IF (atoms%l_geo(n)) THEN
+               WRITE  (oUnit,FMT=8050) n
+               WRITE  (oUnit,FMT=8060) (force%f_a21(i,n),i=1,3)
+            END IF
+8050        FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
+8060        FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
+         END DO
+      ELSE
+         WRITE (oUnit,*) "If this was a serial calculation, the A21 force component would be written out here. In parallel it holds no meaning."
+      END IF
+
 
       CALL timestop("force_a8")
 

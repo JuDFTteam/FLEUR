@@ -90,6 +90,9 @@ MODULE m_checks
 
      !In film case check centering of film
      if ( input%film ) then
+        IF ((input%f_level.GT.0.).AND.input%l_f) THEN
+           call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
+        END IF
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=sum(atoms%neq(:n-1))

@@ -78,7 +78,14 @@ CONTAINS
       !
       !     coded                  Stefan Bl"ugel, IFF Nov. 1997
       !     tested                 RObert Abt    , IFF Dez. 1997
-      !*****************************************************************
+      !
+      !     Added calculation of force contributions from coretails
+      !     outside of their native muffin-tin spheres, i.e. in the
+      !     interstitial region and other muffin-tins; only for bulk.
+      !     Refer to Klüppelberg et al., PRB 91 035105 (2015)
+      !     Aaron Klueppelberg, Oct. 2015
+      ! 
+      !--------------------------------------------------------------------------
          
           USE m_constants
           USE m_qpwtonmt
@@ -132,7 +139,7 @@ CONTAINS
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:),ffonat_pT(:,:),pylm2(:,:,:)
-          REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:)
+          REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:),force_a4_mt_loc(:,:)
           REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
           REAL    rat(atoms%msh,atoms%ntype)
           COMPLEX gv(3),ycomp1(3,-1:1),ffonat(3,stars%ng3*sym%nop)
@@ -176,9 +183,11 @@ CONTAINS
           l_f2 = input%l_f.AND.(input%f_level.GE.1).AND.(.NOT.l_st) ! f_level >= 1: coretails completely contained in force calculation
                                                                     ! Klueppelberg (force level 1)
           IF (l_f2) THEN
-          ! Allocate the force arrays in the routine force_a4_add.f
+          ! Allocate the force arrays in the routine force_a4_add.f90
              CALL alloc_fa4_arrays(atoms,input)
+             ALLOCATE(force_a4_mt_loc,mold=force_a4_mt(:,:,jspin))
              force_a4_mt(:,:,jspin) =  zero
+             force_a4_mt_loc(:,:) =  zero
              force_a4_is(:,:,jspin) = czero
 
              ! Calculate the distribution of Tasks onto processors
@@ -192,22 +201,24 @@ CONTAINS
              ! the first star is \vec{0} and will not contribute to the core forces
              ! thereforce, stars are only considered starting from the second star.
              ! the number of stars is then nq3-1
+
+             ! TODO: Proper parallelization of Klueppelberg force levels.
              
-             ioffset_pT = 0
-             minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank
-             nkpt_pT = minpar
-             left = (stars%ng3-1) - minpar * fmpi%isize
-             do j=1,left
-                nkpt_pT(fmpi%isize-j) = nkpt_pT(fmpi%isize-j)+1
-             end do !j
+             !ioffset_pT = 0
+             !minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank
+             !nkpt_pT = minpar
+             !left = (stars%ng3-1) - minpar * fmpi%isize
+             !do j=1,left
+             !   nkpt_pT(fmpi%isize-j) = nkpt_pT(fmpi%isize-j)+1
+             !end do !j
 
-             do j=1,fmpi%isize-1
-                ioffset_pT(j) = sum(nkpt_pT(0:j-1))
-             end do !j
+             !do j=1,fmpi%isize-1
+             !   ioffset_pT(j) = sum(nkpt_pT(0:j-1))
+             !end do !j
 
-             ioffset_pT = ioffset_pT+1
-             ALLOCATE ( ffonat_pT(3,nkpt_pT(fmpi%irank)*sym%nop) )
-             ffonat_pT = 0
+             !ioffset_pT = ioffset_pT+1
+             ALLOCATE ( ffonat_pT(3,(stars%ng3-1)*sym%nop) )
+             ffonat_pT = czero
 
              ! lattice/spherical harmonics related variables
              s13 = sqrt(1.0/3.0)
@@ -227,7 +238,7 @@ CONTAINS
              ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
              ! for simple use, this is corrected here
              DO n = 1,atoms%ntype
-                vr2(:,0,n) = sfp_const*vr(:,0,n,jspin)/atoms%rmsh(:,n)
+                vr2(:atoms%jri(n),0,n) = sfp_const*vr(:atoms%jri(n),0,n,jspin)/atoms%rmsh(:atoms%jri(n),n)
                 vr2(:,1:,n) = vr(:,1:,n,jspin)
              END DO ! n
 
@@ -303,7 +314,9 @@ CONTAINS
 !             DEALLOCATE(ffonat_pT,n1,n2)
 !#else
              ffonat(:,(sym%nop+1):) = ffonat_pT
-             DEALLOCATE(ffonat_pT)
+             IF (fmpi%irank==0) THEN
+                DEALLOCATE(ffonat_pT)
+             END IF
 !#endif
 
           END IF ! l_f2
@@ -407,7 +420,7 @@ CONTAINS
                       END DO ! lh lattice harmonics
 
                       DO dir = 1,3
-                         CALL intgr3(integrand(:,dir),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),force_a4_mt(dir,n,jspin))
+                         CALL intgr3(integrand(:,dir),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),force_a4_mt_loc(dir,n))
                       END DO ! direction
                       DEALLOCATE ( integrand )
                    END IF !l_f2
@@ -426,7 +439,7 @@ CONTAINS
           !=====> calculate the fourier transform of the core-pseudocharge
           IF (l_f2) THEN
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
-                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
           ELSE
              CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
@@ -670,7 +683,7 @@ CONTAINS
 !***********************************************************************
 
       subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
-            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat)
+            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
       !
@@ -696,6 +709,7 @@ CONTAINS
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
       COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
+      REAL,OPTIONAL,INTENT(IN) :: force_a4_mt_loc(:,:)
       complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
@@ -767,8 +781,14 @@ CONTAINS
 #ifdef CPP_MPI
        CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,mpi_sum, &
                fmpi%mpi_comm,ierr)
+       IF (l_f2) THEN
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_mt,SIZE(force_a4_mt),MPI_DOUBLE,MPI_SUM,fmpi%mpi_comm,ierr)
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_is,SIZE(force_a4_is),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+       END IF
 #endif
-
+       IF (l_f2) THEN
+       force_a4_mt(:,:,jspin)=force_a4_mt(:,:,jspin)+force_a4_mt_loc(:,:)
+       END IF
       end subroutine ft_of_CorePseudocharge
 
    SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,&
