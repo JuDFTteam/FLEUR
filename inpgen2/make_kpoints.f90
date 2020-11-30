@@ -200,12 +200,14 @@ CONTAINS
 
     REAL:: nextp(3),lastp(3)
     REAL,ALLOCATABLE:: d(:)
-    INTEGER :: i,ii
+    INTEGER :: i,ii,iArray(1)
     INTEGER,ALLOCATABLE:: nk(:)
+    REAL,ALLOCATABLE :: segmentLengths(:)
     IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
     ALLOCATE(nk(kpts%numSpecialPoints-1),d(kpts%numSpecialPoints))
+    ALLOCATE(segmentLengths(kpts%numSpecialPoints-1))
     !Distances
     lastp=0
     DO i=1,kpts%numSpecialPoints
@@ -219,6 +221,19 @@ CONTAINS
     DO i=2,kpts%numSpecialPoints
        nk(i-1)=NINT((kpts%nkpt-kpts%numSpecialPoints)*(d(i)/SUM(d)))
     ENDDO
+
+    DO WHILE (SUM(nk(:))+kpts%numSpecialPoints.NE.kpts%nkpt)
+       DO i = 2, kpts%numSpecialPoints
+          segmentLengths(i-1) = d(i) / (nk(i-1) + 1)
+       END DO
+       IF (SUM(nk(:))+kpts%numSpecialPoints.GT.kpts%nkpt) THEN
+          iArray = MAXLOC(segmentLengths(:))
+          nk(iArray(1)) = nk(iArray(1)) - 1
+       ELSE
+          iArray = MINLOC(segmentLengths(:))
+          nk(iArray(1)) = nk(iArray(1)) + 1
+       END IF
+    END DO
 
     ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
     ALLOCATE(kpts%wtkpt(kpts%numSpecialPoints+SUM(nk)))
