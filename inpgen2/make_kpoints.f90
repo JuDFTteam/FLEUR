@@ -200,12 +200,14 @@ CONTAINS
 
     REAL:: nextp(3),lastp(3)
     REAL,ALLOCATABLE:: d(:)
-    INTEGER :: i,ii
+    INTEGER :: i,ii,iArray(1)
     INTEGER,ALLOCATABLE:: nk(:)
+    REAL,ALLOCATABLE :: segmentLengths(:)
     IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
     ALLOCATE(nk(kpts%numSpecialPoints-1),d(kpts%numSpecialPoints))
+    ALLOCATE(segmentLengths(kpts%numSpecialPoints-1))
     !Distances
     lastp=0
     DO i=1,kpts%numSpecialPoints
@@ -219,6 +221,19 @@ CONTAINS
     DO i=2,kpts%numSpecialPoints
        nk(i-1)=NINT((kpts%nkpt-kpts%numSpecialPoints)*(d(i)/SUM(d)))
     ENDDO
+
+    DO WHILE (SUM(nk(:))+kpts%numSpecialPoints.NE.kpts%nkpt)
+       DO i = 2, kpts%numSpecialPoints
+          segmentLengths(i-1) = d(i) / (nk(i-1) + 1)
+       END DO
+       IF (SUM(nk(:))+kpts%numSpecialPoints.GT.kpts%nkpt) THEN
+          iArray = MINLOC(segmentLengths(:))
+          nk(iArray(1)) = nk(iArray(1)) - 1
+       ELSE
+          iArray = MAXLOC(segmentLengths(:))
+          nk(iArray(1)) = nk(iArray(1)) + 1
+       END IF
+    END DO
 
     ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
     ALLOCATE(kpts%wtkpt(kpts%numSpecialPoints+SUM(nk)))
@@ -281,9 +296,15 @@ CONTAINS
   END SUBROUTINE init_by_density
 
   SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
-    USE m_divi
+    USE m_constants
     USE m_types_cell
     USE m_types_sym
+    USE m_types_brZone
+    USE m_divi
+    USE m_kvecon
+
+    IMPLICIT NONE
+
     CLASS(t_kpts),INTENT(out):: kpts
     INTEGER,INTENT(IN)       :: nkpt
     TYPE(t_cell),INTENT(IN)  :: cell
@@ -291,10 +312,42 @@ CONTAINS
     LOGICAL,INTENT(IN)       :: film,l_soc_or_ss,l_gamma
     INTEGER,INTENT(IN)       :: bz_integration
 
+    TYPE(t_brZone)       :: bz
+    INTEGER :: i, j
     INTEGER :: grid(3)
+
+    IF(bz_integration.EQ.BZINT_METHOD_TRIA.AND..NOT.film) THEN
+       kpts%nkpt3(:) = 0
+       kpts%nkpt = nkpt
+       ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
+
+       WRITE (oUnit,'('' k-points generated with tetrahedron '',''method'')')
+       WRITE (oUnit,'(''# k-points generated with tetrahedron '',''method'')')
+       WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
+       WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
+
+       CALL bz%initBZone(cell, sym, l_soc_or_ss, film)
+
+       CALL kvecon(kpts%nkpt,mface_const,bz%ncorn,bz%nsym,bz%nface,bz%rltv,bz%fdist,bz%fnorm,bz%cpoint,&
+                   kpts%bk)
+
+       DO i = 1, kpts%nkpt
+          kpts%wtkpt(i) = 1.0 / kpts%nkpt
+          WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,''vkxyz, wghtkp'')') (kpts%bk(j,i),j=1,3),kpts%wtkpt(i),i
+       END DO
+
+       DO j=1,kpts%nkpt
+          kpts%bk(:,j)=MATMUL(kpts%bk(:,j),cell%amat)/tpi_const
+       END DO
+
+       kpts%kptsKind = KPTS_KIND_TRIA_BULK
+
+       RETURN
+    END IF
 
     CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
     CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+
   END SUBROUTINE init_by_number
 
   SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
@@ -311,6 +364,7 @@ CONTAINS
     USE m_kvecon
     USE m_types_cell
     USE m_types_sym
+    USE m_types_brZone
     USE m_kptgen_hybrid
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
@@ -321,13 +375,7 @@ CONTAINS
     LOGICAL,INTENT(IN)             :: film,l_soc_or_ss,l_gamma
     INTEGER,INTENT(IN)             :: bz_integration
 
-
-    INTEGER, PARAMETER :: nop48  = 48
-    INTEGER, PARAMETER :: mface  = 51
     INTEGER, PARAMETER :: mdir   = 10
-    INTEGER, PARAMETER :: nbsz   =  3
-    INTEGER, PARAMETER :: ibfile =  6
-    INTEGER, PARAMETER :: nv48   = (2*nbsz+1)**3+48
 
     INTEGER ndiv3              ! max. number of tetrahedrons (< 6*(kpts%nkpt+1)
 
@@ -336,22 +384,9 @@ CONTAINS
     INTEGER, ALLOCATABLE :: ntetra(:,:) ! corners of the tetrahedrons
     REAL, ALLOCATABLE    :: voltet(:)   ! voulmes of the tetrahedrons
 
-    REAL    divis(4)           ! Used to find more accurate representation of k-points
-    ! vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
-    REAL    bltv(3,3)          ! cartesian Bravais lattice basis (a.u.)
-    REAL    rltv(3,3)          ! reciprocal lattice basis (2\pi/a.u.)
-    REAL    ccr(3,3,nop48)     ! rotation matrices in cartesian repr.
-    REAL    rlsymr(3,3,nop48)  ! rotation matrices in reciprocal lattice basis representation
-    REAL    talfa(3,nop48)     ! translation vector associated with (non-symmorphic)
-    ! symmetry elements in Bravais lattice representation
-    INTEGER ncorn,nedge,nface  ! number of corners, faces and edges of the IBZ
-    REAL    fnorm(3,mface)     ! normal vector of the planes bordering the IBZ
-    REAL    fdist(mface)       ! distance vector of the planes bordering t IBZ
-    REAL    cpoint(3,mface)    ! cartesian coordinates of corner points of IBZ
-    REAL    xvec(3)            ! arbitrary vector lying in the IBZ
+    TYPE(t_brZone)       :: bz
 
-    INTEGER idsyst   ! crystal system identification in MDDFT programs
-    INTEGER idtype   ! lattice type identification in MDDFT programs
+    REAL    divis(4)           ! Used to find more accurate representation of k-points
 
     INTEGER idimens  ! number of dimensions for k-point set (2 or 3)
     INTEGER nreg     ! 1 kpoints in full BZ; 0 kpoints in irrBZ
@@ -362,7 +397,7 @@ CONTAINS
     REAL    kzero(3) ! shifting vector to bring one k-point to or
     ! away from (0,0,0) (for even/odd nkpt3)
 
-    INTEGER i,j,k,l,mkpt,addSym,nsym
+    INTEGER i,j,k,l,mkpt
     LOGICAL random,l_tria
     REAL as
     REAL binv(3,3)
@@ -402,46 +437,9 @@ CONTAINS
        !------------------------------------------------------------
 
 
-       CALL bravais(cell%amat,idsyst,idtype)
+       CALL bz%initBZone(cell, sym, l_soc_or_ss, film)
 
-       nsym = MERGE(sym%nop2,sym%nop,film)
        random  = bz_integration==BZINT_METHOD_TRIA.AND..NOT.film
-
-       ! Lattice information
-
-       bltv=TRANSPOSE(cell%amat)
-       binv=TRANSPOSE(cell%bmat)/tpi_const
-
-       talfa(:,:nsym)=MATMUL(bltv,sym%tau(:,:nsym))
-
-       DO i = 1, nsym
-          rlsymr(:,:,i)=REAL(sym%mrot(:,:,i))
-          ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(rlsymr(:,:,i))),bltv(:,:)))
-       END DO
-
-       IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
-          IF ((film.AND.(.NOT.sym%invs2)).OR.((.NOT.film).AND.(.NOT.sym%invs))) THEN
-             addSym = 0
-             ! Note: We have to add the negative of each symmetry operation
-             !       to exploit time reversal symmetry. However, if the new
-             !       symmetry operation is the identity matrix it is excluded.
-             !       This is the case iff it is (-Id) + a translation vector.
-             DO i = 1, nsym
-                ! This test assumes that ccr(:,:,1) is the identity matrix.
-                IF(.NOT.ALL(ABS(ccr(:,:,1)+ccr(:,:,i)).LT.10e-10) ) THEN
-                   ccr(:,:,nsym+addSym+1 ) = -ccr(:,:,i)
-                   rlsymr(:,:,nsym+addSym+1 ) = -rlsymr(:,:,i)
-                   addSym = addSym + 1
-                END IF
-             END DO
-             nsym = nsym + addSym
-          END IF
-       END IF
-
-       ! brzone and brzone2 find the corner-points, the edges, and the
-       ! faces of the irreducible wedge of the brillouin zone (IBZ).
-       rltv=TRANSPOSE(cell%bmat)
-       CALL brzone2(rltv,nsym,ccr,mface,nbsz,nv48,cpoint,xvec,ncorn,nedge,nface,fnorm,fdist)
 
        idimens = MERGE(2,3,film)
        mkpt=PRODUCT(grid(:idimens))
@@ -459,7 +457,7 @@ CONTAINS
           WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
           WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
 
-          CALL kvecon(kpts%nkpt,mface,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,&
+          CALL kvecon(kpts%nkpt,mface_const,bz%ncorn,bz%nsym,bz%nface,bz%rltv,bz%fdist,bz%fnorm,bz%cpoint,&
                       vkxyz)
 
           DO i = 1, kpts%nkpt
@@ -472,10 +470,9 @@ CONTAINS
 !               ncorn,nface,fdist,fnorm,cpoint,voltet,ntetra,kpts%ntet,&
 !               vkxyz,wghtkp)
        ELSE
-          ! Now calculate Monkhorst-Pack k-points:
-          CALL kptmop(idsyst,idtype,grid,&
-               rltv,bltv,0,idimens,xvec,fnorm,fdist,ncorn,nface,&
-               nedge,cpoint,nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
+          CALL kptmop(bz%idsyst,bz%idtype,grid,&
+               bz%rltv,bz%bltv,0,idimens,bz%xvec,bz%fnorm,bz%fdist,bz%ncorn,bz%nface,&
+               bz%nedge,bz%cpoint,bz%nsym,bz%ccr,bz%rlsymr,bz%talfa,mkpt,mface_const,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
        END IF
 
@@ -492,7 +489,6 @@ CONTAINS
     kpts%nkpt3(:) = grid(:)
 
   END SUBROUTINE init_by_grid
-
 
   SUBROUTINE add_special_points_default(kpts,film,cell,l_check)
     USE m_judft
