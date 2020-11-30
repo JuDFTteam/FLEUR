@@ -141,6 +141,8 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/inpgen")
 set_target_properties(inpgen2 PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen)
+set_target_properties(inpgen2 PROPERTIES RUNTIME_OUTPUT_NAME inpgen)
+set_target_properties(inpgen2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/..")
 target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS} "CPP_INPGEN")
 target_link_libraries(inpgen2 fleurinput juDFT)
 target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
