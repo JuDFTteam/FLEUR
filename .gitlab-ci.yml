@@ -15,7 +15,7 @@ build-gfortran-hdf5:
   script:
     - cd $CI_PROJECT_DIR
     - ./configure.sh GITLAB
-#    - FC=/usr/lib64/openmpi/bin/mpif90 ./configure.sh 
+#    - FC=/usr/lib64/openmpi/bin/mpif90 ./configure.sh
     - cd build
     - make -j 2
 #  only:
@@ -130,7 +130,7 @@ build-pgi:
        - build.pgi
      expire_in: 1h
   script:
-    - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make
+    - cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
   allow_failure: true
   only:
     - schedules
@@ -175,11 +175,9 @@ build-intel-static:
     when: on_success
     paths:
     - build.intel-static/fleur_MPI
-    - build.intel-static/inpgen2/inpgen2
+    - build.intel-static/inpgen
   allow_failure: true
   only:
-    - schedules
-    - triggers
     - web
 
 
@@ -188,14 +186,14 @@ build-intel:
   stage: build
   artifacts:
      paths:
-       - build.intel.debug
+       - build.intel
      expire_in: 1h
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - cd /builds/fleur/fleur
-    - CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -d -l intel INTEL_MPI
-    - cd build.intel.debug
+    - CC=gcc FC=mpiifort CXX=mpicxx ./configure.sh -l intel
+    - cd build.intel
     - make -j 2
   allow_failure: true
   only:
@@ -213,7 +211,7 @@ test-intel:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
-    - cd /builds/fleur/fleur/build.intel.debug;ctest
+    - cd /builds/fleur/fleur/build.intel;ctest
   allow_failure: true
   artifacts:
     when: on_failure
