@@ -66,7 +66,7 @@ endif()
 #The inpgen tests
 #if (INPGEN)
 foreach(test ${InpgenTests})
-   add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2")
+   add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen")
 endforeach(test)
 #endif()
 
