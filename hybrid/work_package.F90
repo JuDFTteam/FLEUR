@@ -294,7 +294,5 @@ contains
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo
-
-      write (*,*) "n_tot, n_par, psize", n_total, n_parts, psize
    end subroutine split_band_loop
 end module m_work_package
