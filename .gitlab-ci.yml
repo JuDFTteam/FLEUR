@@ -130,7 +130,7 @@ build-pgi:
        - build.pgi
      expire_in: 1h
   script:
-    - cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
+    - module load nvhpc;cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
   allow_failure: true
   only:
     - schedules
@@ -145,7 +145,7 @@ test-pgi:
     - build-pgi
   script:
     - export OMP_NUM_THREADS=2
-    - cd /builds/fleur/fleur/build.pgi;ctest
+    - module load nvhpc;cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
   artifacts:
     when: on_failure
