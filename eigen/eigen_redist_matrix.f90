@@ -17,6 +17,7 @@ CONTAINS
   SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ)
     USE m_types
     USE m_types_mpimat
+    USE m_mingeselle
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_lapw),INTENT(IN)   :: lapw
@@ -50,8 +51,11 @@ CONTAINS
     CALL mat(2,2)%free()
 
     !Now collect off-diagonal parts
-    !CALL mingeselle(mat(2,1),mat(1,2))
-    CALL mat(1,2)%add_transpose(mat(2,1))
+    IF (fmpi%n_size == 1 ) THEN
+       CALL mat(1,2)%add_transpose(mat(2,1))
+    ELSE
+       CALL mingeselle(mat(2,1),mat(1,2))
+    ENDIF
     CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
     CALL mat(1,2)%free()
     CALL mat(2,1)%free()
