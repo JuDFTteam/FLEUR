@@ -14,17 +14,13 @@ CONTAINS
   !! In the non-collinear case, the 2x2 array of matrices is combined into the final matrix. Again a redistribution will happen in the parallel case
  
   
-  SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,l_offd,mat_final_templ)
+  SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ)
     USE m_types
     USE m_types_mpimat
-#ifdef CPP_MPI
-    USE m_mingeselle
-#endif
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    LOGICAL                   :: l_offd
     CLASS(t_mat),INTENT(INOUT):: mat(:,:)
     CLASS(t_mat),INTENT(INOUT):: mat_final
     CLASS(t_mat),INTENT(IN),OPTIONAL :: mat_final_templ
@@ -54,12 +50,9 @@ CONTAINS
     CALL mat(2,2)%free()
 
     !Now collect off-diagonal parts
+    !CALL mingeselle(mat(2,1),mat(1,2))
     CALL mat(1,2)%add_transpose(mat(2,1))
-!#ifdef CPP_MPI
-!    CALL mingeselle(mat(2,1),mat(1,2))
-!#else
     CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
-!#endif
     CALL mat(1,2)%free()
     CALL mat(2,1)%free()
     
