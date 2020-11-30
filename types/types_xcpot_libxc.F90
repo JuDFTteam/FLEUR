@@ -80,7 +80,7 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(INOUT)    :: xcpot
       INTEGER, INTENT(IN)                 :: jspins, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
-      INTEGER                             :: errors(4)
+      !INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
       errors = -1
@@ -121,10 +121,10 @@ CONTAINS
                                                                   XC_POLARIZED, err=errors(4))
       END IF
 
-      IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
-      IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
-      IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
-      IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
+      !IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
+      !IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
+      !IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
+      !IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
 
       !check if any potental is a MetaGGA
       IF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN
