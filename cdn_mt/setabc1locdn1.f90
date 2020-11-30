@@ -94,11 +94,11 @@ CONTAINS
              enough(natom) = .false.
              nkvec(lo,natom) = 0
              l = atoms%llo(lo,ntyp)
-             IF (atoms%invsat(natom).EQ.0) THEN
+             IF (sym%invsat(natom).EQ.0) THEN
                 nbasf0(lo,natom) = nbasf
                 nbasf = nbasf + 2*l + 1
              END IF
-             IF (atoms%invsat(natom).EQ.1) THEN
+             IF (sym%invsat(natom).EQ.1) THEN
                 nbasf0(lo,natom) = nbasf
                 nbasf0(lo,sym%invsatnr(natom)) = nbasf
                 nbasf = nbasf + 2* (2*l+1)
@@ -126,9 +126,9 @@ CONTAINS
     DO ntyp = 1, atoms%ntype
        DO nn = 1, atoms%neq(ntyp)
           natom = natom + 1
-          IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
+          IF ((sym%invsat(natom).EQ.0) .OR. (sym%invsat(natom).EQ.1)) THEN
              DO lo = 1,atoms%nlo(ntyp)
-                m = ( atoms%invsat(natom) +1 ) * ( 2 * atoms%llo(lo,ntyp) + 1 )
+                m = ( sym%invsat(natom) +1 ) * ( 2 * atoms%llo(lo,ntyp) + 1 )
                 DO l = 1, m
                    lm = lm + 1
                    kvec(l,lo,natom) =  lapw%kvec(l,lo,natom)

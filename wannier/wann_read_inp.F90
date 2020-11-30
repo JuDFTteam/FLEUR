@@ -5,35 +5,36 @@
 !--------------------------------------------------------------------------------
 
 module m_wann_read_inp
-
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 contains
-subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
+subroutine wann_read_inp(input,noco,fmpi,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
 !********************************************
    use m_judft
    use m_types
+   USE m_constants
 
    implicit none
 
-   TYPE(t_dimension), INTENT(INOUT) :: DIMENSION
+
    TYPE(t_input),intent(inout) :: input
    TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
-   TYPE(t_mpi),intent(in)          :: mpi
+   TYPE(t_mpi),intent(in)          :: fmpi
 
    logical           :: l_file,l_orbcompinp,l_p0
    integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
 #ifdef CPP_MPI
-          integer :: ierr(3)
-          INCLUDE 'mpif.h'
-          
+          integer :: ierr
 #endif
 
-   l_p0=(mpi%irank==0)
+   l_p0=(fmpi%irank==0)
 !-----some defaults
    wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
@@ -42,7 +43,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
    wann%l_orbcomp=.false.
    wann%l_orbcomprs=.false.
    wann%l_perturbrs=.false.
-   wann%l_denmat=.false.                                             
+   wann%l_denmat=.false.
    wann%l_perturb=.false.
    wann%l_nedrho=.false.
    wann%l_anglmomrs=.false.
@@ -137,11 +138,12 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
    wann%l_hsomtx_to_hsoc_unf=.false.
    wann%l_hsomtx_to_hsoc=.false.
    wann%l_hsomtx_unf_to_hsoc=.false.
+   input%l_kpts_fullbz=.true.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
    inquire(file='wann_inp',exist=l_file)
-   IF ((.not.l_file).AND.(.NOT.input%l_inpXML)) THEN
+   IF ((.not.l_file)) THEN
       CALL juDFT_error ("wann_inp not found", calledby="wann_read_inp")
    END IF
    IF (l_file) THEN
@@ -150,18 +152,18 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
       wann%l_byindex=.false.
       open(916,file='wann_inp',form='formatted')
       i=0
-      do 
+      do
          i=i+1
          read(916,'(a)',iostat=ios)task
          if(ios.ne.0)exit
-         if(l_p0) write(6,*)"line ",i,":",task
+         if(l_p0) write(oUnit,*)"line ",i,":",task
          if(task(1:1).eq.'!')cycle
          if(index(task,'=F').ne.0.or.index(task,'=f').ne.0)cycle
          read(task,*,iostat=ios)task
          if(index(task,'=').ne.0)then
             task=task(1:(index(task,'=')-1))
          endif
-         if(l_p0) write(6,*)"==>key: ",task
+         if(l_p0) write(oUnit,*)"==>key: ",task
          if(trim(task).eq.'endjobs')then
             exit
          elseif(trim(task).eq.'nabla')then
@@ -171,7 +173,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%mhp(1),wann%mhp(2),wann%mhp(3)
             if (ios /= 0) CALL juDFT_error ("error reading mhp", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
+            if(l_p0)write(oUnit,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
          elseif(trim(task).eq.'nablars')then
             wann%l_nablars=.true.
          elseif(trim(task).eq.'nablapaulirs')then
@@ -187,7 +189,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
          elseif(trim(task).eq.'eig66')then
-            input%eig66(1)=.true.       
+           call judft_error("eig66 not supported in wannier")
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -255,7 +257,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
          elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
-            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
             wann%l_hsomtx_unf_to_hsoc_unf=.true.
          elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
@@ -264,19 +266,19 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
-            
+
          elseif(trim(task).eq.'perpmagatlres')then
             wann%l_perpmagatlres=.true.
 	    backspace(916)
             read(916,*,iostat=ios)task,wann%perpmagl
             if (ios /= 0) &
                CALL juDFT_error ("error reading perpmagl", &
-                               calledby="wann_read_inp")   
-            
+                               calledby="wann_read_inp")
+
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
-            wann%l_socmatvec=.true.  
+            wann%l_socmatvec=.true.
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -302,17 +304,18 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%gfthick,wann%gfcut
             if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"gfcut=",wann%gfthick,wann%gfcut
+            if(l_p0)write(oUnit,*)"gfcut=",wann%gfthick,wann%gfcut
          elseif(trim(task).eq.'lapw')then
             wann%l_lapw=.true.
             backspace(916)
             read(916,*,iostat=ios)task,wann%unigrid(:)
             if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"unigrid=",wann%unigrid(:)
+            if(l_p0)write(oUnit,*)"unigrid=",wann%unigrid(:)
          elseif(trim(task).eq.'plot_lapw')then
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
             wann%l_bzsym=.true.
+            input%l_kpts_fullbz=.false.
          elseif(trim(task).eq.'mmn0')then
             wann%l_mmn0=.true.
          elseif(trim(task).eq.'mmn0at')then
@@ -396,15 +399,15 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%atomlist_num,wann%atomlist
             if (ios /= 0) CALL judft_error ("error reading atomlist", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"atomlist_num=",wann%atomlist_num
-            if(l_p0)write(6,*)"atomlist=",wann%atomlist
+            if(l_p0)write(oUnit,*)"atomlist_num=",wann%atomlist_num
+            if(l_p0)write(oUnit,*)"atomlist=",wann%atomlist
          elseif(trim(task).eq.'byindex')then
             wann%l_byindex=.true.
             backspace(916)
             read(916,*,iostat=ios)task,wann%band_min(1),wann%band_max(1)
             if (ios /= 0) CALL juDFT_error("error reading byindex,band_min,band_max", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"band_min=",wann%band_min(1)
-            if(l_p0)write(6,*)"band_max=",wann%band_max(1)
+            if(l_p0)write(oUnit,*)"band_min=",wann%band_min(1)
+            if(l_p0)write(oUnit,*)"band_max=",wann%band_max(1)
             if(wann%band_min(2).eq.-1)then
                wann%band_min(2)=wann%band_min(1)
                wann%band_max(2)=wann%band_max(1)
@@ -414,8 +417,8 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%band_min(2),wann%band_max(2)
             if (ios /= 0) CALL juDFT_error ("error reading byindex2,band_min2,band_max", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"band_min2=",wann%band_min(2)
-            if(l_p0)write(6,*)"band_max2=",wann%band_max(2)
+            if(l_p0)write(oUnit,*)"band_min2=",wann%band_min(2)
+            if(l_p0)write(oUnit,*)"band_max2=",wann%band_max(2)
             if(wann%band_min(1).eq.-1)then
                wann%band_min(1)=wann%band_min(2)
                wann%band_max(1)=wann%band_max(2)
@@ -425,42 +428,42 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             backspace(916)
             read(916,*,iostat=ios)task,wann%ikptstart
             if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
-            if(l_p0)write(6,*)"ikptstart=",wann%ikptstart
+            if(l_p0)write(oUnit,*)"ikptstart=",wann%ikptstart
          else
-            write(6,*)"unrecognized key: ",task
+            write(oUnit,*)"unrecognized key: ",task
             CALL juDFT_error ("unrecognized key in wann_inp", calledby="wann_read_inp")
          endif
       enddo
 
       if (ios /= 0) CALL juDFT_error ("error reading wann_inp", calledby="wann_read_inp")
-      if(l_p0.and.ios.lt.0)write(6,*)"end of wann_inp reached"
+      if(l_p0.and.ios.lt.0)write(oUnit,*)"end of wann_inp reached"
       close(916)
 
-   ELSE IF (input%l_inpXML) THEN
+   ELSE
 
 #ifdef CPP_MPI
       jobListlen=SIZE(wann%jobList)
-      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-      if(mpi%irank>0)then
+      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      if(fmpi%irank>0)then
         allocate(wann%jobList(jobListlen))
       endif
-#endif      
+#endif
       DO i = 1, SIZE(wann%jobList)
 #ifdef CPP_MPI
-         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-#endif     
+      CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,fmpi%mpi_comm,ierr)
+#endif
          task = TRIM(ADJUSTL(wann%jobList(i)))
-         if(l_p0) write(6,*)"task ",i,":",task
+         if(l_p0) write(oUnit,*)"task ",i,":",task
          if(task(1:1).eq.'!')cycle
          if(index(task,'=F').ne.0.or.index(task,'=f').ne.0)cycle
          read(task,*,iostat=ios)task
          if(index(task,'=').ne.0)then
             task=task(1:(index(task,'=')-1))
          endif
-         if(l_p0) write(6,*)"==>key: ",task
+         if(l_p0) write(oUnit,*)"==>key: ",task
          if(trim(task).eq.'endjobs') THEN
             EXIT
          elseif(trim(task).eq.'nabla')then
@@ -470,7 +473,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%mhp(1),wann%mhp(2),wann%mhp(3)
 !            if (ios /= 0) CALL juDFT_error ("error reading mhp", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
+!            if(l_p0)write(oUnit,*)"mhp=",wann%mhp(1),wann%mhp(2),wann%mhp(3)
          elseif(trim(task).eq.'nablars')then
             wann%l_nablars=.true.
          elseif(trim(task).eq.'nablapaulirs')then
@@ -486,7 +489,8 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
          elseif(trim(task).eq.'eig66')then
-            input%eig66(1)=.true.        
+           call judft_error("eig66 not supported in wannier")
+            !input%eig66(1)=.true.
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -554,7 +558,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
          elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
-            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
             wann%l_hsomtx_unf_to_hsoc_unf=.true.
          elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
@@ -563,15 +567,15 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
-            
+
          elseif(trim(task).eq.'perpmagatlres')then
             wann%l_perpmagatlres=.true.
 	    backspace(916)
             read(916,*,iostat=ios)task,wann%perpmagl
             if (ios /= 0) &
                CALL juDFT_error ("error reading perpmagl", &
-                               calledby="wann_read_inp")   
-            
+                               calledby="wann_read_inp")
+
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
@@ -601,17 +605,18 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%gfthick,wann%gfcut
 !            if (ios /= 0) CALL juDFT_error ("error reading gfcut", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"gfcut=",wann%gfthick,wann%gfcut
+!            if(l_p0)write(oUnit,*)"gfcut=",wann%gfthick,wann%gfcut
 !         elseif(trim(task).eq.'lapw')then
 !            wann%l_lapw=.true.
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%unigrid(:)
 !            if (ios /= 0) CALL juDFT_error ("error reading unigrid", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"unigrid=",wann%unigrid(:)
+!            if(l_p0)write(oUnit,*)"unigrid=",wann%unigrid(:)
          elseif(trim(task).eq.'plot_lapw')then
             wann%l_plot_lapw=.true.
          elseif(trim(task).eq.'bzsym')then
             wann%l_bzsym=.true.
+            input%l_kpts_fullbz=.false.
          elseif(trim(task).eq.'mmn0')then
             wann%l_mmn0=.true.
          elseif(trim(task).eq.'mmn0at')then
@@ -695,25 +700,25 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%atomlist_num,wann%atomlist
 !            if (ios /= 0) CALL judft_error ("error reading atomlist", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"atomlist_num=",wann%atomlist_num
-!            if(l_p0)write(6,*)"atomlist=",wann%atomlist
+!            if(l_p0)write(oUnit,*)"atomlist_num=",wann%atomlist_num
+!            if(l_p0)write(oUnit,*)"atomlist=",wann%atomlist
 !         elseif(trim(task).eq.'ikptstart')then
 !            wann%l_ikptstart=.true.
 !            backspace(916)
 !            read(916,*,iostat=ios)task,wann%ikptstart
 !            if (ios /= 0) CALL juDFT_error ("error reading ikptstart", calledby="wann_read_inp")
-!            if(l_p0)write(6,*)"ikptstart=",wann%ikptstart
+!            if(l_p0)write(oUnit,*)"ikptstart=",wann%ikptstart
          else
-            write(6,*)"unrecognized key: ",task
+            write(oUnit,*)"unrecognized key: ",task
             CALL juDFT_error ("unrecognized key in wannier jobList", calledby="wann_read_inp")
          endif
       enddo
 
       IF (wann%l_byindex) THEN
-         if(l_p0)write(6,*)"band_min1=",wann%band_min(1)
-         if(l_p0)write(6,*)"band_max1=",wann%band_max(1)
-         if(l_p0)write(6,*)"band_min2=",wann%band_min(2)
-         if(l_p0)write(6,*)"band_max2=",wann%band_max(2)
+         if(l_p0)write(oUnit,*)"band_min1=",wann%band_min(1)
+         if(l_p0)write(oUnit,*)"band_max1=",wann%band_max(1)
+         if(l_p0)write(oUnit,*)"band_min2=",wann%band_min(2)
+         if(l_p0)write(oUnit,*)"band_max2=",wann%band_max(2)
       END IF
 
    END IF ! l_file
@@ -749,30 +754,30 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
      do n=1,wann%atomlist_num
        wann%atomlist(n)=n
      enddo
-   endif      
+   endif
 
 
 !---- check if we need to increase the neigd parameter
    if(wann%l_byindex)then
    if(noco%l_soc.OR.noco%l_noco)then
       neigd_min=wann%band_max(1)
-   else   
+   else
       neigd_min=max(wann%band_max(1),wann%band_max(2))
    endif !noco,soc?
    if(l_p0)then
-      write(*,*)"In wann_read_inp: input-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: input-neigd=",input%neig
       write(*,*)"In wann_read_inp: we require at least neigd_min=",neigd_min
-      if(neigd_min>DIMENSION%neigd)then
+      if(neigd_min>input%neig)then
          write(*,*)"we increase neigd..."
       else
          write(*,*)"we leave neigd unchanged"
-      endif      
+      endif
    endif !l_p0?
-   if(neigd_min>DIMENSION%neigd)then
-         DIMENSION%neigd=neigd_min
-   endif    
+   if(neigd_min>input%neig)then
+         input%neig=neigd_min
+   endif
    if(l_p0)then
-      write(*,*)"In wann_read_inp: output-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: output-neigd=",input%neig
    endif
 
    endif !l_byindex?
@@ -788,7 +793,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
       if(input%jspins.eq.1 .and. .not. noco%l_soc)then
          call juDFT_error("no updown-mmn0 when soc=F and jspins=1",calledby="wann_read_inp.F90")
       endif
-         
+
    endif
    if(wann%l_socmat.and.input%jspins==1)then
       if(noco%l_soc)then

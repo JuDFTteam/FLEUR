@@ -26,8 +26,8 @@ MODULE m_add_vnonlocal
 !         |  calculate valence-core contribution                              c
 !                                                                             c
 !     variables:                                                              c
-!         kpts%nkptf   :=   number of kpoints                                      c
-!         kpts%nkpt   :=   number of irreducible kpoints                          c
+!         fi%kpts%nkptf   :=   number of kpoints                              c
+!         fi%kpts%nkpt   :=   number of irreducible kpoints                   c
 !         nbands  :=   number of bands for which the exchange matrix (mat_ex) c
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
@@ -41,98 +41,103 @@ MODULE m_add_vnonlocal
 !                                               M.Betzinger (09/07)           c
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
+   SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp, results,&
+                            xcpot, fmpi, nococonv, hmat)
 
-   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, dimension, kpts, jsp, results, xcpot, noco, hmat)
-
+      USE m_types
+      USE m_constants
       USE m_symm_hf, ONLY: symm_hf
-      USE m_util, ONLY: intgrf, intgrf_init
+      USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_exchange_valence_hf
       USE m_exchange_core
       USE m_symmetrizeh
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
-      USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
+      use m_judft
 
       IMPLICIT NONE
 
+      type(t_fleurinput), intent(in) :: fi
       TYPE(t_results), INTENT(INOUT) :: results
-      CLASS(t_xcpot), INTENT(IN)    :: xcpot
-      TYPE(t_dimension), INTENT(IN)    :: dimension
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_lapw), INTENT(IN)    :: lapw
-      TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_noco), INTENT(IN)    :: noco
-      TYPE(t_mat), INTENT(INOUT) :: hmat
+      CLASS(t_xcpot), INTENT(IN)     :: xcpot
+      TYPE(t_hybdat), INTENT(INOUT)  :: hybdat
+      TYPE(t_lapw), INTENT(IN)       :: lapw
+      type(t_mpi), intent(in)        :: fmpi
+      type(t_nococonv),intent(in)    :: nococonv
+      TYPE(t_mat), INTENT(INOUT)     :: hmat
 
       INTEGER, INTENT(IN)    :: jsp
       INTEGER, INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: n, nn, iband, nbasfcn
+      INTEGER                 :: iband, nbasfcn, i, i0, j, ierr
       REAL                    :: a_ex
-      TYPE(t_mat)             :: olap, tmp, v_x, z
-      COMPLEX                 :: exch(dimension%neigd, dimension%neigd)
+      TYPE(t_mat)             :: tmp, z
+      COMPLEX                 :: exch(fi%input%neig)
 
+      call timestart("add_vnonlocal")
+      call timestart("apply v_x")
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      CALL v_x%init(hmat%l_real, nbasfcn, nbasfcn)
+      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)      
+      
+      IF (hmat%l_real) THEN
+         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
+            i0=(i-1)/fmpi%n_size+1
+            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
+               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_r(j, i)
+            enddo
+         enddo
+      else         
+         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
+            i0=(i-1)/fmpi%n_size+1
+            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
+               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_c(j, i)
+            enddo
+         enddo
+      endif
+      call timestop("apply v_x")
 
-      CALL read_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)
-      ! add non-local x-potential to the hamiltonian hmat
-      DO n = 1, v_x%matsize1
-         DO nn = 1, n
-            IF (hmat%l_real) THEN
-               hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
-               v_x%data_r(n, nn) = v_x%data_r(nn, n)
-            ELSE
-               hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
-               v_x%data_c(n, nn) = CONJG(v_x%data_c(nn, n))
-            ENDIF
-         END DO
-      END DO
-      ! calculate HF energy
-      IF (hybrid%l_calhf) THEN
-         WRITE (6, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
+      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk))
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
 
-         WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
-      END IF
-
-      ! read in lower triangle part of overlap matrix from direct acces file olap
-      CALL olap%init(hmat%l_real, nbasfcn, nbasfcn)
-      CALL read_olap(olap, kpts%nkpt*(jsp - 1) + nk)
-      IF (.NOT. olap%l_real) olap%data_c = conjg(olap%data_c)
-
-      CALL z%init(olap%l_real, nbasfcn, dimension%neigd)
-
-      CALL read_z(z, kpts%nkptf*(jsp - 1) + nk)
+#ifdef CPP_MPI
+      call timestart("post add_vnonl read_z barrier")
+      call MPI_Barrier(fmpi%mpi_comm, ierr)
+      call timestop("post add_vnonl read_z barrier")
+#endif
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90
-      IF (.NOT. v_x%l_real) v_x%data_c = conjg(v_x%data_c)
+      
       exch = 0
-      z%matsize1 = MIN(z%matsize1, v_x%matsize2)
+      z%matsize1 = MIN(z%matsize1, hybdat%v_x(nk, jsp)%matsize2)
+      IF (hybdat%v_x(nk, jsp)%l_real) then
+         CALL hybdat%v_x(nk, jsp)%multiply(z, tmp)
+      else
+         ! used to be v_x%data_c = conjg(v_x%data_c)
+         CALL hybdat%v_x(nk, jsp)%multiply(z, tmp, transA="T")
+      endif
 
-      CALL v_x%multiply(z, tmp)
-
-      DO iband = 1, hybrid%nbands(nk)
+      ! WRITE (oUnit, '(A)') "          K-points,   iband,    exch - div (eV), div (eV),  exch (eV)"
+      DO iband = 1, hybdat%nbands(nk)
          IF (z%l_real) THEN
-            exch(iband, iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
+            exch(iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
          ELSE
-            exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
+            exch(iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybrid%nobd(nk,jsp)) THEN
-            results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
+         IF (iband <= hybdat%nobd(nk,jsp)) THEN
+            results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband))
          END IF
-         IF (hybrid%l_calhf) THEN
-            WRITE (6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
-               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybrid%div_vv(iband, nk, jsp))*(-27.211608), &
-               hybrid%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
-         END IF
+         ! IF (hybdat%l_calhf) THEN
+         !    WRITE (oUnit, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
+         !       fi%kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-hartree_to_ev_const), &
+         !       hybdat%div_vv(iband, nk, jsp)*(-hartree_to_ev_const), REAL(exch(iband, iband))*(-hartree_to_ev_const)
+         ! END IF
       END DO
+      call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
 
 END MODULE m_add_vnonlocal

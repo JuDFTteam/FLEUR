@@ -58,7 +58,7 @@ PUBLIC t_denCoeffsOffdiag
 
 CONTAINS
 
-SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fmpl)
+SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco,sphhar,l_jDOS, l_fmpl)
 
    USE m_types_setup
 
@@ -68,11 +68,12 @@ SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fm
    TYPE(t_atoms),      INTENT(IN)    :: atoms
    TYPE(t_noco),       INTENT(IN)    :: noco
    TYPE(t_sphhar),     INTENT(IN)    :: sphhar
+   LOGICAL,            INTENT(IN)    :: l_jDOS
    LOGICAL,            INTENT(IN)    :: l_fmpl
 
    thisDenCoeffsOffdiag%l_fmpl = l_fmpl
 
-   IF (noco%l_mperp) THEN
+   IF (noco%l_mperp.OR.l_jDOS) THEN
       ALLOCATE (thisDenCoeffsOffdiag%uu21(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%ud21(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%du21(0:atoms%lmaxd,atoms%ntype))
@@ -195,7 +196,7 @@ SUBROUTINE addRadFunScalarProducts(thisDenCoeffsOffdiag, atoms, f, g, flo, iType
 END SUBROUTINE addRadFunScalarProducts
 
 SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
-
+   USE m_juDFT
    USE m_types_setup
    USE m_types_cdnval, ONLY: t_eigVecCoeffs
    USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
@@ -210,14 +211,17 @@ SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,w
    TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
    INTEGER,                   INTENT(IN)    :: noccbd
    REAL,                      INTENT(IN)    :: we(noccbd)
-
+   CALL timestart("rhomt21")
    CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,thisDenCoeffsOffdiag%uu21,thisDenCoeffsOffdiag%ud21,&
                 thisDenCoeffsOffdiag%du21,thisDenCoeffsOffdiag%dd21,thisDenCoeffsOffdiag%uulo21,&
                 thisDenCoeffsOffdiag%dulo21,thisDenCoeffsOffdiag%ulou21,thisDenCoeffsOffdiag%ulod21,&
                 thisDenCoeffsOffdiag%uloulop21)
+    CALL timestop("rhomt21")
    IF (thisDenCoeffsOffdiag%l_fmpl) THEN
+      CALL timestart("rhonmt21")
       CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,thisDenCoeffsOffdiag%uunmt21,thisDenCoeffsOffdiag%udnmt21,&
-                                                            thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
+      thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
+      CALL timestop("rhonmt21")                                                            
    END IF
 
 END SUBROUTINE calcCoefficients

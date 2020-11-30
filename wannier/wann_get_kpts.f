@@ -13,10 +13,14 @@
      <               nkpts,kpoints)
 c********************************************************
 c     Read in the k-points from kpts/w90kpts file.
-c 
+c
 c     Frank Freimuth
 c********************************************************
+
+      USE m_constants
+
       implicit none
+
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN)  :: kpts
       logical,intent(in)  :: l_bzsym,film
@@ -35,7 +39,7 @@ c********************************************************
      +        ="wann_get_kpts")
          open(987,file='w90kpts',status='old',form='formatted')
          read(987,*)nkpts, scale
-         write(6,*)"wann_get_kpts: nkpts=",nkpts
+         write(oUnit,*)"wann_get_kpts: nkpts=",nkpts
          if(l_readkpts)then
             IF(SIZE(kpoints,1)/=3) CALL juDFT_error("wann_get_kpts: 1"
      +           ,calledby ="wann_get_kpts")
@@ -47,45 +51,18 @@ c********************************************************
          endif
          close(987)
       else
-         IF(.NOT.input%l_inpXML) THEN
-            inquire(file='kpts',exist=l_file)
-            IF(.NOT.l_file) CALL juDFT_error("where is kpts?",calledby
-     +           ="wann_get_kpts")
-            open(987,file='kpts',status='old',form='formatted')
-            read(987,*)nkpts,scale
-            write(6,*)"wann_get_kpts: nkpts=",nkpts
-            if(l_readkpts)then
-               IF(SIZE(kpoints,1)/=3) 
-     +            CALL juDFT_error("wann_get_kpts: 1",
-     +                             calledby ="wann_get_kpts")
-               IF(SIZE(kpoints,2)/=nkpts)
-     +            CALL juDFT_error("wann_get_kpts:2",
-     +                             calledby ="wann_get_kpts")
-               do iter=1,nkpts
-                  read(987,*)kpoints(:,iter)
-               enddo
-            endif
-            close(987)
-         ELSE
-            nkpts = kpts%nkpt
-            write(6,*)"wann_get_kpts: nkpts=",nkpts
+             nkpts = kpts%nkpt
+            write(oUnit,*)"wann_get_kpts: nkpts=",nkpts
             if(l_readkpts)then
                do iter=1,nkpts
                   kpoints(:,iter) = kpts%bk(:,iter)
                enddo
             endif
-         END IF
       endif
 
-      if(l_readkpts.AND..NOT.input%l_inpXML)then
-         kpoints=kpoints/scale
-         if(film.and..not.l_onedimens)then 
-            kpoints(3,:)=0.0
-         endif
-      endif
       IF (l_readkpts) THEN
          do iter=1,nkpts
-            write(6,*)kpoints(:,iter)
+            write(oUnit,*)kpoints(:,iter)
          enddo
       END IF
 

@@ -1,6 +1,7 @@
 MODULE m_stden
-
 USE m_juDFT
+  REAL,PARAMETER :: input_ellow=-2.0
+  REAL,PARAMETER :: input_elup=1.0
 !     ************************************************************
 !     generate flapw starting density by superposition of
 !     atomic densities. the non-spherical terms inside
@@ -12,9 +13,13 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                 input,cell,xcpot,obsolete,noco,oneD)
 
+SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
+                 input,cell,xcpot,noco,oneD)
+
+   USE m_juDFT_init
+   USE m_types
+   USE m_types_xcpot_inbuild
    USE m_constants
    USE m_qsf
    USE m_checkdopall
@@ -22,17 +27,13 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    USE m_cdn_io
    USE m_qfix
    USE m_atom2
-   USE m_types
-   USE m_types_xcpot_inbuild
-   USE m_juDFT_init
-
+   USE m_RelaxSpinAxisMagn
    IMPLICIT NONE
 
-   TYPE(t_mpi),INTENT(IN)      :: mpi
+   TYPE(t_mpi),INTENT(IN)      :: fmpi
    TYPE(t_atoms),INTENT(IN)    :: atoms
-   TYPE(t_dimension),INTENT(IN):: DIMENSION
+
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-   TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_noco),INTENT(IN)     :: noco
@@ -45,59 +46,63 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    ! Local type instances
    TYPE(t_potden)   :: den
    TYPE(t_enpara)   :: enpara
-   TYPE(t_xcpot_inbuild)    :: xcpot_dummy
-
    ! Local Scalars
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va
-   REAL denz1(1,1),vacxpot(1,1),vacpot(1,1) 
-   INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
-   INTEGER nw,ilo,natot,nat 
+   REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
+   INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
+   INTEGER nw,ilo,natot,nat
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
    REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
-   REAL,    ALLOCATABLE :: vacpar(:)
-   INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
+   REAL     :: vacpar(2)
+   INTEGER lnum(29,atoms%ntype),nst(atoms%ntype)
    INTEGER jrc(atoms%ntype)
-   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
-   REAL                 :: occ(SIZE(atoms%corestateoccs,1),2)
+   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st
+   REAL,ALLOCATABLE   :: occ(:,:)
+   COMPLEX,ALLOCATABLE :: pw_tmp(:,:)
+
+   TYPE(t_nococonv) :: nococonv
    ! Data statements
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
 
-   IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
+   !use the init_potden_simple routine to prevent extra dimensions from noco calculations
+   CALL den%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
+                 atoms%n_u+atoms%n_hia,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
+                 vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-
-   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
-   ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )
+   ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
+   ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
-   ALLOCATE ( rhoss(DIMENSION%msh,input%jspins) )
+   ALLOCATE ( rhoss(atoms%msh,input%jspins) )
 
    rh = 0.0
    rhoss = 0.0
 
-   IF (mpi%irank == 0) THEN
+   IF (fmpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
-      IF ( ABS(input%sigma).LT. 1.e-6) THEN
+      !TODO: reactivate efields
+      !IF ( ABS(input%sigma).LT. 1.e-6) THEN
+      IF (1==1) THEN
          qdel = 0.0
       ELSE
          natot = 0
          DO n = 1, atoms%ntype
             IF (atoms%zatom(n).GE.1.0) natot = natot + atoms%neq(n)
          END DO
-         qdel = 2.*input%sigma/natot
+         !qdel = 2.*input%sigma/natot
       END IF
 
-      WRITE (6,FMT=8000)
+      WRITE (oUnit,FMT=8000)
       8000 FORMAT (/,/,/,' superposition of atomic densities',/,/,' original atomic densities:',/)
       DO n = 1,atoms%ntype
          r = atoms%rmsh(1,n)
          d = EXP(atoms%dx(n))
          jrc(n) = 0
-         DO WHILE (r < atoms%rmt(n) + 20.0) 
-            IF (jrc(n) > DIMENSION%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
+         DO WHILE (r < atoms%rmt(n) + 20.0)
+            IF (jrc(n) > atoms%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
             jrc(n) = jrc(n) + 1
             rat(jrc(n),n) = r
             r = r*d
@@ -115,17 +120,17 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          ELSE
             bm = 0.
          END IF
-         occ=atoms%coreStateOccs(:,:,n)
+         occ=atoms%econf(n)%Occupation(:,:)
          ! check whether this atom has been done already
          DO n1 = 1, n - 1
             IF (ABS(z-atoms%zatom(n1)).GT.del) CYCLE
             IF (ABS(r-atoms%rmt(n1)).GT.del) CYCLE
             IF (ABS(h-atoms%dx(n1)).GT.del) CYCLE
             IF (ABS(bm-atoms%bmu(n1)).GT.del) CYCLE
-            IF (ANY(ABS(occ(:,:)-atoms%coreStateOccs(:,:,n1))>del)) CYCLE
+            IF (ANY(ABS(occ(:,:)-atoms%econf(n1)%Occupation(:,:))>del)) CYCLE
             IF (jr.NE.atoms%jri(n1)) CYCLE
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%msh
                   rh(i,n,ispin) = rh(i,n1,ispin)
                END DO
             END DO
@@ -144,22 +149,22 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          IF (z.LT.1.0) THEN
             va = max(z,1.e-8)/(input%jspins*sfp_const*atoms%volmts(n))
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%msh
                   rh(i,n,ispin) = va/rat(i,n)**2
                END DO
             END DO
          ELSE
-            CALL atom2(DIMENSION,atoms,xcpot,input,n,jrc(n),rnot,qdel,&
-                       rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n))
+            CALL atom2(atoms,xcpot,input,n,jrc(n),rnot,qdel,&
+                       rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n),.true.)
             DO ispin = 1, input%jspins
-               DO i = 1, jrc(n) ! dimension%msh
+               DO i = 1, jrc(n) ! atoms%msh
                   rh(i,n,ispin) = rhoss(i,ispin)
                END DO
             END DO
          END IF
          ! list atomic density
          iza = atoms%zatom(n) + 0.0001
-         WRITE (6,FMT=8030) namat_const(iza)
+         WRITE (oUnit,FMT=8030) namat_const(iza)
          8030 FORMAT (/,/,' atom: ',a2,/)
          8040 FORMAT (4 (3x,i5,f8.5,f12.6))
          70 CONTINUE
@@ -173,13 +178,13 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             DO i = 1, jrc(n)
                rh1(i,n,ispin) = rh(i,n,ispin)*fpi_const*rat(i,n)**2
             END DO
-            rh1(jrc(n):DIMENSION%msh,n,ispin) = 0.0
+            rh1(jrc(n):atoms%msh,n,ispin) = 0.0
             ! prepare spherical mt charge
             DO i = 1,atoms%jri(n)
                den%mt(i,0,n,ispin) = rh(i,n,ispin)*sfp_const*atoms%rmsh(i,n)**2
             END DO
             ! reset nonspherical mt charge
-            DO k = 1,sphhar%nlh(atoms%ntypsy(nat))
+            DO k = 1,sphhar%nlh(sym%ntypsy(nat))
                DO j = 1,atoms%jri(n)
                   den%mt(j,k,n,ispin) = 0.e0
                END DO
@@ -187,19 +192,30 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             nat = nat + atoms%neq(n)
          END DO
       END DO ! ispin
-   END IF ! mpi%irank == 0
+   END IF ! fmpi%irank == 0
 
    DO ispin = 1, input%jspins
-      CALL cdnovlp(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
+      CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input,oneD,l_st,ispin,rh1(:,:,ispin),&
                    den%pw,den%vacxy,den%mt,den%vacz)
       !roa-
    END DO
 
-   IF (mpi%irank == 0) THEN
 
-      ! Check the normalization of total density
-      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,.true.,fix)
+   ! Check the normalization of total density
+   CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   !Rotate density into global frame if l_alignSQA
+   IF (any(noco%l_alignMT)) then
+     allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
+     nococonv%beta=noco%beta_inp
+     nococonv%alph=noco%alph_inp
+     CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
+     Allocate(pw_tmp(size(den%pw,1),3))
+     pw_tmp=0.0
+     pw_tmp(:,:size(den%pw,2))=den%pw
+     call move_alloc(pw_tmp,den%pw)
+   ENDIF
+   IF (fmpi%irank == 0) THEN
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN
          CALL judft_warn("Starting density not charge neutral",hint= &
@@ -208,29 +224,26 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
       ! Write superposed density onto density file
       den%iter = 0
-      CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
-                        1,-1.0,0.0,.TRUE.,den)
 
+      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
+          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
+          CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins
-            WRITE (6,'(a8,i2)') 'spin No.',ispin
-            CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+            WRITE (oUnit,'(a8,i2)') 'spin No.',ispin
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
                            cell,den,ispin)
          END DO ! ispin = 1, input%jspins
       END IF ! input%vchk
 
-      l_enpara = .FALSE.
-      INQUIRE (file='enpara',exist=l_enpara)
-      l_enpara = l_enpara.OR.input%l_inpXML
-
       ! set up parameters for enpara-file
-      IF ((juDFT_was_argument("-genEnpara")).AND..NOT.l_enpara) THEN
-         CALL enpara%init(atoms,input%jspins)
+      IF ((juDFT_was_argument("-genEnpara"))) THEN
+         CALL enpara%init_enpara(atoms,input%jspins,input%film)
 
          enpara%lchange = .TRUE.
          enpara%llochg = .TRUE.
-                
+
          DO ispin = 1, input%jspins
             ! vacpar is taken as highest occupied level from atomic eigenvalues
             ! vacpar (+0.3)  serves as fermi level for film or bulk
@@ -252,15 +265,15 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                END DO
 
                ! take energy-parameters from atomic calculation
-               DO i = nst(n), 1, -1 
+               DO i = nst(n), 1, -1
                   IF (.NOT.input%film) eig(i,ispin,n) = eig(i,ispin,n) + 0.4
                   IF (.NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)) THEN
                      enpara%el0(lnum(i,n),n,ispin) = eig(i,ispin,n)
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%ellow) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_ellow) THEN
                         enpara%el0(lnum(i,n),n,ispin) = vacpar(1)
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
-                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input%elup) THEN
+                     IF (enpara%el0(lnum(i,n),n,ispin).LT.input_elup) THEN
                         l_found(lnum(i,n))  = .TRUE.
                      END IF
                   ELSE
@@ -269,8 +282,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                            IF (atoms%llo(ilo,n).EQ.lnum(i,n)) THEN
                               IF (.NOT.llo_found(ilo)) THEN
                                  enpara%ello0(ilo,n,ispin) = eig(i,ispin,n)
-                                 IF ((enpara%ello0(ilo,n,ispin).GT.input%elup).OR.&
-                                     (enpara%ello0(ilo,n,ispin).LT.input%ellow)) THEN
+                                 IF ((enpara%ello0(ilo,n,ispin).GT.input_elup).OR.&
+                                     (enpara%ello0(ilo,n,ispin).LT.input_ellow)) THEN
                                     enpara%ello0(ilo,n,ispin)= vacpar(1)
                                  ELSE IF (atoms%l_dulo(ilo,n)) THEN
                                     enpara%ello0(ilo,n,ispin)= enpara%el0(atoms%llo(ilo,n),n,ispin)
@@ -288,15 +301,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                         END DO ! ilo = 1, atoms%nlo(n)
                      END IF
                   END IF ! .NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)
-               END DO ! i = nst(n), 1, -1 
-               IF (obsolete%lepr.EQ.1) THEN
-                  DO i = 0, 3
-                     enpara%el0(i,n,ispin) = enpara%el0(i,n,ispin) - vbar(ispin,n)
-                  END DO
-                  DO ilo = 1,atoms%nlo(n)
-                     enpara%ello0(ilo,n,ispin) = enpara%ello0(ilo,n,ispin) - vbar(ispin,n)
-                  END DO
-               END IF
+               END DO ! i = nst(n), 1, -1
             END DO ! atom types
 
             IF (input%film) THEN
@@ -306,7 +311,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                ! generate coulomb potential by integrating inward to z1
 
                DO ivac = 1, vacuum%nvac
-                  CALL xcpot_dummy%init("vwn",.FALSE.,atoms%ntype)
                   DO i=1,vacuum%nmz
                      sigm(i) = (i-1)*vacuum%delz*den%vacz(i,ivac,ispin)
                   END DO
@@ -317,30 +321,28 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                   IF (.NOT.oneD%odi%d1) THEN
                      vacpot = vacpot - fpi_const*vacpar(ivac)
                   END IF
-                  IF (obsolete%lepr.EQ.1) THEN
-                     vacpar(ivac) = -0.2 - vacpot(1,1)
-                     WRITE (6,'(" vacuum",i2," reference energy =",f12.6)') ivac,vacpot
-                  ELSE
-                     vacpar(ivac) = vacpot(1,1)
-                  END IF
+                  vacpar(ivac) = vacpot(1,1)
                END DO
                IF (vacuum%nvac.EQ.1) vacpar(2) = vacpar(1)
             END IF
 
-            IF (obsolete%lepr.EQ.1) THEN
-               enpara%enmix = 0.3
-            ELSE
-               enpara%enmix = 1.0
-            END IF
+            enpara%enmix = 1.0
 
-            
+
             enpara%evac0(:,ispin)=vacpar(:SIZE(enpara%evac0,1))
-           
+
          END DO ! ispin
          CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
-   END IF ! mpi%irank == 0
+   END IF ! fmpi%irank == 0
 
-END SUBROUTINE stden
+   DEALLOCATE ( rat,eig )
+   DEALLOCATE ( rh,rh1)
+   DEALLOCATE ( vbar,sigm )
+   DEALLOCATE ( rhoss )
+   deallocate(den%vacz)
+   deallocate(den%vacxy)
+
+ END SUBROUTINE stden
 
 END MODULE m_stden

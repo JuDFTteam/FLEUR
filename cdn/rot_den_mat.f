@@ -7,9 +7,7 @@
       MODULE m_rotdenmat
       use m_juDFT
       CONTAINS
-      SUBROUTINE rot_den_mat(
-     >                       alph,beta,
-     X                       rho11,rho22,rho21)
+      SUBROUTINE rot_den_mat(alph,beta,rho11,rho22,rho21)
 c***********************************************************************
 c This subroutine rotates the direction of the magnetization of the 
 c density matrix by multiplying with the unitary 2x2 spin rotation
@@ -44,8 +42,8 @@ C     ..
      +       0.5*(1.0-cos(beta))*rho22
       r22n = 0.5*(1.0-cos(beta))*rho11 + sin(beta)*real(rho21) +
      +       0.5*(1.0+cos(beta))*rho22
-      r21n = CMPLX(cos(alph),-sin(alph))*(sin(beta)*(rho11-rho22) +
-     +       2.0*(cos(beta)*real(rho21)-cmplx(0.0,aimag(rho21))))*0.5
+      r21n = CMPLX(cos(alph),+sin(alph))*(sin(beta)*(rho11-rho22) +
+     +       2.0*(cos(beta)*real(rho21)+cmplx(0.0,aimag(rho21))))*0.5
 
       rho11 = r11n
       rho22 = r22n

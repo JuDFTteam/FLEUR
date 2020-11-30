@@ -8,19 +8,20 @@ MODULE m_genNewNocoInp
 
 CONTAINS
 
-SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
+SUBROUTINE genNewNocoInp(input,atoms,noco,nococonv,nococonv_new)
 
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_rwnoco
+   !USE m_rwnoco
 
    IMPLICIT NONE
 
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_noco),INTENT(IN)          :: noco
-   TYPE(t_noco),INTENT(INOUT)       :: noco_new
+   TYPE(t_nococonv),INTENT(IN)          :: nococonv
+   TYPE(t_nococonv),INTENT(INOUT)       :: nococonv_new
 
    INTEGER                          :: iAtom, iType
    REAL                             :: alphdiff
@@ -31,25 +32,26 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
    iAtom = 1
    DO iType = 1, atoms%ntype
       IF (noco%l_ss) THEN
-         alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iAtom) + &
-                                  noco%qss(2)*atoms%taual(2,iAtom) + &
-                                  noco%qss(3)*atoms%taual(3,iAtom) )
-         noco_new%alph(iType) = noco_new%alph(iType) - alphdiff
-         DO WHILE (noco_new%alph(iType) > +pi_const)
-            noco_new%alph(iType)= noco_new%alph(iType) - 2.0*pi_const
+         alphdiff = 2.0*pi_const*(nococonv%qss(1)*atoms%taual(1,iAtom) + &
+                                  nococonv%qss(2)*atoms%taual(2,iAtom) + &
+                                  nococonv%qss(3)*atoms%taual(3,iAtom) )
+         nococonv_new%alph(iType) = nococonv_new%alph(iType) - alphdiff
+         DO WHILE (nococonv_new%alph(iType) > +pi_const)
+            nococonv_new%alph(iType)= nococonv_new%alph(iType) - 2.0*pi_const
          END DO
-         DO WHILE (noco_new%alph(iType) < -pi_const)
-            noco_new%alph(iType)= noco_new%alph(iType) + 2.0*pi_const
+         DO WHILE (nococonv_new%alph(iType) < -pi_const)
+            nococonv_new%alph(iType)= nococonv_new%alph(iType) + 2.0*pi_const
          END DO
       ELSE
-         noco_new%alph(iType) = noco_new%alph(iType)
+         nococonv_new%alph(iType) = nococonv_new%alph(iType)
       END IF
       iatom= iatom + atoms%neq(iType)
    END DO
 
+   CALL judft_error("BUG:noco-write feature not implemented at present")
    OPEN (24,file='nocoinp',form='formatted', status='unknown')
    REWIND (24)
-   CALL rw_noco_write(atoms,noco_new, input)
+   !CALL rw_noco_write(atoms,noco_new, input)
    CLOSE (24)
 
 END SUBROUTINE genNewNocoInp

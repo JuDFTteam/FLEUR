@@ -329,7 +329,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
 
             DO n4 = 1, nPlanes
                vecDist = dvec(1,n4)*solutions(1,1)+dvec(2,n4)*solutions(2,1)+dvec(3,n4)*solutions(3,1) - ddist(n4)
-               IF(vecDist.GT.eps09) THEN
+               IF(vecDist*10..GT.eps09) THEN
                   CYCLE innerPlaneLoop
                END IF
             END DO
@@ -558,7 +558,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       DO i = 1, nface
          WRITE(*,'(4f20.13)') fnorm(:,i), fdist(i)
       END DO
-      CALL juDFT_error("Brillouin zone does not fulfill Euler characterisic.",calledby ="brzone2")
+      CALL juDFT_error("Brillouin zone does not fulfill Euler characteristic.",calledby ="brzone2")
    END IF
 
    DEALLOCATE (planeCorners,dvec,ddist,nPlaneCorners,isIBZPlane)

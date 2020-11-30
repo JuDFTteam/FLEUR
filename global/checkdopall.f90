@@ -8,7 +8,7 @@ MODULE m_checkdopall
 
 CONTAINS
 
-SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
                        cell,potden,ispin)
 
    USE m_sphpts
@@ -21,7 +21,7 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    IMPLICIT NONE
 
    TYPE(t_input),INTENT(IN)     :: input
-   TYPE(t_dimension),INTENT(IN) :: dimension
+   
    TYPE(t_sphhar),intent(in)    :: sphhar      
    TYPE(t_stars),INTENT(IN)     :: stars
    TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -36,33 +36,33 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    INTEGER                      :: npd, nat, n, ivac
    REAL                         :: signum
 
-   REAL                         :: xp(3,dimension%nspd)
+   REAL                         :: xp(3,(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))!(3,dimension%nspd)
 
    CALL timestart("checkDOPAll")
 
    IF ((input%film).AND.(.NOT.oneD%odi%d1)) THEN
       !--->             vacuum boundaries
-      npd = min(dimension%nspd,25)
+      npd = MIN(SIZE(xp,2),25)
       CALL points(xp,npd)
       DO ivac = 1,vacuum%nvac
          signum = 3.0 - 2.0*ivac
          xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
-         CALL checkdop(xp,npd,0,0,ivac,1,ispin,dimension,atoms,&
+         CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
                        sphhar,stars,sym,vacuum,cell,oneD,potden)
       END DO
    ELSE IF (oneD%odi%d1) THEN
-      npd = min(dimension%nspd,25)
+      npd = min(SIZE(xp,2),25)
       CALL cylpts(xp,npd,cell%z1)
-      CALL checkdop(xp,npd,0,0,ivac,1,ispin,dimension,atoms,&
+      CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
                     sphhar,stars,sym,vacuum,cell,oneD,potden)
    END IF
 
    !--->          m.t. boundaries
    nat = 1
    DO n = 1, atoms%ntype
-      CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,nat))
-      CALL checkdop(xp,dimension%nspd,n,nat,0,-1,ispin,&
-                    dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
+      CALL sphpts(xp,SIZE(xp,2),atoms%rmt(n),atoms%pos(1,nat))
+      CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
+                    atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
       nat = nat + atoms%neq(n)
    END DO
 

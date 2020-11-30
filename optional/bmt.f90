@@ -12,7 +12,7 @@ contains
     IMPLICIT NONE
     !     ..
     TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_input),INTENT(INOUT) :: input
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -29,8 +29,8 @@ contains
     LOGICAL l_qfix
     CHARACTER(len=8) filename
 
-    typmag= atoms%ntype 
-    ! only muffin-tins with type <= typmag remain magnetic  
+    typmag= atoms%ntype
+    ! only muffin-tins with type <= typmag remain magnetic
 
 
     IF (input%jspins/=2) THEN
@@ -41,21 +41,23 @@ contains
     !sphhar%nlhd = maxval(sphhar%nlh(:))
 
     CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    IF(noco%l_noco) THEN
+    IF(any(noco%l_unrestrictMT)) THEN
+       archiveType=CDN_ARCHIVE_TYPE_FFN_const
+    ELSE IF(noco%l_noco) THEN
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
 
-    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
-    IF ( typmag < atoms%ntype ) THEN 
-       DO type= typmag+1,atoms%ntype 
+    IF ( typmag < atoms%ntype ) THEN
+       DO type= typmag+1,atoms%ntype
           DO k= 0,sphhar%nlhd
              DO i= 1,atoms%jmtd
-                den%mt(i,k,type,1)= (den%mt(i,k,type,1) + den%mt(i,k,type,2))/2. 
-                den%mt(i,k,type,2)= den%mt(i,k,type,1) 
+                den%mt(i,k,type,1)= (den%mt(i,k,type,1) + den%mt(i,k,type,2))/2.
+                den%mt(i,k,type,2)= den%mt(i,k,type,1)
              ENDDO
           ENDDO
        ENDDO
@@ -92,7 +94,7 @@ contains
          & stars,vacuum,atoms,sphhar,input,sym,&
          & 98,&
          & den%iter,den%mt,den%pw,den%vacz,den%vacxy)
-    CLOSE(98) 
+    CLOSE(98)
 
   END SUBROUTINE bmt
 END MODULE m_bmt

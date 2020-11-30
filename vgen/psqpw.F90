@@ -16,10 +16,13 @@ module m_psqpw
 
 contains
 
-  subroutine psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
        &     qpw, rho, rht, l_xyav, potdenType, psq )
 
 #include"cpp_double.h"
+#ifdef CPP_MPI 
+    use mpi 
+#endif
     use m_constants
     use m_phasy1
     use m_mpmom 
@@ -32,7 +35,7 @@ contains
     use m_SphBessel
     implicit none
 
-    type(t_mpi),        intent(in)  :: mpi
+    type(t_mpi),        intent(in)  :: fmpi
     type(t_atoms),      intent(in)  :: atoms
     type(t_sphhar),     intent(in)  :: sphhar
     type(t_stars),      intent(in)  :: stars
@@ -60,18 +63,17 @@ contains
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
 #ifdef CPP_MPI
-    include 'mpif.h'
-    integer                         :: ierr(3)
+    integer                         :: ierr
     complex, allocatable            :: c_b(:)
 #endif
 
     ! Calculate multipole moments
-    call mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
+    call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
 #ifdef CPP_MPI
     psq(:) = cmplx( 0.0, 0.0 )
-    call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, mpi%mpi_comm, ierr )
+    call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, fmpi%mpi_comm, ierr )
     nd = ( 2 * atoms%lmaxd + 1 ) * ( atoms%lmaxd + 1 ) * atoms%ntype
-    call MPI_BCAST( qlm, nd, CPP_MPI_COMPLEX, 0, mpi%MPI_COMM, ierr )
+    call MPI_BCAST( qlm, nd, CPP_MPI_COMPLEX, 0, fmpi%MPI_COMM, ierr )
 #endif
 
     ! prefactor in (A10) (Coulomb case) or (A11) (Yukawa case)
@@ -97,7 +99,7 @@ contains
     end do
 
     ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
-    if( mpi%irank == 0 ) then
+    if( fmpi%irank == 0 ) then
     s = 0.
     do n = 1, atoms%ntype
       if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -106,14 +108,14 @@ contains
         s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
       end if
     end do
-    !if( mpi%irank == 0 ) then
+    !if( fmpi%irank == 0 ) then
       psq(1) = qpw(1) + ( sfp_const / cell%omtil ) * s
     end if
 
     ! q/=0 term: see (A10) (Coulomb case) or (A11) (Yukawa case)
     fpo = 1. / cell%omtil
     !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
-    do k = mpi%irank+2, stars%ng3, mpi%isize
+    do k = fmpi%irank+2, stars%ng3, fmpi%isize
       if ( .not. oneD%odi%d1 ) then
         call phasy1( atoms, stars, sym, cell, k, pylm )
       else
@@ -143,14 +145,14 @@ contains
     !$omp end parallel do
 #ifdef CPP_MPI
     allocate( c_b(stars%ng3) )
-    call MPI_REDUCE( psq, c_b, stars%ng3, CPP_MPI_COMPLEX, MPI_SUM, 0, mpi%MPI_COMM, ierr )
-    if ( mpi%irank == 0 ) then
+    call MPI_REDUCE( psq, c_b, stars%ng3, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
+    if ( fmpi%irank == 0 ) then
        psq(:stars%ng3) = c_b(:stars%ng3)
     end if
     deallocate( c_b )
 #endif
 
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       if ( potdenType == POTDEN_TYPE_POTYUK ) return
       ! Check: integral of the pseudo charge density within the slab
       if ( input%film .and. .not. oneD%odi%d1 ) then
@@ -179,7 +181,7 @@ contains
       else if ( .not. input%film ) then
         psint = psq(1) * stars%nstr(1) * cell%omtil
       end if
-      write( 6, fmt=8000 ) psint
+      write(oUnit, fmt=8000 ) psint
 8000  format (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
       if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
@@ -192,7 +194,8 @@ contains
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
         end do
-        qvac = qvac - 2 * input%sigma
+        !TODO: reactivate electric fields
+        !qvac = qvac - 2 * input%sigma
       else
         qvac = 0.0
         do nz = 1, vacuum%nmz
@@ -204,10 +207,10 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      write( 6, fmt=8010 ) fact * 1000
+      write(oUnit, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
-    end if ! mpi%irank == 0 
+    end if ! fmpi%irank == 0 
 
   end subroutine psqpw
 

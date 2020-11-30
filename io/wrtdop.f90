@@ -4,16 +4,14 @@
 !     e. wimmer   march 1985
 !     ****************************************************
       CONTAINS
-        SUBROUTINE wrtdop(&
-             &                  stars,vacuum,atoms,sphhar,&
-             &                  input,sym,&
-             &                  nu,&
-             &                  it,fr,fpw,fz,fzxy)
-          !
-          USE m_constants,ONLY: namat_const
+        SUBROUTINE wrtdop(stars,vacuum,atoms,sphhar,input,sym,nu,&
+                          it,fr,fpw,fz,fzxy)
+
+          USE m_constants
           USE m_types
+
           IMPLICIT NONE
-          !
+
           !     .. Scalar Arguments ..
           TYPE(t_stars),INTENT(IN)  :: stars
           TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -42,7 +40,7 @@
           dop     ='in/out  '
           iop     ='char/pot'
           WRITE (nu) name
-          !          WRITE (6,FMT=8000) name
+          !          WRITE (oUnit,FMT=8000) name
 8000      FORMAT (' wrtdop title:',10a8)
           WRITE (nu) iop,dop,it
           DO  jsp = 1,SIZE(fr,4)
@@ -52,8 +50,8 @@
              DO  n = 1,atoms%ntype
                 izn = atoms%zatom(n) + 0.01
                 WRITE (nu) namat_const(izn),n,atoms%jri(n),atoms%rmt(n),atoms%dx(n)
-                WRITE (nu) atoms%ntypsy(na),sphhar%nlh(atoms%ntypsy(na))
-                DO  lh = 0,sphhar%nlh(atoms%ntypsy(na))
+                WRITE (nu) sym%ntypsy(na),sphhar%nlh(sym%ntypsy(na))
+                DO  lh = 0,sphhar%nlh(sym%ntypsy(na))
                    WRITE (nu) lh
                    WRITE (nu) (fr(i,lh,n,jsp),i=1,atoms%jri(n))
                 ENDDO

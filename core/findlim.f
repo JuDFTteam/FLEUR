@@ -7,6 +7,8 @@ c
      >                   mrad,lll,ec,vv,rc,
      <                   nmatch,nzero)
 
+      USE m_constants
+
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
@@ -41,7 +43,7 @@ C                   --------------------
          END IF
    10 CONTINUE
       nzero = mrad - 1
-      WRITE (6,FMT=
+      WRITE (oUnit,FMT=
      +'('' NRC='',I4,'' L='',I2,
      +  ''  NZERO SET TO  (NRC-1) ='',I4)') mrad,lll,(mrad-1)
    20 CONTINUE
@@ -57,7 +59,7 @@ C                     --------------------
             RETURN
          END IF
       ENDDO
-      WRITE (6,FMT=
+      WRITE (oUnit,FMT=
      +'(//,''  STOP IN <<CORE>>'',/,
      +     '' NRC='',I2,'' L='',I2,/,
      +     ''  NO MATCHING-RADIUS FOUND FOR  EC='',F10.3)') mrad,lll,ec

@@ -8,18 +8,19 @@ MODULE m_sympsi
 
   ! Calculates the irreducible represetantions of the wave functions.
   ! if k-point is in Brillouin zone boundary results are correct only for
-  ! non-symmorphic groups (factor groups would be needed for that...). 
+  ! non-symmorphic groups (factor groups would be needed for that...).
   ! jsym contains the number of irreducible rep., corresponding character
   ! tables are given in the file syminfo.
   !
-  ! Double groups work only with non-collinear calculations, for normal spin-orbit 
+  ! Double groups work only with non-collinear calculations, for normal spin-orbit
   ! calculations both spin up and down components would be needed...
 
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(lapw,jspin,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat)
+  SUBROUTINE sympsi(lapw,jspin,sym,ne,cell,eig,noco, jsym,zMat)
 
+    USE m_constants
     USE m_grp_k
     USE m_inv3
     USE m_types
@@ -27,7 +28,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)        :: lapw
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
@@ -37,9 +38,9 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne,jspin
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)
+    REAL,    INTENT (IN) :: eig(:)
 
-    INTEGER, INTENT (OUT):: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
+    INTEGER, INTENT (OUT):: jsym(:)
     !     ..
     !     .. Local Scalars ..
     REAL degthre
@@ -50,7 +51,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER mrot_k(3,3,2*sym%nop)
     INTEGER :: mtmpinv(3,3),d
-    INTEGER :: gmap(DIMENSION%nvd,sym%nop)
+    INTEGER :: gmap(lapw%dim_nvd(),sym%nop)
     REAL ::    kv(3),kvtest(3)
     INTEGER :: deg(ne)
 
@@ -68,7 +69,6 @@ CONTAINS
 
     soc=noco%l_soc.AND.noco%l_noco
     jsym=0
-    ksym=0
     IF (noco%l_soc.AND.(.NOT.noco%l_noco)) RETURN
 
     CALL timestart("sympsi")
@@ -83,7 +83,7 @@ CONTAINS
     ALLOCATE(chars(ne,nclass))
     chars=0.0
     !>
-
+    char_written=.TRUE.
     IF (ALLOCATED(char_table)) THEN
        IF (SIZE(char_table,2).NE.nclass) THEN
           DEALLOCATE(char_table)
@@ -118,7 +118,7 @@ CONTAINS
                 CYCLE kloop
              ENDIF
           ENDDO
-          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
+          WRITE(oUnit,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
           CALL timestart("sympsi")
           RETURN
        ENDDO kloop
@@ -170,7 +170,7 @@ CONTAINS
                            zMat%data_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                    END DO
                 ELSE
-                   IF (soc) THEN  
+                   IF (soc) THEN
                       DO k=1,lapw%nv(jspin)
 
                          csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%data_c(k,deg(n1)))*&
@@ -202,7 +202,7 @@ CONTAINS
 
 
        ! determine the irreducible presentation
-       irrloop: DO n1=1,ndeg 
+       irrloop: DO n1=1,ndeg
           !        write(*,'(2i3,6(2f6.3,2x))') n1,i,chars(deg(n1),1:nclass)
           DO c=1,nirr
              IF (ALL(ABS(chars(deg(n1),1:nclass)-&

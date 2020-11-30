@@ -109,6 +109,7 @@ c     intgrf_init.
 
       FUNCTION intgrf(f,jri,jmtd,rmsh,dx,ntype,itype,gridf)
 
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -124,10 +125,10 @@ c     - local -
 
       fct_res = pure_intgrf(f,jri,jmtd,rmsh,dx,ntype,itype,gridf)
       IF (fct_res%ierror == NEGATIVE_EXPONENT_WARNING) THEN
-        write(6,*) 'intgrf: Warning!'//
+        write(oUnit,*) 'intgrf: Warning!'//
      +               'Negative exponent x in extrapolation a+c*r**x'
       ELSEIF (fct_res%ierror == NEGATIVE_EXPONENT_ERROR) THEN
-        write(6,*)
+        write(oUnit,*)
      +       'intgrf: Negative exponent x in extrapolation a+c*r**x'
         CALL juDFT_error(
      +          'intgrf: Negative exponent x in extrapolation a+c*r**x')
@@ -182,10 +183,10 @@ c     - local -
 !           x      = f(2) / f(1)
 !           x      = log(x)/h
 !           IF(x.lt.0) THEN
-!             IF(x.gt.-1) write(6,'(A,ES9.1)') 'intgrf: Warning!&
+!             IF(x.gt.-1) write(oUnit,'(A,ES9.1)') 'intgrf: Warning!&
 !      &                                        Negative exponent x in& 
 !      &                                        extrapolation c*r**x:',x
-!             IF(x.le.-1) write(6,'(A,ES9.1)') 'intgrf: Negative exponent&
+!             IF(x.le.-1) write(oUnit,'(A,ES9.1)') 'intgrf: Negative exponent&
 !      &                                        x in extrapolation&
 !      &                                        c*r**x:',x
 !             IF(x.le.-1) STOP                 'intgrf: Negative exponent& 
@@ -302,6 +303,8 @@ c     Only Lagrange integration is used
 
       SUBROUTINE primitivef(primf,fin,rmsh,dx,jri,jmtd,itypein,ntype)
 
+      USE m_constants
+
       IMPLICIT NONE
 
 c     - scalars -
@@ -357,10 +360,11 @@ c     - local arrays -
           a     = (f(2)-x*f(1)) / (1-x)
           x     = log(x)/h
           IF(x.lt.0) THEN
-             IF(x>-1) WRITE(6,'(A,ES9.1)')
+             IF(x>-1) WRITE(oUnit,'(A,ES9.1)')
      +            '+intgr: Warning! Negative &exponent x in'//
      +        'extrapolation a+c*r**x:',x
-             IF(x<=-1) WRITE(6,'(A,ES9.1)')'intgr: Negative exponent,'//
+             IF(x<=-1) WRITE(oUnit,'(A,ES9.1)')
+     +              'intgr: Negative exponent,'//
      +             'x in extrapolation a+c*r**x:',x
              IF(x<=-1) STOP 'intgr:Negative exponent x in extrapolation'
           END IF
@@ -407,6 +411,8 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       !function modulo1 maps kpoint into first BZ
       FUNCTION modulo1(kpoint,nkpt3)
 
+      USE m_constants
+
       IMPLICIT NONE
 
       INTEGER,INTENT(IN)  :: nkpt3(3)
@@ -417,8 +423,9 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
       IF(any(abs(help-modulo1).gt.1e-10)) THEN
-        WRITE(6,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
-     +                         ') is not an element of the k-point set.'
+        WRITE(oUnit,'(A,F5.3,2('','',F5.3),A)')
+     +     'modulo1: argument (',kpoint,
+     +     ') is not an element of the k-point set.'
         CALL juDFT_error(
      +     'modulo1: argument not an element of k-point set.', 
      +     calledby = 'util:modulo1')
@@ -434,7 +441,7 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 c     Returns derivative of f in df.
 
       SUBROUTINE derivative_t(df,f,atoms,itype)
-      USE m_types
+      USE m_types_atoms
       IMPLICIT NONE
       REAL,   INTENT(IN)   ::   f(:)
       REAL,   INTENT(OUT)  ::   df(:)

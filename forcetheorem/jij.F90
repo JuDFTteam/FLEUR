@@ -16,11 +16,10 @@ MODULE m_types_jij
 
      REAL,ALLOCATABLE:: qvec(:,:)
      REAL            :: thetaj
-     REAL,ALLOCATABLE:: taual_types(:,:)
      REAL,ALLOCATABLE:: evsum(:)
    CONTAINS
      PROCEDURE :: start   =>jij_start
-     PROCEDURE :: next_job=>jij_next_job 
+     PROCEDURE :: next_job=>jij_next_job
      PROCEDURE :: eval    =>jij_eval
      PROCEDURE :: postprocess => jij_postprocess
      PROCEDURE :: init   => jij_init !not overloaded
@@ -29,35 +28,31 @@ MODULE m_types_jij
 
 CONTAINS
 
-  SUBROUTINE jij_init(this,q,thetaj,atoms)
+
+
+
+  SUBROUTINE jij_init(this,qvec,thetaj,atoms)
     USE m_types_setup
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
-    REAL,INTENT(in)                     :: q(:,:),thetaj
+    REAL,INTENT(in)                     :: qvec(:,:),thetaj
     TYPE(t_atoms),INTENT(IN)            :: atoms
 
     INTEGER:: n,na,ni,nj,j
     REAL,PARAMETER:: eps=1E-5
 
-    !Store data
-    ALLOCATE(this%taual_types(3,atoms%ntype))
-    na=1
-    DO n=1,atoms%ntype
-       this%taual_types(:,n)=atoms%taual(:,na)
-       na=na+atoms%neq(n)
-    ENDDO
-    ALLOCATE(this%qvec(3,SIZE(q,2)))
-    this%qvec=q
+    this%qvec=qvec
     this%thetaj=thetaj
-    
+
     !Max no of loops...
-    n=atoms%nat**2*SIZE(q,2)+1
+    n=atoms%nat**2*SIZE(this%qvec,2)+1
     ALLOCATE(this%q_index(n),this%iatom(n),this%jatom(n),this%phase2(n))
+
 
     !now construct the loops
     this%no_loops=0
-    DO n=1,SIZE(q,2)
+    DO n=1,SIZE(this%qvec,2)
        DO ni=1,atoms%ntype
           IF (ABS(atoms%bmu(ni))<eps) CYCLE !no magnetic atom
           DO nj=ni,atoms%ntype
@@ -73,25 +68,26 @@ CONTAINS
           END DO
        END DO
     END DO
+
     ALLOCATE(this%evsum(this%no_loops))
     this%evsum=0
   END SUBROUTINE jij_init
 
-  
-  SUBROUTINE jij_dist(this,mpi)
+
+  SUBROUTINE jij_dist(this,fmpi)
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
-    TYPE(t_mpi),INTENT(in):: mpi
-    
+    TYPE(t_mpi),INTENT(in):: fmpi
+
     INTEGER:: i,q,ierr
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     INCLUDE 'mpif.h'
     call judft_error("jij has to be parallelized")
-#endif    
+#endif
   END SUBROUTINE jij_dist
 
-  
+
 
   SUBROUTINE jij_start(this,potden,l_io)
     USE m_types_potden
@@ -103,25 +99,27 @@ CONTAINS
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  jij_start
 
-  LOGICAL FUNCTION jij_next_job(this,lastiter,atoms,noco)
+  LOGICAL FUNCTION jij_next_job(this,lastiter,atoms,noco,nococonv)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
+    USE m_types_nococonv
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
+    TYPE(t_noco),INTENT(IN)             :: noco
     !Stuff that might be modified...
-    TYPE(t_noco),INTENT(INOUT) :: noco
+    TYPE(t_nococonv),INTENT(INOUT) :: nococonv
 
     !locals
     INTEGER:: n
 
     IF (.NOT.lastiter) THEN
-       jij_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
+       jij_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
        RETURN
     ENDIF
-    
+
     !OK, now we start the JIJ-loop
 
     this%loopindex=this%loopindex+1
@@ -130,23 +128,23 @@ CONTAINS
 
     ! Now set the noco-variable accordingly...
 
-    noco%qss=this%qvec(:,this%q_index(this%loopindex))
+    nococonv%qss=this%qvec(:,this%q_index(this%loopindex))
 
-!c     Determines the cone angles and phase shifts of the spin 
+!c     Determines the cone angles and phase shifts of the spin
 !c     vectors on magnetic atoms for the calculation of the
 !c     interaction constants Jij from the Heisenberg model
 !c                                   M. Lezaic 04
 
-    noco%alph=0.0;noco%beta=0.0
-    noco%beta(this%iatom(this%loopindex))=this%thetaj
-    IF (this%phase2(this%loopindex)) noco%alph(this%iatom(this%loopindex))=pi_const*0.5
-    noco%beta(this%jatom(this%loopindex))=this%thetaj
+    nococonv%alph=0.0;nococonv%beta=0.0
+    nococonv%beta(this%iatom(this%loopindex))=this%thetaj
+    IF (this%phase2(this%loopindex)) nococonv%alph(this%iatom(this%loopindex))=pi_const*0.5
+    nococonv%beta(this%jatom(this%loopindex))=this%thetaj
 
     !rotate according to q-vector
-    DO n = 1,SIZE(this%taual_types,2)
-       noco%alph(n) = noco%alph(n) + tpi_const*dot_PRODUCT(noco%qss,this%taual_types(:,n))
+    DO n = 1,atoms%ntype
+       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:n-1))+1))
     ENDDO
-    
+
     IF (.NOT.this%l_io) RETURN
     IF (this%loopindex.NE.1) CALL closeXMLElement('Forcetheorem_Loop_JIJ')
     CALL openXMLElementPoly('Forcetheorem_Loop_JIJ',(/'Loop index:'/),(/this%loopindex/))
@@ -162,9 +160,9 @@ CONTAINS
     CHARACTER(LEN=18):: attributes(6)
 
     IF (this%loopindex==0) RETURN
-    
+
     IF (.NOT.this%l_io) RETURN
-  
+
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_JIJ')
     CALL openXMLElementPoly('Forcetheorem_JIJ',(/'Configs'/),(/this%no_loops/))
@@ -179,22 +177,24 @@ CONTAINS
                RESHAPE((/1,1,5,5,5,6,4,18,4,4,2,15/),(/6,2/)))
     ENDDO
     CALL closeXMLElement('Forcetheorem_JIJ')
+    CALL judft_end("Forcetheorem: Jij")
   END SUBROUTINE jij_postprocess
 
 
-  FUNCTION jij_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
-       cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
+  FUNCTION jij_eval(this,eig_id,atoms,kpts,sym,&
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
@@ -205,12 +205,12 @@ CONTAINS
     INTEGER,INTENT(IN)             :: eig_id
     skip=.FALSE.
     IF (this%loopindex==0) RETURN
-  
+
     this%evsum(this%loopindex)=results%seigv
     skip=.TRUE.
   END FUNCTION  jij_eval
 
-  
+
 
   SUBROUTINE priv_analyse_data()
 !-------------------------------------------------------------------
@@ -220,7 +220,7 @@ CONTAINS
 !                                   M. Lezaic 04
 !-------------------------------------------------------------------
 
-    USE m_constants, ONLY : pimach
+    USE m_constants
     PRINT *,"jcoef2 has still to be reimplemented"
 #ifdef CPP_NEVER
       USE m_nshell
@@ -243,9 +243,9 @@ c     .. Array arguments ..
       REAL,    INTENT (IN)  :: amat(3,3)
 
 c     .. Temporary..
-      INTEGER :: nshort !The number of non-zero interactions for a calculation 
+      INTEGER :: nshort !The number of non-zero interactions for a calculation
 c                        with the least square method
-      REAL   Tc 
+      REAL   Tc
       REAL, ALLOCATABLE :: Cmat(:,:),DelE(:),work(:)
       INTEGER  lwork
 
@@ -257,8 +257,8 @@ c     .. Local scalars ..
       REAL    enmin,enmax,zcoord,deltaz
 !     REAL    wei !(old version)
       INTEGER, PARAMETER   :: nmax=10,dims=(2*nmax+1)**3,shmax=192
-      REAL, PARAMETER :: tol=0.000001 
- 
+      REAL, PARAMETER :: tol=0.000001
+
 c     ..Local Arrays..
 
       INTEGER w(nop,nqpt-1),itype(nmagn)
@@ -275,7 +275,7 @@ c     .. Intrinsic Functions ..
       INTRINSIC cos,sin
 
 c     .. External Subroutines ..
-      
+
       EXTERNAL CPP_LAPACK_dgels
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -286,7 +286,7 @@ c-------------------------------------------------------------------
        OPEN(115,file='jconst',status='unknown')
         w=0
         nqvect=0
-        nshort=0 
+        nshort=0
         ReJq=0.0
         ImJq=0.0
         sqsin=(sin(thetaJ))**2
@@ -295,10 +295,10 @@ c-------------------------------------------------------------------
         IF (nmagn.gt.mtypes) limit=mtypes
 
             IF(nsh.LT.0)THEN
-c...   Setup for a calculation using least squares method       
-            WRITE(6,*) 'Jij calculated with the least squares method'
+c...   Setup for a calculation using least squares method
+            WRITE(oUnit,*) 'Jij calculated with the least squares method'
              nsh=-nsh
-             nshort=nsh 
+             nshort=nsh
             ENDIF
 
       DO n=1,nqpt
@@ -308,8 +308,8 @@ c...   Setup for a calculation using least squares method
         DO nu=mu,nmagn
          DO phi=1,2
          READ(114,*)
-         READ(114,5000) itype(mu),alph,beta,M(mu) 
-         READ(114,5000) itype(nu),alph,beta,M(nu) 
+         READ(114,5000) itype(mu),alph,beta,M(mu)
+         READ(114,5000) itype(nu),alph,beta,M(nu)
 !        READ(114,5001) qss(1),qss(2),qss(3),wei, rseig !(old version)
          READ(114,5001) qss(1),qss(2),qss(3),rseig
  5000    FORMAT(3x,i4,4x,f14.10,1x,f14.10,4x,f8.5)
@@ -322,7 +322,7 @@ c...     Aquire information on the maximal and minimal calculated energy
              enmin=rseig
              qssmax=qss
              enmax=rseig
-          ELSE 
+          ELSE
              IF(enmin.GE.rseig)THEN
                 enmin=rseig
                 qssmin=qss
@@ -334,10 +334,10 @@ c...     Aquire information on the maximal and minimal calculated energy
            ENDIF
 
                IF(n.EQ.1)THEN
-               seigv0(mu,nu,phi)=rseig ! reference:energy of the collinear state 
+               seigv0(mu,nu,phi)=rseig ! reference:energy of the collinear state
                ELSE
                seigv(mu,nu,qcount,phi)=rseig ! energies of spin-spirals
-               ENDIF 
+               ENDIF
          qn = ( qss(1)**2 + qss(2)**2 + qss(3)**2 )
          IF((mu.EQ.nu).OR.(invs.AND.(qn.GT.tol)))
      &   GOTO 33
@@ -348,7 +348,7 @@ c...     Aquire information on the maximal and minimal calculated energy
        ENDDO !imt
          IF(n.EQ.1)THEN
            IF(qn.GT.tol) THEN
-           WRITE(*,*) 'jcoff2: The first energy in jenerg file should correspond 
+           WRITE(*,*) 'jcoff2: The first energy in jenerg file should correspond
      &to qss=0!'
 #ifdef CPP_MPI
             CALL MPI_ABORT(MPI_COMM_WORLD,1,ierr)
@@ -370,29 +370,29 @@ c...
              w(nn,qcount)=1
 c...
 c...    Eliminate the q-vectors which are repeating and for each q remove the -q
-c... 
+c...
            DO nnn=1,nn-1
             DO ii=1,2
             Dabsq(:)=ABS(q(:,nn,qcount)+((-1)**ii)*q(:,nnn,qcount))
             IDabsq(:)=NINT(Dabsq(:))
-            divi(:)=ABS(Dabsq(:)/FLOAT(IDabsq(:))-1.0) 
+            divi(:)=ABS(Dabsq(:)/FLOAT(IDabsq(:))-1.0)
               IF(((Dabsq(1).LT.tol).OR.(divi(1).LT.tol)).AND.
      &           ((Dabsq(2).LT.tol).OR.(divi(2).LT.tol)).AND.
      &           ((Dabsq(3).LT.tol).OR.(divi(3).LT.tol)))THEN
                  w(nn,qcount)=0
                  GOTO 44
               ENDIF
-             ENDDO ! ii 
+             ENDDO ! ii
            ENDDO !nnn
          nqvect=nqvect+1
-        WRITE(116,5502) mrot(1,1,nn),mrot(1,2,nn),mrot(1,3,nn) 
-        WRITE(116,5502) mrot(2,1,nn),mrot(2,2,nn),mrot(2,3,nn) 
-        WRITE(116,5502) mrot(3,1,nn),mrot(3,2,nn),mrot(3,3,nn) 
+        WRITE(116,5502) mrot(1,1,nn),mrot(1,2,nn),mrot(1,3,nn)
+        WRITE(116,5502) mrot(2,1,nn),mrot(2,2,nn),mrot(2,3,nn)
+        WRITE(116,5502) mrot(3,1,nn),mrot(3,2,nn),mrot(3,3,nn)
         WRITE(116,5002) nqvect,q(1,nn,qcount),q(2,nn,qcount),
      &                         q(3,nn,qcount)
 5002    FORMAT(i6,3(f14.10,1x))
 5502    FORMAT(3(i3))
-  44       CONTINUE 
+  44       CONTINUE
       ENDDO !nn
 c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
               mu=1
@@ -415,7 +415,7 @@ c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
      &        (0.5*M(nu)*ReJq(nu,nu,qcount)/M(mu))
               IF(invs)THEN
                ImJq(mu,nu,qcount)=0.0
-              ELSE  
+              ELSE
                ImJq(mu,nu,qcount)=((seigv(mu,nu,qcount,2)
      &         -seigv(mu,nu,qcount,1))/
      &         (M(mu)*M(nu)*sqsin))-ReJq(mu,nu,qcount)
@@ -424,15 +424,15 @@ c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
              mu=mu+nmagtype(imt)
            ENDDO !mu
 
-         ENDIF !if(n.eq.1)   
-      ENDDO !n   
-      WRITE(6,5006)enmax,qssmax
-      WRITE(6,5007)enmin,qssmin
+         ENDIF !if(n.eq.1)
+      ENDDO !n
+      WRITE(oUnit,5006)enmax,qssmax
+      WRITE(oUnit,5007)enmin,qssmin
  5006 FORMAT('Maximal calculated energy = ',f20.10,'htr',
      & ' for the spin-spiral vector qss = ',3(f14.10,1x))
  5007 FORMAT('Minimal calculated energy = ',f20.10,'htr',
      & ' for the spin-spiral vector qss = ',3(f14.10,1x))
-      
+
       CLOSE(116)
       OPEN(117,file='shells',status='unknown')
       OPEN(118,file='MCinp',status='unknown')
@@ -460,8 +460,8 @@ c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
           endif
 
           t(:)=taual(:,itype(mu))-taual(:,itype(nu))
- 
-        deltaz=taual(3,itype(mu))-taual(3,itype(nu))   !Added for film 07/10 S. Schroeder 
+
+        deltaz=taual(3,itype(mu))-taual(3,itype(nu))   !Added for film 07/10 S. Schroeder
 !        zcoord=taual(3,itype(nu))*amat(3,3)-taual(3,itype(1))*amat(3,3)
         zcoord=taual(3,itype(nu))*amat(3,3)
           tauC1(:)=taual(1,itype(mu))*amat(:,1)
@@ -477,19 +477,19 @@ c ... For the case of calculation with the least squares method
 c ... for one magnetic atom per unit cell
        IF (nshort.GT.0) THEN
        qcount=nqpt-1
-       lwork=2*nshort 
+       lwork=2*nshort
        ALLOCATE (Cmat(qcount,nshort),DelE(qcount),work(lwork))
           Cmat=0.0
-       IF (nshort.GE.nqpt)THEN 
+       IF (nshort.GE.nqpt)THEN
         WRITE(*,*) ' Please supply the data for', nshort,
-     & 'q-points different from zero' 
-        STOP   
+     & 'q-points different from zero'
+        STOP
         ENDIF
 
           DO n=1,qcount
            DO nn=1,nshort
             DO atsh=1,nat(nn)
-            scp=(q(1,1,n)*R(1,atsh,nn)    
+            scp=(q(1,1,n)*R(1,atsh,nn)
      &          +q(2,1,n)*R(2,atsh,nn)
      &          +q(3,1,n)*R(3,atsh,nn))*tpi
             Cmat(n,nn)=Cmat(n,nn)-1.0+cos(scp)
@@ -498,12 +498,12 @@ c ... for one magnetic atom per unit cell
           DelE(n)=ReJq(1,1,n)*2000 ! multiply by 2000 to get [mRy/muB**2]
           ENDDO
 
-      IF (nu.gt.mu) STOP 'For more than one magnetic atom in the unit 
+      IF (nu.gt.mu) STOP 'For more than one magnetic atom in the unit
      & cell please set nshort=0'
        CALL dgels('N',qcount,nshort,1,Cmat,qcount,DelE,qcount,
      & work,lwork,info)
 
-c      The routine dgels returns the solution, J(n), in the array DelE(n)  
+c      The routine dgels returns the solution, J(n), in the array DelE(n)
        Tc=0.0
       DO n=1,nshort
       Tc=Tc+nat(n)*DelE(n) !Mean-field Tc=1/3*(Sum_i(J_0,i))
@@ -514,7 +514,7 @@ c Now prepare and write the input for the Monte Carlo calculation:
           tauC2(:)=(taual(1,itype(mu))-R(1,atsh,n))*amat(:,1)
      &            +(taual(2,itype(mu))-R(2,atsh,n))*amat(:,2)
      &            +(taual(3,itype(mu))-R(3,atsh,n))*amat(:,3)
-         
+
        WRITE(118,5008) itype(mu),itype(nu),tauC1(1),tauC1(2),tauC1(3),
      &                 tauC2(1),tauC2(2),tauC2(3),DelE(n)
            ENDDO ! atsh
@@ -526,8 +526,8 @@ c... Perform the back-Fourier transform
           DO nnn=1,nsh
              wrJ=0
           DO atsh=1,nat(nnn)
-          IF(atsh.gt.shmax) STOP 'jcoff2:increase shmax!' 
-          J=0.0  
+          IF(atsh.gt.shmax) STOP 'jcoff2:increase shmax!'
+          J=0.0
           DO n=1,nqpt-1
            DO nn=1,nop
             IF(w(nn,n).EQ.1)THEN
@@ -553,12 +553,12 @@ c Now prepare and write the input for the Monte Carlo calculation:
           tauC2(:)=(taual(1,itype(mu))-R(1,atsh,nnn))*amat(:,1)
      &            +(taual(2,itype(mu))-R(2,atsh,nnn))*amat(:,2)
      &            +(taual(3,itype(mu))-R(3,atsh,nnn))*amat(:,3)
-         
+
        WRITE(118,5008) itype(mu),itype(nu),tauC1(1),tauC1(2),tauC1(3),
      &                 tauC2(1),tauC2(2),tauC2(3),J
          ENDDO !atsh (atoms in each shell)
-c...  In case of only one magnetic atom per unit cell, calculate the mean-field Tc 
-          IF(nmagn.EQ.1) Tc=Tc+nat(nnn)*J 
+c...  In case of only one magnetic atom per unit cell, calculate the mean-field Tc
+          IF(nmagn.EQ.1) Tc=Tc+nat(nnn)*J
          ENDDO !nnn (shells)
       ENDIF !nshort
         ENDDO !nu
@@ -567,13 +567,13 @@ c...  In case of only one magnetic atom per unit cell, calculate the mean-field 
           IF(nmagn.EQ.1) THEN
           Tc=157.889*M(1)*M(1)*Tc/3.0
           WRITE(115,*) '# Tc(mean field)= ',Tc
-          ENDIF 
+          ENDIF
  5008     FORMAT(i4,i4,7(1x,f14.10))
       CLOSE(117)
       CLOSE(118)
       CLOSE(115)
 #endif
     END SUBROUTINE priv_analyse_data
-    
+
 
       END MODULE m_types_jij

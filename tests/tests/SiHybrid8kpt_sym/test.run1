@@ -1,0 +1,34 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/sym.out",$workdir);
+
+jt::copyfile("files/cdn01",$workdir);
+jt::copyfile("files/cdn02",$workdir);
+jt::copyfile("files/cdn03",$workdir);
+jt::copyfile("files/cdn04",$workdir);
+jt::copyfile("files/cdn05",$workdir);
+jt::copyfile("files/cdn06",$workdir);
+jt::copyfile("files/cdn07",$workdir);
+jt::copyfile("files/cdn08",$workdir);
+jt::copyfile("files/cdn09",$workdir);
+jt::copyfile("files/cdn10",$workdir);
+jt::copyfile("files/cdn11",$workdir);
+jt::copyfile("files/cdn12",$workdir);
+jt::copyfile("files/cdn13",$workdir);
+jt::copyfile("files/cdnc",$workdir);
+
+jt::testrun_seq("$executable ",$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/out","it=  1  is completed");
+
+$result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -569.8004567175, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -580.0362470542, 0.0001);
+
+$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "13: *([^ ]*)", 0.000002, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "14: *([^ ]*)", 0.508222,      0.0001);
+
+$result+=jt::test_grepnumber("$workdir/out", "bandgap",  ".*: *([^ ]*)", 0.088478, 0.000001);
+
+jt::stageresult($workdir,$result,"1");

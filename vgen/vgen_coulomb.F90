@@ -7,18 +7,20 @@
 module m_vgen_coulomb
 
   use m_juDFT
-
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 contains
 
-  subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, den, vCoul, results )
+  subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
+             cell, sphhar, atoms, dosf, den, vCoul, results )
     !----------------------------------------------------------------------------
-    ! FLAPW potential generator                           
+    ! FLAPW potential generator
     !----------------------------------------------------------------------------
-    ! Generates the Coulomb or Yukawa potential and optionally the 
+    ! Generates the Coulomb or Yukawa potential and optionally the
     ! density-potential integrals
     ! vCoul%potdenType = POTDEN_TYPE_POTYUK -> Yukawa case
-    ! It takes a spin variable to indicate in which spin-channel the charge 
+    ! It takes a spin variable to indicate in which spin-channel the charge
     ! resides.
     !----------------------------------------------------------------------------
 
@@ -39,22 +41,23 @@ contains
     implicit none
 
     integer,            intent(in)               :: ispin
-    type(t_mpi),        intent(in)               :: mpi
-    type(t_dimension),  intent(in)               :: dimension
+    type(t_mpi),        intent(in)               :: fmpi
+
     type(t_oneD),       intent(in)               :: oneD
     type(t_input),      intent(in)               :: input
-    type(t_field),      intent(inout)            :: field
+    type(t_field),      intent(in)               :: field
     type(t_vacuum),     intent(in)               :: vacuum
     type(t_sym),        intent(in)               :: sym
     type(t_stars),      intent(in)               :: stars
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
-    type(t_atoms),      intent(in)               :: atoms 
+    type(t_atoms),      intent(in)               :: atoms
+    LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
-    complex                                      :: vintcza, xint, rhobar
+    complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1
     integer                                      :: imz, imzxy, ichsmrg, ivfft
@@ -63,26 +66,25 @@ contains
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
 #ifdef CPP_MPI
-    include 'mpif.h'
     integer:: ierr
 #endif
- 
-    
+
+
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
 
 
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
-    call timestart( "psqpw" )      
-    call psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+    call timestart( "psqpw" )
+    call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
          den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
     call timestop( "psqpw" )
 
 
 
     ! VACUUM POTENTIAL
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       if ( oneD%odi%d1 ) then
         call timestart( "Vacuum" )
         !---> generates the m=0,gz=0 component of the vacuum potential
@@ -95,11 +97,11 @@ contains
              oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
              vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
         call timestop( "Vacuum" )
-        !---> generation of the vacuum warped potential components and       
+        !---> generation of the vacuum warped potential components and
       elseif ( input%film .and. .not. oneD%odi%d1 ) then
         !     ----> potential in the  vacuum  region
-        call timestart( "Vacuum" ) 
-        call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh )
+        call timestart( "Vacuum" )
+        call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
         call vvacis( stars, vacuum, sym, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
         call timestop( "Vacuum" )
@@ -109,12 +111,12 @@ contains
 
       ! INTERSTITIAL POTENTIAL
       call timestart( "interstitial" )
-      write( 6, fmt=8010 )
+      write(oUnit, fmt=8010 )
 8010  format (/,5x,'coulomb potential in the interstitial region:')
       ! in case of a film:
       if ( input%film .and. .not.oneD%odi%d1 ) then
         ! create v(z) for each 2-d reciprocal vector
-        ivfft = 3 * stars%mx3 
+        ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
         do irec2 = 1, stars%ng2
           i = 0
@@ -124,7 +126,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell, sym, input, field, z, irec2, psq, &
                               vCoul%vacxy(:,:,:,ispin), vCoul%vacz(:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm )
+                              rhobar, sig1dh, vz1dh, alphm,vslope )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
@@ -167,45 +169,38 @@ contains
           ! if( abs( real( psq(1) ) ) * cell%omtil < 0.01 ) vCoul%pw(1,ispin) = 0.0
           ! there is a better option now using qfix in mix
         else
-          vCoul%pw(1,ispin) = cmplx(0.0,0.0) 
+          vCoul%pw(1,ispin) = cmplx(0.0,0.0)
           vCoul%pw(2:stars%ng3,ispin) = fpi_const * psq(2:stars%ng3) / stars%sk3(2:stars%ng3) ** 2
         end if
       end if
     call timestop("interstitial")
-    end if ! mpi%irank == 0
-
-
+    end if ! fmpi%irank == 0
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
-    call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
-    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but ...
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
+    call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
+    CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     call timestop( "MT-spheres" )
 
-
-
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
 
-
-
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then
         call timestart( "checking" )
-        call checkDOPAll( input, dimension, sphhar, stars, atoms, sym, vacuum, oneD, &
+        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, &
                           cell, vCoul, ispin )
         call timestop( "checking" )
       end if CHECK_CONTINUITY
 
       CALCULATE_DENSITY_POTENTIAL_INTEGRAL: if ( present( results ) ) then
-        if ( input%total ) then
           call timestart( "den-pot integrals" )
           !     CALCULATE THE INTEGRAL OF n*Vcoulomb
-          write( 6, fmt=8020 )
+          write(oUnit, fmt=8020 )
 8020      format (/,10x,'density-coulomb potential integrals',/)
           !       interstitial first
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
@@ -214,11 +209,10 @@ contains
           call int_nv( ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, &
                        vCoul, den, results%te_vcoul )
 
-          write( 6, fmt=8030 ) results%te_vcoul
+          write(oUnit, fmt=8030 ) results%te_vcoul
 8030      format (/,10x,'total density-coulomb potential integral :', t40,f20.10)
 
           call timestop( "den-pot integrals" )
-        end if
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
 

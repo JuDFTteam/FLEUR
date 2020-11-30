@@ -17,7 +17,8 @@ c
 c     subroutine boxdim added to subroutine prp_xcfft
 c        s.bluegel, IFF, 18.Nov.97
 c*********************************************************************
-c
+
+      USE m_constants
       USE m_ifft, ONLY : ifft235
       USE m_boxdim
       IMPLICIT NONE
@@ -61,13 +62,13 @@ c
 c---> fft's are usually fastest for low primes
 c     (restrict kxcid to: kxcid=  (2**P) * (3**Q) * (5**R)
 c
-      iofile = 6
+      iofile = oUnit
       ksfft = 1
-      WRITE (6,*) 'minimum: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
-      kxc1d = ifft235(iofile,ksfft,kxc1d,2.0)
-      kxc2d = ifft235(iofile,ksfft,kxc2d,2.0)
-      kxc3d = ifft235(iofile,ksfft,kxc3d,2.0)
-      WRITE (6,*) 'ifft235: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
+      !WRITE (oUnit,*) 'minimum: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
+      kxc1d = ifft235(ksfft,kxc1d,2.0)
+      kxc2d = ifft235(ksfft,kxc2d,2.0)
+      kxc3d = ifft235(ksfft,kxc3d,2.0)
+      !WRITE (oUnit,*) 'ifft235: kxc1d,kxc2d,kxc3d',kxc1d,kxc2d,kxc3d
 
       RETURN
       END

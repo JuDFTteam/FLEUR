@@ -3,12 +3,12 @@
 
 jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
 
+jt::testrun("rm mixi*",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output
 
-$result=jt::test_grepexists("$workdir/relax.xml","4204.7823");
-$result+=jt::test_grepexists("$workdir/relax.xml","1.3806000000   -0.00942");
-$result+=jt::test_grepexists("$workdir/relax.xml","0.00942");
+$result=jt::test_grepexists("$workdir/relax.xml","4204.714");
+$result+=jt::test_grepexists("$workdir/relax.xml","1.3806000000   -0.0179");
 
 jt::stageresult($workdir,$result,"3");

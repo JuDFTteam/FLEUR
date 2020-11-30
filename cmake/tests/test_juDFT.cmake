@@ -2,9 +2,9 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/juDFT/CMakeLists.txt" )
     find_package(Git REQUIRED)
     execute_process(COMMAND ${GIT_EXECUTABLE} submodule init juDFT WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
     execute_process(COMMAND ${GIT_EXECUTABLE} submodule update  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
-    if( ${_res_init} GREATER 0 OR ${_res_update} GREATER 0 )
-       message(FATAL_ERROR "HDF5 source could not be downloaded.\n"
-                     "We tried: 'git submodule init external/libxc-git && git submodule update' and resulted in error" )
+    if (_res_init GREATER 0 OR _res_update GREATER 0)
+        message(FATAL_ERROR "juDFT source could not be downloaded.\n"
+                     "We tried: 'git submodule init juDFT && git submodule update' and resulted in error")
     endif()
 endif()
 set(JUDFT_USE_MPI ${FLEUR_USE_MPI} CACHE BOOL "Compile with MPI, will also work in serial")
@@ -19,10 +19,13 @@ if (DEFINED FLEUR_USE_HDF5)
    if (DEFINED FLEUR_HDF5_LIBRARIES)
      message("SET:${FLEUR_HDF5_LIBRARIES}")
      set(JUDFT_LIBRARIES ${FLEUR_HDF5_LIBRARIES} CACHE STRING "Libraries for linking with HDF5")
-   endif()		 
+   endif()
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
+if (CLI_PATCH_INTEL)
+   set(JUDFT_PATCH_INTEL ON CACHE BOOL "Apply patches to MKL for performance on AMD")
+endif()
 
 add_subdirectory(juDFT)
 

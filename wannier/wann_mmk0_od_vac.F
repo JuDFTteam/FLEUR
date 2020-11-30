@@ -9,15 +9,15 @@
 c**************************************************************
 c      Determines the overlap matrix Mmn(k) in the vacuum
 c      for the wannier functions.
-c      For more details see routine wannier.F 
+c      For more details see routine wannier.F
 c
-c      Y. Mokrousov, F. Freimuth 
-c*************************************************************** 
+c      Y. Mokrousov, F. Freimuth
+c***************************************************************
 
       CONTAINS
 
       SUBROUTINE wann_mmk0_od_vac(
-     >     DIMENSION, oneD, vacuum, stars, cell,
+     >      oneD, vacuum, stars, cell,
      >     l_noco,nlotot,
      >     z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
@@ -37,7 +37,7 @@ c***************************************************************
 
       TYPE(t_mat), INTENT(IN) :: zMat
 
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
@@ -124,12 +124,12 @@ c     ..intrinsic functions..
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      cell,vacuum,stars,oneD,
      >      qssbti(3,jspin),odi%n2d,
      >      wronk,evac,bkpt,odi%M,odi%mb,
-     >      vz,kvac3(1),nv2,
-     <      uz(1,-vM),duz(1,-vM),u(1,1,-vM),udz(1,-vM),
-     <      dudz(1,-vM),ddnv(1,-vM),ud(1,1,-vM))
+     >      vz,kvac3(:),nv2,
+     <      uz(:,-vM:),duz(:,-vM:),u(:,:,-vM:),udz(:,-vM:),
+     <      dudz(:,-vM:),ddnv(:,-vM:),ud(:,:,-vM:))
       ENDDO
 
       addnoco=0
@@ -176,7 +176,7 @@ c     +                    conjg(zMat%data_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb
-         endif 
+         endif
       enddo          ! k = 1,nv
 
 c  now actually computing the Mmn matrix
@@ -184,11 +184,11 @@ c  now actually computing the Mmn matrix
       do l = 1,nv2
        do m = -odi%mb,odi%mb
          do i = 1,nslibd
-           do j = 1,nslibd 
-            mmn(i,j) = mmn(i,j) + 
+           do j = 1,nslibd
+            mmn(i,j) = mmn(i,j) +
      +                area*(acof(l,m,i)*conjg(acof(l,m,j))
-     +              + ddnv(l,m)*bcof(l,m,i)*conjg(bcof(l,m,j)))  
-           enddo 
+     +              + ddnv(l,m)*bcof(l,m,i)*conjg(bcof(l,m,j)))
+           enddo
          enddo
        enddo
       enddo

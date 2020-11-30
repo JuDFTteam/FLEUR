@@ -38,7 +38,7 @@
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
       SUBROUTINE wann_plot(
-     >     DIMENSION,oneD,vacuum,stars,cell,atoms,
+     >     oneD,vacuum,stars,cell,atoms,
      >     nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
      >     ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
      >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
@@ -60,7 +60,7 @@
 
       IMPLICIT NONE
 
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
@@ -189,7 +189,7 @@ c make preparations for plotting in vacuum
      &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
      &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
          call wann_1dvacabcof(
-     >         DIMENSION,oneD,vacuum,stars,cell,
+     >         oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:),
      >         nv,bkpt,z1,odi,ods,
      >         nvd,k1,k2,k3,evac,

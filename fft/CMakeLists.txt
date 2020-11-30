@@ -7,7 +7,8 @@ fft/rfft.f90
 fft/fft2d.F90
 fft/fft3d.f90
 fft/fft_interface.F90
-fft/selectFFT.F90
+fft/selecFFT.F90
+fft/fftw3.F90
 )
 if (FLEUR_USE_FFTMKL)
    set(fleur_F90 ${fleur_F90} fft/mkl_dfti.f90)

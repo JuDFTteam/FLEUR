@@ -1,98 +1,81 @@
 MODULE m_forcea21
 CONTAINS
-  SUBROUTINE force_a21(input,atoms,DIMENSION,sym,oneD,cell,&
-                       we,jsp,epar,ne,eig,usdus,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
+   SUBROUTINE force_a21(input,atoms,sym,oneD,cell,&
+       we,jsp,epar,ne,eig,usdus,tlmplm,vtot,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
+      !--------------------------------------------------------------------------
+      ! Pulay 2nd and 3rd term force contributions à la Rici et al.
+      ! 
+      ! Equation A17 and A20 combined, Phys. Rev. B 43, 6411 
+      ! 
+      ! NOTE: We do NOT include the i**l factors in the alm, blm coming from
+      ! to_pulay anymore. Therefore, we can use matrix elements from file 28, 38
+      ! DIRECTLY.
+      ! 
+      ! Note: The present version only yields forces for the highest energy window
+      ! (=valence states). If semicore forces are wanted as well the tmas and tmat
+      ! files have to be saved, indexed and properly used here in force_a21.
+      ! 
+      ! 22/june/97: Probably found symmetrization error replacing S^-1 by S 
+      ! (IS instead of isinv)
+      ! 
+      ! Force contribution B4 added following
+      ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
+      ! GMadsen FZJ 20/3-01
+      !--------------------------------------------------------------------------
+      USE m_forcea21lo
+      USE m_forcea21U
+      USE m_types_setup
+      USE m_types_misc
+      USE m_types_usdus
+      USE m_types_tlmplm
+      USE m_types_cdnval
+      USE m_types_potden
+      USE m_constants
+      USE m_juDFT
 
-    ! ************************************************************
-    ! Pulay 2nd and 3rd (A17+A20) term force contribution a la Rici
-    ! combined
-    ! NOTE: we do NOT include anymore  the i**l factors
-    ! in the alm,blm coming from to_pulay. Therefore, we can
-    ! use matrixelements from file 28,38 DIRECTLY
-    ! note: present version only yields forces for
-    ! highest energy window (=valence states)
-    ! if also semicore forces are wanted the tmas and tmat files
-    ! have to be saved, indexed and properly used here in force_a21
-    ! 22/june/97: probably we found symmetrization error replacing
-    ! now S^-1 by S (IS instead of isinv)
-    ! ************************************************************
+      IMPLICIT NONE
+
+      TYPE(t_input),        INTENT(IN)    :: input
+      TYPE(t_atoms),        INTENT(IN)    :: atoms
+      TYPE(t_sym),          INTENT(IN)    :: sym
+      TYPE(t_oneD),         INTENT(IN)    :: oneD
+      TYPE(t_cell),         INTENT(IN)    :: cell
+      TYPE(t_usdus),        INTENT(IN)    :: usdus
+      TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
+      TYPE(t_potden),       INTENT(IN)    :: vtot
+      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+      TYPE(t_results),      INTENT(INOUT) :: results
+
+      INTEGER, INTENT(IN) :: jsp, ne
+
+      REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
+      REAL,    INTENT(IN)    :: eig(input%neig)
+      COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+      COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+      COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+      COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
+      COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
+
+      ! Local scalars
+      REAL   , PARAMETER :: zero=0.0
+      COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
+      COMPLEX dtd,dtu,utd,utu
+      INTEGER lo
+      INTEGER i,ie,im,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
+      INTEGER natrun,is,isinv,j,irinv,it,lmplmd
+
+      ! Local arrays
+      REAL, ALLOCATABLE :: a21(:,:),b4(:,:)
+      COMPLEX forc_a21(3),forc_b4(3)
+      REAL starsum(3),starsum2(3),gvint(3),gvint2(3)
+      REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
+
+      CALL timestart("force_a21")
+
+    lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
+
     !
-    ! Force contribution B4 added following
-    ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
-    ! GMadsen FZJ 20/3-01
-    !
-    USE m_forcea21lo
-    USE m_forcea21U
-    USE m_tlmplm_store
-    USE m_types_setup
-    USE m_types_misc
-    USE m_types_usdus
-    USE m_types_tlmplm
-    USE m_types_cdnval
-    USE m_constants
-    USE m_juDFT
-    IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)        :: input
-    TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_dimension),INTENT(IN)    :: DIMENSION
-    TYPE(t_oneD),INTENT(IN)         :: oneD
-    TYPE(t_sym),INTENT(IN)          :: sym
-    TYPE(t_cell),INTENT(IN)         :: cell
-    TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_usdus),INTENT(IN)        :: usdus
-    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne,jsp
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
-    REAL,    INTENT(IN)    :: eig(DIMENSION%neigd)
-    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
-    COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX dtd,dtu,utd,utu
-    INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
-    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
-    INTEGER natrun,is,isinv,j,irinv,it
-    REAL   ,PARAMETER:: zero=0.0
-    COMPLEX,PARAMETER:: czero=CMPLX(0.,0.)
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: v_mmp(:,:,:)
-    REAL,    ALLOCATABLE :: a21(:,:),b4(:,:)
-    COMPLEX forc_a21(3),forc_b4(3)
-    REAL starsum(3),starsum2(3),gvint(3),gvint2(3)
-    REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
-
-    TYPE(t_tlmplm)::tlmplm
-
-    CALL timestart("force_a21")
-
-    !dimension%lmplmd = (dimension%lmd* (dimension%lmd+3))/2
-    mlotot = 0 ; mlolotot = 0
-    DO n = 1, atoms%ntype
-       mlotot = mlotot + atoms%nlo(n)
-       mlolotot = mlolotot + atoms%nlo(n)*(atoms%nlo(n)+1)/2
-    ENDDO
-    mlot_d = MAX(mlotot,1)
-    mlolot_d = MAX(mlolotot,1)
-    ALLOCATE ( tlmplm%tdd(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tuu(0:DIMENSION%lmplmd,atoms%ntype,1),&
-         tlmplm%tdu(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tud(0:DIMENSION%lmplmd,atoms%ntype,1),&
-         tlmplm%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
-         tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
-         tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
-         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
-    !
-    IF(atoms%n_u.GT.0) THEN
-       ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u))
-       v_mmp = CMPLX(0.0,0.0)
-       CALL read_tlmplm_vs_mmp(jsp,atoms%n_u,v_mmp)
-    END IF
+    ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
 
     i_u = 1
     natom = 1
@@ -100,11 +83,6 @@ CONTAINS
        IF (atoms%l_geo(n)) THEN
           forc_a21(:) = czero
           forc_b4(:) = czero
-
-
-          CALL read_tlmplm(n,jsp,atoms%nlo,&
-               tlmplm%tuu(:,n,1),tlmplm%tud(:,n,1),tlmplm%tdu(:,n,1),tlmplm%tdd(:,n,1),&
-               tlmplm%ind(:,:,n,1),tlmplm%tuulo(:,:,:,1),tlmplm%tuloulo(:,:,:,1),tlmplm%tdulo(:,:,:,1))
 
           DO natrun = natom,natom + atoms%neq(n) - 1
              a21(:,natrun) = zero
@@ -125,40 +103,18 @@ CONTAINS
                       DO m2 = -l2,l2
                          lm2 = ll2 + m2
                          DO natrun = natom,natom + atoms%neq(n) - 1
-                            in = tlmplm%ind(lm1,lm2,n,1)
-                            IF (in.NE.-9999) THEN
-                               IF (in.GE.0) THEN
-                                  !
-                                  ! ATTENTION: the matrix elements tuu,tdu,tud,tdd
-                                  ! as calculated in tlmplm are the COMPLEX CONJUGATE
-                                  ! of the non-spherical matrix elements because in the
-                                  ! matrix building routine hssphn (or similar routines)
-                                  ! the COMPLEX CONJUGATE of alm,blm is calculated (to
-                                  ! save complex operations presumably)
-                                  ! Her, A20 is formulated in the usual way therefore
-                                  ! we have to take the COMPLEX CONJUGATE versions
-                                  ! of tuu,tdu,tud,tdd as compared to hssphn!
-                                  !
-                                  utu = tlmplm%tuu(in,n,1)
-                                  dtu = tlmplm%tdu(in,n,1)
-                                  utd = tlmplm%tud(in,n,1)
-                                  dtd = tlmplm%tdd(in,n,1)
-                               ELSE
-                                  im = -in
-                                  utu = CONJG(tlmplm%tuu(im,n,1))
-                                  dtd = CONJG(tlmplm%tdd(im,n,1))
-                                  utd = CONJG(tlmplm%tdu(im,n,1))
-                                  dtu = CONJG(tlmplm%tud(im,n,1))
-                               END IF
-                               DO i = 1,3
-                                  a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                       AIMAG( CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
-                                       +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
-                                       +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                       +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
-                                  !   END i loop
-                               END DO
-                            END IF
+                            utu = CONJG(tlmplm%h_loc(lm2,lm1,n,jsp,jsp))
+                            dtd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1+tlmplm%h_loc2(n),n,jsp,jsp))
+                            utd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1,n,jsp,jsp))
+                            dtu = CONJG(tlmplm%h_loc(lm2,lm1+tlmplm%h_loc2(n),n,jsp,jsp))
+                            DO i = 1,3
+                               a21(i,natrun) = a21(i,natrun) + 2.0*&
+                                    AIMAG( CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
+                               !   END i loop
+                            END DO
                             !   END natrun
                          END DO
                          !
@@ -166,19 +122,11 @@ CONTAINS
                       END DO
                       !   END l2 loop
                    END DO
-                   !+gu 20.11.97
-                   in = tlmplm%ind(lm1,lm1,n,1)
-                   IF (in.NE.-9999) THEN
-                      utu = -eig(ie)
-                      utd = 0.0
-                      dtu = 0.0
-                      dtd = utu*usdus%ddn(l1,n,jsp)
-                   ELSE
-                      utu = epar(l1,n)-eig(ie)
-                      utd = 0.5
-                      dtu = 0.5
-                      dtd = utu*usdus%ddn(l1,n,jsp)
-                   END IF
+                   !correct spherical part
+                   utu = -eig(ie)
+                   utd = 0.0
+                   dtu = 0.0
+                   dtd = utu*usdus%ddn(l1,n,jsp)
                    DO i = 1,3
                       DO natrun = natom,natom + atoms%neq(n) - 1
                          a21(i,natrun) = a21(i,natrun) + 2.0*&
@@ -203,8 +151,8 @@ CONTAINS
           !
           CALL force_a21_lo(atoms,jsp,n,we,eig,ne,eigVecCoeffs,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
 
-          IF ((atoms%n_u.GT.0).AND.(i_u.LE.atoms%n_u)) THEN
-             CALL force_a21_U(atoms,i_u,n,jsp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
+          IF ((atoms%n_u+atoms%n_hia.GT.0).AND.(i_u.LE.atoms%n_u+atoms%n_hia)) THEN
+             CALL force_a21_U(atoms,i_u,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),eigVecCoeffs,aveccof,bveccof,cveccof,a21)
           END IF
           IF (input%l_useapw) THEN
              ! -> B4 force
@@ -250,7 +198,7 @@ CONTAINS
                                  + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
                                  ( eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%dus(l1,n,jsp)&
                                  + eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%duds(l1,n,jsp)&
-                                 + eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%dulos(lo,n,jsp) ) ) )  
+                                 + eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%dulos(lo,n,jsp) ) ) )
                          END DO
                       ENDDO
                    ENDDO
@@ -299,7 +247,7 @@ CONTAINS
              !!               isinv = is
              ! Rotation is alreadt done in to_pulay, here we work only in the
              ! coordinate system of the representative atom (natom):
-             !!        
+             !!
              DO it = 1,sym%invarind(natom)
                 is =sym%invarop(natom,it)
                 isinv = sym%invtab(is)
@@ -338,34 +286,33 @@ CONTAINS
              !
              !  natrun loop end
           END DO
-          !
-          !     sum to existing forces
-          !
-          !  NOTE: force() IS REAL AND THEREFORE TAKES ONLY THE
-          !  REAL PART OF forc_a21(). IN GENERAL, FORCE MUST BE
-          !  REAL AFTER k-STAR SUMMATION. NOW, WE PUT THE PROPER
-          !  OPERATIONS INTO REAL SPACE. PROBLEM: WHAT HAPPENS
-          !  IF IN REAL SPACE THERE IS NO INVERSION ANY MORE?
-          !  BUT WE HAVE INVERSION IN k-SPACE DUE TO TIME REVERSAL
-          !  SYMMETRY, E(k)=E(-k)
-          !  WE ARGUE THAT k-SPACE INVERSION IS AUTOMATICALLY TAKEN
-          !  INTO ACCOUNT IF FORCE = (1/2)(forc_a21+conjg(forc_a21))
-          !  BECAUSE TIME REVERSAL SYMMETRY MEANS THAT conjg(PSI)
-          !  IS ALSO A SOLUTION OF SCHR. EQU. IF PSI IS ONE.
-          DO i = 1,3
-             results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
-             f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
-             f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
-          END DO
-          !
-          !     write result moved to force_a8
-          !
-          !         write(*,*) a21(:,n) 
-       ENDIF                                            !  IF (atoms%l_geo(n)) ...
-       natom = natom + atoms%neq(n)
-    ENDDO
 
-    CALL timestop("force_a21")
+            ! Add onto existing forces.
 
-  END SUBROUTINE force_a21
+            ! NOTE: results%force is real and therefore only the real part of
+            ! forc_a21 is added. In general, force must be real after the k-star
+            ! summation. Now, we put the proper operations into real space. 
+            ! Problem: What happens if in real space there is no inversion anymore?
+            ! But we have inversion in k-space due to time reversal symmetry:
+            ! E(k)=E(-k)
+            ! We argue that k-space inversion is automatically taken into account
+            ! if force = (1/2)(forc_a21+conjg(forc_a21)), because time reversal
+            ! symmetry means that conjg(PSI) is also a solution of Schrödinger eq.
+            ! if PSI is one.
+
+            DO i = 1, 3
+               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
+               f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
+               f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
+            END DO
+
+         END IF ! IF (atoms%l_geo(n)) ...
+         natom = natom + atoms%neq(n)
+      END DO
+
+      ! The result is written in force_a8.
+
+      CALL timestop("force_a21")
+
+   END SUBROUTINE force_a21
 END MODULE m_forcea21

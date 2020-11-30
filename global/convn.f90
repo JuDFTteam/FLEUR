@@ -1,8 +1,8 @@
       MODULE m_convn
-      use m_juDFT
+        use m_juDFT
+        implicit none
       CONTAINS
-      SUBROUTINE convn(&
-     &                 dimension,atoms,stars)
+      SUBROUTINE convn(l_write,atoms,stars)
 !
 !     ***********************************************************
 !     determines the optimum values for the convergence parameter
@@ -13,9 +13,10 @@
 !          m. weinert july 1982
 !     ***********************************************************
       USE m_types
+      USE m_constants
       IMPLICIT NONE
-!     ..
-      TYPE(t_dimension),INTENT(IN) :: dimension
+      !     ..
+      LOGICAL,INTENT(IN)           :: l_write
       TYPE(t_atoms),INTENT(INOUT)  :: atoms
       TYPE(t_stars),INTENT(IN)     :: stars
 !     .. Local Scalars ..
@@ -55,20 +56,16 @@
          atoms%ncv(n) = 18 + n1
    20 CONTINUE
 !--->    output and make sure ncv(n).le.ncvd
-   30 CONTINUE
-      WRITE (6,FMT=8010)
+30    CONTINUE
+      IF (.not.l_write) return   
+      WRITE (oUnit,FMT=8010)
       DO 40 n = 1,atoms%ntype
          nc = atoms%ncv(n)
          l = nc - 1
-         WRITE (6,FMT=8020) n,nc,l
+         WRITE (oUnit,FMT=8020) n,nc,l
    40 CONTINUE
-      l = dimension%ncvd - 1
-      WRITE (6,FMT=8030) dimension%ncvd,l
-      DO 50 n = 1,atoms%ntype
-         atoms%ncv(n) = min0(atoms%ncv(n),dimension%ncvd)
-   50 CONTINUE
       RETURN
-   60 WRITE (6,FMT=8040) n,sck
+   60 WRITE (oUnit,FMT=8040) n,sck
        CALL juDFT_error("ncv",calledby="convn")
  8000 FORMAT (10i5)
  8010 FORMAT (/,/,10x,'convergence parameters for the pseudocharge',&

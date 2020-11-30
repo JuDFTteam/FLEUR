@@ -190,7 +190,6 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
                     ! transform wfs to global frame
                     DO iintsp=1,2
                        pt = matmul(bmat,rcc2)/tpi_const
-!                       CALL cotra1(pt(1),rcc2,bmat)
                        arg = -pi*real(2*iintsp-3)*( qss(1,iqpt)*rcc2(1)
      >                                             +qss(2,iqpt)*rcc2(2)
      >                                             +qss(3,iqpt)*rcc2(3))

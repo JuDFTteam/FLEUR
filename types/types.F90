@@ -5,12 +5,13 @@
 !--------------------------------------------------------------------------------
 
 !< This module collects all the type definitions. It can be used if no circular dependencies occur, i.e. in all
-!! places not defining a type 
+!! places not defining a type
 MODULE m_types
   USE m_types_mat
   USE m_types_xcpot
   USE m_types_lapw
   USE m_types_mpi
+  use m_types_hybmpi
   USE m_types_tlmplm
   USE m_types_misc
   USE m_types_setup
@@ -26,5 +27,13 @@ MODULE m_types
   USE m_types_denCoeffsOffdiag
   USE m_types_force
   USE m_types_forcetheo
+  USE m_types_hybinp
+  USE m_types_hybdat
+  USE m_types_mpinp
+  USE m_types_mpdata
+  USE m_types_greensf
+  USE m_types_greensfCoeffs
+  USE m_types_hub1data
+  USE m_types_nococonv
+  use m_types_fft
 END MODULE m_types
-

@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_utility
-
+  USE m_juDFT
    IMPLICIT NONE
 
    CONTAINS

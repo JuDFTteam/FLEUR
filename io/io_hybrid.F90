@@ -4,219 +4,119 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_io_hybrid
-  use m_io_matrix
-  use m_judft
-  use m_types
-  implicit none
-  !private
-  integer,save :: id_olap,id_z,id_v_x,id_coulomb,id_coulomb_spm
-  !public:: open_hybrid_io,read_cmt,write_cmt
+module m_io_hybinp
+   use m_io_matrix
+   use m_judft
+   use m_types
+   use m_unify_zmat
+   implicit none
+   !private
+   integer, save :: id_olap, id_z, id_v_x
+   !public:: open_hybinp_io,read_cmt,write_cmt
 contains
+   subroutine read_z(atoms, cell, hybdat, kpts, sym, noco,nococonv, input, ik,&
+                     jsp, z_out, parent_z, c_phase, list)
+      USE m_eig66_io
+      use m_types
+      use m_trafo
+      implicit none
+      type(t_atoms), intent(in)    :: atoms
+      type(t_cell), intent(in)     :: cell
+      type(t_hybdat), intent(in)   :: hybdat
+      type(t_kpts), intent(in)     :: kpts
+      type(t_sym), intent(in)      :: sym
+      type(t_noco), intent(in)     :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
+      type(t_input), intent(in)    :: input
+      integer, intent(in)          :: ik, jsp
+      TYPE(t_mat), INTENT(INOUT)   :: z_out
 
-  SUBROUTINE open_hybrid_io1(DIMENSION,l_real)
-    implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
-    LOGICAL,INTENT(IN)          :: l_real
-    LOGICAL :: opened=.false.
+      type(t_mat), intent(inout), target, optional :: parent_z
+      complex, intent(inout), optional             :: c_phase(:)
+      integer, intent(in), optional                :: list(:)
 
-    if (opened) return
-    opened=.true.
+      INTEGER              :: ikp, iop, i
+      type(t_mat), pointer :: ptr_mat
+      type(t_mat), target  :: tmp_mat
+      type(t_lapw)         :: lapw_ik, lapw_ikp
+      integer, allocatable :: p_list(:)
+      logical, parameter   :: unify_z = .False.
 
-    !print *,"Open olap.mat"
-    id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
-    !print *,"Open z.mat"
-    id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
-  END SUBROUTINE open_hybrid_io1
+      REAL :: eig(input%neig)
 
+      call timestart("read_z")
 
-  SUBROUTINE open_hybrid_io1b(DIMENSION,l_real)
-    implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
-    LOGICAL,INTENT(IN)          :: l_real
-    LOGICAL :: opened=.false.
+      if(present(list)) then 
+         p_list = list 
+      else
+         p_list = [(i, i=1,hybdat%nbands(ik))]
+      endif
 
-    if (opened) return
-    opened=.true.
+      if(ik <= kpts%nkpt) then
+         call read_eig(hybdat%eig_id,ik,jsp,zmat=z_out, list=p_list, eig=eig)
+         if(unify_z) then 
+            call check_p_list(p_list, eig)
+            call unify_zmat(eig, z_out)
+         endif 
 
-    !print *,"Open v_x.mat"
-    id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
-  END SUBROUTINE open_hybrid_io1b
+         if(size(p_list) /= z_out%matsize2) then
+            write (*,*)  size(p_list), z_out%matsize1, z_out%matsize2
+            call judft_error("this doesn't match")
+         endif
+         if(present(parent_z)) then
+            call parent_z%copy(z_out,1,1)
+         endif
+      else
+         if(present(parent_z)) then
+            ptr_mat => parent_z
+         else
+            call tmp_mat%init(z_out)
+            ptr_mat => tmp_mat
+         endif
 
+         ikp = kpts%bkp(ik) ! parrent k-point
+         iop = kpts%bksym(ik) ! connecting symm
 
-  SUBROUTINE open_hybrid_io2(hybrid,DIMENSION,atoms,l_real)
-    IMPLICIT NONE
-    TYPE(t_hybrid),INTENT(IN)   :: hybrid
-    TYPE(t_dimension),INTENT(IN):: dimension
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    LOGICAL,INTENT(IN)          :: l_real
-    INTEGER:: irecl_coulomb
-    LOGICAL :: opened=.FALSE.
+         call read_eig(hybdat%eig_id,ikp, jsp,zmat=ptr_mat, list=p_list, eig=eig)
+         if(unify_z) then 
+            call check_p_list(p_list, eig)
+            call unify_zmat(eig, ptr_mat)
+         endif
 
-    
+         if(size(p_list) /= ptr_mat%matsize2) then
+            write (*,*) "list:", size(p_list)
+            write (*,*) "ptr_mat", ptr_mat%matsize1, ptr_mat%matsize2
+            write (*,*) "z_out", z_out%matsize1, z_out%matsize2
+            call judft_error("this doesn't match ptr mat")
+         endif 
+         
+         CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
+         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
+         call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, &
+                                  size(p_list), lapw_ikp, lapw_ik, z_out, &
+                                  c_phase)
+      endif
+      call timestop("read_z")
+   END subroutine read_z
 
-    if (opened) return
-    opened=.true.
-    OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
-  
-#ifdef CPP_NOSPMVEC
-    irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2
-    if (.not.l_real) irecl_coulomb =irecl_coulomb *2
-    OPEN(unit=778,file='coulomb',form='unformatted',access='direct', recl=irecl_coulomb)
-    id_coulomb=778
-#else
-    ! if the sparse matrix technique is used, several entries of the
-    ! matrix vanish so that the size of each entry is smaller
-    irecl_coulomb = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
-         +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
-         +   (hybrid%maxindxm1-1)*atoms%nat**2&
-         +   ((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm)&
-         *((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm+1)/2 )*8
-    if (.not.l_real) irecl_coulomb =irecl_coulomb *2
-    OPEN(unit=778,file='coulomb1',form='unformatted',access='direct', recl=irecl_coulomb)
-    id_coulomb_spm=778
-#endif
-  END SUBROUTINE open_hybrid_io2
-  
-  subroutine write_cmt(cmt,nk)
-    implicit none
-    complex,INTENT(IN):: cmt(:,:,:)
-    integer,INTENT(IN):: nk
+   subroutine check_p_list(p_list, eig)
+      implicit none 
+      integer, intent(in) :: p_list(:)
+      real, intent(in)    :: eig(:) 
 
-    write(777,rec=nk) cmt
-  end subroutine write_cmt
+      integer, allocatable :: groups(:)
+      logical :: succ
+      integer :: n_g, end_group
 
-  subroutine read_cmt(cmt,nk)
-    implicit none
-    complex,INTENT(OUT):: cmt(:,:,:)
-    integer,INTENT(IN):: nk
+      groups = make_groups(eig)
+      succ = .false.
 
-    read(777,rec=nk) cmt
-  end subroutine read_cmt
-
-  subroutine write_coulomb(nk,l_real,coulomb)
-    implicit none
-    complex,intent(in) :: coulomb(:)
-    integer,intent(in) :: nk
-    logical,intent(in) :: l_real
-
-    if (l_real) THEN
-       write(id_coulomb,rec=nk) real(coulomb)
-    else
-       write(id_coulomb,rec=nk) coulomb
-    end if
-  end subroutine write_coulomb
-
-   subroutine write_coulomb_spm_r(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
-    implicit none
-    real,intent(in)    :: coulomb_mt1(:,:,:,:)
-    real,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
-    real,intent(in) :: coulomb_mtir(:)
-    integer,intent(in) :: nk
-    
-    !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
-    write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
-  end subroutine write_coulomb_spm_r
-
-   subroutine write_coulomb_spm_c(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
-    implicit none
-    real,intent(in)    :: coulomb_mt1(:,:,:,:)
-    complex,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
-    complex,intent(in) :: coulomb_mtir(:)
-    integer,intent(in) :: nk
-    
-    write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
-  end subroutine write_coulomb_spm_c
-
-     subroutine read_coulomb_spm_r(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
-    implicit none
-    real,intent(out)    :: coulomb_mt1(:,:,:,:)
-    real,intent(out) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
-    real,intent(out) :: coulomb_mtir(:)
-    integer,intent(in) :: nk
-    
-    !print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
-    read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
-  end subroutine read_coulomb_spm_r
-
-   subroutine read_coulomb_spm_c(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
-    implicit none
-    real,intent(out)    :: coulomb_mt1(:,:,:,:)
-    complex,intent(out) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
-    complex,intent(out) :: coulomb_mtir(:)
-    integer,intent(in) :: nk
-    read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
-  end subroutine read_coulomb_spm_c
-
-  subroutine read_coulomb_r(nk,coulomb)
-    implicit none
-    real   ,intent(out) :: coulomb(:)
-    integer,intent(in) :: nk
-
-    read(id_coulomb,rec=nk) coulomb
-  end subroutine read_coulomb_r
-  
-  subroutine read_coulomb_c(nk,coulomb)
-    implicit none
-    complex,intent(out) :: coulomb(:)
-    integer,intent(in) :: nk
-    
-    read(id_coulomb,rec=nk) coulomb
-  end subroutine read_coulomb_c
-
-
-  
-  subroutine read_olap(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(INOUT):: mat
-    INTEGER,INTENT(IN)           :: rec
-    
-    CALL read_matrix(mat,rec,id_olap)
-  END subroutine read_olap
-
-    subroutine write_olap(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(IN)   :: mat
-    INTEGER,INTENT(IN)           :: rec
-    
-    CALL write_matrix(mat,rec,id_olap)
-  END subroutine write_olap
-
-  subroutine read_z(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(INOUT):: mat
-    INTEGER,INTENT(IN)           :: rec
-    !print *,"read z:",rec
-    
-    CALL read_matrix(mat,rec,id_z)
-  END subroutine read_z
-
-    subroutine write_z(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(IN)   :: mat
-    INTEGER,INTENT(IN)           :: rec
-     !print *,"write z:",rec
-   CALL write_matrix(mat,rec,id_z)
-  END subroutine write_z
-
-  subroutine read_v_x(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(INOUT):: mat
-    INTEGER,INTENT(IN)           :: rec
-    
-    CALL read_matrix(mat,rec,id_v_x)
-  END subroutine read_v_x
-
-  subroutine write_v_x(mat,rec)
-    implicit none
-    TYPE(t_mat),INTENT(IN)   :: mat
-    INTEGER,INTENT(IN)           :: rec
-    
-    CALL write_matrix(mat,rec,id_v_x)
-  END subroutine write_v_x
-
-  
- 
-
-end module m_io_hybrid
+      do n_g = 1, size(groups)
+         end_group = sum(groups(1:n_g))
+         if(end_group == maxval(p_list)) then 
+            succ = .True.
+         endif 
+      enddo
+      if(.not. succ) call judft_error("You can't cut in the middle of deg eigenvals")
+   end subroutine check_p_list
+end module m_io_hybinp

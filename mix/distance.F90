@@ -8,6 +8,7 @@ contains
   SUBROUTINE distance(irank,vol,jspins,fsm,inden,outden,results,fsm_mag)
     use m_types
     use m_types_mixvector
+    USE m_constants
     use m_xmlOutput
  
     implicit none
@@ -55,10 +56,10 @@ contains
        WRITE(attributes(1),'(i0)') js
        WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
        CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
-       WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
+       WRITE (oUnit,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
     END DO
     
-    IF (SIZE(outden%pw,2)>2) WRITE (6,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
+    IF (SIZE(outden%pw,2)>2) WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
     
     !calculate the distance of total charge and spin density
     !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
@@ -68,8 +69,8 @@ contains
             (/1000*SQRT(ABS(dist(4)/vol))/),reshape((/10,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
             (/1000*SQRT(ABS(dist(5)/vol))/),reshape((/19,20/),(/1,2/)))
-       WRITE ( 6,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
-       WRITE ( 6,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
+       WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
+       WRITE (oUnit,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
        
        !dist/vol should always be >= 0 ,
        !but for dist=0 numerically you might obtain dist/vol < 0

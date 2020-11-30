@@ -5,7 +5,10 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_plot_um_dat
-      use m_juDFT
+#ifdef CPP_MPI 
+            use mpi 
+#endif
+            use m_juDFT
 c******************************************************************
 c       plot wannierfunctions directly within fleur
 c       based on wann_plot
@@ -13,12 +16,12 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
-     >          mpi_comm,sortrule,band_min,band_max,l_soc,
+     >          kpts,stars,vacuum,atoms,sphhar,input,sym,fmpi,
+     >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
+     >          mpi_communicator,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
-     >          neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >          omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >          invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >          beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -35,7 +38,7 @@ c******************************************************************
       use m_wann_1dvacabcof
       use m_radfun
       use m_radflo
-      use m_cdnread, only : cdn_read0
+      use m_cdnread
       use m_types
       use m_constants
       use m_wann_real
@@ -51,34 +54,35 @@ c******************************************************************
 
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
-      integer mpiierr(3)
+      integer mpiierr
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      TYPE(t_kpts),INTENT(in) :: kpts
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_sym),INTENT(IN)       :: sym
-      TYPE(t_mpi),INTENT(IN)       :: mpi
-      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_mpi),INTENT(IN)       :: fmpi
+      TYPE(t_lapw)      :: lapw
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_enpara),INTENT(IN)    :: enpara
 
-      integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
+      integer, intent (in) :: band_min(2),band_max(2),mpi_communicator
+      integer, intent (in) :: eig_id
       logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
-      integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac 
+      integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
@@ -91,15 +95,16 @@ c******************************************************************
       integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d)
-      real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd) 
+      real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd)
       real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
       real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
-      real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)  
+      real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)
       real,    intent (in) :: pos(3,natd),ef
       complex, intent (in) :: ustep(n3d)
       logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss,l_bzsym
       logical,intent(in)::l_proj_plot
       integer,intent(in)::sortrule
+      integer :: n_start, n_end
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
       type (od_inp), intent (in) :: odi
@@ -113,7 +118,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer noccbd,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer jsp_start,jsp_end,nrec,nrec1,nbands
       integer nodeu,noded,n_size,na,n_rank,nbnd,nkbnd,idum,jdum,kdum
-      integer i1,i2,i3,in,ikpt_k,lda
+      integer i1,i2,i3,in,ikpt_k,lda,nbasfcn
       integer n_bands(0:neigd),nslibd
       character*8 dop,iop
       real bkpt(3),sfp,tpi,wronk,wk,wk_b,phase
@@ -209,7 +214,7 @@ c      real dotirp
       real,allocatable::knorm(:,:)
       real,allocatable::wfnorm(:)
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
-      INTEGER :: grid(3),k,addnoco      
+      INTEGER :: grid(3),k,addnoco
       integer,allocatable :: shiftkpt(:,:)
       LOGICAL :: cartesian,xsf
       REAL    :: rhocc(jmtd),realpart,imagpart
@@ -217,7 +222,7 @@ c      real dotirp
       CHARACTER(len=30):: filename
       CHARACTER(len=20):: name1,name2,name3
       CHARACTER(len=10):: vandername
-      NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename 
+      NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename
       complex :: nsfactor
       integer :: ngopr1(natd)
 
@@ -261,7 +266,7 @@ c         WRITE(20,*) "  filename='plot1' /"
       OPEN (18,file='plot_inp')
       READ(18,'(i2,5x,l1)') nplot,xsf
       ! If xsf is specified we create an input file for xcrysden
-      IF (nplot.ge.2) 
+      IF (nplot.ge.2)
      &     CALL juDFT_error
      +     ("plots one by one, please, this is not charge density"
      +     ,calledby ="wann_plot_um_dat")
@@ -269,10 +274,10 @@ c         WRITE(20,*) "  filename='plot1' /"
       vec1 = (/0.,0.,0./);vec2=(/0.,0.,0./);vec3=(/0.,0.,0./)
       zero = (/0.,0.,0./);filename="default"
       READ(18,plot)
-      IF (twodim.AND.ANY(grid(1:2)<1)) 
+      IF (twodim.AND.ANY(grid(1:2)<1))
      +     CALL juDFT_error("Illegal grid size in plot",calledby
      +     ="wann_plot_um_dat")
-      IF (.NOT.twodim.AND.ANY(grid<1)) 
+      IF (.NOT.twodim.AND.ANY(grid<1))
      +     CALL juDFT_error("Illegal grid size in plot",calledby
      +     ="wann_plot_um_dat")
       IF (twodim) grid(3) = 1
@@ -289,7 +294,7 @@ c         WRITE(20,*) "  filename='plot1' /"
       volume  = vec1(1)*vec2(2)*vec3(3) + vec2(1)*vec3(2)*vec1(3) +
      &          vec3(1)*vec1(2)*vec2(3) - vec1(3)*vec2(2)*vec3(1) -
      &          vec2(3)*vec3(2)*vec1(1) - vec3(3)*vec1(2)*vec2(1)
-    
+
 
 
       sfp = 2* sqrt( pimach() )
@@ -319,7 +324,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
           enddo
         enddo
       enddo
- 
+
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspins
       if(l_soc) wannierspin=2
@@ -394,13 +399,13 @@ c**************************************************************
             IF(kpt/=i) CALL juDFT_error("kpt.ne.i",calledby
      +           ="wann_plot_um_dat")
             print*,i,irreduc(i),mapkoper(i)
-         enddo   
+         enddo
          close(713)
          IF(MAXVAL(irreduc(:))/=nkpts) CALL juDFT_error
      +        ("max(irreduc(:))/=nkpts",calledby ="wann_plot_um_dat")
-      else   
+      else
          fullnkpts=nkpts
-      endif   
+      endif
 
       IF(kpun/=fullnkpts) CALL juDFT_error
      +     ("mismatch in kpun and fullnkpts",calledby
@@ -437,10 +442,10 @@ c**************************************************************
                   read(419,*)idum,jdum,kdum,realpart,imagpart
                    u_matrix(i,j,ikpt)=cmplx(realpart,imagpart)
                enddo
-            enddo   
-         enddo   
+            enddo
+         enddo
          close(419)
-      endif   
+      endif
 
 c      if(um_format)then
 c         open(419,file='umatrix_formatted')
@@ -449,8 +454,8 @@ c            do j=1,num_wann
 c               do i=1,num_bands
 c                  write(419,*)u_matrix(i,j,ikpt)
 c               enddo
-c            enddo   
-c         enddo   
+c            enddo
+c         enddo
 c         close(419)
 c      endif
 
@@ -492,7 +497,7 @@ c...and the local orbital radial functions
 c       do ilo = 1, nlo(n)
          call radflo(
      >             atoms,n,jspin,enpara%ello0(:,:,jspin),vr(1,n,jspin2),
-     >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),mpi,
+     >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),fmpi,
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:))
 c       enddo
 c       na = na + neq(n)
@@ -512,7 +517,7 @@ c******************************************************************
         i_rec = i_rec + 1
         if (mod(i_rec-1,isize).eq.irank) then
         print*,"k-point=",ikpt
-        kptibz=ikpt 
+        kptibz=ikpt
         if(l_bzsym) kptibz=irreduc(ikpt)
         if(l_bzsym) oper=mapkoper(ikpt)
 
@@ -525,29 +530,53 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-      zzMat%l_real = l_real
-      zzMat%matsize1 = nbasfcn
-      zzMat%matsize2 = neigd
-      IF(l_real) THEN
-         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
-      ELSE
-         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
-      END IF
-      CALL judft_error("TODO:adjust in wann_plot_um_dat")
+!      zzMat%l_real = l_real
+!      zzMat%matsize1 = nbasfcn
+!      zzMat%matsize2 = neigd
+!      IF(l_real) THEN
+!         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+!      ELSE
+!         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+!      END IF
+!      CALL judft_error("TODO:adjust in wann_plot_um_dat")
 !      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
 !     >     irank,isize,kptibz,jspin,nbasfcn,nlotot, l_ss,l_noco,nrec,
 !     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
-      zMat%l_real = zzMat%l_real
-      zMat%matsize1 = zzMat%matsize1
-      zMat%matsize2 = zzMat%matsize2
-      IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
-         zMat%data_r = 0.0
-      ELSE
-         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
-         zMat%data_c = CMPLX(0.0,0.0)
-      END IF
+!      zMat%l_real = zzMat%l_real
+!      zMat%matsize1 = zzMat%matsize1
+!      zMat%matsize2 = zzMat%matsize2
+!      IF (zzMat%l_real) THEN
+!         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+!         zMat%data_r = 0.0
+!      ELSE
+!         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+!         zMat%data_c = CMPLX(0.0,0.0)
+!      END IF
+
+                n_start=1
+                n_end=input%neig
+
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
+     &               kptibz,cell,(sym%zrfs.AND.
+     &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &               .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+
+                nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
+               CALL zzMat%init(l_real,nbasfcn,input%neig)
+               CALL zMat%init(l_real,nbasfcn,input%neig)
+
+
+                CALL cdn_read(
+     &                eig_id,
+     &               lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, 
+     &                kptibz,jspin,lapw%dim_nbasfcn(),
+     &               noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
+     &                nbands,eigg,zzMat)
+
+
+
 
 
       nslibd = 0
@@ -575,23 +604,23 @@ c...we work only within the energy window
              zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
-       endif 
-      enddo 
+       endif
+      enddo
 c***********************************************************
 c              rotate the wavefunction
 c***********************************************************
 
       if (l_bzsym.and.oper.ne.1) then  !rotate bkpt
          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
+     >        tau,
+     >       lapw,    
+!     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
      x            zMat,nsfactor)
       endif
 
@@ -608,14 +637,14 @@ c******************************************************************
       acof(:,:,:) = cmplx(0.,0.) ; bcof(:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:) = cmplx(0.,0.)
 
-c...generation of the A,B,C coefficients in the spheres 
-c...for the lapws and local orbitals, summed by the basis functions 
+c...generation of the A,B,C coefficients in the spheres
+c...for the lapws and local orbitals, summed by the basis functions
       ngopr1(:)=1
 
       CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     >           noco,jspin,oneD,acof,bcof,ccof,zMat)
+     >           noco,nococonv,jspin,oneD,acof,bcof,ccof,zMat)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof,bcof,ccof)
 
 
@@ -639,7 +668,7 @@ c***********************************************************************
      &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
      &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
          call wann_1dvacabcof(
-     >         DIMENSION,oneD,vacuum,stars,cell,
+     >         oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,odi,ods,
      >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
@@ -659,7 +688,7 @@ c**************************************************************************
              if(counter>num_inc) exit
              if(.not.inc_band(nbn))cycle band
        endif
-          
+
 
           DO iz = 0,grid(3)-1
           DO iy = 0,grid(2)-1
@@ -720,7 +749,7 @@ c**************************************************************************
                 if(nvac==1)jvac=1
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
      >         nmz,delz,bmat,bbmat,enpara%evac0(:,jspin),bkpt,vz,jspin,
-     >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd, 
+     >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd,
      >            nbasfcn,neigd,nv(jspin),omtil,nslibd,
      >            ac(:,nbn,ivac),
      &             bc(:,nbn,ivac),
@@ -731,7 +760,7 @@ c**************************************************************************
      +                  xdnout*u_matrix(counter,:,ikpt)*factor
               CYCLE xloop
              END IF
-            
+
              IF (odi%d1) THEN
               IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
                call wann_plot_od_vac(point,z1,nmzd,nv2d,odi,
@@ -766,7 +795,7 @@ c..end of the loop by the bands
       counter=counter+1
 
 
-      ENDDO band   
+      ENDDO band
 
       deallocate ( acof,bcof,ccof,we,eigg )
 
@@ -776,7 +805,7 @@ c..end of the loop by the bands
       if(film)then
          if (.not.odi%d1) deallocate(ac,bc,u,ue)
          if (odi%d1) deallocate(ac_1,bc_1,u_1,ue_1)
-      endif   
+      endif
 
 
       endif!processors
@@ -785,44 +814,44 @@ c..end of the loop by the bands
       mesh=grid(1)*grid(2)*grid(3)
 
 #ifdef CPP_MPI
-c      call MPI_BARRIER(mpi_comm,ierr)
+c      call MPI_BARRIER(mpi_communicator,ierr)
       if(l_p0)then
          if(isize.ne.1)then
-       allocate(wannierfunc_temp(num_wann,mesh))  
+       allocate(wannierfunc_temp(num_wann,mesh))
        do cpu_index=1,isize-1
         do ikpt=1,fullnkpts
          if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(knorm(ikpt,1:num_bands),num_bands,
      &             CPP_MPI_REAL,cpu_index,
-     &        ikpt,mpi_comm,stt,mpiierr)
+     &        ikpt,mpi_communicator,stt,mpiierr)
          endif !processors
         enddo !ikpt
            call MPI_RECV(wannierfunc_temp(1:num_wann,1:mesh),
      &         num_wann*mesh,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &        cpu_index+fullnkpts,mpi_comm,stt,mpiierr)
+     &        cpu_index+fullnkpts,mpi_communicator,stt,mpiierr)
            wannierfunc(:,:)=wannierfunc(:,:)+
      &                   wannierfunc_temp(:,:)
 
 
 
-       enddo !cpu_index 
+       enddo !cpu_index
        deallocate(wannierfunc_temp)
        endif !isize
       else
        do ikpt=1,fullnkpts
         if(mod(ikpt-1,isize).eq.irank)then
              call MPI_SEND(knorm(ikpt,1:num_bands),num_bands,
-     &           CPP_MPI_REAL,0,ikpt,mpi_comm,mpiierr)
-        endif !processors  
-       enddo !ikpt  
+     &           CPP_MPI_REAL,0,ikpt,mpi_communicator,mpiierr)
+        endif !processors
+       enddo !ikpt
              call MPI_SEND(wannierfunc(1:num_wann,1:mesh),
      &        num_wann*mesh,
-     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_comm,mpiierr)
+     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicator,mpiierr)
 
 
 
-      endif ! l_p0   
+      endif ! l_p0
 
 
 
@@ -880,7 +909,7 @@ c***************************************************************
      $           ,grid)
          ELSE
                WRITE (vandername,201) nplo,jspin
-  201          FORMAT (i5.5,'.',i1)            
+  201          FORMAT (i5.5,'.',i1)
                OPEN(55,file=vandername)
                WRITE (55,7) grid(1),grid(2),grid(3),ikpt,nslibd
     7          FORMAT (5i4)
@@ -901,22 +930,22 @@ c********************************************************************
               ENDIF
            enddo
           enddo
-         enddo 
+         enddo
          IF (xsf) THEN
               CALL xsf_WRITE_endblock(55,twodim)
               CALL xsf_WRITE_endblock(56,twodim)
               CALL xsf_WRITE_endblock(57,twodim)
               CLOSE (55) ; CLOSE (56) ; CLOSE (57)
          ENDIF
-           
-      ENDDO   !nplo      
+
+      ENDDO   !nplo
       IF (.not.xsf) CLOSE(55)
     8 FORMAT (2f7.3)
 
 c*******************************************************************
 c     determine spreads, centers, norms
 c*******************************************************************
-      
+
       l_spreadcal=.true.
       if(l_spreadcal)then !calculate spreads and centers from real space grid
          print*,"calculate spreads and centers"
@@ -941,28 +970,28 @@ c*******************************************************************
                   do ii1=1,num_wann
                      spreads(nplo,ii1)=spreads(nplo,ii1)
      +  +wannierfunc(nplo,posi)*conjg(wannierfunc(ii1,posi))*
-     *       dot_product(point,point)   
-                  enddo   
+     *       dot_product(point,point)
+                  enddo
                enddo
             enddo
-           enddo   
+           enddo
         enddo
 
         do nplo=1,num_wann !normalize centers
            centers(:,nplo)=centers(:,nplo)/(mesh)*volume
-        enddo   
- 
+        enddo
+
         do nplo=1,num_wann  !normalize spreads
            do ii1=1,num_wann
              spreads(nplo,ii1)=spreads(nplo,ii1)/mesh*volume
-           enddo        
+           enddo
            spreads(nplo,nplo)=spreads(nplo,nplo)
-     &           -dot_product(centers(1:3,nplo),centers(1:3,nplo))      
-        enddo   
+     &           -dot_product(centers(1:3,nplo),centers(1:3,nplo))
+        enddo
 
         wfnorm(:)=wfnorm(:)/(mesh)*volume !normalize wfnorm
 
-         knorm(:,:)=knorm(:,:)/mesh*volume !normalize knorm       
+         knorm(:,:)=knorm(:,:)/mesh*volume !normalize knorm
 
 c***********************************************************
 c        write spreads and so on to files
@@ -977,24 +1006,24 @@ c***********************************************************
          do nplo=1,num_wann
             do ii1=1,num_wann
                write(519,*)nplo,ii1,spreads(nplo,ii1)
-            enddo   
-         enddo   
+            enddo
+         enddo
          close(519)
          open(521,file=spin12(jspin)//'.norm')
          do ii1=1,num_wann
             write(521,*)wfnorm(ii1)
-         enddo   
+         enddo
          close(521)
          deallocate(centers)
          deallocate(spreads)
          deallocate(wfnorm)
-      endif   
+      endif
 
       open(611,file=spin12(jspin)//'.knorm')
       do nplo=1,num_bands
          do ikpt=1,fullnkpts
             write(611,*)ikpt,nplo,knorm(ikpt,nplo)
-         enddo   
+         enddo
       enddo
       close(611)
 
@@ -1013,18 +1042,18 @@ c*****************************************************************
       deallocate(u_matrix)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
-#endif      
+      call MPI_BARRIER(mpi_communicator,mpiierr)
+#endif
 
 110   continue ! end of cycle by spins
 
 
       deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg)
- 
+
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,mpiierr)
-#endif      
+      call MPI_BARRIER(mpi_communicator,mpiierr)
+#endif
 
       END SUBROUTINE wann_plot_um_dat
       END MODULE m_wann_plot_um_dat

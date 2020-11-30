@@ -7,7 +7,7 @@ MODULE m_kerker
 
 CONTAINS
 
-  SUBROUTINE kerker( field, DIMENSION, mpi, &
+  SUBROUTINE kerker( field,  fmpi, &
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
        oneD, inDen, outDen, precon_v  )
 
@@ -21,9 +21,9 @@ CONTAINS
     USE m_types_mixvector
     USE m_constants
 
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     USE m_mpi_bc_potden
-#endif    
+#endif
     IMPLICIT NONE
 
     TYPE(t_oneD),      INTENT(in)    :: oneD
@@ -35,9 +35,9 @@ CONTAINS
     TYPE(t_cell),      INTENT(in)    :: cell
     TYPE(t_sphhar),    INTENT(in)    :: sphhar
     TYPE(t_field),     INTENT(inout) :: field
-    TYPE(t_dimension), INTENT(in)    :: DIMENSION
-    TYPE(t_mpi),       INTENT(in)    :: mpi
-    TYPE(t_atoms),     INTENT(in)    :: atoms 
+
+    TYPE(t_mpi),       INTENT(in)    :: fmpi
+    TYPE(t_atoms),     INTENT(in)    :: atoms
     TYPE(t_potden),    INTENT(inout) :: outDen
     TYPE(t_potden),    INTENT(in)    :: inDen
     TYPE(t_mixvector), INTENT(INOUT) :: precon_v
@@ -49,27 +49,30 @@ CONTAINS
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
     CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
-    MPI0_b: IF( mpi%irank == 0 ) THEN 
+    MPI0_b: IF( fmpi%irank == 0 ) THEN
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
     END IF MPI0_b
 #ifdef CPP_MPI
-    CALL mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
+    CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
 #endif
     IF ( .NOT. input%film ) THEN
-       CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
-            sphhar, atoms, resDen, vYukawa )
+       CALL vgen_coulomb( 1, fmpi,  oneD, input, field, vacuum, sym, stars, cell, &
+            sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
-       if( mpi%irank == 0 ) then 
-          call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
+       call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
+       if( fmpi%irank == 0 ) then
           call resDenMod%copyPotDen( resDen )
        end if
+#ifdef CPP_MPI
+       CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDenMod )
+#endif
        vYukawa%iter = resDen%iter
-       CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, resDenMod, &
+       CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, resDenMod, &
             vYukawa )
     END IF
 
-    MPI0_c: IF( mpi%irank == 0 ) THEN
+    MPI0_c: IF( fmpi%irank == 0 ) THEN
        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
        DO n = 1, atoms%ntype
           DO lh = 0, sphhar%nlhd
@@ -83,7 +86,7 @@ CONTAINS
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
-       CALL qfix(mpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., .TRUE., fix )
+       CALL qfix(fmpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
     END IF MPI0_c
     CALL precon_v%from_density(resden)

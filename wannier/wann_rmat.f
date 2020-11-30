@@ -19,10 +19,11 @@ c     between wannier functions.
 c
 c     FF, 2009
 c***********************************************************
-      use m_constants, only:pimach, ImagUnit
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
+
       real, intent(in) :: bmat(:,:)
       real, intent(in) :: amat(:,:)
 
@@ -100,7 +101,7 @@ c***********************************************************
       jspins=jspins_in
       if(l_nocosoc)jspins=1
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 
       do jspin=1,jspins  !spin loop
 c*****************************************************
@@ -122,8 +123,9 @@ c*****************************************************
          endif
          read (203,*) num_wann,num_bands
          close (203)
-         write(6,*)'According to proj there are ',num_bands,' bands'
-         write(6,*)"and ",num_wann," wannier functions."
+         write(oUnit,*)'According to proj there are ',
+     +                 num_bands,' bands'
+         write(oUnit,*)"and ",num_wann," wannier functions."
 
 c****************************************************************
 c        get nntot and bk and wb from bkpts file
@@ -196,7 +198,7 @@ c****************************************************************
 c****************************************************************
 c        read in eig-file
 c****************************************************************
-         write(6,*)"read in eig-file"
+         write(oUnit,*)"read in eig-file"
          allocate(energy(num_bands,num_kpts))
          inquire(file=spin12(jspin)//'.eig',exist=l_umdat)
          IF(.NOT.l_umdat)  CALL judft_error
@@ -212,8 +214,8 @@ c****************************************************************
 
          minenerg=minval(energy(:,:))
          maxenerg=maxval(energy(:,:))
-         write(6,*)"minenerg=",minenerg
-         write(6,*)"maxenerg=",maxenerg
+         write(oUnit,*)"minenerg=",minenerg
+         write(oUnit,*)"maxenerg=",maxenerg
 
 
          allocate(eigval_opt(num_bands,nkpts))
@@ -252,7 +254,7 @@ c****************************************************************
 c****************************************************************
 c        Set up posop.
 c****************************************************************
-         write(6,*)"Set up posop."
+         write(oUnit,*)"Set up posop."
          allocate( posop2(3,num_wann,num_wann,num_kpts) )
          posop2=cmplx(0.0,0.0)
          

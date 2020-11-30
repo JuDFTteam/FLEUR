@@ -9,7 +9,7 @@ c***************************************c
       MODULE m_wann_uHu_od_vac
       CONTAINS
       SUBROUTINE wann_uHu_od_vac(
-     >     DIMENSION,oneD,vacuum,stars,cell,
+     >     oneD,vacuum,stars,cell,
      >     chi,l_noco,l_soc,jspins,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,
@@ -30,7 +30,7 @@ c***************************************c
 
       implicit none
 
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
@@ -127,7 +127,7 @@ c     ..local scalars..
      +           bcof(nv2d,-odi%mb:odi%mb,nslibd),
      +           acof_b(nv2d,-odi%mb:odi%mb,nslibd_b),
      +           bcof_b(nv2d,-odi%mb:odi%mb,nslibd_b),
-     +           kvac3(nv2d),map1(nvd), 
+     +           kvac3(nv2d),map1(nvd),
      +           kvac3_b(nv2d),map1_b(nvd),
      +           zmsh(nmz),xx(nmz),xximag(nmz),v1(nmzd),
      +           gdu(nmzd),gdud(nmzd),gdu_b(nmzd),gdud_b(nmzd) )
@@ -187,20 +187,22 @@ c     ..local scalars..
 
 c...for the k-point
 
-      qssbti(1,1) = - qss(1)/2.     
-      qssbti(2,1) = - qss(2)/2.     
-      qssbti(1,2) = + qss(1)/2.     
+      qssbti(1,1) = - qss(1)/2.
+      qssbti(2,1) = - qss(2)/2.
+      qssbti(1,2) = + qss(1)/2.
       qssbti(2,2) = + qss(2)/2.
       qssbti(3,1) = - qss(3)/2.
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      cell,vacuum,stars,oneD,
      >      qssbti(3,jspin),odi%n2d,
      >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz(1,ivac,jspin2),kvac3,nv2,
-     <      uz(1,-odi%mb),duz(1,-odi%mb),u(1,1,-odi%mb),udz(1,-odi%mb),
-     <      dudz(1,-odi%mb),ddnv(1,-odi%mb),ud(1,1,-odi%mb))
+     <      uz(:,-odi%mb:),duz(:,-odi%mb:),
+     <      u(:,:,-odi%mb:),udz(1:,-odi%mb:),
+     <      dudz(:,-odi%mb:),ddnv(:,-odi%mb:),
+     <      ud(:,:,-odi%mb:))
       ENDDO
 
       do k = 1,nv(jspin)
@@ -250,13 +252,14 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      cell,vacuum,stars,oneD,
      >      qssbti(3,jspin_b),odi%n2d,
      >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
      >      vz(1,ivac,jspin2_b),kvac3_b,nv2_b,
-     <      uz_b(1,-odi%mb),duz_b(1,-odi%mb),u_b(1,1,-odi%mb),
-     <      udz_b(1,-odi%mb),
-     <      dudz_b(1,-odi%mb),ddnv_b(1,-odi%mb),ud_b(1,1,-odi%mb))
+     <      uz_b(:,-odi%mb:),duz_b(:,-odi%mb:),u_b(:,:,-odi%mb:),
+     <      udz_b(:,-odi%mb:),
+     <      dudz_b(:,-odi%mb:),ddnv_b(:,-odi%mb:),
+     <      ud_b(:,:,-odi%mb:))
       ENDDO
 
       do k = 1,nv_b(jspin_b)
@@ -300,7 +303,7 @@ c     +                    conjg(zMat_b%z_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb
-         endif 
+         endif
       enddo          ! k = 1,nv
 
 c  now actually computing the uHu matrix
@@ -327,7 +330,7 @@ c  now actually computing the uHu matrix
          ! transformation u --> v = sqrt(z)*u
          ! thus we can use simplified 'pseudopotential'
          ! and skip r in integration dx dy = r dr dphi
-         u(i,:,:) = zz*u(i,:,:)              
+         u(i,:,:) = zz*u(i,:,:)
          ud(i,:,:) = zz*ud(i,:,:)
          u_b(i,:,:) = zz*u_b(i,:,:)
          ud_b(i,:,:) = zz*ud_b(i,:,:)
@@ -349,7 +352,7 @@ c  now actually computing the uHu matrix
          enddo
       enddo
 
-     
+
       ! calculate uHu matrix elements
       do l = 1,nv2
 
@@ -387,7 +390,7 @@ c  now actually computing the uHu matrix
                  ENDDO
                  call intgz0(xx,delz,nmzxy,xv,tail)
                  call intgz0(xximag,delz,nmzxy,yv,tail)
-                 tuu = cmplx(xv,-yv)                 
+                 tuu = cmplx(xv,-yv)
 
                  ! tud
                  DO i=1,nmzxy
@@ -398,7 +401,7 @@ c  now actually computing the uHu matrix
                  ENDDO
                  call intgz0(xx,delz,nmzxy,xv,tail)
                  call intgz0(xximag,delz,nmzxy,yv,tail)
-                 tud = cmplx(xv,-yv)                 
+                 tud = cmplx(xv,-yv)
 
                  ! tdu
                  DO i=1,nmzxy
@@ -409,7 +412,7 @@ c  now actually computing the uHu matrix
                  ENDDO
                  call intgz0(xx,delz,nmzxy,xv,tail)
                  call intgz0(xximag,delz,nmzxy,yv,tail)
-                 tdu = cmplx(xv,-yv)                 
+                 tdu = cmplx(xv,-yv)
 
                  ! tdd
                  DO i=1,nmzxy
@@ -420,8 +423,8 @@ c  now actually computing the uHu matrix
                  ENDDO
                  call intgz0(xx,delz,nmzxy,xv,tail)
                  call intgz0(xximag,delz,nmzxy,yv,tail)
-                 tdd = cmplx(xv,-yv)                
- 
+                 tdd = cmplx(xv,-yv)
+
               ELSE ! non-warping components Gz==0, m==0
                    ! need integral with XXXXXX
 
@@ -453,7 +456,7 @@ c  now actually computing the uHu matrix
                     ! construct symmetrized 'pseudopotential'
                     ! TODO: valid to simply symmetrize?
                     DO i=1,nmzd
-                       v1(i) = vz(i,ivac,jspin2H) 
+                       v1(i) = vz(i,ivac,jspin2H)
      >                       + (m*m+mp*mp)/(4.*zmsh(i)*zmsh(i))
      >                       - 1./(8.*zmsh(i)*zmsh(i))
                     ENDDO
@@ -549,11 +552,11 @@ c  now actually computing the uHu matrix
                     tdd = cmplx(xv,-yv)
 
                  ENDIF ! ((ico.EQ.1) .OR. (ico.EQ.2))
-            
+
               ENDIF ! (ind1.NE.0)
-        
+
               ! determine phase factor
-              phasfc = chi*exp(-cmplx(0.0,m2*arg_b-m1*arg)) 
+              phasfc = chi*exp(-cmplx(0.0,m2*arg_b-m1*arg))
 
               ! contraction of integrals with a,b coefficients
               ! yields contribution to uHu matrix
@@ -563,8 +566,8 @@ c  now actually computing the uHu matrix
      *             acof(l,m,i)*conjg(acof_b(lp,mp,j))*tuu +
      +             acof(l,m,i)*conjg(bcof_b(lp,mp,j))*tud +
      +             bcof(l,m,i)*conjg(acof_b(lp,mp,j))*tdu +
-     +             bcof(l,m,i)*conjg(bcof_b(lp,mp,j))*tdd ) 
-                enddo 
+     +             bcof(l,m,i)*conjg(bcof_b(lp,mp,j))*tdd )
+                enddo
               enddo
 
              ENDDO ! m2

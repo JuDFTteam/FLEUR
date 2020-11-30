@@ -11,22 +11,23 @@ CONTAINS
   !Overlap matrix
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
-       vacuum,stars,DIMENSION, mpi,jsp,input,v,evac,cell,&
-       lapw,sym, noco,hmat,smat)
- 
+       vacuum,stars, fmpi,jsp,input,v,evac,cell,&
+       lapw,sym, noco,nococonv,hmat,smat)
+
 
     USE m_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_nococonv),INTENT(IN)       :: nococonv
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_potden),INTENT(IN)     :: v
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:),smat(:,:)
     !     ..
@@ -46,15 +47,15 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER:: nv2(input%jspins)
-    INTEGER kvac(2,DIMENSION%nv2d,input%jspins)
-    INTEGER map2(DIMENSION%nvd,input%jspins)
-    COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
+    INTEGER kvac(2,lapw%dim_nv2d(),input%jspins)
+    INTEGER map2(lapw%dim_nvd(),input%jspins)
+    COMPLEX tddv(lapw%dim_nv2d(),lapw%dim_nv2d()),tduv(lapw%dim_nv2d(),lapw%dim_nv2d())
+    COMPLEX tudv(lapw%dim_nv2d(),lapw%dim_nv2d()),tuuv(lapw%dim_nv2d(),lapw%dim_nv2d())
     COMPLEX vxy_help(stars%ng2-1)
-    COMPLEX a(DIMENSION%nvd,input%jspins),b(DIMENSION%nvd,input%jspins)
-    REAL ddnv(DIMENSION%nv2d,input%jspins),dudz(DIMENSION%nv2d,input%jspins)
-    REAL duz(DIMENSION%nv2d,input%jspins), udz(DIMENSION%nv2d,input%jspins)
-    REAL uz(DIMENSION%nv2d,input%jspins)
+    COMPLEX a(lapw%dim_nvd(),input%jspins),b(lapw%dim_nvd(),input%jspins)
+    REAL ddnv(lapw%dim_nv2d(),input%jspins),dudz(lapw%dim_nv2d(),input%jspins)
+    REAL duz(lapw%dim_nv2d(),input%jspins), udz(lapw%dim_nv2d(),input%jspins)
+    REAL uz(lapw%dim_nv2d(),input%jspins)
     !     ..
 
 
@@ -72,7 +73,7 @@ CONTAINS
              END IF
           ENDDO
           nv2(jspin) = nv2(jspin) + 1
-          IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("hsvac:dimension%nv2d",calledby ="hsvac")
+          IF (nv2(jspin)>lapw%dim_nv2d())  CALL juDFT_error("hsvac:lapw%dim_nv2d()",calledby ="hsvac")
           kvac(1:2,nv2(jspin),jspin) = lapw%gvec(1:2,k,jspin)
           map2(k,jspin) = nv2(jspin)
        ENDDO k_loop
@@ -84,12 +85,14 @@ CONTAINS
           s1=MIN(SIZE(hmat,1),jspin1) !in colinear case s1=1
           DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
              s2=MIN(SIZE(hmat,1),jspin2) !in colinear case s2=1
-          !--->       get the wavefunctions and set up the tuuv, etc matrices          
+          !--->       get the wavefunctions and set up the tuuv, etc matrices
+             CALL timestart("vacfun")
              CALL vacfun(&
-                  vacuum,stars,&
-                  input,noco,jspin1,jspin2,&
+                  fmpi,vacuum,stars,&
+                  input,nococonv,jspin1,jspin2,&
                   sym, cell,ivac,evac,lapw%bkpt,v%vacxy,v%vacz,kvac,nv2,&
                   tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
+             CALL timestop("vacfun")
           !
           !--->       generate a and b coeffficients
           !
@@ -105,8 +108,8 @@ CONTAINS
              ENDDO
           !--->       update hamiltonian and overlap matrices
           IF (jspin1==jspin2) THEN
-             DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
-                i0=(i-1)/mpi%n_size+1 !local column index
+             DO  i = fmpi%n_rank+1,lapw%nv(jspin2),fmpi%n_size
+                i0=(i-1)/fmpi%n_size+1 !local column index
                 ik = map2(i,jspin2)
                 DO j = 1,i - 1 !TODO check noco case
                    !--->             overlap: only  (g-g') parallel=0       '
@@ -121,15 +124,15 @@ CONTAINS
                               * CONJG(a(i,jspin1)* duz(ik,jspin1) + b(i,jspin1)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                          IF (hmat(1,1)%l_real) THEN
-                            hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo) 
-                         ELSE 
+                            hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo)
+                         ELSE
                             hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + 0.25 * apw_lo
                          ENDIF
                       ENDIF
                       !Overlapp Matrix
                       IF (hmat(1,1)%l_real) THEN
                          smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
-                      ELSE 
+                      ELSE
                          smat(s1,s2)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
                       ENDIF
                    END IF
@@ -145,8 +148,8 @@ CONTAINS
           ENDIF
 
           !--->    hamiltonian update
-          DO  i = mpi%n_rank+1,lapw%nv(jspin1),mpi%n_size
-             i0=(i-1)/mpi%n_size+1 !local column index
+          DO  i = fmpi%n_rank+1,lapw%nv(jspin1),fmpi%n_size
+             i0=(i-1)/fmpi%n_size+1 !local column index
              ik = map2(i,jspin1)
              DO j = 1,MERGE(i,lapw%nv(jspin2),jspin1==jspin2)
                 jk = map2(j,jspin2)

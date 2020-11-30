@@ -6,53 +6,70 @@
 
 MODULE m_relaxation
   USE m_judft
+#ifdef CPP_MPI 
+   use mpi 
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC relaxation !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
 
 CONTAINS
-  SUBROUTINE relaxation(mpi,input,atoms,cell,sym,force_new,energies_new)
-    !This routine uses the current force,energies and atomic positions to 
-    !generate a displacement in a relaxation step. 
+  SUBROUTINE relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,force_new,energies_new)
+    !This routine uses the current force,energies and atomic positions to
+    !generate a displacement in a relaxation step.
     !The history is taken into account by read_relax from m_relaxio
     !After generating new positions the code stops
     USE m_types
+    USE m_constants
     USE m_relaxio
     USE m_mixing_history
-#ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-#endif
-    TYPE(t_mpi),INTENT(IN)   :: mpi
+    USE m_chkmt
+    USE m_types_xml
+    USE m_xsf_io
+
+    TYPE(t_mpi),INTENT(IN)   :: fmpi
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_atoms),INTENT(IN) :: atoms
     TYPE(t_sym),INTENT(IN)   :: sym
+    TYPE(t_oneD),INTENT(IN)  :: oneD
+    TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_cell),INTENT(IN)  :: cell
     REAL,INTENT(in)          :: force_new(:,:),energies_new !data for this iteration
 
     REAL,ALLOCATABLE :: pos(:,:,:),force(:,:,:),energies(:)
-    REAL,ALLOCATABLE :: displace(:,:),old_displace(:,:)
-    INTEGER          :: n,ierr
+    REAL,ALLOCATABLE :: displace(:,:),old_displace(:,:), tempDisplace(:,:)
+    REAL,ALLOCATABLE :: totalDisplace(:,:)
+    REAL             :: dispAll(3,atoms%nat), overlap(0:atoms%ntype,atoms%ntype)
+    REAL             :: dispLength, maxDisp, limitDisp
+    INTEGER          :: iType,ierr, numDispReduce
     LOGICAL          :: l_conv
 
-    IF (mpi%irank==0) THEN
-       ALLOCATE(pos(3,atoms%ntype,1)); 
-       DO n=1,atoms%ntype
-          pos(:,n,1)=atoms%pos(:,SUM(atoms%neq(:n-1))+1)
+    !to calculate the current displacement
+    Type(t_xml)   :: xml
+    TYPE(t_atoms) :: atoms_non_displaced
+    TYPE(t_atoms) :: tempAtoms
+
+    IF (fmpi%irank==0) THEN
+       call xml%init()
+       ALLOCATE(pos(3,atoms%ntype,1));
+       DO iType = 1, atoms%ntype
+          pos(:,iType,1)=atoms%pos(:,SUM(atoms%neq(:iType-1))+1)
        END DO
        ALLOCATE(force(3,atoms%ntype,1)); force(:,:,1)=force_new
        ALLOCATE(energies(1));energies(1)=energies_new
        ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
+       ALLOCATE(tempDisplace(3,atoms%ntype),totalDisplace(3,atoms%ntype))
 
        !Remove force components that are not selected for relaxation
-       DO n=1,atoms%ntype
-          IF (atoms%l_geo(n)) THEN
-             force(:,n,1)=force(:,n,1)*REAL(atoms%relax(:,n))
+       DO iType = 1, atoms%ntype
+          IF (atoms%l_geo(iType)) THEN
+             force(:,iType,1)=force(:,iType,1)*REAL(atoms%relax(:,iType))
           ELSE
-             force(:,n,1)=0.0
+             force(:,iType,1)=0.0
           ENDIF
        ENDDO
-       
-       ! add history 
+
+       ! add history
        CALL read_relax(pos,force,energies)
 
        !determine new positions
@@ -68,33 +85,83 @@ CONTAINS
        ELSE IF (input%forcemix==2) THEN
           CALL simple_bfgs(pos,force,displace)
        ELSE
-          CALL juDFT_error('unkown mixing scheme for forces', calledby='relaxation')
+          CALL juDFT_error('Unknown mixing scheme for forces', calledby='relaxation')
        END IF
 
        !Check for convergence of forces/displacements
-       l_conv=.TRUE.
-       DO n=1,atoms%ntype
-          IF (DOT_PRODUCT(force(:,n,SIZE(force,3)),force(:,n,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
-          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsdisp**2) l_conv=.FALSE.
+       maxDisp = 0.0
+       l_conv = .TRUE.
+       DO iType = 1, atoms%ntype
+          IF (DOT_PRODUCT(force(:,iType,SIZE(force,3)),force(:,iType,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
+          dispLength = SQRT(DOT_PRODUCT(displace(:,iType),displace(:,iType)))
+          maxDisp = MAX(maxDisp,dispLength)
+          IF (dispLength>input%epsdisp) l_conv=.FALSE.
        ENDDO
 
+       ! Limit the maximal displacement in a single force relaxation step to limitDisp = 0.2 a_0.
+       limitDisp = 0.2
+       IF(maxDisp.GT.limitDisp) THEN
+          displace(:,:) = limitDisp*displace(:,:) / maxDisp
+       END IF
+
        !New displacements relative to positions in inp.xml
-       CALL read_displacements(atoms,old_displace)
-       displace=displace+old_displace
+       !CALL read_displacements(atoms,old_displace)
+       call atoms_non_displaced%read_xml(xml)
+       call xml%freeResources()
+       call atoms_non_displaced%init(cell)
+       DO iType = 1, atoms%ntype
+          old_displace(:,iType) = atoms%pos(:,SUM(atoms%neq(:iType-1))+1) - &
+                                  atoms_non_displaced%pos(:,SUM(atoms%neq(:iType-1))+1)
+       END DO
+
+       tempAtoms = atoms_non_displaced
+       tempDisplace = MATMUL(cell%bmat,totalDisplace)/tpi_const
+
+       CALL rotate_to_all_sites(tempDisplace,atoms_non_displaced,cell,sym,dispAll)
+       tempAtoms%taual(:,:)=atoms_non_displaced%taual(:,:)+dispAll(:,:)
+       tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
+
+       numDispReduce = 0
+       overlap=1.0
+       DO WHILE(ANY(overlap>1E-10))
+          overlap = 0.0
+          totalDisplace=displace+old_displace
+
+          tempAtoms = atoms_non_displaced
+          tempDisplace = MATMUL(cell%bmat,totalDisplace)/tpi_const
+
+          CALL rotate_to_all_sites(tempDisplace,atoms_non_displaced,cell,sym,dispAll)
+          tempAtoms%taual(:,:)=atoms_non_displaced%taual(:,:)+dispAll(:,:)
+          tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
+          CALL chkmt(tempAtoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
+
+          IF (ANY(overlap>1E-10)) THEN
+             numDispReduce = numDispReduce + 1
+             IF (numDispReduce.GE.3) THEN
+                CALL juDFT_warn("Strong MT spheres crash in structural relaxation")
+             END IF
+             displace(:,:) = 0.5 * displace(:,:)
+             WRITE(oUnit,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+             WRITE(*,*) 'Automatically reducing atom displacements because MT spheres crash into each other!'
+          END IF
+       END DO
 
        !Write file
-       CALL write_relax(pos,force,energies,displace)
+       CALL write_relax(pos,force,energies,totalDisplace)
 
-
+       ! Structure in  xsf-format
+       OPEN (55,file="struct-relax.xsf",status='replace')
+       CALL xsf_WRITE_atoms(55,tempAtoms,input%film,.FALSE.,cell%amat)
+       CLOSE (55)
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
-       CALL judft_end("Structural relaxation: Done",mpi%irank)
+       CALL judft_end("Structural relaxation: Done",fmpi%irank)
     ELSE
-       CALL mixing_history_reset(mpi)
-       CALL judft_end("Structural relaxation: new displacements generated",mpi%irank)
+       CALL mixing_history_reset(fmpi)
+       CALL judft_end("Structural relaxation: new displacements generated",fmpi%irank)
     END IF
   END SUBROUTINE relaxation
 
@@ -108,17 +175,18 @@ CONTAINS
     REAL,INTENT(OUT) :: displace(:,:)
 
     real :: corr
-    
+
     displace = alpha*force(:,:,SIZE(force,3))
     corr=maxdisp/maxval(abs(displace))
     if (corr<1.0) displace = corr*alpha*force(:,:,size(force,3))
-    
+
   END SUBROUTINE simple_step
 
   SUBROUTINE simple_bfgs(pos,force,shift)
     !-----------------------------------------------
     !  Simple BFGS method to calculate shift out of old positions and forces
     !-----------------------------------------------
+    USE m_constants
     IMPLICIT NONE
     REAL,INTENT(in)  :: pos(:,:,:),force(:,:,:)
     REAL,INTENT(OUT) :: shift(:,:)
@@ -150,14 +218,14 @@ CONTAINS
        yy = DOT_PRODUCT(y,v)
        !check that update will leave h positive definite;
        IF (py <= 0.0) THEN
-          WRITE (6,*) '  bfgs: <p|y> < 0'
-          WRITE (6,*) '  check convergence of forces'
+          WRITE (oUnit,*) '  bfgs: <p|y> < 0'
+          WRITE (oUnit,*) '  check convergence of forces'
           !Starting over with initial hessian
           h = 0.0
           DO j = 1,n_force
              h(j,j) = 1.0
           ENDDO
-          CYCLE 
+          CYCLE
        ELSE
           !update h
           IF (n == 2) THEN

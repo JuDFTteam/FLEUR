@@ -49,6 +49,7 @@ CONTAINS
   END SUBROUTINE judfT_file_readable
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
+    USE m_juDFT_internalParams
     USE m_judft_usage
     use m_juDFT_string
     USE m_judft_xmloutput
@@ -105,21 +106,21 @@ CONTAINS
        ELSE
           WRITE(0,'(a)') "************juDFT-Warning*****************"
        ENDIF
-       WRITE(0,"(3a)") "Error message:",message
+       WRITE(0,"(3a)") "Error message: ",message
        IF (PRESENT(calledby)) THEN
-          WRITE(0,"(3a)") "Error occurred in subroutine:",calledby
+          WRITE(0,"(3a)") "Error occurred in subroutine: ",calledby
        ENDIF
        IF (PRESENT(hint)) THEN
-          WRITE(0,"(3a)") "Hint:",hint
+          WRITE(0,"(3a)") "Hint: ",hint
        ENDIF
        IF (PRESENT(no)) THEN
-          WRITE(0,"(1a,i0)") "Error number:",no
+          WRITE(0,"(1a,i0)") "Error number: ",no
        ENDIF
        IF (PRESENT(file)) THEN
           IF (PRESENT(line)) THEN
-             WRITE(0,"(3a,i0)") "Source:",file,":",line
+             WRITE(0,"(3a,i0)") "Source: ",file,":",line
           ELSE
-             WRITE(0,"(3a)") "Source:",file
+             WRITE(0,"(3a)") "Source: ",file
           ENDIF
        ENDIF
 #ifdef CPP_MPI
@@ -147,12 +148,12 @@ CONTAINS
           CALL print_memory_info(0,.TRUE.)
           IF (irank==0) THEN
              !Error on PE0 write info to out and out.xml
-             WRITE(6,*) "***************ERROR***************"
-             WRITE(6,*) message
-             WRITE(6,*) "***************ERROR***************"
+             WRITE(juDFT_outUnit,*) "***************ERROR***************"
+             WRITE(juDFT_outUnit,*) message
+             WRITE(juDFT_outUnit,*) "***************ERROR***************"
              CALL writeXMLElement('ERROR',(/"Message"/),(/message/))
              !try closing the out file
-             CLOSE(6,iostat=e)
+             CLOSE(juDFT_outUnit,iostat=e)
              !Try closing the xml-out
              CALL endXMLOutput()
           ENDIF
@@ -199,7 +200,6 @@ CONTAINS
     INTEGER :: ierr
     CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
-
     l_endXML_local = .TRUE.
     IF(PRESENT(l_endXML)) THEN
        l_endXML_local = l_endXML

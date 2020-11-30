@@ -5,23 +5,26 @@
 !--------------------------------------------------------------------------------
 MODULE m_mpi_bc_xcpot
   use m_judft
+#ifdef CPP_MPI
+  use mpi 
+#endif
 CONTAINS
-  SUBROUTINE mpi_bc_xcpot(xcpot,mpi)
+  SUBROUTINE mpi_bc_xcpot(xcpot,fmpi)
+
     USE m_types
     USE m_types_xcpot_libxc
     IMPLICIT NONE
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT):: xcpot
-    TYPE(t_mpi),INTENT(IN)                  :: mpi
+    TYPE(t_mpi),INTENT(IN)                  :: fmpi
 
 #ifdef CPP_MPI
     LOGICAL           :: l_relcor
     CHARACTER(len=100):: namex
     INTEGER           :: ierr,n,i(5)
-    INCLUDE 'mpif.h'
 
-    IF (mpi%isize==1) RETURN !nothing to be done with only one PE
+    IF (fmpi%isize==1) RETURN !nothing to be done with only one PE
     !First determine type on pe0
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        SELECT TYPE(xcpot)
        TYPE IS (t_xcpot_inbuild)
           n=1
@@ -31,8 +34,8 @@ CONTAINS
           CALL judft_error("Type could not be determined in mpi_bc_xcpot")
        END SELECT
     END IF
-    CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank /= 0) THEN
+    CALL MPI_BCAST(n,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
+    IF (fmpi%irank /= 0) THEN
        IF (ALLOCATED(xcpot)) DEALLOCATE(xcpot)
        !Now we know the types and can allocate on the other PE type dependend
        SELECT CASE(n)
@@ -45,29 +48,7 @@ CONTAINS
        END SELECT
     END IF
     !Now we can do the the type dependend bc
-    SELECT TYPE(xcpot)
-    TYPE IS (t_xcpot_inbuild)
-       IF (mpi%irank==0) THEN
-          namex=xcpot%get_name()
-          l_relcor=xcpot%DATA%krla==1
-          n=SIZE(xcpot%lda_atom)
-       ENDIF
-       CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       IF (mpi%irank /= 0)  CALL xcpot%init(namex(1:4),l_relcor,n)
-       CALL MPI_BCAST(xcpot%lda_atom,n,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    TYPE IS (t_xcpot_libxc)
-       IF (mpi%irank==0) THEN
-          i(1) = xcpot%jspins
-          i(2) = xcpot%func_vxc_id_x
-          i(3) = xcpot%func_vxc_id_c
-          i(4) = xcpot%func_exc_id_x
-          i(5) = xcpot%func_exc_id_c
-       ENDIF
-       CALL MPI_BCAST(i,size(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        IF (mpi%irank /= 0)  CALL xcpot%init(i(1),i(2),i(3),i(4),i(5)) 
-    END SELECT
+    call xcpot%mpi_bc(fmpi%mpi_comm,0)
 #endif
   END SUBROUTINE mpi_bc_xcpot
 END MODULE m_mpi_bc_xcpot

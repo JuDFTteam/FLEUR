@@ -35,7 +35,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, den, &
+  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, den, &
                           VYukawa )
 
     use m_constants
@@ -49,7 +49,7 @@ module m_VYukawaFilm
     type(t_cell),       intent(in)    :: cell
     type(t_sym),        intent(in)    :: sym
     type(t_input),      intent(in)    :: input
-    type(t_mpi),        intent(in)    :: mpi
+    type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms 
     type(t_sphhar),     intent(in)    :: sphhar
     type(t_oneD),       intent(in)    :: oneD
@@ -66,7 +66,7 @@ module m_VYukawaFilm
  
     ! PSEUDO-CHARGE DENSITY
 
-    call psqpw( mpi, atoms, sphhar, stars, vacuum, cell, input, sym, oneD, &
+    call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym, oneD, &
                 den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
                 psq )
 
@@ -110,14 +110,14 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
                VYukawa%mt(:,0:,:,1) )
 
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
-    call VYukawaModify( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, &
+    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, &
                         den, &
                         VYukawa )
 
@@ -823,7 +823,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaModify( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, den, &
+  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, den, &
                             VYukawa )
 
     ! This subroutine adds a potential to the previously computed Yukawa
@@ -848,7 +848,7 @@ module m_VYukawaFilm
     type(t_cell),       intent(in)    :: cell
     type(t_sym),        intent(in)    :: sym
     type(t_input),      intent(in)    :: input
-    type(t_mpi),        intent(in)    :: mpi
+    type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms
     type(t_sphhar),     intent(in)    :: sphhar
     type(t_oneD),       intent(in)    :: oneD
@@ -951,7 +951,7 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
                VYukawaModification%mt(:,0:,:,1) )
 

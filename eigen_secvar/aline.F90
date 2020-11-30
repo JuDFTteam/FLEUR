@@ -7,8 +7,8 @@
 MODULE m_aline
   USE m_juDFT
 CONTAINS
-  SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD,eig,ne,zMat,hmat,smat)
+  SUBROUTINE aline(eig_id, nk,atoms,sym,&
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv,oneD,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -29,15 +29,17 @@ CONTAINS
     !************************************************************************
 
 #include"cpp_double.h"
+    USE m_types
+    USE m_constants
     USE m_abcof
     USE m_hssrwu
     USE m_eig66_io
-    USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -54,23 +56,23 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT) :: eig(DIMENSION%neigd)
+    REAL,    INTENT (OUT) :: eig(input%neig)
     TYPE(t_mat),INTENT(IN):: hmat,smat
 
     !     ..
     !     .. Local Scalars ..
     INTEGER lhelp
-    INTEGER i,info,j 
+    INTEGER i,info,j
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
 
-    REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:) 
+    REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:)
     REAL     CPP_BLAS_sdot
     EXTERNAL CPP_BLAS_sdot,CPP_BLAS_sspmv
 
     COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
-    COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:) 
+    COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:)
     COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc,CPP_BLAS_chpmv
     REAL,    ALLOCATABLE :: rwork(:)
@@ -79,19 +81,19 @@ CONTAINS
     l_real=zMat%l_real
 
 
-    lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
+    lhelp= MAX(lapw%nmat,(input%neig+2)*input%neig)
     CALL read_eig(eig_id,nk,jsp,neig=ne, eig=eig,zmat=zmat)
     IF (l_real) THEN
-       ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
+       ALLOCATE ( h_r(input%neig,input%neig),s_r(input%neig,input%neig) )
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
-       !     in outeig z is complex conjugated to make it usable for abcof. Here we 
-       !                       first have to undo this  complex conjugation for the 
+       !     in outeig z is complex conjugated to make it usable for abcof. Here we
+       !                       first have to undo this  complex conjugation for the
        ! multiplication with a and b matrices.
 
        zmat%data_c=conjg(zmat%data_c)
-       ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
+       ALLOCATE ( h_c(input%neig,input%neig),s_c(input%neig,input%neig) )
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
     ENDIF
@@ -126,24 +128,24 @@ CONTAINS
        END DO
     END DO
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat) )
-    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
+    ALLOCATE ( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat) )
+    ALLOCATE ( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat) )
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
     IF (.NOT.l_real) zMat%data_c = CONJG(zMat%data_c)
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,sym,cell,lapw,ne,&
-         usdus,noco,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+         usdus,noco,nococonv,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !
     CALL timestart("aline: hssr_wu")
     IF (l_real) THEN
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+       CALL hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_r,s_r)
     ELSE
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+       CALL hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_c=h_c,s_c=s_c)
     ENDIF
 
@@ -154,20 +156,20 @@ CONTAINS
     !
     IF (l_real) THEN
        !---> LAPACK call
-       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,DIMENSION%neigd,s_r,DIMENSION%neigd,eig,help_r,lhelp,info)
+       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,input%neig,s_r,input%neig,eig,help_r,lhelp,info)
     ELSE
        ALLOCATE ( rwork(MAX(1,3*ne-2)) )
-       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,DIMENSION%neigd,s_c,DIMENSION%neigd,eig,help_c,lhelp,rwork,info)
+       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,input%neig,s_c,input%neig,eig,help_c,lhelp,rwork,info)
        DEALLOCATE ( rwork )
     ENDIF
     IF (info /= 0) THEN
-       WRITE (6,FMT=8000) info
+       WRITE (oUnit,FMT=8000) info
        IF (i < 0) THEN
-          WRITE(6,'(a7,i3,a22)') 'element',info,' has an illegal value'
+          WRITE(oUnit,'(a7,i3,a22)') 'element',info,' has an illegal value'
        ELSEIF (i > ne) THEN
-          WRITE(6,'(a2,i3,a22)') 's:',info-ne,' not positive definite'
+          WRITE(oUnit,'(a2,i3,a22)') 's:',info-ne,' not positive definite'
        ELSE
-          WRITE(6,'(a8,i3,a15)') 'argument',info,' not  converged'
+          WRITE(oUnit,'(a8,i3,a15)') 'argument',info,' not  converged'
        ENDIF
        CALL juDFT_error("Diagonalisation failed",calledby ='aline')
     ENDIF

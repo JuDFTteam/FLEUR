@@ -8,6 +8,9 @@ c*****************************************c
 c                J.-P. Hanke, Dec. 2015   c
 c*****************************************c
       MODULE m_wann_uHu_soc
+#if (defined(CPP_MPI) && !defined(CPP_T90))
+      use mpi 
+#endif
       CONTAINS
       SUBROUTINE wann_uHu_soc(
      >                  input,atoms,
@@ -110,7 +113,6 @@ C     .. Local Arrays ..
       DATA ispjsp/1,-1/
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
 
@@ -207,12 +209,10 @@ c***************************************c
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
        bkrot=MATMUL(bpt,bmat)
-!       call cotra3(bpt,bkrot,bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
        bkrot=MATMUL(bpt2,bmat)
-!       call cotra3(bpt2,bkrot,bmat)
        call ylm4(lwn,bkrot,yl2)
        call cpu_time(t0)
        t33 = t33 + t0-t1
@@ -439,7 +439,7 @@ c*********************************************************c
       enddo !ikpt_b
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
 #endif
 
       deallocate( dvd, dvu, uvd, uvu )

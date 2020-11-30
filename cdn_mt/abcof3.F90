@@ -29,8 +29,8 @@ CONTAINS
 
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)
-    COMPLEX, INTENT (OUT):: a(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: a(:,0:,:)!(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (OUT):: b(:,0:,:)!(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (OUT):: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
     !     .. Local Scalars ..
     COMPLEX phase,c_0,c_1,c_2
@@ -120,7 +120,7 @@ CONTAINS
              !              is 1 if atom natom can   be mapped via inversion symmetrie and is parent atom
              !              is 2 if atom natom can   be mapped via inversion symmetrie and is second atom
 
-             IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
+             IF ((sym%invsat(natom).EQ.0) .OR. (sym%invsat(natom).EQ.1)) THEN
                 tmk = tpi_const* dot_product(fk(:),atoms%taual(:,natom))
                 phase = cmplx(cos(tmk),sin(tmk))
                 IF (oneD%odi%d1) THEN
@@ -128,7 +128,7 @@ CONTAINS
                    !                nap = ods%ngopr(natom)
                    !               inap = ods%invtab(nap)
                 ELSE
-                   nap = atoms%ngopr(natom)
+                   nap = sym%ngopr(natom)
                    inap = sym%invtab(nap)
                 END IF
                 DO  j = 1,3
@@ -174,7 +174,7 @@ CONTAINS
     DO n = 1,atoms%ntype
        DO nn = 1,atoms%neq(n)
           iatom = iatom + 1
-          IF (atoms%invsat(iatom).EQ.1) THEN
+          IF (sym%invsat(iatom).EQ.1) THEN
              jatom = sym%invsatnr(iatom)
              DO ilo = 1,atoms%nlo(n)
                 l = atoms%llo(ilo,n)

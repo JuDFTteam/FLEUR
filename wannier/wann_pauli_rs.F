@@ -20,7 +20,7 @@ c     files WF1.chk (and WF1_um.dat) produced
 c     by wannier90.
 c     FF, January 2009
 c*************************************************
-      use m_constants, only:pimach, ImagUnit
+      use m_constants
       use m_wann_read_umatrix
 
       implicit none
@@ -101,7 +101,12 @@ c*************************************************
       jspins=jspins_in
       if(l_soc)jspins=1
 
-      write(6,*)"nkpts=",nkpts
+      if(jspins_in==1.and..not.l_soc)then
+        jspins=2
+      endif
+
+
+      write(oUnit,*)"nkpts=",nkpts
 
 c*****************************************************
 c     get num_bands and num_wann from the proj file
@@ -122,8 +127,8 @@ c*****************************************************
       endif
       read (203,*) num_wann,num_bands
       close (203)
-      write(6,*)'According to proj there are ',num_bands,' bands'
-      write(6,*)"and ",num_wann," wannier functions."
+      write(oUnit,*)'According to proj there are ',num_bands,' bands'
+      write(oUnit,*)"and ",num_wann," wannier functions."
 
       allocate( u_matrix_opt(num_bands,num_wann,nkpts,jspins) )
       allocate( u_matrix(num_wann,num_wann,nkpts,jspins) )
@@ -250,7 +255,7 @@ c****************************************************
          allocate(amn(nbnd,nwfs,fullnkpts))
          read(304)amn(1:nbnd,1:nwfs,1:fullnkpts)
          close(304)
-         deallocate(amn)
+
          do nkp=1,fullnkpts
           do i=1,num_bands
            do j=1,num_bands
@@ -264,7 +269,7 @@ c****************************************************
           paulimat(2,:,:,nkp)=paulimat(2,:,:,nkp)+
      &       transpose(conjg( paulimat(2,:,:,nkp) ))
          enddo !nkp
-
+         deallocate(amn)
       else !l_unformatted   
          open(304,file='updown.mmn0',form='formatted')
          read(304,*)
@@ -290,7 +295,7 @@ c        Calculate matrix elements of Pauli in the basis of
 c        rotated Bloch functions.
 c****************************************************************
          allocate( paulimat2(3,num_wann2,num_wann2,nkpts) )
-         write(6,*)"calculate matrix elements of spin operator
+         write(oUnit,*)"calculate matrix elements of spin operator
      &   between wannier orbitals"
 
          if(have_disentangled) then       
@@ -431,7 +436,7 @@ c****************************************************************
 c************************************************************
 c        Calculate matrix elements in real space.
 c***********************************************************      
-         write(6,*)"calculate pauli-mat in rs"
+         write(oUnit,*)"calculate pauli-mat in rs"
          allocate(hreal(3,num_wann2,num_wann2,rvecnum))
          hreal = cmplx(0.0,0.0)
          if(l_ndegen)then

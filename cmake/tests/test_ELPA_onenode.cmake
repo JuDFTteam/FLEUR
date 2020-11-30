@@ -3,13 +3,10 @@ try_compile(FLEUR_USE_ELPA_ONENODE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake
 LINK_LIBRARIES ${FLEUR_LIBRARIES})
 
 if (NOT FLEUR_USE_ELPA_ONENODE)
-   if (DEFINED CLI_ELPA_OPENMP)
-      message ("FLEUR_USE_GPU: ${FLEUR_USES_GPU}")
-      if (FLEUR_USE_GPU)
-      set(TEST_LIBRARIES "-lelpa_onenode;${FLEUR_LIBRARIES}")
-      else()
+   if (FLEUR_USE_OPENMP AND DEFINED CLI_ELPA_OPENMP AND NOT FLEUR_USE_GPU)
       set(TEST_LIBRARIES "-lelpa_onenode_openmp;${FLEUR_LIBRARIES}")
-      endif()
+   else()
+      set(TEST_LIBRARIES "-lelpa_onenode;${FLEUR_LIBRARIES}")
    endif()
    try_compile(FLEUR_USE_ELPA_ONENODE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
 LINK_LIBRARIES ${TEST_LIBRARIES})

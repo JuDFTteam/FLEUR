@@ -14,10 +14,11 @@ use judft_tests;
 
 my $testdir=shift;
 my $executable=shift;
+$executable .= " -no_send";
 
 #check MPI environment
 my $mpi=shift;
-if ($mpi="sequential"){
+if ($mpi=~/sequential/){
 } elsif ($mpi){
     if ($ENV{"juDFT_MPI"}) {
 	    $mpi=$ENV{"juDFT_MPI"};	
@@ -32,13 +33,13 @@ if ($executable=~/_MPI/){
     #no mpi executable...
     $mpi='';
 }
-if ($mpi="sequential"){
+if ($mpi=~/sequential/){
     $mpi=""
 }
 print "MPI:$mpi\n";
 
-my $workdir="$ENV{PWD}/Testing/work";
-system("rm $workdir/*");
+my $workdir="$ENV{PWD}/Testing/$testdir/work";
+system("rm -r $workdir/*");
 chdir($dir);
 
 judft_tests::execute_test($testdir,$executable,$mpi,$workdir);

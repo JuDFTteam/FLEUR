@@ -6,18 +6,19 @@ MODULE m_alineso
   ! Eigenvalues and vectors (eig_so and zso) are returned 
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE alineso(eig_id,lapw,mpi,DIMENSION,atoms,sym,kpts,input,noco,&
+  SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,&
                      cell,oneD, nk, usdus,rsoc,nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
     USE m_types
+    USE m_constants
     USE m_hsohelp
     USE m_hsoham
     USE m_eig66_io, ONLY : read_eig
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
     TYPE(t_lapw),INTENT(IN)        :: lapw
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -34,8 +35,8 @@ CONTAINS
     INTEGER, INTENT (OUT):: nsize,nmat
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
-    REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd)
+    COMPLEX, INTENT (OUT) :: zso(:,:,:)!(lapw%dim_nbasfcn(),2*input%neig,wannierspin)
+    REAL,    INTENT (OUT) :: eig_so(2*input%neig)
     !-odim
     !+odim
     !     ..
@@ -51,7 +52,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER :: nsz(2)
-    REAL    :: eig(DIMENSION%neigd,input%jspins),s(3)
+    REAL    :: eig(input%neig,input%jspins),s(3)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
     COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:),bhelp(:,:,:,:)
@@ -67,25 +68,25 @@ CONTAINS
     !     read from eigenvalue and -vector file
     !
 
-    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
+    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)
     zmat%l_real=l_real
     zMat(1:input%jspins)%matsize1=lapw%nv(1:input%jspins)+atoms%nlotot
-    zmat%matsize2=dimension%neigd
+    zmat%matsize2=input%neig
    
     INQUIRE (4649,opened=l_socvec)
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
     if (l_real) THEN
-       ALLOCATE (zmat(1)%data_r(zmat(1)%matsize1,DIMENSION%neigd) )
+       ALLOCATE (zmat(1)%data_r(zmat(1)%matsize1,input%neig) )
        zmat(1)%data_r(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%data_r(zmat(2)%matsize1,DIMENSION%neigd) )
+          ALLOCATE(zmat(2)%data_r(zmat(2)%matsize1,input%neig) )
           zmat(2)%data_r=0.0
        ENDIF
     else
-       ALLOCATE (zmat(1)%data_c(zmat(1)%matsize1,DIMENSION%neigd) )
+       ALLOCATE (zmat(1)%data_c(zmat(1)%matsize1,input%neig) )
        zmat(1)%data_c(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%data_c(zmat(2)%matsize1,DIMENSION%neigd) )
+          ALLOCATE(zmat(2)%data_c(zmat(2)%matsize1,input%neig) )
           zmat(2)%data_c=0.0
        ENDIF  
     endif
@@ -94,8 +95,8 @@ CONTAINS
     DO jsp = 1,input%jspins
        CALL read_eig(eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
        IF (judft_was_argument("-debugtime")) THEN
-          WRITE(6,*) "Non-SOC ev for nk,jsp:",nk,jsp
-          WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
+          WRITE(oUnit,*) "Non-SOC ev for nk,jsp:",nk,jsp
+          WRITE(oUnit,"(6(f10.6,1x))") eig(:ne,jsp)
        ENDIF
        CALL read_eig(eig_id,nk,jsp,list=[(i,i=1,ne)],zmat=zmat(jsp))
 
@@ -107,12 +108,15 @@ CONTAINS
 !!$          lapw%rk(i,1) = SQRT(r2)
 !!$       ENDDO
 
-       IF (ne.GT.DIMENSION%neigd) THEN
-          WRITE (6,'(a13,i4,a8,i4)') 'alineso: ne=',ne,' > dimension%neigd=',DIMENSION%neigd
+       IF (ne.GT.input%neig) THEN
+          WRITE (oUnit,'(a13,i4,a8,i4)') 'alineso: ne=',ne,' > input%neig=',input%neig
           CALL juDFT_error("alineso: ne > neigd",calledby="alineso")
        ENDIF
        nsz(jsp) = ne
     ENDDO
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(fmpi%sub_comm,ierr) ! Synchronizes the RMA operations
+#endif
     !
     ! set up size of e.v. problem in second variation: nsize
     !
@@ -131,14 +135,14 @@ CONTAINS
 !
 ! in case of ev-parallelization, now distribute the atoms:
 !
-      IF (mpi%n_size > 1) THEN
-        nat_l = FLOOR(real(atoms%nat)/mpi%n_size)
-        extra = atoms%nat - nat_l*mpi%n_size
-        nat_start = mpi%n_rank*nat_l + 1 + extra
-        nat_stop  = (mpi%n_rank+1)*nat_l + extra
-        IF (mpi%n_rank < extra) THEN
-          nat_start = nat_start - (extra - mpi%n_rank)
-          nat_stop  = nat_stop - (extra - mpi%n_rank - 1)
+      IF (fmpi%n_size > 1) THEN
+        nat_l = FLOOR(real(atoms%nat)/fmpi%n_size)
+        extra = atoms%nat - nat_l*fmpi%n_size
+        nat_start = fmpi%n_rank*nat_l + 1 + extra
+        nat_stop  = (fmpi%n_rank+1)*nat_l + extra
+        IF (fmpi%n_rank < extra) THEN
+          nat_start = nat_start - (extra - fmpi%n_rank)
+          nat_stop  = nat_stop - (extra - fmpi%n_rank - 1)
         ENDIF
       ELSE
         nat_start = 1
@@ -147,25 +151,25 @@ CONTAINS
       nat_l = nat_stop - nat_start + 1
 
     ! set up A and B coefficients
-    ALLOCATE (ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins))
-    ALLOCATE (bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins))
-    ALLOCATE (chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins))
+    ALLOCATE (ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
+    ALLOCATE (bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
+    ALLOCATE (chelp(-atoms%llod :atoms%llod, input%neig,atoms%nlod,nat_l,input%jspins))
     CALL timestart("alineso SOC: -help") 
-    CALL hsohelp(DIMENSION,atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
+    CALL hsohelp(atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
                  zso,noco,oneD,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
 
     ! set up hamilton matrix
     CALL timestart("alineso SOC: -ham") 
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
-    ALLOCATE (hsomtx(DIMENSION%neigd,DIMENSION%neigd,2,2))
-    CALL hsoham(atoms,noco,input,nsz,dimension%neigd,chelp,rsoc,ahelp,bhelp,&
-                nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,hsomtx)
+    ALLOCATE (hsomtx(input%neig,input%neig,2,2))
+    CALL hsoham(atoms,noco,input,nsz,input%neig,chelp,rsoc,ahelp,bhelp,&
+                nat_start,nat_stop,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,hsomtx)
     DEALLOCATE (ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -ham") 
-    IF (mpi%n_rank==0) THEN
+    IF (fmpi%n_rank==0) THEN
 
     ! add e.v. on diagonal
     !      write(*,*) '!!!!!!!!!!! remove SOC !!!!!!!!!!!!!!'
@@ -182,7 +186,7 @@ CONTAINS
     !
     !  resort H-matrix 
     !
-    ALLOCATE (hso(2*DIMENSION%neigd,2*DIMENSION%neigd))
+    ALLOCATE (hso(2*input%neig,2*input%neig))
     DO jsp = 1,2
        DO jsp1 = 1,2
           IF (jsp.EQ.1) nn = 0 
@@ -254,8 +258,8 @@ else
     !
     ! diagonalize the hamiltonian using library-routines
     !
-    idim_c = 4*DIMENSION%neigd
-    idim_r = 6*DIMENSION%neigd
+    idim_c = 4*input%neig
+    idim_r = 6*input%neig
 
     CALL timestart("alineso SOC: -diag") 
 
@@ -266,9 +270,9 @@ else
     ELSE
        vectors= 'V'
     ENDIF
-    CALL CPP_LAPACK_cheev(vectors,'U',nsize,hso,2*DIMENSION%neigd,eig_so,&
+    CALL CPP_LAPACK_cheev(vectors,'U',nsize,hso,2*input%neig,eig_so,&
                           cwork, idim_c, rwork, info)
-    IF (info.NE.0) WRITE (6,FMT=8000) info
+    IF (info.NE.0) WRITE (oUnit,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_cheev: info=',i4)
     CALL timestop("alineso SOC: -diag") 
 
@@ -277,7 +281,7 @@ else
     IF (input%eonly) THEN
        IF(l_socvec) CALL juDFT_error("EONLY set. Vectors not calculated.",calledby ="alineso")
     ELSE
-       ALLOCATE (zhelp2(DIMENSION%neigd,2*DIMENSION%neigd))
+       ALLOCATE (zhelp2(input%neig,2*input%neig))
        !
        ! proj. back to G - space: old eigenvector 'z' to new one 'Z'
        !                                 +
@@ -305,18 +309,18 @@ else
           ENDDO  ! j
 
           if (l_real) THEN
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd,CMPLX(1.0,0.0),CMPLX(zmat(jsp)%data_r(:,:)),&
-                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*input%neig,input%neig,CMPLX(1.0,0.0),CMPLX(zmat(jsp)%data_r(:,:)),&
+                  zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           else
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd, CMPLX(1.0,0.0),zmat(jsp)%data_c(:,:),&
-                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.0,0.0), zso(:,:,jsp2),zmat(1)%matsize1)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*input%neig,input%neig, CMPLX(1.0,0.0),zmat(jsp)%data_c(:,:),&
+                  zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           endif
 
        ENDDO    !isp
 
        IF(l_socvec) THEN
           !RS: write SOC vectors to SOCVEC
-          WRITE(4649) lapw%nmat,nsize,input%jspins,nsz,2*DIMENSION%neigd,CONJG(hso)
+          WRITE(4649) lapw%nmat,nsize,input%jspins,nsz,2*input%neig,CONJG(hso)
           !CF: write qsgw
           IF(l_qsgw) THEN
              nn = 2*nsz(1)

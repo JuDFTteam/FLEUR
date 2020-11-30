@@ -9,6 +9,7 @@
 ! Author: M. Schlipf 2009
 MODULE m_hsefunctional
    USE m_judft
+   USE m_types_hybdat
    IMPLICIT NONE
 
 #ifdef __PGI
@@ -54,9 +55,9 @@ CONTAINS
 
    ! Calculate the enhancement factor of the HSE03 functional
    ! References:
-   ! [1] Heyd, Scuseria, Ernzerhof: Hybrid functionals based on a screened Coulomb potential,
+   ! [1] Heyd, Scuseria, Ernzerhof: hybinp functionals based on a screened Coulomb potential,
    !     J. Chem. Phys. 118 (2003) 8207-8215
-   ! [2] Heyd, Scuseria: Assessment and validation of a screened Coulomb hybrid density
+   ! [2] Heyd, Scuseria: Assessment and validation of a screened Coulomb hybinp density
    !     functional, J. Chem. Phys. 120 (2004) 7274-7280
    ! [3] Ernzerhof, Perdew: Generalized gradient approximation to the angle- and system-
    !     averaged exchange hole, J. Chem. Phys. 109 (1998) 3313-3319
@@ -66,12 +67,12 @@ CONTAINS
    !         dFx_ds   - derivative of this factor with respect to s
    !         d2Fx_ds2 - second derivative with respect to s
    SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
-
+      use m_constants
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: kF, s_inp
-      REAL, INTENT(OUT) :: F_x, dFx_ds, d2Fx_ds2
-      REAL, INTENT(OUT) :: dFx_dkF, d2Fx_dsdkF
+      REAL, INTENT(INOUT) :: F_x, dFx_ds, d2Fx_ds2
+      REAL, INTENT(INOUT) :: dFx_dkF, d2Fx_dsdkF
 
       ! Helper variables
       REAL :: r1_kF, &                   ! 1 / kF
@@ -106,6 +107,9 @@ CONTAINS
 
       ! If a large value of s would violate the Lieb-Oxford bound, the value of s is reduced,
       ! so that this condition is fullfilled
+      F_x=REAL_NOT_INITALIZED; dFx_ds=REAL_NOT_INITALIZED; d2Fx_ds2=REAL_NOT_INITALIZED
+      dFx_dkF=REAL_NOT_INITALIZED;d2Fx_dsdkF=REAL_NOT_INITALIZED
+
       correction = s_inp > s_thresh
       IF (correction) THEN
          s_si2 = s_chg/(s_inp*s_inp)
@@ -229,12 +233,12 @@ CONTAINS
                                   appInt, dAppInt_ds, d2AppInt_ds2, dAppInt_dkF, d2AppInt_dsdkF)
 
       USE m_exponential_integral, ONLY: calculateExponentialIntegral, gauss_laguerre
-
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: omega_kF, Hs2, D_Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: appInt, dAppInt_ds, d2AppInt_ds2
-      REAL, INTENT(OUT) :: dAppInt_dkF, d2AppInt_dsdkF
+      REAL, INTENT(INOUT) :: appInt, dAppInt_ds, d2AppInt_ds2
+      REAL, INTENT(INOUT) :: dAppInt_dkF, d2AppInt_dsdkF
 
       REAL    :: w2, bw, r2bw, bw_Hs2, bw_D_Hs2
       ! variables for temporary storage of the integrals, the prefactors and the dot_product
@@ -251,6 +255,9 @@ CONTAINS
                                     -0.065032363850763, 0.008401793031216/), &
                          b = 1.455915450052607, cutoff = 14.0
 
+      appInt=REAL_NOT_INITALIZED; dAppInt_ds=REAL_NOT_INITALIZED;
+      d2AppInt_ds2=REAL_NOT_INITALIZED; dAppInt_dkF=REAL_NOT_INITALIZED;
+      d2AppInt_dsdkF=REAL_NOT_INITALIZED
       ! Calculate helper variables
       w2 = omega_kF**2
       bw = b*w2
@@ -264,8 +271,8 @@ CONTAINS
 
          ! combine the solutions of the integrals with the appropriate prefactors
          a_omegaI(0) = 1.0
-         a_omegaI(1:8) = a*(/(omega_kF**i, i=1, 8)/)
-         aI_omegaI = (/(i*a_omegaI(i), i=0, 8)/)
+         a_omegaI(1:8) = a*[(omega_kF**i, i=1, 8)]
+         aI_omegaI = [(i*a_omegaI(i), i=0, 8)]
          appInt = DOT_PRODUCT(a_omegaI, integral(0:8))
          dotpr = DOT_PRODUCT(a_omegaI, integral(2:10))
          dAppInt_ds = -dotpr*dHs2_ds
@@ -311,7 +318,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: bw_Hs2, bw_D_Hs2
-      REAL, INTENT(OUT) :: integral(0:12)
+      REAL, INTENT(INOUT) :: integral(0:12)
 
       ! Helper variables
       REAL :: bw_Hs2_Sqr, bw_Hs2_Cub, sqrt_bw_Hs2, &
@@ -324,6 +331,8 @@ CONTAINS
       REAL, PARAMETER :: &
          A = 1.0161144, A_2 = A/2.0, scale = 2.25/A, sqrtA = 1.008025, & !sqrt(A)
          b = 1.455915450052607
+
+      integral = 0.0
 
       ! Calculate many helper variables
       bw_Hs2_Sqr = bw_Hs2*bw_Hs2
@@ -598,7 +607,7 @@ CONTAINS
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s, H, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: F, dFs2_ds, d2Fs2_ds2
+      REAL, INTENT(INOUT) :: F, dFs2_ds, d2Fs2_ds2
 
       REAL, PARAMETER   :: slope = 6.4753871
       REAL, PARAMETER   :: shift = 0.4796583
@@ -621,10 +630,11 @@ CONTAINS
    !         dGs2_ds   - first derivative of G(s)s^2 with respect to s
    !         d2Gs2_ds2 - second derivative of G(s)s^2
    SUBROUTINE calculateG(s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2, G, dGs2_ds, d2Gs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s2, Fs2, dFs2_ds, d2Fs2_ds2, Hs2, dHs2_ds, d2Hs2_ds2
-      REAL, INTENT(OUT) :: G, dGs2_ds, d2Gs2_ds2
+      REAL, INTENT(INOUT) :: G, dGs2_ds, d2Gs2_ds2
 
       ! helper variables
       REAL :: AHs2_1_2, AHs2_3_2, r1_Fs2, D_Hs2, D_Hs2Sqr, D_Hs2Cub, &
@@ -643,6 +653,7 @@ CONTAINS
                          D = 0.57786348, &
                          E = -0.051955731
 
+       G=REAL_NOT_INITALIZED; dGs2_ds=REAL_NOT_INITALIZED; d2Gs2_ds2=REAL_NOT_INITALIZED
       ! calculate the helper variables
       AHs2_1_2 = sqrtA*SQRT(Hs2)
       AHs2_3_2 = AHs2_1_2*A*Hs2
@@ -831,10 +842,11 @@ CONTAINS
    !         dHs2_ds   - first derivative d(s^2*H(s))/ds
    !         d2Hs2_ds2 - second derivative d^2(s^2H(s))/ds^2
    SUBROUTINE calculateH(s, H, dHs2_ds, d2Hs2_ds2)
+      use m_constants, only: REAL_NOT_INITALIZED
       IMPLICIT NONE
 
       REAL, INTENT(IN)  :: s
-      REAL, INTENT(OUT) :: H, dHs2_ds, d2Hs2_ds2
+      REAL, INTENT(INOUT) :: H, dHs2_ds, d2Hs2_ds2
 
       ! helper variables
       REAL :: s2, s3, s4, s5, s6
@@ -850,6 +862,7 @@ CONTAINS
          a4 = 0.00120824, &
          a5 = 0.0347188
 
+      H=REAL_NOT_INITALIZED; dHs2_ds=REAL_NOT_INITALIZED; d2Hs2_ds2=REAL_NOT_INITALIZED
       ! calculate helper variables
       s2 = s*s
       s3 = s2*s
@@ -950,10 +963,10 @@ CONTAINS
    ! maxlcutm    - maximum of all these l cutoffs
    ! nindxm      - number of radial functions of mixed basis
    ! maxindxm    - maximum of these numbers
-   ! gptm        - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g        - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm       - number of vectors (for treated k-vector)
    ! pgptm       - pointer to the appropriate g-vector (for treated k-vector)
-   ! gptmd       - dimension of gptm
+   ! gptmd       - dimension of g
    ! basm        - mixed basis functions (mt + inter) for treated k-vector
    ! lexp        - cutoff of spherical harmonics expansion of plane wave
    ! noGPts      - no g-vectors used for Fourier trafo
@@ -965,15 +978,15 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, bk, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       basm, noGPts, irank, &
       ! Output
       potential, muffintin, interstitial)
 
       USE m_constants
-      USE m_olap, ONLY: gptnorm
-      USE m_util, ONLY: sphbessel, pure_intgrf, intgrf_init, intgrf_out, NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
-
+      USE m_types_hybdat, ONLY: gptnorm
+      USE m_util, ONLY: sphbessel
+      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       IMPLICIT NONE
 
       ! scalar input
@@ -984,24 +997,24 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
+      INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: g(:,:)
       INTEGER, INTENT(IN)    :: ngptm
-      INTEGER, INTENT(IN)    :: pgptm(ngptm)
+      INTEGER, INTENT(IN)    :: pgptm(:)
 
-      REAL, INTENT(IN)       :: bk(3)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)!,amat(3,3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)!,amat(3,3)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
-      COMPLEX, INTENT(OUT)   :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
+      REAL, INTENT(INOUT)    :: potential(noGPts)                           ! Fourier transformed potential
+      COMPLEX, INTENT(INOUT) :: muffintin(noGPts, maxindxm, &                 ! muffin-tin overlap integral
                                           (maxlcutm + 1)**2, ntype, MAXVAL(neq))
-      COMPLEX, INTENT(OUT)   :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
+      COMPLEX, INTENT(INOUT) :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
 
       ! private scalars
       INTEGER                :: cg, cg2, ci, cl, cn, cr                          ! counter variables
@@ -1015,7 +1028,7 @@ CONTAINS
 
       ! private arrays
       INTEGER                :: gPts(3, noGPts)                              ! g vectors (internal units)
-      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                   ! gPts - gptm
+      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                   ! gPts - g
       INTEGER                :: natdPtr(ntype + 1)                            ! pointer to all atoms of one type
       REAL, ALLOCATABLE   :: gridf(:, :)                                  ! grid for radial integration
       REAL                   :: k_G(3, noGPts)                               ! k + G
@@ -1023,7 +1036,7 @@ CONTAINS
       REAL                   :: arg(noGPts)                                 ! abs(k+G)^2 / (4*omega^2)
       REAL                   :: sphbesK_Gr(noGPts, jmtd, 0:maxlcutm, ntype)    ! spherical bessel function of abs(k+G)r
       TYPE(intgrf_out)       :: intgrMT(noGPts, maxindxm, 0:maxlcutm, ntype)   ! integration in muffin-tin
-      REAL                   :: abs_dg(noGpts, gptmd)                        ! abs(gPts - gptm)
+      REAL                   :: abs_dg(noGpts, gptmd)                        ! abs(gPts - g)
       COMPLEX                :: imgl(0:maxlcutm)                            ! i^l
       COMPLEX                :: Ylm(noGPts, (maxlcutm + 1)**2)                 ! spherical harmonics for k+G and all lm
       COMPLEX                :: expIGR(noGPts, ntype, MAXVAL(neq))            ! exp(-iGR) for all atom types
@@ -1080,9 +1093,9 @@ CONTAINS
 !   G,I     \      |  k,I /     Sqrt(Om)   LM                |               L
 !                                                           /
 !                                                            0
-      IF (ngptm < noGpts) STOP 'hsefunctional: error calculating Fourier coefficients, noGpts too large'
+      IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
-      gPts(:, :) = gptm(:, pgptm(1:noGPts))
+      gPts(:, :) = g(:, pgptm(1:noGPts))
 #ifndef __PGI
 
       gpoints:FORALL (cg=1:noGPts)
@@ -1145,7 +1158,7 @@ CONTAINS
       ! Calculate the difference of the G vectors and its absolute value
       FORALL (cg2=1:gptmd)
 
-      gPts_gptm(:, cg, cg2) = gPts(:, cg) - gptm(:, cg2)
+      gPts_gptm(:, cg, cg2) = gPts(:, cg) - g(:, cg2)
       abs_dg(cg, cg2) = gptnorm(gPts_gptm(:, cg, cg2), bmat)
 
       END FORALL
@@ -1154,10 +1167,10 @@ CONTAINS
 
       ! Check if any of the integrations failed and abort if one did
       IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
-         IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
+         IF (irank == 0) WRITE (oUnit, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
       ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
-         IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
-         STOP 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+         IF (irank == 0) WRITE (oUnit, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+         call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
       END IF
 
       ! Calculate the interstitial value with eq.[3] using the limit
@@ -1199,7 +1212,7 @@ CONTAINS
       potential = -pi_omega2
       endwhere
 
-      DEALLOCATE (gridf)
+      deallocate(gridf)
 #else
       call judft_error("hsefunctional not implemented for PGI")
 #endif
@@ -1216,13 +1229,13 @@ CONTAINS
       !         gPts_gptm - vector G - G_I
       PURE FUNCTION calculateSummation(abs_dg, gPts_gptm)
          IMPLICIT NONE
-         INTEGER, INTENT(IN) :: gPts_gptm(3, noGPts, gptmd)
-         REAL, INTENT(IN)    :: abs_dg(noGPts, gptmd)
+         INTEGER, INTENT(IN) :: gPts_gptm(:,:,:)
+         REAL, INTENT(IN)    :: abs_dg(:,:)
          COMPLEX             :: calculateSummation(noGPts, gptmd)
          INTEGER             :: cn, ci                                     ! counter variables
-         REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - gptm)*R (R: radius MT)
+         REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - g)*R (R: radius MT)
          REAL                :: inter_atom(noGPts, gptmd, ntype)            ! inter-atom interaction for interstitial
-         COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-gptm)R)
+         COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-g)R)
          COMPLEX             :: sumExpIdGR(noGPts, gptmd, ntype)            ! sum over atom of same type
 
          atoms:FORALL (cn=1:ntype)
@@ -1284,10 +1297,10 @@ CONTAINS
    ! maxlcutm    - maximum of all these l cutoffs
    ! nindxm      - number of radial functions of mixed basis
    ! maxindxm    - maximum of these numbers
-   ! gptm        - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g        - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm       - number of vectors (for treated k-vector)
    ! pgptm       - pointer to the appropriate g-vector (for treated k-vector)
-   ! gptmd       - dimension of gptm
+   ! gptmd       - dimension of g
    ! basm        - mixed basis functions (mt + inter) for treated k-vector
    ! lexp        - cutoff of spherical harmonics expansion of plane wave
    ! noGPts      - no g-vectors used for Fourier trafo
@@ -1298,13 +1311,14 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       nbasp, basm, noGPts, invsat, invsatnr, irank, &
       ! Output
       potential, fourier_trafo)
 
       USE m_constants
-      USE m_util, ONLY: sphbessel, pure_intgrf, intgrf_init, intgrf_out, NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
+      USE m_util, ONLY: sphbessel
+      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,  NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       USE m_trafo, ONLY: symmetrize
 
       IMPLICIT NONE
@@ -1317,26 +1331,26 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
-      INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)    :: lcutm(:)
+      INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(:)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: g(:,:)
       INTEGER, INTENT(IN)    :: ngptm, nbasp
-      INTEGER, INTENT(IN)    :: pgptm(ngptm)
-      INTEGER, INTENT(IN)    :: invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    :: pgptm(:)
+      INTEGER, INTENT(IN)    :: invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)       :: bk(3)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
-      REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
+      REAL, INTENT(INOUT)      :: potential(noGPts)                           ! Fourier transformed potential
 #ifdef CPP_INVERSION
-      REAL, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      REAL, INTENT(INOUT)      :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #else
-      COMPLEX, INTENT(OUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
+      COMPLEX, INTENT(INOUT)   :: fourier_trafo(nbasp, noGPts) !muffintin_out(nbasp,noGPts)
 #endif
 
       ! private scalars
@@ -1373,7 +1387,7 @@ CONTAINS
 
       ! allocate arrays in first entry reuse later
       IF (first_entry) THEN
-         ALLOCATE (already_known(nkptf), &            ! stores which elements are known
+         allocate(already_known(nkptf), &            ! stores which elements are known
                    known_potential(maxNoGPts, nkptf), &            ! stores the potential for all k-points
                    known_fourier_trafo(nbasp, maxNoGPts, nkptf))            ! stores the fourier transform of the mixed basis
          ! initialization
@@ -1383,9 +1397,9 @@ CONTAINS
          ! unset flag as arrays are allocated
          first_entry = .FALSE.
       ELSE
-         ! check if size of arrays has changed and stop with error if they did
-         IF (SIZE(already_known) /= nkptf) STOP 'hsefunctional: Array size changed!'
-         IF (SIZE(known_fourier_trafo, 1) /= nbasp) STOP 'hsefunctional: Array size changed!'
+         ! check if size of arrays has changed and st--op with error if they did
+         IF (SIZE(already_known) /= nkptf) call juDFT_error('hsefunctional: Array size changed!')
+         IF (SIZE(known_fourier_trafo, 1) /= nbasp) call juDFT_error( 'hsefunctional: Array size changed!')
       END IF
 
       ! if the current k-point was not calculated yet
@@ -1438,9 +1452,9 @@ CONTAINS
 !   G,I     \      |  k,I /     Sqrt(Om)   LM                |               L
 !                                                           /
 !                                                            0
-         IF (ngptm < noGpts) STOP 'hsefunctional: error calculating Fourier coefficients, noGpts too large'
+         IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
-         gPts(:, :) = gptm(:, pgptm(1:noGPts))
+         gPts(:, :) = g(:, pgptm(1:noGPts))
 
          gpoints:FORALL (cg=1:noGPts)
          ntypesA:FORALL (cn=1:ntype)
@@ -1494,10 +1508,10 @@ CONTAINS
 
          ! Check if any of the integrations failed and abort if one did
          IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
-            IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
+            IF (irank == 0) WRITE (oUnit, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
          ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
-            IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
-            STOP 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+            IF (irank == 0) WRITE (oUnit, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+            call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
          END IF
 
 ! Calculate the Fourier transformed potential
@@ -1525,7 +1539,7 @@ CONTAINS
          potential = -pi_omega2
          endwhere
 
-         DEALLOCATE (gridf)
+         deallocate(gridf)
 
          !
          ! Create pointer which correlate the position in the array with the
@@ -1547,7 +1561,7 @@ CONTAINS
                END DO
             END DO
          END DO
-         IF (nbasp /= cg) STOP 'hsefunctional: wrong array size: nbasp'
+         IF (nbasp /= cg) call juDFT_error( 'hsefunctional: wrong array size: nbasp')
 
 #ifdef CPP_INVERSION
          ! Symmetrize muffin tin fourier transform
@@ -1616,10 +1630,10 @@ CONTAINS
    ! maxlcutm - maximum of all these l cutoffs
    ! nindxm   - number of radial functions of mixed basis
    ! maxindxm - maximum of these numbers
-   ! gptm     - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g     - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm    - number of vectors
    ! pgptm    - pointer to the appropriate g-vector
-   ! gptmd    - dimension of gptm
+   ! gptmd    - dimension of g
    ! basm     - radial mixed basis functions (mt + inter)
    ! lexp     - cutoff of spherical harmonics expansion of plane wave
    ! maxbasm  - maximum number of mixed basis functions
@@ -1632,13 +1646,13 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, nkptf, nkptd, nkpti, bk, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       basm, lexp, maxbasm, nbasm, invsat, invsatnr, irank, &
       ! Input & output
       coulomb)
 
       USE m_trafo, ONLY: symmetrize
-      USE m_wrapper, ONLY: packmat, unpackmat, diagonalize, inverse
+      USE m_wrapper, ONLY: packmat, unpackmat
       USE m_olap, ONLY: olap_pw
 
       IMPLICIT NONE
@@ -1652,26 +1666,26 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
+      INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
-      INTEGER, INTENT(IN)    :: ngptm(nkptf)
-      INTEGER, INTENT(IN)    :: pgptm(MAXVAL(ngptm), nkptf)
-      INTEGER, INTENT(IN)    :: nbasm(nkptf)
-      INTEGER, INTENT(IN)    :: invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: g(:,:)
+      INTEGER, INTENT(IN)    :: ngptm(:)
+      INTEGER, INTENT(IN)    :: pgptm(:,:)
+      INTEGER, INTENT(IN)    :: nbasm(:)
+      INTEGER, INTENT(IN)    :: invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)       :: bk(3, nkptd)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:,:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array inout
 #ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)    :: coulomb(maxbasm*(maxbasm + 1)/2, nkpti)
+      REAL, INTENT(INOUT)    :: coulomb(:,:)
 #else
-      COMPLEX, INTENT(INOUT) :: coulomb(maxbasm*(maxbasm + 1)/2, nkpti)
+      COMPLEX, INTENT(INOUT) :: coulomb(:,:)
 #endif
 
       ! private scalars
@@ -1687,15 +1701,15 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: coulmat(:, :)                                 ! helper array to symmetrize coulomb
 
       ! Check size of arrays
-      IF (nkpti > nkptd) STOP 'hsefunctional: missmatch in dimension of arrays'
+      IF (nkpti > nkptd) call juDFT_error( 'hsefunctional: missmatch in dimension of arrays')
       nbasp = maxbasm - MAXVAL(ngptm)
-      IF (ANY(nbasm - ngptm /= nbasp)) STOP 'hsefunctional: wrong assignment of nbasp'
+      IF (ANY(nbasm - ngptm /= nbasp)) call juDFT_error( 'hsefunctional: wrong assignment of nbasp')
 
       !
       ! Create pointer which correlate the position in the array with the
       ! appropriate indices of the MT mixed basis function
       !
-      ALLOCATE (ptrType(nbasp), ptrEq(nbasp), ptrL(nbasp), ptrM(nbasp), ptrN(nbasp))
+      allocate(ptrType(nbasp), ptrEq(nbasp), ptrL(nbasp), ptrM(nbasp), ptrN(nbasp))
       nbasp = 0
       DO itype = 1, ntype
          DO ieq = 1, neq(itype)
@@ -1733,15 +1747,15 @@ CONTAINS
             ! Input
             rmsh, rmt, dx, jri, jmtd, bk(:, ikpt), &
             bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-            nindxm, maxindxm, gptm, ngptm(ikpt), pgptm(:, ikpt), gptmd, &
+            nindxm, maxindxm, g, ngptm(ikpt), pgptm(:, ikpt), gptmd, &
             basm, noGPts, irank, &
             ! Output
             potential, muffintin, interstitial)
          interstitial = CONJG(interstitial)
 
          ! Helper matrix for temporary storage of the attenuated Coulomb matrix
-         ALLOCATE (coulmat(nbasm(ikpt), nbasm(ikpt)), stat=ok)
-         IF (ok /= 0) STOP 'hsefunctional: failure at matrix allocation'
+         allocate(coulmat(nbasm(ikpt), nbasm(ikpt)), stat=ok)
+         IF (ok /= 0) call juDFT_error( 'hsefunctional: failure at matrix allocation')
          coulmat = 0
          !
          ! Calculate the difference of the Coulomb matrix by the attenuation
@@ -1781,11 +1795,11 @@ CONTAINS
 #endif
          ! add the changes to the Coulomb matrix
          coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt) = packmat(coulmat) + coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt)
-         DEALLOCATE (coulmat)
+         deallocate(coulmat)
 
       END DO
 
-      DEALLOCATE (ptrType, ptrEq, ptrL, ptrM, ptrN)
+      deallocate(ptrType, ptrEq, ptrL, ptrM, ptrN)
 
    END SUBROUTINE change_coulombmatrix
 
@@ -1821,10 +1835,10 @@ CONTAINS
    ! maxlcutm - maximum of all these l cutoffs
    ! nindxm   - number of radial functions of mixed basis
    ! maxindxm - maximum of these numbers
-   ! gptm     - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g     - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm    - number of vectors
    ! pgptm    - pointer to the appropriate g-vector
-   ! gptmd    - dimension of gptm
+   ! gptmd    - dimension of g
    ! basm     - radial mixed basis functions (mt + inter)
    ! nbasm    - number of mixed basis function
    ! nobd     - dimension of occupied bands
@@ -1841,13 +1855,13 @@ CONTAINS
    FUNCTION dynamic_hse_adjustment( &
       rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, bmat, vol, &
       ntype, neq, natd, taual, lcutm, maxlcutm, nindxm, maxindxm, &
-      gptm, ngptm, pgptm, gptmd, basm, nbasm, &
+      g, ngptm, pgptm, gptmd, basm, nbasm, &
       nobd, nbands, nsst, ibando, psize, indx, invsat, invsatnr, irank, &
       cprod_r, cprod_c, l_real, wl_iks, n_q)
 
       USE m_trafo, ONLY: symmetrize
       USE m_olap, ONLY: olap_pw, olap_pwp
-      USE m_wrapper, ONLY: diagonalize, dotprod, matvec, packmat, inverse
+      USE m_wrapper, ONLY: packmat
 
       IMPLICIT NONE
 
@@ -1861,22 +1875,22 @@ CONTAINS
       REAL, INTENT(IN)     :: vol
 
       ! array input
-      INTEGER, INTENT(IN)  :: lcutm(ntype)
+      INTEGER, INTENT(IN)  :: lcutm(:)
       INTEGER, INTENT(IN)  :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)  :: jri(ntype)
-      INTEGER, INTENT(IN)  :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)  :: jri(:)
+      INTEGER, INTENT(IN)  :: g(:,:)
       INTEGER, INTENT(IN)  :: ngptm
-      INTEGER, INTENT(IN)  :: pgptm(ngptm)
-      INTEGER, INTENT(IN)  :: nsst(nbands), indx(nbands, nbands)
-      INTEGER, INTENT(IN)  :: invsat(natd), invsatnr(natd)
-      REAL, INTENT(IN)     :: bk(3)
-      REAL, INTENT(IN)     :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      INTEGER, INTENT(IN)  :: pgptm(:)
+      INTEGER, INTENT(IN)  :: nsst(:), indx(:,:)
+      INTEGER, INTENT(IN)  :: invsat(:), invsatnr(:)
+      REAL, INTENT(IN)     :: bk(:)
+      REAL, INTENT(IN)     :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)     :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)     :: bmat(3, 3)
-      REAL, INTENT(IN)     :: taual(3, natd)
-      REAL, INTENT(IN)     :: wl_iks(nobd)
-      REAL, INTENT(IN)     :: cprod_r(nbasm, psize, nbands)
-      COMPLEX, INTENT(IN)  :: cprod_c(nbasm, psize, nbands)
+      REAL, INTENT(IN)     :: bmat(:,:)
+      REAL, INTENT(IN)     :: taual(:,:)
+      REAL, INTENT(IN)     :: wl_iks(:)
+      REAL, INTENT(IN)     :: cprod_r(:,:,:)
+      COMPLEX, INTENT(IN)  :: cprod_c(:,:,:)
       LOGICAL, INTENT(IN)   :: l_real
 
       ! return type definition
@@ -1919,7 +1933,7 @@ CONTAINS
       CALL calculate_fourier_transform_once( &
          rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, &
          bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-         nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+         nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
          nbasp, basm, noGPts, invsat, invsatnr, irank, &
          potential, fourier_trafo)
 
@@ -1933,13 +1947,13 @@ CONTAINS
                if (l_real) THEN
                   cprod_fourier_trafo_r(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dotprod(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0, iband1)) &
+                     dot_product(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0, iband1)) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
                      + cprod_r(nbasp + igpt, iobd0, iband1)
                else
                   cprod_fourier_trafo_c(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dotprod(cprod_c(:nbasp, iobd0, iband1), fourier_trafo(:nbasp, igpt)) &
+                     dot_product(cprod_c(:nbasp, iobd0, iband1), fourier_trafo(:nbasp, igpt)) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
                      + CONJG(cprod_c(nbasp + igpt, iobd0, iband1))
                endif
@@ -1979,7 +1993,7 @@ CONTAINS
    PURE FUNCTION calcYlm(rvec, ll)
       USE m_util, ONLY: harmonicsr
       IMPLICIT NONE
-      REAL, INTENT(IN)    :: rvec(3)
+      REAL, INTENT(IN)    :: rvec(:)
       INTEGER, INTENT(IN) :: ll
       COMPLEX             :: calcYlm((ll + 1)**2)
       CALL harmonicsr(calcYlm, rvec, ll)
@@ -2000,7 +2014,7 @@ CONTAINS
    PURE FUNCTION my_dot_product3x1(first, second)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: first(:, :, :)
-      REAL, INTENT(IN)    :: second(SIZE(first, 1))
+      REAL, INTENT(IN)    :: second(:)
       REAL                :: my_dot_product3x1(SIZE(first, 2), SIZE(first, 3))
       INTEGER             :: ci, cj
 
@@ -2013,7 +2027,7 @@ CONTAINS
    PURE FUNCTION my_dot_product4x1(first, second)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: first(:, :, :, :)
-      REAL, INTENT(IN)    :: second(SIZE(first, 1))
+      REAL, INTENT(IN)    :: second(:)
       REAL                :: my_dot_product4x1(SIZE(first, 2), SIZE(first, 3), SIZE(first, 4))
       INTEGER             :: ci, cj, ck
 
@@ -2027,7 +2041,7 @@ CONTAINS
    PURE FUNCTION my_dot_product3x3(first, second)
       IMPLICIT NONE
       COMPLEX, INTENT(IN) :: first(:, :, :)
-      REAL, INTENT(IN) :: second(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3))
+      REAL, INTENT(IN) :: second(:,:,:)
       COMPLEX             :: my_dot_product3x3(SIZE(first, 1), SIZE(first, 2))
       INTEGER             :: ci, cj
 
@@ -2041,7 +2055,7 @@ CONTAINS
    PURE FUNCTION my_dot_product4x4(first, second)
       IMPLICIT NONE
       COMPLEX, INTENT(IN) :: first(:, :, :, :)
-      REAL, INTENT(IN) :: second(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3), SIZE(first, 4))
+      REAL, INTENT(IN) :: second(:,:,:,:)
       COMPLEX             :: my_dot_product4x4(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3))
       INTEGER             :: ci, cj, ck
 
@@ -2078,9 +2092,9 @@ CONTAINS
    COMPLEX PURE FUNCTION crc_gPtsSummation(noGpts, vec1, vec2, vec3)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: noGPts
-      COMPLEX, INTENT(IN) :: vec1(noGPts)
-      REAL, INTENT(IN)    :: vec2(noGPts)
-      COMPLEX, INTENT(IN) :: vec3(noGPts)
+      COMPLEX, INTENT(IN) :: vec1(:)
+      REAL, INTENT(IN)    :: vec2(:)
+      COMPLEX, INTENT(IN) :: vec3(:)
       COMPLEX             :: temp(noGPts)
       temp = vec1*vec3
       crc_gPtsSummation = DOT_PRODUCT(temp, vec2)
@@ -2088,9 +2102,9 @@ CONTAINS
    REAL PURE FUNCTION rrr_gPtsSummation(noGpts, vec1, vec2, vec3)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: noGPts
-      REAL, INTENT(IN)    :: vec1(noGPts)
-      REAL, INTENT(IN)    :: vec2(noGPts)
-      REAL, INTENT(IN)    :: vec3(noGPts)
+      REAL, INTENT(IN)    :: vec1(:)
+      REAL, INTENT(IN)    :: vec2(:)
+      REAL, INTENT(IN)    :: vec3(:)
       REAL                :: temp(noGPts)
       temp = vec1*vec3
       rrr_gPtsSummation = DOT_PRODUCT(temp, vec2)
@@ -2132,6 +2146,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      USE m_intgrf
       USE m_wrapper
 
       IMPLICIT NONE
@@ -2146,26 +2161,26 @@ CONTAINS
       REAL, INTENT(INOUT)   ::  te_hfex_core
 
 !   - arrays -
-      INTEGER, INTENT(IN)      ::  neq(ntype), lcutm(ntype), lmax(ntype), &
-                                  lmaxc(ntype), jri(ntype), nv(jspd), &
+      INTEGER, INTENT(IN)      ::  neq(:), lcutm(:), lmax(:), &
+                                  lmaxc(:), jri(:), nv(:), &
                                   nindxc(0:MAXVAL(lmaxc), ntype), &
                                   nindx(0:lmaxd, ntype)
-      INTEGER, INTENT(IN)      ::  nsest(nbands), indx_sest(nbands, nbands)
-      INTEGER, INTENT(IN)      ::  nobd(nkpt)
-      REAL, INTENT(IN)         ::  rmsh(jmtd, ntype), dx(ntype)
+      INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
+      INTEGER, INTENT(IN)      ::  nobd(:)
+      REAL, INTENT(IN)         ::  rmsh(:,:), dx(:)
       REAL, INTENT(IN)         ::  bas1(jmtd, maxindx, 0:lmaxd, ntype), &
                                   bas2(jmtd, maxindx, 0:lmaxd, ntype)
       REAL, INTENT(IN)         ::  core1(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype), &
                                   core2(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype)
       REAL, INTENT(IN)         ::  fac(0:maxfac), sfac(0:maxfac)
-      REAL, INTENT(IN)         ::  bkpt(3)
-      REAL, INTENT(IN)         ::  gridf(jmtd, ntype)
-      REAL, INTENT(IN)         ::  w_iks(neigd, nkptd, jspd)
+      REAL, INTENT(IN)         ::  bkpt(:)
+      REAL, INTENT(IN)         ::  gridf(:,:)
+      REAL, INTENT(IN)         ::  w_iks(:,:,:)
 
 #ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)  ::  mat_ex(nbasfcn*(nbasfcn + 1)/2)
+      REAL, INTENT(INOUT)  ::  mat_ex(:)
 #else
-      COMPLEX, INTENT(INOUT)  ::  mat_ex(nbasfcn*(nbasfcn + 1)/2)
+      COMPLEX, INTENT(INOUT)  ::  mat_ex(:)
 #endif
       INTEGER, PARAMETER      ::  ncut = 5                  ! cut-off value of n-summation
       INTEGER                 ::  cn                        ! counter for n-summation
@@ -2198,7 +2213,7 @@ CONTAINS
       LOGICAL                 ::  ldum(nbands, nbands)
 
       ! check if a_ex is consistent
-!     IF ( a_ex /= aMix_HSE ) STOP 'hsefunctional: inconsistent mixing!'
+!     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
 
       ! read in mt wavefunction coefficients from file cmt
       irecl_cmt = neigd*maxlmindx*natd*16
@@ -2206,7 +2221,7 @@ CONTAINS
       READ (777, rec=nk) cmt(:, :, :)
       CLOSE (777)
 
-      ALLOCATE (fprod(jmtd, 5), larr(5), parr(5))
+      allocate(fprod(jmtd, 5), larr(5), parr(5))
 
       exchange = 0
       iatom = 0
@@ -2231,14 +2246,14 @@ CONTAINS
                            n = n + 1
                            m = SIZE(fprod, 2)
                            IF (n > m) THEN
-                              ALLOCATE (fprod2(jmtd, m), larr2(m), parr2(m))
+                              allocate(fprod2(jmtd, m), larr2(m), parr2(m))
                               fprod2 = fprod; larr2 = larr; parr2 = parr
-                              DEALLOCATE (fprod, larr, parr)
-                              ALLOCATE (fprod(jmtd, m + 5), larr(m + 5), parr(m + 5))
+                              deallocate(fprod, larr, parr)
+                              allocate(fprod(jmtd, m + 5), larr(m + 5), parr(m + 5))
                               fprod(:, :m) = fprod2
                               larr(:m) = larr2
                               parr(:m) = parr2
-                              DEALLOCATE (fprod2, larr2, parr2)
+                              deallocate(fprod2, larr2, parr2)
                            END IF
                            fprod(:, n) = (core1(:, p1, l1, itype) &
                                           *bas1(:, p2, l2, itype) &
@@ -2251,7 +2266,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     ALLOCATE (integral(n, n), carr(n, nbands), &
+                     allocate(integral(n, n), carr(n, nbands), &
                                carr2(n, nv(jsp)), carr3(n, nv(jsp)))
 
                      DO i = 1, n
@@ -2276,9 +2291,10 @@ CONTAINS
                         DO j = 1, n
                            ! Integration over r
                            integrand = fprod(:, j)*sum_primf
-                           integral(i, j) = fpi_const/(2*l + 1)* &
-                                            intgrf(integrand, jri, jmtd, rmsh, &
-                                                   dx, ntype, itype, gridf)
+                           call juDFT_error("stop the following line has to be reimplemented:")
+                           ! integral(i, j) = fpi_const/(2*l + 1)* &
+                           !                  intgrf(integrand, jri, jmtd, rmsh, &
+                           !                         dx, ntype, itype, gridf)
                         END DO
 
                      END DO
@@ -2297,7 +2313,7 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM((/((2*l2 + 1)*nindx(l2, itype), l2=0, ll - 1)/)) &
+                                 lm = SUM([((2*l2 + 1)*nindx(l2, itype), l2=0, ll - 1)]) &
                                       + (m2 + ll)*nindx(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom) &
@@ -2313,7 +2329,7 @@ CONTAINS
                         END DO
                      END DO
 
-                     DEALLOCATE (integral, carr, carr2, carr3)
+                     deallocate(integral, carr, carr2, carr3)
 
                   END DO
                END DO
@@ -2323,9 +2339,9 @@ CONTAINS
 
 #ifdef CPP_INVERSION
       IF (ANY(ABS(aimag(exchange)) > 10.0**-10)) THEN
-         IF (irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
+         IF (irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
          WRITE (*, *) MAXVAL(ABS(aimag(exchange)))
-         STOP 'exchangeCore: Unusually large imaginary component.'
+         call juDFT_error( 'exchangeCore: Unusually large imaginary component.')
       END IF
 #endif
 
@@ -2382,6 +2398,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      use m_intgrf
       USE m_wrapper
       USE m_gaunt
       USE m_trafo
@@ -2397,17 +2414,17 @@ CONTAINS
       REAL, INTENT(INOUT) ::  te_hfex
 
       ! - arays -
-      INTEGER, INTENT(IN)    ::  neq(ntype), ncst(ntype), lmaxc(ntype)
+      INTEGER, INTENT(IN)    ::  neq(:), ncst(:), lmaxc(:)
       INTEGER, INTENT(IN)    ::  nindxc(0:lmaxcd, ntype)
-      INTEGER, INTENT(IN)    ::  jri(ntype)
-      INTEGER, INTENT(IN)    ::  invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    ::  jri(:)
+      INTEGER, INTENT(IN)    ::  invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)    ::  rmsh(jmtd, ntype), dx(ntype)
+      REAL, INTENT(IN)    ::  rmsh(:,:), dx(:)
       REAL, INTENT(IN)    ::  core1(jmtd, maxindxc, 0:lmaxcd, ntype), &
                              core2(jmtd, maxindxc, 0:lmaxcd, ntype)
-      REAL, INTENT(IN)    ::  bkpt(3)
-      REAL, INTENT(IN)    ::  gridf(jmtd, ntype)
-      REAL, INTENT(IN)    ::  wtkpt(nkpti, nwd)
+      REAL, INTENT(IN)    ::  bkpt(:)
+      REAL, INTENT(IN)    ::  gridf(:,:)
+      REAL, INTENT(IN)    ::  wtkpt(:,:)
       REAL, INTENT(IN)    ::  fac(0:maxfac)
 
       ! - local scalars -
@@ -2428,7 +2445,7 @@ CONTAINS
       ! in Legendre polynomials
       CHARACTER*100         :: outtext
 
-!   IF ( a_ex /= aMix_HSE ) STOP 'hsefunctional: mixing parameter inconsistent'
+!   IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: mixing parameter inconsistent'
 
 !   IF ( irank == 0 ) THEN
 !     WRITE(outtext,'(A)') new_line('n') // new_line('n') // '### core-core-core-core exchange ###'
@@ -2509,7 +2526,8 @@ CONTAINS
 
                                     integrand = rprod*sum_primf
 
-                                    rdum1 = rdum*intgrf(integrand, jri, jmtd, rmsh, dx, ntype, itype, gridf)
+                                    call juDFT_error("stop the following line has to be reimplemented:")
+                                    !rdum1 = rdum*intgrf(integrand, jri, jmtd, rmsh, dx, ntype, itype, gridf)
 
                                     iatom = iatom0
                                     DO ieq = 1, neq(itype)
@@ -2538,11 +2556,11 @@ CONTAINS
       CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., &
                       ntype, ntype, neq, lmaxc, lmaxcd, &
                       nindxc, natd, invsat, invsatnr)
-      IF (ANY(ABS(aimag(exch)) > 1E-6)) STOP 'exchange_cccc: exch possesses significant imaginary part'
+      IF (ANY(ABS(aimag(exch)) > 1E-6)) call juDFT_error( 'exchange_cccc: exch possesses significant imaginary part')
 # endif
 !   DO icst = 1,ncstd
 !     IF ( irank == 0 ) &
-!       WRITE(6,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
+!       WRITE(oUnit,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
 !   END DO
 
       ! add core exchange contributions to the te_hfex

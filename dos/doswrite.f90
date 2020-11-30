@@ -11,14 +11,15 @@ MODULE m_doswrite
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
 CONTAINS
-  SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+  SUBROUTINE doswrite(eig_id,kpts,atoms,vacuum,input,banddos,&
+                      sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,jDOS,oneD)
+    USE m_types
+    USE m_constants
     USE m_evaldos
     USE m_cdninf
-    USE m_types
     IMPLICIT NONE
   
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_sliceplot),INTENT(IN) :: sliceplot
@@ -30,6 +31,7 @@ CONTAINS
     TYPE(t_dos),INTENT(IN)       :: dos
     TYPE(t_slab),INTENT(IN)      :: slab
     TYPE(t_orbcomp),INTENT(IN)   :: orbcomp
+    TYPE(t_jDOS),INTENT(IN)      :: jDOS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(IN)       :: mcd
@@ -41,7 +43,7 @@ CONTAINS
 
     !    locals
     REAL    :: wk,bkpt(3)
-    REAL    :: eig(DIMENSION%neigd)
+    REAL    :: eig(input%neig)
     INTEGER :: ne,ikpt,kspin,j,i,n
     COMPLEX, ALLOCATABLE :: ac(:,:),bc(:,:)
 
@@ -50,11 +52,11 @@ CONTAINS
     IF (.NOT.(banddos%dos.OR.input%cdinf.OR.banddos%vacdos.OR.(vacuum%nstm.EQ.3))) RETURN
     !     check if settings in inp-file make any sense
     IF (banddos%vacdos.AND..NOT.banddos%dos) THEN
-       WRITE(6,*) "STOP DOS: only set banddos%vacdos = .true. if banddos%dos=.true."
+       WRITE(oUnit,*) "STOP DOS: only set banddos%vacdos = .true. if banddos%dos=.true."
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
-    IF (banddos%vacdos.AND.(.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1)))THEN
-       WRITE(6,*) "STOP DOS: if stars = f set vacuum%nstars=1"
+    IF (banddos%vacdos.AND.(.NOT.banddos%starcoeff.AND.(banddos%nstars.NE.1)))THEN
+       WRITE(oUnit,*) "STOP DOS: if stars = f set banddos%nstars=1"
        CALL juDFT_error("DOS",calledby ="doswrite")
     ENDIF
 
@@ -81,8 +83,8 @@ CONTAINS
              WRITE (85,FMT=8080) atoms%ntype, (atoms%neq(n),n=1,atoms%ntype)
              IF (banddos%vacdos) THEN
                 WRITE (86,FMT=8080) vacuum%nvac,kpts%nkpt
-                WRITE (86,FMT=8080) vacuum%layers
-                WRITE (86,'(20(i3,1x))') (vacuum%izlay(i,1),i=1,vacuum%layers)
+                WRITE (86,FMT=8080) banddos%layers
+                WRITE (86,'(20(i3,1x))') (banddos%izlay(i,1),i=1,banddos%layers)
              ENDIF
           ENDIF
 
@@ -105,7 +107,7 @@ CONTAINS
     !     write DOS/VACDOS     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                    DIMENSION,results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp)
+                    results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp,jDOS)
     END IF
 
     !     Now write to vacwave if nstm=3 
@@ -113,18 +115,18 @@ CONTAINS
     IF (vacuum%nstm.EQ.3) THEN
        call juDFT_error("nstm=3 not implemented in doswrite")
        !OPEN (89,file='tmp_vacwave',status='old',access='direct')!, recl=reclength_vw)
-       ALLOCATE ( ac(n2max,DIMENSION%neigd),bc(n2max,DIMENSION%neigd) )
+       ALLOCATE ( ac(n2max,input%neig),bc(n2max,input%neig) )
        DO ikpt = 1,kpts%nkpt
           WRITE(*,*) 'Read rec',ikpt,'from vacwave'
           READ(89,rec=ikpt) wk,ne,bkpt(1),bkpt(2),eig,ac,bc
           WRITE (87,'(i3,1x,f12.6)') ikpt,wk
           i=0
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.banddos%e2_dos) i=i+1
+             IF (ABS(eig(n)-banddos%tworkf).LE.banddos%e2_dos) i=i+1
           END DO
           WRITE (87,FMT=990) bkpt(1), bkpt(2), i, n2max
           DO n = 1, ne
-             IF (ABS(eig(n)-vacuum%tworkf).LE.banddos%e2_dos) THEN
+             IF (ABS(eig(n)-banddos%tworkf).LE.banddos%e2_dos) THEN
                 WRITE (87,FMT=1000) eig(n)
                 DO j=1,n2max
                    WRITE (87,FMT=1010) ac(j,n),bc(j,n)

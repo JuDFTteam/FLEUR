@@ -9,18 +9,23 @@ MODULE m_qfix
   ! qfix=1 (qfix=f in inp.xml) means we fix only in INT (only done in firstcall)
   ! qfix=2 (qfix=t in inp.xml) means we fix total charge
   ! qfix file no longer supported!
+  ! If l_par=.TRUE., MPI parallelization in the cdntot will be used.
+  ! Be carefull not to set it to .TRUE. if you are calling only from one MPI
+  ! rank.
 
 CONTAINS
-  SUBROUTINE qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-                  den,l_noco,l_printData,force_fix,fix,fix_pw_only)
+  SUBROUTINE qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+                  den,l_noco,l_printData,l_par,force_fix,fix,fix_pw_only)
 
     USE m_types
+    USE m_constants
     USE m_cdntot
     USE m_xmlOutput
+
     IMPLICIT NONE
 
     !     .. Scalar Arguments ..
-    TYPE(t_mpi),INTENT(IN)       :: mpi
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_sym),INTENT(IN)       :: sym
@@ -30,7 +35,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_potden),INTENT(INOUT) :: den
-    LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix
+    LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
     REAL,    INTENT (OUT)        :: fix
     LOGICAL,INTENT(IN),OPTIONAL  :: fix_pw_only
     !     .. Local Scalars ..
@@ -50,57 +55,58 @@ CONTAINS
     ! qfix==0 means no qfix was given in inp.xml. 
     ! In this case do nothing except when forced to fix!
     
-    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis)
+    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis,fmpi,l_par)
 
-    !The total nucleii charge
-    zc=SUM(atoms%neq(:)*atoms%zatom(:))
-    zc = zc + 2*input%sigma
+    IF (fmpi%irank.EQ.0) THEN
+       !The total nucleii charge
+       zc=SUM(atoms%neq(:)*atoms%zatom(:))
+       !zc = zc + 2*input%sigma !TODO : reactivate fields
 
-    IF (fixtotal) THEN
+       IF (fixtotal) THEN
+          !-roa
+          fix = zc/qtot
+          na = 1
+          DO n = 1,atoms%ntype
+             lh = sphhar%nlh(sym%ntypsy(na))
+             jm = atoms%jri(n)
+             den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
+             na = na + atoms%neq(n)
+          ENDDO
+          den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
+          IF (input%film) THEN
+             den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
+             den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
+                den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
+          END IF
+          WRITE (oUnit,FMT=8000) zc,fix
+       ELSE
+          fix = (zc - qtot) / qis + 1.
+          den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
+          WRITE (oUnit,FMT=8001) zc,fix
+       ENDIF
+
+       IF (l_noco) THEN
+          !fix also the off-diagonal part of the density matrix
+          den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
+          IF (input%film.AND.fixtotal) THEN
+             den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
+             den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
+          END IF
+       END IF
+
+       IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+
+       CALL openXMLElementNoAttributes('fixedCharges')
+       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis,fmpi,.FALSE.)
+       CALL closeXMLElement('fixedCharges')
+
+       IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
+       IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
+
+8000   FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
+8001   FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
        !-roa
-       fix = zc/qtot
-       na = 1
-       DO n = 1,atoms%ntype
-          lh = sphhar%nlh(atoms%ntypsy(na))
-          jm = atoms%jri(n)
-          den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
-          na = na + atoms%neq(n)
-       ENDDO
-       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       IF (input%film) THEN
-          den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
-          den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
-             den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
-       END IF
-       WRITE (6,FMT=8000) zc,fix
-    ELSE
-       fix = (zc - qtot) / qis + 1.
-       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
-       WRITE (6,FMT=8001) zc,fix
     ENDIF
-
-    IF (l_noco) THEN
-       !fix also the off-diagonal part of the density matrix
-       den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
-       IF (input%film.AND.fixtotal) THEN
-          den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
-          den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
-       END IF
-    END IF
-
-    IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
-
-    CALL openXMLElementNoAttributes('fixedCharges')
-    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis)
-    CALL closeXMLElement('fixedCharges')
-
-    IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
-    IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
-
-
-8000 FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
-8001 FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
-    !-roa
 
   END SUBROUTINE qfix
 END MODULE m_qfix

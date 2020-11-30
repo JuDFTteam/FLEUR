@@ -169,13 +169,16 @@ CONTAINS
   SUBROUTINE write_matrix_DA(mat,rec,id)
     TYPE(t_Mat),INTENT(IN):: mat
     INTEGER,INTENT(IN)        :: rec,id
-    INTEGER:: err
+    INTEGER    :: err
+    INTEGER(8) :: matsize
     IF (mat%l_real) THEN
        WRITE(id,rec=rec,iostat=err) mat%l_real,mat%matsize1,mat%matsize2,mat%data_r
+       matsize = 8 * size(mat%data_r)
     ELSE
        WRITE(id,rec=rec,iostat=err) mat%l_real,mat%matsize1,mat%matsize2,mat%data_c
+       matsize = 16 * size(mat%data_c)
     END IF
-    IF (err.NE.0) CALL judft_error("Failed in writing of matrix")
+    IF (err.NE.0) CALL judft_error("Failed in writing of matrix. Matrix size in byte = " // int2str(matsize))
   END SUBROUTINE write_matrix_DA
 
   SUBROUTINE close_matrix_DA(id)

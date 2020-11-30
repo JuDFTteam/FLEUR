@@ -15,12 +15,14 @@
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
       <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="44.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointList posScale="1.00000000" weightScale="1.00000000" count="2">
+         <kPointListSelection listName="default" />
+         <kPointLists>
+         <kPointList posScale="1.00000000" weightScale="1.00000000" count="2" name="default">
             <kPoint weight="    0.500000">    0.250000     0.250000     0.375000</kPoint>
             <kPoint weight="    0.500000">    0.250000     0.250000     0.125000</kPoint>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
    </calculationSetup>
    <cell>
       <symmetryOperations>
@@ -112,13 +114,13 @@
    </cell>
    <xcFunctional name="pw91" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Ti-1" element="Ti" atomicNumber="22" coreStates="5" magMom=".00000000" flipSpin="T">
+      <species name="Ti-1" element="Ti" atomicNumber="22" coreStates="5" magMom=".00000000" >
          <mtSphere radius="2.28000000" gridPoints="757" logIncrement=".01500000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-      <species name="O-2" element="O" atomicNumber="8" coreStates="1" magMom=".00000000" flipSpin="T">
+      <species name="O-2" element="O" atomicNumber="8" coreStates="1" magMom=".00000000" >
          <mtSphere radius="1.29000000" gridPoints="429" logIncrement=".02400000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <energyParameters s="2" p="2" d="3" f="4"/>
@@ -140,11 +142,9 @@
          <nocoParams l_relax="F" l_magn="F" M=".00000000" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
       </atomGroup>
    </atomGroups>
-   <output dos="T" band="F" vacdos="F" slice="F" coreSpec="F">
+   <output dos="T" band="F"  slice="F" coreSpec="F">
       <checks vchk="F" cdinf="F" disp="F"/>
-      <densityOfStates ndir="-1" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
-      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="0" score="F" plplot="F"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <coreSpectrum eKin="300.0" atomType="1" lmax="2" edgeType="L" eMin="-1.0" eMax="15.0" numPoints="17" verbose="F">

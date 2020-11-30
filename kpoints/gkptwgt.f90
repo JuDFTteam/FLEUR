@@ -1,7 +1,7 @@
       MODULE m_gkptwgt
       CONTAINS
         SUBROUTINE gkptwgt(&
-             &                   kpts,cell)
+             &                   kpts,cell,latnam)
           !                                                             
           !     this subroutine generates the weight factor of a k-point 
           !     in the irreducible wedge of a 2d-brillouin zone         
@@ -12,11 +12,13 @@
           !     changed by                        Stefan Bl"ugel, IFF, Jan.96
           !                                                           
           USE m_constants
-          USE m_types
+          USE m_types_kpts
+          USE m_types_cell
           USE m_juDFT
           IMPLICIT NONE
           TYPE(t_cell),INTENT(IN)   :: cell
           TYPE(t_kpts),INTENT(INOUT):: kpts
+          CHARACTER(len=*),INTENT(IN) :: latnam
 
           !                                                        
           !     .. was an Argument
@@ -41,14 +43,14 @@
           !     ..
 
           !      nver = 3
-          IF ( cell%latnam.EQ.'squ' ) THEN
+          IF ( latnam.EQ.'squ' ) THEN
              nver = 3
-          ELSEIF ( cell%latnam.EQ.'p-r' .OR. cell%latnam.EQ.'c-r' ) THEN
+          ELSEIF ( latnam.EQ.'p-r' .OR. latnam.EQ.'c-r' ) THEN
              nver = 4
-          ELSEIF ( cell%latnam.EQ.'hex' ) THEN
+          ELSEIF ( latnam.EQ.'hex' ) THEN
              nver = 3
              ver(2,3) = 1./3.
-          ELSEIF ( cell%latnam.EQ.'hx3' .OR. cell%latnam.EQ. 'obl' ) THEN
+          ELSEIF ( latnam.EQ.'hx3' .OR. latnam.EQ. 'obl' ) THEN
              CALL juDFT_error("weights for hx3 or obl not defined" ,calledby&
                   &        ="gkptwgt")
           ENDIF
@@ -66,7 +68,7 @@
                 s1 = s1+cell%bmat(i,1)*kpts%bk(i,ikpt)
                 s2 = s2+cell%bmat(i,2)*kpts%bk(i,ikpt)
              ENDDO
-             IF (cell%latnam.EQ.'hex') THEN
+             IF (latnam.EQ.'hex') THEN
                 kpts%bk(1,ikpt) = s1*cell%amat(2,2)/tpi_const
                 kpts%bk(2,ikpt) = s2*cell%amat(1,1)/pi_const
              ELSE

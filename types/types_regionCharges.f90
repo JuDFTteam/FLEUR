@@ -30,7 +30,8 @@ CONTAINS
 
 SUBROUTINE regionCharges_init(thisRegCharges,input,atoms)
 
-   USE m_types_setup
+   USE m_types_input
+   USE m_types_atoms
 
    IMPLICIT NONE
 
@@ -55,16 +56,17 @@ SUBROUTINE regionCharges_init(thisRegCharges,input,atoms)
 
 END SUBROUTINE regionCharges_init
 
-SUBROUTINE sumBandsVac(thisRegCharges,vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
+SUBROUTINE sumBandsVac(thisRegCharges,vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-   USE m_types_setup
-   USE m_types_dos
+  USE m_types_vacuum
+  USE m_types_dos
+  USE m_types_vacdos
 
    IMPLICIT NONE
 
    CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
    TYPE(t_vacuum),         INTENT(IN)    :: vacuum
-   TYPE(t_dos),            INTENT(IN)    :: dos
+   TYPE(t_vacdos),         INTENT(IN)    :: vacdos
    INTEGER,                INTENT(IN)    :: noccbd
    INTEGER,                INTENT(IN)    :: ikpt
    INTEGER,                INTENT(IN)    :: jsp_start, jsp_end
@@ -77,9 +79,9 @@ SUBROUTINE sumBandsVac(thisRegCharges,vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,e
    DO ispin = jsp_start, jsp_end
       DO ivac = 1,vacuum%nvac
          thisRegCharges%pvac(ivac,ispin) = thisRegCharges%pvac(ivac,ispin)+&
-            dot_product(eig(:noccbd)*dos%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+            dot_product(eig(:noccbd)*vacdos%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
          thisRegCharges%svac(ivac,ispin)=thisRegCharges%svac(ivac,ispin)+&
-            dot_product(dos%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+            dot_product(vacdos%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
       END DO
    END DO
 

@@ -1,6 +1,6 @@
       MODULE m_nabla
       use m_juDFT
-        
+
       CONTAINS
 
       SUBROUTINE nabla(
@@ -22,11 +22,13 @@
 !     psi(r)   ... core wavefunction
 !     phi(r,l) ... valence wavefunction
 !    dphi(r,l) ... radial derivative of valence wavefunction
-!     
+!
 !----------------------------------------------------------------
+       USE m_constants
        USE m_clebsch
        USE m_intgr, ONLY : intgr3
-       IMPLICIT NONE  
+
+       IMPLICIT NONE
 
        INTEGER, INTENT(IN) :: ispecies, number_of_j1, grid_size
        INTEGER, INTENT(IN) :: l1, lmax, nstd, ntypd
@@ -49,87 +51,87 @@
        NULLIFY(f)
 
        IF ( ASSOCIATED(f) ) THEN
-        WRITE(6,*)'nabla: f association status:',ASSOCIATED(f)
+        WRITE(oUnit,*)'nabla: f association status:',ASSOCIATED(f)
         STOP
        ENDIF
 
        ALLOCATE ( f(grid_size),STAT=alloc_error )
        IF (alloc_error /= 0)  CALL juDFT_error("Couldn't allocate f",
      +      calledby ="nabla")
-      
+
        lmn1 = 2 * (number_of_j1 - 1)  * l1
        mu = -j1
 
        DO WHILE (mu <= j1)
         lmn1 = lmn1 + 1
-        m1 = INT(mu - ms) 
+        m1 = INT(mu - ms)
         lmn2 = 0
         DO l2 = 0, lmax
          DO m2 = -l2, l2
             lmn2 = lmn2 + 1
-            IF(l1 == l2 + 1)THEN  
+            IF(l1 == l2 + 1)THEN
              total_result = 0.00
              result  = 0.00
              result1 = 0.00
-!     
+!
 ! (l+1)/srqt[(2l+1)(2l+3)] < phi_core | (d phi_valence / dr ) >
 !
              f(:) = psi(:) * dphi(:,l2) ! assumed to be already multiplied with * ri(:) * ri(:)
-      
+
              CALL intgr3(f,ri,delta_x,grid_size,result)
-      
+
              result = result * (l2 + 1.00) /
      +                         sqrt((2.00*l2 +1.00)*(2.*l2+3.00))
-      
+
 !
 !  - l(l+1)/srqt[(2l+1)(2l+3)] < phi_core | (1/r) phi_valence >
 !
              f(:) = psi(:) * phi(:,l2) ! assumed to be already multiplied with 1G* ri(:)
              CALL intgr3(f,ri,delta_x,grid_size,result1)
-             result1 = - result1 * l2 * (l2 + 1.0) /              
-     +                   sqrt((2.0 * l2 + 1.00) * (2. * l2 + 3.00)) 
+             result1 = - result1 * l2 * (l2 + 1.0) /
+     +                   sqrt((2.0 * l2 + 1.00) * (2. * l2 + 3.00))
 !
 ! Sum up and decorate with Clebsch-Gordon coefficients
 !
              result  = result + result1
              total_result = result*clebsch(real(l1),spin,mu-ms,ms,j1,mu)
-      
+
              index = (ispecies - 1) * 3 + 1
              psi_phi(lmn1,lmn2,index)= cgc(l2,1,l1,m2,1,m1) *       ! left polarization
      +                                 total_result / cgc(l2,1,l1,0,0,0)
-      
+
              index = index + 1
              psi_phi(lmn1,lmn2,index)= cgc(l2,1,l1,m2,-1,m1) *      ! right polarization
      +                                 total_result / cgc(l2,1,l1,0,0,0)
-      
+
              index = index + 1
              psi_phi(lmn1,lmn2,index)= cgc(l2,1,l1,m2,0,m1) *        ! z-polarization
      +                                 total_result / cgc(l2,1,l1,0,0,0)
-      
-            ELSEIF(l1== l2-1)THEN  
-      
-              result  =  cnst_zero 
+
+            ELSEIF(l1== l2-1)THEN
+
+              result  =  cnst_zero
               result1 =  cnst_zero
 !
 ! l/srqt[(2l-1)(2l+1)] < phi_core | (d phi_valence / dr ) >
 !
               f(:) = psi(:)* dphi(:,l2)   * ri(:) * ri(:)
               CALL intgr3(f,ri,delta_x,grid_size,result)
-              result = result * l2 / sqrt((2.0*l2 - 1.0)*(2.0*l2 + 1.0)) 
+              result = result * l2 / sqrt((2.0*l2 - 1.0)*(2.0*l2 + 1.0))
 !
 !   l(l+1)/srqt[(2l-1)(2l+1)] < phi_core | (1/r) phi_valence >
 !
               f(:) = psi(:)* phi(:,l2) * ri(:)
               CALL intgr3(f,ri,delta_x,grid_size,result1)
               result1 = result1 * l2 * (l2 + 1.0) /
-     +                  sqrt((2.00 * l2 - 1.00) * (2.00 * l2 + 1.00)) 
+     +                  sqrt((2.00 * l2 - 1.00) * (2.00 * l2 + 1.00))
 !
 ! Sum up and decorate with Clebsch-Gordon coefficients
 !
               result = result + result1
               total_result= result*clebsch(real(l1),spin,mu-ms,ms,j1,mu)
-      
-      
+
+
               index = (ispecies - 1) * 3 + 1
               psi_phi(lmn1,lmn2,index) = cgc(l2,1,l1,m2,1,m1) *          ! left polarization
      +                                 total_result / cgc(l2,1,l1,0,0,0)
@@ -139,7 +141,7 @@
               index = index + 1
               psi_phi(lmn1,lmn2,index) = cgc(l2,1,l1,m2,0,m1) *          ! z-polarization
      +                                 total_result / cgc(l2,1,l1,0,0,0)
-            ENDIF         
+            ENDIF
           ENDDO
         ENDDO
         mu = mu + 1.00
@@ -151,37 +153,37 @@
 
       FUNCTION cgc(l1,l2,l3,m1,m2,m3)
 
-      IMPLICIT NONE  
+      IMPLICIT NONE
       INTEGER :: l1, l2, l3, m1, m2, m3
-      REAL  :: two_l1p1, two_l1p2, l1pm3, l1pm3p1, l1mm3p1, l1mm3, cgc 
+      REAL  :: two_l1p1, two_l1p2, l1pm3, l1pm3p1, l1mm3p1, l1mm3, cgc
 
       IF (m3 /= m1 + m2) THEN
        cgc = 0.0
        RETURN
-      END IF 
+      END IF
 !     gb  m3 = m1 + m2
       two_l1p1 = 2 * l1 + 1
       two_l1p2 = 2 * l1 + 2
       l1pm3 = l1 + m3
       l1pm3p1 = l1 + m3 + 1
       l1mm3p1 = l1 - m3 + 1
-      l1mm3 = l1 - m3 
-      cgc = 0.0 
+      l1mm3 = l1 - m3
+      cgc = 0.0
       IF (l3 == l1 + 1) THEN
           IF (m2 == 1) then
-           cgc = sqrt( (l1pm3 * l1pm3p1) / (two_l1p1 * two_l1p2))   
+           cgc = sqrt( (l1pm3 * l1pm3p1) / (two_l1p1 * two_l1p2))
           ELSEIF (m2 == 0) THEN
            cgc = sqrt( (l1mm3p1 * l1pm3p1) / (two_l1p1 * (l1 + 1)))
           ELSEIF (m2 == -1) THEN
-           cgc = sqrt( (l1mm3 * l1mm3p1) / (two_l1p1 * two_l1p2))   
+           cgc = sqrt( (l1mm3 * l1mm3p1) / (two_l1p1 * two_l1p2))
           END IF
       ELSE IF(l3 == l1 -1) THEN
           IF (m2 == 1) then
-           cgc = sqrt( (l1mm3 * l1mm3p1) / (2.0 * l1 * two_l1p1))   
+           cgc = sqrt( (l1mm3 * l1mm3p1) / (2.0 * l1 * two_l1p1))
           ELSEIF (m2 == 0) THEN
-           cgc = -sqrt( (l1mm3 * l1pm3) / (l1 * (two_l1p1)))   
+           cgc = -sqrt( (l1mm3 * l1pm3) / (l1 * (two_l1p1)))
           ELSEIF (m2 == -1) THEN
-           cgc = sqrt( (l1pm3p1 * l1pm3) / (2.0 * l1 * two_l1p1))   
+           cgc = sqrt( (l1pm3p1 * l1pm3) / (2.0 * l1 * two_l1p1))
           END IF
       END IF
       END FUNCTION cgc

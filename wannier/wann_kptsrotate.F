@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2016 Peter GrÃ¼nberg Institut, Forschungszentrum JÃ¼lich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,55 +12,50 @@ c     Frank Freimuth
 c****************************************
       contains
       subroutine wann_kptsrotate(
-     >               natd,nlod,llod,
-     >               ntypd,nlo,llo,invsat,
+     >               atoms,
+     >               invsat,
      >               l_noco,l_soc,
-     >               ntype,neq,nlotot,
      >               jspin_in,
      >               oper,nop,mrot,nvd,
-     >               nv,shiftkpt,
+     >               shiftkpt,
      >               tau,
-     x               bkpt,k1,k2,k3,
+     >               lapw,
+!     x               bkpt,k1,k2,k3,
      x               zMat,nsfactor)
+
       USE m_types
+      use m_constants
       use m_inv3
-      use m_constants,only:pimach
+
       implicit none
-      integer,intent(in)    :: natd
-      integer,intent(in)    :: nlod
-      integer,intent(in)    :: llod
-      integer,intent(in)    :: ntypd
-      INTEGER, INTENT (IN)  :: nlo(ntypd)
-      integer, intent(in)   :: llo(nlod,ntypd)
-      INTEGER, INTENT (IN)  :: invsat(natd)
+      TYPE(t_atoms),INTENT(IN)             :: atoms
+      INTEGER, INTENT (IN)  :: invsat(:)
       logical,intent(in)    :: l_noco
       logical,intent(in)    :: l_soc
-      integer,intent(in)    :: ntype
-      integer,intent(in)    :: neq(ntype)
-      integer,intent(in)    :: nlotot
       integer,intent(in)    :: jspin_in
       integer,intent(in)    :: oper
       integer,intent(in)    :: nop
       integer,intent(in)    :: mrot(3,3,nop)
-      integer,intent(in)    :: nvd,nv(:)
+      integer,intent(in)    :: nvd
       integer,intent(in)    :: shiftkpt(3)
       real,intent(in)       :: tau(3,nop)
-      real,intent(inout)    :: bkpt(3)
-      integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
+!      real,intent(inout)    :: bkpt(3)
+!      integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
+      TYPE(t_lapw),intent(inout)  :: lapw
 
+      
       TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       complex,intent(out)   :: nsfactor !phase of non-symmorphic ops
 
       real    :: bkrot(3),tpi,arg
-      integer :: rotmat(3,3),determ,ilo
-      integer :: j1,j2,j3,k,j,at_ind,invoper
+      integer :: rotmat(3,3),determ,iatom,itype
+      integer :: j1,j2,j3,k,j,at_ind,invoper,nkvec
       real    :: shiftnonsymm(3)
       real    :: phase
-      INTEGER :: kvec(2*(2*llod+1),nlod,natd)
       integer :: natom,ntyp,lm,m,l,lo,nn,jspin
       integer :: absoper,jj,jsp_start,jsp_end
-      integer :: testmat(3,3)
+      integer :: testmat(3,3),nbasf
 
       tpi=2.0*pimach()
 
@@ -95,42 +90,42 @@ c      print*,testmat
           if(.not.(l_noco.and.(jspin.eq.2)))then
             bkrot(:)=0.0
             do k=1,3
-              bkrot(:)=bkrot(:)+mrot(k,:,absoper)*bkpt(k)
+              bkrot(:)=bkrot(:)+mrot(k,:,absoper)*lapw%bkpt(k)
             enddo
-            bkpt(:)=bkrot(:)
+            lapw%bkpt(:)=bkrot(:)
           endif
-          do j=1,nv(jspin)  !rotate reciprocal vector
-               j1=mrot(1,1,absoper)*k1(j,jspin)+
-     +            mrot(2,1,absoper)*k2(j,jspin)+
-     +            mrot(3,1,absoper)*k3(j,jspin)
-               j2=mrot(1,2,absoper)*k1(j,jspin)+
-     +            mrot(2,2,absoper)*k2(j,jspin)+
-     +            mrot(3,2,absoper)*k3(j,jspin)
-               j3=mrot(1,3,absoper)*k1(j,jspin)+
-     +            mrot(2,3,absoper)*k2(j,jspin)+
-     +            mrot(3,3,absoper)*k3(j,jspin)
-               k1(j,jspin)=j1
-               k2(j,jspin)=j2
-               k3(j,jspin)=j3
+          do j=1,lapw%nv(jspin)  !rotate reciprocal vector
+               j1=mrot(1,1,absoper)*lapw%k1(j,jspin)+
+     +            mrot(2,1,absoper)*lapw%k2(j,jspin)+
+     +            mrot(3,1,absoper)*lapw%k3(j,jspin)
+               j2=mrot(1,2,absoper)*lapw%k1(j,jspin)+
+     +            mrot(2,2,absoper)*lapw%k2(j,jspin)+
+     +            mrot(3,2,absoper)*lapw%k3(j,jspin)
+               j3=mrot(1,3,absoper)*lapw%k1(j,jspin)+
+     +            mrot(2,3,absoper)*lapw%k2(j,jspin)+
+     +            mrot(3,3,absoper)*lapw%k3(j,jspin)
+               lapw%k1(j,jspin)=j1
+               lapw%k2(j,jspin)=j2
+               lapw%k3(j,jspin)=j3
           enddo 
       enddo !jspin  
 
       if(oper.lt.0)then !time-inversion symmetry
-         k1   = -k1
-         k2   = -k2
-         k3   = -k3
-         bkpt = -bkpt
+         lapw%k1   = -lapw%k1
+         lapw%k2   = -lapw%k2
+         lapw%k3   = -lapw%k3
+         lapw%bkpt = -lapw%bkpt
       endif
 
       do jspin=jsp_start,jsp_end
         jj=0 
         if(l_noco.and.(jspin.eq.2))then
-           jj=nv(1)+nlotot
+           jj=lapw%nv(1)+atoms%nlotot
         endif
-        do j=1,nv(jspin)
-         phase = k1(j,jspin) * shiftnonsymm(1)
-     +         + k2(j,jspin) * shiftnonsymm(2)
-     +         + k3(j,jspin) * shiftnonsymm(3)
+        do j=1,lapw%nv(jspin)
+         phase = lapw%k1(j,jspin) * shiftnonsymm(1)
+     +         + lapw%k2(j,jspin) * shiftnonsymm(2)
+     +         + lapw%k3(j,jspin) * shiftnonsymm(3)
          phase = tpi*phase
          phase = cos(phase)
          IF(zMat%l_real) THEN
@@ -139,36 +134,51 @@ c      print*,testmat
             zMat%data_c(j+jj,:)  = phase * zMat%data_c(j+jj,:) 
          END IF
         enddo    
-        jj=jj+nv(jspin)
-        do ilo=1,nlotot
-           call judft_error("BUG in wann_kptsrotate:LOs missing")
-         !j=kveclo(ilo)
-         phase = k1(j,jspin) * shiftnonsymm(1)
-     +         + k2(j,jspin) * shiftnonsymm(2)
-     +         + k3(j,jspin) * shiftnonsymm(3)
-         phase = tpi*phase
-         phase = cos(phase)
-         IF(zMat%l_real) THEN
-            zMat%data_r(jj+ilo,:)  = phase * zMat%data_r(jj+ilo,:) 
-         ELSE
-            zMat%data_c(jj+ilo,:)  = phase * zMat%data_c(jj+ilo,:) 
-         END IF
-        enddo
+        jj=jj+lapw%nv(jspin)
+c$$$        do ilo=1,nlotot
+c$$$           call judft_error("BUG in wann_kptsrotate:LOs missing")
+c$$$         !j=kveclo(ilo)
+c$$$         phase = lapw%k1(j,jspin) * shiftnonsymm(1)
+c$$$     +         + lapw%k2(j,jspin) * shiftnonsymm(2)
+c$$$     +         + lapw%k3(j,jspin) * shiftnonsymm(3)
+c$$$         phase = tpi*phase
+c$$$         phase = cos(phase)
+c$$$         IF(zMat%l_real) THEN
+c$$$            zMat%data_r(jj+ilo,:)  = phase * zMat%data_r(jj+ilo,:) 
+c$$$         ELSE
+c$$$            zMat%data_c(jj+ilo,:)  = phase * zMat%data_c(jj+ilo,:) 
+c$$$         END IF
+c$$$  enddo
+        do iatom=1,atoms%nat
+          iType = atoms%itype(iAtom)
+          do lo=1,atoms%nlo(itype)
+             DO nkvec = 1, lapw%nkvec(lo,iAtom)
+!                   iLAPW = lapw%kvec(nkvec,lo,iAtom)
+                   nbasf=lapw%nv(jspin)+lapw%index_lo(lo,iatom)+nkvec
+                   IF(zMat%l_real) THEN
+            zMat%data_r(nbasf,:)  = phase * zMat%data_r(nbasf,:) 
+                   ELSE
+            zMat%data_c(nbasf,:)  = phase * zMat%data_c(nbasf,:) 
+                   END IF                   
+             END DO
+          enddo !lo   
+        enddo !iatom
+        
       enddo  
 
 
-      bkpt(:)   = bkpt(:)   - shiftkpt(:)
-      k1(:,:)   = k1(:,:)   + shiftkpt(1)
-      k2(:,:)   = k2(:,:)   + shiftkpt(2)
-      k3(:,:)   = k3(:,:)   + shiftkpt(3)
+      lapw%bkpt(:)   = lapw%bkpt(:)   - shiftkpt(:)
+      lapw%k1(:,:)   = lapw%k1(:,:)   + shiftkpt(1)
+      lapw%k2(:,:)   = lapw%k2(:,:)   + shiftkpt(2)
+      lapw%k3(:,:)   = lapw%k3(:,:)   + shiftkpt(3)
 
-      write(6,*)"in wann_kptsrotate:"
-      write(6,*) "bkpt=",bkpt
+      write(oUnit,*)"in wann_kptsrotate:"
+      write(oUnit,*) "bkpt=",lapw%bkpt
 
       arg = tpi*(
-     +        bkpt(1)*shiftnonsymm(1)+
-     +        bkpt(2)*shiftnonsymm(2)+
-     +        bkpt(3)*shiftnonsymm(3)  )
+     +        lapw%bkpt(1)*shiftnonsymm(1)+
+     +        lapw%bkpt(2)*shiftnonsymm(2)+
+     +        lapw%bkpt(3)*shiftnonsymm(3)  )
       
       nsfactor = cmplx(cos(arg),sin(arg))
 

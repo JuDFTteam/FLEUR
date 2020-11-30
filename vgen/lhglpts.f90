@@ -6,7 +6,7 @@
 
 MODULE m_lhglpts
   !     **********************************************************
-  !     calculates lattice harmonics on the gauss-legendre angular 
+  !     calculates lattice harmonics on the gauss-legendre angular
   !     mesh - r.pentcheva Feb'96
   !     **********************************************************
 CONTAINS
@@ -17,15 +17,18 @@ CONTAINS
        &                   ylh)
     !
     USE m_ylm
-    USE m_types
+    USE m_types_sym
+    USE m_types_sphhar
+    USE m_types_atoms
+
     IMPLICIT NONE
 
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
     !     ..
-    !     .. Scalar Arguments .. 
-    INTEGER, INTENT (IN) :: nsp 
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: nsp
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rx(:,:) !(3,dimension%nspd)

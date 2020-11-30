@@ -1,0 +1,17 @@
+$test_name="Fe monolayer fcc (110): spin spiral energy";
+$test_code="Fleur";
+$test_stages=2;
+$test_desc=<<EOF
+Simple test of Fleur with two steps:
+1.Generate the reference charge density
+2.Calculatie spin spiral energy via the force theorem
+This test was callibrated via MaX-R4 release becuase
+MaX-R4 was shown to give the same results as version 26d.
+Uses: spin spiral force theorem
+WARNING: the test is aimed to calculate	energy difference
+between	two spin spirals. If it	starts to fail,	please 
+check if energy	difference between q1 and q2 remains the
+same. If it is true, just adjust q1 and	q2 values in test.run2.
+Otherwise there	seems to be a bug.
+EOF
+;

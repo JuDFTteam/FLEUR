@@ -8,7 +8,7 @@ MODULE m_check_arguments
   PRIVATE
   TYPE t_param
      INTEGER             :: TYPE !can be 0,1,2 for a simple argument, an argument with a string or with a number
-     CHARACTER(len=20)   :: name
+     CHARACTER(len=200)   :: name
      CHARACTER(len=200)  :: desc
      CHARACTER(len=200)  :: values
   END TYPE t_param
@@ -80,7 +80,7 @@ CONTAINS
           END IF
        ENDDO param_loop
        IF (n>SIZE(params)) THEN
-          PRINT *,"Unkown command line argument:"//str
+          PRINT *,"Unknown command line argument:"//str
           check_arguments=.FALSE.
        END IF
        i=i+1
@@ -110,10 +110,10 @@ CONTAINS
           RETURN
        ENDIF
     END DO
-1001 FORMAT(t5,a,t20,": ",a)
-1002 FORMAT(t5,a," $$$",t20,": ",a)
-1003 FORMAT(t5,a," [",a,"]",/,t20,": ",a)
-1004 FORMAT(t5,a," #",t20,": ",a)
+1001 FORMAT(t5,a,t30,": ",a)
+1002 FORMAT(t5,a," $$$",t30,": ",a)
+1003 FORMAT(t5,a," [",a,"]",/,t30,": ",a)
+1004 FORMAT(t5,a," #",t30,": ",a)
     
     PRINT *,"BUG, check handling of parameters in check_arguments.f90"
     PRINT *,name

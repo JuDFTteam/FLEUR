@@ -1,3 +1,4 @@
+
 help=0
 CLI_LIBDIR=""
 CLI_INCLUDEDIR=""
@@ -5,7 +6,7 @@ while [ $# -gt 0 ]
 do
     case "$1" in
         -h) help=1;;
-	-help) help=1;;
+	-help|--help) help=1;;
         -b) backup=1;;
         -backup) backup=1;;
         -g) gitupdate=1;;
@@ -18,6 +19,8 @@ do
 	-external) shift;external_lib="$external_lib $1";;
 	-hdf5) shift; CLI_USE_HDF5=$1;;
 	-wannier) shift; CLI_USE_WANNIER=$1;;
+        -edsolver) shift; CLI_USE_EDSOLVER=$1;;
+	-kplib)  CLI_USE_KPLIB=1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
@@ -29,10 +32,11 @@ do
 	-includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
 	-elpa_openmp) CLI_ELPA_OPENMP=1;;
 	-cmake_opts) shift;CMAKE_OPTIONS=$1;;
-	-make) make_directly=1;;	     
-	-warn_only) CLI_WARN_ONLY=1;;	     
-        -d) debug=1;;
-	-*) error="Unkown argument";;
+	-make) make_directly=1;;
+	-warn_only) CLI_WARN_ONLY=1;;
+  -d) debug=1;;
+  -amd) CLI_PATCH_INTEL=1;;
+	-*) error="Unknown argument";;
 	*)  break;;	# terminate while loop
     esac
     shift
@@ -43,7 +47,7 @@ then
     then
 	machine=$1;shift
     else
-	error="You specified the -m switch and gave an additional MACHINE argument" 
+	error="You specified the -m switch and gave an additional MACHINE argument"
     fi
 fi
 if [ $# -gt 0 ]
@@ -57,11 +61,11 @@ then
 fi
 if [ $# -gt 0 ]
 then
-    error="Extra unkown arguments"
+    error="Extra unknown arguments"
 fi
 
 #check if -h or  -help was given as argument
-if [ $help -gt 0 ] 
+if [ $help -gt 0 ]
 then
    echo "USAGE: configure.sh [options] [MACHINE] [label]"
    echo "
@@ -70,27 +74,29 @@ General options:
   -h            : print this help-page
   -m #          : specify the machine to build on (see below for possible options)
                   This can also be specified without -m as a first argument
-  -l #          : label for the build. It will be attached to the name of 
+  -l #          : label for the build. It will be attached to the name of
                   the build directory.
                   This option can also be specified as second argument without -l
   -d            : build a debugging version of FLEUR (adds .debug to label)
   -g            : do a git pull first if this is a git version
   -t            : generate all tests including those that run longer
   -b            : backup an old build directory if present
-  -make         : do not stop after configure script but run make directly	     
+  -make         : do not stop after configure script but run make directly
   -cmake #      : cmake executable to use
   -cmake_opts # : additional options for cmake can be specified here directly
- 
-Command line options to switch on/off features. These options overwrite the results of 
-the test and might lead to the configuration to fail. 
-  -hdf5    [TRUE|FALSE] : use HDF5 library
-  -wannier [TRUE|FALSE] : use Wannier90 library
-  -mpi     [TRUE|FALSE] : compile the MPI parallel version
-  -libxc   [TRUE|FALSE] : use libxc library
+  -amd          : apply some patches to the Intel MKL to run on AMD (very experiemental)
+
+Command line options to switch on/off features. These options overwrite the results of
+the test and might lead to the configuration to fail.
+  -hdf5     [TRUE|FALSE] : use HDF5 library (if the library is not found and a git-version is used, try to compile it)
+  -wannier  [TRUE|FALSE] : use Wannier90 library
+  -mpi      [TRUE|FALSE] : compile the MPI parallel version
+  -libxc    [TRUE|FALSE] : use libxc library
+  -edsolver [TRUE|FALSE] : use the Exact Diagonalization library by Jindrich Kolorenc
 
 Command line option to compile external libraries:
   -external # : download and compile external libraries before building FLEUR
-                currently 'hdf5','libxc' and 'chase' are possible options. The switch 
+                currently 'xml2', 'elpa' and 'chase' are possible options. The switch
                 can be specified multiple times
 
 Options to specify Fortran/Linker flags:
@@ -103,21 +109,22 @@ Special options:
   -elpa_openmp  : USE the OpenMP version of elpa, e.g. use '-lelpa_openmp'
 
 
-To help the script finding a proper configuration you should provide the name of 
+To help the script finding a proper configuration you should provide the name of
 a specific machine to compile on.
-Currently known machine configurations are: " 
+Currently known machine configurations are: "
    echo "   $known_machines"
-   echo " 
+   echo "
 If you do not specify the machine the AUTO option will be used in which some
 defaults are tested. It might work if your machine is not one of those known.
 
-You might also want to add your configuration to the directory 
+You might also want to add your configuration to the directory
 cmake/machines in this case :-)
-  
+
   In addition you can modify some environment variables:
         FC                  -- name of Fortran compiler
-        CC                  -- name of C compiler"
-echo "
+        CC                  -- name of C compiler
+        CXX                 -- name of C++ compiler
+
    By specifying a label you can have different build directories.
    The label will be added to the 'build' directory name."
   exit 1

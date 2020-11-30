@@ -51,129 +51,95 @@
 
 MODULE m_exchange_valence_hf
 
+   USE m_constants
+   USE m_types
+   USE m_util
+
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
    INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
+   SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+                                  n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
 
-   SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, parent, pointer_EIBZ, n_q, wl_iks, it, xcpot, noco, nsest, indx_sest, &
-                                  mpi, mat_ex)
-
-      USE m_types
       USE m_wrapper
-      USE m_constants
       USE m_trafo
       USE m_wavefproducts
       USE m_olap
       USE m_spmvec
-      USE m_hsefunctional, ONLY: dynamic_hse_adjustment
-      USE m_io_hybrid
+      USE m_hsefunctional
+      USE m_io_hybinp
       USE m_kp_perturbation
-
+      use m_spmm
+      use m_work_package
+#ifdef CPP_MPI
+      use mpi
+#endif
       IMPLICIT NONE
 
-      TYPE(t_results), INTENT(IN)    :: results
-      TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
-      TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_noco), INTENT(IN)    :: noco
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)    :: cell
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_lapw), INTENT(IN)    :: lapw
-      TYPE(t_mat), INTENT(INOUT) :: mat_ex
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+      type(t_k_package), intent(in)     :: k_pack
+      type(t_fleurinput), intent(in)    :: fi
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      type(t_mat), intent(in)           :: z_k
+      TYPE(t_results), INTENT(IN)       :: results
+      TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
+      TYPE(t_mpdata), intent(inout)     :: mpdata
+      TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      TYPE(t_lapw), INTENT(IN)          :: lapw
+      type(t_stars), intent(in)         :: stars
+      TYPE(t_mat), INTENT(INOUT)        :: mat_ex
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      ! blas
+      real, external      :: ddot
+      complex, external   :: zdotc
 
       ! scalars
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: nk, nkpt_EIBZ
-      INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
-      INTEGER, INTENT(IN)    ::  n_q(nkpt_EIBZ)
+      INTEGER, INTENT(IN)    ::  n_q(:)
+      INTEGER, INTENT(IN)    ::  nsest(:)
+      INTEGER, INTENT(IN)    ::  indx_sest(:, :)
 
-      INTEGER, INTENT(IN)    ::  parent(kpts%nkptf)
-      INTEGER, INTENT(IN)    ::  pointer_EIBZ(nkpt_EIBZ)
-      INTEGER, INTENT(IN)    ::  nsest(hybrid%nbands(nk))
-      INTEGER, INTENT(IN)    ::  indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
+      complex, intent(in)    :: cmt_nk(:,:,:)
 
-      REAL, INTENT(IN)    ::  eig_irr(dimension%neigd, kpts%nkpt)
-      REAL, INTENT(IN)    ::  wl_iks(dimension%neigd, kpts%nkptf)
+      REAL, INTENT(IN)    ::  eig_irr(:, :)
+      REAL, INTENT(IN)    ::  wl_iks(:, :)
 
       ! local scalars
-      INTEGER                 ::  iband, iband1, ibando, ikpt, ikpt0
-      INTEGER                 ::  i, ic, ix, iy, iz
-      INTEGER                 ::  irecl_coulomb, irecl_coulomb1
-      INTEGER                 ::  j
-      INTEGER                 ::  m1, m2
-      INTEGER                 ::  n, n1, n2, nn, nn2
-      INTEGER                 ::  nkqpt
-      INTEGER                 ::  npot
-      INTEGER                 ::  ok
-      INTEGER                 ::  psize
-      REAL                    ::  rdum
-      REAL                    ::  k0
+      INTEGER                 ::  iband, jq, iq, nq_idx
+      INTEGER                 ::  i, ierr, ik
+      INTEGER                 ::  j, iq_p, start, stride
+      INTEGER                 ::  n1, n2, nn2, me
+      INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
+      INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
       REAL, SAVE             ::  divergence
 
-      COMPLEX                 ::  cdum, cdum1, cdum2
+      COMPLEX                 ::  cdum2
       COMPLEX                 ::  exch0
 
       LOGICAL, SAVE           ::  initialize = .true.
 
       ! local arrays
-      INTEGER              :: kcorner(3, 8) = reshape((/0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1/), (/3, 8/))
-      COMPLEX              :: exchcorrect(kpts%nkptf)
-      COMPLEX              :: dcprod(hybrid%nbands(nk), hybrid%nbands(nk), 3)
-      COMPLEX              :: exch_vv(hybrid%nbands(nk), hybrid%nbands(nk))
+      COMPLEX              :: exchcorrect(fi%kpts%nkptf)
+      COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk), 3)
+      COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk))
       COMPLEX              :: hessian(3, 3)
-      COMPLEX              :: proj_ibsc(3, mnobd, hybrid%nbands(nk))
-      COMPLEX              :: olap_ibsc(3, 3, mnobd, mnobd)
-      REAL                 :: carr1_v_r(hybrid%maxbasm1), carr1_c_r(hybrid%maxbasm1)
-      COMPLEX              :: carr1_v_c(hybrid%maxbasm1), carr1_c_c(hybrid%maxbasm1)
+      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk))
+      COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), cprod_cv_r(:, :, :), carr3_vv_r(:, :, :), carr3_cv_r(:, :, :)
-      COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), cprod_cv_c(:, :, :), carr3_vv_c(:, :, :), carr3_cv_c(:, :, :)
+      LOGICAL              :: occup(fi%input%neig), conjg_mtir
+      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
 
 
-#if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-      REAL                 :: coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype)
-      REAL                 :: coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
-      REAL                 :: coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-      COMPLEX              :: coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
-      COMPLEX              :: coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-#else
-      REAL                 :: coulomb_r(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2)
-      COMPLEX              :: coulomb_c(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2)
-#endif
-
-#ifdef CPP_IRCOULOMBAPPROX
-      REAL                 :: coulomb_mtir_r((hybrid%maxlcutm1 + 1)**2*atoms%nat, &
-                                             (hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))
-#else
-      REAL                 :: coulomb_mtir_r(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
-                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
-#endif
-
-#ifdef CPP_IRCOULOMBAPPROX
-      COMPLEX              :: coulomb_mtir_c((hybrid%maxlcutm1 + 1)**2*atoms%nat, &
-                                             (hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))
-#else
-      COMPLEX              :: coulomb_mtir_c(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
-                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
-#endif
-
-      LOGICAL              :: occup(dimension%neigd)
       CALL timestart("valence exchange calculation")
+      ik = k_pack%nk
 
-      IF (initialize) THEN !it .eq. 1 .and. nk .eq. 1) THEN
-         call calc_divergence(cell, kpts, divergence)
-         PRINT *, "Divergence:", divergence
+      IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
+         call calc_divergence(fi%cell, fi%kpts, divergence)
+         if(fmpi%irank == 0) write (*,*) "Divergence:", divergence
          initialize = .false.
       END IF
 
@@ -182,94 +148,35 @@ CONTAINS
       ! the sum over the inner occupied valence states is restricted to the EIBZ(k)
       ! the contribution of the Gamma-point is treated separately (see below)
 
-      ! determine package size loop over the occupied bands
-      rdum = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
-      psize = 1
-      DO iband = mnobd, 1, -1
-         ! ensure that the packages have equal size
-         IF (modulo(mnobd, iband) == 0) THEN
-            ! choose packet size such that cprod is smaller than memory threshold
-            IF (rdum*iband <= maxmem) THEN
-               psize = iband
-               EXIT
-            END IF
-         END IF
-      END DO
-
-      IF (psize /= mnobd) THEN
-         WRITE (6, '(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybrid%bands in packages', &
-            ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
-      END IF
-      ALLOCATE (phase_vv(psize, hybrid%nbands(nk)), stat=ok)
-      IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
-      phase_vv = 0
-      IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
-
-      if (mat_ex%l_real) THEN
-         ALLOCATE (cprod_vv_c(hybrid%maxbasm1, 0, 0), carr3_vv_c(hybrid%maxbasm1, 0, 0))
-         ALLOCATE (cprod_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
-         ALLOCATE (carr3_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
-         cprod_vv_r = 0; carr3_vv_r = 0
-      ELSE
-         ALLOCATE (cprod_vv_r(hybrid%maxbasm1, 0, 0), carr3_vv_r(hybrid%maxbasm1, 0, 0))
-         ALLOCATE (cprod_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
-         ALLOCATE (carr3_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
-         cprod_vv_c = 0; carr3_vv_c = 0
-      END IF
+      call timestart("alloc phase_vv & dot_res")
+      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik), hybdat%nbands(ik))
+      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
+      call timestop("alloc phase_vv & dot_res")
 
-      DO ikpt = 1, nkpt_EIBZ
+      call timestart("q_loop")
+      DO jq = 1, size(k_pack%q_packs)
+         iq = k_pack%q_packs(jq)%ptr
+         iq_p = fi%kpts%bkp(iq)
 
-         ikpt0 = pointer_EIBZ(ikpt)
+         ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
 
-         n = hybrid%nbasp + hybrid%ngptm(ikpt0)
-         IF (hybrid%nbasm(ikpt0) /= n) STOP 'error hybrid%nbasm'
-         nn = n*(n + 1)/2
-
-         ! read in coulomb matrix from direct access file coulomb
-         IF (mat_ex%l_real) THEN
-            CALL read_coulomb_spm_r(kpts%bkp(ikpt0), coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r)
-         ELSE
-            CALL read_coulomb_spm_c(kpts%bkp(ikpt0), coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c)
-         END IF
-
-         IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-            IF ((kpts%bksym(ikpt0) > sym%nop) .and. (.not. mat_ex%l_real)) THEN
-               coulomb_mt2_c = conjg(coulomb_mt2_c)
-               coulomb_mtir_c = conjg(coulomb_mtir_c)
-            END IF
-#else
-            if (.not. mat_ex%l_real) THEN
-               IF (kpts%bksym(ikpt0) > sym%nop) coulomb = conjg(coulomb)
-            endif
-#endif
-         END IF
-
-         DO ibando = 1, mnobd, psize
-
+         n_parts = size(k_pack%q_packs(jq)%band_packs)
+         start  = k_pack%q_packs(jq)%submpi%rank + 1
+         stride = k_pack%q_packs(jq)%submpi%size
+         do ipart = start, n_parts, stride
+            !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
+            psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
+            ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
+            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik))
             IF (mat_ex%l_real) THEN
-#ifdef CPP_IRAPPROX
-               CALL wavefproducts_inv(1, hybdat, dimension, input, jsp, atoms, lapw, obsolete, kpts, nk, ikpt0, &
-                                      mnobd, hybrid, parent, cell, sym, noco, nkqpt, cprod_vv)
-#else
-               CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, dimension, input, jsp, atoms, &
-                                       lapw, kpts, nk, ikpt0, hybdat, mnobd, hybrid, parent, cell, hybrid%nbasp, sym, &
-                                       noco, nkqpt, cprod_vv_r)
-#endif
+               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
+                                      hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             ELSE
-#ifdef CPP_IRAPPROX
-               CALL wavefproducts_noinv(1, hybdat, nk, ikpt0, dimension, input, jsp, cell, atoms, hybrid,
-               kpts, mnobd, lapw, sym, noco, nkqpt, cprod_vv)
-#else
-               CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, dimension, input, jsp, &!jsp,&
-                                         cell, atoms, hybrid, hybdat, kpts, mnobd, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
-#endif
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
+                                        hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -277,100 +184,129 @@ CONTAINS
             ! The mixed basis functions and the potential difference
             ! are Fourier transformed, so that the exchange can be calculated
             ! in Fourier space
-#ifndef CPP_NOSPMVEC
-            IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-               iband1 = hybrid%nobd(nkqpt,jsp)
+            ! IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+            !    call judft_error("HSE not implemented")
+            !    ! iband1 = hybdat%nobd(ikqpt, jsp)
 
-               exch_vv = exch_vv + &
-                         dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
-                                                kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
-                                                hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, hybrid%maxindxm1, hybrid%gptm, &
-                                                hybrid%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), hybrid%gptmd, hybrid%basm1, &
-                                                hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
-                                                atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
-                                                cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
-            END IF
-#endif
+            !    ! exch_vv = exch_vv + &
+            !    !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
+            !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
+            !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+            !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+            !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
+            !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+            !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+            ! END IF
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
-            IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-               CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybrid%nbasm(ikpt0), :, :), cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
-                               carr3_vv_c(:hybrid%nbasm(ikpt0), :, :), cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), &
-                               hybrid%nbasm(ikpt0), psize, hybrid%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
-                               hybrid, kpts, cell, atoms, phase_vv)
-               IF (mat_ex%l_real) THEN
-                  cprod_vv_r(:hybrid%nbasm(ikpt0), :, :) = carr3_vv_r(:hybrid%nbasm(ikpt0), :, :)
-               ELSE
-                  cprod_vv_c(:hybrid%nbasm(ikpt0), :, :) = carr3_vv_c(:hybrid%nbasm(ikpt0), :, :)
-               ENDIF
+
+            IF (fi%kpts%bkp(iq) /= iq) THEN
+               call carr3_vv%init(cprod_vv)
+               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, psize, phase_vv, cprod_vv, carr3_vv)
+               call cprod_vv%copy(carr3_vv, 1, 1)
+               call carr3_vv%free()
             ELSE
-               phase_vv(:, :) = (1.0, 0.0)
+               phase_vv(:, :) = cmplx_1
             END IF
 
-            ! calculate exchange matrix at ikpt0
-
+            call carr1_v%init(cprod_vv)
+            ! calculate exchange matrix at iq
             call timestart("exchange matrix")
-            DO n1 = 1, hybrid%nbands(nk)
-               DO iband = 1, psize
-                  IF ((ibando + iband - 1) > hybrid%nobd(nkqpt,jsp)) CYCLE
+            call timestart("sparse matrix products")
+            IF (mat_ex%l_real) THEN
+               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, carr1_v)
+            ELSE
+               conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
+            END IF
+            call timestop("sparse matrix products")
 
-                  cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
+            nq_idx = k_pack%q_packs(jq)%rank
+            DO iband = 1, hybdat%nbands(ik)
+               call timestart("apply prefactors carr1_v")
+               if (mat_ex%l_real) then
+                  DO iob = 1, psize
+                     do i = 1, hybdat%nbasm(iq)
+                        carr1_v%data_r(i, iob + psize*(iband - 1)) &
+                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))                        
+                     enddo
+                  enddo
+               else
+                  DO iob = 1, psize
+                     do i = 1, hybdat%nbasm(iq)
+                        carr1_v%data_c(i, iob + psize*(iband - 1)) &
+                           = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
+                     enddo
+                  enddo
+               endif
+               call timestop("apply prefactors carr1_v")
+            enddo
 
-                  IF (mat_ex%l_real) THEN
-                     carr1_v_r(:n) = 0
-                     CALL spmvec_invs(atoms, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
-                                      coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
-                  ELSE
-                     carr1_v_c(:n) = 0
-                     CALL spmvec_noinvs(atoms, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
-                                        coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
-                  END IF
-
-                  IF (mat_ex%l_real) THEN
-                     DO n2 = 1, nsest(n1)!n1
-                        nn2 = indx_sest(n2, n1)
-                        exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                           dotprod(carr1_v_r(:n), cprod_vv_r(:n, iband, nn2))
-                     END DO !n2
-                  ELSE
-                     DO n2 = 1, nsest(n1)!n1
-                        nn2 = indx_sest(n2, n1)
-                        exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                           dotprod(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
-                     END DO !n2
-                  END IF
+            call timestart("exch_vv dot prod")
+            m = hybdat%nbands(ik)
+            n = hybdat%nbands(ik)
+            k = hybdat%nbasm(iq)
+            lda = hybdat%nbasm(iq)*psize
+            ldb = hybdat%nbasm(iq)*psize
+            ldc = hybdat%nbands(ik)
+            IF (mat_ex%l_real) THEN
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               DO iob = 1, psize
+                  call dgemm("T", "N", m, n, k, 1.0, carr1_v%data_r(1, iob), lda, cprod_vv%data_r(1, iob), ldb, 0.0, dot_result%data_r, ldc)
+                  DO iband = 1, hybdat%nbands(ik)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_r(iband, nn2)
+                     enddo
+                  END DO
                END DO
-            END DO  !n1
-            call timestop("exchange matrix")
-         END DO !ibando
-      END DO  !ikpt
+            ELSE
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               DO iob = 1, psize
+                  call zgemm("C", "N", m, n, k, cmplx_1, carr1_v%data_c(1, iob), lda, cprod_vv%data_c(1, iob), ldb, cmplx_0, dot_result%data_c, ldc)
 
-!   WRITE(7001,'(a,i7)') 'nk: ', nk
-!   DO n1=1,hybrid%nbands(nk)
-!      DO n2=1,n1
-!         WRITE(7001,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
-!     END DO
-!   END DO
+                  DO iband = 1, hybdat%nbands(ik)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_c(iband, nn2)
+                     enddo
+                  END DO
+               enddo
+            END IF
+            call timestop("exch_vv dot prod")
+            call timestop("exchange matrix")
+
+            call cprod_vv%free()
+            call carr1_v%free()
+         enddo
+      END DO  !jq
+
+      call timestop("q_loop")
+
+      call dot_result%free()
 
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 
       ! valence-valence-valence-valence exchange
+      call timestart("gamma point treatment")
+      IF ((.not. xcpot%is_name("hse")) .AND. &
+          (.not. xcpot%is_name("vhse")) .AND. &
+          k_pack%submpi%root()) THEN ! no gamma point correction needed for HSE functional
 
-      IF ((.not. xcpot%is_name("hse")) .AND. (.not. xcpot%is_name("vhse"))) THEN ! no gamma point correction needed for HSE functional
          IF (zero_order .and. .not. ibs_corr) THEN
-            WRITE (6, '(A)') ' Take zero order terms into account.'
+            WRITE (oUnit, '(A)') ' Take zero order terms into account.'
          ELSE IF (zero_order .and. ibs_corr) THEN
-            WRITE (6, '(A)') ' Take zero order terms and ibs-correction into account.'
+            WRITE (oUnit, '(A)') ' Take zero order terms and ibs-correction into account.'
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, hybrid, &
-                                cell, hybdat, kpts, kpts%nkpt, lapw, dimension, jsp, eig_irr)
+            CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., fi%input, fi%atoms, mpdata, fi%hybinp, &
+                                fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, lapw, fi%oneD, jsp, eig_irr)
 
             ! make dcprod hermitian
-            DO n1 = 1, hybrid%nbands(nk)
+            DO n1 = 1, hybdat%nbands(ik)
                DO n2 = 1, n1
                   dcprod(n1, n2, :) = (dcprod(n1, n2, :) - conjg(dcprod(n2, n1, :)))/2
                   dcprod(n2, n1, :) = -conjg(dcprod(n1, n2, :))
@@ -378,22 +314,23 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(nk, atoms, dimension, input, jsp, hybdat, hybrid, lapw, kpts, kpts%nkpt, cell, mnobd, &
-                                   sym, proj_ibsc, olap_ibsc)
+               CALL ibs_correction(ik, fi%atoms, fi%input, jsp, hybdat, mpdata, fi%hybinp, &
+                                   lapw, fi%kpts, fi%cell, MAXVAL(hybdat%nobd(:, jsp)), &
+                                   fi%sym, fi%noco, nococonv, proj_ibsc, olap_ibsc)
             END IF
          END IF
 
          !This should be done with w_iks I guess!TODO
          occup = .false.
-         DO i = 1, hybrid%ne_eig(nk)
-            IF (results%ef >= eig_irr(i, nk)) THEN
+         DO i = 1, hybdat%ne_eig(ik)
+            IF (results%ef >= eig_irr(i, ik)) THEN
                occup(i) = .true.
-            ELSE IF ((eig_irr(i, nk) - results%ef) <= 1E-06) THEN
+            ELSE IF ((eig_irr(i, ik) - results%ef) <= 1E-06) THEN
                occup(i) = .true.
             END IF
          END DO
 
-         DO n1 = 1, hybrid%nbands(nk)
+         DO n1 = 1, hybdat%nbands(ik)
             DO n2 = 1, nsest(n1)!n1
                nn2 = indx_sest(n2, n1)
                exchcorrect = 0
@@ -411,7 +348,7 @@ CONTAINS
                   IF (occup(n1) .and. occup(nn2)) THEN
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybrid%nbands(nk)
+                        DO iband = 1, hybdat%nbands(ik)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -420,16 +357,16 @@ CONTAINS
 
                         ! ibs correction
                         IF (ibs_corr) THEN
-                           hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/cell%omtil
-                           DO iband = 1, hybrid%nbands(nk)
-                              hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/cell%omtil
+                           hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/fi%cell%omtil
+                           DO iband = 1, hybdat%nbands(ik)
+                              hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/fi%cell%omtil
                            END DO
                         END IF
                      END DO
                   ELSE
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybrid%nbands(nk)
+                        DO iband = 1, hybdat%nbands(ik)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -438,7 +375,7 @@ CONTAINS
                   END IF
 
                   exchcorrect(1) = fpi_const/3*(hessian(1, 1) + hessian(2, 2) + hessian(3, 3))
-                  exch0 = exchcorrect(1)/kpts%nkptf
+                  exch0 = exchcorrect(1)/fi%kpts%nkptf
                END IF
 
                ! tail correction/contribution from all other k-points (it  goes into exchcorrect )
@@ -449,66 +386,76 @@ CONTAINS
                !multiply divergent contribution with occupation number;
                !this only affects metals
                IF (n1 == nn2) THEN
-                  cdum2 = fpi_const/cell%omtil*divergence*wl_iks(n1, nk)*kpts%nkptf
+                  cdum2 = fpi_const/fi%cell%omtil*divergence*wl_iks(n1, ik)*fi%kpts%nkptf
                END IF
 
                ! due to the symmetrization afterwards the factor 1/n_q(1) must be added
 
-               IF (n1 == nn2) hybrid%div_vv(n1, nk, jsp) = REAL(cdum2)
+               IF (n1 == nn2) hybdat%div_vv(n1, ik, jsp) = REAL(cdum2)
                exch_vv(nn2, n1) = exch_vv(nn2, n1) + (exch0 + cdum2)/n_q(1)
 
             END DO !n2
          END DO !n1
       END IF ! xcpot%icorr .ne. icorr_hse
+      call timestop("gamma point treatment")
 
       IF (mat_ex%l_real) THEN
          IF (any(abs(aimag(exch_vv)) > 1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv', &
                                                                calledby='exchange_val_hf.F90')
       END IF
 
-!   WRITE(7000,'(a,i7)') 'nk: ', nk
-!   DO n1=1,hybrid%nbands(nk)
-!      DO n2=1,n1
-!         WRITE(7000,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
-!      END DO
-!   END DO
-
       ! write exch_vv in mat_ex
-      CALL mat_ex%alloc(matsize1=hybrid%nbands(nk))
+      call timestart("alloc mat_ex")
+      if (.not. mat_ex%allocated()) then
+         if (k_pack%submpi%root()) then
+            CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
+         else
+            CALL mat_ex%alloc(matsize1=1)
+         endif
+      endif
+      call timestop("alloc mat_ex")
+
+      call timestart("reduce exch_vv>mat_ex")
       IF (mat_ex%l_real) THEN
+#ifdef CPP_MPI
+         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%submpi%comm, ierr)
+#else
          mat_ex%data_r = exch_vv
+#endif
       ELSE
+#ifdef CPP_MPI
+         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%submpi%comm, ierr)
+#else
          mat_ex%data_c = exch_vv
+#endif
       END IF
+      call timestop("reduce exch_vv>mat_ex")
       CALL timestop("valence exchange calculation")
 
    END SUBROUTINE exchange_valence_hf
 
    SUBROUTINE calc_divergence(cell, kpts, divergence)
-
-      USE m_util, ONLY: cerf
-      USE m_types
-      USE m_constants
-
       IMPLICIT NONE
 
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_kpts), INTENT(IN)  :: kpts
-      REAL, INTENT(OUT) :: divergence
+      REAL, INTENT(INOUT) :: divergence
 
       INTEGER :: ix, iy, iz, sign, n
       logical :: found
-      REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2
+      REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2, nkpt3(3)
       COMPLEX :: cdum
 
+      call timestart("calc_divergence")
       expo = 5e-3
       rrad = sqrt(-log(5e-3)/expo)
       cdum = sqrt(expo)*rrad
-      divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
+      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
       rrad = rrad**2
-      kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
-      kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
-      kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
+      nkpt3 = kpts%calcNkpt3()
+      kv1 = cell%bmat(1, :)/nkpt3(1)
+      kv2 = cell%bmat(2, :)/nkpt3(2)
+      kv3 = cell%bmat(3, :)/nkpt3(3)
       n = 1
       found = .true.
 
@@ -533,7 +480,64 @@ CONTAINS
          END DO
          n = n + 1
       END DO
-
+      call timestop("calc_divergence")
    END SUBROUTINE calc_divergence
 
+   function calc_divergence2(cell, kpts) result(divergence)
+      USE m_types
+      USE m_constants
+      USE m_util, ONLY: cerf
+      implicit none
+      TYPE(t_cell), INTENT(IN)  :: cell
+      TYPE(t_kpts), INTENT(IN)  :: kpts
+      REAL                      :: divergence
+
+      INTEGER :: ikpt
+      REAL, PARAMETER :: expo = 5e-3
+      REAL    :: rrad, k(3), knorm2
+      COMPLEX :: cdum
+
+      rrad = sqrt(-log(5e-3)/expo)
+      cdum = sqrt(expo)*rrad
+      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
+      rrad = rrad**2
+
+      do ikpt = 1, kpts%nkptf
+         k = kpts%bkf(:, ikpt)
+         knorm2 = norm2(k)
+         IF (knorm2 < rrad) THEN
+            divergence = divergence - exp(-expo*knorm2)/knorm2/kpts%nkptf
+         END IF
+      enddo
+   end function calc_divergence2
+
+   subroutine recombine_parts(in_part, ipart, psizes, out_total)
+      use m_types
+      type(t_mat), intent(in)    :: in_part
+      integer, intent(in)        :: ipart, psizes(:)
+      type(t_mat), intent(inout) :: out_total
+
+      integer :: nbands, iband, iob, offset, i, tsize
+      logical :: l_real
+
+      l_real = in_part%l_real
+      tsize = sum(psizes)
+
+      nbands = in_part%matsize2/psizes(ipart)
+      if (out_total%matsize2/tsize /= nbands) call judft_error("nbands seems different")
+      offset = 0
+      do i = 1, ipart - 1
+         offset = offset + psizes(i)
+      enddo
+
+      do iband = 1, nbands
+         do iob = 1, psizes(ipart)
+            if (l_real) then
+               out_total%data_r(:, iob + (iband - 1)*tsize + offset) = in_part%data_r(:, iob + (iband - 1)*psizes(ipart))
+            else
+               out_total%data_c(:, iob + (iband - 1)*tsize + offset) = in_part%data_c(:, iob + (iband - 1)*psizes(ipart))
+            endif
+         enddo
+      enddo
+   end subroutine recombine_parts
 END MODULE m_exchange_valence_hf

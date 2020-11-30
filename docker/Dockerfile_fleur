@@ -2,6 +2,6 @@ FROM iffregistry.fz-juelich.de/fleur/fleur/intel-libs
 MAINTAINER d.wortmann@fz-juelich.de
 
 COPY fleur /home
-RUN echo "#!/bin/sh \n if [ -r /mnt/inp.xml ] ; then cd /mnt ; ulimit -s unlimited ;/home/fleur \$@; else echo 'You should provide your working directory by specifying e.g. -v \$PWD:/mnt ' ; fi " >/home/fleur.sh ; chmod a+x /home/fleur.sh
+RUN echo "#!/bin/sh \n if [ -r /mnt/inp.xml ] ; then cd /mnt ; export OMP_NUM_THREADS=2 ; ulimit -s unlimited ;/home/fleur \$@; else echo 'You should provide your working directory by specifying e.g. -v \$PWD:/mnt ' ; fi " >/home/fleur.sh ; chmod a+x /home/fleur.sh
 ENTRYPOINT ["/home/fleur.sh"]
 

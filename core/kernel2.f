@@ -234,7 +234,7 @@ c derivatives
          END DO
 C***********************************************************            WAB05210
    30 CONTINUE
-c      write(6,*) wp
+c      write(oUnit,*) wp
       
       END SUBROUTINE kernel2
       END MODULE m_kernel2

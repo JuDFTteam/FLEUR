@@ -9,7 +9,7 @@ jt::testrun($executable,$workdir);
 $result=jt::test_fileexists("$workdir/out");
 $result+=min(jt::test_fileexists("$workdir/cdn1"),jt::test_fileexists("$workdir/cdn.hdf"));
 $result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-2786.95650275,0.0001);
-$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","2: *([^ ]*)",8.38435,0.001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","2: *([^ ]*)",8.376682,0.001);
 $result+=jt::test_grepnumber("$workdir/out","distance of spin densitie","2: *([^ ]*)",17.14035,0.001);
 
 jt::stageresult($workdir,$result,"1");

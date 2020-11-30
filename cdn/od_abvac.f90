@@ -7,23 +7,23 @@
 MODULE m_od_abvac
 CONTAINS
   SUBROUTINE od_abvac(&
-       &     cell,vacuum,DIMENSION,stars,&
+       &     cell,vacuum,stars,&
        &     oneD,qssbti,&
        &     n2d_1,&
        &     wronk,evac,bkpt,MM,vM,&
        &     vz,kvac3,nv2,&
        &     uz,duz,u,udz,dudz,ddnv,ud)
     !**************************************************************
-    !      determines the nesessary values and derivatives on the 
+    !      determines the nesessary values and derivatives on the
     !      vacuum cylindrical boundary for finding a and b coefficients
     !      for the construcing vacuum charge density in vacden.F
     !                          Y.Mokrousov, 7th of october 2002
-    !*************************************************************** 
+    !***************************************************************
     USE m_vacuz
     USE m_vacudz
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_stars),INTENT(IN)       :: stars
@@ -36,26 +36,26 @@ CONTAINS
     REAL,    INTENT (in) :: evac
     !     ..array arguments..
 
-    INTEGER, INTENT (in) :: kvac3(DIMENSION%nv2d)
-    REAL,    INTENT (in) :: bkpt(3),qssbti 
-    REAL,    INTENT (in) :: vz(vacuum%nmzd) 
-    REAL,    INTENT (out):: udz(DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: uz(DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: dudz(DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: duz(DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: u(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: ud(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: ddnv(DIMENSION%nv2d,-vM:vM)
+    INTEGER, INTENT (in) :: kvac3(:)
+    REAL,    INTENT (in) :: bkpt(3),qssbti
+    REAL,    INTENT (in) :: vz(vacuum%nmzd)
+    REAL,    INTENT (out):: udz(:,-vM:)
+    REAL,    INTENT (out):: uz(:,-vM:)
+    REAL,    INTENT (out):: dudz(:,-vM:)
+    REAL,    INTENT (out):: duz(:,-vM:)
+    REAL,    INTENT (out):: u(:,:,-vM:)
+    REAL,    INTENT (out):: ud(:,:,-vM:)
+    REAL,    INTENT (out):: ddnv(:,-vM:)
     !     ..local scalars..
     REAL ev,scale,xv,yv,vzero,v1
     INTEGER i,ik,jk,jspin,jsp1,jsp2 ,l,m
     INTEGER i1,i2,i3,ind1,ind3
     !     .. local arrays..
-    REAL wdz(DIMENSION%nv2d,-vM:vM),wz(DIMENSION%nv2d,-vM:vM)
-    REAL dwdz(DIMENSION%nv2d,-vM:vM),dwz(DIMENSION%nv2d,-vM:vM)
+    REAL wdz(lapw_dim_nv2d,-vM:vM),wz(lapw_dim_nv2d,-vM:vM)
+    REAL dwdz(lapw_dim_nv2d,-vM:vM),dwz(lapw_dim_nv2d,-vM:vM)
     REAL v(3),x(vacuum%nmzd)
     REAL  vr0(vacuum%nmzd)
-    REAL w(vacuum%nmzd,DIMENSION%nv2d,-vM:vM),wd(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
+    REAL w(vacuum%nmzd,lapw_dim_nv2d,-vM:vM),wd(vacuum%nmzd,lapw_dim_nv2d,-vM:vM)
 
     !     wronksian for the schrodinger equation given by an identity
 

@@ -7,7 +7,7 @@
 MODULE m_hs_int
 CONTAINS
   !Subroutine to construct the interstitial Hamiltonian and overlap matrix
-  SUBROUTINE hs_int(input,noco,stars,lapw,mpi,cell,isp,vpw,&
+  SUBROUTINE hs_int(input,noco,stars,lapw,fmpi,cell,isp,vpw,&
        smat,hmat)
     USE m_types
     IMPLICIT NONE
@@ -16,7 +16,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
-    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
     INTEGER,INTENT(IN)            :: isp
     COMPLEX,INTENT(IN)            :: vpw(:,:)
     CLASS(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
@@ -35,12 +35,12 @@ CONTAINS
           jjspin=MIN(jspin,SIZE(smat,1))
         
           !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-          !$OMP SHARED(mpi,lapw,stars,input,cell,vpw) &
+          !$OMP SHARED(fmpi,lapw,stars,input,cell,vpw) &
           !$OMP SHARED(jjspin,iispin,ispin,jspin)&
           !$OMP SHARED(hmat,smat)&
           !$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
-          DO  i = mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
-             i0=(i-1)/mpi%n_size+1
+          DO  i = fmpi%n_rank+1,lapw%nv(ispin),fmpi%n_size
+             i0=(i-1)/fmpi%n_size+1
              !--->    loop over (k+g)
              DO  j = 1,MIN(i,lapw%nv(jspin))  
                 ii = lapw%gvec(:,i,ispin) - lapw%gvec(:,j,jspin)

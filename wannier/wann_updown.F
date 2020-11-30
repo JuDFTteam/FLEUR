@@ -6,13 +6,17 @@
 
       MODULE m_wann_updown
       use m_juDFT
+#ifdef CPP_MPI
+      use mpi 
+#endif
       CONTAINS
       SUBROUTINE wann_updown(
-     >      DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,
-     >      sphhar,oneD,noco,cell,vTot,
+     >      wann,fmpi,input,kpts,sym,atoms,stars,vacuum,
+     >      sphhar,oneD,noco,nococonv,cell,vTot,
      >      enpara,
-     >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
+     >      eig_id,l_real,mpi_communicatior,l_dulo,l_noco,l_ss,lmaxd,
+     >      ntypd,
+     >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
@@ -41,10 +45,11 @@ c****************************************************************************
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0, cdn_read
-      use m_constants, only : pimach
+      use m_constants
 !      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
+      use m_wann_mmk0_updown_sph_at
       use m_wann_abinv
       use m_wann_kptsrotate
       use m_wann_read_inp
@@ -56,10 +61,10 @@ c****************************************************************************
       use m_wann_write_nabla
       use m_wann_write_matrix6
       use m_wann_write_amn
-      use m_wann_write_nabla
       use m_wann_mmkb_int
       use m_wann_perpmag
       use m_wann_gabeffgagaunt
+      use m_wann_torque
 #ifdef CPP_TOPO
       use m_wann_nabla_updown
       use m_wann_surfcurr_updown
@@ -68,16 +73,15 @@ c****************************************************************************
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
-      integer ierr(3)
+      integer ierr
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 
 #endif
 
-      TYPE(t_dimension), INTENT(IN) :: DIMENSION
-      TYPE(t_wann),      INTENT(INOUT) :: wann    
-      TYPE(t_mpi),INTENT(IN)    :: mpi
+
+      TYPE(t_wann),      INTENT(INOUT) :: wann
+      TYPE(t_mpi),INTENT(IN)    :: fmpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -87,13 +91,15 @@ c****************************************************************************
       TYPE(t_sphhar),INTENT(IN) :: sphhar
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_noco),INTENT(IN)   :: noco
+      TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_potden),INTENT(IN) :: vTot
       TYPE(t_enpara),INTENT(IN) :: enpara
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
-      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2,eig_id
+      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
+      integer, intent (in) :: mpi_communicatior
+      integer, intent (in) :: natd,nop,nvd,jspd,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
@@ -128,11 +134,11 @@ c****************************************************************************
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
       real, intent(in) :: theta,phi
-     
+
 cccccccccccccccccc   local variables   cccccccccccccccccccc
 !      type(t_wann) :: wann  !now input variable
       integer :: lmd,nlotot,n,nmat,iter,ikpt
-      integer :: addnoco,addnoco2,funbas,loplod
+      integer :: addnoco,addnoco2,funbas,loplod,at
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer :: jsp_start,jsp_end,nrec,nrec1,nbands,nbands_b
       integer :: nodeu,noded,n_size,na,n_rank,nbnd,numbands
@@ -176,10 +182,12 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
       complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
+      complex, allocatable :: mmn0at(:,:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
       complex, allocatable :: socamn(:,:,:)
       complex, allocatable :: socmmn(:,:,:)
+      complex, allocatable :: torque(:,:,:,:,:)
       complex, allocatable :: socmmnk(:,:,:,:)
       complex, allocatable :: omn(:,:,:),vec(:,:),a(:)
       complex, allocatable :: smn(:,:,:)
@@ -196,6 +204,8 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer, allocatable :: iwork(:)
       integer :: info,lwork,lrwork,liwork,lee
       character :: jobz, uplo
+      character(len=10)  :: torquename
+      character(len=14)  :: torquenamekpts
       logical :: l_file
       logical :: l_amn2, l_conjugate
       character(len=3) :: spin12(2)
@@ -209,7 +219,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: funbas_start,funbas_stop,jspin5
       complex :: phasust
       integer,allocatable::pair_to_do(:,:)
-      integer :: ngopr1(natd)
+      integer :: ngopr1(natd),nbnd1p2
       integer,allocatable::maptopair(:,:,:)
       integer :: ldu,ldv,wannierspin,jspin2
       complex, allocatable :: amn_copy(:,:)
@@ -253,24 +263,24 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       real,parameter      :: bohrtocm=0.529177e-8
       real,parameter      :: condquant=7.7480917e-5
       real                :: dirfacs(3)
-      complex,allocatable :: ubeffug(:,:,:) 
-      complex,allocatable :: ubeffdg(:,:,:) 
-      complex,allocatable :: dbeffug(:,:,:) 
-      complex,allocatable :: dbeffdg(:,:,:) 
-      complex,allocatable :: ubeffulog(:,:,:,:) 
-      complex,allocatable :: dbeffulog(:,:,:,:) 
-      complex,allocatable :: ulobeffug(:,:,:,:) 
-      complex,allocatable :: ulobeffdg(:,:,:,:) 
-      complex,allocatable :: ulobeffulog(:,:,:,:,:) 
+      complex,allocatable :: ubeffug(:,:,:)
+      complex,allocatable :: ubeffdg(:,:,:)
+      complex,allocatable :: dbeffug(:,:,:)
+      complex,allocatable :: dbeffdg(:,:,:)
+      complex,allocatable :: ubeffulog(:,:,:,:)
+      complex,allocatable :: dbeffulog(:,:,:,:)
+      complex,allocatable :: ulobeffug(:,:,:,:)
+      complex,allocatable :: ulobeffdg(:,:,:,:)
+      complex,allocatable :: ulobeffulog(:,:,:,:,:)
       integer :: spinloop1,spinloop2,ilop
-      integer :: alerr
+      integer :: alerr,nbasfcn
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)   :: zMat(2),zzMat(2)
       TYPE(t_lapw)  :: lapw
 
-      IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
-     +     ,calledby ="wann_updown")
+!      IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
+!     +     ,calledby ="wann_updown")
 
 c-----initializations
       time_interstitial=0.0
@@ -312,7 +322,7 @@ c-----read the input file to determine what to do
       if(.not.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-         call MPI_BARRIER(mpi_comm,ierr)
+         call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 c**************************************************************
@@ -362,7 +372,6 @@ c**************************************************************
       if(l_p0)then
       write (*,*) 'fermi energy:',efermi
       write (*,*) 'emin,emax=',e1s,e2s
-      write (*,*) 'nbasfcn =',nbasfcn
       endif
       nlotot = 0
       do n = 1, ntype
@@ -391,7 +400,7 @@ c*********************************************************
           enddo
         enddo
       enddo
-    
+
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
@@ -438,14 +447,14 @@ cccccccccccccccc   end of the potential part  ccccccccccc
          if (alerr /= 0) call juDFT_error('alerr: 17',
      &         calledby='wann_updown')
 c****************************************************
-c     jspin=1 
+c     jspin=1
 c****************************************************
       jspin=1
 
 c...read number of bands and wannier functions from file proj
 
 c..reading the proj.1 / proj.2 / proj file
-       l_proj=.false.  
+       l_proj=.false.
        do j=jspin,0,-1
          inquire(file=trim('proj'//spin012(j)),exist=l_proj)
          if(l_proj)then
@@ -463,7 +472,7 @@ c..reading the proj.1 / proj.2 / proj file
        else
           CALL juDFT_error("no proj/proj.1/proj.2",
      +                     calledby ="wann_updown")
-       endif  
+       endif
 
 
        jspin2=jspin
@@ -477,12 +486,12 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !          CALL judft_error("TODO:wann_updown")
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
- 
-        CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+
+        CALL cdn_read0(eig_id,fmpi%irank,fmpi%isize,jspin5,
      >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
      >  noco%l_noco, n_bands,n_size)
- 
- 
+
+
        enddo
 
        jspin=1
@@ -497,9 +506,10 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
+     >           fmpi,cell,noco,nococonv,input,kpts,sym,atoms,           
      >            eig_id,l_real,
-     >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,nlotot,
+     >            ntypd,nvd,wannierspin,
+     >            isize,jspin,
      >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
@@ -517,10 +527,12 @@ c*************************************************************
 #ifdef CPP_MPI
       if(l_p0)then
          do cpu_index=1,isize-1
-      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_comm,ierr)
+      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_communicatior,
+     & ierr)
          enddo
       else
-       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_comm,stt,ierr)
+       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_communicatior,stt,
+     & ierr)
       endif
 #endif
 
@@ -531,6 +543,11 @@ c##################################################################
          if (alerr /= 0) call juDFT_error('alerr: 18',
      &         calledby='wann_updown')
       mmn(:,:,:) = cmplx(0.,0.)
+      if(wann%l_mmn0at)then
+         allocate( mmn0at(nbnd,nbnd,wann%atomlist_num,fullnkpts))
+                            mmn0at = cmplx(0.,0.)
+      endif ! wann%l_mmn0at
+
       if((l_soc.or.l_noco) .and. (jspin.eq.1))
      &   allocate( socmmn(nbnd,nbnd,fullnkpts),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 19',
@@ -588,7 +605,7 @@ c***********************************************************
 
              call radflo(
      > atoms,n,jspin,enpara%ello0(:,:,jspin2),vr(1,n,jspin2),
-     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),mpi,
+     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),fmpi,
      <  usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin))
 
           enddo !ilo
@@ -598,7 +615,7 @@ c***********************************************************
 c****************************************************************
 c     Calculate the radial overlap integrals.
 c****************************************************************
-      if(wann%l_mmn0)then
+      if(wann%l_mmn0.or.wann%l_mmn0at)then
        allocate( radial1_ff(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 26',
      &         calledby='wann_updown')
@@ -782,10 +799,10 @@ c****************************************************************
      &                     1:nlod,-llod:llod,1:ntype),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 43',
      &         calledby='wann_updown')
-         
-         
+
+
          call wann_gabeffgagaunt(
-     >            vTot,         
+     >            vTot,
      >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
@@ -794,8 +811,20 @@ c****************************************************************
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
      <            ulobeffug,ulobeffdg,ulobeffulog)
-      endif   
-    
+      endif
+
+
+      if(wann%l_torque)then
+         if(l_soc)then
+            allocate( torque(3,nbnd,nbnd,
+     &             wann%atomlist_num,fullnkpts) )
+         else
+            nbnd1p2=nbnd+nbnd
+            allocate( torque(3,nbnd1p2,nbnd1p2,
+     &             wann%atomlist_num,fullnkpts) )
+         endif
+         torque=cmplx(0.0,0.0)
+      endif
 
 
       i_rec = 0 ; n_rank = 0
@@ -814,12 +843,12 @@ c****************************************************************
 c****************************************************************
 c     Obtain eigenvectors for the two spin channels.
 c****************************************************************
-      
+
       allocate ( eigg(neigd,2),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 44',
      &         calledby='wann_updown')
-      
-      
+
+
       call cpu_time(delta)
       do jspin=1,wannierspin
          if(jspin.eq.1)nrec=0
@@ -828,33 +857,26 @@ c****************************************************************
          n_start=1
          n_end=neigd
 
-      zzMat(jspin)%l_real = l_real
-      zzMat(jspin)%matsize1 = nbasfcn
-      zzMat(jspin)%matsize2 = neigd
-      IF(l_real) THEN
-         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
-     &   ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
-     +                      zzMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 45',
-     &         calledby='wann_updown')
-      ELSE
-         IF(.NOT.ALLOCATED(zzMat(jspin)%data_c))
-     &   ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
-     +                      zzMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 46',
-     &         calledby='wann_updown')
-      END IF
 
-        CALL lapw%init(input,noco,kpts,atoms,sym,
+
+        CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
      &  kptibz,cell,
      &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+     &  .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+
+
+        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
+     &  lapw%nv(1)+atoms%nlotot,noco%l_noco)
+        
+        CALL zzMat(jspin)%init(l_real,nbasfcn,input%neig)
+        CALL zMat(jspin)%init(l_real,nbasfcn,input%neig)
+
 
         CALL cdn_read(
      & eig_id,
-     & DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
-     & kptibz,jspin,DIMENSION%nbasfcn,
-     & noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     & lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & kptibz,jspin,lapw%dim_nbasfcn(),
+     & noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      & nbands,eigg(:,jspin),zzMat(jspin))
 
 
@@ -875,31 +897,12 @@ c****************************************************************
       call cpu_time(delta1)
       time_rw=time_rw+delta1-delta
       nslibd = 0
-      
+
       jspin=1
 
 c...we work only within the energy window
 
-      DO jspin = 1, wannierspin
-         zMat(jspin)%l_real = zzMat(jspin)%l_real
-         zMat(jspin)%matsize1 = zzMat(jspin)%matsize1
-         zMat(jspin)%matsize2 = zzMat(jspin)%matsize2
-         IF (zzMat(jspin)%l_real) THEN
-	       IF(.not.allocated(zmat(jspin)%data_r))
-     +      ALLOCATE (zMat(jspin)%data_r(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 47',
-     &         calledby='wann_updown')
-            zMat(jspin)%data_r = 0.0
-         ELSE
-	       IF(.not.allocated(zMat(jspin)%data_c))
-     +      ALLOCATE (zMat(jspin)%data_c(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2),stat=alerr )
-         if (alerr /= 0) call juDFT_error('alerr: 48',
-     &         calledby='wann_updown')
-            zMat(jspin)%data_c = CMPLX(0.0,0.0)
-         END IF
-      END DO
+ 
 
       eig(:) = 0.
 
@@ -944,21 +947,21 @@ c              rotate the wavefunction
 c***********************************************************
       do jspin=1,wannierspin
         if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
-          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
+           call wann_kptsrotate(
+     >            atoms,
+     >            invsat,
      >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,lapw%nv,
+     >            oper,nop,mrot,nvd,
      >            shiftkpt(:,ikpt),
-     >            tau,
-     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
+     >          tau,
+     >          lapw,    
+!     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
      x            zMat(jspin),nsfactor)
         else
           nsfactor=cmplx(1.0,0.0)
         endif
-      enddo !jspin 
+      enddo !jspin
 c      print*,"bkpt1=",bkpt
 
 c******************************************************************
@@ -972,8 +975,8 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
      & ccof(-llod:llod,noccbd,nlod,natd,wannierspin),stat=alerr )
          if (alerr /= 0) call juDFT_error('alerr: 49',
      &         calledby='wann_updown')
-     
-     
+
+
 
       acof(:,:,:,:) = cmplx(0.,0.) ; bcof(:,:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:,:) = cmplx(0.,0.)
@@ -995,11 +998,12 @@ c...for the lapws and local orbitals, summed by the basis functions
       do jspin=1,wannierspin
 
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +      noco,min(jspin,input%jspins),oneD,acof(1:,0:,1:,jspin),
+     +      noco,nococonv,min(jspin,input%jspins),oneD,
+     +      acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
-         call wann_abinv(atoms,
+         call wann_abinv(atoms,sym,
      X        acof(:,0:,:,jspin),bcof(:,0:,:,jspin),
      <       ccof(-llod:,:,:,:,jspin))
       enddo !jspin
@@ -1012,7 +1016,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmat)then
          call wann_socmat(
-     >       mpi,enpara,input,noco,atoms,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
      >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       theta,phi,jspins,irank,
@@ -1032,8 +1036,8 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
-     >       mpi,enpara,input,noco,atoms,
-     >       lmaxd,natd,neigd,
+     >       fmpi,enpara,input,noco,nococonv,atoms,
+     >       lmaxd,natd,noccbd,
      >       llod,jspd,
      >       jspins,irank,
      >       vTot%mt,! vr,
@@ -1052,7 +1056,22 @@ c...for the lapws and local orbitals, summed by the basis functions
      >            ulobeffug,ulobeffdg,ulobeffulog,
      >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
-      endif   
+      endif
+      
+      if(wann%l_torque)then
+         call wann_torque(
+     >       amat,
+     >       ntype,lmaxd,lmax,natd,
+     >       neq,noccbd,lmd,natd,llod,nlod,
+     >       nlo,llo, 
+     >       acof,bcof,ccof,
+     >       usdus%us,usdus%dus,usdus%duds,usdus%uds,
+     >       usdus%ulos,usdus%dulos,
+     >       rmt,pos,wann%atomlist_num,wann%atomlist, 
+     >       (l_soc.or.l_noco),nbnd,
+     &       torque(:,:,:,:,ikpt))
+      endif
+      
 
 #ifdef CPP_TOPO
 
@@ -1073,20 +1092,20 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       dirfacs,amat,
      >       ntype,lmaxd,lmax,natd,
      >       neq,noccbd,lmd,natd,llod,nlod,
-     >       nlo,llo, 
+     >       nlo,llo,
      >       acof,bcof,ccof,
      >       us,dus,duds,uds,
      >       ulos,dulos,
-     >       rmt,pos, 
+     >       rmt,pos,
      &       surfcurr(:,:,:,ikpt))
-        write(6,*)"dirfacs=",dirfacs
+        write(oUnit,*)"dirfacs=",dirfacs
       endif
 
       if(wann%l_nabla)then
          call wann_nabla_updown(
      >       jspin,ntype,lmaxd,lmax,natd,
      >       jmtd,jri,rmsh,dx,neq,
-     >       noccbd,lmd,natd,llod,nlod, 
+     >       noccbd,lmd,natd,llod,nlod,
      >       ff(:,:,:,:,1),gg(:,:,:,:,1),
      >       ff(:,:,:,:,2),gg(:,:,:,:,2),
      >       acof(:,:,:,1),bcof(:,:,:,1),
@@ -1132,18 +1151,34 @@ c-->     determine index and phase factor
                value=phasust*zzConjgTemp
                nablamat(dir,m,n,ikpt) = nablamat(dir,m,n,ikpt) -
      +                                  value*b2(dir)
-              enddo 
+              enddo
              enddo
             enddo
 
  42        continue
  41      continue
-      endif   
+      endif
 #endif
 
 c***************************************************
 c     Calculate matrix elements of the Pauli matrix.
 c***************************************************
+      if(wann%l_mmn0at)then
+        call wann_mmk0_updown_sph_at(
+     >      l_noco,alph,beta,
+     >      llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
+     >      ntype,neq,nlo,llo,
+     >      radial1_ff,radial1_gg,radial1_fg,radial1_gf,
+     >      acof(1:noccbd,:,:,:),
+     >      bcof(1:noccbd,:,:,:),ccof(:,1:noccbd,:,:,:),
+     >      usdus%ddn,usdus%uulon,usdus%dulon,usdus%uloulopn,
+     >      wann%atomlist_num,wann%atomlist(:),
+     =      mmn0at(:,:,:,ikpt))
+      endif
+
+
+
+
       if(wann%l_mmn0)then
 
 c------> interstitial contribution to updown.mmn0-matrix
@@ -1167,25 +1202,25 @@ c$$$            do m = 1,nslibd
 c$$$             do n = 1,nslibd
 c$$$#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
 c$$$              mmn(m,n,ikpt) =
-c$$$     =        mmn(m,n,ikpt) + 
+c$$$     =        mmn(m,n,ikpt) +
 c$$$     +          phasust*z(i,m,1)*conjg(z(j+addnoco,n,2))
 c$$$#else
 c$$$              mmn(m,n,ikpt) =
-c$$$     =        mmn(m,n,ikpt) + 
+c$$$     =        mmn(m,n,ikpt) +
 c$$$     +          phasust*cmplx(z(i,m,1)*z(j+addnoco,n,2),0.0)
 c$$$#endif
 c$$$             enddo !n
 c$$$            enddo !m
 c$$$
 c$$$  22     continue
-c$$$       enddo !i  
+c$$$       enddo !i
 
       addnoco2 = addnoco      ! TODO: correct for addnoco2
       call wann_mmkb_int(
      >         cmplx(1.,0.),addnoco,addnoco2,
-     > DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,
+     >         nvd,stars%mx1,stars%mx2,stars%mx3,
      > stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     > lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat(1),nslibd,
+     > lapw%nv(jspin),neigd,nbasfcn,nbasfcn,zMat(1),nslibd,
      > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
@@ -1245,7 +1280,7 @@ c     <           mmn(1:noccbd,1:noccbd,ikpt))
 10    continue ! end of cycle by the k-points
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 c******************************************************
 c     Write down the projections.
@@ -1257,57 +1292,70 @@ c******************************************************
         hescale=sqrt(hescale)
         nablamat=nablamat*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'nabl.updown',
+     >      mpi_communicatior,l_p0,'nabl.updown',
      >      'Matrix elements of nabla operator',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,
+     >      irank,isize,wann%l_unformatted,
      <      nablamat)
       endif
 
       if(wann%l_socmat)then
 !        call wann_write_hsomtx(
-!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      mpi_communicatior,l_p0,'WF1.hsomtx',
 !     >      'Matrix elements of spin-orbit coupling',
 !     >      2,2,nbnd,nbnd,fullnkpts,
 !     >      irank,isize,
 !     <      hsomtx)
-     
+
         call wann_write_matrix5(
-     >      mpi_comm,l_p0,'WF1.hsomtx',
+     >      mpi_communicatior,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
      >      nbnd,nbnd,2,2,fullnkpts,
-     >      irank,isize,wann%l_unformatted,
+     >      irank,isize,wann%socmatfmt==2,
      <      hsomtx)
-     
-     
+
+
       endif
-      
+
       if(wann%l_socmatvec)then
         call wann_write_matrix6(
-     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      mpi_communicatior,l_p0,'WF1.hsomtxvec',
      >      'Vectors for spin-orbit coupling',
      >      2,2,nbnd,nbnd,3,fullnkpts,
-     >      irank,isize,wann%l_unformatted,
+     >      irank,isize,wann%socmatvecfmt==2,
      <      hsomtxvec)
       endif
 
       if(wann%l_mmn0)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.mmn0',
+     >      mpi_communicatior,l_p0,'updown.mmn0',
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.false.,.true.,
-     <      mmn,wann%l_unformatted)
-      endif !l_soc and l_mmn0  
+     <      mmn,wann%mmn0fmt==2)
+      endif !l_soc and l_mmn0
 
       if(wann%l_perpmag)then
         call wann_write_amn(
-     >      mpi_comm,l_p0,'updown.perpmag',
+     >      mpi_communicatior,l_p0,'updown.perpmag',
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.true.,.true.,
-     <      perpmag,wann%l_unformatted)
-      endif !l_soc and l_mmn0  
+     <      perpmag,wann%perpmagfmt==2)
+      endif !l_soc and l_mmn0
+
+      if(wann%l_mmn0at)then
+        do at=1,wann%atomlist_num
+         write(torquename,fmt='("mmn0up_",i3.3)')wann%atomlist(at)
+         call wann_write_amn(
+     >      mpi_communicatior,l_p0,torquename,
+     >      'Atom resolved overlap',
+     >      nbnd,fullnkpts,nbnd,
+     >      irank,isize,.true.,wann%l_unformatted,
+     <      mmn0at(:,:,at,:),wann%l_unformatted)
+        enddo
+      endif
+
 
       if(wann%l_surfcurr)then
         surfcurr=conjg(surfcurr/cmplx(0.0,2.0))
@@ -1315,39 +1363,56 @@ c******************************************************
         hescale=sqrt(hescale)
         surfcurr=surfcurr*hescale
         call wann_write_nabla(
-     >      mpi_comm,l_p0,'surfcurr.updown',
+     >      mpi_communicatior,l_p0,'surfcurr.updown',
      >      'Surface currents',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,
+     >      irank,isize,wann%l_unformatted,
      <      surfcurr)
-      endif 
+      endif
+
+      if(wann%l_torque)then
+       if(l_soc)then
+          nbnd1p2=nbnd
+       else
+          nbnd1p2=nbnd+nbnd
+       endif
+       do at=1,wann%atomlist_num
+         write(torquename,fmt='("torque_",i3.3)')wann%atomlist(at)
+         call wann_write_nabla(
+     >      mpi_communicatior,l_p0,torquename,
+     >      'Spin currents into MT-sphere',
+     >      nbnd1p2,fullnkpts,nbnd1p2,
+     >      irank,isize,wann%l_unformatted,
+     <      torque(:,:,:,at,:)) 
+       enddo
+      endif
 
       if( allocated (nablamat) ) deallocate( nablamat )
       deallocate ( mmn )
 
       deallocate(flo)
- 
+
       deallocate ( vr,vz )
       deallocate ( ff,gg )
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)
 
       call cpu_time(delta)
       time_total=delta-time_total
-      write(6,*)"time_total=",time_total
-      write(6,*)"time_mmn=",time_mmn
-      write(6,*)"time_interstitial=",time_interstitial
-      write(6,*)"time_ujugaunt=",time_ujugaunt
-      write(6,*)"time_abcof=",time_abcof
-      write(6,*)"time_symm=",time_symm
-      write(6,*)"time_rw=",time_rw
-      write(6,*)"time_film=",time_film
+      write(oUnit,*)"time_total=",time_total
+      write(oUnit,*)"time_mmn=",time_mmn
+      write(oUnit,*)"time_interstitial=",time_interstitial
+      write(oUnit,*)"time_ujugaunt=",time_ujugaunt
+      write(oUnit,*)"time_abcof=",time_abcof
+      write(oUnit,*)"time_symm=",time_symm
+      write(oUnit,*)"time_rw=",time_rw
+      write(oUnit,*)"time_film=",time_film
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
 
 

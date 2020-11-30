@@ -17,7 +17,7 @@ sub initlog($$$){
     print LOG "Starting\n";
     print  "Configuration: $config_name\n";
     print  "Test: $test_name\n";
-    print  "Workdir: $workdir\n";     
+    print  "Workdir: $workdir\n";
 }
 
 sub stoplog($){
@@ -35,7 +35,7 @@ sub copyfile($$){
 
     system("cp $from $to");
     my $res=system("diff -q $from $to");
-    
+
     if ($res==0) {print LOG "Done\n";}
        else {print LOG "Failed\n";}
 }
@@ -64,15 +64,19 @@ sub testrun($$){
     my $dir=shift;
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
-    print LOG "Running $ex:";
-    
+
+    print LOG "Running OMP_NUM_THREADS=$ENV{'OMP_NUM_THREADS'} $ex:";
     if (system("cd $dir;$ex")==0){
 	print LOG "Done\n";}
-       else {
-	   print LOG "Failed\n";}
+    else {
+        print LOG "Failed\n";
+    }
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub testrun_seq($$){
@@ -80,10 +84,10 @@ sub testrun_seq($$){
     my $dir=shift;
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
-    print LOG "Running $ex:";
-    
+
     my $omps=$ENV{'OMP_NUM_THREADS'};
     $ENV{'OMP_NUM_THREADS'}=1;
+    print LOG "Running OMP_NUM_THREADS=$ENV{'OMP_NUM_THREADS'} $ex:";
     if (system("cd $dir;$ex")==0){
       print LOG "Done\n";}
     else {
@@ -93,13 +97,16 @@ sub testrun_seq($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Finished execution\n";
+
+    my $errmsg = `grep "ERROR Message" $dir/out.xml`;
+    print LOG $errmsg if $errmsg;
 }
 
 sub test_fileexists($){
     my $file=shift;
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Testing for $file:";
-    
+
     if (-r $file){
 	print LOG "Exists\n";
 	return 0;
@@ -134,13 +141,18 @@ sub test_grepnumber($$$$$){
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Grep for $grepfor in $file:";
 
-    my $l=`grep \"$grepfor\" $file`;
+    my $l=`grep \"$grepfor\" $file|tail -1`;
 
-    
+
     $l=~m/$reg/s;
 
-    
+
     print LOG "$1 == $value:";
+
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
 
     if (abs($1-$value)<$tol){
 	print LOG "ok\n";
@@ -151,14 +163,76 @@ sub test_grepnumber($$$$$){
     }
 }
 
-       
+sub test_grep_lastnumber($$$$$){
+    my $file=shift;
+    my $grepfor=shift;
+    my $reg=shift;
+    my $value=shift;
+    my $tol=shift;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Grep for $grepfor in $file:";
+
+    my $l=`grep \"$grepfor\" $file | tail -1`;
+
+
+    $l=~m/$reg/s;
+
+
+    print LOG "$1 == $value:";
+
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
+
+    if (abs($1-$value)<$tol){
+        print LOG "ok\n";
+        return 0;
+    }else{
+	print LOG "failed\n";
+        return 1;
+    }
+}   
+
+sub test_grep_firstnumber($$$$$){
+    my $file=shift;
+    my $grepfor=shift;
+    my $reg=shift;
+    my $value=shift;
+    my $tol=shift;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Grep for $grepfor in $file:";
+
+    my $l=`grep \"$grepfor\" $file | head -1`;
+
+
+    $l=~m/$reg/s;
+
+
+    print LOG "$1 == $value:";
+
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
+
+    if (abs($1-$value)<$tol){
+        print LOG "ok\n";
+        return 0;
+    }else{
+	print LOG "failed\n";
+        return 1;
+    }
+}   
 
 
 sub stageresult($$$){
     my $workdir=shift;
     my $result=shift;
     my $stage=shift;
-    
+
     system("rm -f $workdir/test_$stage.*");
     if ($result==0){
 	system("touch $workdir/test_$stage.ok");
@@ -167,7 +241,7 @@ sub stageresult($$$){
 	system("touch $workdir/test_$stage.failed");
 	print "Stage $stage failed\n";
     }
-    
+
 }
 
 sub testresult($){
@@ -214,4 +288,4 @@ sub test_grep_error($){
         return 0;
     }
 
-}    
+}

@@ -5,20 +5,17 @@
 !--------------------------------------------------------------------------------
 MODULE m_optional
   USE m_juDFT
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 CONTAINS
-  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,DIMENSION,&
-       stars,input,sym, cell, sliceplot,obsolete, xcpot, noco, oneD)
+  SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,&
+       stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
     !
     !----------------------------------------
     ! this routine is called by: fleur.F90
     !
-    ! optional --+-- plot -+- loddop
-    !            |         +- outcdn -+- cotra0
-    !            |                    +- cotra1
-    !            |                    +- starf2 -- spgrot
-    !            |                    +- starf3
-    !            |                    +- ylm3
-    !            +-- stden -+- atom2 -+- setcor
+    ! optional  stden -+- atom2 -+- setcor
     !            |          |         +- stpot1
     !            |          |         +- differ -+- inwint
     !            |          |         |          +- outint
@@ -40,10 +37,8 @@ CONTAINS
     !            |          +- points -- qranf
     !            |          +- sphpts -- qranf
     !            |          +- checkdop -+- starf3
-    !            |                       +- cotra0
     !            |                       +- starf2 -- spgrot
     !            |                       +- fitchk
-    !            |                       +- cotra1
     !            |                       +- ylm3
     !            +-- cdnsp -+- readDensity
     !            |          +- writeDensity
@@ -56,27 +51,25 @@ CONTAINS
     !                     +- wrtdop
     !----------------------------------------
     USE m_bmt
-    USE m_plotdop
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
     USE m_cdn_io
     USE m_types
-    USE m_pldngen
-   
+
+
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
 
-    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_obsolete),INTENT(IN) :: obsolete
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_input),INTENT(INOUT) :: input
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -84,68 +77,59 @@ CONTAINS
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: it, archiveType
+    INTEGER :: it, archiveType, atomsCounter
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
+    LOGICAL :: stateCheck=.TRUE.
 #ifdef CPP_MPI
-    include 'mpif.h'
-    INTEGER :: ierr(2)
+    INTEGER :: ierr
 #endif
     !     ..
     it = 1
 
-    IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
-       IF (noco%l_noco) THEN
-          CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-               cell,input,noco,oneD,sliceplot)
-       ENDIF
-    ENDIF
 
-       
-    IF (mpi%irank == 0) THEN
-       IF (sliceplot%plpot) input%score = .FALSE.
-       IF (sliceplot%iplot.NE.0) THEN
-          CALL timestart("Plotting")
-          IF (input%strho) CALL juDFT_error("strho = T and iplot=/=0",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                       input,sym,cell,sliceplot,noco)
-          CALL timestop("Plotting")
-       END IF
-    ENDIF ! mpi%irank == 0
     !
     !     --->generate starting charge density
     !
     strho=input%strho
     IF (.NOT.(strho.OR.(sliceplot%iplot.NE.0))) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-       IF (noco%l_noco) THEN
+       IF (any(noco%l_unrestrictMT)) THEN
+          archiveType = CDN_ARCHIVE_TYPE_FFN_const
+       ELSE IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
-       IF (mpi%irank == 0) THEN
+       IF (fmpi%irank == 0) THEN
           strho = .NOT.isDensityFilePresent(archiveType)
        END IF
 #ifdef CPP_MPI
-       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
     ENDIF
     IF (strho) THEN
-       strho=input%total 
-       input%total = .FALSE.
+       !strho=input%total
+       !input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
-       CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                  input,cell,xcpot,obsolete,noco,oneD)
+       IF (input%jspins.EQ.2) THEN
+          DO atomsCounter=1, atoms%ntype
+             IF(.NOT.MAXVAL(ABS(atoms%econf(atomsCounter)%Occupation(:,1)-atoms%econf(atomsCounter)%Occupation(:,2))).EQ.0)stateCheck=.FALSE.
+          END DO
+       END IF
+       IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any acutal polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
+       CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
+                  input,cell,xcpot,noco,oneD)
        !
-       input%total=strho
+       !input%total=strho
        CALL timestop("generation of start-density")
     END IF
-    IF (mpi%irank == 0) THEN
+    IF (fmpi%irank == 0) THEN
        !
        !     --->generate spin polarized charge density
        !
        IF (input%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dimension)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -160,19 +144,18 @@ CONTAINS
           CALL timestop('optional: flip magnetic moments')
        END IF
 
- 
- 
+
+
        IF (input%l_bmt) THEN
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
 
-    ENDIF ! mpi%irank == 0
+    ENDIF ! fmpi%irank == 0
 
-    IF (sliceplot%iplot.NE.0)      CALL juDFT_end("density plot o.k.",mpi%irank)
-    IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
-    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
-    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
-    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
-    
+    IF (input%strho)          CALL juDFT_end("starting density generated",fmpi%irank)
+    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",fmpi%irank)
+    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",fmpi%irank)
+    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',fmpi%irank)
+
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

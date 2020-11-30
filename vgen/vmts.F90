@@ -1,8 +1,10 @@
 module m_vmts
-
+#ifdef CPP_MPI 
+  use mpi 
+#endif
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, potdenType, vr )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -33,7 +35,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr, only : intgr2
+    use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -41,13 +43,14 @@ contains
     implicit none
 
     type(t_input),  intent(in)        :: input
-    type(t_mpi),    intent(in)        :: mpi
+    type(t_mpi),    intent(in)        :: fmpi
     type(t_stars),  intent(in)        :: stars
     type(t_sphhar), intent(in)        :: sphhar
     type(t_atoms),  intent(in)        :: atoms
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
     type(t_oneD),   intent(in)        :: oneD
+    LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
@@ -60,21 +63,16 @@ contains
     real                              :: green_factor, termsR
     real                              :: green_1    (1:atoms%jmtd), green_2    (1:atoms%jmtd)
     real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd)
-    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)
+    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)!, integral_3 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     
     !$ complex, allocatable :: vtl_loc(:,:)
 #ifdef CPP_MPI
-    include 'mpif.h'
-    integer                       :: ierr(3)
+    integer                       :: ierr
     complex, allocatable          :: c_b(:)
-
-    external MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
-
-
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
@@ -83,19 +81,19 @@ contains
 
     
     ! q=0 component
-    if ( mpi%irank == 0 ) then
+    if ( fmpi%irank == 0 ) then
       vtl(0,1:atoms%ntype) = sfp_const * vpw(1)
     end if
 
     ! q/=0 components
     !$omp parallel default( none ) &
-    !$omp& shared( mpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
+    !$omp& shared( fmpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
     !$omp& private( vtl_loc )
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype)) 
     !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
-    do k = mpi%irank+2, stars%ng3, mpi%isize
+    do k = fmpi%irank+2, stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
       if ( .not. oneD%odi%d1 ) then
         call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -106,7 +104,7 @@ contains
       nat = 1
       do n = 1, atoms%ntype
         call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
-        nd = atoms%ntypsy(nat)
+        nd = sym%ntypsy(nat)
         do lh = 0, sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)
           sm = (0.0,0.0)
@@ -132,24 +130,22 @@ contains
 #ifdef CPP_MPI
     n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
     allocate( c_b(n1) )
-    call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
-    if ( mpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
+    call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+    if ( fmpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
     deallocate( c_b )
 #endif
-
-
 
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
-    if( mpi%irank == 0 ) then
+    if( fmpi%irank == 0 ) then
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
     nat = 1
     do n = 1, atoms%ntype
-      nd = atoms%ntypsy(nat)
+      nd = sym%ntypsy(nat)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then
@@ -171,11 +167,17 @@ contains
         end if
         integrand_1(1:imax) = green_1(1:imax) * rho(1:imax,lh,n)
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
-        call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
-        call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        if (.not.dosf) THEN
+         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        else
+           call sfint(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
+           call sfint(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
+        end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
+
       end do
       nat = nat + atoms%neq(n)
     end do
@@ -183,9 +185,7 @@ contains
       deallocate( il, kl )
     end if
 
-    
-
-    if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
       do n = 1, atoms%ntype
         vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
       end do

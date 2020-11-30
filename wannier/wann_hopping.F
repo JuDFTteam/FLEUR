@@ -19,7 +19,7 @@ c     in file WF1.chk produced by wannier90.
 c
 c     Frank Freimuth
 c****************************************************
-      use m_constants, only:pimach
+      use m_constants
       use m_wann_read_umatrix
 c      use m_wann_get_mp
 c      use m_wann_get_kpts
@@ -105,7 +105,7 @@ c      real                :: kpoints(3,nkpts)
       if(l_soc)jspins=1
       l_socham=.false.
 
-      write(6,*)"nkpts=",nkpts
+      write(oUnit,*)"nkpts=",nkpts
 
       do jspin=1,jspins  !spin loop
 c*****************************************************
@@ -127,8 +127,9 @@ c*****************************************************
          endif
          read (203,*) num_wann,num_bands
          close (203)
-         write(6,*)'According to proj there are ',num_bands,' bands'
-         write(6,*)"and ",num_wann," wannier functions."
+         write(oUnit,*)'According to proj there are ',
+     +                 num_bands,' bands'
+         write(oUnit,*)"and ",num_wann," wannier functions."
 c****************************************************************
 c     read in chk
 c****************************************************************
@@ -150,7 +151,7 @@ c****************************************************************
          if(l_soc.and.l_socmmn0)then
           num_bands2=neigd
          endif
-         write(6,*)"read in eig-file"
+         write(oUnit,*)"read in eig-file"
          allocate(energy(num_bands2,num_kpts))
          inquire(file=spin12(jspin)//'.eig',exist=l_umdat)
          IF(.NOT.l_umdat)  CALL juDFT_error
@@ -166,8 +167,8 @@ c****************************************************************
 
          minenerg=minval(energy(:,:))
          maxenerg=maxval(energy(:,:))
-         write(6,*)"minenerg=",minenerg
-         write(6,*)"maxenerg=",maxenerg
+         write(oUnit,*)"minenerg=",minenerg
+         write(oUnit,*)"maxenerg=",maxenerg
 c*********************************************
 c       Preparations for spin-orbit coupling
 c*********************************************
@@ -204,7 +205,7 @@ c****************************************************************
 c               calculate matrix elements of hamiltonian
 c****************************************************************
 
-         write(6,*)"calculate matrix elements of hamiltonian
+         write(oUnit,*)"calculate matrix elements of hamiltonian
      &   between wannier orbitals"
 
 
@@ -276,9 +277,9 @@ c****************************************************************
           num_wann2=neigd
           wann_shift=band_min(jspin)-1
          endif
-         write(6,*)"num_wann2=",num_wann2
-         write(6,*)"num_wann=",num_wann
-         write(6,*)"wann_shift=",wann_shift
+         write(oUnit,*)"num_wann2=",num_wann2
+         write(oUnit,*)"num_wann=",num_wann
+         write(oUnit,*)"wann_shift=",wann_shift
          allocate(hwannsoc(num_wann,num_wann,num_kpts,2,2))
          hwannsoc=cmplx(0.0,0.0)
          do kspin=1,2
@@ -312,7 +313,7 @@ c****************************************************************
      &                   hwannsoc(i,j,k,2,1)+hwannsoc(i,j,k,2,2)
              eulav=eulav-hwann(i,j,k)
              if(abs(eulav).gt.1.e-6)then
-                 write(6,*)"soc-hop: something wrong:",eulav
+                 write(oUnit,*)"soc-hop: something wrong:",eulav
              endif
            enddo
           enddo
@@ -331,7 +332,8 @@ c***************************************************************
 
          if(repro_eig)then
    
-         write(6,*)"As a check, try to reproduce the old eigenvalues"
+         write(oUnit,*)
+     +      "As a check, try to reproduce the old eigenvalues"
 
 c       Note, that this check will give positive result,
 c       if u_matrix is unitary
@@ -368,11 +370,11 @@ c       if u_matrix is unitary
           do j = 1,num_wann
               eigw(i,j) = ei(j)
               if(abs(eigw(i,j)-eigval2(j,i)).gt.0.0001)then
-                 write(6,*)"found different eigenvalues:"
-                 write(6,*)"kpt=",i
-                 write(6,*)"band=",j
-                 write(6,*)"eig=",eigval2(j,i)
-                 write(6,*)"neweig=",eigw(i,j)
+                 write(oUnit,*)"found different eigenvalues:"
+                 write(oUnit,*)"kpt=",i
+                 write(oUnit,*)"band=",j
+                 write(oUnit,*)"eig=",eigval2(j,i)
+                 write(oUnit,*)"neweig=",eigw(i,j)
               endif
           enddo
 
@@ -391,7 +393,7 @@ c       if u_matrix is unitary
 c************************************************************
 c     Calculate hoppings.
 c***********************************************************      
-      write(6,*)"calculate hoppings"
+      write(oUnit,*)"calculate hoppings"
       allocate( hreal(num_wann,num_wann,rvecnum) )
       hreal=cmplx(0.0,0.0)
       do rvecind=1,rvecnum

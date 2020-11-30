@@ -9,42 +9,43 @@ MODULE m_atom2
 !     *************************************************************
 CONTAINS
    SUBROUTINE atom2(&
-  &                 dimension, atoms, xcpot, input, ntyp, jrc, rnot1,&
+  &                  atoms, xcpot, input, ntyp, jrc, rnot1,&
   &                 qdel,&
-  &                 rhoss, nst, lnum, eig, vbar)
+  &                 rhoss, nst, lnum, eig, vbar,l_valence)
 
       USE m_intgr, ONLY: intgr1, intgr0
       USE m_constants
       USE m_potl0
       USE m_stpot1
-      USE m_setcor
+    !  USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
-      TYPE(t_dimension), INTENT(IN)  :: dimension
+
       TYPE(t_atoms), INTENT(IN)      :: atoms
       CLASS(t_xcpot), INTENT(IN)     :: xcpot
       TYPE(t_input), INTENT(IN)      :: input
       INTEGER, INTENT(IN)  :: jrc, ntyp
       REAL, INTENT(IN)  :: rnot1, qdel
       REAL, INTENT(OUT) :: rhoss(:, :) !(mshd,input%jspins),
-      REAL, INTENT(OUT) :: eig(dimension%nstd, input%jspins), vbar(input%jspins)
-      INTEGER, INTENT(OUT) :: nst, lnum(dimension%nstd)
+      REAL, INTENT(OUT) :: eig(29, input%jspins), vbar(input%jspins)
+      INTEGER, INTENT(OUT) :: nst, lnum(29)
+      LOGICAL,OPTIONAL,INTENT(IN)::l_valence
 !     ..
 !     .. Local Scalars ..
       REAL c, d, delrv, dist, distol, e, fisr, fj, fl, fn, h,&
      &     p, p1, pmax, pmin, r, r3, rn, rnot, z, zero, bmu_l, rho
-      INTEGER i, inr0, it, itmax, k, l, n, ispin, kk, ierr, msh_l
+      INTEGER i, inr0, it, itmax, k, l, n, ispin, kk, ierr, msh_l,isp
       LOGICAL conv, lastit, l_start
 !     ..
 !     .. Local Arrays ..
-      REAL a(jrc), b(jrc), dens(jrc), occ(dimension%nstd, input%jspins)
-      REAL rad(jrc), rev(dimension%nstd, input%jspins), ahelp(jrc), ain(jrc),&
+      REAL a(jrc), b(jrc), dens(jrc), occ(29, input%jspins)
+      REAL rad(jrc), rev(29, input%jspins), ahelp(jrc), ain(jrc),&
      &     rh(jrc), vr(jrc), f(0:3),&
-     &     vr1(jrc, input%jspins), vr2(jrc, input%jspins), vx(dimension%msh, input%jspins), vxc(dimension%msh, input%jspins)
-      INTEGER kappa(dimension%nstd), nprnc(dimension%nstd)
+     &     vr1(jrc, input%jspins), vr2(jrc, input%jspins), vx(atoms%msh, input%jspins), vxc(atoms%msh, input%jspins)
+      INTEGER kappa(29), nprnc(29)
 !     ..
 !     ..
 !     .. Data statements ..
@@ -55,7 +56,7 @@ CONTAINS
       vxc(:, :) = 0.0
       vx(:, :) = 0.0
 !
-      WRITE (6, FMT=8000)
+      WRITE (oUnit, FMT=8000)
 8000  FORMAT(' subroutine atom2 entered')
       z = atoms%zatom(ntyp)
       n = jrc
@@ -72,11 +73,24 @@ CONTAINS
       enddo
       rn = rad(n)
       bmu_l = atoms%bmu(ntyp)
-      IF (bmu_l > 0.001 .AND. atoms%numStatesProvided(ntyp) .NE. 0) CALL &
-         judft_warn("You specified both: inital moment and occupation numbers.", &
-                    hint="The inital moment will be ignored, set magMom=0.0", calledby="atom2.f90")
-      CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
+      !IF (bmu_l > 0.001 .AND. atoms%numStatesProvided(ntyp) .NE. 0) CALL &
+      !   judft_warn("You specified both: inital moment and occupation numbers.", &
+      !              hint="The inital moment will be ignored, set magMom=0.0", calledby="atom2.f90")
+      !CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
+      CALL atoms%econf(ntyp)%get_core(nst,nprnc,kappa,occ,l_valence)
 
+      if (input%jspins == 2) THEN
+         bmu_l=sign(1.,sum(occ(:nst,1)-occ(:nst,2)))
+         if (any(bmu_l*(occ(:nst,1)-occ(:nst,2))<-1.E-5)) call judft_warn("Inconsistent polarization of starting density")
+         if (bmu_l<0) THEN
+            DO i=1,nst
+               bmu_l=occ(i,1)
+               occ(i,1)=occ(i,2)
+               occ(i,2)=bmu_l
+            ENDDO
+            bmu_l=-1
+         ENDIF
+      ENDIF
 !
 !--->   for electric field case (sigma.ne.0), add the extra charge
 !--->   to the uppermost level; ignore the possible problem that
@@ -245,7 +259,7 @@ CONTAINS
          p1 = 1.0e0/dist
          p = min(pmax, p1)
          p = max(p, pmin)
-         WRITE (6, FMT=8060) it, dist, p
+         WRITE (oUnit, FMT=8060) it, dist, p
          p1 = 1.0e0 - p
          DO ispin = 1, input%jspins
             DO i = 1, n
@@ -256,25 +270,26 @@ CONTAINS
 !
 ! output
 !
-      WRITE (6, FMT=8030) dist
+      WRITE (oUnit, FMT=8030) dist
       conv = .false.
 !     list eigenvalues
-190   IF (conv) WRITE (6, FMT=8040) it, dist
-      DO ispin = 1, input%jspins
-         WRITE (6, '(a8,i2)') 'spin No.', ispin
+190   IF (conv) WRITE (oUnit, FMT=8040) it, dist
+      DO isp = 1, input%jspins
+         ispin=merge(isp,3-isp,(bmu_l>0).or.(input%jspins<2))
+         WRITE (oUnit, '(a8,i2)') 'spin No.',ispin
          DO k = 1, nst
             fj = iabs(kappa(k)) - 0.5e0
             l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
             lnum(k) = l
-            WRITE (6, FMT=8050) nprnc(k), kappa(k), l, fj,&
-      &                        occ(k, ispin), eig(k, ispin), rev(k, ispin)
+            WRITE (oUnit, FMT=8050) nprnc(k), kappa(k), l, fj,&
+      &                        occ(k, isp), eig(k, isp), rev(k, isp)
          ENDDO
 !
 !--->   guess enpara if it doesn't exist, using floating energy parameters
 !
          i = atoms%jri(ntyp) - (log(4.0)/atoms%dx(ntyp) + 1.51)
-         vbar(ispin) = vr1(i, ispin)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
-         WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(ispin)
+         vbar(isp) = vr1(i, isp)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
+         WRITE (oUnit, '(/,'' reference energy = '',2f12.6,/)') vbar(isp)
       ENDDO
 
 8030  FORMAT(/, /, /, ' $$$ error: not converged, dist=', f10.6,/)
@@ -283,6 +298,19 @@ CONTAINS
       &       'occ.   eigenvalue (har)  <r>  ',/)
 8050  FORMAT(3x, i1, i5, i5, f6.1, 2(3x, f7.2, 1x, 2f12.6))
 8060  FORMAT('it,dist,p=', i4, 2f12.5)
+
+      IF (input%jspins>1.and.bmu_l<0) THEN
+         DO i=1,nst
+            bmu_l=eig(i,1)
+            eig(i,1)=eig(i,2)
+            eig(i,2)=bmu_l
+         ENDDO
+         DO i=1,size(rhoss,1)
+            bmu_l=rhoss(i,1)
+            rhoss(i,1)=rhoss(i,2)
+            rhoss(i,2)=bmu_l
+         ENDDO
+      ENDIF
 
    END SUBROUTINE atom2
 END MODULE m_atom2

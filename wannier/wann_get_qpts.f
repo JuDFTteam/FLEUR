@@ -9,7 +9,11 @@ c     Read in the q-points from qpts file.
 c 
 c   
 c********************************************************
+
+      USE m_constants
+
       implicit none
+
       logical,intent(in)  :: l_bzsym,film
       logical,intent(in)  :: l_onedimens,l_readqpts
       integer,intent(out) :: nqpts
@@ -27,7 +31,7 @@ c********************************************************
      +        ="wann_get_qpts")
          open(987,file='w90qpts',status='old',form='formatted')
          read(987,*)nqpts, scale
-         write(6,*)"wann_get_qpts: nqpts=",nqpts
+         write(oUnit,*)"wann_get_qpts: nqpts=",nqpts
          if(l_readqpts)then
             IF(SIZE(qpoints,1)/=3) CALL juDFT_error("wann_get_qpts: 1"
      +           ,calledby ="wann_get_qpts")
@@ -45,7 +49,7 @@ c********************************************************
      +        ="wann_get_qpts")
          open(987,file=param_file,status='old',form='formatted')
          read(987,*)nqpts,scale
-         write(6,*)"wann_get_qpts: nqpts=",nqpts
+         write(oUnit,*)"wann_get_qpts: nqpts=",nqpts
          if(l_readqpts)then
             IF(SIZE(qpoints,1)/=3) CALL juDFT_error("wann_get_qpts: 1"
      +           ,calledby ="wann_get_qpts")
@@ -66,7 +70,7 @@ c********************************************************
             qpoints(3,:)=0.0
          endif   
          do iter=1,nqpts
-            write(6,*)qpoints(:,iter)
+            write(oUnit,*)qpoints(:,iter)
          enddo
       endif
 

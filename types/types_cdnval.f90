@@ -5,6 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_cdnval
+!use m_types_jDOS
+!use m_types_orbcomp
+!use m_types_mcd
+!use m_types_slab
 
 IMPLICIT NONE
 
@@ -60,20 +64,7 @@ PRIVATE
       PROCEDURE,PASS :: init => denCoeffs_init
    END TYPE t_denCoeffs
 
-   TYPE t_slab
-      INTEGER              :: nsld, nsl
 
-      INTEGER, ALLOCATABLE :: nmtsl(:,:)
-      INTEGER, ALLOCATABLE :: nslat(:,:)
-      REAL,    ALLOCATABLE :: zsl(:,:)
-      REAL,    ALLOCATABLE :: volsl(:)
-      REAL,    ALLOCATABLE :: volintsl(:)
-      REAL,    ALLOCATABLE :: qintsl(:,:,:,:)
-      REAL,    ALLOCATABLE :: qmtsl(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init => slab_init
-   END TYPE t_slab
 
    TYPE t_eigVecCoeffs
       COMPLEX, ALLOCATABLE :: acof(:,:,:,:)
@@ -84,17 +75,7 @@ PRIVATE
          PROCEDURE,PASS :: init => eigVecCoeffs_init
    END TYPE t_eigVecCoeffs
 
-   TYPE t_mcd
-      REAL                 :: emcd_lo, emcd_up
 
-      INTEGER, ALLOCATABLE :: ncore(:)
-      REAL,    ALLOCATABLE :: e_mcd(:,:,:)
-      REAL,    ALLOCATABLE :: mcd(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init1 => mcd_init1
-   END TYPE t_mcd
 
    TYPE t_moments
 
@@ -105,25 +86,22 @@ PRIVATE
       REAL, ALLOCATABLE    :: stdn(:,:)
       REAL, ALLOCATABLE    :: svdn(:,:)
 
+      REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
+
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
 
-   TYPE t_orbcomp
 
-      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
 
-      CONTAINS
-         PROCEDURE,PASS :: init => orbcomp_init
-   END TYPE t_orbcomp
+
 
    TYPE t_cdnvalJob
       LOGICAL              :: l_evp
       INTEGER, ALLOCATABLE :: k_list(:)
       INTEGER, ALLOCATABLE :: ev_list(:)
       INTEGER, ALLOCATABLE :: noccbd(:)    ! Attention, these are for all k-points and all states
-      REAL,    ALLOCATABLE :: weights(:,:) ! 
+      REAL,    ALLOCATABLE :: weights(:,:) !
 
 
       CONTAINS
@@ -141,8 +119,8 @@ PRIVATE
          PROCEDURE,PASS :: init => gVacMap_init
    END TYPE t_gVacMap
 
-PUBLIC t_orb, t_denCoeffs, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_moments, t_orbcomp, t_cdnvalJob, t_gVacMap
+PUBLIC t_orb, t_denCoeffs,  t_eigVecCoeffs
+PUBLIC  t_moments,  t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
@@ -277,85 +255,34 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
 END SUBROUTINE denCoeffs_init
 
-SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
-
-   USE m_types_setup
-   USE m_types_kpts
-   USE m_slabdim
-   USE m_slabgeom
-
-   IMPLICIT NONE
-
-   CLASS(t_slab),      INTENT(INOUT) :: thisSlab
-   TYPE(t_banddos),    INTENT(IN)    :: banddos
-   TYPE(t_dimension),  INTENT(IN)    :: dimension
-   TYPE(t_atoms),      INTENT(IN)    :: atoms
-   TYPE(t_cell),       INTENT(IN)    :: cell
-   TYPE(t_input),      INTENT(IN)    :: input
-   TYPE(t_kpts),       INTENT(IN)    :: kpts
-
-   INTEGER :: nsld
-
-   nsld=1
-
-   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      CALL slab_dim(atoms, nsld)
-      ALLOCATE (thisSlab%nmtsl(atoms%ntype,nsld))
-      ALLOCATE (thisSlab%nslat(atoms%nat,nsld))
-      ALLOCATE (thisSlab%zsl(2,nsld))
-      ALLOCATE (thisSlab%volsl(nsld))
-      ALLOCATE (thisSlab%volintsl(nsld))
-      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
-      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
-      CALL slabgeom(atoms,cell,nsld,thisSlab%nsl,thisSlab%zsl,thisSlab%nmtsl,&
-                    thisSlab%nslat,thisSlab%volsl,thisSlab%volintsl)
-   ELSE
-      ALLOCATE (thisSlab%nmtsl(1,1))
-      ALLOCATE (thisSlab%nslat(1,1))
-      ALLOCATE (thisSlab%zsl(1,1))
-      ALLOCATE (thisSlab%volsl(1))
-      ALLOCATE (thisSlab%volintsl(1))
-      ALLOCATE (thisSlab%qintsl(1,1,1,input%jspins))
-      ALLOCATE (thisSlab%qmtsl(1,1,1,input%jspins))
-   END IF
-   thisSlab%nsld = nsld
-
-   thisSlab%nmtsl = 0
-   thisSlab%nslat = 0
-   thisSlab%zsl = 0.0
-   thisSlab%volsl = 0.0
-   thisSlab%volintsl = 0.0
-   thisSlab%qintsl = 0.0
-   thisSlab%qmtsl = 0.0
-
-END SUBROUTINE slab_init
 
 
-SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,noccbd)
+
+SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
 
    USE m_types_setup
 
    IMPLICIT NONE
 
    CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
+
    TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_input),         INTENT(IN)    :: input
 
    INTEGER,               INTENT(IN)    :: jspin, noccbd
+   LOGICAL,               INTENT(IN)    :: l_bothSpins
 
    IF(ALLOCATED(thisEigVecCoeffs%acof)) DEALLOCATE(thisEigVecCoeffs%acof)
    IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
-   IF (noco%l_mperp) THEN
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
+   IF (l_bothSpins) THEN
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
    ELSE
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
    END IF
 
@@ -365,48 +292,18 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,n
 
 END SUBROUTINE eigVecCoeffs_init
 
-SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
+
+SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
 
    USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_mcd),          INTENT(INOUT) :: thisMCD
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-
-   ALLOCATE (thisMCD%ncore(atoms%ntype))
-   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
-   IF (banddos%l_mcd) THEN
-      thisMCD%emcd_lo = banddos%e_mcd_lo
-      thisMCD%emcd_up = banddos%e_mcd_up
-      ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd,kpts%nkpt,input%jspins) )
-      IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
-   ELSE
-      ALLOCATE (thisMCD%m_mcd(1,1,1,1))
-      ALLOCATE (thisMCD%mcd(1,1,1,1,input%jspins))
-   ENDIF
-
-   thisMCD%ncore = 0
-   thisMCD%e_mcd = 0.0
-   thisMCD%mcd = 0.0
-   thisMCD%m_mcd = CMPLX(0.0,0.0)
-
-END SUBROUTINE mcd_init1
-
-SUBROUTINE moments_init(thisMoments,input,atoms)
-
-   USE m_types_setup
+   USE m_types_mpi
 
    IMPLICIT NONE
 
    CLASS(t_moments),      INTENT(INOUT) :: thisMoments
+   TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_atoms),         INTENT(IN)    :: atoms
 
    ALLOCATE(thisMoments%chmom(atoms%ntype,input%jspins))
@@ -423,34 +320,14 @@ SUBROUTINE moments_init(thisMoments,input,atoms)
    thisMoments%stdn = 0.0
    thisMoments%svdn = 0.0
 
-END SUBROUTINE moments_init
-
-SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,dimension,atoms,kpts)
-
-   USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
-   TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_banddos),       INTENT(IN)    :: banddos
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
-   TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_kpts),          INTENT(IN)    :: kpts
-
-   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat,kpts%nkpt,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat,kpts%nkpt,input%jspins))
-   ELSE
-      ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
-      ALLOCATE(thisOrbcomp%qmtp(1,1,1,input%jspins))
+   IF(mpi%irank.EQ.0.and.input%lresMax>0) THEN
+      ALLOCATE(thisMoments%rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(input%lResMax*(input%lResMax+1))/2+input%lResMax,atoms%ntype,4))
+      thisMoments%rhoLRes = 0.0
    END IF
 
-   thisOrbcomp%comp = 0.0
-   thisOrbcomp%qmtp = 0.0
+END SUBROUTINE moments_init
 
-END SUBROUTINE orbcomp_init
+
 
 SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
@@ -467,7 +344,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    TYPE(t_kpts),                   INTENT(IN)    :: kpts
    TYPE(t_noco),                   INTENT(IN)    :: noco
    TYPE(t_results),                INTENT(IN)    :: results
- 
+
 
    INTEGER,                        INTENT(IN)    :: jspin
 
@@ -478,12 +355,10 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    thisCdnvalJob%l_evp=mpi%n_size>1
    thisCdnvalJob%k_list=mpi%k_list !includes allocate
    thisCdnvalJob%ev_list=mpi%ev_list
-   
+
    thisCdnvalJob%weights = results%w_iks(:,:,jsp)*2.0/input%jspins
 
-   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
-   thisCdnvalJob%noccbd = 0
-
+   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt), source=0)
 
    ! determine bands to be used for each k point, MPI process
    DO ikpt_i = 1,SIZE(thisCdnvalJob%k_list)
@@ -548,18 +423,19 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
    INTEGER,ALLOCATABLE :: compact_ev_list(:)
    INTEGER :: nk
+   logical, allocatable :: l_nonzero(:)
 
    nk=thisCdnvalJob%k_list(ikpt)
    IF (l_empty) THEN
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
-      compact_ev_list=PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),&
-           thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8)
+      l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
+      compact_ev_list=PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)
    END IF
  END FUNCTION compact_ev_list
 
 
-SUBROUTINE gVacMap_init(thisGVacMap,dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
+SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
    USE m_types_setup
    USE m_types_lapw
@@ -571,7 +447,7 @@ SUBROUTINE gVacMap_init(thisGVacMap,dimension,sym,atoms,vacuum,stars,lapw,input,
    IMPLICIT NONE
 
    CLASS(t_gVacMap),      INTENT(INOUT) :: thisGVacMap
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
+
    TYPE(t_sym),           INTENT(IN)    :: sym
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
@@ -589,13 +465,13 @@ SUBROUTINE gVacMap_init(thisGVacMap,dimension,sym,atoms,vacuum,stars,lapw,input,
    IF (ALLOCATED(thisGVacMap%gvac1d)) DEALLOCATE(thisGVacMap%gvac1d)
    IF (ALLOCATED(thisGVacMap%gvac2d)) DEALLOCATE(thisGVacMap%gvac2d)
 
-   ALLOCATE(thisGVacMap%gvac1d(dimension%nv2d))
-   ALLOCATE(thisGVacMap%gvac2d(dimension%nv2d))
+   ALLOCATE(thisGVacMap%gvac1d(lapw%dim_nv2d()))
+   ALLOCATE(thisGVacMap%gvac2d(lapw%dim_nv2d()))
 
    thisGVacMap%gvac1d = 0
    thisGVacMap%gvac2d = 0
 
-   IF (vacuum%nstm.EQ.3.AND.input%film) THEN
+   IF (.false..AND.input%film) THEN
       CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
                  cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
    END IF

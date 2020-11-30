@@ -6,23 +6,28 @@
 
 MODULE m_lapwdim
 CONTAINS
-  SUBROUTINE lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
+  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
     !  Generalization of the old apws_dim routine
     !*********************************************************************
     USE m_boxdim
-    USE m_types
+    USE m_types_fleurinput
     USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_noco),INTENT(INOUT)   :: noco
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
+    TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_oneD),INTENT(IN)      :: oneD
-    CLASS(t_forcetheo),INTENT(in):: forcetheo
-    TYPE(t_dimension),INTENT(INOUT)::DIMENSION
+    CLASS(t_forcetheo),INTENT(IN):: forcetheo
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+
+    !local variable for init
+    INTEGER               :: nvd,nv2d,nbasfcn
+    TYPE(t_lapw) :: lapw
 
     INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2
     INTEGER ispin,nvh(2),nv2h(2)
@@ -68,15 +73,13 @@ CONTAINS
        q_vectors=forcetheo%qvec
     CLASS IS (t_forcetheo) ! DEFAULT
        ALLOCATE(q_vectors(3,1))
-       q_vectors(:,1)=noco%qss
+       q_vectors(:,1)=nococonv%qss
     END SELECT
 
-    if (any(abs(noco%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
-    noco%qss=q_vectors(:,1) ! Usually does not do anything, but ensures that in
-                            !force theorem CASE noco%qss is first q-vector in list
+    if (any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
 
-    
-    DIMENSION%nvd = 0 ; DIMENSION%nv2d = 0
+
+    nvd = 0 ; nv2d = 0
     DO q=1,SIZE(q_vectors,2)
        qss=q_vectors(:,q)
        DO nk=1,kpts%nkpt
@@ -126,11 +129,16 @@ CONTAINS
              nvh(ispin)  = nv
              nv2h(ispin) = nv2
           END DO
-          DIMENSION%nvd=MAX(DIMENSION%nvd,MAX(nvh(1),nvh(2)))
-          DIMENSION%nv2d=MAX(DIMENSION%nv2d,MAX(nv2h(1),nv2h(2)))
+          nvd=MAX(nvd,MAX(nvh(1),nvh(2)))
+          nv2d=MAX(nv2d,MAX(nv2h(1),nv2h(2)))
 
        ENDDO !k-loop
     ENDDO !q-loop
+
+    nbasfcn = nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
+    IF (noco%l_noco) nbasfcn = 2*nbasfcn
+    call lapw%init_dim(nvd,nv2d,nbasfcn)
+
   END SUBROUTINE lapw_dim
 
   SUBROUTINE lapw_fft_dim(cell,input,noco,stars)
@@ -169,12 +177,6 @@ CONTAINS
     !
     !---> Determine rkmax box of size mk1, mk2, mk3,
     !     for which |G(mk1,mk2,mk3) + (k1,k2,k3)| < rkmax
-    !
-    CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
-
-    !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-
-
 
     !---> Determine the dimensions kq1d, kq2d, kq3d
     !     of the dimension of the charge density fft-box
@@ -189,7 +191,7 @@ CONTAINS
     mk2 = int(gmaxp*input%rkmax/arltv2) + 1
     mk3 = int(gmaxp*input%rkmax/arltv3) + 1
 
-    !---> add + 1 in spin spiral calculation, to make sure that all G's are 
+    !---> add + 1 in spin spiral calculation, to make sure that all G's are
     !---> still within the FFT-box after being shifted by the spin spiral
     !---> q-vector.
     IF (noco%l_ss) THEN
@@ -210,9 +212,9 @@ CONTAINS
     !                      0  PROGRAM, RADIX-2 ONLY
     !                      1  PROGRAM, RADIX-2, RADIX-3,RADIX-5
 
-    stars%kq1_fft = ifft235(6,ksfft,stars%kq1_fft,gmaxp)
-    stars%kq2_fft = ifft235(6,ksfft,stars%kq2_fft,gmaxp)
-    stars%kq3_fft = ifft235(6,ksfft,stars%kq3_fft,gmaxp)
+    stars%kq1_fft = ifft235(ksfft,stars%kq1_fft,gmaxp)
+    stars%kq2_fft = ifft235(ksfft,stars%kq2_fft,gmaxp)
+    stars%kq3_fft = ifft235(ksfft,stars%kq3_fft,gmaxp)
 
 
   END SUBROUTINE lapw_fft_dim

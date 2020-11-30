@@ -1,5 +1,8 @@
 MODULE m_fermie
   USE m_juDFT
+#ifdef CPP_MPI 
+   use mpi 
+#endif 
   !-----------------------------------------------------------------------
   !     determines the fermi energy by
   !            gaussian-integration method                          c.l.fu
@@ -7,7 +10,7 @@ MODULE m_fermie
   !            or fermi-function                                    p.kurz
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE fermie(eig_id,mpi,kpts,input,noco,e_min,cell,results)
+  SUBROUTINE fermie(eig_id,fmpi,kpts,input,noco,e_min,cell,results)
 
     !---------------------------------------------------f--------------------
     !
@@ -26,7 +29,8 @@ CONTAINS
     !
     !-----------------------------------------------------------------------
 
-
+    USE m_types
+    USE m_constants
     USE m_eig66_io, ONLY : read_eig,write_eig
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     USE m_mpi_col_eigJ
@@ -35,11 +39,13 @@ CONTAINS
     USE m_fertri
     USE m_ferhis
     USE m_fergwt
-    USE m_types
+    USE m_fertetra
     USE m_xmlOutput
+
     IMPLICIT NONE
+
     TYPE(t_results), INTENT(INOUT) :: results
-    TYPE(t_mpi),     INTENT(IN)    :: mpi
+    TYPE(t_mpi),     INTENT(IN)    :: fmpi
     TYPE(t_input),   INTENT(IN)    :: input
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_cell),    INTENT(IN)    :: cell
@@ -50,7 +56,7 @@ CONTAINS
     REAL,INTENT(IN)      :: e_min
     !     ..
     !     .. Array Arguments ..
-    !REAL,    INTENT (OUT):: w(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
+    !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
@@ -61,15 +67,12 @@ CONTAINS
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
-    REAL,    ALLOCATABLE :: eig(:,:,:)
-    INTEGER ne(kpts%nkpt,SIZE(results%w_iks,3))
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
     !--- J constants
 
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER, PARAMETER :: comm = MPI_COMM_SELF
     INTEGER*4 :: nv_mpi(2),idum1d(0),idum2d(0,0)
     INTEGER ierr
@@ -80,11 +83,11 @@ CONTAINS
     !***********************************************************************
     !                  ABBREVIATIONS
     !
-    !     eig        : array of eigenvalues 
+    !     eig        : array of eigenvalues
     !     wtkpt      : list of the weights of each k-point (from inp-file)
-    !     e          : linear list of the eigenvalues 
+    !     e          : linear list of the eigenvalues
     !     we         : list of weights of the eigenvalues in e
-    !     zelec      : number of electrons 
+    !     zelec      : number of electrons
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
     !     seigv      : weighted sum of the occupied valence eigenvalues
     !     seigsc     : weighted sum of the semi-core eigenvalues
@@ -95,12 +98,10 @@ CONTAINS
     !     .. Data statements ..
     DATA del/1.0e-6/
 
-    ALLOCATE (eig(SIZE(results%w_iks,1),SIZE(results%w_iks,2),SIZE(results%w_iks,3)))
-
     ! initiliaze e
     e = 0
 
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8000)
+    IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,/,1x,'fermi energy and band-weighting factors:')
     !
     !---> READ IN EIGENVALUES
@@ -119,14 +120,14 @@ CONTAINS
     ENDIF
     !---> pk non-collinear
     !
-    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
+    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
-          IF (mpi%irank == 0) THEN
-             CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
-             WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
-             WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
-             WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
+          IF (fmpi%irank == 0) THEN
+             if(input%eig66(1))CALL read_eig(eig_id,k,jsp,neig=results%neig(k,jsp),eig=results%eig(:,k,jsp))
+             WRITE (oUnit,'(a2,3f10.5,a12,f12.6)') 'at',kpts%bk(:,k), " k-weight:", kpts%wtkpt(k)
+             WRITE (oUnit,'(i5,a14)') results%neig(k,jsp),' eigenvalues :'
+             WRITE (oUnit,'(8f12.6)') (results%eig(i,k,jsp),i=1,results%neig(k,jsp))
              IF(.NOT.judft_was_argument("-minimalOutput")) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') jsp
@@ -134,17 +135,17 @@ CONTAINS
                 WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
                 WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
                 WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
-                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,results%eig(1:results%neig(k,jsp),k,jsp))
              END IF
           END IF
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+          CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
        END DO
     ENDDO
     !finished reading of eigenvalues
-    IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
-  IF (mpi%irank == 0) THEN 
+    IF (fmpi%irank == 0) CALL closeXMLElement('eigenvalues')
+  IF (fmpi%irank == 0) THEN
 
     IF (ABS(input%fixed_moment)<1E-6) THEN
        !this is a standard calculation
@@ -167,18 +168,18 @@ CONTAINS
           !Generate a list of energies
           DO  k = 1,kpts%nkpt
              !
-             !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE 
+             !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE
              !--->          CONECTION TO THE ORIGINAL ARRAYS
              !
-             DO  j = 1,ne(k,jsp)
-                e(n+j) = eig(j,k,jsp)
+             DO  j = 1,results%neig(k,jsp)
+                e(n+j) = results%eig(j,k,jsp)
                 we(n+j) = kpts%wtkpt(k)
                 idxeig(n+j) = j+n_help
                 idxkpt(n+j) = k
                 idxjsp(n+j) = jsp
              END DO
              !--->          COUNT THE NUMBER OF EIGENVALUES
-             n = n + ne(k,jsp)
+             n = n + results%neig(k,jsp)
           END DO
        END DO
 
@@ -186,13 +187,12 @@ CONTAINS
 
        !     Check if no deep eigenvalue is found
        IF (e_min-MINVAL(e(1:n))>1.0) THEN
-          WRITE(6,*) 'WARNING: Too low eigenvalue detected:'
-          WRITE(6,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',&
-               &             e_min
-          CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi" &
-               &     ,hint ="If the lowest eigenvalue is more than 1Htr below "//&
-               &     "the lowest energy parameter, you probably have picked up"//&
-               &     " a ghoststate")
+          WRITE(oUnit,*) 'WARNING: Too low eigenvalue detected:'
+          WRITE(oUnit,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',e_min
+          CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi", &
+                          hint ="If the lowest eigenvalue is more than 1Htr below "//&
+                                "the lowest energy parameter, you probably have picked up"//&
+                                " a ghoststate")
        END IF
        !
        !---> DETERMINE EF BY SUMMING WEIGHTS
@@ -205,76 +205,71 @@ CONTAINS
        DO WHILE ((ws+del).LT.weight)
           l = l + 1
           IF (l.GT.n) THEN
-             IF ( mpi%irank == 0 ) THEN
-                WRITE (6,FMT=8010) n,ws,weight
+             IF ( fmpi%irank == 0 ) THEN
+                WRITE (oUnit,FMT=8010) n,ws,weight
              END IF
-             CALL juDFT_error("Not enough eavefunctions",calledby="fermie")
+             CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
 8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
           END IF
           ws = ws + we(INDEX(l))
           seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-          !         WRITE (6,FMT='(2f10.7)') e(index(l)),we(index(l))
+          !         WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
        END DO
-       results%ef = e(INDEX(l))
+       results%ef = -100000.0
+       IF(l.GT.0) THEN
+          results%ef = e(INDEX(l))
+       END IF
        nstef = l
        zc = input%zelec
        IF(m_spins /= 1) THEN
           zc = zc/2.0-(mspin-1.5)*input%fixed_moment
           idxjsp = 1 !assume single spin in following calculations
           IF (mspin == 1) THEN
-             WRITE(6,*) "Fixed total moment calculation"
-             WRITE(6,*) "Moment:",input%fixed_moment
-             write(6,*) "First Spin:"
+             WRITE(oUnit,*) "Fixed total moment calculation"
+             WRITE(oUnit,*) "Moment:",input%fixed_moment
+             write(oUnit,*) "First Spin:"
           ELSE
-             WRITE(6,*) "Second Spin:"
+             WRITE(oUnit,*) "Second Spin:"
           ENDIF
        ENDIF
 
-       IF ( mpi%irank == 0 ) WRITE (6,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
+       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
 
        !+po
        results%ts = 0.0
        !-po
        results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
        results%bandgap = 0.0
-       IF (input%gauss) THEN
-          CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
-       ELSE IF (input%tria) THEN
-          CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
+       IF(input%bz_integration==BZINT_METHOD_HIST) THEN
+          CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
+               nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
+       ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
+          CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+       ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
+          CALL fertri(input,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
                results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
-       ELSE
-          CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp, n,&
-               nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
-       END IF
+       ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
+          CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+                        results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+       ENDIF
        results%seigscv = results%seigsc + results%seigv
 
        IF (mspin == 2) THEN
-          WRITE(6,*) "Different Fermi-energies for both spins:"
-          WRITE(6,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
+          WRITE(oUnit,*) "Different Fermi-energies for both spins:"
+          WRITE(oUnit,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
                ,input%fixed_moment,"   Difference(EF):",efermi," - ",results%ef,"="&
                ,efermi-results%ef
        ENDIF
        efermi = results%ef
     enddo
-    DEALLOCATE (eig)
+
+    IF (m_spins == 2) nspins = 2
 
     attributes = ''
     WRITE(attributes(1),'(f20.10)') results%ef
     WRITE(attributes(2),'(a)') 'Htr'
-    IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
- ENDIF
-
-    IF(.not.input%eig66(1))THEN
-    !Put w_iks into eig-file
-     DO jsp = 1,nspins
-       DO  k = 1,kpts%nkpt
-          IF (mpi%irank == 0) CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
-#ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#endif
-       ENDDO
-     ENDDO
-    ENDIF    
+    IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+ ENDIF   
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

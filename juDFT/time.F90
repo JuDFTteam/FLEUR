@@ -13,6 +13,9 @@ MODULE m_juDFT_time
    !     Daniel Wortmann, Fri Sep  6 11:53:08 2002
    !*****************************************************************
    USE m_judft_xmlOutput
+#ifdef CPP_MPI 
+   use mpi 
+#endif
    IMPLICIT NONE
    !     List of different timers
    PRIVATE
@@ -39,7 +42,7 @@ MODULE m_juDFT_time
    CHARACTER(LEN=256), SAVE   :: lastfile = ""
    INTEGER, SAVE   :: lastline = 0
 
-   PUBLIC timestart, timestop, writetimes, writeTimesXML
+   PUBLIC timestart, timestop, writetimes, writeTimesXML, cputime, addtime
    PUBLIC resetIterationDependentTimers, check_time_for_next_iteration
    PUBLIC juDFT_time_lastlocation !should be used for error handling only
 
@@ -87,6 +90,38 @@ CONTAINS
 
    !<-- S: timestart(timer)
 
+   subroutine addtime(ttimer, time, n_calls)
+      implicit none 
+      CHARACTER(LEN=*), INTENT(IN) :: ttimer
+      real, intent(in)             :: time
+      integer, intent(in)          :: n_calls
+      TYPE(t_timer), POINTER       :: ptr_timer
+      logical  :: found
+      integer  :: n
+
+      found = .False.
+      do n = 1,current_timer%n_subtimers 
+         if(trim(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) then 
+            ptr_timer => current_timer%subtimer(n)%p
+            found = .True.
+            exit 
+         endif
+      enddo
+
+      if(.not. found) then
+         call priv_new_timer(ttimer)
+         ptr_timer => current_timer
+         current_timer => current_timer%parenttimer
+      endif
+      call priv_debug_output(" finished ", ttimer)
+
+      ptr_timer%time = ptr_timer%time + time
+      ptr_timer%no_calls = ptr_timer%no_calls + 1
+      ptr_timer%mintime = -1
+      ptr_timer%maxtime = -1
+      ptr_timer%starttime = -1
+   end subroutine addtime
+
    SUBROUTINE timestart(ttimer, file, line)
       USE m_judft_args
       IMPLICIT NONE
@@ -95,28 +130,28 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n
-      IF (PRESENT(file)) lastfile = file
-      IF (PRESENT(line)) lastline = line
-      IF (.NOT. ASSOCIATED(current_timer)) THEN
-         CALL priv_new_timer("Total Run")
-         l_debug = judft_was_Argument("-debugtime")
-      ENDIF
-
-      DO n = 1, current_timer%n_subtimers
-         IF (TRIM(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) THEN
-            current_timer => current_timer%subtimer(n)%p
-            IF (current_timer%starttime > 0) THEN
-               WRITE (*, *) "Timer already running:", ttimer
-               STOP "BUG:starttime"
-            ENDIF
-            current_timer%starttime = cputime()
-            CALL priv_debug_output(" started ", current_timer%name)
-            RETURN
+         IF (PRESENT(file)) lastfile = file
+         IF (PRESENT(line)) lastline = line
+         IF (.NOT. ASSOCIATED(current_timer)) THEN
+            CALL priv_new_timer("Total Run")
+            l_debug = judft_was_Argument("-debugtime")
          ENDIF
-      ENDDO
-      !new subtimer
-      CALL priv_new_timer(ttimer)
-      CALL priv_debug_output(" started ", current_timer%name)
+
+         DO n = 1, current_timer%n_subtimers
+            IF (TRIM(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) THEN
+               current_timer => current_timer%subtimer(n)%p
+               IF (current_timer%starttime > 0) THEN
+                  WRITE (*, *) "Timer already running:", ttimer
+                  STOP "BUG:starttime"
+               ENDIF
+               current_timer%starttime = cputime()
+               CALL priv_debug_output(" started ", current_timer%name)
+               RETURN
+            ENDIF
+         ENDDO
+         !new subtimer
+         CALL priv_new_timer(ttimer)
+         CALL priv_debug_output(" started ", current_timer%name)
    END SUBROUTINE timestart
 
    !>
@@ -127,24 +162,24 @@ CONTAINS
 
       REAL::time
 
-      IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
-         WRITE (*, *) "Current timer:", current_timer%name, " could not stop:", ttimer
-         STOP "BUG:timestop"
-      ENDIF
-      IF (current_timer%starttime < 0) THEN
-         WRITE (*, *) "Timer not initialized:"//ttimer
-         STOP "BUG:timestop"
-      ENDIF
-      time = cputime() - current_timer%starttime !This runtime
-      current_timer%time = current_timer%time + time
-      current_timer%no_calls = current_timer%no_calls + 1
-      current_timer%mintime = MIN(current_timer%mintime, time)
-      current_timer%maxtime = MAX(current_timer%maxtime, time)
-      current_timer%starttime = -1
+         IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
+            WRITE (*, *) "Current timer:", trim(current_timer%name), " could not stop:"
+            STOP "BUG:timestop"
+         ENDIF
+         IF (current_timer%starttime < 0) THEN
+            WRITE (*, *) "Timer not initialized:"//ttimer
+            STOP "BUG:timestop"
+         ENDIF
+         time = cputime() - current_timer%starttime !This runtime
+         current_timer%time = current_timer%time + time
+         current_timer%no_calls = current_timer%no_calls + 1
+         current_timer%mintime = MIN(current_timer%mintime, time)
+         current_timer%maxtime = MAX(current_timer%maxtime, time)
+         current_timer%starttime = -1
 
-      CALL priv_debug_output(" stopped ", current_timer%name)
+         CALL priv_debug_output(" stopped ", current_timer%name)
 
-      current_timer => current_timer%parenttimer
+         current_timer => current_timer%parenttimer
    END SUBROUTINE timestop
 
    !>
@@ -201,7 +236,7 @@ CONTAINS
             sum_time = sum_time + times(i)
             times(i) = 0.0
          ENDDO
-         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/timer%time*100.
+         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/max(1E-10,timer%time)*100.
          WRITE (fid, *)
          WRITE (fid, *) "-------------------------------------------------"
          WRITE (fid, *)
@@ -265,7 +300,7 @@ CONTAINS
    END SUBROUTINE priv_writetimes
 
    !<-- S:writetimes()
-   
+
    RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr, opt_idstr)
       use m_judft_string
       IMPLICIT NONE
@@ -279,15 +314,15 @@ CONTAINS
 
       INTEGER          :: n
       REAL             :: time
-      CHARACTER(LEN=30):: timername 
+      CHARACTER(LEN=30):: timername
       CHARACTER(LEN=:), allocatable :: idstr
-   
+
       if(present(opt_idstr)) then
          idstr = opt_idstr
       else
          idstr = ""
       endif
-     
+
       IF (timer%starttime > 0) THEN
          time = timer%time + cputime() - timer%starttime
          timername = timer%name//" not term."
@@ -295,18 +330,18 @@ CONTAINS
          time = timer%time
          timername = timer%name
       ENDIF
-      
-      if(level > 1 ) outstr = outstr // nl 
+
+      if(level > 1 ) outstr = outstr // nl
       outstr = outstr // idstr // "{"
       idstr = idstr // repeat(" ", indent_spaces)
 
       outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
-      outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)      
+      outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)
       if(level > 1) then
          outstr = outstr // ","
          outstr = outstr // nl // idstr // '"mintime"   : '  // float2str(timer%mintime)// ','
          outstr = outstr // nl // idstr // '"maxtime"   : '  // float2str(timer%maxtime)// ','
-         outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls) 
+         outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls)
       endif
 
       time = 0
@@ -315,17 +350,17 @@ CONTAINS
       ENDDO
       if(timer%n_subtimers > 0) then
          !add comma behind ncalls
-         outstr = outstr // "," 
-         outstr = outstr // nl // idstr // '"subtimers": '  // "[" 
+         outstr = outstr // ","
+         outstr = outstr // nl // idstr // '"subtimers": '  // "["
          idstr = idstr // repeat(" ", indent_spaces)
          DO n = 1, timer%n_subtimers
             CALL priv_genjson(timer%subtimer(n)%p, level + 1, outstr, idstr)
             if(n /= timer%n_subtimers) outstr = outstr // ","
          ENDDO
-         idstr  = idstr(:len(idstr)-indent_spaces) 
-         outstr = outstr // nl // idstr // ']' 
+         idstr  = idstr(:len(idstr)-indent_spaces)
+         outstr = outstr // nl // idstr // ']'
       endif
-      idstr  = idstr(:len(idstr)-indent_spaces) 
+      idstr  = idstr(:len(idstr)-indent_spaces)
       outstr = outstr // nl // idstr // "}"
    END SUBROUTINE priv_genjson
 
@@ -345,6 +380,10 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
+#ifdef CPP_MPI 
+     use mpi 
+#endif
+     USE m_juDFT_internalParams
      USE m_judft_usage
      USE m_judft_args
       IMPLICIT NONE
@@ -353,7 +392,6 @@ CONTAINS
       CHARACTER(len=:), allocatable :: json_str
       CHARACTER(len=30)::filename
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err,isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -365,28 +403,28 @@ CONTAINS
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime
          globaltimer%starttime = cputime()
-         WRITE (6, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
+         WRITE (juDFT_outUnit, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
          CALL add_usage_data("Runtime", globaltimer%time)
-         CALL priv_writetimes_longest(globaltimer, fid=6)
+         CALL priv_writetimes_longest(globaltimer, fid=juDFT_outUnit)
 
-         WRITE (6, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
+         WRITE (juDFT_outUnit, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
             INT(globaltimer%time), INT(min_time*globaltimer%time)
 
-         CALL priv_writetimes(globaltimer, 1, 6)
+         CALL priv_writetimes(globaltimer, 1, juDFT_outUnit)
 #ifdef CPP_MPI
          IF (l_mpi) THEN
             CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-            WRITE (6, *) "Program used ", isize, " PE"
+            WRITE (juDFT_outUnit, *) "Program used ", isize, " PE"
          ENDIF
 #endif
       END IF
       IF (irank==0.OR.judft_was_argument("-all_times")) THEN
          json_str = ""
          CALL priv_genjson(globaltimer, 1, json_str)
-         IF (irank==0) THEN
+         IF (.not. judft_was_argument("-all_times")) THEN
             OPEN(32, file="juDFT_times.json")
          ELSE
-            WRITE(filename,"(a,i0,a)") "juDFT_times.",irank,".json"
+            WRITE(filename,"(a,i0.4,a)") "juDFT_times_pe=",irank,".json"
             OPEN(32, file=trim(filename))
          END IF
          write (32,"(A)") json_str
@@ -396,14 +434,15 @@ CONTAINS
 
    ! writes all times to out.xml file
    SUBROUTINE writeTimesXML()
-
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -472,15 +511,16 @@ CONTAINS
    END SUBROUTINE privWriteTimesXML
 
    SUBROUTINE check_time_for_next_iteration(it, l_cont)
+
       USE m_judft_args
       IMPLICIT NONE
       INTEGER, INTENT(IN)     :: it
       LOGICAL, INTENT(INOUT)  :: l_cont
-      CHARACTER(len=1000)::wtime_string
-      INTEGER          :: wtime, time_used, time_per_iter
-      INTEGER:: irank = 0
+      CHARACTER(len=1000) :: wtime_string
+      INTEGER             :: time_used, time_per_iter
+      INTEGER             :: irank = 0
+      real                :: wtime
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -508,14 +548,15 @@ CONTAINS
    END SUBROUTINE check_time_for_next_iteration
 
    SUBROUTINE resetIterationDependentTimers()
-
+#ifdef CPP_MPI 
+      use mpi 
+#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer, parenttimer
 #ifdef CPP_MPI
-      INCLUDE "mpif.h"
       INTEGER::err, isize
       LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
@@ -598,7 +639,7 @@ CONTAINS
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec')") time, ihours, iminutes, INT(seconds)
       ELSE
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec ->',1x,f5.1,'%')") &
-            time, ihours, iminutes, INT(seconds), time/ttime*100.0
+            time, ihours, iminutes, INT(seconds), time/max(1E-10,ttime)*100.0
       ENDIF
    END FUNCTION timestring
 
@@ -611,18 +652,15 @@ CONTAINS
       USE ifport
 #endif
       IMPLICIT NONE
-#ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-#endif
       REAL::cputime
 
       !TRY TO USE mpi OR openmp wall-clock functions
-#ifdef CPP_MPI
-      cputime = MPI_WTIME()
+#ifdef _OPENMP
+      cputime = real(omp_get_wtime(),kind=kind(cputime))
 #elif __INTEL_COMPILER
       cputime = rtc()
-#elif _OPENMP
-      cputime = omp_get_wtime()
+#elif CPP_MPI
+      cputime = real(MPI_WTIME(),kind=kind(cputime))
 #else
       !use f95 intrinsic function
       CALL CPU_TIME(cputime)
@@ -631,7 +669,7 @@ CONTAINS
    !>
    SUBROUTINE juDFT_time_lastlocation()
       IF (ASSOCIATED(current_timer)) THEN
-         WRITE (0, *) "Last kown location:"
+         WRITE (0, *) "Last known location:"
          WRITE (0, *) "Last timer:", current_timer%name
          IF (lastline > 0) THEN
             WRITE (0, *) "File:", TRIM(lastfile), ":", lastline
@@ -644,4 +682,3 @@ CONTAINS
       END IF
    END SUBROUTINE juDFT_time_lastlocation
 END MODULE m_juDFT_time
-

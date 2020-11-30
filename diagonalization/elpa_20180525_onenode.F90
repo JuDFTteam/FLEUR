@@ -27,9 +27,9 @@ CONTAINS
     USE m_types_mat
 #ifdef CPP_ELPA_ONENODE
     USE elpa
-#endif
 #ifdef CPP_GPU
     USE nvtx
+#endif
 #endif
     IMPLICIT NONE
 

@@ -63,8 +63,8 @@ c****************************************************************
         if(l_bzsym) kptibz=irreduc(ikpt)
             call wann_read_eig(
      >              eig_id,
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              ntypd,neigd,nvd,jspd,
+     >              0,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,nrec,
      <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)

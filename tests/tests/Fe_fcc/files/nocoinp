@@ -1,8 +1,0 @@
-atom-type   1,l_relax=F
-alpha =  0.0000000000,b_cons_x =  0.0000000000
-beta  =  1.5707963268,b_cons_y =  0.0000000000
-
- -- logical parameters --
-l_ss=T,l_mperp=F,l_constr=F
-mix_b= 0.500
-qss=(  0.3000000000,  0.1000000000,  0.0000000000)

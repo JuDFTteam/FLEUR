@@ -7,23 +7,41 @@
 
 #include <stdio.h>
 #include "inputSchema.h"
-
+#include "inputSchema_old.h"
+#include <string.h>
 /*
  * This method together with the variables defined in inputSchema.h
  * writes out the file FleurInputSchema.xsd.
  *                                            GM'16
  */
-int dropInputSchema()
+int dropInputSchema(char* version)
 {
-   char schemaString[FleurInputSchema_xsd_len + 1];
+  char * xsd_txt;
+  int xsd_len;
+   if (strcmp(version,"0.33")==0){
+     xsd_len=FleurInputSchema_xsd_len;
+     xsd_txt = FleurInputSchema_xsd;
+   }else if(strcmp(version,"0.32")==0){
+     xsd_len=FleurInputSchema0_32_xsd_len;
+     xsd_txt = FleurInputSchema0_32_xsd;
+   }else if(strcmp(version,"0.31")==0){
+     xsd_len=FleurInputSchema0_31_xsd_len;
+     xsd_txt = FleurInputSchema0_31_xsd;
+   }else if(strcmp(version,"0.27")==0){
+     xsd_len=FleurInputSchema0_27_xsd_len;
+     xsd_txt = FleurInputSchema0_27_xsd;
+   }else{
+     return 1;
+   }
+   char schemaString[xsd_len + 1];
    int i = 0;
    int errorCode = 0;
    FILE *file;
-   for (i = 0 ; i < FleurInputSchema_xsd_len ; ++i)
+   for (i = 0 ; i < xsd_len ; ++i)
    {
-      schemaString[i] = FleurInputSchema_xsd[i];
+      schemaString[i] = xsd_txt[i];
    }
-   schemaString[FleurInputSchema_xsd_len] = '\0';
+   schemaString[xsd_len] = '\0';
    file = fopen("FleurInputSchema.xsd", "w");
    errorCode = fprintf(file,"%s", schemaString);
    fclose(file);
@@ -38,7 +56,7 @@ int dropInputSchema()
  * You have to write it by hand. ;)
  * ...But if you prefer an automatic generation just follow this recipe:
  *
- * 1. Generate the file FleurInputSchema.xsd with the dropInputSchema 
+ * 1. Generate the file FleurInputSchema.xsd with the dropInputSchema
  *    method in this file.
  * 2. Change the XML Schema file as desired.
  * 3. run: xxd -i FleurInputSchema.xsd inputSchema.h

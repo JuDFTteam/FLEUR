@@ -9,7 +9,7 @@ CONTAINS
     !     *****************************************************
     !
     USE m_intgr, ONLY : intgr3, intgz0
-    USE m_constants, ONLY : fpi_const
+    USE m_constants
     USE m_loddop
     USE m_cfft
     USE m_types
@@ -81,7 +81,7 @@ CONTAINS
           rh(:atoms%jri(n))=rhsp(:atoms%jri(n),0,n,num,1)*rhsp(:atoms%jri(n),0,n,num,1) *fpi_const
           CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),pdis(0,n,num))
           pdis(4,n,num)=pdis(0,n,num)
-          DO lh = 1,sphhar%nlh(atoms%ntypsy(na))
+          DO lh = 1,sphhar%nlh(sym%ntypsy(na))
              rh(:atoms%jri(n))=rh(:atoms%jri(n))+rhsp(:atoms%jri(n),lh,n,num,1)*&
                   rhsp(:atoms%jri(n),lh,n,num,1)* atoms%rmsh(:atoms%jri(n),n)*atoms%rmsh(:atoms%jri(n),n)
              CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),rhs)
@@ -220,23 +220,23 @@ CONTAINS
 
     dis(:) = SQRT(dis(:)/cell%vol)*1000.
 
-    WRITE (6,FMT=8000) iter,dis(1)
+    WRITE (oUnit,FMT=8000) iter,dis(1)
 8000 FORMAT (/,'----> distance of  the potential for it=',i3,':',f11.6, ' mhtr/bohr**3')
-    WRITE(6,*) "Details of potential differences for each atom type"
-    WRITE(6,*) "Atom: total difference: difference of first sphhar"
+    WRITE(oUnit,*) "Details of potential differences for each atom type"
+    WRITE(oUnit,*) "Atom: total difference: difference of first sphhar"
     DO n=1,atoms%ntype
-       WRITE(6,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,1),pdis(0:3,n,1)
+       WRITE(oUnit,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,1),pdis(0:3,n,1)
     ENDDO
-    WRITE(6,*) "Difference of interstitial:",pdis(0,0,1)
+    WRITE(oUnit,*) "Difference of interstitial:",pdis(0,0,1)
     IF (input%jspins.EQ.2) THEN
-       WRITE (6,FMT=8010) iter,dis(2)
+       WRITE (oUnit,FMT=8010) iter,dis(2)
 8010   FORMAT (/,'----> distance of spin potential for it=',i3,':', f11.6,' mhtr/bohr**3')
-       WRITE(6,*) "Details of potential differences for each atom type"
-       WRITE(6,*) "Atom: total difference: difference of first sphhar"
+       WRITE(oUnit,*) "Details of potential differences for each atom type"
+       WRITE(oUnit,*) "Atom: total difference: difference of first sphhar"
        DO n=1,atoms%ntype
-          WRITE(6,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,2),pdis(0:3,n,2)
+          WRITE(oUnit,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,2),pdis(0:3,n,2)
        ENDDO
-       WRITE(6,*) "Difference of interstitial:",pdis(0,0,2)
+       WRITE(oUnit,*) "Difference of interstitial:",pdis(0,0,2)
     END IF
   CONTAINS
     SUBROUTINE priv_cdndif(m1,m2,m3,n1,n2,n3,s1,s2,film,rhsp,rhpw,rhv0,rhv1)

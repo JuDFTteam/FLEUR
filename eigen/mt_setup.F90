@@ -7,48 +7,43 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,vTot,mpi,results,DIMENSION,td,ud)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,fmpi,results,td,ud)
     USE m_types
-    USE m_usetup
     USE m_tlmplm_cholesky
-    USE m_tlmplm_store
     USE m_spnorb
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
+
     TYPE(t_enpara),INTENT(INOUT) :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym  
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
+    TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: inDen
-    TYPE(t_potden),INTENT(INOUT) :: vTot
+    TYPE(t_potden),INTENT(IN)    :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
+    TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
+    TYPE(t_hub1data),INTENT(INOUT)::hub1data
 
     INTEGER:: jsp
 
-    IF ((atoms%n_u.GT.0)) THEN
-       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
-    END IF
 
     CALL timestart("tlmplm")
-    CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
-         DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(4,input%jspins,noco%l_mtNocoPot),&
-         (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
+    CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained))!l_offdiag
 
-    DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
-       !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
-       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,jsp,mpi,vTot,input,td,ud)
-       IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u>0,jsp,jsp,input%jspins)
+    DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT))
+       !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,fmpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
+       CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,input,hub1inp,hub1data,td,ud)
     END DO
     CALL timestop("tlmplm")
 
     !Setup of soc parameters for first-variation SOC
     IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.)
+       CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
     END IF
 
   END SUBROUTINE mt_setup

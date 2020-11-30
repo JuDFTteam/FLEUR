@@ -5,17 +5,20 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_mpi_bc_st
+#ifdef CPP_MPI
+  use mpi
+#endif
   !**********************************************************************
   !     mpi_bc_st :  broadcast all information for qpw_to_nmt
   !     mpi_col_st:  collect the density from pe's 
   !**********************************************************************
 CONTAINS
-  SUBROUTINE mpi_bc_st(mpi,stars,qpwc)
+  SUBROUTINE mpi_bc_st(fmpi,stars,qpwc)
     !
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_stars),INTENT(IN)   :: stars
     !     ..
     !     .. Array Arguments ..
@@ -23,47 +26,43 @@ CONTAINS
     !     ..
     !     ..
     !     .. Local Arrays ..
-    INTEGER ierr(3)
+    INTEGER ierr
     !     ..
-    !     .. External Subroutines.. 
-    EXTERNAL MPI_BCAST
-    !     ..
-    INCLUDE 'mpif.h'
+    !INCLUDE 'mpif.h'
     !
     !
     ! -> Broadcast the arrays:
-
-    CALL MPI_BCAST(qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+#ifdef CPP_MPI
+    CALL MPI_BCAST(qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
+#endif
 
   END SUBROUTINE mpi_bc_st
   !*********************************************************************
-  SUBROUTINE mpi_col_st(mpi,atoms,sphhar,rho)
+  SUBROUTINE mpi_col_st(fmpi,atoms,sphhar,rho)
     !
 #include"cpp_double.h"
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    INCLUDE 'mpif.h'
-    EXTERNAL MPI_REDUCE
     !     ..
     !     .. Scalar Arguments ..
     REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
     INTEGER n
-    INTEGER ierr(3)
+    INTEGER ierr
     REAL, ALLOCATABLE :: r_b(:)
-
+#ifdef CPP_MPI
     n = atoms%jmtd*(sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(rho,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,&
-         &                                       mpi%mpi_comm,ierr)
-    IF (mpi%irank == 0) rho=reshape(r_b,(/atoms%jmtd,1+sphhar%nlhd,atoms%ntype/))
+         &                                       fmpi%mpi_comm,ierr)
+    IF (fmpi%irank == 0) rho=reshape(r_b,(/atoms%jmtd,1+sphhar%nlhd,atoms%ntype/))
 
     DEALLOCATE(r_b) 
-
+#endif
   END SUBROUTINE mpi_col_st
   !*********************************************************************
 END MODULE m_mpi_bc_st

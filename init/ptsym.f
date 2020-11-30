@@ -18,10 +18,14 @@
 !             nrot      number of operations for each symmetry kind
 !             locops    mapping of operations to space group list
 !*********************************************************************
+
       CONTAINS
+
       SUBROUTINE ptsym(
      >                 ntype,natd,neq,pos,nops,mrot,tau,lmax,
      <                 nsymt,typsym,nrot,locops)
+
+      USE m_constants
 
       IMPLICIT NONE
 
@@ -64,8 +68,8 @@
       na = 1
       DO n = 1, ntype
           IF ( neq(n)*nrot(na) .NE. nops ) THEN
-            WRITE (6,'(/a,i3)') ' symmetry is incorrect for atom',na
-            WRITE (6,'(" neq=",i3,", nrot=",i3,", nops=",i3)')            
+        WRITE (oUnit,'(/a,i3)') ' symmetry is incorrect for atom',na
+        WRITE (oUnit,'(" neq=",i3,", nrot=",i3,", nops=",i3)')            
      &               neq(n),nrot(na),nops
             CALL juDFT_error("symmetry is incorrect for some atomp"
      +           ,calledby ="ptsym")

@@ -14,15 +14,14 @@ CONTAINS
     USE m_juDFT
     USE m_check_arguments
     IMPLICIT NONE
- 
+
     CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
     PRINT *, version_const_MaX
     CALL add_fleur_arguments()
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
-    
-    
+
     IF (.NOT. judft_was_argument("-h")) RETURN
 
     !now print version info and help on command line arguments:
@@ -56,6 +55,7 @@ CONTAINS
     CALL print_argument("-fft")
     CALL print_argument("-diag")
     CALL print_argument("-eig")
+    CALL print_argument("-disable_progress_thread")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Options useful for debugging:"
     CALL print_argument("-warn_only")
@@ -73,7 +73,7 @@ CONTAINS
 #endif
     WRITE (*,'(a)') "Options for privacy sensitive users"
     CALL print_argument("-no_send")
-    
+
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details."
 
@@ -82,7 +82,7 @@ CONTAINS
 
   SUBROUTINE add_fleur_arguments()
     USE m_check_arguments
-    
+
     CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","") 
     CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","") 
     !Control the job
@@ -93,6 +93,9 @@ CONTAINS
     CALL new_argument(1,"-f","Obtain info on subjobs from file","") 
     CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
+#ifdef CPP_FFTW
+    //",fftw"&
+#endif
 #ifdef CPP_FFT_MKL
          //",mkl"&
 #endif
@@ -119,7 +122,7 @@ CONTAINS
 #ifdef CPP_GPU
        //",cusolver"&
 #endif
-       ) 
+       )
     CALL new_argument(1,"-eig","Method for storing the eigenvectors","mem,da"&
 #ifdef CPP_MPI
          //",mpi"&
@@ -128,18 +131,21 @@ CONTAINS
          //",hdf"&
 #endif
          )
-    !Debugging 
-    CALL new_argument(0,"-warn_only","Continue execution after a warning message","") 
-    CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","") 
+
+    CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","") 
+    !Debugging
+    CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
+    CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")
     CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
     CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
     !Output
-    CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","") 
+    CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","")
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","")
-    CALL new_argument(0,"-minimalOutput","Reduce the amount of output in the out.xml file","") 
-    CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
-    CALL new_argument(0,"-gw","Add alternative k point set for GW in all outputs for the XML input file","") 
-    CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","") 
+    CALL new_argument(0,"-minimalOutput","Reduce the amount of output in the out.xml file","")
+    CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","")
+    CALL new_argument(0,"-gw","Add alternative k point set for GW in all outputs for the XML input file","")
+    CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","")
+    CALL new_argument(0,"-greensf","write out green's function parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-h","Print this message","")
     CALL new_argument(0,"-no_send","Do not send usage data","")
     !HDF density

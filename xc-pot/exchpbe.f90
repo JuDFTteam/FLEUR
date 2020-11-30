@@ -94,7 +94,11 @@ CONTAINS
          fxpbe = 1e0 + xcpot%uk * ( 1e0 - p0 )
       ELSEIF (xcpot%is_wc) THEN
          css = 1+cwu*s2*s2
-         xwu = teo*s2 + (xcpot%um-teo)*s2*exp(-s2) + log(css)
+         IF(s2.GT.100) THEN ! This is introduced because the PGI compiler has problems with calculating exp(-somethingLarge).
+            xwu = teo*s2 + log(css)
+         ELSE
+            xwu = teo*s2 + (xcpot%um-teo)*s2*exp(-s2) + log(css)
+         END IF
          p0 = 1.e0 + xwu/xcpot%uk
          fxpbe = 1e0 + xcpot%uk - xcpot%uk/p0
       ENDIF
@@ -129,10 +133,16 @@ CONTAINS
          fs = 2.e0*ul*p0
          fss = -2.e0*ul*s*fs
       ELSEIF (xcpot%is_wc) THEN
-         dxwu = 2*teo + 2*(xcpot%um-teo)*exp(-s2)*(1-s2) + 4*cwu*s2/css
-         fs = dxwu / (p0*p0)
-         ddx = 4*s*((xcpot%um-teo)*exp(-s2)*(s2-2)+2*cwu* &
-                    (1-cwu*s2*s2)/css**2)
+         IF (s2.GT.100) THEN ! This is introduced because the PGI compiler has problems with calculating exp(-somethingLarge).
+            dxwu = 2*teo + 4*cwu*s2/css
+            fs = dxwu / (p0*p0)
+            ddx = 4*s*(2*cwu*(1-cwu*s2*s2)/css**2)
+         ELSE
+            dxwu = 2*teo + 2*(xcpot%um-teo)*exp(-s2)*(1-s2) + 4*cwu*s2/css
+            fs = dxwu / (p0*p0)
+            ddx = 4*s*((xcpot%um-teo)*exp(-s2)*(s2-2)+2*cwu* &
+                       (1-cwu*s2*s2)/css**2)
+         END IF
          fss = ( ddx - 2*s*dxwu*dxwu/(p0*xcpot%uk) ) / (p0*p0)
       ENDIF
 !     -gu

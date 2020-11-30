@@ -14,7 +14,11 @@ c*****************************************************************
 c     Apply the symmetries to reduce the number of k-points.
 c     Frank Freimuth
 c*****************************************************************
+
+      USE m_constants
+      USE m_types_kpts
       implicit none
+
       integer, intent(in) :: nop
       logical,intent(in)  :: film
       real, intent(in)    :: bmat(3,3)
@@ -40,11 +44,13 @@ c*****************************************************************
       real                :: bbmat(3,3)
       real,allocatable    :: kptslen(:)
       logical             :: l_onlysymor
-
+      TYPE(t_kpts)     :: kpts
+      integer :: count
+      
       inquire(file='onlysymor',exist=l_onlysymor)
 
       bbmat=matmul(bmat,transpose(bmat))
-      write(6,*) "Apply the symmetries to w90kpts"
+      write(oUnit,*) "Apply the symmetries to w90kpts"
 c**********************************************************
 c     read in kpoints from w90kpts file
 c**********************************************************
@@ -62,10 +68,17 @@ c**********************************************************
          read(987,*)kpoints(:,iter)
       enddo
       close(987)
-      write(6,*) "kpoints read from w90kpts:"
+      write(oUnit,*) "kpoints read from w90kpts:"
       do iter=1,nkpts
-         write(6,'(3f10.5)')kpoints(:,iter)/scale
+         write(oUnit,'(3f10.5)')kpoints(:,iter)/scale
       enddo
+
+
+      kpoints=kpoints/scale
+      
+!!! We do not need scale any more in kpts.xml
+      scale=1.0
+
 
 c*********************************************************
 c     determine lengths of kpoints
@@ -149,54 +162,70 @@ c****************************************************
          endif  
       enddo   
       close(117)
-      open(119,file='kpts',form='formatted')
-      if (film.and..not.l_onedimens)then
-        write(119,'(i5,f20.10,3x,l1)')reduznumk,scale,.false.         
-      else
-        write(119,'(i5,f20.10)')reduznumk,scale
-      endif   
+!      open(119,file='kpts',form='formatted')
+!      if (film.and..not.l_onedimens)then
+!        write(119,'(i5,f20.10,3x,l1)')reduznumk,scale,.false.         
+!      else
+!        write(119,'(i5,f20.10)')reduznumk,scale
+!      endif   
+
+      kpts%nkpt=reduznumk
+      ALLOCATE(kpts%bk(3,reduznumk),kpts%wtkpt(reduznumk))
+
+
       sumweights=0
+      count=0
       do ikpt=1,nkpts
          bkpt(:)=kpoints(:,ikpt)
          if (mapk(ikpt)==0)then
             sumweights=sumweights+weight(ikpt)
-            write(6,*)"ikpt=",ikpt
-            write(6,*)"irreducible"
-            write(6,fmt='(a10,3f9.6)')"internal: ",bkpt(:)/scale
+            count=count+1
+            write(oUnit,*)"ikpt=",ikpt
+            write(oUnit,*)"irreducible"
+            write(oUnit,fmt='(a10,3f9.6)')"internal: ",bkpt(:)/scale
 
-            if (film.and..not.l_onedimens)then
-               write(119,'(3f10.5)')bkpt(1:2),weight(ikpt)
-            else
-               write(119,'(4f10.5)')bkpt(:),weight(ikpt)
-            endif   
+!            if (film.and..not.l_onedimens)then
+!               write(119,'(3f10.5)')bkpt(1:2),weight(ikpt)
+!            else
+!               write(119,'(4f10.5)')bkpt(:),weight(ikpt)
+!            endif   
+      
+            kpts%bk(:,count)=bkpt(:)
+            kpts%wtkpt(count)=weight(ikpt)     
+      
       
          elseif(mapkoper(ikpt).gt.0)then
-            write(6,*)"ikpt=",ikpt
-            write(6,*)"reducible"
-            write(6,*)"map=",mapk(ikpt)
+            write(oUnit,*)"ikpt=",ikpt
+            write(oUnit,*)"reducible"
+            write(oUnit,*)"map=",mapk(ikpt)
             brot(:)=0.0
             do k=1,3
                brot(:)=brot(:)+
      + mrot(k,:,mapkoper(ikpt))*kpoints(k,mapk(ikpt))
             enddo   
-            write(6,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
+            write(oUnit,'(a19,3f9.6)')"rotated internal: ",
+     +                                brot(:)/scale
          elseif(mapkoper(ikpt).lt.0)then
-            write(6,*)"ikpt=",ikpt
-            write(6,*)"reducible"
-            write(6,*)"map=",mapk(ikpt)
+            write(oUnit,*)"ikpt=",ikpt
+            write(oUnit,*)"reducible"
+            write(oUnit,*)"map=",mapk(ikpt)
             brot(:)=0.0
             do k=1,3
                brot(:)=brot(:)-
      + mrot(k,:,-mapkoper(ikpt))*kpoints(k,mapk(ikpt))
             enddo   
-            write(6,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
+            write(oUnit,'(a19,3f9.6)')"rotated internal: ",
+     +                                brot(:)/scale
          endif   
       enddo   
-      close(119)
+!      close(119)
 
-      write(6,*)"reduznumk=",reduznumk     
-      write(6,*)"nkpts=",nkpts
-      write(6,*)"sumweights=",sumweights
+        CALL kpts%print_XML(999,"kpts_new.xml")
+
+
+      write(oUnit,*)"reduznumk=",reduznumk     
+      write(oUnit,*)"nkpts=",nkpts
+      write(oUnit,*)"sumweights=",sumweights
       
       IF(sumweights/=nkpts) CALL juDFT_error
      +     ("sum of weights differs from nkpts",calledby

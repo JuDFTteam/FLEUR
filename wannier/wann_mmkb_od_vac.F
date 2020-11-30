@@ -7,14 +7,14 @@
       MODULE m_wann_mmkb_od_vac
 c**************************************************************
 c      Determines the overlap matrix Mmn(k,k+b) in the vacuum
-c      for the wannier functions. 
+c      for the wannier functions.
 c      For more details see routine wannier.F and wann_mmk0_od_vac.F
 c
 c      Y. Mokrousov, F. Freimuth
-c*************************************************************** 
+c***************************************************************
       CONTAINS
       SUBROUTINE wann_mmkb_od_vac(
-     >     DIMENSION,oneD,vacuum,stars,cell,
+     >     oneD,vacuum,stars,cell,
      >     vacchi,l_noco,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
@@ -33,7 +33,7 @@ c***************************************************************
 
       implicit none
 
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
@@ -121,7 +121,7 @@ c     ..local scalars..
      +           bcof(nv2d,-odi%mb:odi%mb,nslibd),
      +           acof_b(nv2d,-odi%mb:odi%mb,nslibd_b),
      +           bcof_b(nv2d,-odi%mb:odi%mb,nslibd_b),
-     +           kvac3(nv2d),map1(nvd), 
+     +           kvac3(nv2d),map1(nvd),
      +           kvac3_b(nv2d),map1_b(nvd) )
 
       tpi = 2 * pimach() ; ic = cmplx(0.,1.)
@@ -164,20 +164,20 @@ c     ..local scalars..
 
 c...for the k-point
 
-      qssbti(1,1) = - qss(1)/2.     
-      qssbti(2,1) = - qss(2)/2.     
-      qssbti(1,2) = + qss(1)/2.     
+      qssbti(1,1) = - qss(1)/2.
+      qssbti(2,1) = - qss(2)/2.
+      qssbti(1,2) = + qss(1)/2.
       qssbti(2,2) = + qss(2)/2.
       qssbti(3,1) = - qss(3)/2.
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      cell,vacuum,stars,oneD,
      >      qssbti(3,jspin),odi%n2d,
      >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz,kvac3,nv2,
-     <      uz(1,-vM),duz(1,-vM),u(1,1,-vM),udz(1,-vM),
-     <      dudz(1,-vM),ddnv(1,-vM),ud(1,1,-vM))
+     <      uz(:,-vM:),duz(:,-vM:),u(:,:,-vM:),udz(:,-vM:),
+     <      dudz(:,-vM:),ddnv(:,-vM:),ud(:,:,-vM:))
       ENDDO
 
       do k = 1,nv(jspin)
@@ -227,12 +227,12 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      cell,vacuum,stars,oneD,
      >      qssbti(3,jspin_b),odi%n2d,
      >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
      >      vz_b,kvac3_b,nv2_b,
-     <      uz_b(1,-vM),duz_b(1,-vM),u_b(1,1,-vM),udz_b(1,-vM),
-     <      dudz_b(1,-vM),ddnv_b(1,-vM),ud_b(1,1,-vM))
+     <      uz_b(1:,-vM:),duz_b(1:,-vM:),u_b(1:,1:,-vM:),udz_b(1:,-vM:),
+     <      dudz_b(1:,-vM:),ddnv_b(1:,-vM:),ud_b(1:,1:,-vM:))
       ENDDO
 
       do k = 1,nv_b(jspin_b)
@@ -275,7 +275,7 @@ c     +                    conjg(zMat_b%data_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb
-         endif 
+         endif
       enddo          ! k = 1,nv
 
 c  now actually computing the Mmn matrix
@@ -287,7 +287,7 @@ c  now actually computing the Mmn matrix
       arg = phi2(irec2)
 
       !write(*,*)'mmkb_od_vac zks0',zks0
-      
+
       gbess(:,:) = 0.
       do i = 1,nmz
          zz = z1+(i-1)*delz
@@ -303,7 +303,7 @@ c           gbess(i) = 1.
       do l = 1,nv2
       do lprime = 1,nv2_b
 
-      if (kvac3(l).eq.(kvac3_b(lprime)-gb(3))) then      
+      if (kvac3(l).eq.(kvac3_b(lprime)-gb(3))) then
 
        do m = -odi%mb,odi%mb
         do mp = -odi%mb,odi%mb
@@ -314,25 +314,25 @@ c           gbess(i) = 1.
          do i = 1,nmz
            zz = z1+(i-1)*delz
            xx(np1-i) = zz*u(i,l,m)*u_b(i,lprime,mp)*gbess(mp-m,i)
-         enddo    
+         enddo
          call intgz0(xx,delz,nmz,uuo,tail)
 
          do i = 1,nmz
            zz = z1+(i-1)*delz
            xx(np1-i) = zz*u(i,l,m)*ud_b(i,lprime,mp)*gbess(mp-m,i)
-         enddo    
+         enddo
          call intgz0(xx,delz,nmz,udo,tail)
 
          do i = 1,nmz
            zz = z1+(i-1)*delz
            xx(np1-i) = zz*ud(i,l,m)*u_b(i,lprime,mp)*gbess(mp-m,i)
-         enddo     
+         enddo
          call intgz0(xx,delz,nmz,duo,tail)
 
          do i = 1,nmz
            zz = z1+(i-1)*delz
            xx(np1-i) = zz*ud(i,l,m)*ud_b(i,lprime,mp)*gbess(mp-m,i)
-         enddo   
+         enddo
          call intgz0(xx,delz,nmz,ddo,tail)
 
          do i = 1,nslibd
@@ -341,8 +341,8 @@ c           gbess(i) = 1.
      *          acof(l,m,i)*conjg(acof_b(lprime,mp,j))*uuo +
      +          acof(l,m,i)*conjg(bcof_b(lprime,mp,j))*udo +
      +          bcof(l,m,i)*conjg(acof_b(lprime,mp,j))*duo +
-     +          bcof(l,m,i)*conjg(bcof_b(lprime,mp,j))*ddo )*vacchi  
-           enddo 
+     +          bcof(l,m,i)*conjg(bcof_b(lprime,mp,j))*ddo )*vacchi
+           enddo
          enddo
 
         enddo !mp

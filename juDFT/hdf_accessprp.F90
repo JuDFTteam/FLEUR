@@ -7,6 +7,7 @@
 module m_hdf_accessprp
     USE hdf5
     USE m_judft_stop
+    USE m_juDFT_internalParams
     implicit none
     private
     !the hdf-access-properties
@@ -55,7 +56,7 @@ module m_hdf_accessprp
            IF (.not.l_exist) return
            OPEN(999,file=setupfile)
       ENDIF
-      write(6,*) "Access properties from:",setupfile
+      write(juDFT_outUnit,*) "Access properties from:",setupfile
 
       n=0
       readloop:DO
@@ -87,7 +88,7 @@ module m_hdf_accessprp
              access_filename(n)=filename
         endif
 
-        write(6,"(a,i5,8(1x,a))") "Access_prp:",n,"for:",filename,"with:",driver
+        write(juDFT_outUnit,"(a,i5,8(1x,a))") "Access_prp:",n,"for:",filename,"with:",driver
 
         !different drivers
         if (index(driver,"default")==1) THEN
@@ -108,7 +109,7 @@ module m_hdf_accessprp
             i=1
             DO WHILE(i<=size(hint))
               if (len(trim(hint(i)))>1) THEN
-                  write(6,*) "Hint:",hint(i),"=",value(i)
+                  write(juDFT_outUnit,*) "Hint:",hint(i),"=",value(i)
                   call MPI_Info_set(info,hint(i),value(i),hdferr)
                   i=i+1
               else
@@ -129,14 +130,17 @@ module m_hdf_accessprp
         ENDIF
      ENDIF
 #endif
-        write(0,*) "Driver name unkown:",driver
-        call judft_error("Unkown driver",calledby="gf_io2dmat")
+        write(0,*) "Driver name unknown:",driver
+        call judft_error("Unknown driver",calledby="gf_io2dmat")
       ENDDO readloop
 100   close(999)
 
       END SUBROUTINE
 
       FUNCTION hdf_access_prp(filename)
+
+      USE m_juDFT_internalParams
+
       !return the access_prp from the list
       character(len=*),intent(in) :: filename
       INTEGER(hid_t)          :: hdf_access_prp
@@ -147,7 +151,7 @@ module m_hdf_accessprp
       DO n=2,n_access_prp
           if (trim(filename)==trim(access_filename(n))) THEN
                   hdf_access_prp=access_prp(n)
-                  write(6,*) "Assigned:",n," to ", filename
+                  write(juDFT_outUnit,*) "Assigned:",n," to ", filename
           ENDIF
       ENDDO
       END function

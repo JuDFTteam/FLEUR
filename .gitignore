@@ -1,6 +1,5 @@
 docs/mkdocs/site
 init/compileinfo.h
-io/xml/inputSchema.h
 Testing/*
 *~
 \#*
@@ -9,6 +8,7 @@ build.*
 *.o
 *.x
 *.swp
+*.pyc
 tags
 .DS_Store
 .vscode

@@ -1,18 +1,16 @@
 # script to store environment settings for later use in cmake
 
-echo "set(compile_user $USER)" >config.cmake
+>config.cmake
 
-#Some freqeuntly used Environment variables
+#Some frequently used environment variables
 if [ ! -z ${HDF5_ROOT+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_ROOT/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_ROOT/include" ; fi
 if [ ! -z ${HDF5_DIR+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_DIR/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_DIR/include" ; fi
 if [ ! -z ${HDF5_LIB+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_LIB" ; fi
 if [ ! -z ${HDF5_INCLUDE+x} ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_INCLUDE" ; fi
 if [ ! -z ${HDF5_MODULES+x} ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_MODULES" ; fi
 
-
-
 #Set options for linker
-#1. if environment variable FLEUR_LIBRARIES is present use it 
+#1. if environment variable FLEUR_LIBRARIES is present use it
 #2. if CLI_LIBRARIES is present, use it
 #3. if FLEUR_LIBDIR is present, add these directories with -L option
 
@@ -31,7 +29,7 @@ then
 fi
 #check the FLEUR_LIBDIR variable
 
-for lib in $FLEUR_LIBDIR $CLI_LIBDIR 
+for lib in $FLEUR_LIBDIR $CLI_LIBDIR
 do
     if [ "cmake_lib" ]
     then
@@ -69,7 +67,7 @@ if [ "$FLEUR_USE_HDF5" ] || [ "$FLEUR_USE_SERIAL" ] || [ "$FLEUR_USE_MPI" ] || [
 then
     echo "WARNING"
     echo "The FLEUR_USE_XXX environment variables are no longer supported, use the command line options instead"
-fi    
+fi
 
 if [ "$CLI_USE_HDF5" ]
 then
@@ -84,6 +82,11 @@ fi
 if [ "$CLI_USE_WANNIER" ]
 then
     echo "set(CLI_FLEUR_USE_WANNIER $CLI_USE_WANNIER)"  >>config.cmake
+fi
+
+if [ "$CLI_USE_EDSOLVER" ]
+then
+    echo "set(CLI_FLEUR_USE_EDSOLVER $CLI_USE_EDSOLVER)"  >>config.cmake
 fi
 
 if [ "$CLI_USE_CHASE" ]
@@ -121,5 +124,12 @@ then
     echo "set(CLI_WARN_ONLY 1)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_KPLIB" ]
+then
+    echo "set(CLI_FLEUR_USE_KPLIB 1)"  >>config.cmake
+fi
 
-
+if [ "$CLI_PATCH_INTEL" ]
+then
+    echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake
+fi

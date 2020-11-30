@@ -12,7 +12,9 @@ module m_judft_info
   public judft_info,judft_write_infos
 contains
   subroutine judft_info(message,group)
+
     implicit none
+
     character(len=*),intent(in)::message,group
 
     integer:: irank=0,ierr
@@ -64,11 +66,14 @@ contains
   end subroutine priv_reallocate
 
   subroutine judft_write_infos()
+
+    USE m_juDFT_internalParams
+
     integer::n
     
-    write(6,*) "The following WARNING messages have been issued:"
+    write(juDFT_outUnit,*) "The following WARNING messages have been issued:"
     DO n=1,info_index
-       write(6,8000) groups(n),messages(n)
+       write(juDFT_outUnit,8000) groups(n),messages(n)
     enddo
 8000 FORMAT(a20,' WARNING: ',a50)
   end subroutine judft_write_infos

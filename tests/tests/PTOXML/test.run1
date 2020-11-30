@@ -2,13 +2,12 @@
 #The following arguments are passed: executable, working directory
 
 jt::copyfile("files/inp.xml",$workdir);
-jt::copyfile("files/sym.out",$workdir);
-	
+
 jt::testrun("$executable ",$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
-$result+=jt::test_grepnumber("$workdir/out","new fermi",".*: *([^ ]*)",0.211131,0.001);
-$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-22006.639735,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","new fermi",".*: *([^ ]*)",0.211258,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-22006.6222524,0.0001);
 
 jt::stageresult($workdir,$result,"1");

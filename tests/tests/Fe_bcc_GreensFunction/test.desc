@@ -1,0 +1,11 @@
+$test_name="Fleur Fe bcc Green's function";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of the green's function calculation in FLEUR with one step:
+1. Generate starting density, run 1 Iteration and calculate Green's function
+   for d-orbitals. Ensure that the occupations from the Green's function are
+   close to the MT-charges obtained
+EOF
+;

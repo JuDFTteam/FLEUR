@@ -234,12 +234,10 @@ c          endif
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
        bkrot=MATMUL(bpt,bmat)
-!       call cotra3(bpt,bkrot,bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
        bkrot=MATMUL(bpt2,bmat)
-!       call cotra3(bpt2,bkrot,bmat)
        if(ANY(bkrot.ne.0.0)) stop 'dmi but bkrot.ne.0'
        call ylm4(lwn,bkrot,yl2)
        !if(indexx.eq.1 .and. irank.eq.0) write(*,*)'yl2',yl2(1)

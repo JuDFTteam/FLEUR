@@ -1,32 +1,32 @@
       MODULE m_tetcon
       use m_juDFT
+      use m_constants
 !
 ! This subroutine constructs the tetrahedra for the
 ! Brillouin zone integration
 !
       CONTAINS
       SUBROUTINE tetcon(
-     >                  iofile,ibfile,mkpt,ndiv3,
-     >                  nkpt,omega,kvc,nsym,
+     >                  nkpt,ndiv3,
+     >                  omega,kvc,nsym,
      <                  nt,voltet,ntetra)
 
       IMPLICIT NONE
 c
-      INTEGER, INTENT (IN) :: iofile,ibfile
-      INTEGER, INTENT (IN) :: mkpt,ndiv3,nkpt,nsym
+      INTEGER, INTENT (IN) :: ndiv3,nkpt,nsym
       REAL,    INTENT (IN) :: omega
-      REAL,    INTENT (IN) :: kvc(3,mkpt)
+      REAL,    INTENT (IN) :: kvc(3,nkpt)
       INTEGER, INTENT (OUT) :: nt
       INTEGER, INTENT (OUT) :: ntetra(4,ndiv3)
       REAL,    INTENT (OUT) :: voltet(ndiv3)
 
       INTEGER i,it,j,ic,icom,ik,nkp,jj,nnt,nsid,nkq
       INTEGER i2,i3,i4,nk2,k,l,kk,is1,is2,is3,js1,js2,js3
-      INTEGER nside(4),nside2(4),nkadd(mkpt)
-      REAL dnorm,pi,vav,vsq,sav,ssq,dm,dist,dl,vect
+      INTEGER nside(4),nside2(4),nkadd(nkpt)
+      REAL dnorm,vav,vsq,sav,ssq,dm,dist,dl,vect
       REAL vol,vt,length,minlen,eps,eps1
       REAL vmin,vmax,smin,smax,volnew,sum,sss
-      REAL ddist(mkpt),kcorn(3,4),norm(3),d(3,16),dnm(3),cn(3)
+      REAL ddist(nkpt),kcorn(3,4),norm(3),d(3,16),dnm(3),cn(3)
 C
 C----->  Intrinsic Functions
 C
@@ -45,7 +45,6 @@ C*************************************************************************
 C
       data eps/1e-10/
       data eps1/1e-5/
-      pi = 4.0*atan(1.0)
 C
 C CONSTRUCT THE FIRST TETRAHEDRON
 C
@@ -55,15 +54,16 @@ C FIND K-POINT NEAREST TO 1
 C
       dm=10.0**9
       i2=0
-      do 100 i=2,nkpt
-      dist=0.0
-      do 110 icom=1,3
-      dist=dist+(kvc(icom,1)-kvc(icom,i))**2
-  110 continue
-      if ( dist.gt.dm ) goto 100
-      i2=i
-      dm=dist
-  100 continue
+      do i=2,nkpt
+        dist=0.0
+        do icom=1,3
+          dist=dist+(kvc(icom,1)-kvc(icom,i))**2
+        enddo
+        if ( dm-dist .gt. eps ) then
+          i2=i
+          dm=dist
+        endif
+      enddo
       IF ( i2==0 )  CALL juDFT_error(" tetcon1 ",calledby ="tetcon")
       dnorm=sqrt(dm)
       ntetra(2,1)=i2
@@ -73,21 +73,22 @@ C CONNECTING 1 AND I2
 C
       dm=10.0**9
       i3=0
-      do 200 i=2,nkpt
-      if ( i.eq.i2 ) goto 200
-      dl=0.0
-      dist=0.0
-      do 210 icom=1,3
-      vect=kvc(icom,i)-0.5*(kvc(icom,1)+kvc(icom,i2))
-      dist=dist+vect*vect
-      dl=dl+vect*(kvc(icom,1)-kvc(icom,i2))
-  210 continue
-      dl=dl/dnorm
-      if ( abs(dist-dl*dl).lt.0.01*dist ) goto 200
-      if ( dist.gt.dm ) goto 200
-      dm=dist
-      i3=i
-  200 continue
+      do i=2,nkpt
+        if ( i.eq.i2 ) cycle
+        dl=0.0
+        dist=0.0
+        do icom=1,3
+          vect=kvc(icom,i)-0.5*(kvc(icom,1)+kvc(icom,i2))
+          dist=dist+vect*vect
+          dl=dl+vect*(kvc(icom,1)-kvc(icom,i2))
+        enddo
+        dl=dl/dnorm
+        if ( abs(dist-dl*dl).lt.0.01*dist ) cycle
+        if ( dm-dist .gt. eps ) then
+          dm=dist
+          i3=i
+        endif
+      enddo
       IF ( i3==0 )  CALL juDFT_error(" tetcon2 ",calledby ="tetcon")
       ntetra(3,1)=i3
 C
@@ -101,31 +102,32 @@ C
       cn(3)=(kvc(1,1)-kvc(1,i2))*(kvc(2,i2)-kvc(2,i3))-
      $      (kvc(2,1)-kvc(2,i2))*(kvc(1,i2)-kvc(1,i3))
       dnorm=0.0
-      do 300 icom=1,3
-      dnorm=dnorm+cn(icom)**2
-  300 continue
+      do icom=1,3
+        dnorm=dnorm+cn(icom)**2
+      enddo
       dnorm=1.0/sqrt(dnorm)
-      do 310 icom=1,3
-      cn(icom)=cn(icom)*dnorm
-  310 continue
+      do icom=1,3
+        cn(icom)=cn(icom)*dnorm
+      enddo
       i4=0
       dm=10.0**9
-      do 400 i=2,nkpt
-      if ( (i.eq.i2).or.(i.eq.i3) ) goto 400
-      dist=0.0
-      dl=0.0
-      do 410 icom=1,3
-      vect=kvc(icom,i)-(kvc(icom,1)+kvc(icom,i2)+
-     $     kvc(icom,i3))/3.0
-      dist=dist+vect**2
-      dl=dl+vect*cn(icom)
-  410 continue
-      if ( dl*dl.lt.0.01*dist ) goto 400
-      if ( dist.gt.dm ) goto 400
-      i4=i
-      dm=dist
-      vt=dl/(dnorm*6.0)
-  400 continue
+      do i=2,nkpt
+        if ( (i.eq.i2).or.(i.eq.i3) ) cycle
+        dist=0.0
+        dl=0.0
+        do icom=1,3
+          vect=kvc(icom,i)-(kvc(icom,1)+kvc(icom,i2)+
+     $         kvc(icom,i3))/3.0
+          dist=dist+vect**2
+          dl=dl+vect*cn(icom)
+        enddo
+        if ( dl*dl.lt.0.01*dist ) cycle
+        if ( dm-dist .gt. eps ) then
+          i4=i
+          dm=dist
+          vt=dl/(dnorm*6.0)
+        endif
+      enddo
       IF ( i4==0 )  CALL juDFT_error(" tetcon3 ",calledby ="tetcon")
       ntetra(4,1)=i4
       voltet(1)=abs(vt)
@@ -409,28 +411,30 @@ C
       ssq=ssq/(6*nt)
       vsq=sqrt(vsq-vav*vav)
       ssq=sqrt(ssq-sav*sav)
-      write(iofile,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
+      write(oUnit,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
  5000 format(/,'   division into tetrahedra  ',/,
      $  '  there are      ',i5,'  tetrahedra ',/,
      $  '  volume         ',f15.10,'  +/-  ',f10.5,3x,2f10.5,/,
      $  '  side           ',f15.10,'  +/-  ',f10.5,3x,2f10.5,/)
-c     write(ibfile,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
-      write(iofile,5100) ((ntetra(j,i),j=1,4),i=1,nt)
+c     write(oUnit,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
+      write(oUnit,5100) ((ntetra(j,i),j=1,4),i=1,nt)
  5100 format(4(4x,4i4))
-c     write(ibfile,5100) ((ntetra(j,i),j=1,4),i=1,nt)
+c     write(oUnit,5100) ((ntetra(j,i),j=1,4),i=1,nt)
 C CHECK IF WE HAVE THE CORRECT TOTAL VOLUME
-      vt=omega*vav*nt*nsym/(2*pi)**3-1.0
-      write(iofile,5200) vt
-c     write(ibfile,5200) vt
+      vt=omega*vav*nt*nsym/(2*pi_const)**3-1.0
+      write(oUnit,5200) vt
+c     write(oUnit,5200) vt
       do 5300 i =1,nt
-c     write(ibfile,'('' tetrahedra # '',i5,'' is '',d12.4)') i,voltet(i)
+c     write(oUnit,'('' tetrahedra # '',i5,'' is '',d12.4)') i,voltet(i)
  5300 continue
  5200 format(/,'  voltetsum/volBZ - 1  ',d12.4)
 C
 C     The following statement used to have a stop in it.
 C     If the word TETCON5 appears you have failed the < 1.0D-5 test.
 C
-      if ( abs(vt).gt.eps1 ) write(iofile,'(''  tetcon5  '')')
+      if ( abs(vt).gt.eps1 ) THEN
+         write(oUnit,'(''  tetcon5  '')')
+      endif
       RETURN
       END SUBROUTINE tetcon
       END MODULE m_tetcon

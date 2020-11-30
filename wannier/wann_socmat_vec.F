@@ -7,7 +7,7 @@
       module m_wann_socmat_vec
       contains
       subroutine wann_socmat_vec(
-     >               mpi,enpara,input,noco,atoms,
+     >               fmpi,enpara,input,noco,nococonv,atoms,
      >               lmaxd,natd,neigd,
      >               llod,jspd,
      >               jspins,irank,
@@ -16,22 +16,23 @@
      <               hsomtx_vec)
 c***********************************************************************
 c     Calculate matrix elements of the spin-orbit interaction for those
-c     Bloch functions out of which the Wannier functions are 
+c     Bloch functions out of which the Wannier functions are
 c     constructed. From these matrix elements the spin-orbit Hamiltonian
 c     in the basis set of Wannier functions may be constructed.
-c     
+c
 c     Frank Freimuth
 c***********************************************************************
       USE m_types
-      USE m_spnorb 
+      USE m_spnorb
       USE m_hsoham
       implicit none
 
-      TYPE(t_mpi),INTENT(IN)      :: mpi
+      TYPE(t_mpi),INTENT(IN)      :: fmpi
 
       TYPE(t_enpara),INTENT(IN)   :: enpara
       TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_noco),INTENT(IN)     :: noco
+      TYPE(t_nococonv),INTENT(IN) :: nococonv
       TYPE(t_atoms),INTENT(IN)    :: atoms
 
       integer, intent(in) :: lmaxd
@@ -44,8 +45,8 @@ c***********************************************************************
       integer, intent(in) :: jspins
       integer, intent(in) :: irank
 
-      real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd   
-  
+      real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd
+
       complex, intent(in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
@@ -91,7 +92,7 @@ c***********************************************************************
        ENDDO !ie
       enddo !ispin
 
-      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd), 
+      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),
      +         usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),
      +         usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd),
      +         usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd),
@@ -103,20 +104,20 @@ c***********************************************************************
 
 
       CALL spnorb(
-     >         atoms,noco,input,mpi, enpara,
+     >         atoms,noco,nococonv,input,fmpi, enpara,
      >         vr,usdus,rsoc,.true.)
-      
-      do compo=1,3 
+
+      do compo=1,3
         rsoc%soangl= cmplx(0.0,0.0)
 
-        
-        CALL spnorb_angles(atoms,mpi,noco%theta,
-     >        noco%phi,rsoc%soangl,compo)
+
+        CALL spnorb_angles(atoms,fmpi,nococonv%theta,
+     >        nococonv%phi,rsoc%soangl,compo)
 
         CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
+     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
      <            hsomtx)
- 
+
         do i1 = 1,2
          do i2 = 1,2
           do i = 1,neigd

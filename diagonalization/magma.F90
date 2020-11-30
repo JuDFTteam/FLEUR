@@ -16,7 +16,7 @@ CONTAINS
 #ifdef CPP_MAGMA
     use magma
 #endif    
-    use m_types_mat
+    use m_types
     IMPLICIT NONE
 
     ! ... Arguments ...
@@ -28,7 +28,7 @@ CONTAINS
 #ifdef CPP_MAGMA
 
     ! ... Local Variables ..
-    INTEGER :: lwork,liwork,lrwork,err,mout(1)
+    INTEGER :: lwork,liwork,lrwork,error,mout(1),i
     REAL    :: eigTemp(hmat%matsize1)
     LOGICAL :: initialized=.false.
 
@@ -37,37 +37,63 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: work(:)
     
 
+    print*, "magma started"
     IF (.NOT.initialized) THEN
        initialized=.TRUE.
        CALL magmaf_init()
     ENDIF
 
     IF (hmat%l_real) THEN
-       CALL juDFT_error("REAL diagonalization not implemented in magma.F90")
+       ALLOCATE(rwork(1),iwork(1))
+       CALL magmaf_dsygvdx(1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+                           SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,-1,iwork,-1,error)
+       IF (error/=0) THEN
+          WRITE(*,*) 'magmaf_dsygvdx error code: ', error
+          CALL juDFT_error("Failed to query workspaces (1)",calledby="magma.F90")
+       END IF
+       lrwork=rwork(1)
+       liwork=iwork(1)
+       DEALLOCATE(rwork,iwork)
+       ALLOCATE(rwork(lrwork),iwork(liwork))
+       CALL magmaf_dsygvdx(1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+                           SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,lrwork,iwork,liwork,error)
+       IF (error/=0) THEN
+          WRITE(*,*) 'magmaf_dsygvdx error code: ', error
+          CALL juDFT_error("Magma failed to diagonalize Hamiltonian (1)",calledby="magma.F90")
+       END IF
     ELSE
        !Query the workspace size 
        ALLOCATE(work(1),rwork(1),iwork(1))
-       CALL magmaf_zhegvdx(1,'v','i','l',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
-            0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,err)
-       IF (err/=0) CALL juDFT_error("Failed to query workspaces",calledby="magma.F90")
+       !CALL magmaf_zhegvdx_2stage_m(NGPU_CONST,&
+       CALL magmaf_zhegvdx(1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+                           SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,error)
+       IF (error/=0) THEN
+          WRITE(*,*) 'magmaf_zhegvdx error code: ', error
+          CALL juDFT_error("Failed to query workspaces (2)",calledby="magma.F90")
+       END IF
        lwork=work(1)
        lrwork=rwork(1)
        liwork=iwork(1)
        DEALLOCATE(work,rwork,iwork)
        ALLOCATE(work(lwork),rwork(lrwork),iwork(liwork))
        !Now the diagonalization
-       CALL magmaf_zhegvdx(1,'v','i','l',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
-            0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,err)
-       IF (err/=0) CALL juDFT_error("Magma failed to diagonalize Hamiltonian")
+       !CALL magmaf_zhegvdx_2stage_m(NGPU_CONST,&
+       CALL magmaf_zhegvdx(1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+                           SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,error)
+       IF (error/=0) THEN
+          WRITE(*,*) 'magmaf_zhegvdx error code: ', error
+          CALL juDFT_error("Magma failed to diagonalize Hamiltonian (2)",calledby="magma.F90")
+       END IF
     ENDIF
+
     ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
     DO i = 1, ne
        eig(i) = eigTemp(i)
        IF (hmat%l_real) THEN
-          zmat%data_r(:,i)=hmat%data_r(:nsize,i)
+          zmat%data_r(:,i)=hmat%data_r(:,i)
        ELSE
-          zmat%data_c(:,i)=hmat%data_c(:nsize,i)
+          zmat%data_c(:,i)=hmat%data_c(:,i)
        ENDIF
     END DO
 #endif

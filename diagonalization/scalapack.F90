@@ -24,6 +24,7 @@ CONTAINS
     !
 #include"cpp_double.h"
     USE m_juDFT
+    USE m_constants
     USE m_types_mpimat
     USE m_types_mat
     IMPLICIT NONE
@@ -203,38 +204,38 @@ CONTAINS
     endif
     CALL timestop("SCALAPACK call")
     IF (ierr .NE. 0) THEN
-       !IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
-       !IF (ierr <= 0) WRITE (6,*) myid,' illegal input argument'
+       !IF (ierr /= 2) WRITE (oUnit,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
+       !IF (ierr <= 0) WRITE (oUnit,*) myid,' illegal input argument'
        IF (MOD(ierr,2) /= 0) THEN
-          !WRITE (6,*) myid,'some eigenvectors failed to converge'
+          !WRITE (oUnit,*) myid,'some eigenvectors failed to converge'
           eigs: DO i = 1, ne
              IF (ifail(i) /= 0) THEN
-                !WRITE (6,*) myid,' eigenvector',ifail(i), 'failed to converge'
+                !WRITE (oUnit,*) myid,' eigenvector',ifail(i), 'failed to converge'
              ELSE
                 EXIT eigs
              ENDIF
           ENDDO eigs
-          !CALL CPP_flush(6)
+          !CALL CPP_flush(oUnit)
        ENDIF
        IF (MOD(ierr/4,2).NE.0) THEN
-          !WRITE(6,*) myid,' only',num2,' eigenvectors converged'
-          !CALL CPP_flush(6)
+          !WRITE(oUnit,*) myid,' only',num2,' eigenvectors converged'
+          !CALL CPP_flush(oUnit)
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
-          !WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
+          !WRITE(oUnit,*) myid,' PDSTEBZ failed to compute eigenvalues'
           CALL judft_warn("SCALAPACK failed to solve eigenvalue problem",calledby="scalapack.f90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
-          !WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
+          !WRITE(oUnit,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
           CALL judft_warn("SCALAPACK failed: B was not positive definite",calledby="scalapack.f90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN
        !IF (myid ==0) THEN
-          WRITE(6,*) 'Not all eigenvalues wanted are found'
-          WRITE(6,*) 'number of eigenvalues/vectors wanted',num1
-          WRITE(6,*) 'number of eigenvalues/vectors found',num2
-          !CALL CPP_flush(6)
+          WRITE(oUnit,*) 'Not all eigenvalues wanted are found'
+          WRITE(oUnit,*) 'number of eigenvalues/vectors wanted',num1
+          WRITE(oUnit,*) 'number of eigenvalues/vectors found',num2
+          !CALL CPP_flush(oUnit)
        !ENDIF
     ENDIF
     !

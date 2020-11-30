@@ -15,9 +15,9 @@ MODULE m_types_gpumat
      PROCEDURE        :: alloc =>t_gpumat_alloc
      PROCEDURE        :: multiply=>t_gpumat_multiply            !> do a matrix-matrix multiply
      PROCEDURE        :: transpose=>t_gpumat_transpose          !> transpose the matrix
-     PROCEDURE        :: from_packed=>t_gpumat_from_packed      !> initialized from a packed-storage matrix
+!     PROCEDURE        :: from_packed=>t_gpumat_from_packed      !> initialized from a packed-storage matrix
      PROCEDURE        :: inverse =>t_gpumat_inverse             !> invert the matrix
-     PROCEDURE        :: to_packed=>t_gpumat_to_packed          !> convert to packed-storage matrix
+!     PROCEDURE        :: to_packed=>t_gpumat_to_packed          !> convert to packed-storage matrix
      PROCEDURE        :: clear => t_gpumat_clear                !> set data arrays to zero
      PROCEDURE        :: copy => t_gpumat_copy                  !> copy into another t_mat 
      PROCEDURE        :: move => t_gpumat_move                  !> move data into another t_mat 
@@ -75,7 +75,6 @@ CONTAINS
 
 
   SUBROUTINE t_gpumat_add_transpose(mat,mat1)
-    USE m_types
     IMPLICIT NONE
     CLASS(t_gpumat),INTENT(INOUT):: mat
     CLASS(t_mat),INTENT(IN)    :: mat1

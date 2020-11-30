@@ -2,6 +2,7 @@ MODULE m_anglso
 contains
   COMPLEX FUNCTION anglso(theta,phi,l1,m1,is1,l2,m2,is2,compo)
     USE m_juDFT
+    USE m_constants
     !
     ! calculates spin-orbit matrix for theta,phi =/= 0
     !
@@ -15,10 +16,7 @@ contains
     !     .. Local Scalars ..
     REAL sgm1,sgm2,xlz,xlpl,xlmn,angl_r,angl_i
     LOGICAL :: l_standard_euler_angles
-    !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC abs,REAL,sqrt,isign
-    !
+
     anglso = CMPLX(0.0,0.0)
     IF (l1.NE.l2) THEN
        RETURN
@@ -30,22 +28,17 @@ contains
     sgm1 = is1
     sgm2 = is2
     IF (l1.LT.0) THEN
-       WRITE (6,FMT=*)&
-            &      ' PROGRAM STOPS IN ANGLSO ( L < 0 ) .'
-       WRITE (6,FMT=*) ' L1 =',l1,'    L2 =',l2
+       WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN ANGLSO ( L < 0 ) .'
+       WRITE (oUnit,FMT=*) ' L1 =',l1,'    L2 =',l2
        CALL juDFT_error("ANGLSO (L <0 )",calledby="anglso")
     ELSE IF ((ABS(m1).GT.l1) .OR. (ABS(m2).GT.l2)) THEN
-       WRITE (6,FMT=*)&
-            &      ' PROGRAM STOPS IN ANGLSO ( M < L OR L < M )'
-       WRITE (6,FMT=*) ' L1 =',l1,'    L2 =',l2
-       WRITE (6,FMT=*) ' M1 =',m1,'    M2 =',m2
-       CALL juDFT_error("ANGLSO ( M < L OR L < M )",calledby="anglso"&
-            &         )
-    ELSE IF ((is1.NE.-1.AND.is1.NE.1) .OR.&
-         &         (is2.NE.-1.AND.is2.NE.1)) THEN
-       WRITE (6,FMT=*)&
-            &      ' PROGRAM STOPS IN ANGLSO ( S >< +-1/2 ) .'
-       WRITE (6,FMT=*) ' S1 =',0.5*sgm1,'    S2 =',0.5*sgm2
+       WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN ANGLSO ( M < L OR L < M )'
+       WRITE (oUnit,FMT=*) ' L1 =',l1,'    L2 =',l2
+       WRITE (oUnit,FMT=*) ' M1 =',m1,'    M2 =',m2
+       CALL juDFT_error("ANGLSO ( M < L OR L < M )",calledby="anglso")
+    ELSE IF ((is1.NE.-1.AND.is1.NE.1) .OR. (is2.NE.-1.AND.is2.NE.1)) THEN
+       WRITE (oUnit,FMT=*) ' PROGRAM STOPS IN ANGLSO ( S >< +-1/2 ) .'
+       WRITE (oUnit,FMT=*) ' S1 =',0.5*sgm1,'    S2 =',0.5*sgm2
        CALL juDFT_error("ANGLSO ( S >< +-1/2 )",calledby ="anglso")
     END IF
     !

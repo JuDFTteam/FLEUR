@@ -4,6 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur_jobs
+#ifdef CPP_MPI
+    use mpi
+#endif
     USE m_juDFT
     IMPLICIT NONE
     PRIVATE
@@ -127,17 +130,43 @@ CONTAINS
             CALL fleur_job_single(jobs)
     END SUBROUTINE
 
-    SUBROUTINE fleur_job_init()
+    SUBROUTINE fleur_job_init(l_mpi_multithreaded)
       USE m_fleur_help
       use m_judft
-        INTEGER:: irank=0
+      USE m_constants
+        logical, intent(out) :: l_mpi_multithreaded
+        INTEGER :: irank=0
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-        INTEGER ierr(3), i
-        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
-        CALL judft_init()
+        INTEGER ierr, i
+        CALL MPI_INIT_THREAD(MPI_THREAD_MULTIPLE,i,ierr)
+        if(ierr /= 0) call judft_error("MPI init failed.")
+#endif
+        CALL judft_init(oUnit,.FALSE.)
+#ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+        select case (i)
+            case (MPI_THREAD_SINGLE)
+                l_mpi_multithreaded = .False.
+                call judft_error("Fleur does not support: 'MPI_THREAD_SINGLE'. The minimum is 'MPI_THREAD_FUNNELED'")
+            case (MPI_THREAD_FUNNELED )
+                l_mpi_multithreaded = .False.
+            case (MPI_THREAD_SERIALIZED)
+                l_mpi_multithreaded = .False.
+            case (MPI_THREAD_MULTIPLE)
+                l_mpi_multithreaded = .True.
+            case default 
+                call judft_error("Can't identify MPI_Thread lvl")
+        end select 
+
+        if(judft_was_argument("-disable_progress_thread")) then 
+            l_mpi_multithreaded = .False.
+        endif
+        
         IF(irank.EQ.0) THEN
+           if(.not. l_mpi_multithreaded) then 
+            write (*,*) "MPI_THREAD_MULTIPLE is not avalible. This might lead to performance problems"
+           endif
+
            !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "Linked MPI version does not support multithreading."
@@ -149,7 +178,6 @@ CONTAINS
            !$       WRITE(*,*) ""
            !$       CALL juDFT_error("MPI not usable with OpenMP")
            !$    END IF
-           !Select the io-mode from the command-line
         END IF
 #endif
         IF (irank==0) THEN
@@ -157,16 +185,32 @@ CONTAINS
         END IF
     END SUBROUTINE
 
-    SUBROUTINE fleur_job_execute(jobs)
+    SUBROUTINE fleur_job_execute(jobs, l_mpi_multithreaded)
         USE m_fleur
-        TYPE(t_job),INTENT(IN) ::jobs(:)
+        USE m_types
+        USE m_fleur_init
 
+        TYPE(t_job),INTENT(IN) ::jobs(:)
+        logical, intent(in)    :: l_mpi_multithreaded
+
+        !local variables for FLEUR
+        type(t_fleurinput) :: fi
+        TYPE(t_mpi)      :: fmpi
+        TYPE(t_sphhar)   :: sphhar
+        TYPE(t_stars)    :: stars
+        TYPE(t_enpara)   :: enpara
+        TYPE(t_results)  :: results
+        TYPE(t_nococonv) :: nococonv
+        type(t_wann)     :: wann
+        CLASS(t_forcetheo),ALLOCATABLE::forcetheo
+        class(t_xcpot), allocatable :: xcpot
+
+        !local variables for jobcontrol
         INTEGER:: njob=1
         INTEGER:: irank=0
 
 #ifdef CPP_MPI
         INTEGER:: ierr
-      INCLUDE 'mpif.h'
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
         !find the number of the job for this PE
@@ -183,15 +227,23 @@ CONTAINS
         !change directory
         CALL chdir(jobs(njob)%directory)
         !Call FLEUR
+        fmpi%l_mpi_multithreaded = l_mpi_multithreaded
+        fmpi%mpi_comm = jobs(njob)%mpi_comm
+        CALL timestart("Initialization")
+        call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
+           fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
+           fi%hub1inp,wann)
+        CALL timestop("Initialization")
 
-        CALL fleur_execute(jobs(njob)%mpi_comm)
+        CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
+                           xcpot, wann)
 
     END SUBROUTINE
 
     SUBROUTINE fleur_job_distribute(jobs)
+        use m_types_mpi
         TYPE(t_job),INTENT(INOUT)::jobs(:)
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
         INTEGER:: i,free_pe,isize,irank,min_pe,new_comm,ierr
 
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
@@ -225,7 +277,7 @@ CONTAINS
             IF ((irank.GE.min_pe).AND.(irank<min_pe+jobs(i)%PE_requested)) EXIT
         ENDDO
         jobs%mpi_comm=MPI_UNDEFINED
-        CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,i,irank,new_comm,ierr)
+        CALL judft_comm_split(MPI_COMM_WORLD,i,irank,new_comm)
         IF (i.LE.size(jobs)) THEN
             if(size(jobs) > 1) PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
             jobs(i)%mpi_comm=new_comm
@@ -250,8 +302,9 @@ PROGRAM fleurjob
     USE m_juDFT
     IMPLICIT NONE
     TYPE(t_job),ALLOCATABLE::jobs(:)
-    CALL fleur_job_init()
+    logical :: l_mpi_multithreaded
+    CALL fleur_job_init(l_mpi_multithreaded)
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)
-    CALL fleur_job_execute(jobs)
+    CALL fleur_job_execute(jobs, l_mpi_multithreaded)
 END

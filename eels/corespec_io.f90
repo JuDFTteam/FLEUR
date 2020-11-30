@@ -158,9 +158,9 @@ MODULE m_corespec_io
       write(*,csmsgs) trim(smeno),&
          &"found more than 2*csv%nc-1 of csi%edgeidx > 0 !"//csmsgerr ; stop
     endif
-    if((csv%nc-1)**2+maxval(csi%edgeidx).gt.atoms%ncst(csi%atomType)) then
+    if((csv%nc-1)**2+maxval(csi%edgeidx).gt.atoms%econf(csi%atomType)%num_core_states) then
       write(*,csmsgs) trim(smeno),&
-         &"found (csv%nc-1)^2+maxval(csi%edgeidx) > atoms%ncst(csi%atomType)!"//csmsgerr
+         &"found (csv%nc-1)^2+maxval(csi%edgeidx) > num_core_states(csi%atomType)!"//csmsgerr
       stop
     endif
     csv%nljc = count(csi%edgeidx.gt.0)

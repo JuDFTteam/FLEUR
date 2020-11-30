@@ -13,10 +13,11 @@ module m_vvacxy
 
   subroutine vvacxy( stars, vacuum, cell, sym, input, field, rhtxy, vxy, alphm )
 
-    use m_intgr, only: intgz1
-    use m_constants
     use m_types
+    use m_constants
+    use m_intgr, only: intgz1
     use m_qsf
+
     implicit none
 
     type(t_input),  intent(in)     :: input
@@ -44,10 +45,10 @@ module m_vvacxy
       ! if nmzxy > ncsh, the boundary condition is wrong - and the
       ! potential is very wavy - try it yourself, if you don't believe.
       if ( vacuum%nmzxyd < ncsh ) then
-        write (6,*) 'error vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '< ncsh(zsigma) = ', ncsh
+        write (oUnit,*) 'error vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '< ncsh(zsigma) = ', ncsh
         call judft_error( "error: vacuum%nmzxyd < ncsh", calledby="vvacxy" )
       else if ( vacuum%nmzxyd > ncsh ) then
-        write (6,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
+        write (oUnit,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
         write (0,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
         call judft_warn( "nmzxyd > ncsh", calledby="vvacxy" )
       end if

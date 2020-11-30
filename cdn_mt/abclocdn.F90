@@ -46,8 +46,8 @@ CONTAINS
     REAL,    INTENT (IN) :: alo1(:),blo1(:),clo1(:)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
     COMPLEX, INTENT (IN) :: ccchi(2)
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     REAL,    OPTIONAL, INTENT (IN)    :: fgp(3)
 
@@ -84,7 +84,7 @@ CONTAINS
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
-          IF (atoms%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
+          IF (sym%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
              ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
              na2 = sym%invsatnr(na)
              lmp = ll1 - m

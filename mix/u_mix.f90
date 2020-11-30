@@ -5,149 +5,147 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_umix
-  USE m_juDFT
-  !
-  ! mix the old and new density matrix for the lda+U method
-  !                                                 gb.2001
-  ! --------------------------------------------------------
-  ! Extension to multiple U per atom type by G.M. 2017
-CONTAINS
-  SUBROUTINE u_mix(input,atoms,n_mmp_in,n_mmp_out)
+   !
+   ! mix the old and new density matrix for the lda+U method
+   !                                                 gb.2001
+   ! --------------------------------------------------------
+   ! Extension to multiple U per atom type by G.M. 2017
+   USE m_juDFT
+   USE m_types
+   USE m_constants
+   USE m_nmat_rot
+   USE m_xmlOutput
 
-    USE m_types
-    USE m_cdn_io
-    USE m_nmat_rot
-    USE m_xmlOutput
+   IMPLICIT NONE
 
-    ! ... Arguments
+   CONTAINS
 
-    IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    COMPLEX, INTENT (INOUT)    :: n_mmp_out(-3:3,-3:3,atoms%n_u,input%jspins)
-    COMPLEX, INTENT (INOUT)    :: n_mmp_in (-3:3,-3:3,atoms%n_u,input%jspins)
-    !
-    ! ... Locals ...
-    INTEGER j,k,iofl,l,itype,ios,i_u,jsp
-    REAL alpha,spinf,gam,del,sum1,sum2,mix_u, uParam, jParam
-    REAL    zero(atoms%n_u)
-    CHARACTER(LEN=20)   :: attributes(6)
-    COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
-    !
-    ! check for possible rotation of n_mmp
-    !
-    zero=0.0
-    CALL nmat_rot(zero,-atoms%lda_u%theta,-atoms%lda_u%phi,3,atoms%n_u,input%jspins,atoms%lda_u%l,n_mmp_out)
+   SUBROUTINE u_mix(input,atoms,noco,n_mmp_in,n_mmp_out)
 
-    ! Write out n_mmp_out to out.xml file
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_atoms),INTENT(IN)    :: atoms
+      TYPE(t_noco), INTENT(IN)    :: noco
+      COMPLEX,      INTENT(IN)    :: n_mmp_out(-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,      INTENT(INOUT) :: n_mmp_in (-lmaxU_const:,-lmaxU_const:,:,:)
 
-    CALL openXMLElementNoAttributes('ldaUDensityMatrix')
-    DO jsp = 1, input%jspins
-       DO i_u = 1, atoms%n_u
-          l = atoms%lda_u(i_u)%l
-          itype = atoms%lda_u(i_u)%atomType
-          uParam = atoms%lda_u(i_u)%u
-          jParam = atoms%lda_u(i_u)%j
-          attributes = ''
-          WRITE(attributes(1),'(i0)') jsp
-          WRITE(attributes(2),'(i0)') itype
-          WRITE(attributes(3),'(i0)') i_u
-          WRITE(attributes(4),'(i0)') l
-          WRITE(attributes(5),'(f15.8)') uParam
-          WRITE(attributes(6),'(f15.8)') jParam
-          CALL writeXMLElementMatrixPoly('densityMatrixFor',&
-                                         (/'spin    ','atomType','uIndex  ','l       ','U       ','J       '/),&
-                                         attributes,n_mmp_out(-l:l,-l:l,i_u,jsp))
-       END DO
-    END DO
-    CALL closeXMLElement('ldaUDensityMatrix')
 
-    ! exit subroutine if density matrix does not exist
-    IF(.NOT.ANY(n_mmp_in(:,:,:,:).NE.0.0)) THEN
-       RETURN
-    END IF
+      INTEGER :: mp,m,l,itype,i_u,jsp
+      REAL    :: alpha,spinf,gam,del,uParam,jParam
+      REAL    :: zero(atoms%n_u),dist(SIZE(n_mmp_in,4))
 
-    IF (input%ldauLinMix) THEN
+      CHARACTER(LEN=20)   :: attributes(6)
+      COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
 
-       ! mix here straight with given mixing factors
+      !
+      ! check for possible rotation of n_mmp
+      !
+      !zero=0.0
+      !CALL nmat_rot(zero,-atoms%lda_u%theta,-atoms%lda_u%phi,3,atoms%n_u,input%jspins,atoms%lda_u%l,n_mmp_out)
 
-       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins))
-       n_mmp = CMPLX(0.0,0.0)
+      ! Write out n_mmp_out to out.xml file
+      CALL openXMLElementNoAttributes('ldaUDensityMatrix')
+      DO jsp = 1, SIZE(n_mmp_out,4)
+         DO i_u = 1, atoms%n_u
+            l = atoms%lda_u(i_u)%l
+            itype = atoms%lda_u(i_u)%atomType
+            uParam = atoms%lda_u(i_u)%u
+            jParam = atoms%lda_u(i_u)%j
+            attributes = ''
+            WRITE(attributes(1),'(i0)') jsp
+            WRITE(attributes(2),'(i0)') itype
+            WRITE(attributes(3),'(i0)') i_u
+            WRITE(attributes(4),'(i0)') l
+            WRITE(attributes(5),'(f15.8)') uParam
+            WRITE(attributes(6),'(f15.8)') jParam
+            CALL writeXMLElementMatrixPoly('densityMatrixFor',&
+                                          (/'spin    ','atomType','uIndex  ','l       ','U       ','J       '/),&
+                                          attributes,n_mmp_out(-l:l,-l:l,i_u,jsp))
+         END DO
+      END DO
+      CALL closeXMLElement('ldaUDensityMatrix')
 
-       alpha = input%ldauMixParam
-       spinf = input%ldauSpinf
+      ! exit subroutine if density matrix does not exist
+      IF(.NOT.ANY(ABS(n_mmp_in(:,:,1:atoms%n_u,:)).GT.1e-12)) RETURN
 
-       sum1 = 0.0
-       IF (input%jspins.EQ.1) THEN
-          DO i_u = 1, atoms%n_u
-             DO j = -3,3
-                DO k = -3,3
-                   sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
-                   n_mmp(k,j,i_u,1) = alpha * n_mmp_out(k,j,i_u,1) + (1.0-alpha) * n_mmp_in(k,j,i_u,1)
-                END DO
-             END DO
-          END DO
-          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
-       ELSE
-          sum2 = 0.0
-          gam = 0.5 * alpha * (1.0 + spinf)
-          del = 0.5 * alpha * (1.0 - spinf)
-          DO i_u = 1,atoms%n_u
-             DO j = -3,3
-                DO k = -3,3
-                   sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
-                   sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
+      !Calculate distance
+      dist = 0.0
+      DO i_u = 1, atoms%n_u
+         DO m = -lmaxU_const,lmaxU_const
+            DO mp = -lmaxU_const,lmaxU_const
+               DO jsp = 1, SIZE(n_mmp_in,4)
+                  dist(jsp) = dist(jsp) + ABS(n_mmp_out(m,mp,i_u,jsp) - n_mmp_in(m,mp,i_u,jsp))
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+      !Write to outfile
+      IF(input%jspins.EQ.1) THEN
+         WRITE (oUnit,'(a,f12.6)') 'n_mmp distance =',dist(1)
+      ELSE
+         DO jsp = 1, SIZE(n_mmp_in,4)
+            WRITE (oUnit,9000) 'n_mmp distance spin ',jsp,' =',dist(jsp)
+9000        FORMAT(a,I1,a,f12.6)
+         ENDDO
+      ENDIF
 
-                   n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
-                                      (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
-                                            del * n_mmp_out(k,j,i_u,2) - &
-                                            del * n_mmp_in (k,j,i_u,2)
+      IF (input%ldauLinMix) THEN
 
-                   n_mmp(k,j,i_u,2) =       gam * n_mmp_out(k,j,i_u,2) + &
-                                      (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
-                                            del * n_mmp_out(k,j,i_u,1) - &
-                                            del * n_mmp_in (k,j,i_u,1)
-                END DO
-             END DO
-          END DO
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-       ENDIF
-       n_mmp_in = n_mmp
-       DEALLOCATE (n_mmp)
-    ELSE ! input%ldauLinMix
+         ! mix here straight with given mixing factors
+         ALLOCATE (n_mmp,mold=n_mmp_in)
+         n_mmp = cmplx_0
 
-       ! only calculate distance
+         alpha = input%ldauMixParam
+         spinf = input%ldauSpinf
 
-       sum1 = 0.0
-       DO i_u = 1, atoms%n_u
-          DO j = -3,3
-             DO k = -3,3
-                sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
-             END DO
-          END DO
-       END DO
-       IF (input%jspins.EQ.1) THEN
-          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
-       ELSE
-          sum2 = 0.0
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
-          DO i_u = 1, atoms%n_u
-             DO j = -3,3
-                DO k = -3,3
-                   sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
-                END DO
-             END DO
-          END DO
-          DO j=-3,3
-             WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
-          END DO
-          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-          DO j=-3,3
-             WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
-          END DO
-       END IF
-    END IF ! input%ldauLinMix
+         IF (input%jspins.EQ.1) THEN
+            DO i_u = 1, atoms%n_u
+               DO m = -lmaxU_const,lmaxU_const
+                  DO mp = -lmaxU_const,lmaxU_const
 
-  END SUBROUTINE u_mix
+                     n_mmp(m,mp,i_u,1) =      alpha * n_mmp_out(m,mp,i_u,1) + &
+                                        (1.0-alpha) * n_mmp_in (m,mp,i_u,1)
+
+                  END DO
+               END DO
+            END DO
+         ELSE
+            gam = 0.5 * alpha * (1.0 + spinf)
+            del = 0.5 * alpha * (1.0 - spinf)
+            DO i_u = 1,atoms%n_u
+               DO m = -lmaxU_const,lmaxU_const
+                  DO mp = -lmaxU_const,lmaxU_const
+
+                     n_mmp(m,mp,i_u,1) =       gam * n_mmp_out(m,mp,i_u,1) + &
+                                         (1.0-gam) * n_mmp_in (m,mp,i_u,1) + &
+                                               del * n_mmp_out(m,mp,i_u,2) - &
+                                               del * n_mmp_in (m,mp,i_u,2)
+
+                     n_mmp(m,mp,i_u,2) =       gam * n_mmp_out(m,mp,i_u,2) + &
+                                         (1.0-gam) * n_mmp_in (m,mp,i_u,2) + &
+                                               del * n_mmp_out(m,mp,i_u,1) - &
+                                               del * n_mmp_in (m,mp,i_u,1)
+                     IF(noco%l_mperp) THEN
+                        n_mmp(m,mp,i_u,3) =       alpha * n_mmp_out(m,mp,i_u,3) + &
+                                            (1.0-alpha) * n_mmp_in (m,mp,i_u,3)
+                     ENDIF
+
+                  END DO
+               END DO
+            END DO
+
+         ENDIF
+         n_mmp_in = n_mmp
+         DEALLOCATE(n_mmp)
+      ENDIF
+
+      CALL openXMLElementNoAttributes('ldaUDensityMatrixConvergence')
+      DO jsp = 1, SIZE(dist)
+         attributes = ''
+         WRITE(attributes(1),'(i0)') jsp
+         WRITE(attributes(2),'(f13.6)') dist(jsp)
+         CALL writeXMLElementForm('distance',['spin    ','distance'],attributes(:2),reshape([4,8,1,13],[2,2]))
+      ENDDO
+      CALL closeXMLElement('ldaUDensityMatrixConvergence')
+
+   END SUBROUTINE u_mix
 END MODULE m_umix

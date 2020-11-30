@@ -24,6 +24,7 @@ c..tidied-up && extension of rwf-parameter
 c..Frank Freimuth
 c*********************************************************************
 
+      USE m_constants
       use m_intgr, only : intgr3
 
       implicit none
@@ -320,12 +321,12 @@ c..n=4
 c         radf(j) = rads(nwf,l,j,1)*rads(nwf,l,j,1)
          enddo
          call intgr3(radf,rmsh(1,ntyp),dx(ntyp),jri(ntyp),radi)
-         write (6,*)
-         write (6,*) 'Wannier Function N:',nwf
-         write (6,*) 'angular momentum',l
-         write (6,*) 'radial function at the MT boundary:',
+         write (oUnit,*)
+         write (oUnit,*) 'Wannier Function N:',nwf
+         write (oUnit,*) 'angular momentum',l
+         write (oUnit,*) 'radial function at the MT boundary:',
      &                rads(nwf,l,jri(ntyp),1)
-         write (6,*) 'norma =',radi
+         write (oUnit,*) 'norma =',radi
         enddo
        endif 
  

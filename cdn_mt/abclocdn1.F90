@@ -20,6 +20,7 @@ CONTAINS
        nbasf0,alo1,blo1,clo1,kvec, nkvec,enough,bascof_lo )
     !
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)     :: sym
     TYPE(t_atoms),INTENT(IN)   :: atoms
@@ -59,7 +60,7 @@ CONTAINS
     DO lo = 1,atoms%nlo(ntyp)
        l = atoms%llo(lo,ntyp)
        IF (.NOT.((s.LE.eps).AND.(l.GE.1))) THEN
-          IF (atoms%invsat(na).EQ.0) THEN
+          IF (sym%invsat(na).EQ.0) THEN
 
              IF ((nkvec(lo,na)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
                 enough(na) = .FALSE.
@@ -86,7 +87,7 @@ CONTAINS
                 ENDIF ! linind
              ENDIF   ! nkvec < 2*atoms%llo
 
-          ELSEIF (atoms%invsat(na).EQ.1) THEN
+          ELSEIF (sym%invsat(na).EQ.1) THEN
              IF ((nkvec(lo,na)).LT. (2* (2*atoms%llo(lo,ntyp)+1))) THEN
                 enough(na) = .FALSE.
                 nkvec(lo,na) = nkvec(lo,na) + 1
@@ -118,12 +119,10 @@ CONTAINS
        ENDIF  ! s > eps  & l >= 1
     END DO
     IF ((k.EQ.nv) .AND. (.NOT.enough(na))) THEN
-       WRITE (6,FMT=*)&
-            &     'abclocdn did not find enough linearly independent'
-       WRITE (6,FMT=*)&
-            &     'ccof coefficient-vectors. the linear independence'
-       WRITE (6,FMT=*) 'quality, linindq, is set to: ',linindq,'.'
-       WRITE (6,FMT=*) 'this value might be to large.'
+       WRITE (oUnit,FMT=*) 'abclocdn did not find enough linearly independent'
+       WRITE (oUnit,FMT=*) 'ccof coefficient-vectors. the linear independence'
+       WRITE (oUnit,FMT=*) 'quality, linindq, is set to: ',linindq,'.'
+       WRITE (oUnit,FMT=*) 'this value might be to large.'
        STOP 'abclocdn: did not find enough lin. ind. ccof-vectors'
     END IF
 

@@ -32,8 +32,8 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,nat_l)
-    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,nat_l)
+    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),nat_l)
+    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),nat_l)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,nat_l)
     !     ..
     !     .. Local Scalars ..
@@ -45,7 +45,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
     REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fk(3),fkp(3)
-    REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
+    REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     LOGICAL apw(0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE :: work_r(:)
@@ -96,7 +96,7 @@ CONTAINS
              natom = SUM(atoms%neq(:n-1)) + nn
              IF ((natom.GE.nat_start).AND.(natom.LE.nat_stop)) THEN
                 natom_l = natom_l + 1
-                IF (atoms%invsat(natom).EQ.2) THEN
+                IF (sym%invsat(natom).EQ.2) THEN
                    jatom = sym%invsatnr(natom)
                 ELSE
                    jatom = natom
@@ -116,7 +116,7 @@ CONTAINS
                 !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,nat_start,nat_stop)
                 !$   ALLOCATE(acof_l(size(acof,1),0:size(acof,2)-1),bcof_l(size(bcof,1),0:size(bcof,2)-1))
                 !$   ALLOCATE(ccof_l(-atoms%llod:atoms%llod,size(ccof,2),size(ccof,3)))
-                !$   acof_l=0 ; bcof_l=0 ; ccof_l=0 
+                !$   acof_l=0 ; bcof_l=0 ; ccof_l=0
                 !$OMP DO
 #endif
                 DO k = 1,nvmax
@@ -126,7 +126,7 @@ CONTAINS
                       work_c(:ne)=zMat%data_c(k,:ne)
                    END IF
 
-                   fg = lapw%gvec(:,k,jspin) 
+                   fg = lapw%gvec(:,k,jspin)
                    fk = lapw%bkpt + fg
                    s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                    s = SQRT(s)
@@ -160,7 +160,7 @@ CONTAINS
                          c_0 = CONJG(ylm(lm+1))*phase
                          c_1 = c_0 *  fj(l)
                          c_2 = c_0 * dfj(l)
-                         IF (atoms%invsat(natom).EQ.2) THEN
+                         IF (sym%invsat(natom).EQ.2) THEN
                            lmp = ll1 - m
                            inv_f = (-1)**(l-m)
                            c_1 =  conjg(c_1) * inv_f
@@ -201,10 +201,10 @@ CONTAINS
                       ENDDO ! loop over m
                    ENDDO ! loop over l
                    DO lo=1,atoms%nlo(n)
-                      DO nkvec=1,lapw%nkvec(lo,jatom) 
+                      DO nkvec=1,lapw%nkvec(lo,jatom)
                          IF (k==lapw%kvec(nkvec,lo,jatom)) THEN !check if this k-vector has LO attached
                             term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(n)**2)/2) * phase
-                            IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                            IF ((sym%invsat(natom)==0).OR.(sym%invsat(natom)==1)) THEN
                                na2=natom
                             ELSE
                                na2 = sym%invsatnr(natom)
@@ -216,31 +216,31 @@ CONTAINS
                                DO m = -l,l
                                   lm = ll1 + m
                                   !+gu_con
-                                  IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                                  IF ((sym%invsat(natom)==0).OR.(sym%invsat(natom)==1)) THEN
                                      IF (zMat%l_real) THEN
                                         ctmp = zMat%data_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
                                      ELSE
                                         ctmp = zMat%data_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
                                      ENDIF
                                      !$ IF (.false.) THEN
-                                     acof(i,lm,natom_l) = acof(i,lm,natom_l) + ctmp*alo1(lo)
-                                     bcof(i,lm,natom_l) = bcof(i,lm,natom_l) + ctmp*blo1(lo)
-                                     ccof(m,i,lo,natom_l) = ccof(m,i,lo,natom_l) + ctmp*clo1(lo)
+                                     acof(i,lm,natom_l) = acof(i,lm,natom_l) + ctmp*alo1(lo,jspin)
+                                     bcof(i,lm,natom_l) = bcof(i,lm,natom_l) + ctmp*blo1(lo,jspin)
+                                     ccof(m,i,lo,natom_l) = ccof(m,i,lo,natom_l) + ctmp*clo1(lo,jspin)
                                      !$ ENDIF
-                                     !$ acof_l(i,lm)   = acof_l(i,lm)   +  ctmp*alo1(lo)
-                                     !$ bcof_l(i,lm)   = bcof_l(i,lm)   +  ctmp*blo1(lo)
-                                     !$ ccof_l(m,i,lo) = ccof_l(m,i,lo) +  ctmp*clo1(lo)
+                                     !$ acof_l(i,lm)   = acof_l(i,lm)   +  ctmp*alo1(lo,jspin)
+                                     !$ bcof_l(i,lm)   = bcof_l(i,lm)   +  ctmp*blo1(lo,jspin)
+                                     !$ ccof_l(m,i,lo) = ccof_l(m,i,lo) +  ctmp*clo1(lo,jspin)
                                   ELSE
                                      ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
                                      lmp = ll1 - m
                                      !$ IF (.false.) THEN
-                                     acof(i,lmp,natom_l) = acof(i,lmp,natom_l) +ctmp*alo1(lo)
-                                     bcof(i,lmp,natom_l) = bcof(i,lmp,natom_l) +ctmp*blo1(lo)
-                                     ccof(-m,i,lo,natom_l) = ccof(-m,i,lo,natom_l) +ctmp*clo1(lo)
+                                     acof(i,lmp,natom_l) = acof(i,lmp,natom_l) +ctmp*alo1(lo,jspin)
+                                     bcof(i,lmp,natom_l) = bcof(i,lmp,natom_l) +ctmp*blo1(lo,jspin)
+                                     ccof(-m,i,lo,natom_l) = ccof(-m,i,lo,natom_l) +ctmp*clo1(lo,jspin)
                                      !$ ENDIF
-                                     !$ acof_l(i,lmp)   = acof_l(i,lmp)   +  ctmp*alo1(lo)
-                                     !$ bcof_l(i,lmp)   = bcof_l(i,lmp)   +  ctmp*blo1(lo)
-                                     !$ ccof_l(-m,i,lo) = ccof_l(-m,i,lo) +  ctmp*clo1(lo)
+                                     !$ acof_l(i,lmp)   = acof_l(i,lmp)   +  ctmp*alo1(lo,jspin)
+                                     !$ bcof_l(i,lmp)   = bcof_l(i,lmp)   +  ctmp*blo1(lo,jspin)
+                                     !$ ccof_l(-m,i,lo) = ccof_l(-m,i,lo) +  ctmp*clo1(lo,jspin)
                                   ENDIF
                                END DO
                             END DO
@@ -260,7 +260,7 @@ CONTAINS
 #endif
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)
-                ELSE               
+                ELSE
                    DEALLOCATE(work_c)
                 ENDIF
              ENDIF ! nat_start <= natom <= nat_stop

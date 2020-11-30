@@ -12,8 +12,8 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       input,atoms,mpi,lapw,cell,noco,ntyp,na,&
-       isp,ud, alo1,blo1,clo1,fj,gj,&
+       input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
+       isp,ud, alo1,blo1,clo1,fjgj,&
        iintsp,jintsp,chi,smat)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
@@ -24,23 +24,25 @@ CONTAINS
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
     USE m_types
+    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_mpi),INTENT(IN)    :: mpi
+    TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_noco),INTENT(IN)   :: noco
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
+    TYPE(t_fjgj),INTENT(IN)   :: fjgj
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN)      :: na,ntyp 
+    INTEGER, INTENT (IN)      :: na,ntyp
     INTEGER, INTENT (IN)      :: jintsp,iintsp
     COMPLEX, INTENT (IN)      :: chi
     INTEGER, INTENT(IN)       :: isp
     !     ..
     !     .. Array Arguments ..
     REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
-    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     TYPE(t_usdus),INTENT(IN)  :: ud
     CLASS(t_mat),INTENT(INOUT) :: smat
 
@@ -55,20 +57,24 @@ CONTAINS
     COMPLEX,   ALLOCATABLE  :: cph(:,:)
     ALLOCATE(cph(MAXVAL(lapw%nv),2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
+       CALL lapw%phase_factors(i,atoms%taual(:,na),nococonv%qss,cph(:,i))
     ENDDO
 
-    IF ((atoms%invsat(na) == 0) .OR. (atoms%invsat(na) == 1)) THEN
+    IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
        !--->    at once. where it is made use of the fact, that the sum of
        !--->    these contributions is twice the real part of the contribution
        !--->    of each atom. note, that in this case there are twice as many
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
-       IF (atoms%invsat(na) == 0) invsfct = 1
-       IF (atoms%invsat(na) == 1) invsfct = 2
+       IF (sym%invsat(na) == 0) invsfct = 1
+       IF (sym%invsat(na) == 1) invsfct = 2
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
+
+       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
+       !$acc & copyin(l,lapw%kvec(:,:,na),lapw,ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:),atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:))&
+       !$acc default(none)
 
        DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
 
@@ -82,26 +88,28 @@ CONTAINS
                clo1(lo)*    clo1(lo) )
           DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
-                locol=(locol-1)/mpi%n_size+1 !this is the column in local storage!
+             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN
+                locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage!
                 k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
+                !$acc loop gang private(fact2,dotp,kp)
                 DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
-                        fj(kp,l,iintsp)* ( alo1(lo) + &
+                        fjgj%fj(kp,l,isp,iintsp)* ( alo1(lo) + &
                         clo1(lo)*ud%uulon(lo,ntyp,isp))+&
-                        gj(kp,l,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
+                        fjgj%gj(kp,l,isp,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
-                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
-                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
+                !$acc end loop
                 !--->          calculate the overlap matrix elements with other local
                 !--->          orbitals at the same atom, if they have the same l
                 DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),iintsp==jintsp)
@@ -121,11 +129,11 @@ CONTAINS
                          lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
                          dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                          IF (smat%l_real) THEN
-                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)* &
+                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)* &
                                  cph(k,jintsp)*conjg(cph(kp,iintsp))
                          ELSE
-                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)*&
-                                 cph(k,jintsp)*CONJG(cph(kp,iintsp)) 
+                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)*&
+                                 cph(k,jintsp)*CONJG(cph(kp,iintsp))
                          ENDIF
                       END DO
                    ENDIF
@@ -145,13 +153,15 @@ CONTAINS
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
-             ENDIF ! mod(locol-1,n_size) = nrank 
+             ENDIF ! mod(locol-1,n_size) = nrank
           END DO
        END DO
+       !$acc end kernels
     END IF
   END SUBROUTINE slomat
   !===========================================================================
   PURE REAL FUNCTION legpol(l,arg)
+  !$acc routine seq
     !
     IMPLICIT NONE
     !     ..

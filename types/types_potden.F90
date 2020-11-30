@@ -7,7 +7,7 @@ MODULE m_types_potden
 
   !> Data type for the density or the potential
    TYPE t_potden
-     INTEGER             :: iter  
+     INTEGER             :: iter
      INTEGER             :: potdenType
      COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
      !                      mt(radial_grid, sphhar, atom, spin)
@@ -23,7 +23,11 @@ MODULE m_types_potden
      REAL,ALLOCATABLE  :: phi_vacxy(:,:,:)
      REAL,ALLOCATABLE  :: theta_mt(:,:)
      REAL,ALLOCATABLE  :: phi_mt(:,:)
-     
+
+     ! Core density
+     REAL, ALLOCATABLE :: qint(:,:)
+     REAL, ALLOCATABLE :: tec(:,:)
+     REAL, ALLOCATABLE :: mtCore(:,:,:)
 
      ! For density matrix and associated potential matrix
      COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
@@ -89,7 +93,7 @@ CONTAINS
     endif
 #endif
   end subroutine collect
-  
+
   subroutine distribute(this,mpi_comm)
     use m_mpi_bc_tool
     implicit none
@@ -107,7 +111,7 @@ CONTAINS
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,mpi_comm)
 #endif
   end subroutine distribute
-  
+
   SUBROUTINE sum_both_spin(this,that)
     IMPLICIT NONE
     CLASS(t_potden),INTENT(INOUT)   :: this
@@ -137,7 +141,7 @@ CONTAINS
        ENDIF
     END IF
   END SUBROUTINE sum_both_spin
-    
+
   SUBROUTINE copy_both_spin(this,that)
     IMPLICIT NONE
     CLASS(t_potden),INTENT(IN)   :: this
@@ -148,7 +152,7 @@ CONTAINS
     that%vacz(:,:,1)=this%vacz(:,:,1)
     that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
     IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
-    
+
     IF (SIZE(that%mt,4)>1) THEN
        that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
        that%pw(:,2)=this%pw(:,1)
@@ -206,10 +210,10 @@ CONTAINS
 
     PotDen3%iter       = PotDen1%iter
     PotDen3%potdenType = PotDen1%potdenType
-    
+
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
-    
+
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
     PotDen3%pw         = PotDen1%pw + PotDen2%pw
     PotDen3%vacz       = PotDen1%vacz + PotDen2%vacz
@@ -217,7 +221,7 @@ CONTAINS
     if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
       PotDen3%pw_w = PotDen1%pw_w + PotDen2%pw_w
     end if
-  
+
   end subroutine
 
   subroutine subPotDen( PotDen3, PotDen1, PotDen2 )
@@ -225,13 +229,13 @@ CONTAINS
     class(t_potden), intent(in)    :: PotDen1
     class(t_potden), intent(in)    :: PotDen2
     class(t_potden), intent(inout) :: PotDen3
- 
+
     PotDen3%iter       = PotDen1%iter
     PotDen3%potdenType = PotDen1%potdenType
 
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
-    
+
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
     PotDen3%vacz       = PotDen1%vacz - PotDen2%vacz
@@ -239,51 +243,60 @@ CONTAINS
     if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
       PotDen3%pw_w = PotDen1%pw_w - PotDen2%pw_w
     end if
- 
+
   end subroutine
 
   subroutine copyPotDen( PotDenCopy, PotDen )
-  
+
     implicit none
     class(t_potden), intent(in)    :: PotDen
     class(t_potden), intent(inout) :: PotDenCopy
 
     PotDenCopy%iter       = PotDen%iter
     PotDenCopy%potdenType = PotDen%potdenType
-    
+
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDenCopy%mt)) allocate(PotDenCopy%mt, mold=PotDen%mt)
-    
+
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw
     PotDenCopy%vacz       = PotDen%vacz
     PotDenCopy%vacxy      = PotDen%vacxy
+    PotDenCopy%qint       = PotDen%qint
+    PotDenCopy%tec        = PotDen%tec
+    PotDenCopy%mtCore     = PotDen%mtCore
+    PotDenCopy%mmpMat     = PotDen%mmpMat
 
   end subroutine copyPotDen
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
     USE m_judft
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_stars
+    USE m_types_vacuum
+    USE m_types_noco
+    USE m_types_sphhar
+
     IMPLICIT NONE
-    CLASS(t_potden),INTENT(OUT):: pd 
+    CLASS(t_potden),INTENT(OUT):: pd
     TYPE(t_atoms),INTENT(IN) :: atoms
     TYPE(t_stars),INTENT(IN) :: stars
     TYPE(t_sphhar),INTENT(IN):: sphhar
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_noco),INTENT(IN)  :: noco
     INTEGER,INTENT(IN)       :: jspins, potden_type
- 
-    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u,jspins,noco%l_noco,noco%l_mtnocopot,potden_type,&
+
+    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jspins,potden_type
+    INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
@@ -296,24 +309,34 @@ CONTAINS
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
     IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
     IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
+    IF(ALLOCATED(pd%qint)) DEALLOCATE (pd%qint)
+    IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
+    IF(ALLOCATED(pd%mtCore)) DEALLOCATE (pd%mtCore)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
     ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
+    ALLOCATE (pd%qint(ntype,jspins))
+    ALLOCATE (pd%tec(ntype,jspins))
+    ALLOCATE (pd%mtCore(coreMsh,ntype,jspins))
+
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
+    pd%qint = 0.0
+    pd%tec = 0.0
+    pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
-!!$#CPP_TODO_copy !code from brysh1,brysh2... 
+!!$#CPP_TODO_copy !code from brysh1,brysh2...
 !!$  SUBROUTINE get_combined_vector(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-!!$                    den,nmap,nmaph,mapmt,mapvac2,sout) 
+!!$                    den,nmap,nmaph,mapmt,mapvac2,sout)
 !!$    !This was brysh1 before
 !!$    USE m_types
 !!$    IMPLICIT NONE
@@ -338,14 +361,14 @@ CONTAINS
 !!$
 !!$    !Calculation of size
 !!$    i=SIZE(den%mt)+MERGE(SIZE(den%pw),2*SIZE(den%pw),sym%invs)+SIZE(den%vacxz)+MERGE(SIZE(den%vacz)*2,SIZE(den%vacz),sym%invs)
-!!$    IF (noco%l_mtnocopot.AND.sym%invs) i=i+
-!!$    
+!!$    IF (any(noco%l_unrestrictMT).AND.sym%invs) i=i+
 !!$
-!!$    
-!!$    !--->  put input into arrays sout 
-!!$    !      in the spin polarized case the arrays consist of 
+!!$
+!!$
+!!$    !--->  put input into arrays sout
+!!$    !      in the spin polarized case the arrays consist of
 !!$    !      spin up and spin down densities
-!!$    
+!!$
 !!$    j=0
 !!$    DO  js = 1,input%jspins
 !!$       DO i = 1,stars%ng3
@@ -361,7 +384,7 @@ CONTAINS
 !!$       mapmt=0
 !!$       na = 1
 !!$       DO n = 1,atoms%ntype
-!!$          DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+!!$          DO l = 0,sphhar%nlh(sym%ntypsy(na))
 !!$             DO i = 1,atoms%jri(n)
 !!$                mapmt = mapmt +1
 !!$                j = j + 1
@@ -437,10 +460,10 @@ CONTAINS
 !!$          END DO
 !!$          nvaccoeff2 = 2*vacuum%nmzxy*(stars%ng2-1)*vacuum%nvac + 2*vacuum%nmz*vacuum%nvac
 !!$          IF (mapvac2 .NE. nvaccoeff2) THEN
-!!$             WRITE (6,*)'The number of vaccum coefficients off the'
-!!$             WRITE (6,*)'off-diagonal part of the density matrix is'
-!!$             WRITE (6,*)'inconsitent:'
-!!$             WRITE (6,8000) mapvac2,nvaccoeff2
+!!$             WRITE (oUnit,*)'The number of vaccum coefficients off the'
+!!$             WRITE (oUnit,*)'off-diagonal part of the density matrix is'
+!!$             WRITE (oUnit,*)'inconsitent:'
+!!$             WRITE (oUnit,8000) mapvac2,nvaccoeff2
 !!$8000         FORMAT ('mapvac2= ',i12,'nvaccoeff2= ',i12)
 !!$             CALL juDFT_error("brysh1:# of vacuum coeff. inconsistent" ,calledby ="brysh1")
 !!$          ENDIF
@@ -452,9 +475,9 @@ CONTAINS
 !!$          DO n = 1, atoms%n_u
 !!$             DO k = -3, 3
 !!$                DO i = -3, 3
-!!$                   j = j + 1 
+!!$                   j = j + 1
 !!$                   sout(j) = REAL(den%mmpMat(i,k,n,js))
-!!$                   j = j + 1 
+!!$                   j = j + 1
 !!$                   sout(j) = AIMAG(den%mmpMat(i,k,n,js))
 !!$                ENDDO
 !!$             ENDDO
@@ -464,27 +487,27 @@ CONTAINS
 !!$
 !!$    mapmtd = atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd
 !!$    IF (mapmt .GT. mapmtd) THEN
-!!$       WRITE(6,*)'The number of mt coefficients is larger than the'
-!!$       WRITE(6,*)'dimensions:'
-!!$       WRITE (6,8040) mapmt,mapmtd
+!!$       WRITE(oUnit,*)'The number of mt coefficients is larger than the'
+!!$       WRITE(oUnit,*)'dimensions:'
+!!$       WRITE (oUnit,8040) mapmt,mapmtd
 !!$8040   FORMAT ('mapmt= ',i12,' > mapmtd= ',i12)
 !!$       CALL juDFT_error("brysh1: mapmt > mapmtd (dimensions)",calledby ="brysh1")
 !!$    ENDIF
 !!$
 !!$    nmap = j
-!!$    IF (nmap.GT.SIZE(sout)) THEN 
-!!$       WRITE(6,*)'The total number of charge density coefficients is'
-!!$       WRITE(6,*)'larger than the dimensions:'
-!!$       WRITE (6,8030) nmap,SIZE(sout)
+!!$    IF (nmap.GT.SIZE(sout)) THEN
+!!$       WRITE(oUnit,*)'The total number of charge density coefficients is'
+!!$       WRITE(oUnit,*)'larger than the dimensions:'
+!!$       WRITE (oUnit,8030) nmap,SIZE(sout)
 !!$8030   FORMAT ('nmap= ',i12,' > size(sout)= ',i12)
 !!$       CALL juDFT_error("brysh1: nmap > mmap (dimensions)",calledby ="brysh1")
 !!$    ENDIF
 !!$
 !!$  END SUBROUTINE get_combined_vector
 !!$#endif
-    
-    
-  
+
+
+
   SUBROUTINE resetPotDen(pd)
 
     IMPLICIT NONE
@@ -495,6 +518,9 @@ CONTAINS
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
+    pd%qint = 0.0
+    pd%tec = 0.0
+    pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen

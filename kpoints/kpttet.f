@@ -2,19 +2,16 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE kpttet(
-     >                  iofile,ibfile,iokpt,
-     >                  kpri,ktest,kmidtet,mkpt,ndiv3,
-     >                  nreg,nfulst,rltv,voluni,
+     >                  nkpt,ndiv3,
+     >                  rltv,voluni,
      >                  nsym,ccr,mdir,mface,
      >                  ncorn,nface,fdist,fnorm,cpoint,
-     <                  voltet,ntetra,ntet,vktet,
-     =                  nkpt,
-     <                  divis,vkxyz,wghtkp)
+     <                  voltet,ntetra,ntet,
+     <                  vkxyz,wghtkp)
 c
 c
 c ---> This program generates k-points
-c           in irreducible wedge of BZ  (for nreg=0)
-c           in total BZ                 (for nreg=1)
+c           in irreducible wedge of BZ  
 c      (BZ = 1. Brillouin-zone) for all canonical Bravais lattices
 c      in 3 dimensions,
 c      using the basis vectors of the reciprocal lattice,
@@ -48,9 +45,6 @@ c    nface    : number of faces of the irrBZ
 c    cpoint   : cartesian coordinates of corner points of irrBZ
 c
 c    characterization of the tetrahedron-method k-point set:
-c    nreg     : 1 kpoints in full BZ; 0 kpoints in irrBZ
-c    nfulst   : 1 kpoints ordered in full stars 
-c                  (meaningful only for nreg =1; full BZ)
 c    nkpt     : on input: required number of k-points inside irrBZ
 c               to build the tetrahedrons
 c    ntet     : number of tetrahedra generated
@@ -58,19 +52,13 @@ c    ntetra   : list of four points for each tetrahedron
 c               containing the indices of the respective corner points
 c    vktet    : corner points of tetrahedra
 c
-c    kmidtet  : key to generate mid-tetrahedron k-points
-c               1 mid-points are generated; 0 not generated
-c
 c    OUTPUT: k-point set
 c    nkpt     : number of k-points generated in set
 c    vkxyz    : vector of kpoint generated; in cartesian representation
 c    wghtkp   : weight associated with k-points for BZ integration
-c    divis    : integer triple divis(i); i=1,4.
-c               Used to find more accurate representation of k-points
-c               vklmn(i,kpt)/divis(i) and weights as wght(kpt)/divis(4)
 c
 c-----------------------------------------------------------------------
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_tetcon
       USE m_kvecon
       USE m_fulstar
@@ -78,15 +66,10 @@ c-----------------------------------------------------------------------
 C
 C-----> PARAMETER STATEMENTS
 C
-      INTEGER, INTENT (IN) :: mkpt,ndiv3,mface,mdir
+      INTEGER, INTENT (IN) :: ndiv3,mface,mdir
 c
-c ---> file number for read and write
-c
-      INTEGER, INTENT (IN) :: iofile,iokpt,ibfile
 c
 c ---> running mode parameter
-c
-      INTEGER, INTENT (IN) :: kpri,ktest
 C
 C----->  Symmetry information
 C
@@ -105,61 +88,38 @@ C
 C
 C----->  BRILLOUINE ZONE INTEGRATION
 C
-      INTEGER, INTENT (IN) :: nreg,nfulst,kmidtet
-      INTEGER, INTENT (INOUT) :: nkpt
+      INTEGER, INTENT (IN) :: nkpt
       INTEGER, INTENT (OUT) :: ntetra(4,ndiv3),ntet
-      REAL,    INTENT (OUT) :: voltet(ndiv3),vktet(3,mkpt)
-      REAL,    INTENT (OUT) :: vkxyz(3,mkpt),wghtkp(mkpt),divis(4)
+      REAL,    INTENT (OUT) :: voltet(ndiv3)
+      REAL,    INTENT (OUT) :: vkxyz(3,nkpt),wghtkp(nkpt)
 
 C
 C --->  local variables
 c
-      INTEGER   i,j,ii, nkstar
-      REAL      sumwght,eps,one,tpi,sumvol,volirbz
-      REAL      vkmid(3,mkpt)
+      INTEGER   i,j,ii
+      REAL      eps,sumvol,volirbz
+
+      REAL :: vktet(3,nkpt)
+
 C
 C --->  set local constants
 c
-      SAVE      eps,one
-      DATA      eps/1.0e-9/,one/1.0/
+      SAVE      eps
+      DATA      eps/1.0e-9/
 c
 c======================================================================
 c
-      tpi = 2.0 * pimach()
-c
-      IF (kpri.GE.1) THEN
-        WRITE (iofile,'(3x,'' *<* kpttet *>* '')')
-        WRITE (iofile,'(3x,'' generate k-vectors'')')
-        WRITE (iofile,'(3x,'' ~~~~~~~~~~~~~~~~~~'')')
-        WRITE (iofile,'(3x,'' by tetrahedron-method'')')
-        WRITE (iofile,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~'')')
-      ENDIF
- 
-      WRITE (iofile,'('' k-points generated with tetrahedron '',
+
+      WRITE (oUnit,'('' k-points generated with tetrahedron '',
      >                                              ''method'')')
-      WRITE (iokpt,'(''# k-points generated with tetrahedron '',
+      WRITE (oUnit,'(''# k-points generated with tetrahedron '',
      >                                              ''method'')')
-      IF (nreg .EQ. 0) THEN
-        WRITE (iofile,'(3x,'' in irred wedge of 1. Brillouin zone'')')
-        WRITE (iofile,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
-        WRITE (iokpt,'(''#'',i4,21x,''nreg: k-points in irrBZ'')') nreg
-      ELSEIF (nreg .eq. 1 .and. nfulst .eq. 1) then
-        WRITE (iofile,'(3x,'' in 1. Brillouin zone'')')
-        WRITE (iofile,'(3x,'' ~~~~~~~~~~~~~~~~~~~~'')')
-        WRITE (iofile,'(3x,'' full stars generated'')')
-        WRITE (iofile,'(3x,'' ~~~~~~~~~~~~~~~~~~~~'')')
-        WRITE (iokpt,'(''#'',2(i4,1x),14x,'' nreg,nfulst: '',
-     >      ''k-points in totBZ, ordered in full stars'')') nreg,nfulst
-      ELSE
-        WRITE (iofile,'(2(1x,i4),4x,'' nreg,nfulst: wrong choice;'',
-     >       /,27x,'' allowed combinations: (1,1); (0,0),(0,1)'')' )
-     >                                                   nreg,nfulst
-         CALL juDFT_error("nreg,nfulst: wrong choice",calledby="kpttet")
-      ENDIF
+      WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
+      WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
 
       CALL kvecon(
-     >            iofile,ibfile,mkpt,mface,
-     >            nkpt,ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,
+     >            nkpt,mface,
+     >            ncorn,nsym,nface,rltv,fdist,fnorm,cpoint,
      <            vktet )
 !
 ! --->  generate tetrahedra and mid-tetrahedron k-points
@@ -167,132 +127,46 @@ c
 ! --->  (a) Determine the corner K-POINTs for X number of Tetrahedra for
 !           doing a very pretty Brillouine zone Integration;
 ! --->      determine the volume of each tetrahedron
-!
+
+      DO i = 1, nkpt
+         wghtkp(i) = 1.0 / nkpt
+         vkxyz(:,i) = vktet(:,i)
+         WRITE (oUnit,'(3(f10.7,1x),f12.10,1x,i4,3x,
+     +          ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
+      END DO
+
       CALL tetcon(
-     >            iofile,ibfile,mkpt,ndiv3,
-     >            nkpt,voluni,vktet,
-     =            nsym,
+     >            nkpt,ndiv3,voluni,vktet,nsym,
      <            ntet,voltet,ntetra)
-c
-      WRITE (iofile,'('' the number of tetrahedra '')')
-      WRITE (iofile,*) ntet
-      WRITE (iofile,'('' volumes of the tetrahedra '')')
-      WRITE (iofile,'(e19.12,1x,i5,5x,''voltet(i),i'')')
+
+      WRITE (oUnit,'('' the number of tetrahedra '')')
+      WRITE (oUnit,*) ntet
+      WRITE (oUnit,'('' volumes of the tetrahedra '')')
+      WRITE (oUnit,'(e19.12,1x,i5,5x,''voltet(i),i'')')
      >                               (voltet(i),i,i=1,ntet)
-      WRITE (iofile,'('' corners of the tetrahedra '')')
-      WRITE (iofile, 999) ((ntetra(j,i),j=1,4),i=1,ntet)
-      WRITE (iofile,'('' the # of different k-points '')')
-      WRITE (iofile,*) nkpt
-      WRITE (iofile,'('' k-points used to construct tetrahedra'')')
-      WRITE (iofile,'(3(4x,f10.6))') ((vktet(i,j),i=1,3),j=1,nkpt)
-  999 FORMAT (4(3x,4i4))
+      WRITE (oUnit,'('' corners of the tetrahedra '')')
+      WRITE (oUnit, '(4(3x,4i4))') ((ntetra(j,i),j=1,4),i=1,ntet)
+      WRITE (oUnit,'('' the # of different k-points '')')
+      WRITE (oUnit,*) nkpt
+      WRITE (oUnit,'('' k-points used to construct tetrahedra'')')
+      WRITE (oUnit,'(3(4x,f10.6))') ((vktet(i,j),i=1,3),j=1,nkpt)
 c
 c --->   calculate weights from volume of tetrahedra
 c
-      volirbz =  tpi**3 /(real(nsym)*voluni)
+      volirbz =  tpi_const**3 /(real(nsym)*voluni)
       sumvol = 0.0
       DO i = 1, ntet
          sumvol = sumvol + voltet(i)
          voltet(i) = ntet * voltet(i) / volirbz 
       ENDDO
-c
-      IF ((sumvol-volirbz)/volirbz .LE. eps) THEN
-        IF (kmidtet.EQ.1) THEN
-          DO i = 1, ntet
-            wghtkp(i) = voltet(i)/sumvol
-          ENDDO
-        ELSE
-          DO i = 1, nkpt
-            wghtkp(i) = 1./nkpt
-          ENDDO
-        ENDIF
-      ELSE
-        WRITE (iofile, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
+
+      IF ((sumvol-volirbz)/volirbz.GT. eps) THEN
+         WRITE (oUnit, '(2(e19.12,1x),5x,''summvol.ne.volirbz'')')
      >                                     sumvol,volirbz
          CALL juDFT_error("sumvol =/= volirbz",calledby="kpttet")
-      ENDIF
-c
-c --->  prepare the final set of kpoints in irrBZ (depending on kmidtet)
-c
-      IF ( kmidtet.EQ.0) THEN
-c
-        DO i = 1, nkpt
-           vkxyz(:,i) = vktet(:,i)
-           WRITE (iofile,'(3(f10.7,1x),f12.10,1x,i4,3x,
-     +           ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i),i
-        ENDDO  
-        nkstar = nkpt
-
-      ELSEIF ( kmidtet.EQ.1) THEN
-c
-c --->  (b) calculate mid-tetrahedron k-points
-c
-         DO i=1,ntet
-            vkmid(:,i) = 0.0
-            DO j=1,4
-               vkmid(:,i) = vkmid(:,i) + vktet(:,ntetra(j,i))
-            ENDDO
-            vkmid(:,i) = vkmid(:,i) * 0.25
-         ENDDO
-
-         nkpt = ntet
-         WRITE (iofile,'('' the new number of k-points is '',i4)') nkpt
-         WRITE (iofile,'('' the new k-points are the '',
-     +                        ''mid-tetrahedron-points '')')
-         WRITE (iokpt,'(''# the new k-points are the '',
-     +                        ''mid-tetrahedron-points '')')
-         sumwght = 0.00
-         DO i=1,ntet
-           vkxyz(:,i) = vkmid(:,i)
-           sumwght = sumwght + wghtkp(i)
-         ENDDO
-!
-! ---> check sumwght; if abs(sumwght-1).lt.eps print kpoints and weights
-!
-         IF ( abs(sumwght - one).LT.eps) THEN
-            WRITE (iofile,'(1x,f12.10,1x,'' sumwght .eq. one'')')
-     +                                                   sumwght
-            DO i=1,nkpt
-               WRITE (iofile,'(3(f10.7,1x),f12.10,1x,i4,3x,
-     +            ''vkxyz, wghtkp'')') (vkxyz(ii,i),ii=1,3),wghtkp(i), i
-            ENDDO
-            nkstar = ntet
-
-         ELSE
-            WRITE (iofile,'(1x,f12.10,1x,'' sumwght .ne. one'')')
-     +                                                   sumwght
-             CALL juDFT_error("sumwght",calledby="kpttet")
-         ENDIF
-
-      END IF ! end of generation of mid-tetrahedron k-points
-
-!
-! --->   set denominators for more accurate k-point representation
-!
-      DO i=1,4
-         divis(i) = real(nkpt)
-      ENDDO
-
-      IF ( nreg.EQ.1 .AND. nfulst.EQ.1 ) THEN
-
-! --->   generate full stars for all representative k-points
-!        - for nreg=1 and nfulst=1:
-!              - determine order of full star ifstar(kpn).le.nsym
-!              - assign nkpt= sum {ifstar(ik)} (ik=1,ntet)
-!              - assign vkxyz(ix,kpn) = vkstar(ix,ikpn(is,ik));
-!                        ix=1,3; kpn=1,nkpt; ik=1,ntet; is=1,ifstar(ik)
-!              - calculate wghtkp(kpn)=wghtkp_old(ik)/ifstar(ik)
-!                                kpn=1,nkpt; ik=1,ntet
-
-         CALL fulstar(
-     >                iofile,iokpt,kpri,ktest,
-     >                ccr,nsym,
-     >                vkxyz,nkstar,mkpt,mface,mdir,
-     =                nkpt,vkxyz,wghtkp)
-
-         divis(4) = divis(4) * nsym
       ENDIF
 
       RETURN
       END SUBROUTINE kpttet
       END MODULE m_kpttet
+

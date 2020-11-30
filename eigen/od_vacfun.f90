@@ -7,8 +7,8 @@
 MODULE m_od_vacfun
 CONTAINS
   SUBROUTINE od_vacfun(&
-       m_cyl,cell,vacuum,DIMENSION,stars,&
-       jsp,input,noco,ipot,oneD, n2d_1, ivac,evac,bkpt,MM,vM,&
+       m_cyl,cell,vacuum,stars,&
+       jsp,input,noco,nococonv,ipot,oneD, n2d_1, ivac,evac,bkpt,MM,vM,&
        vxy,vz,kvac3,nv2, tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv)
     !*********************************************************************
     !     determines the necessary values and derivatives on the cylindrical
@@ -22,11 +22,12 @@ CONTAINS
     USE m_intgr, ONLY : intgz0
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_cell),INTENT(IN)     :: cell
     !     ..
@@ -37,18 +38,18 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nv2(input%jspins)
-    INTEGER, INTENT (IN) :: kvac3(DIMENSION%nv2d,input%jspins)
+    INTEGER, INTENT (IN) :: kvac3(lapw_dim_nv2d,input%jspins)
     COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,n2d_1-1)
-    COMPLEX, INTENT (OUT):: tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX, INTENT (OUT):: tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX, INTENT (OUT):: tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX, INTENT (OUT):: tuuv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
+    COMPLEX, INTENT (OUT):: tddv(-vM:vM,-vM:vM,lapw_dim_nv2d,lapw_dim_nv2d)
+    COMPLEX, INTENT (OUT):: tduv(-vM:vM,-vM:vM,lapw_dim_nv2d,lapw_dim_nv2d)
+    COMPLEX, INTENT (OUT):: tudv(-vM:vM,-vM:vM,lapw_dim_nv2d,lapw_dim_nv2d)
+    COMPLEX, INTENT (OUT):: tuuv(-vM:vM,-vM:vM,lapw_dim_nv2d,lapw_dim_nv2d)
     REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,input%jspins)
-    REAL,    INTENT (IN) :: bkpt(3) 
-    REAL,    INTENT (OUT):: udz(-vM:vM,DIMENSION%nv2d,input%jspins),uz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL,    INTENT (OUT):: dudz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL,    INTENT (OUT):: duz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL,    INTENT (OUT):: ddnv(-vM:vM,DIMENSION%nv2d,input%jspins)
+    REAL,    INTENT (IN) :: bkpt(3)
+    REAL,    INTENT (OUT):: udz(-vM:vM,lapw_dim_nv2d,input%jspins),uz(-vM:vM,lapw_dim_nv2d,input%jspins)
+    REAL,    INTENT (OUT):: dudz(-vM:vM,lapw_dim_nv2d,input%jspins)
+    REAL,    INTENT (OUT):: duz(-vM:vM,lapw_dim_nv2d,input%jspins)
+    REAL,    INTENT (OUT):: ddnv(-vM:vM,lapw_dim_nv2d,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero,v1,wronk
@@ -57,12 +58,12 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    REAL wdz(-vM:vM,DIMENSION%nv2d,input%jspins),wz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL dwdz(-vM:vM,DIMENSION%nv2d,input%jspins),dwz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL u(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins),ud(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins)
+    REAL wdz(-vM:vM,lapw_dim_nv2d,input%jspins),wz(-vM:vM,lapw_dim_nv2d,input%jspins)
+    REAL dwdz(-vM:vM,lapw_dim_nv2d,input%jspins),dwz(-vM:vM,lapw_dim_nv2d,input%jspins)
+    REAL u(vacuum%nmzd,-vM:vM,lapw_dim_nv2d,input%jspins),ud(vacuum%nmzd,-vM:vM,lapw_dim_nv2d,input%jspins)
     REAL v(3),x(vacuum%nmzd)
     REAL vr0(vacuum%nmzd,2,4)
-    REAL w(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins),wd(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins)
+    REAL w(vacuum%nmzd,-vM:vM,lapw_dim_nv2d,input%jspins),wd(vacuum%nmzd,-vM:vM,lapw_dim_nv2d,input%jspins)
     REAL qssbti(2)
     !     ..
 
@@ -74,8 +75,8 @@ CONTAINS
 
     wronk = 2.0
 
-    qssbti(1) = - noco%qss(3)/2.
-    qssbti(2) = + noco%qss(3)/2.
+    qssbti(1) = - nococonv%qss(3)/2.
+    qssbti(2) = + nococonv%qss(3)/2.
 
     tuuv(:,:,:,:) = CMPLX(0.,0.)
     tudv(:,:,:,:) = CMPLX(0.,0.)
@@ -137,7 +138,7 @@ CONTAINS
                   wz(m,ik,jspin)/(2.0*((cell%z1)**(1.5)))
              uz(m,ik,jspin)=wz(m,ik,jspin)/SQRT(cell%z1)
              dudz(m,ik,jspin)=(-dwdz(m,ik,jspin))/SQRT(cell%z1)-&
-                  wdz(m,ik,jspin)/(2.0*((cell%z1)**(1.5))) 
+                  wdz(m,ik,jspin)/(2.0*((cell%z1)**(1.5)))
              udz(m,ik,jspin)=wdz(m,ik,jspin)/SQRT(cell%z1)
              IF (m.GT.0) THEN
                 duz(-m,ik,jspin) = duz(m,ik,jspin)
@@ -287,8 +288,3 @@ CONTAINS
     RETURN
   END SUBROUTINE od_vacfun
 END MODULE m_od_vacfun
-
-
-
-
-      

@@ -27,13 +27,14 @@ MODULE m_xmlOutput
       USE m_constants
       USE m_utility
       USE m_compile_descr
+#ifdef CPP_MPI
+      use mpi
+#endif
 !$    use omp_lib
       
       IMPLICIT NONE
 
-#ifdef CPP_MPI
-      include "mpif.h"
-#endif
+
       INTEGER           :: err, isize
       INTEGER           :: numFlags
       INTEGER           :: nOMPThreads

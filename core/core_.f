@@ -5,6 +5,8 @@ c...............................................................core
      >                mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,
      X                ectab,
      <                rhochr,rhospn)
+
+      USE m_constants
       USE m_felim
       USE m_findlim
       USE m_cnodes
@@ -90,16 +92,16 @@ C
          ferro = .true.
       ELSE
          ferro = .false.
-         WRITE (6,FMT=
+         WRITE (oUnit,FMT=
      +'(''  PARAMAGNETIC CASE'',/,
      +   ''  *****************'')')
       END IF
 
-      WRITE (6,FMT=
+      WRITE (oUnit,FMT=
      +'(/,''  ATOMIC NUMBER  : '',F6.2,/,
      +    ''  CORE ELECTRONS : '',I5,/,
      +    ''  VAL. ELECTRONS : '',I5)') zz,ncor,nval
-      WRITE (6,FMT=
+      WRITE (oUnit,FMT=
      +'(  /,
      +    ''  MESH    RC(1)  : '',F12.6,//10x,
      +    ''MUE  KAP ITER    ENERGY '',
@@ -240,7 +242,7 @@ c                    - atomic energy search -
 c
                   IF (abs(var(iv)).EQ.0.00) THEN
                      IF (ferro) THEN
-                        WRITE (6,FMT='(A,I3,A)') ' VAR ',iv,
+                        WRITE (oUnit,FMT='(A,I3,A)') ' VAR ',iv,
      +                    ' = 0 ??????!!!!!'
                      END IF
                   ELSE
@@ -293,7 +295,7 @@ c
   130          CONTINUE
 c
                IF (var(1).GT.0.00) THEN
-                  WRITE (6,FMT=*) ' WARNING FROM <CORE> E=',var(1)
+                  WRITE (oUnit,FMT=*) ' WARNING FROM <CORE> E=',var(1)
                   var(1) = -0.20
                END IF
 c
@@ -322,7 +324,7 @@ c
                   DO 140 iv = 1,nvar
                      IF (abs(var(iv)).EQ.0.00) THEN
                         IF (ferro) THEN
-                           WRITE (6,FMT='(A,I3,A)') ' VAR ',iv,
+                           WRITE (oUnit,FMT='(A,I3,A)') ' VAR ',iv,
      +                       ' = 0 ??????!!!!!'
                         END IF
                      ELSE
@@ -330,7 +332,7 @@ c
                      END IF
   140             CONTINUE
                ELSE
-                  WRITE (6,FMT=
+                  WRITE (oUnit,FMT=
      +'('' ITERATION NOT CONVERGED AFTER'',I3,'' STEPS !'',/,
      + '' PARAMETERS:'',4E18.10,/,'' LAST CORR.:'',4E18.10,/,
      +  '' LAST ERROR:'',4E18.10)') itermax, (var(iv),iv=1,4),
@@ -360,10 +362,10 @@ c                 - final info. -
                ectab(ic) = ec + 2*ec_sv
 c
                IF (ish.LT.nsh) THEN
-                  WRITE (6,FMT=8000) nqn,txtl(l),txtk(iabs(kap(s))),
+                WRITE (oUnit,FMT=8000) nqn,txtl(l),txtk(iabs(kap(s))),
      +              (2*muem05+1),kap(s),iter,ec/2.
                ELSE
-                  WRITE (6,FMT=8000) nqn,txtl(l),txtk(iabs(kap(s))),
+                WRITE (oUnit,FMT=8000) nqn,txtl(l),txtk(iabs(kap(s))),
      +              (2*muem05+1),kap(s),iter,ec/2.
 
 C              ----------------------------
@@ -391,7 +393,7 @@ C              ----------------------------
                         IF (vz* (ectab(i)-ectab(i-ii)).GT.0.0) iflag = 1
   160                CONTINUE
 c
-                     IF (ferro .AND. (iflag.EQ.1)) WRITE (6,FMT=
+                     IF (ferro .AND. (iflag.EQ.1)) WRITE (oUnit,FMT=
      +'('' >>> CHECK DATA '',                               '' E(KAP,MJ)
      + SHOULD BE MONOTONOUS AND '',                         '' E(+L,MJ)
      +< E(-L-1,MJ) '',//)')
@@ -402,16 +404,16 @@ c
 c----> s - loop end
   180    CONTINUE
 C----> \mu  - loop end
-         WRITE (6,FMT='(I4,A1,20X,F16.3)') nqn,txtl(l),bhff(ilshell)
+       WRITE (oUnit,FMT='(I4,A1,20X,F16.3)') nqn,txtl(l),bhff(ilshell)
          btot = bhff(ilshell) + btot
   190 CONTINUE
 C----> nl  - loop end
-      WRITE (6,FMT='(''HFTOT:'',20X,F16.3)') btot
+      WRITE (oUnit,FMT='(''HFTOT:'',20X,F16.3)') btot
 c
       qcor = rsimp(mrad,rhochr,rc,jtop,dx)
-      WRITE (6,FMT=8020) 'charge',qcor
+      WRITE (oUnit,FMT=8020) 'charge',qcor
       spcor = rsimp(mrad,rhospn,rc,jtop,dx)
-      WRITE (6,FMT=8020) 'spin',spcor
+      WRITE (oUnit,FMT=8020) 'spin',spcor
 c
 C----> that's all
 c

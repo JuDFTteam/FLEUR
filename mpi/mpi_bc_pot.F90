@@ -5,15 +5,17 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_mpi_bc_pot
+#ifdef CPP_MPI
+   use mpi 
+#endif
 CONTAINS
-   SUBROUTINE mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
+   SUBROUTINE mpi_bc_pot(fmpi,stars,sphhar,atoms,input,vacuum,&
                          iter,fr,fpw,fz,fzxy)
 
    USE m_types
    IMPLICIT NONE
-   INCLUDE 'mpif.h'
 
-   TYPE(t_mpi),INTENT(IN)        :: mpi
+   TYPE(t_mpi),INTENT(IN)        :: fmpi
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_vacuum),INTENT(IN)     :: vacuum
    TYPE(t_stars),INTENT(IN)      :: stars
@@ -27,18 +29,18 @@ CONTAINS
    REAL,    INTENT (INOUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL,    INTENT (INOUT) :: fz(vacuum%nmzd,2,input%jspins)
 
-   INTEGER :: n, ierr(3)
-
-   CALL MPI_BCAST(iter,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   INTEGER :: n, ierr
+#ifdef CPP_MPI
+   CALL MPI_BCAST(iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
 
     n = stars%ng3 * input%jspins
-    CALL MPI_BCAST(fpw,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(fpw,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
     n = vacuum%nmzxyd * (stars%ng2-1) * 2 * input%jspins
-    CALL MPI_BCAST(fzxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(fzxy,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
     n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
-    CALL MPI_BCAST(fr,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(fr,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
     n = vacuum%nmzd * 2 * input%jspins
-    CALL MPI_BCAST(fz,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
-
+    CALL MPI_BCAST(fz,n,MPI_DOUBLE,0,fmpi%mpi_comm,ierr)
+#endif
    END SUBROUTINE mpi_bc_pot
 END MODULE m_mpi_bc_pot

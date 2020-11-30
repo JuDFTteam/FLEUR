@@ -6,41 +6,49 @@
 
 MODULE m_rhosphnlo
   !***********************************************************************
-  ! Add the local orbital contributions to the charge density. The 
+  ! Add the local orbital contributions to the charge density. The
   ! corresponding summation of the pure apw contribuions is done in
   ! cdnval.
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,atoms,sphhar, uloulopn,dulon,uulon,&
-       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,qmtllo)
+  SUBROUTINE rhosphnlo(itype,ispin,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
+       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,moments,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
+    USE m_types
     USE m_radsra
     USE m_radsrdn
-    USE m_types
+
     IMPLICIT NONE
+
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_sym),INTENT(IN)      :: sym
+
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,    INTENT (IN) :: itype 
+    INTEGER,    INTENT (IN) :: itype, ispin
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: aclo(atoms%nlod),bclo(atoms%nlod),cclo(atoms%nlod,atoms%nlod)
-    REAL,    INTENT (IN) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: dulon(atoms%nlod),uulon(atoms%nlod),vr(atoms%jmtd)
-    REAL,    INTENT (IN) :: uloulopn(atoms%nlod,atoms%nlod),ello(atoms%nlod)
-    REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: qmtllo(0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd)
+    REAL,    INTENT (IN) :: aclo(:),bclo(:),cclo(:,:)
+    REAL,    INTENT (IN) :: acnmt(0:,:,:)
+    REAL,    INTENT (IN) :: bcnmt(0:,:,:)
+    REAL,    INTENT (IN) :: ccnmt(:,:,:)
+    REAL,    INTENT (IN) :: dulon(:),uulon(:),vr(:)
+    REAL,    INTENT (IN) :: uloulopn(:,:),ello(:)
+    REAL,    INTENT (IN) :: f(:,:,0:),g(:,:,0:)
+    REAL,    INTENT (INOUT) :: qmtllo(0:)
+    REAL,    INTENT (INOUT) :: rho(:,0:)
+    TYPE(t_moments), INTENT(INOUT) :: moments
+
+    INTEGER, PARAMETER :: lcf=3
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2
-    INTEGER j,l,lh,lo,lop,lp,nodedum
-    REAL dus,ddn,c
+    INTEGER j,l,lh,lo,lop,lp,nodedum,llp
+    REAL dus,ddn,c,temp
     !     ..
     !     .. Local Arrays ..
     REAL,    ALLOCATABLE :: flo(:,:,:),glo(:,:)
@@ -90,16 +98,25 @@ CONTAINS
 
     DO lo = 1,atoms%nlo(itype)
        l = atoms%llo(lo,itype)
+       llp = (l* (l+1))/2 + l
        DO j = 1,atoms%jri(itype)
-          rho(j,0) = rho(j,0) + c_2 *&
-               (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
-               bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
+          temp = c_2 *&
+                 (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
+                 bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
+          rho(j,0) = rho(j,0) + temp
+          IF (l.LE.input%lResMax) THEN
+             moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
+          END IF
        END DO
        DO lop = 1,atoms%nlo(itype)
           IF (atoms%llo(lop,itype).EQ.l) THEN
              DO j = 1,atoms%jri(itype)
-                rho(j,0) = rho(j,0) + c_2 * cclo(lop,lo) *&
+                temp = c_2 * cclo(lop,lo) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
+                rho(j,0) = rho(j,0) + temp
+                IF (l.LE.input%lResMax) THEN
+                   moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
+                END IF
              END DO
           END IF
        END DO
@@ -108,21 +125,36 @@ CONTAINS
     !---> add the contribution of the local orbitals and flapw - lo cross-
     !---> terms to the non-spherical chargedensity inside the muffin tins.
 
-    DO lh = 1,sphhar%nlh(atoms%ntypsy(atoms%nat))
+    DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%nat))
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
+             l = atoms%llo(lo,itype)
+             IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
+                .AND.(l.EQ.lcf.OR.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
+             llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
-                rho(j,lh) = rho(j,lh) + c_1 * (&
+                temp = c_1 * (&
                      acnmt(lp,lo,lh) * (f(j,1,lp)*flo(j,1,lo) +f(j,2,lp)*flo(j,2,lo) ) +&
                      bcnmt(lp,lo,lh) * (g(j,1,lp)*flo(j,1,lo) +g(j,2,lp)*flo(j,2,lo) ) )
+                rho(j,lh) = rho(j,lh) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
+                END IF
              END DO
           END DO
        END DO
        DO lo = 1,atoms%nlo(itype)
+          l = atoms%llo(lo,itype)
           DO lop = 1,atoms%nlo(itype)
+             lp = atoms%llo(lop,itype)
+             llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
-                rho(j,lh) = rho(j,lh) + c_1 * ccnmt(lop,lo,lh) *&
+                temp = c_1 * ccnmt(lop,lo,lh) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
+                rho(j,lh) = rho(j,lh) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
+                END IF
              END DO
           END DO
        END DO

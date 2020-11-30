@@ -1,14 +1,45 @@
 set(fleur_F90 ${fleur_F90}
-hybrid/hyb_abcrot.F90          hybrid/exchange_core.F90   hybrid/mixedbasis.F90      hybrid/symmetrizeh.F90
-hybrid/checkolap.F90       hybrid/exchange_val_hf.F90 hybrid/read_core.F90       hybrid/wavefproducts.F90
-hybrid/coulombmatrix.F90   hybrid/gen_wavf.F90        hybrid/spmvec.F90          hybrid/hybrid.F90
-hybrid/HF_init.F90   hybrid/hsfock.F90          hybrid/subvxc.F90          hybrid/add_Vnonlocal.F90
-hybrid/hf_setup.F90  hybrid/kp_perturbation.F90 hybrid/symm_hf.F90 hybrid/trafo.F90
-hybrid/exponential_integral.f90
-hybrid/hsefunctional.F90
-hybrid/olap.F90
-)
-
-set(fleur_F77 ${fleur_F77}
-hybrid/wrapper.F
+   hybrid/calc_cmt.f90
+   hybrid/hyb_abcrot.F90
+   hybrid/exchange_core.F90
+   hybrid/ex_to_vx.f90
+   hybrid/mixedbasis.F90
+   hybrid/symmetrizeh.F90
+   hybrid/checkolap.F90
+   hybrid/exchange_val_hf.F90
+   hybrid/hybrid_core.f90
+   hybrid/coulombmatrix.F90
+   hybrid/gen_wavf.F90
+   hybrid/spmvec.F90
+   hybrid/calc_hybrid.F90
+   hybrid/HF_init.F90
+   hybrid/hsfock.F90
+   hybrid/subvxc.F90
+   hybrid/add_Vnonlocal.F90
+   hybrid/hf_setup.F90
+   hybrid/kp_perturbation.f90
+   hybrid/symm_hf.F90
+   hybrid/trafo.F90
+   hybrid/exponential_integral.f90
+   hybrid/hsefunctional.F90
+   hybrid/olap.F90
+   hybrid/wrapper.f90
+   hybrid/wavefproducts.f90
+   hybrid/wavefproducts_aux.F90
+   hybrid/wavefproducts_inv.f90
+   hybrid/wavefproducts_noinv.f90
+   hybrid/calc_l_m_from_lm.f90
+   hybrid/calc_mpsmat.f90
+   hybrid/reorder.f90
+   hybrid/spmm.f90
+   hybrid/sphbessel_integral.f90
+   hybrid/structureconstant.F90
+   hybrid/work_package.F90
+   hybrid/distribute_mpi.F90
+   hybrid/util/util.f90
+   hybrid/util/rorder.f90
+   hybrid/util/intgrf.f90
+   hybrid/legendre_poly.f90 
+   hybrid/unify_zmat.f90
+   hybrid/progress_thread/thread_lib.f90 
 )

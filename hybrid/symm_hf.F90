@@ -11,33 +11,39 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_symm_hf
 
-#define irreps .false.
-
+   use m_judft
+   USE m_types
+   USE m_types_hybdat
+   USE m_constants
+   USE m_util
+   USE m_intgrf
+   USE m_io_hybinp
+#ifdef CPP_MPI 
+   use mpi 
+#endif
 CONTAINS
 
-   SUBROUTINE symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
-
-      USE m_types
-      USE m_util, ONLY: modulo1
-
+   SUBROUTINE symm_hf_init(fi, nk, nsymop, rrot, psym)
+      use m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_kpts), INTENT(IN)    :: kpts
+      type(t_fleurinput), intent(in)    :: fi
       INTEGER, INTENT(IN)    :: nk
-      INTEGER, INTENT(OUT)   :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(INOUT) :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
+      INTEGER, INTENT(INOUT) :: nsymop
+      INTEGER, INTENT(INOUT) :: rrot(:, :, :) ! 3,3,fi%sym%nsym
+      INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
       REAL    :: rotkpt(3)
 
+      CALL timestart("symm_hf_init")
+      nsymop = 0
       ! calculate rotations in reciprocal space
-      DO i = 1, sym%nsym
-         IF (i <= sym%nop) THEN
-            rrot(:, :, i) = transpose(sym%mrot(:, :, sym%invtab(i)))
+      DO i = 1, fi%sym%nsym
+         IF(i <= fi%sym%nop) THEN
+            rrot(:, :, i) = transpose(fi%sym%mrot(:, :, fi%sym%invtab(i)))
          ELSE
-            rrot(:, :, i) = -rrot(:, :, i - sym%nop)
+            rrot(:, :, i) = -rrot(:, :, i - fi%sym%nop)
          END IF
       END DO
 
@@ -48,74 +54,65 @@ CONTAINS
 
       psym = 0
       nsymop = 0
-      DO i = 1, sym%nsym
-         rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
+      DO i = 1, fi%sym%nsym
+         rotkpt = matmul(rrot(:, :, i), fi%kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3)
+         rotkpt = fi%kpts%to_first_bz(rotkpt)
 
          !check if rotkpt is identical to bk(:,nk)
-         IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
+         IF(maxval(abs(rotkpt - fi%kpts%bkf(:, nk))) <= 1E-07) THEN
             nsymop = nsymop + 1
             psym(nsymop) = i
          END IF
       END DO
 
-      WRITE (6, '(A,i3)') ' nk', nk
-      WRITE (6, '(A,3f10.5)') ' kpts%bkf(:,nk):', kpts%bkf(:, nk)
-      WRITE (6, '(A,i3)') ' Number of elements in the little group:', nsymop
+      WRITE(oUnit, '(A,i3)') 'current nk: ', nk
+      WRITE(oUnit, '(A,3f10.5)') ' fi%kpts%bkf(:,nk):', fi%kpts%bkf(:, nk)
+      WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
 
+      CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, &
-                      lapw, jsp, mpi, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
-                      pointer_EIBZ, nsest, indx_sest)
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, cmt, &
+                      rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
 
-      USE m_constants
-      USE m_types
-      USE m_util, ONLY: modulo1, intgrf, intgrf_init
-      USE m_olap, ONLY: wfolap_inv, wfolap_noinv, wfolap1, wfolap_init
-      USE m_trafo, ONLY: waveftrafo_symm
-      USE m_io_hybrid
+      USE m_olap
+      USE m_trafo
+      use m_calc_cmt
+      use m_juDFT
+
       IMPLICIT NONE
 
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-
-      TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: dimension
-      TYPE(t_hybrid), INTENT(IN) :: hybrid
-      TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
-      TYPE(t_kpts), INTENT(IN)   :: kpts
-      TYPE(t_atoms), INTENT(IN)  :: atoms
-      TYPE(t_lapw), INTENT(IN)   :: lapw
+      type(t_fleurinput), intent(in)    :: fi
+      TYPE(t_hybdat), INTENT(IN) :: hybdat
+      type(t_hybmpi), intent(in) :: submpi
+      TYPE(t_mpdata), intent(in) :: mpdata
 
 !     - scalars -
       INTEGER, INTENT(IN)              :: nk
-      INTEGER, INTENT(IN)              :: jsp
-      INTEGER, INTENT(OUT)             :: nkpt_EIBZ
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
-      INTEGER, INTENT(IN)              :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(IN)              :: psym(sym%nsym)
-      INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER, INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
-      INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
-      INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
+      COMPLEX , intent(in)             :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
+      INTEGER, INTENT(IN)              :: rrot(:, :, :)
+      INTEGER, INTENT(IN)              :: psym(:)
+      INTEGER, INTENT(INOUT)           :: parent(fi%kpts%nkptf)
+      INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk))
+      INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
+      INTEGER, ALLOCATABLE, INTENT(INOUT) :: n_q(:)
 
-      REAL, INTENT(IN)                 :: eig_irr(dimension%neigd, kpts%nkpt)
+      REAL, INTENT(IN)                 :: eig_irr(:, :)
 
 !     - local scalars -
-      INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
-      INTEGER                         :: itype, ieq, iatom, ratom
-      INTEGER                         :: iband, iband1, iband2, iatom0
+      INTEGER                         :: ikpt, iop, isym, iisym, m
+      INTEGER                         :: itype, ieq, iatom, ratom, ierr
+      INTEGER                         ::  iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: irecl_cmt, irecl_z
       INTEGER                         :: ok
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
-      INTEGER                         :: ndb, ndb1, ndb2
+      INTEGER                         :: ndb1, ndb2
       INTEGER                         :: nrkpt
       INTEGER                         :: maxndb, nddb
 
@@ -125,61 +122,46 @@ CONTAINS
       COMPLEX, PARAMETER             :: img = (0.0, 1.0)
 
 !     - local arrays -
-      INTEGER                         :: neqvkpt(kpts%nkptf)
-      INTEGER                         :: list(kpts%nkptf)
-      INTEGER                         :: degenerat(hybrid%ne_eig(nk))
-      INTEGER, ALLOCATABLE             :: help(:)
+      INTEGER                         :: neqvkpt(fi%kpts%nkptf)
+      INTEGER                         :: list(fi%kpts%nkptf)
+      INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
-      REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
+      complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                         :: carr1(hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
-      COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
-      COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
-      COMPLEX, ALLOCATABLE             :: trace(:, :)
-
-      TYPE(t_mat)                     :: olappw, z
-      COMPLEX, ALLOCATABLE             :: rep_d(:, :, :)
+      COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
-      WRITE (6, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
+      CALL timestart("symm_hf")
+      parent = 0; nsest = 0; indx_sest = 0;
+      WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
       ! applying the symmetry operations of the little group of k
-
+      call timestart("calc EIBZ")
       neqvkpt = 0
 
-      DO i = 1, kpts%nkptf
+      DO i = 1, fi%kpts%nkptf
          list(i) = i - 1
       END DO
 
-      DO ikpt = 2, kpts%nkptf
+      DO ikpt = 2, fi%kpts%nkptf
          DO iop = 1, nsymop
 
-            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
-
-            !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3)
+            rotkpt = matmul(rrot(:, :, psym(iop)), fi%kpts%bkf(:, ikpt))
 
             !determine number of rotkpt
-            nrkpt = 0
-            DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
-                  nrkpt = ikpt1
-                  EXIT
-               END IF
-            END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
+            nrkpt = fi%kpts%get_nk(rotkpt)
+            IF(nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
-            IF (list(nrkpt) /= 0) THEN
+            IF(list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
                neqvkpt(ikpt) = neqvkpt(ikpt) + 1
                parent(nrkpt) = ikpt
             END IF
-            IF (all(list == 0)) EXIT
+            IF(all(list == 0)) EXIT
 
          END DO
       END DO
@@ -188,49 +170,36 @@ CONTAINS
       parent(1) = 1
       neqvkpt(1) = 1
 
-      ! determine number of members in the EIBZ(k)
-      ic = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (parent(ikpt) == ikpt) ic = ic + 1
-      END DO
-      nkpt_EIBZ = ic
-
-      ALLOCATE (pointer_EIBZ(nkpt_EIBZ))
-      ic = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (parent(ikpt) == ikpt) THEN
-            ic = ic + 1
-            pointer_EIBZ(ic) = ikpt
-         END IF
-      END DO
-
-      WRITE (6, '(A,i5)') ' Number of k-points in the EIBZ', nkpt_EIBZ
+      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%EIBZ(nk)%nkpt
+      call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
-
-      ALLOCATE (n_q(nkpt_EIBZ))
+      call timestart("calc n_q")
+      IF(ALLOCATED(n_q)) DEALLOCATE(n_q)
+      allocate(n_q(fi%kpts%EIBZ(nk)%nkpt), source=0)
 
       ic = 0
       n_q = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (parent(ikpt) == ikpt) THEN
+      DO ikpt = 1, fi%kpts%nkptf
+         IF(parent(ikpt) == ikpt) THEN
             ic = ic + 1
             DO iop = 1, nsymop
                isym = psym(iop)
-               rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, ikpt))
+               rotkpt = matmul(rrot(:, :, isym), fi%kpts%bkf(:, ikpt))
 
                !transfer rotkpt into BZ
-               rotkpt = modulo1(rotkpt, kpts%nkpt3)
+               rotkpt = fi%kpts%to_first_bz(rotkpt)
 
                !check if rotkpt is identical to bk(:,ikpt)
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
+               IF(maxval(abs(rotkpt - fi%kpts%bkf(:, ikpt))) <= 1E-06) THEN
                   n_q(ic) = n_q(ic) + 1
                END IF
             END DO
          END IF
       END DO
-      IF (ic /= nkpt_EIBZ) STOP 'symm: failure EIBZ'
+      IF(ic /= fi%kpts%EIBZ(nk)%nkpt) call judft_error('symm: failure EIBZ')
+      call timestop("calc n_q")
 
       ! calculate degeneracy:
       ! degenerat(i) = 1 state i  is not degenerat,
@@ -241,18 +210,18 @@ CONTAINS
 
       degenerat = 1
 
-      WRITE (6, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
+      WRITE(oUnit, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
-      DO i = 1, hybrid%nbands(nk)
-         DO j = i + 1, hybrid%nbands(nk)
-            IF (abs(eig_irr(i, nk) - eig_irr(j, nk)) <= tolerance) THEN
+      DO i = 1, hybdat%nbands(nk)
+         DO j = i + 1, hybdat%nbands(nk)
+            IF(abs(eig_irr(i, nk) - eig_irr(j, nk)) <= tolerance) THEN
                degenerat(i) = degenerat(i) + 1
             END IF
          END DO
       END DO
 
-      DO i = 1, hybrid%ne_eig(nk)
-         IF (degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
+      DO i = 1, hybdat%ne_eig(nk)
+         IF(degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
             degenerat(i + 1:i + degenerat(i) - 1) = 0
          END IF
       END DO
@@ -262,231 +231,128 @@ CONTAINS
 
       ! number of different degenerate bands/states
       nddb = count(degenerat >= 1)
+#ifdef CPP_EXPLICIT_HYB
+      WRITE(oUnit, *) ' Degenerate states:'
+      DO iband = 1, hybdat%nbands(nk)/5 + 1
+         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
+      END DO
+#endif
 
-      WRITE (6, *) ' Degenerate states:'
-      DO iband = 1, hybrid%nbands(nk)/5 + 1
-         WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybrid%nbands(nk)))
+      IF(allocated(olapmt)) deallocate(olapmt)
+      allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:fi%atoms%lmaxd, fi%atoms%ntype), stat=ok)
+      IF(ok /= 0) call judft_error('symm: failure allocation olapmt')
+      olapmt = 0
+
+      call timestart("calc olapmt")
+      DO itype = 1, fi%atoms%ntype
+         DO l = 0, fi%atoms%lmax(itype)
+            nn = mpdata%num_radfun_per_l(l, itype)
+            DO n2 = 1, nn
+               DO n1 = 1, nn
+                  olapmt(n1, n2, l, itype) = intgrf( &
+                                             hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype) &
+                                             + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype), &
+                                             fi%atoms, itype, hybdat%gridf)
+               END DO
+            END DO
+         END DO
+      END DO
+      call timestop("calc olapmt")
+
+      allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
+      IF(ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
+      wavefolap = 0
+
+      allocate(cmthlp(size(cmt,2), size(cmt,1) ), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc cmthlp")
+
+      call timestart("calc wavefolap")
+      do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
+         itype = fi%atoms%itype(iatom)
+         cmthlp = transpose(cmt(:,:,iatom))
+         lm = 0
+         DO l = 0, fi%atoms%lmax(itype)
+            DO M = -l, l
+               nn = mpdata%num_radfun_per_l(l, itype)
+               DO iband1 = 1, hybdat%nbands(nk)
+                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
+                  !          X,                  INCX,  BETA,    Y, INCY )
+                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
+                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
+                  
+                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
+                  !          X,      INCX,  BETA,    Y, INCY )  
+                  call zgemv("C", nn, hybdat%nbands(nk), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
+                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
+               END DO
+               lm = lm + nn
+            END DO
+         END DO
       END DO
 
-      IF (irreps) THEN
-         ! calculate representation, i.e. the action of an element of
-         ! the little group of k on \phi_n,k:
-         ! P(R,T)\phi_n,k = \sum_{n'\in degenerat(n)} rep_v(n',n) *\phi_n',k
+      deallocate(cmthlp)
+#ifdef CPP_MPI
+      call timestart("allreduce wavefolap")
+      call MPI_ALLREDUCE(MPI_IN_PLACE, wavefolap, size(wavefolap), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+      call timestop("allreduce wavefolap")
+#endif
+      call timestop("calc wavefolap")
 
-         ! read in cmt and z at current k-point (nk)
-         CALL read_cmt(cmt, nk)
-         call read_z(z, kpts%nkptf*(jsp - 1) + nk)
-
-         ALLOCATE (rep_d(maxndb, nddb, nsymop), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation rep_v'
-
-         call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
-
-         olapmt = 0
-         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, hybrid, cell, hybdat%bas1, hybdat%bas2)
-
-         ALLOCATE (cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation cmthlp/cpwhlp'
-
-         DO isym = 1, nsymop
-            iop = psym(isym)
-
-            ic = 0
-            DO i = 1, hybrid%nbands(nk)
-               ndb = degenerat(i)
-               IF (ndb >= 1) THEN
-                  ic = ic + 1
-                  cmthlp = 0
-                  cpwhlp = 0
-
-                  CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, hybrid, kpts, sym, jsp, dimension, cell, lapw)
-
-                  DO iband = 1, ndb
-                     carr1 = cmt(iband + i - 1, :, :)
-                     IF (z%l_real) THEN
-                        rep_d(iband, ic, isym) = wfolap_inv(carr1, z%data_r(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                            cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_r, olapmt, atoms, hybrid)
-                     else
-                        rep_d(iband, ic, isym) = wfolap_noinv(carr1, z%data_c(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                              cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_c, olapmt, atoms, hybrid)
-                     endif
-                  END DO
-
-               END IF
-            END DO
-
-         END DO
-
-         DEALLOCATE (cmthlp, cpwhlp)
-
-         ! calculate trace of irrecudible representation
-         ALLOCATE (trace(sym%nsym, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation trace'
-
-         ic = 0
-         trace = 0
-         DO iband = 1, hybrid%nbands(nk)
-            ndb = degenerat(iband)
-            IF (ndb >= 1) THEN
-               ic = ic + 1
-               !calculate trace
-               DO iop = 1, nsymop
-                  isym = psym(iop)
-                  DO i = 1, ndb
-                     trace(isym, ic) = trace(isym, ic) + rep_d(i, ic, iop)
-                  END DO
-               END DO
+      allocate(symequivalent(nddb, nddb), stat=ok)
+      IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
+      symequivalent = .false.
+      ic1 = 0
+      DO iband1 = 1, hybdat%nbands(nk)
+         ndb1 = degenerat(iband1)
+         IF(ndb1 == 0) CYCLE
+         ic1 = ic1 + 1
+         ic2 = 0
+         DO iband2 = 1, hybdat%nbands(nk)
+            ndb2 = degenerat(iband2)
+            IF(ndb2 == 0) CYCLE
+            ic2 = ic2 + 1
+            IF(any(abs(wavefolap(iband1:iband1 + ndb1 - 1, &
+                                 iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
+!                .and. ndb1 .eq. ndb2 ) THEN
+               symequivalent(ic2, ic1) = .true.
             END IF
          END DO
-
-         ! determine symmetry equivalent bands/irreducible representations by comparing the trace
-
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
-
-         ic1 = 0
-         symequivalent = .false.
-         DO iband1 = 1, hybrid%nbands(nk)
-            ndb1 = degenerat(iband1)
-            IF (ndb1 >= 1) THEN
-               ic1 = ic1 + 1
-               ic2 = 0
-               DO iband2 = 1, hybrid%nbands(nk)
-                  ndb2 = degenerat(iband2)
-                  IF (ndb2 >= 1) THEN
-                     ic2 = ic2 + 1
-                     IF (ndb2 == ndb1) THEN
-                        ! note that this criterium is only valid for pure spatial rotations
-                        ! if one combines spatial rotations with time reversal symmetry there
-                        ! is no unique criteria to identify symequivalent state
-                        ! however, also in the latter case the trace of the spatial rotations
-                        ! for two symmetry equivalent states must be equivalent
-                        IF (all(abs(trace(:sym%nop, ic1) - trace(:sym%nop, ic2)) <= 1E-8))&
-           &            THEN
-                           symequivalent(ic2, ic1) = .true.
-                        END IF
-                     END IF
-                  END IF
-               END DO
-            END IF
-         END DO
-
-      ELSE
-         ! read in cmt and z at current k-point (nk)
-
-         CALL read_cmt(cmt, nk)
-         !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
-
-         IF (allocated(olapmt)) deallocate (olapmt)
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
-         olapmt = 0
-
-         DO itype = 1, atoms%ntype
-            DO l = 0, atoms%lmax(itype)
-               nn = hybrid%nindx(l, itype)
-               DO n2 = 1, nn
-                  DO n1 = 1, nn
-                     olapmt(n1, n2, l, itype) = intgrf( &
-          &                        hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
-          &                       + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
-          &                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         ALLOCATE (wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation wfolap/maxindx'
-         wavefolap = 0
-
-         iatom = 0
-         DO itype = 1, atoms%ntype
-            DO ieq = 1, atoms%neq(itype)
-               iatom = iatom + 1
-               lm = 0
-               DO l = 0, atoms%lmax(itype)
-                  DO M = -l, l
-                     nn = hybrid%nindx(l, itype)
-                     DO iband1 = 1, hybrid%nbands(nk)
-                        carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
-           &                                cmt(iband1, lm + 1:lm + nn, iatom))
-                        DO iband2 = 1, iband1
-                           wavefolap(iband2, iband1)&
-            &            = wavefolap(iband2, iband1)&
-            &            + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
-                        END DO
-                     END DO
-                     lm = lm + nn
-                  END DO
-               END DO
-            END DO
-         END DO
-
-         DO iband1 = 1, hybrid%nbands(nk)
-            DO iband2 = 1, iband1
-               wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
-            END DO
-         END DO
-
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
-         symequivalent = .false.
-         ic1 = 0
-         DO iband1 = 1, hybrid%nbands(nk)
-            ndb1 = degenerat(iband1)
-            IF (ndb1 == 0) CYCLE
-            ic1 = ic1 + 1
-            ic2 = 0
-            DO iband2 = 1, hybrid%nbands(nk)
-               ndb2 = degenerat(iband2)
-               IF (ndb2 == 0) CYCLE
-               ic2 = ic2 + 1
-               IF (any(abs(wavefolap(iband1:iband1 + ndb1 - 1,&
-        &                             iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
-!     &          .and. ndb1 .eq. ndb2 ) THEN
-                  symequivalent(ic2, ic1) = .true.
-               END IF
-            END DO
-         END DO
-      END IF
+      END DO
 
       !
       ! generate index field which contain the band combinations (n1,n2),
       ! which are non zero
       !
-
+      call timestart("calc bandcombos")
       ic1 = 0
       indx_sest = 0
       nsest = 0
-      DO iband1 = 1, hybrid%nbands(nk)
+      DO iband1 = 1, hybdat%nbands(nk)
          ndb1 = degenerat(iband1)
-         IF (ndb1 >= 1) ic1 = ic1 + 1
+         IF(ndb1 >= 1) ic1 = ic1 + 1
          i = 0
-         DO WHILE (degenerat(iband1 - i) == 0)
+         DO WHILE(degenerat(iband1 - i) == 0)
             i = i + 1
          END DO
          ndb1 = degenerat(iband1 - i)
          ic2 = 0
-         DO iband2 = 1, hybrid%nbands(nk)
+         DO iband2 = 1, hybdat%nbands(nk)
             ndb2 = degenerat(iband2)
-            IF (ndb2 >= 1) ic2 = ic2 + 1
+            IF(ndb2 >= 1) ic2 = ic2 + 1
             i = 0
-            DO WHILE (degenerat(iband2 - i) == 0)
+            DO WHILE(degenerat(iband2 - i) == 0)
                i = i + 1
             END DO
             ndb2 = degenerat(iband2 - i)
             ! only upper triangular part
-            IF (symequivalent(ic2, ic1) .and. iband2 <= iband1) THEN
-!            IF( ndb1 .ne. ndb2 ) STOP 'symm_hf: failure symequivalent'
+            IF(symequivalent(ic2, ic1) .and. iband2 <= iband1) THEN
+!            IF( ndb1 .ne. ndb2 ) call judft_error('symm_hf: failure symequivalent')
                nsest(iband1) = nsest(iband1) + 1
                indx_sest(nsest(iband1), iband1) = iband2
             END IF
          END DO
       END DO
+      call timestop("calc bandcombos")
 
       !
       ! calculate representations for core states
@@ -501,147 +367,35 @@ CONTAINS
 
       pi = pimach()
 
-      IF (hybdat%lmaxcd > atoms%lmaxd) STOP &
-     & 'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
-
+      call timestart("calc core repr")
+      IF(hybdat%lmaxcd > fi%atoms%lmaxd) then
+         call judft_error('symm_hf: The very impropable case that hybdat%lmaxcd > fi%atoms%lmaxd occurs')
+      endif
       iatom = 0
       iatom0 = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
+      DO itype = 1, fi%atoms%ntype
+         DO ieq = 1, fi%atoms%neq(itype)
             iatom = iatom + 1
             DO iop = 1, nsymop
                isym = psym(iop)
-               IF (isym <= sym%nop) THEN
+               IF(isym <= fi%sym%nop) THEN
                   iisym = isym
                ELSE
-                  iisym = isym - sym%nop
+                  iisym = isym - fi%sym%nop
                END IF
 
-               ratom = hybrid%map(iatom, isym)
-               rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, nk))
-               g = nint(rotkpt - kpts%bkf(:, nk))
+               ratom = fi%hybinp%map(iatom, isym)
+               rotkpt = matmul(rrot(:, :, isym), fi%kpts%bkf(:, nk))
+               g = nint(rotkpt - fi%kpts%bkf(:, nk))
 
-               cdum = exp(-2*pi*img*dot_product(rotkpt, sym%tau(:, iisym)))* &
-        &               exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
+               cdum = exp(-2*pi*img*dot_product(rotkpt, fi%sym%tau(:, iisym)))* &
+                      exp(2*pi*img*dot_product(g, fi%atoms%taual(:, ratom)))
             END DO
          END DO
-         iatom0 = iatom0 + atoms%neq(itype)
+         iatom0 = iatom0 + fi%atoms%neq(itype)
       END DO
+      call timestop("calc core repr")
 
+      CALL timestop("symm_hf")
    END SUBROUTINE symm_hf
-
-   INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts, nk, sym)
-
-      USE m_util, ONLY: modulo1
-      USE m_types
-      IMPLICIT NONE
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_kpts), INTENT(IN)   :: kpts
-
-!     - scalar input -
-      INTEGER, INTENT(IN)   :: nk
-!     - array input -
-
-!     - local scalars -
-      INTEGER               ::  isym, ic, iop, ikpt, ikpt1
-      INTEGER               ::  nsymop, nrkpt
-!     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym)
-      INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf),&
-     &                          symop(kpts%nkptf)
-      INTEGER, ALLOCATABLE  ::  psym(:)!,help(:)
-      REAL                  ::  rotkpt(3)
-
-      ! calculate rotations in reciprocal space
-      DO isym = 1, sym%nsym
-         IF (isym <= sym%nop) THEN
-            rrot(:, :, isym) = transpose(sym%mrot(:, :, sym%invtab(isym)))
-         ELSE
-            rrot(:, :, isym) = -rrot(:, :, isym - sym%nop)
-         END IF
-      END DO
-
-      ! determine little group of k., i.e. those symmetry operations
-      ! which keep bk(:,nk,nw) invariant
-      ! nsymop :: number of such symmetry-operations
-      ! psym   :: points to the symmetry-operation
-
-      ic = 0
-      ALLOCATE (psym(sym%nsym))
-
-      DO iop = 1, sym%nsym
-         rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
-
-         !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3)
-
-         !check if rotkpt is identical to bk(:,nk)
-         IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
-            ic = ic + 1
-            psym(ic) = iop
-         END IF
-      END DO
-      nsymop = ic
-
-      ! reallocate psym
-!       ALLOCATE(help(ic))
-!       help = psym(1:ic)
-!       DEALLOCATE(psym)
-!       ALLOCATE(psym(ic))
-!       psym = help
-!       DEALLOCATE(help)
-
-      ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
-      ! those k-points, which can generate the whole BZ by
-      ! applying the symmetry operations of the little group of k
-
-      neqvkpt = 0
-
-!       list = (/ (ikpt-1, ikpt=1,nkpt) /)
-      DO ikpt = 1, kpts%nkptf
-         list(ikpt) = ikpt - 1
-      END DO
-
-      DO ikpt = 2, kpts%nkptf
-         DO iop = 1, nsymop
-
-            rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
-
-            !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3)
-
-            !determine number of rotkpt
-            nrkpt = 0
-            DO ikpt1 = 1, kpts%nkptf
-               IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt1))) <= 1E-06) THEN
-                  nrkpt = ikpt1
-                  EXIT
-               END IF
-            END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
-
-            IF (list(nrkpt) /= 0) THEN
-               list(nrkpt) = 0
-               neqvkpt(ikpt) = neqvkpt(ikpt) + 1
-               parent(nrkpt) = ikpt
-               symop(nrkpt) = psym(iop)
-            END IF
-            IF (all(list == 0)) EXIT
-
-         END DO
-      END DO
-
-      ! for the Gamma-point holds:
-      parent(1) = 1
-      neqvkpt(1) = 1
-
-      ! determine number of members in the EIBZ(k)
-      ic = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (parent(ikpt) == ikpt) ic = ic + 1
-      END DO
-      symm_hf_nkpt_EIBZ = ic
-
-   END FUNCTION symm_hf_nkpt_EIBZ
-
 END MODULE m_symm_hf

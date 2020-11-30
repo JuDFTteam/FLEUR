@@ -2,9 +2,9 @@ MODULE m_intgr
 
   !**********************************************************************
   ! intgr[0-3]:
-  !    Integrators of a function y(jri) on a logarithmic mesh with jri 
+  !    Integrators of a function y(jri) on a logarithmic mesh with jri
   !    mesh points. The output is either a scalar [z] or a field [z(jri)].
-  !    Either the first meshpoint [r0,r1] and the increment [h] or the 
+  !    Either the first meshpoint [r0,r1] and the increment [h] or the
   !    array of meshpoints [rmsh(jri)] is supplied:
   !
   ! intgz0 & intgz1 :
@@ -12,7 +12,7 @@ MODULE m_intgr
   !     a tail correction assuming that the function is a simple
   !     decaying exponential between the first mesh point and infinity.
   !     y contains the nmz function values tabulated at a spacing of h.
-  !
+  ! 
   !            integrator:      ---- input ----      output
   !    intgr0:   definite       y r0        h jri  | z
   !    intgr1: indefinite       y r1        h jri  | z(jri)
@@ -29,11 +29,11 @@ MODULE m_intgr
   IMPLICIT NONE
 
   !INTRINSIC exp,log
-  INTERFACE 
+  INTERFACE
     REAL FUNCTION CPP_BLAS_sdot( n, f1, is1, f2, is2 )
       INTEGER, INTENT (IN) :: n, is1, is2
       REAL,    INTENT (IN) :: f1(n), f2(n)
-    END FUNCTION 
+    END FUNCTION
   END INTERFACE
 
 !  interface intgz1
@@ -43,13 +43,13 @@ MODULE m_intgr
   interface intgz1Reverse
     module procedure intgz1RealReverse, intgz1ComplexReverse
   end interface
-  
+
 
   INTEGER, PARAMETER, PRIVATE :: nr  = 7 , nr1 = 6
-  REAL,    PARAMETER, PRIVATE :: h0 = 140. , zero = 0.0e0
-  
+  REAL,    PARAMETER, PRIVATE :: h0 = 140.
+
   ! lagrangian integration coefficients (simpson 7 point rule: error  h**9)
-  
+
   INTEGER, DIMENSION(7),   PARAMETER, PRIVATE :: ih = (/41,216,27,272,27,216,41/)
 
   REAL,    DIMENSION(7,5), PARAMETER, PRIVATE :: a = RESHAPE( &
@@ -82,10 +82,10 @@ MODULE m_intgr
     !--->    integral from 0 to r1 approximated by leading term in power
     !--->    series expansion of y(r)
     !
-    z = zero
-    IF (y(1)*y(2).GT.zero) THEN
+    z = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
       alpha = 1.0 + log(y(2)/y(1))/h
-      IF (alpha.GT.zero) z = r0*y(1)/alpha
+      IF (alpha.GT.0.0) z = r0*y(1)/alpha
     ENDIF
     !
     !--->    determine steps and starting point for simpson
@@ -96,7 +96,7 @@ MODULE m_intgr
     r(1) = r0
     DO i = 2,7
       r(i) = dr*r(i-1)
-    ENDDO 
+    ENDDO
     !
     !--->    lagrange integration for points 1<j<n0, error: h**9
     !
@@ -130,7 +130,7 @@ MODULE m_intgr
   !**********************************************************************
   SUBROUTINE intgr1( y, r1, h, jri, z )
     !**********************************************************************
-    !     .. 
+    !     ..
     !     .. Arguments ..
     INTEGER, INTENT (IN) :: jri
     REAL,    INTENT (IN) :: h,r1
@@ -145,10 +145,10 @@ MODULE m_intgr
     !--->    integral from 0 to r1 approximated by leading term in power
     !--->    series expansion of y(r)
     !
-    z(1) = zero
-    IF (y(1)*y(2).GT.zero) THEN
+    z(1) = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
       alpha = 1.0 + log(y(2)/y(1))/h
-      IF (alpha.GT.zero) z(1) = r1*y(1)/alpha
+      IF (alpha.GT.0.0) z(1) = r1*y(1)/alpha
     ENDIF
     !
     !--->    lagrange integration for points 1<j<nr, error: h**9
@@ -197,10 +197,10 @@ MODULE m_intgr
     !--->    integral from 0 to r1 approximated by leading term in power
     !--->    series expansion of y(r)
     !
-    z(1) = zero
-    IF (y(1)*y(2).GT.zero) THEN 
+    z(1) = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
       alpha = 1.0 + log(y(2)/y(1))/h
-      IF (alpha.GT.zero) z(1) = rmsh(1)*y(1)/alpha
+      IF (alpha.GT.0.0) z(1) = rmsh(1)*y(1)/alpha
     ENDIF
     !
     !--->    lagrange integration for points 1<j<nr, error: h**9
@@ -228,7 +228,62 @@ MODULE m_intgr
 
     RETURN
   END SUBROUTINE intgr2
+  !**********************************************************************
+  SUBROUTINE intgr3_modern( y, r, h, jri, z )
+    !**********************************************************************
+    !     ..
+    !     .. Arguments ..
+    INTEGER, INTENT (IN) :: jri
+    REAL,    INTENT (IN) :: h
+    REAL,    INTENT (IN) :: r(:)
+    REAL,    INTENT (IN) :: y(:)
+    REAL,    INTENT (OUT):: z
+    !     ..
+    !     .. Locals ..
+    INTEGER :: m, n0, nsteps
+    REAL    :: tiny, h1, z1, ih1(nr)
+    INTEGER :: i, j
+    REAL    :: alpha
+    !
+    !--->    integral from 0 to r1 approximated by leading term in power
+    !--->    series expansion of y(r)
+    !
+    !      DO i=1,jri
+    !        IF (abs(y(i)).LT.tiny) y(i) = tiny
+    !      ENDDO
+    !
+    z = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
+      alpha = 1.0 + log(y(2)/y(1))/h
+      IF (alpha.GT.0.0) z = r(1)*y(1)/alpha
+    ENDIF
+    !
+    !--->    determine steps and starting point for simpson
+    !
+    nsteps = (jri-1)/nr1
+    n0 = jri - nr1*nsteps
+    !
+    !--->    lagrange integration for points 1<j<n0, error: h**9
+    !
+   z1 = 0.
+   DO j = 1,n0 - 1
+     z1 = z1 + dot_product(a(:,j), r(1:7)*y(1:7))
+   ENDDO
+   z = z + z1 * h / 60480.
+    !
+    !--->    simpson integration
+    !
+    h1 = h / h0
+    DO i = 1,nr
+      ih1(i) = h1 * ih(i)
+    ENDDO
+    DO m = 1,nsteps
+      z = z + dot_product(ih1*r(n0:n0+6),y(n0:n0+nr-1))
+      n0 = n0 + nr1
+    ENDDO
 
+    RETURN
+END SUBROUTINE intgr3_modern
   !**********************************************************************
   SUBROUTINE intgr3( y, r, h, jri, z )
     !**********************************************************************
@@ -242,7 +297,7 @@ MODULE m_intgr
     !     ..
     !     .. Locals ..
     INTEGER :: m, n0, nsteps
-    REAL    :: tiny, yr(nr), h1, z1, ih1(nr)
+    REAL    :: tiny, h1, z1, ih1(nr)
     INTEGER :: i, j
     REAL    :: alpha
     !
@@ -253,10 +308,10 @@ MODULE m_intgr
     !        IF (abs(y(i)).LT.tiny) y(i) = tiny
     !      ENDDO
     !
-    z = zero
-    IF (y(1)*y(2).GT.zero) THEN
+    z = 0.0
+    IF (y(1)*y(2).GT.0.0) THEN
       alpha = 1.0 + log(y(2)/y(1))/h
-      IF (alpha.GT.zero) z = r(1)*y(1)/alpha
+      IF (alpha.GT.0.0) z = r(1)*y(1)/alpha
     ENDIF
     !
     !--->    determine steps and starting point for simpson
@@ -266,16 +321,11 @@ MODULE m_intgr
     !
     !--->    lagrange integration for points 1<j<n0, error: h**9
     !
-    IF (n0.GT.1) THEN
-      DO i = 1,7
-        yr(i) = r(i)*y(i)
-      ENDDO
-      z1 = 0.
-      DO j = 1,n0 - 1
-        z1 = z1 + CPP_BLAS_sdot(7,a(1,j),1,yr,1)
-      ENDDO
-      z = z + z1 * h / 60480.
-    END IF
+   z1 = 0.
+   DO j = 1,n0 - 1
+     z1 = z1 + dot_product(a(:,j), r(1:7)*y(1:7))
+   ENDDO
+   z = z + z1 * h / 60480.
     !
     !--->    simpson integration
     !
@@ -284,10 +334,7 @@ MODULE m_intgr
       ih1(i) = h1 * ih(i)
     ENDDO
     DO m = 1,nsteps
-      DO i = 1,nr
-        yr(i) = ih1(i)*r(i+n0-1)
-      ENDDO
-      z = z + CPP_BLAS_sdot(nr,yr,1,y(n0),1)
+      z = z + dot_product(ih1*r(n0:n0+6),y(n0:n0+nr-1))
       n0 = n0 + nr1
     ENDDO
 
@@ -316,9 +363,9 @@ MODULE m_intgr
     !--->    to alpha>0.1 which corresponds to square of wavefunctions
     !--->    of energy > 0.00125 a.u. below the vacuum level
     !
-    z = zero
+    z = 0.0
     IF (tail) THEN
-      IF (y(1)*y(2).GT.zero) THEN
+      IF (y(1)*y(2).GT.0.0) THEN
         alpha = log(y(2)/y(1))/h
         IF (alpha.GT.0.1) z = y(1)/alpha
       ENDIF
@@ -331,7 +378,7 @@ MODULE m_intgr
     !
     !--->    lagrange integration for points 1<j<n0, error: h**9
     !
-    yl = zero
+    yl = 0.0
     IF (n0.GT.1) THEN
       DO j = 1, n0 - 1
         yl = yl + CPP_BLAS_sdot(7,a(1,j),1,y,1)
@@ -341,7 +388,7 @@ MODULE m_intgr
     !
     !--->    simpson integration
     !
-    ys = zero
+    ys = 0.0
     n0 = n0 - 1
     DO m = 1,nsteps
       DO i = 1,nr
@@ -358,7 +405,7 @@ MODULE m_intgr
   !**********************************************************************
   SUBROUTINE intgz1( y, h, nmz, z, tail )
     !**********************************************************************
-    !     .. 
+    !     ..
     !     .. Arguments ..
     INTEGER, INTENT (IN)  :: nmz
     LOGICAL, INTENT (IN)  :: tail
@@ -377,10 +424,10 @@ MODULE m_intgr
     !--->    to alpha>0.1 which corresponds to square of wavefunctions
     !--->    of energy > 0.00125 a.u. below the vacuum level
     !
-    z(1) = zero
+    z(1) = 0.0
     IF (tail) THEN
       IF (abs(y(1)).GT.eps) THEN
-        IF (y(1)*y(2).GT.zero) THEN
+        IF (y(1)*y(2).GT.0.0) THEN
           alpha = log(y(2)/y(1))/h
           IF (alpha.GT.0.1) z(1) = y(1)/alpha
         ENDIF
@@ -398,7 +445,7 @@ MODULE m_intgr
     !--->    simpson integration
     !
     DO j = nr,nmz
-      ys = zero
+      ys = 0.0
       DO i = 1,nr
         ys = ys + ih(i)*y(j-nr+i)
       ENDDO
@@ -445,7 +492,7 @@ MODULE m_intgr
     call intgz1( y_reverse, h, nmz, z_reverse, tail )
     do i = 1, nmz
       z(i) = z_reverse(nmz+1-i)
-    end do    
+    end do
 
   end subroutine intgz1RealReverse
 
@@ -468,10 +515,36 @@ MODULE m_intgr
     call intgz1Complex( y_reverse, h, nmz, z_reverse, tail )
     do i = 1, nmz
       z(i) = z_reverse(nmz+1-i)
-    end do    
+    end do
 
   end subroutine intgz1ComplexReverse
 
+   SUBROUTINE sfint(y,x,h,jri,z)
+      ! Seperate spline interpolation integrator for source-free calculations,
+      ! as the input here is notoriously unsmooth and intgr2 fails.
 
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: x(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: alpha
+      INTEGER :: i
+
+      z = 0.0
+      IF (y(1)*y(2).GT.0.0) THEN
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.0.0) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z(2)=z(1)+h*(x(1)*y(1)+x(2)*y(2))/2
+
+      DO i=3, jri-1
+         z(i)=z(i-1)-h*(x(i-2)*y(i-2)-13*x(i-1)*y(i-1)-13*x(i)*y(i)+x(i+1)*y(i+1))/24
+      END DO
+
+      z(i)=z(i-1)+h*(x(i-1)*y(i-1)+x(i)*y(i))/2
+
+   END SUBROUTINE
 
 END MODULE m_intgr

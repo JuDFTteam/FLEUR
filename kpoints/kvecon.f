@@ -1,5 +1,6 @@
       MODULE m_kvecon
       use m_juDFT
+      use m_constants
 !
 ! This subroutine determines the k-points with which we
 ! will calculate the band-structure. The first ncorn
@@ -12,35 +13,30 @@
 !
       CONTAINS
       SUBROUTINE kvecon(
-     >                  iofile,ibfile,mkpt,mface,
-     >                  nkpt,ncorn,nsym,nface,rcmt,fdist,fnorm,cpoint,
+     >                  nkpt,mface,
+     >                  ncorn,nsym,nface,rcmt,fdist,fnorm,cpoint,
      <                  kvc )
 
       IMPLICIT NONE
 
 ! ... Arguments ...
-      INTEGER, INTENT (IN) :: mkpt,mface
-      INTEGER, INTENT (IN) :: iofile,ibfile
-      INTEGER, INTENT (IN) :: nkpt,ncorn,nsym,nface
+      INTEGER, INTENT (IN) :: nkpt,mface
+      INTEGER, INTENT (IN) :: ncorn,nsym,nface
       REAL,    INTENT (IN) :: fdist(mface),fnorm(3,mface)
       REAL,    INTENT (IN) :: rcmt(3,3),cpoint(3,mface)
-      REAL,    INTENT (OUT) :: kvc(3,mkpt)
+      REAL,    INTENT (OUT) :: kvc(3,nkpt)
 
 ! ... Locals ...
       INTEGER nk,i,lmin,l,j,n1,n2,n3,i1,i2,i3,ncd
       REAL d,dm,dist,dmax,xmin,cn,alpha,thrd
-      REAL knew(3),kc(3),cnorm(3),xnorm(3),cand(3,48*mkpt)
+      REAL knew(3),kc(3),cnorm(3),xnorm(3),cand(3,48*nkpt)
 !
 ! ... Intrinsic Functions ...
       INTRINSIC abs,sqrt
 
       IF ( nkpt.LT.ncorn ) THEN
-        WRITE (iofile,'(1x,''nkpt='',i4,'' ,ncorn='',i4)') nkpt,ncorn
+        WRITE (oUnit,'(1x,''nkpt='',i4,'' ,ncorn='',i4)') nkpt,ncorn
          CALL juDFT_error("nkpt<ncorn ",calledby="kvecon")
-      ENDIF
-      IF ( nkpt.GT.mkpt ) THEN
-        WRITE (iofile,'(1x,''nkpt='',i4,'' , mkpt='',i4)') nkpt, mkpt
-         CALL juDFT_error("nkpt>mkpt ",calledby="kvecon")
       ENDIF
       thrd=1.00/3.00
 !
@@ -61,21 +57,21 @@
       n1 = int(xnorm(1)/d)+1
       n2 = int(xnorm(2)/d)+1
       n3 = int(xnorm(3)/d)+1
-      WRITE( iofile,'('' n1 = '',i5,'' n2 = '',i5,'' n3 = '',i5)') 
+      WRITE( oUnit,'('' n1 = '',i5,'' n2 = '',i5,'' n3 = '',i5)') 
      +                                                    n1,n2,n3
       ncd=0
 
-      WRITE (iofile,'('' $$$$$ check $$$$$ '')')
-      WRITE (iofile,'(''   ncorn = '',i4)') ncorn
-      WRITE (ibfile,'(''    cpoints '')')
+      WRITE (oUnit,'('' $$$$$ check $$$$$ '')')
+      WRITE (oUnit,'(''   ncorn = '',i4)') ncorn
+      WRITE (oUnit,'(''    cpoints '')')
       DO i = 1, ncorn
-        WRITE (ibfile,8901) cpoint(1,i),cpoint(2,i),cpoint(3,i)
+        WRITE (oUnit,8901) cpoint(1,i),cpoint(2,i),cpoint(3,i)
       ENDDO
  8901 FORMAT ('    ( ',2(f13.6,','),f13.6,' )',/)
-      WRITE (ibfile,'(''   nface = '',i4)') nface
+      WRITE (oUnit,'(''   nface = '',i4)') nface
       DO i = 1, nface
-        WRITE (ibfile,8902) fdist(i)
-        WRITE (ibfile,8901) fnorm(1,i),fnorm(2,i),fnorm(3,i)
+        WRITE (oUnit,8902) fdist(i)
+        WRITE (oUnit,8901) fnorm(1,i),fnorm(2,i),fnorm(3,i)
       ENDDO
  8902 FORMAT ('  fdist = ',f13.6)
 C
@@ -95,7 +91,7 @@ C
               IF ( alpha.GT.( fdist(l)+1.0e-6*d ) ) GOTO 200
             ENDDO
             ncd = ncd + 1
-            IF (ncd>48*mkpt)  CALL juDFT_error("ncd>ncmax",calledby
+            IF (ncd>48*nkpt)  CALL juDFT_error("ncd>ncmax",calledby
      +           ="kvecon")
             DO i = 1, 3
               cand(i,ncd)=knew(i)
@@ -151,8 +147,8 @@ C restrict our points to be on a finite grid determined by
 C the corner points.
 C
       dmax=0.0e0
-      write(iofile,'('' kpoint ('',i3,'')  ncd = '',i8,
-     +               '' max. allowed is '',i8)') lmin,ncd,48*mkpt
+      write(oUnit,'('' kpoint ('',i3,'')  ncd = '',i8,
+     +               '' max. allowed is '',i8)') lmin,ncd,48*nkpt
       do 3000 n1=1,ncd
       do 3100 i=1,3
       knew(i)=cand(i,n1)
@@ -268,10 +264,10 @@ C
 C
 C OUTPUT OF KVECTORS
 C
-      write(iofile,6000) 2.0e0*d,nkpt
+      write(oUnit,6000) 2.0e0*d,nkpt
  6000 format(//,'   minimal distance  ',f10.5,
      & //,'    coordinates of',i5,'  kpoints in cart. units ',//)
-      write(iofile,6100) ((kvc(i,l),i=1,3),l=1,nkpt)
+      write(oUnit,6100) ((kvc(i,l),i=1,3),l=1,nkpt)
  6100 format(2(3f13.6,3x),3f13.6)
       RETURN
       END SUBROUTINE kvecon

@@ -72,6 +72,6 @@ C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          END DO
       END IF
       bhf = -cautog*rsimp(mrad,rint,rc,jtop,dx)*0.001
-c      write(6,'(''hf='',e14.7)') BHF
+c      write(oUnit,'(''hf='',e14.7)') BHF
       RETURN
       END

@@ -4,79 +4,89 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_cdnovlp
-      USE m_juDFT
-      IMPLICIT NONE
-      PRIVATE
-      PUBLIC :: cdnovlp 
-      CONTAINS
-        SUBROUTINE cdnovlp(mpi,&
-             &                   sphhar,stars,atoms,sym,&
-             &                   DIMENSION,vacuum,cell,&
-             &                   input,oneD,l_st,&
-             &                   jspin,rh,&
-             &                   qpw,rhtxy,rho,rht)
-          !*****************************************************************
-          !     calculates the overlapping core tail density and adds
-          !     its contribution to the corresponging components of
-          !     valence density.      
-          !
-          !     OLD VERSION:
-          !     The previous version to calculate the overlap of the
-          !     core tails was done in real space:
-          !     A three dimensional real space grid was set up. On each
-          !     of these grid points the charge density of all atoms inside
-          !     the unit cell and neigboring unit cells was calculated.
-          !     This calculation required a lagrange fit since the core
-          !     charge is on a radial mesh. The same was done in the vacuum
-          !     region, except on each z-plane we worked on a two dimension
-          !     grid. After the charge density was generated on a equidistant
-          !     grid the charge density was FFTed into G-space. The set up
-          !     of the charge density on the real space grid is rather time
-          !     consuming. 3-loops are required for the 3D grid
-          !                1-loop over all atoms in the unit cells
-          !                Larange interpolation
-          !                3D and 2D FFTs
-          !     In order to save time the non-spherical contributions inside
-          !     the sphere had been ignored. It turns out that the later
-          !     approximation is pure in the context of force calculations.
-          !     
-          !     PRESENT VERSION:
-          !     The present version is written from scratch. It is based on the
-          !     idea that the FFT of an overlap of spherically symmetric
-          !     charges can be expressed by the product of
-          !
-          !     sum_natype{ F(G,ntype) * sum_atom(atype) {S(\vec{G},atom)}}
-          !
-          !     of form factor F and structure factor S. The Form factor
-          !     depends only G while the structure factor depends on \vec{G}
-          !     and can build up in G-space. F of a gaussian chargedensity can
-          !     be calculated analytically.
+MODULE m_cdnovlp
+   USE m_juDFT
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_force_a4_add
+   USE m_sphbes
+   USE m_phasy1
 
-          !     The core-tails to the vacuum region are described by an
-          !     exponentially decaying function into the vacuum:
-
-          !     rho(r_||,z,ivac)= sum_n{ rho(n,ivac) * exp(-kappa*(z-z_v))
-          !                                          * exp(iG(n)r_||) }
-
-          !     And the plane waves are expanded into lattice harmonics
-          !     up to a l_cutoff. Tests of the accuracy inside the sphere
-          !     have shown that a reduction of the l_cutoff inside the 
-          !     in order to save time leads to sizable errors and should 
-          !     be omitted.
-
-          !     rho_L(r) =  4 \pi i^l \sum_{g =|= 0}  \rho_int(g) r_i^{2} \times
-          !                              j_{l} (gr_i) \exp{ig\xi_i} Y^*_{lm} (g)
-
-          !     Tests have shown that the present version is about 10 times
-          !     faster than the previous one also all nonspherical terms are
-          !     included up to l=8 and the previous one included only l=0.
-          !     For l=16 it is still faster by factor 2.
-
-          !     coded                  Stefan Bl"ugel, IFF Nov. 1997
-          !     tested                 RObert Abt    , IFF Dez. 1997
-          !*****************************************************************
-          !
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: cdnovlp 
+CONTAINS
+   SUBROUTINE cdnovlp(fmpi, sphhar, stars, atoms, sym, vacuum,cell, input, &
+                      oneD, l_st, jspin, rh, qpw, rhtxy, rho, rht, vpw, vr)
+      !--------------------------------------------------------------------------
+      !     calculates the overlapping core tail density and adds
+      !     its contribution to the corresponging components of
+      !     valence density.      
+      !
+      !     OLD VERSION:
+      !     The previous version to calculate the overlap of the
+      !     core tails was done in real space:
+      !     A three dimensional real space grid was set up. On each
+      !     of these grid points the charge density of all atoms inside
+      !     the unit cell and neigboring unit cells was calculated.
+      !     This calculation required a lagrange fit since the core
+      !     charge is on a radial mesh. The same was done in the vacuum
+      !     region, except on each z-plane we worked on a two dimension
+      !     grid. After the charge density was generated on a equidistant
+      !     grid the charge density was FFTed into G-space. The set up
+      !     of the charge density on the real space grid is rather time
+      !     consuming. 3-loops are required for the 3D grid
+      !                1-loop over all atoms in the unit cells
+      !                Larange interpolation
+      !                3D and 2D FFTs
+      !     In order to save time the non-spherical contributions inside
+      !     the sphere had been ignored. It turns out that the later
+      !     approximation is pure in the context of force calculations.
+      !     
+      !     PRESENT VERSION:
+      !     The present version is written from scratch. It is based on the
+      !     idea that the FFT of an overlap of spherically symmetric
+      !     charges can be expressed by the product of
+      ! 
+      !     sum_natype{ F(G,ntype) * sum_atom(atype) {S(\vec{G},atom)}}
+      ! 
+      !     of form factor F and structure factor S. The Form factor
+      !     depends only G while the structure factor depends on \vec{G}
+      !     and can build up in G-space. F of a gaussian chargedensity can
+      !     be calculated analytically.
+      ! 
+      !     The core-tails to the vacuum region are described by an
+      !     exponentially decaying function into the vacuum:
+      ! 
+      !     rho(r_||,z,ivac)= sum_n{ rho(n,ivac) * exp(-kappa*(z-z_v))
+      !                                          * exp(iG(n)r_||) }
+      ! 
+      !     And the plane waves are expanded into lattice harmonics
+      !     up to a l_cutoff. Tests of the accuracy inside the sphere
+      !     have shown that a reduction of the l_cutoff inside the 
+      !     in order to save time leads to sizable errors and should 
+      !     be omitted.
+      ! 
+      !     rho_L(r) =  4 \pi i^l \sum_{g =|= 0}  \rho_int(g) r_i^{2} \times
+      !                              j_{l} (gr_i) \exp{ig\xi_i} Y^*_{lm} (g)
+      ! 
+      !     Tests have shown that the present version is about 10 times
+      !     faster than the previous one also all nonspherical terms are
+      !     included up to l=8 and the previous one included only l=0.
+      !     For l=16 it is still faster by factor 2.
+      !
+      !     coded                  Stefan Bl"ugel, IFF Nov. 1997
+      !     tested                 RObert Abt    , IFF Dez. 1997
+      !
+      !     Added calculation of force contributions from coretails
+      !     outside of their native muffin-tin spheres, i.e. in the
+      !     interstitial region and other muffin-tins; only for bulk.
+      !     Refer to Klüppelberg et al., PRB 91 035105 (2015)
+      !     Aaron Klueppelberg, Oct. 2015
+      ! 
+      !--------------------------------------------------------------------------
+         
           USE m_constants
           USE m_qpwtonmt
           USE m_cylbes
@@ -84,19 +94,20 @@
           USE m_od_cylbes
           USE m_diflgr
           USE m_types
+          USE m_intgr, ONLY : intgr3
 #ifdef CPP_MPI
           USE m_mpi_bc_st
 #endif
           !
           !     .. Parameters ..
-          TYPE(t_mpi),INTENT(IN)     :: mpi
+          TYPE(t_mpi),INTENT(IN)     :: fmpi
           TYPE(t_sphhar),INTENT(IN)   :: sphhar
           TYPE(t_atoms),INTENT(IN)    :: atoms
           TYPE(t_stars),INTENT(IN)    :: stars
           TYPE(t_cell),INTENT(IN)     :: cell
           TYPE(t_sym),INTENT(IN)      :: sym
           TYPE(t_oneD),INTENT(IN)     :: oneD
-          TYPE(t_dimension),INTENT(IN)::DIMENSION
+          
           TYPE(t_vacuum),INTENT(in):: vacuum
           TYPE(t_input),INTENT(in)::input
 
@@ -109,35 +120,40 @@
           LOGICAL,INTENT (IN) :: l_st
           !     ..
           !     .. Array Arguments ..
+          COMPLEX,INTENT(IN),OPTIONAL :: vpw(:,:)
+          REAL,INTENT(IN),OPTIONAL :: vr(:,0:,:,:)
           COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
           COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
           REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
           REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
+          REAL,   INTENT (INOUT) :: rh(atoms%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX czero,carg,VALUE,slope,c_ph
+          COMPLEX czero,carg,VALUE,slope,c_ph,sm
           REAL    dif,dxx,g,gz,dtildh,&
                &        rkappa,sign,signz,tol_14,z,zero,zvac,&
-               &        g2,phi,gamma,qq
+               &        g2,phi,gamma,qq,s13,s23,factor,gr
           INTEGER ig3,imz,ivac,j,j1,k,kz,k1,k2,l_cutoff,m0,&
                &        n,nz,nrz,nzvac,&
-               &        irec2,irec3,irec1,m,gzi
+               &        irec2,irec3,irec1,m,gzi,dir,jm,lh,nat,left,minpar,kp,l,lm,maxl,nd,symint
           !     ..
           !     .. Local Arrays ..
-          COMPLEX, ALLOCATABLE :: qpwc(:)
+          COMPLEX, ALLOCATABLE :: qpwc(:),ffonat_pT(:,:),pylm2(:,:,:)
+          REAL, ALLOCATABLE :: vr2(:,:,:),integrand(:,:),integrandr(:),vrrgrid(:),vrigrid(:),bsl(:,:),force_a4_mt_loc(:,:)
           REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
-          REAL    rat(DIMENSION%msh,atoms%ntype)
-          INTEGER mshc(atoms%ntype)
+          REAL    rat(atoms%msh,atoms%ntype)
+          COMPLEX gv(3),ycomp1(3,-1:1),ffonat(3,stars%ng3*sym%nop)
+          INTEGER mshc(atoms%ntype),ioffset_pT(0:fmpi%isize-1),nkpt_pT(0:fmpi%isize-1)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
+          LOGICAL l_f2
+          INTEGER, ALLOCATABLE :: n1(:),n2(:)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
 #ifdef CPP_MPI
-      EXTERNAL MPI_BCAST
+      !EXTERNAL MPI_BCAST
       INTEGER ierr
-#include "cpp_double.h"
-      INCLUDE "mpif.h"
 #endif
+
           !
           !----> Abbreviation
           !
@@ -163,6 +179,148 @@
           !
 
           ALLOCATE (qpwc(stars%ng3))
+
+          l_f2 = input%l_f.AND.(input%f_level.GE.1).AND.(.NOT.l_st) ! f_level >= 1: coretails completely contained in force calculation
+                                                                    ! Klueppelberg (force level 1)
+          IF (l_f2) THEN
+          ! Allocate the force arrays in the routine force_a4_add.f90
+             CALL alloc_fa4_arrays(atoms,input)
+             ALLOCATE(force_a4_mt_loc,mold=force_a4_mt(:,:,jspin))
+             force_a4_mt(:,:,jspin) =  zero
+             force_a4_mt_loc(:,:) =  zero
+             force_a4_is(:,:,jspin) = czero
+
+             ! Calculate the distribution of Tasks onto processors
+             ! Agenda here: every processor in general gets the same number of tasks,
+             ! but if there are some left, distribute them on the last processors
+             ! reason for that is that within the first few stars, the length of the
+             ! stars will change rapidly, while for the last few stars, many will have
+             ! the same length. Hence, the first few processors, which will calculate
+             ! the spherical Bessel functions quite often, don't get as many stars to
+             ! calculate as the last few processors
+             ! the first star is \vec{0} and will not contribute to the core forces
+             ! thereforce, stars are only considered starting from the second star.
+             ! the number of stars is then nq3-1
+
+             ! TODO: Proper parallelization of Klueppelberg force levels.
+             
+             !ioffset_pT = 0
+             !minpar = (stars%ng3-1)/fmpi%isize       ! MINimal number of elements calculated in each PARallel rank
+             !nkpt_pT = minpar
+             !left = (stars%ng3-1) - minpar * fmpi%isize
+             !do j=1,left
+             !   nkpt_pT(fmpi%isize-j) = nkpt_pT(fmpi%isize-j)+1
+             !end do !j
+
+             !do j=1,fmpi%isize-1
+             !   ioffset_pT(j) = sum(nkpt_pT(0:j-1))
+             !end do !j
+
+             !ioffset_pT = ioffset_pT+1
+             ALLOCATE ( ffonat_pT(3,(stars%ng3-1)*sym%nop) )
+             ffonat_pT = czero
+
+             ! lattice/spherical harmonics related variables
+             s13 = sqrt(1.0/3.0)
+             s23 = sqrt(2.0/3.0)
+             ycomp1(1,0) = czero
+             ycomp1(2,0) = czero
+             ycomp1(3,0) = cmplx(2.0*s13,0.0)
+             ycomp1(1,-1) = cmplx(s23,0.0)
+             ycomp1(2,-1) = cmplx(0.0,-s23)
+             ycomp1(3,-1) = czero
+             ycomp1(1,1) = cmplx(-s23,0.0)
+             ycomp1(2,1) = cmplx(0.0,-s23)
+             ycomp1(3,1) = czero
+
+             ALLOCATE ( vr2(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
+
+             ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
+             ! for simple use, this is corrected here
+             DO n = 1,atoms%ntype
+                vr2(:atoms%jri(n),0,n) = sfp_const*vr(:atoms%jri(n),0,n,jspin)/atoms%rmsh(:atoms%jri(n),n)
+                vr2(:,1:,n) = vr(:,1:,n,jspin)
+             END DO ! n
+
+             ALLOCATE ( integrandr(atoms%jmtd) )
+             ALLOCATE ( pylm2( (atoms%lmaxd+1)**2,3,sym%nop ) )
+             ALLOCATE ( vrrgrid(atoms%jmtd),vrigrid(atoms%jmtd) )
+
+             ! (f)orce(f)actor(on)(at)oms calculation, parallelization in k
+             ffonat = czero
+             nat = 1
+             DO n = 1, atoms%ntype
+                nd = sym%ntypsy(nat)
+                ! find maximal l of the potential for atom (type) n
+                ! directly reading max(llh(:,nd)) is only possible if llh is initialized to zero
+                ! otherwise, there can be random numbers in it for high lh that are not used by each atom
+                maxl = 0
+                DO lh = 0,sphhar%nlh(nd)
+                   maxl = max(maxl,sphhar%llh(lh,nd))
+                END DO ! lh
+                ALLOCATE ( bsl(0:maxl,atoms%jmtd),integrand(atoms%jmtd,0:maxl) )
+                g = -0.1 ! g is the norm of a star and can't be negative, this is to initialize a check if the norm between stars has changed
+
+                ! on each processor, calculate a certain consecutive set of k
+                kp = 0
+                DO k = 2,stars%ng3 ! for k = 1 (G = 0), grad rho_core^alpha is zero
+                   IF (abs(g-stars%sk3(k)).gt.tol_14) THEN ! only calculate new spherical Bessel functions if the length of the star vector has changed
+                      g = stars%sk3(k)
+
+                      ! generate spherical Bessel functions up to maxl for the radial grid
+                      DO j = 1,atoms%jri(n)
+                         gr = g * atoms%rmsh(j,n)
+                         CALL sphbes(maxl,gr,bsl(:,j))
+                         bsl(:,j) = bsl(:,j) * atoms%rmsh(j,n)**2
+                      END DO ! j
+                   END IF
+
+                   ! as phasy1, but with i\vec{G} in it, i.e. gradient of plane wave, only for atom n and star k
+                   CALL phasy2(atoms, stars, sym, cell, k, n, nat, pylm2)
+
+                   ! construct and evaluate radial integral int_0^R_{beta} r^2 j_{l}(Gr) V_{eff,l}^{beta}(r) dr
+                   !then, multiply by pylm2 times clnu
+                   DO lh = 0,sphhar%nlh(nd)
+                      l = sphhar%llh(lh,nd)
+                      integrandr(:) = bsl(l,:) * vr2(:,lh,n)
+                      CALL intgr3(integrandr,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),factor)
+                      DO j = 1,sym%nop
+                         symint = kp*sym%nop + j
+                         DO dir = 1,3
+                            sm = czero
+                            DO jm = 1,sphhar%nmem(lh,nd)
+                               lm = l*(l+1) + sphhar%mlh(jm,lh,nd) + 1
+                               sm = sm + conjg(sphhar%clnu(jm,lh,nd)) * pylm2(lm,dir,j)
+                            END DO ! jm
+                            ffonat_pT(dir,symint) = ffonat_pT(dir,symint) + factor * sm
+                         END DO ! dir
+                      END DO ! symint
+                   END DO ! lh
+
+                   kp = kp+1
+                END DO ! k stars
+                DEALLOCATE ( bsl,integrand )
+                nat = nat+atoms%neq(n)
+             END DO ! n atom type
+
+             ! collect the entries of ffonat calculated by the different processors
+             ! could be all collapsed to irank 0, but if the later part also gets
+             ! parallelized over k at some point, now all iranks have ffonat available
+!#ifdef CPP_MPI
+!             ALLOCATE( n1(0:fmpi%isize-1),n2(0:fmpi%isize-1) )
+!             n1(:) = 3*nkpt_pT(:)*sym%nop
+!             n2(:) = 3*ioffset_pT(:)*sym%nop
+!             CALL MPI_ALLGATHERV(ffonat_pT(1,1),n1(fmpi%irank),MPI_COMPLEX,ffonat(1,1),n1,n2,MPI_COMPLEX,MPI_COMM_WORLD,ierr)
+!             DEALLOCATE(ffonat_pT,n1,n2)
+!#else
+             ffonat(:,(sym%nop+1):) = ffonat_pT
+             IF (fmpi%irank==0) THEN
+                DEALLOCATE(ffonat_pT)
+             END IF
+!#endif
+
+          END IF ! l_f2
+
           !
           !----> prepare local array to store pw-expansion of pseudo core charge
           !
@@ -174,21 +332,22 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
+          mshc(:) = 0 ! This initialization is important because there may be atoms without core states.
           nloop: DO  n = 1 , atoms%ntype
-              IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
+              IF ((atoms%econf(n)%num_core_states.GT.0).OR.l_st) THEN
                    DO  j = 1 , atoms%jri(n)
                       rat(j,n) = atoms%rmsh(j,n)
                    ENDDO
                    dxx = EXP(atoms%dx(n))
-                   DO j = atoms%jri(n) + 1 , DIMENSION%msh
+                   DO j = atoms%jri(n) + 1 , atoms%msh
                       rat(j,n) = rat(j-1,n)*dxx
                    ENDDO
-                   DO j = atoms%jri(n) - 1 , DIMENSION%msh
+                   DO j = atoms%jri(n) - 1 , atoms%msh
                       rh(j,n) = rh(j,n)/ (fpi_const*rat(j,n)*rat(j,n))
                    ENDDO
-                   DO j = DIMENSION%msh , atoms%jri(n) , -1
+                   DO j = atoms%msh , atoms%jri(n) , -1
                       IF ( rh(j,n) .GT. tol_14 ) THEN
                          mshc(n) = j
                          CYCLE nloop
@@ -205,34 +364,72 @@
           !       IF mshc = jri  either core tail too small or no core (i.e. H)
           !
           DO  n = 1,atoms%ntype
-              IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
+              IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
 
                    j1 = atoms%jri(n) - 1
                    IF ( method1 .EQ. 1) THEN
                       dif = diflgr(rat(j1,n),rh(j1,n))
-                      WRITE (6,FMT=8000) n,rh(atoms%jri(n),n),dif
+                      WRITE (oUnit,FMT=8000) n,rh(atoms%jri(n),n),dif
                       alpha(n) = -0.5 * dif / ( rh(atoms%jri(n),n)*atoms%rmt(n) )
                    ELSEIF ( method1 .EQ. 2) THEN
                       alpha(n) = LOG( rh(j1,n) / rh(atoms%jri(n),n) )
                       alpha(n) = alpha(n)&
                            &                   / ( atoms%rmt(n)*atoms%rmt(n)*( 1.0-EXP( -2.0*atoms%dx(n) ) ) )
                    ELSE
-                      WRITE (6,'('' error in choice of method1 in cdnovlp '')')
+                      WRITE (oUnit,'('' error in choice of method1 in cdnovlp '')')
                       CALL juDFT_error("error in choice of method1 in cdnovlp"&
                            &              ,calledby ="cdnovlp")
                    ENDIF
                    acoff(n) = rh(atoms%jri(n),n) * EXP( alpha(n)*atoms%rmt(n)*atoms%rmt(n) )
-                   !WRITE (6,FMT=8010) alpha(n),acoff(n)
+                   !WRITE (oUnit,FMT=8010) alpha(n),acoff(n)
                    DO j = 1,atoms%jri(n) - 1
                       rh(j,n) = acoff(n) * EXP( -alpha(n)*rat(j,n)**2 )
                    ENDDO
 
+                   ! Subtract pseudo density contribution from own mt sphere from mt forces
+                   ! Klueppelberg (force level 1)
+                   IF (l_f2) THEN
+                      ALLOCATE ( integrand(atoms%jmtd,3) )
+                      integrandr = zero
+                      integrand  = zero
+                      DO j = 1,atoms%jri(n)
+                         integrandr(j) = -alpha(n) * acoff(n) * atoms%rmsh(j,n)**3 &
+                                         *sfp_const * exp(-alpha(n) * atoms%rmsh(j,n)**2) !*2 
+                      ! factor of two missing? grad e^{-alpha*r^2} = -2alpha\vec{r}e^{-alpha*r^2}
+                      END DO ! j radial mesh
+
+                      DO lh = 0,sphhar%nlh(sym%ntypsy(n))
+                         IF (sphhar%llh(lh,sym%ntypsy(n)).ne.1) CYCLE
+
+                         gv = czero
+                         DO jm = 1,sphhar%nmem(lh,sym%ntypsy(n))
+                            m = sphhar%mlh(jm,lh,sym%ntypsy(n))
+
+                            DO dir = 1,3
+                               gv(dir) = gv(dir) + ycomp1(dir,m)* sphhar%clnu(jm,lh,sym%ntypsy(n)) ! why not conjg?
+                            END DO ! direction
+
+                         END DO ! jm
+
+                         DO dir = 1,3
+                            DO j = 1,atoms%jri(n)
+                               integrand(j,dir) = integrand(j,dir) - integrandr(j)* vr2(j,lh,n) * real(gv(dir))
+                            END DO ! j radial mesh
+                         END DO ! dir ection
+
+                      END DO ! lh lattice harmonics
+
+                      DO dir = 1,3
+                         CALL intgr3(integrand(:,dir),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),force_a4_mt_loc(dir,n))
+                      END DO ! direction
+                      DEALLOCATE ( integrand )
+                   END IF !l_f2
                 ELSE
                    alpha(n) = 0.0
               ENDIF
           ENDDO
           !
-          IF (mpi%irank ==0) THEN
+          IF (fmpi%irank ==0) THEN
 8000         FORMAT (/,10x,'core density and its first derivative ',&
                   &                 'at sph. bound. for atom type',&
                   &             i2,' is',3x,2e15.7)
@@ -240,15 +437,19 @@
           END IF          
           !
           !=====> calculate the fourier transform of the core-pseudocharge
-
-          CALL ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,tol_14,rh, &
-                          acoff,stars,method2,rat,cell,oneD,sym,qpwc)
+          IF (l_f2) THEN
+             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
+          ELSE
+             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
+          END IF
 
           DO k = 1 , stars%ng3    
               qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
           ENDDO
 
-          IF (mpi%irank ==0) THEN
+          IF (fmpi%irank ==0) THEN
              !
              !=====> calculate core-tails to the vacuum region                
              !       Coretails expanded in exponentially decaying functions.
@@ -440,7 +641,7 @@
              !           they are contained in the plane wave part 
              !
              DO n = 1,atoms%ntype
-                IF  ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
+                IF  ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
                    DO j = 1,atoms%jri(n)
                       rho(j,0,n,jspin) = rho(j,0,n,jspin)&
                            &                          - sfp_const*rat(j,n)*rat(j,n)*rh(j,n)
@@ -452,23 +653,28 @@
              !           contribution) to the m.t. density, include full nonspherical 
              !           components
              !
-          ENDIF ! mpi%irank ==0
+          ENDIF ! fmpi%irank ==0
           l_cutoff=input%coretail_lmax
 #ifdef CPP_MPI
-          IF ( mpi%isize > 1 ) CALL mpi_bc_st(mpi,stars,qpwc)
+          IF ( fmpi%isize > 1 ) CALL mpi_bc_st(fmpi,stars,qpwc)
 #endif
 
           CALL qpw_to_nmt(&
                &                sphhar,atoms,stars,&
-               &                sym,cell,oneD,mpi,&
+               &                sym,cell,oneD,fmpi,&
                &                jspin,l_cutoff,qpwc,&
                &                rho)
 
 #ifdef CPP_MPI
-          IF ( mpi%isize > 1) CALL mpi_col_st(mpi,atoms,sphhar,rho(1,0,1,jspin))
+          IF ( fmpi%isize > 1) CALL mpi_col_st(fmpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
           DEALLOCATE (qpwc)
+          IF (l_f2) THEN ! Klueppelberg (force level 1)
+             ! Deallocate arrays used specifically during force calculation
+             DEALLOCATE ( vr2,integrandr,pylm2 )
+             DEALLOCATE ( vrrgrid,vrigrid )
+          END IF
 
         END SUBROUTINE cdnovlp
 
@@ -476,8 +682,8 @@
 !     INTERNAL SUBROUTINES
 !***********************************************************************
 
-      subroutine ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,&
-            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc)
+      subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
+            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
       !
@@ -488,19 +694,22 @@
 
       USE m_types
 
-      type(t_mpi)      ,intent(in) :: mpi
-      type(t_dimension),intent(in) :: DIMENSION
+      type(t_mpi)      ,intent(in) :: fmpi
+      
       type(t_atoms)    ,intent(in) :: atoms
-      integer          ,intent(in) :: mshc(atoms%ntype)
+      integer          ,intent(in) :: mshc(atoms%ntype),jspin
       real             ,intent(in) :: alpha(atoms%ntype), tol_14
-      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: rh(atoms%msh,atoms%ntype)
       real             ,intent(in) :: acoff(atoms%ntype)
       type(t_stars)    ,intent(in) :: stars
       integer          ,intent(in) :: method2
-      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: rat(atoms%msh,atoms%ntype)
       type(t_cell)     ,intent(in) :: cell
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
+      LOGICAL,         INTENT(IN)  :: l_f2
+      COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
+      REAL,OPTIONAL,INTENT(IN) :: force_a4_mt_loc(:,:)
       complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
@@ -511,13 +720,9 @@
       real :: qf(stars%ng3)
       complex qpwc_at(stars%ng3)
 #ifdef CPP_MPI
-      external mpi_bcast
       complex :: qpwc_loc(stars%ng3)
       integer :: ierr
-#include "cpp_double.h"
-      include "mpif.h"
 #endif
-
       czero = (0.0,0.0)
 #ifdef CPP_MPI
       DO k = 1 , stars%ng3
@@ -531,7 +736,7 @@
       !
       !*****> start loop over the atom type
       !
-      DO  n = 1 + mpi%irank, atoms%ntype, mpi%isize
+      DO  n = 1 + fmpi%irank, atoms%ntype, fmpi%isize
           IF ( ( mshc(n) .GT. atoms%jri(n) ).AND.&
               &        ( alpha(n) .GT. tol_14 ) )    THEN
                    
@@ -539,7 +744,7 @@
               
               ! (1) Form factor for each atom type
              
-              CALL FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
+              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,&
                                  atoms%rmt(n),atoms%jri(n),atoms%dx(n),mshc(n),rat(:,n), &
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
@@ -550,10 +755,17 @@
                  DO k = 1, n-1
                     nat1 = nat1 + atoms%neq(k)
                  END DO
-              END IF       
-              CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
-                                 atoms%neq(n),atoms%nat,atoms%taual,&
-                                 cell,qf,qpwc_at)
+              END IF  
+              
+              IF (l_f2) THEN     
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                                    cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
+              ELSE
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                                    atoms%neq(n),atoms%nat,atoms%taual,&
+                                    cell,qf,qpwc_at,jspin,l_f2,n)              
+              END IF
 #ifdef CPP_MPI
               DO k = 1, stars%ng3
                  qpwc_loc(k) = qpwc_loc(k)  + qpwc_at(k)
@@ -567,142 +779,168 @@
           END IF
        ENDDO
 #ifdef CPP_MPI
-       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,CPP_MPI_COMPLEX,mpi_sum, &
-               mpi%mpi_comm,ierr)
+       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,mpi_sum, &
+               fmpi%mpi_comm,ierr)
+       IF (l_f2) THEN
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_mt,SIZE(force_a4_mt),MPI_DOUBLE,MPI_SUM,fmpi%mpi_comm,ierr)
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,force_a4_is,SIZE(force_a4_is),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+       END IF
 #endif
-
+       IF (l_f2) THEN
+       force_a4_mt(:,:,jspin)=force_a4_mt(:,:,jspin)+force_a4_mt_loc(:,:)
+       END IF
       end subroutine ft_of_CorePseudocharge
 
-
-!----------------------------------------------------------------------
-      subroutine StructureConst_forAtom(nat1,stars,oneD,sym,&
-                          neq,natd,taual,cell,qf,qpwc_at)
-!       calculates structure constant for each atom of atom type
+   SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,&
+                          neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
+      ! Calculates the structure constant for each atom of atom type
 
       USE m_types
       USE m_spgrot
       USE m_constants
       USE m_od_chirot
 
-       integer          ,intent(in) :: nat1
-       type(t_stars)    ,intent(in) :: stars
-       type(t_oneD)     ,intent(in) :: oneD
-       type(t_sym)      ,intent(in) :: sym
-       integer          ,intent(in) :: neq,natd
-       real             ,intent(in) :: taual(3,natd)
-       type(t_cell)     ,intent(in) :: cell
-       real             ,intent(in) :: qf(stars%ng3)
-       complex         ,intent(out) :: qpwc_at(stars%ng3)
+      integer,       intent(in)  :: nat1
+      type(t_stars), intent(in)  :: stars
+      type(t_oneD),  intent(in)  :: oneD
+      type(t_sym),   intent(in)  :: sym
+      integer,       intent(in)  :: neq,natd, jspin, n
+      real,          intent(in)  :: taual(3,natd)
+      type(t_cell),  intent(in)  :: cell
+      real,          intent(in)  :: qf(stars%ng3)
+      LOGICAL,       INTENT(IN)  :: l_f2
+      COMPLEX,OPTIONAL,INTENT(IN):: vpw(:,:),ffonat(:,:)
+      complex,       intent(out) :: qpwc_at(stars%ng3)
 
-!      ..Local variables
+      ! ..Local variables
       integer k, nat2, nat, j
       real x
       complex sf, czero
 
-!      ..Local arrays
-       integer kr(3,sym%nop)
-       real    kro(3,oneD%ods%nop)
-       complex phas(sym%nop)
-       complex phaso(oneD%ods%nop)
+      ! ..Local arrays
+      integer kr(3,sym%nop)
+      real    kro(3,oneD%ods%nop), force_mt_loc(3)
+      complex phas(sym%nop), phase, force_is_loc(3)
+      complex phaso(oneD%ods%nop), kcmplx(3)
 
       czero = (0.0,0.0)
       DO k = 1 , stars%ng3    
-          qpwc_at(k) = czero
-      ENDDO
+         qpwc_at(k) = czero
+      END DO
 
-      !
       !    first G=0
-      !
       k=1
       qpwc_at(k)      = qpwc_at(k)      + neq * qf(k)
 
-      !
       !    then  G>0
-      !
+
+      force_mt_loc=0.0
+      force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at) &
+!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
 !$OMP FIRSTPRIVATE(czero) &
-!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso)
+!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso,kcmplx,phase) &
+!$OMP REDUCTION(+:force_mt_loc,force_is_loc)
       DO  k = 2,stars%ng3
-          IF (.NOT.oneD%odi%d1) THEN
-              CALL spgrot(&
-                   &                       sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-                   &                       stars%kv3(:,k),&
-                   &                       kr,phas)
-              !
-              ! ----> start loop over equivalent atoms
-              !
-               nat2 = nat1 + neq - 1
-               DO  nat = nat1,nat2
-                   sf = czero
-                   DO  j = 1,sym%nop
-                       x = -tpi_const* ( kr(1,j) * taual(1,nat)&
-                           &          + kr(2,j) * taual(2,nat)&
-                           &          + kr(3,j) * taual(3,nat))
+         IF (.NOT.oneD%odi%d1) THEN
+            CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
+                        stars%kv3(:,k), kr, phas)
+            
+            ! ----> start loop over equivalent atoms
+
+            IF (l_f2) THEN ! Klueppelberg (force level 1)
+               ! generate phase factors for each G, not only for each star, to incorporate the atomic phase factors
+               kcmplx = cmplx(0.0,0.0)
+               DO j = 1,sym%nop
+                  x = -tpi_const * ( kr(1,j) * taual(1,nat1) &
+                                   + kr(2,j) * taual(2,nat1) &
+                                   + kr(3,j) * taual(3,nat1) )
+                  phase = cmplx(cos(x),sin(x))
+                  ! generate muffin-tin part of core force component
+                  force_mt_loc(:) = force_mt_loc(:) + qf(k) * &
+                                           phase * stars%nstr(k) * ffonat(:,(k-1)*sym%nop+j)
+                  kcmplx(:) = kcmplx(:) + kr(:,j) * phase * phas(j) ! should be conjg(phas(j)), but in FLEUR, only real phas(j) are accepted
+               END DO !j
+               kcmplx = matmul(kcmplx,cell%bmat) * stars%nstr(k) / sym%nop
+               ! generate interstitial part of core force component
+               force_is_loc(:) = force_is_loc(:) + qf(k) * &
+                                        conjg(vpw(k,jspin))*cell%omtil*ImagUnit*kcmplx(:)
+            END IF
+
+            nat2 = nat1 + neq - 1
+            DO nat = nat1, nat2
+               sf = czero
+               DO j = 1,sym%nop
+                  x = -tpi_const * ( kr(1,j) * taual(1,nat) &
+                                   + kr(2,j) * taual(2,nat) &
+                                   + kr(3,j) * taual(3,nat) )
                        !gb      sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
-                       sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
-                   ENDDO
-                   sf = sf / REAL( sym%nop )
-                   qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
-               ENDDO
-          ELSE
-               !-odim
-               CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
-               nat2 = nat1 + neq - 1
-               DO  nat = nat1,nat2
-                   !                  sf = cmplx(1.,0.)
-                   sf = czero
-                   DO  j = 1,oneD%ods%nop
-                       x = -tpi_const* ( kro(1,j)*taual(1,nat)&
-                           &          + kro(2,j)*taual(2,nat)&
-                           &          + kro(3,j)*taual(3,nat))
-                       sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
-                   ENDDO
-                   sf = sf / REAL( oneD%ods%nop )
-                   qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
-               ENDDO
-               !+odim
+                  sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
+               END DO
+               sf = sf / REAL( sym%nop )
+               qpwc_at(k) = qpwc_at(k) + sf * qf(k)
+            END DO
+         ELSE
+            !-odim
+            CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
+            nat2 = nat1 + neq - 1
+            DO  nat = nat1,nat2
+               ! sf = cmplx(1.,0.)
+               sf = czero
+               DO  j = 1,oneD%ods%nop
+                  x = -tpi_const * ( kro(1,j)*taual(1,nat) &
+                                   + kro(2,j)*taual(2,nat) &
+                                   + kro(3,j)*taual(3,nat))
+                  sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
+               END DO
+               sf = sf / REAL( oneD%ods%nop )
+               qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
+            END DO
+            !+odim
           END IF
       ENDDO
 !$OMP END PARALLEL DO
-      end subroutine StructureConst_forAtom
 
-!----------------------------------------------------------------------
-      subroutine FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
-                       rmt,jri,dx,mshc,rat,&
-                       rh,alpha,stars,cell,acoff,qf)
+      IF (l_f2) THEN ! Klueppelberg (force level 1)
+         force_a4_mt(:,n,jspin) = force_a4_mt(:,n,jspin) + force_mt_loc
+         force_a4_is(:,n,jspin) = force_a4_is(:,n,jspin) + force_is_loc
+      END IF
+   END SUBROUTINE StructureConst_forAtom
+
+   SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, rmt, jri, dx, &
+                                     mshc, rat, rh, alpha, stars, cell, acoff, &
+                                     qf)
 
       USE m_types
       USE m_constants
       USE m_rcerf
-      USE m_intgr, ONLY : intgr3,intgz0
+      USE m_intgr, ONLY : intgr3, intgz0
 
-      type(t_dimension),intent(in) :: DIMENSION
-      integer          ,intent(in) :: method2, n_out_p
+      
+      integer          ,intent(in) :: msh,method2, n_out_p
       real             ,intent(in) :: rmt
       integer          ,intent(in) :: jri
       real             ,intent(in) :: dx
       integer          ,intent(in) :: mshc
-      real             ,intent(in) :: rat(DIMENSION%msh)
-      real             ,intent(in) :: rh(DIMENSION%msh)
+      real             ,intent(in) :: rat(msh)
+      real             ,intent(in) :: rh(msh)
       real             ,intent(in) :: alpha
       type(t_stars)    ,intent(in) :: stars
       type(t_cell)     ,intent(in) :: cell
       real             ,intent(in) :: acoff
       real            ,intent(out) :: qf(stars%ng3)
 
-
-!     ..Local variables
+      ! ..Local variables
       real f11, f12, ar, g, ai, qfin, qfout, gr, a4, alpha3, zero
       integer k, ir, j
       logical tail
 
-!     ..Local arrays
-      real rhohelp(DIMENSION%msh)
+      ! ..Local arrays
+      real rhohelp(msh)
 
       zero = 0.0
       DO k = 1,stars%ng3
-        qf(k) = 0.0
+         qf(k) = 0.0
       END DO
 
       tail = .FALSE.
@@ -716,107 +954,86 @@
 !$OMP FIRSTPRIVATE(zero) &
 !$OMP PRIVATE(k,g,ai,qfin,ir,j,rhohelp,qfout,gr,a4,alpha3)
       DO  k = 1,stars%ng3
-          g = stars%sk3(k)
-          !    first G=0
-          IF ( k.EQ.1 ) THEN
-              ai = zero
-              !
-              ! ---->     calculate form factor inside the mt-sphere
-              !           (use analytic integration of gaussian)
-              !
-              qfin = - f11 + f12 * rcerf(ar,ai)
-              !
-              ! ---->     calculate form factor outside the mt-sphere
-              !           (do numerical integration of tails)
-              !
-              IF ( method2 .EQ. 1) THEN
+         g = stars%sk3(k)
+         !    first G=0
+         IF ( k.EQ.1 ) THEN
+            ai = zero
+
+            ! ---->     calculate form factor inside the mt-sphere
+            !           (use analytic integration of gaussian)
  
-                  DO ir = 1 , n_out_p
-                     j  = jri+ir-1
-                     rhohelp(mshc+1-j) =  rat(j) * rat(j) &
-                           &                       * rat(j) *  rh(j)
-                  END DO
-                  CALL intgz0(rhohelp,dx,n_out_p,qfout,tail)
+            qfin = - f11 + f12 * rcerf(ar,ai)
+
+            ! ---->     calculate form factor outside the mt-sphere
+            !           (do numerical integration of tails)
+
+            IF ( method2 .EQ. 1) THEN
+               DO ir = 1 , n_out_p
+                  j = jri+ir-1
+                  rhohelp(mshc+1-j) =  rat(j) * rat(j) * rat(j) *  rh(j)
+               END DO
+               CALL intgz0(rhohelp, dx, n_out_p, qfout, tail)
+            ELSE
+               DO ir = 1 , n_out_p
+                  j = jri+ir-1
+                  rhohelp(ir) = rat(j) * rat(j) * rh(j)
+               END DO
+               CALL intgr3(rhohelp, rat(jri), dx, n_out_p, qfout)
+               ! ---->     have to remove the small r-correction from intgr3
+               qfout = qfout - rmt*rhohelp(1)
+            END IF
  
-              ELSE
- 
-                  DO ir = 1 , n_out_p
-                     j  = jri+ir-1
-                     rhohelp(ir) = rat(j) * rat(j) * rh(j)
-                  END DO
-                  CALL intgr3(rhohelp,rat(jri),dx,&
-                           &                        n_out_p,qfout)
-                  !--->             have to remove the small r-correction from intgr3
-                  qfout=qfout-rmt*rhohelp(1)
- 
-              END IF
- 
-              qfout = fpi_const * qfout
-              !
-          ELSE 
-              !    then  G>0
-              ai = 0.5*g/SQRT(alpha)
-              gr = g*rmt
-              a4 = 0.25/alpha
-              !
-              ! ---->     calculate form factor inside the mt-sphere
-              !           (use analytic integration of gaussian)
-              !
-              qfin = - f11 * SIN(gr)/gr &
-                           &                + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
-              !
-              ! ---->     calculate form factor outside the mt-sphere
-              !           (do numerical integration of tails)
+            qfout = fpi_const * qfout
+         ELSE 
+            !    then  G>0
+            ai = 0.5*g/SQRT(alpha)
+            gr = g*rmt
+            a4 = 0.25/alpha
 
-              IF ( method2 .EQ. 1) THEN
+            ! ---->     calculate form factor inside the mt-sphere
+            !           (use analytic integration of gaussian)
 
-                  DO ir = 1 , n_out_p 
-                      j  = jri+ir-1
-                      rhohelp(mshc-jri+2-ir) =  rat(j)*rat(j) &
-                                    &                                     * rh(j) * SIN( g*rat(j) )
-                  END DO
-                  !
-                  !--->       note we use here the integration routine for vacuum. Because 
-                  !           the vacuum integration is made for an inwards integration 
-                  !           from outside to inside. Outside the starting value will be 
-                  !           nearly zero since the core density is small. if the tail 
-                  !           correction (tail=.true.) is included for the integrals, the 
-                  !           integrand is from infinity inward. This might not be 
-                  !           necessary. Further the integration routine is made for 
-                  !           equidistant meshpoints, therefore the term r(i) of
-                  !           dr/di = dx*r(i) is included in rhohelp
+              qfin = - f11 * SIN(gr)/gr + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
 
+            ! ---->     calculate form factor outside the mt-sphere
+            !           (do numerical integration of tails)
 
-                  CALL intgz0(rhohelp,dx,n_out_p,qfout,tail)
+            IF ( method2 .EQ. 1) THEN
+               DO ir = 1 , n_out_p 
+                  j  = jri+ir-1
+                  rhohelp(mshc-jri+2-ir) =  rat(j)*rat(j) * rh(j) * SIN( g*rat(j) )
+               END DO
 
-              ELSE
+               ! ---->     note we use here the integration routine for vacuum. Because 
+               !           the vacuum integration is made for an inwards integration 
+               !           from outside to inside. Outside the starting value will be 
+               !           nearly zero since the core density is small. if the tail 
+               !           correction (tail=.true.) is included for the integrals, the 
+               !           integrand is from infinity inward. This might not be 
+               !           necessary. Further the integration routine is made for 
+               !           equidistant meshpoints, therefore the term r(i) of
+               !           dr/di = dx*r(i) is included in rhohelp
 
-                  DO ir = 1 , n_out_p
-                      j  = jri+ir-1
-                      rhohelp(ir) = rat(j) * rh(j) * SIN(g*rat(j))
-                  END DO
-                  CALL intgr3(rhohelp,rat(jri),dx,&
-                              &                        n_out_p,qfout)
-                  !--->             have to remove the small r-correction from intgr3
-                  !roa...correction.from.intgr3.......................
-                  IF (rhohelp(1)*rhohelp(2).GT.zero) THEN
-                      alpha3 = 1.0 + LOG(rhohelp(2)/rhohelp(1))/dx
-                      IF (alpha3.GT.zero)&
-                              &                 qfout = qfout - rat(jri)*rhohelp(1)/alpha3
-                      ENDIF
-                  !roa...end.correction...............................
+               CALL intgz0(rhohelp,dx,n_out_p,qfout,tail)
+            ELSE
+               DO ir = 1 , n_out_p
+                  j  = jri+ir-1
+                  rhohelp(ir) = rat(j) * rh(j) * SIN(g*rat(j))
+               END DO
+               CALL intgr3(rhohelp, rat(jri), dx, n_out_p, qfout)
+               ! ---->     have to remove the small r-correction from intgr3
+               !roa...correction.from.intgr3.......................
+               IF (rhohelp(1)*rhohelp(2).GT.zero) THEN
+                  alpha3 = 1.0 + LOG(rhohelp(2)/rhohelp(1))/dx
+                  IF (alpha3.GT.zero) qfout = qfout - rat(jri)*rhohelp(1)/alpha3
+               END IF
+               !roa...end.correction...............................
+            END IF
 
-
-                  END IF
-
-                  qfout = fpi_const * qfout / g
-                  !
-          END IF
-          !
-          qf(k)    = (qfin + qfout)/cell%omtil
-      ENDDO
+            qfout = fpi_const * qfout / g
+         END IF
+         qf(k) = (qfin + qfout)/cell%omtil
+      END DO
 !$OMP END PARALLEL DO
-      end subroutine FormFactor_forAtomType
-
-      END MODULE m_cdnovlp
-
+   END SUBROUTINE FormFactor_forAtomType
+END MODULE m_cdnovlp

@@ -1,7 +1,7 @@
 MODULE m_grdchlh
    use m_juDFT
 !     -----------------------------------------------------------------
-!     input: iexpm=1: exponential mesh. otherwise dx interval mesh.
+!     input: rv present: exponential mesh. otherwise dx interval mesh.
 !            ro: charge or quantity to be derivated.
 !     evaluates d(ro)/dr,d{d(ro)/dr}/dr.
 !     drr=d(ro)/dr, ddrr=d(drr)/dr.
@@ -9,36 +9,41 @@ MODULE m_grdchlh
 !     ------------------------------------------------------------------
 CONTAINS
 
-   SUBROUTINE grdchlh(iexpm,ist,ied,dx,rv,ro,ndvgrd, drr,ddrr)
+   SUBROUTINE grdchlh(dx,ro, drr,ddrr,rv,order)
+
+      USE m_constants
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)  :: iexpm,ist,ied,ndvgrd
       REAL,    INTENT (IN)  :: dx
-      REAL,    INTENT (IN)  :: ro(ied),rv(ied)
-      REAL,    INTENT (OUT) :: drr(ied),ddrr(ied)
+      REAL,    INTENT (IN)  :: ro(:)
+      REAL,    INTENT (OUT) :: drr(:),ddrr(:)
+
+      real,intent(in),optional :: rv(:)
+      INTEGER, INTENT (IN),OPTIONAL  :: order
 
       REAL drx,drx0,drx1,drx2,drx3,drxx,drxx0,drxx1,drxx2,drxx3
-      INTEGER i,i1,i2,i3,i4,i5,i6,j,nred
+      INTEGER i,i1,i2,i3,i4,i5,i6,j,nred,ndvgrd
 
-      DO i = ist,ied
-         drr(i) = 0.0
-         ddrr(i) = 0.0
-      ENDDO
+      ndvgrd=6
+      if (present(order)) ndvgrd=order
 
-      IF (ied-ist < 3) RETURN
+      drr = 0.0
+      ddrr = 0.0
+
+      IF (size(ro) < 4) RETURN
 
       IF (ndvgrd < 3 .OR. ndvgrd>6) THEN
          CALL juDFT_error("ndvgrd<3 .or. ndvgrd>6",calledby="grdchlh")
       ENDIF
 126   FORMAT (/,' ndvgrd should be ge.4 .or. le.6. ndvgrd=',i3)
 
-      i1 = ist
-      i2 = ist + 1
-      i3 = ist + 2
-      i4 = ist + 3
-      i5 = ist + 4
-      i6 = ist + 5
+      i1 = 1
+      i2 = 2
+      i3 = 3
+      i4 = 4
+      i5 = 5
+      i6 = 6
 
       IF (ndvgrd==3) THEN
 
@@ -70,7 +75,7 @@ CONTAINS
 
       ENDIF
 
-      IF (iexpm==1) THEN
+      IF (present(rv)) THEN
          drr(i1)  = drx1/rv(i1)
          ddrr(i1) = (drxx1-drx1)/rv(i1)**2
       ELSE
@@ -80,7 +85,7 @@ CONTAINS
 
       IF (ndvgrd>3) THEN
 
-         IF (iexpm==1) THEN
+         IF (present(rv)) THEN
             drr(i2) = drx2/rv(i2)
             ddrr(i2) = (drxx2-drx2)/rv(i2)**2
          ELSE
@@ -89,7 +94,7 @@ CONTAINS
          ENDIF
 
          IF (ndvgrd==6) THEN
-            IF (iexpm==1) THEN
+            IF (present(rv)) THEN
                drr(i3)  = drx3/rv(i3)
                ddrr(i3) = (drxx3-drx3)/rv(i3)**2
             ELSE
@@ -102,12 +107,12 @@ CONTAINS
 
       nred = REAL(ndvgrd)/2 + 0.1
 
-      IF (ied-nred.LE.ist) THEN
-         WRITE(6,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
-         CALL juDFT_error("ied-nred.le.ist",calledby="grdchlh")
+      IF (size(ro)-nred.LE.1) THEN
+         WRITE(oUnit,fmt='(/'' size(ro)-nred < 1. size(ro),nred='',3i4)') size(ro),nred
+         CALL juDFT_error("size(ro)-nred.le.1",calledby="grdchlh")
       ENDIF
 
-      DO j = nred + ist,ied - nred
+      DO j = nred + 1,size(ro) - nred
 
          IF (ndvgrd==3) THEN
 
@@ -131,7 +136,7 @@ CONTAINS
 
          ENDIF
 
-         IF (iexpm==1) THEN
+         IF (present(rv)) THEN
             drr(j)  = drx/rv(j)
             ddrr(j) = (drxx-drx)/rv(j)**2
          ELSE
@@ -143,64 +148,64 @@ CONTAINS
 
       IF (ndvgrd==3) THEN
 
-         drx0  = f133(ro(ied-2),ro(ied-1),ro(ied),dx)
-         drxx0 = f233(ro(ied-2),ro(ied-1),ro(ied),dx)
+         drx0  = f133(ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
+         drxx0 = f233(ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
 
       ELSEIF (ndvgrd==4) THEN
 
-         drx1  = f143(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
-         drxx1 = f243(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
-         drx0  = f144(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
-         drxx0 = f244(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
+         drx1  = f143(ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
+         drxx1 = f243(ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
+         drx0  = f144(ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
+         drxx0 = f244(ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)),dx)
 
       ELSEIF (ndvgrd==5) THEN
 
-         drx1  = f154(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
-         drxx1 = f254(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
-         drx0  = f155(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
-         drxx0 = f255(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
+         drx1  = f154(ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)), dx)
+         drxx1 = f254(ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)), dx)
+         drx0  = f155(ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)), dx)
+         drxx0 = f255(ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2),ro(size(ro)-1),ro(size(ro)), dx)
 
       ELSEIF (ndvgrd==6) THEN
 
-         drx2  = f164(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
-         drxx2 = f264(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+         drx2  = f164(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
+         drxx2 = f264(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
 
-         drx1  = f165(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
-         drxx1 = f265(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+         drx1  = f165(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
+         drxx1 = f265(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
 
-         drx0  = f166(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
-         drxx0 = f266(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+         drx0  = f166(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
+         drxx0 = f266(ro(size(ro)-5),ro(size(ro)-4),ro(size(ro)-3),ro(size(ro)-2), ro(size(ro)-1),ro(size(ro)),dx)
 
       ENDIF
 
       IF (ndvgrd>3) THEN
 
          IF (ndvgrd==6) THEN
-            IF (iexpm==1) THEN
-               drr(ied-2)  = drx2/rv(ied-2)
-               ddrr(ied-2) = (drxx2-drx2)/rv(ied-2)**2
+            IF (present(rv)) THEN
+               drr(size(ro)-2)  = drx2/rv(size(ro)-2)
+               ddrr(size(ro)-2) = (drxx2-drx2)/rv(size(ro)-2)**2
             ELSE
-               drr(ied-2)  = drx2
-               ddrr(ied-2) = drxx2
+               drr(size(ro)-2)  = drx2
+               ddrr(size(ro)-2) = drxx2
             ENDIF
          ENDIF
 
-         IF (iexpm==1) THEN
-            drr(ied-1)  = drx1/rv(ied-1)
-            ddrr(ied-1) = (drxx1-drx1)/rv(ied-1)**2
+         IF (present(rv)) THEN
+            drr(size(ro)-1)  = drx1/rv(size(ro)-1)
+            ddrr(size(ro)-1) = (drxx1-drx1)/rv(size(ro)-1)**2
          ELSE
-            drr(ied-1)  = drx1
-            ddrr(ied-1) = drxx1
+            drr(size(ro)-1)  = drx1
+            ddrr(size(ro)-1) = drxx1
          ENDIF
 
       ENDIF
 
-      IF (iexpm==1) THEN
-         drr(ied)  = drx0/rv(ied)
-         ddrr(ied) = (drxx0-drx0)/rv(ied)**2
+      IF (present(rv)) THEN
+         drr(size(ro))  = drx0/rv(size(ro))
+         ddrr(size(ro)) = (drxx0-drx0)/rv(size(ro))**2
       ELSE
-         drr(ied)  = drx0
-         ddrr(ied) = drxx0
+         drr(size(ro))  = drx0
+         ddrr(size(ro)) = drxx0
       ENDIF
 
    END SUBROUTINE grdchlh

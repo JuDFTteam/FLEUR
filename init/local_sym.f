@@ -34,17 +34,19 @@
 !*********************************************************************
       CONTAINS
       SUBROUTINE local_sym(
-     >                     lmaxd,lmax,nops,mrot,tau,
+     >                     l_write,lmaxd,lmax,nops,mrot,tau,
      >                     natd,ntype,neq,amat,bmat,pos,
      X                     nlhd,memd,ntypsd,l_dim,
-     <                     nlhtyp,ntypsy,nlh,llh,nmem,mlh,clnu)
+     <                     nlhtyp,nlh,llh,nmem,mlh,clnu)
 
       USE m_ptsym
       USE m_lhcal
-      USE m_constants, ONLY : pimach
+      USE m_constants
+
       IMPLICIT NONE
 
 !---> Arguments
+      LOGICAL,INTENT(IN)   :: l_write
       INTEGER, INTENT (IN) :: lmaxd,nops,ntype,natd
       INTEGER, INTENT (IN) :: neq(ntype),lmax(ntype),mrot(3,3,nops)
       REAL,    INTENT (IN) :: tau(3,nops),pos(3,natd)
@@ -52,7 +54,6 @@
       LOGICAL, INTENT (IN) :: l_dim
       INTEGER              :: nlhd,memd,ntypsd
       INTEGER              :: nlhtyp(ntype)
-      INTEGER, INTENT(OUT) :: ntypsy(natd)
       INTEGER, INTENT(OUT) :: llh(0:nlhd,ntypsd),nmem(0:nlhd,ntypsd)
       INTEGER, INTENT(OUT) ::  mlh(memd,0:nlhd,ntypsd),nlh(ntypsd)
       COMPLEX, INTENT(OUT) :: clnu(memd,0:nlhd,ntypsd)
@@ -74,7 +75,9 @@
       nlhd_max = (lmaxd+1)**2
       ALLOCATE ( typsym(natd) )
 
-      WRITE (6,'(//," Local symmetries:",/,1x,17("-"))')
+      if (l_write) THEN
+         WRITE (oUnit,'(//," Local symmetries:",/,1x,17("-"))')
+      END IF
 !
 !===> determine the point group symmetries for each atom given
 !===> the space group operations and atomic positions
@@ -84,18 +87,20 @@
      >           ntype,natd,neq,pos,nops,mrot,tau,lmax,
      <           nsymt,typsym,nrot,locops)
 
-      WRITE (6,'("   symmetry kinds =",i4)') nsymt
-      DO nsym = 1, nsymt
-         WRITE (6,'(/,"   symmetry",i3,":",i4," operations in",
-     &       " local point group",/,8x,"atoms:")') nsym,nrot(nsym)
-         na = 0
-         DO n=1,ntype
-           DO nn = 1, neq(n)
-             na = na + 1 
-             IF ( typsym(na) == nsym ) WRITE (6,'(i14)') na
-           ENDDO
-         ENDDO
-      ENDDO
+      if (l_write) THEN
+        WRITE (oUnit,'("   symmetry kinds =",i4)') nsymt
+        DO nsym = 1, nsymt
+          WRITE (oUnit,'(/,"   symmetry",i3,":",i4," operations in",
+     +      " local point group",/,8x,"atoms:")') nsym,nrot(nsym)
+          na = 0
+          DO n=1,ntype
+            DO nn = 1, neq(n)
+              na = na + 1
+              IF ( typsym(na) == nsym ) WRITE (oUnit,'(i14)') na
+            ENDDO
+          ENDDO
+        ENDDO
+      endif
 !
 !===>  generate the lattice harmonics for each local symmetry
 !
@@ -179,31 +184,24 @@
          ENDDO
       ENDDO
 
-      na = 0
-      DO n = 1, ntype
-         DO nn = 1,neq(n)
-            na = na + 1
-            ntypsy(na) = typsym(na)
-!            ntypsy(na) = typsym(na-nn+1)
-         ENDDO
-      ENDDO
 
 !---> output results
+      if (.not.l_write) return
       DO n = 1, nsymt
-        WRITE (6,'(/," --- Local symmetry",i3,":",i4,
+        WRITE (oUnit,'(/," --- Local symmetry",i3,":",i4,
      &       " lattice harmonics ",30("-"))') n,nlh(n)+1
         DO lh = 0,nlh(n)
-          WRITE (6,'(/,5x,"lattice harmonic",i4,":  l=",i2,
+          WRITE (oUnit,'(/,5x,"lattice harmonic",i4,":  l=",i2,
      &         ",",i3," members:")') lh+1,llh(lh,n),nmem(lh,n)
           IF ( mod(nmem(lh,n),2)==1 ) THEN
-            WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+            WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &                     mlh(1,lh,n),clnu(1,lh,n)
             IF ( nmem(lh,n) > 1 ) THEN
-              WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+              WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &             (mlh(m,lh,n),clnu(m,lh,n),m=2,nmem(lh,n))
             ENDIF
           ELSE
-            WRITE (6,'(5x,i5,2f14.8,5x,i5,2f14.8)')
+            WRITE (oUnit,'(5x,i5,2f14.8,5x,i5,2f14.8)')
      &            (mlh(m,lh,n),clnu(m,lh,n),m=1,nmem(lh,n))
           ENDIF
         ENDDO

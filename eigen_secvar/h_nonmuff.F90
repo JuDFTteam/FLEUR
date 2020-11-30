@@ -11,7 +11,7 @@ MODULE m_hnonmuff
   !                r. p  1995
   !*********************************************************************
 CONTAINS
-  SUBROUTINE h_nonmuff(atoms,DIMENSION,sym,cell, jsp,ne,usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
+  SUBROUTINE h_nonmuff(atoms,input,sym,cell, jsp,ne,usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
 
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -20,7 +20,7 @@ CONTAINS
     USE m_ylm
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -29,25 +29,25 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     LOGICAL,INTENT(IN)   :: l_real
-    INTEGER, INTENT (IN) :: jsp,ne     
+    INTEGER, INTENT (IN) :: jsp,ne
     !     ..
     TYPE(t_tlmplm),INTENT(IN)::td
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: bkpt(3)   
+    REAL,    INTENT (IN) :: bkpt(3)
     REAL,    INTENT (INOUT) :: h(ne*(ne+1)/2)
 
-    REAL,    OPTIONAL,INTENT (IN) :: z_r(DIMENSION%nbasfcn,ne)
-    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(DIMENSION%nbasfcn,ne)
+    REAL,    OPTIONAL,INTENT (IN) :: z_r(lapw%dim_nbasfcn(),ne)
+    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(lapw%dim_nbasfcn(),ne)
     !     ..
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,hij,phase,sij,utd,utu
     REAL con1,ff,gg,gs,th,ws
-    INTEGER l,l1,ll1,lm,lmp,lwn,invsfct
+    INTEGER l,l1,ll1,lm,lmp,lwn,invsfct,s
     INTEGER i,im,in,j,k,ke ,m1,n,na,nn,np,ii,ij,m
     !     ..
     !     .. Local Arrays ..
-    COMPLEX a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd)
-    COMPLEX b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd), ylm( (atoms%lmaxd+1)**2 )
+    COMPLEX a(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),ax(input%neig)
+    COMPLEX b(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),bx(input%neig), ylm( (atoms%lmaxd+1)**2 )
     REAL vmult(3),vsmult(3),f(0:atoms%lmaxd,SIZE(lapw%k1,1)),g(0:atoms%lmaxd,SIZE(lapw%k1,1))
     !     ..
     !     ..
@@ -76,10 +76,10 @@ CONTAINS
        DO  nn = 1,atoms%neq(n)
           na = na + 1
           !+inv
-          IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
-             IF (atoms%invsat(na).EQ.0) invsfct = 1
-             IF (atoms%invsat(na).EQ.1) invsfct = 2
-             np = atoms%ngopr(na)
+          IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
+             IF (sym%invsat(na).EQ.0) invsfct = 1
+             IF (sym%invsat(na).EQ.1) invsfct = 2
+             np = sym%ngopr(na)
              !---> a and b
              a(:ne,:) = CMPLX(0.0,0.0)
              b(:ne,:) = CMPLX(0.0,0.0)
@@ -94,7 +94,7 @@ CONTAINS
                 vmult=MATMUL(vsmult,cell%bmat)
                 CALL ylm4(lwn,vmult, ylm)
                 !-->     synthesize the complex conjugates of a and b
-                if (l_real) THEN
+                IF (l_real) THEN
                    DO l = 0,lwn
                       ll1 = l* (l+1)
                       DO m = -l,l
@@ -106,7 +106,7 @@ CONTAINS
                       END DO
                    END DO
 
-                else
+                ELSE
                    DO l = 0,lwn
                       ll1 = l* (l+1)
                       DO m = -l,l
@@ -117,7 +117,7 @@ CONTAINS
                          b(:ne,lm) = b(:ne,lm) + sij*z_c(k,:ne)
                       END DO
                    END DO
-                endif
+                ENDIF
              ENDDO
              DO  l = 0,lwn
                 DO  m = -l,l
@@ -129,24 +129,17 @@ CONTAINS
                    DO  l1 = 0,lwn
                       DO  m1 = -l1,l1
                          lm = l1* (l1+1) + m1
-                         in = td%ind(lmp,lm,nn,jsp)
-                         IF (in.NE.-9999) THEN
-                            IF (in.GE.0) THEN
-                               utu = CONJG(td%tuu(in,nn,jsp))*invsfct
-                               dtu = CONJG(td%tdu(in,nn,jsp))*invsfct
-                               utd = CONJG(td%tud(in,nn,jsp))*invsfct
-                               dtd = CONJG(td%tdd(in,nn,jsp))*invsfct
-                            ELSE
-                               im = -in
-                               utu = td%tuu(im,nn,jsp)*invsfct
-                               dtd = td%tdd(im,nn,jsp)*invsfct
-                               utd = td%tdu(im,nn,jsp)*invsfct
-                               dtu = td%tud(im,nn,jsp)*invsfct
-                            END IF
-                            !--->    update ax, bx
-                            ax(:ne) = ax(:ne) + CONJG(utu*a(:ne,lm)+utd*b(:ne,lm))
-                            bx(:ne) = bx(:ne) + CONJG(dtu*a(:ne,lm)+dtd*b(:ne,lm))
-                         END IF
+                         s=td%h_loc2(n)
+                         utu=td%h_loc(lmp,lm,n,jsp,jsp)
+                         dtu=td%h_loc(lmp,lm+s,n,jsp,jsp)
+                         utd=td%h_loc(lmp+s,lm,n,jsp,jsp)
+                         dtd=td%h_loc(lmp+s,lm+s,n,jsp,jsp)
+                         !TODO we have to think about the spherical contributions here...
+                         CALL judft_error("Second variation not currently implemeted correctly")
+                         !--->    update ax, bx
+                         ax(:ne) = ax(:ne) + CONJG(utu*a(:ne,lm)+utd*b(:ne,lm))
+                         bx(:ne) = bx(:ne) + CONJG(dtu*a(:ne,lm)+dtd*b(:ne,lm))
+
                       ENDDO
                    ENDDO
 

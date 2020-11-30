@@ -7,7 +7,7 @@
 MODULE m_radflo
   USE m_juDFT
 CONTAINS
-  SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,mpi, usdus,&
+  SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,fmpi, usdus,&
        uuilon,duilon,ulouilopn,flo,lout_all)
     !
     !***********************************************************************
@@ -50,7 +50,7 @@ CONTAINS
     !***********************************************************************
     !
     USE m_intgr, ONLY : intgr0
-    USE m_constants, ONLY : c_light
+    USE m_constants
     USE m_radsra
     USE m_radsrdn
     USE m_differ
@@ -58,7 +58,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !lo part is calculated here
-    TYPE(t_mpi),INTENT(IN)     :: mpi
+    TYPE(t_mpi),INTENT(IN)     :: fmpi
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     !     .. Scalar Arguments ..
@@ -85,13 +85,13 @@ CONTAINS
     c = c_light(1.0)
     !
     IF ( PRESENT(lout_all) ) THEN
-       loutput = ( mpi%irank == 0 ) .OR. lout_all
+       loutput = ( fmpi%irank == 0 ) .OR. lout_all
     ELSE
-       loutput = ( mpi%irank == 0 )
+       loutput = ( fmpi%irank == 0 )
     END IF
     !$    loutput=.false.
     IF (loutput) THEN
-       WRITE (6,FMT=8000)
+       WRITE (oUnit,FMT=8000)
     END IF
     ofdiag = .FALSE.
     !---> calculate the radial wavefunction with the appropriate
@@ -179,7 +179,7 @@ CONTAINS
        CALL intgr0(dulo,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%dulon(ilo,ntyp,jsp))
        IF (atoms%l_dulo(ilo,ntyp)) usdus%dulon(ilo,ntyp,jsp) = 0.0
        IF (loutput) THEN
-          WRITE (6,FMT=8010) ilo,atoms%llo(ilo,ntyp),ello(ilo,ntyp),&
+          WRITE (oUnit,FMT=8010) ilo,atoms%llo(ilo,ntyp),ello(ilo,ntyp),&
                usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,usdus%uulon(ilo,ntyp,jsp),&
                usdus%dulon(ilo,ntyp,jsp)
        END IF
@@ -232,10 +232,10 @@ CONTAINS
     ENDDO
     ! 
     IF ( (ofdiag).AND.(loutput) ) THEN
-       WRITE (6,FMT=*) 'overlap matrix between different local orbitals'
-       WRITE (6,FMT=8020) (i,i=1,atoms%nlo(ntyp))
+       WRITE (oUnit,FMT=*) 'overlap matrix between different local orbitals'
+       WRITE (oUnit,FMT=8020) (i,i=1,atoms%nlo(ntyp))
        DO ilo = 1,atoms%nlo(ntyp)
-          WRITE (6,FMT='(i3,40e13.6)') ilo, (usdus%uloulopn(ilo,jlo,ntyp,jsp),jlo=1,atoms%nlo(ntyp))
+          WRITE (oUnit,FMT='(i3,40e13.6)') ilo, (usdus%uloulopn(ilo,jlo,ntyp,jsp),jlo=1,atoms%nlo(ntyp))
 
        END DO
     END IF
@@ -273,17 +273,17 @@ CONTAINS
              ENDIF
           ENDDO
           IF ( loutput ) THEN
-             WRITE(6,'(A,I2)')&
+             WRITE(oUnit,'(A,I2)')&
                   &      'Overlap matrix of normalized MT functions '//&
                   &      'and its eigenvalues for l =',l
              DO i=1,j
-                WRITE(6,'(30F11.7)') (help(k,i),k=1,i)
+                WRITE(oUnit,'(30F11.7)') (help(k,i),k=1,i)
              ENDDO
           END IF
           CALL CPP_LAPACK_ssyev('N','U',j,help,atoms%nlod+2,ulo,dulo, i)
           IF(i/=0)  CALL juDFT_error("ssyev failed.",calledby ="radflo")
           IF ( loutput ) THEN
-             WRITE(6,'(30F11.7)') (ulo(i),i=1,j)
+             WRITE(oUnit,'(30F11.7)') (ulo(i),i=1,j)
           END IF
        ENDDO
     ENDIF ! .false.

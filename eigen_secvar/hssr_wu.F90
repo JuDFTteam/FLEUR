@@ -8,13 +8,13 @@ MODULE m_hssrwu
   !                r. wu  1992
   !*********************************************************************
 CONTAINS
-  SUBROUTINE hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+  SUBROUTINE hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
        tlmplm,acof,bcof,ccof, h_r,s_r,h_c,s_c)
     !
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_usdus),INTENT(IN)       :: usdus
@@ -23,16 +23,16 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jsp,ne     
+    INTEGER, INTENT (IN) :: jsp,ne
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN) :: acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat)
 
-    REAL,    OPTIONAL,INTENT (INOUT) :: h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd)
+    REAL,    OPTIONAL,INTENT (INOUT) :: h_r(input%neig,input%neig),s_r(input%neig,input%neig)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(input%neig,input%neig),s_c(input%neig,input%neig)
 
     !     ..
     !     .. Local Scalars ..
@@ -50,19 +50,19 @@ CONTAINS
 
     l_real=PRESENT(h_r)
 
-    ALLOCATE ( a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd) )
-    ALLOCATE ( b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd) )
+    ALLOCATE ( a(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),ax(input%neig) )
+    ALLOCATE ( b(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),bx(input%neig) )
     na = 0
     DO n = 1,atoms%ntype        ! loop over atom-types
        lwn = atoms%lmax(n)
        DO nn = 1,atoms%neq(n)    ! loop over atoms
           na = na + 1
           !+inv
-          IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+          IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
              CALL timestart("hssr_wu: spherical")
-             IF (atoms%invsat(na).EQ.0) invsfct = 1.0
-             IF (atoms%invsat(na).EQ.1) invsfct = SQRT(2.0)
-             DO lm = 0, DIMENSION%lmd
+             IF (sym%invsat(na).EQ.0) invsfct = 1.0
+             IF (sym%invsat(na).EQ.1) invsfct = SQRT(2.0)
+             DO lm = 0, atoms%lmaxd*(atoms%lmaxd+2)
                 DO ke = 1, ne
                    a(ke,lm) = invsfct*acof(ke,lm,na)
                    b(ke,lm) = invsfct*bcof(ke,lm,na)
@@ -118,30 +118,18 @@ CONTAINS
                       DO l1 = 0,atoms%lnonsph(n)         ! l', m' loop
                          DO m1 = -l1,l1
                             lm = l1* (l1+1) + m1
-                            in = tlmplm%ind(lmp,lm,n,jsp)
-                            IF (in.NE.-9999) THEN
+                            utu = CONJG(tlmplm%h_loc(lmp,lm,n,jsp,jsp))
+                            dtd = CONJG(tlmplm%h_loc(lmp+tlmplm%h_loc2(n),lm+tlmplm%h_loc2(n),n,jsp,jsp))
+                            utd = CONJG(tlmplm%h_loc(lmp+tlmplm%h_loc2(n),lm,n,jsp,jsp))
+                            dtu = CONJG(tlmplm%h_loc(lmp,lm+tlmplm%h_loc2(n),n,jsp,jsp))
+                            !--->    update ax, bx
+                            DO k = 1,ne
+                               ax(k) = ax(k) + utu*CONJG(a(k,lm))+&
+                                    utd*CONJG(b(k,lm))
+                               bx(k) = bx(k) + dtu*CONJG(a(k,lm))+&
+                                    dtd*CONJG(b(k,lm))
+                            ENDDO
 
-                               IF (in.GE.0) THEN
-                                  utu = CONJG(tlmplm%tuu(in,n,jsp))
-                                  dtu = CONJG(tlmplm%tdu(in,n,jsp))
-                                  utd = CONJG(tlmplm%tud(in,n,jsp))
-                                  dtd = CONJG(tlmplm%tdd(in,n,jsp))
-                               ELSE
-                                  im = -in
-                                  utu = tlmplm%tuu(im,n,jsp)
-                                  dtd = tlmplm%tdd(im,n,jsp)
-                                  utd = tlmplm%tdu(im,n,jsp)
-                                  dtu = tlmplm%tud(im,n,jsp)
-                               END IF
-                               !--->    update ax, bx
-                               DO k = 1,ne
-                                  ax(k) = ax(k) + utu*CONJG(a(k,lm))+&
-                                       utd*CONJG(b(k,lm))
-                                  bx(k) = bx(k) + dtu*CONJG(a(k,lm))+&
-                                       dtd*CONJG(b(k,lm))
-                               ENDDO
-
-                            ENDIF ! in =/= -9999
                          ENDDO    ! m1
                       ENDDO       ! l1
                       !

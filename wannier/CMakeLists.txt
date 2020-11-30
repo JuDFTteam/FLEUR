@@ -37,6 +37,7 @@ wannier/wann_maxbnd.F
 wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
+wannier/wann_mmk0_updown_sph_at.f
 wannier/wann_mmk0_vac.F
 #wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
@@ -51,9 +52,12 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
+wannier/wann_pauliat_rs.f
 wannier/wann_gabeffgagaunt.f
 wannier/wann_perpmag.f
-wannier/wann_perpmag_rs.f
+wannier/wann_perpmag_rs.F
+wannier/wann_torque_rs.F
+wannier/wann_torque.F
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
 wannier/wann_plot_symm.f
@@ -92,6 +96,7 @@ wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
 wannier/wann_plot_od_vac.F
 wannier/bs_comfort.F
+wannier/wann_socmatvec_rs.F
 )
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
@@ -104,22 +109,22 @@ wannier/wannier.F90
 wannier/wann_orbcomp.f90
 wannier/wann_postproc.F90
 )
-if(FLEUR_USE_WANN)
+if(FLEUR_USE_WANN_EXTERNAL)
 set(fleur_F90 ${fleur_F90}
-external/wannier90/src/comms.F90      
-external/wannier90/src/disentangle.F90  
-external/wannier90/src/io.F90     
-external/wannier90/src/overlap.F90     
-external/wannier90/src/plot.F90  
-external/wannier90/src/sitesym.F90    
-external/wannier90/src/utility.F90     
-external/wannier90/src/wannierise.F90   
-external/wannier90/src/constants.F90  
-external/wannier90/src/hamiltonian.F90  
-external/wannier90/src/kmesh.F90  
-external/wannier90/src/parameters.F90  
-external/wannier90/src/transport.F90  
-external/wannier90/src/wannier_lib.F90  
+external/wannier90/src/comms.F90
+external/wannier90/src/disentangle.F90
+external/wannier90/src/io.F90
+external/wannier90/src/overlap.F90
+external/wannier90/src/plot.F90
+external/wannier90/src/sitesym.F90
+external/wannier90/src/utility.F90
+external/wannier90/src/wannierise.F90
+external/wannier90/src/constants.F90
+external/wannier90/src/hamiltonian.F90
+external/wannier90/src/kmesh.F90
+external/wannier90/src/parameters.F90
+external/wannier90/src/transport.F90
+external/wannier90/src/wannier_lib.F90
 external/wannier90/src/ws_distance.F90
 )
 endif()

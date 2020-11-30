@@ -12,11 +12,13 @@
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="144.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointList posScale="6.00000000" weightScale="1.00000000" count="1">
+         <kPointListSelection listName="default" />
+         <kPointLists>
+         <kPointList posScale="6.00000000" weightScale="1.00000000" count="1" name="default">
             <kPoint weight="    1.0">-2.0 4.0 -2.0</kPoint>
          </kPointList>
+         </kPointLists>
       </bzIntegration>
-      <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
    </calculationSetup>
    <cell>
       <symmetry spgrp="p3" invs="F" zrfs="F"/>
@@ -27,13 +29,13 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Bi-1" element="Bi" atomicNumber="83" coreStates="19" magMom="1.00000000" flipSpin="T">
+      <species name="Bi-1" element="Bi" atomicNumber="83" coreStates="19" magMom="1.00000000" >
          <mtSphere radius="2.83000000" gridPoints="681" logIncrement=".01900000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="6" p="6" d="6" f="4"/>
          <lo type="SCLO" l="2" n="5" eDeriv="0"/>
       </species>
-      <species name="Te-1" element="Te" atomicNumber="52" coreStates="14" magMom="0.00000000" flipSpin="T">
+      <species name="Te-1" element="Te" atomicNumber="52" coreStates="14" magMom="0.00000000" >
          <mtSphere radius="2.83000000" gridPoints="681" logIncrement=".01900000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="5" p="5" d="4" f="4"/>
@@ -107,7 +109,7 @@
       <checks vchk="F" cdinf="F" disp="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000000" locy1=".00000000" locx2=".00000000" locy2=".00000000" nstm="0" tworkf=".00000000"/>
-      <plotting iplot="0" score="F" plplot="F"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput form66="F" eonly="F" bmt="F"/>
    </output>

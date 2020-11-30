@@ -1,5 +1,5 @@
 #First check if we can compile with MAGMA
-if (${CLI_FLEUR_USE_MAGMA})
+if (CLI_FLEUR_USE_MAGMA)
    message("Set FLEUR_USE_MAGMA to environment, skipping test")
    set(FLEUR_USE_MAGMA ${CLI_FLEUR_USE_MAGMA})
 else()

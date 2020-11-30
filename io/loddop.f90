@@ -1,17 +1,17 @@
       MODULE m_loddop
       USE m_juDFT
       CONTAINS
-        SUBROUTINE loddop(&
-             &                  stars,vacuum,atoms,sphhar,&
-             &                  input,sym,&
-             &                  nu,&
-             &                  it,fr,fpw,fz,fzxy)
+        SUBROUTINE loddop(stars,vacuum,atoms,sphhar,input,sym,nu,&
+                          it,fr,fpw,fz,fzxy)
           !     ***********************************************************
           !     reload formatted density or potential   c.l.fu
           !     ***********************************************************
+
           USE m_types
+          USE m_constants
+
           IMPLICIT NONE
-          !
+
           !     .. Scalar Arguments ..
           TYPE(t_stars),INTENT(IN)  :: stars
           TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -57,7 +57,7 @@
           !      WRITE (*,FMT=8000) name
           ! 8000 FORMAT (' loddop title:',10a8)
           READ (nu,END=200,ERR=200) iop,dop,it
-          DO  jsp = 1,SIZE(fr,4)
+          DO  jsp = 1,input%jspins
              READ (nu,END=200,ERR=200) jspdum
              READ (nu,END=200,ERR=200) nn
              IF (nn/=atoms%ntype) CALL juDFT_error("nn.NE.ntype",calledby =&
@@ -68,10 +68,10 @@
                 READ (nu,END=200,ERR=200) namaux,ndum,jrin,rmtn,dxn
                 READ (nu,END=200,ERR=200) ntydum,nlhn
                 !+gu
-                IF ( nlhn.GT.sphhar%nlh(atoms%ntypsy(na)) ) THEN
-                   WRITE (*,*) 'nlh (',nlhn,') set to (',sphhar%nlh(atoms%ntypsy(na)),')'
-                   n_diff = nlhn - sphhar%nlh(atoms%ntypsy(na))
-                   nlhn = sphhar%nlh(atoms%ntypsy(na))
+                IF ( nlhn.GT.sphhar%nlh(sym%ntypsy(na)) ) THEN
+                   WRITE (*,*) 'nlh (',nlhn,') set to (',sphhar%nlh(sym%ntypsy(na)),')'
+                   n_diff = nlhn - sphhar%nlh(sym%ntypsy(na))
+                   nlhn = sphhar%nlh(sym%ntypsy(na))
                 ELSE
                    n_diff = 0 
                 ENDIF
@@ -80,8 +80,8 @@
                    READ (nu,END=200,ERR=200) lhdummy
                    READ (nu,END=200,ERR=200) (fr(i,lh,n,jsp),i=1,jrin)
                 ENDDO
-                IF (nlhn.LT.sphhar%nlh(atoms%ntypsy(na))) THEN
-                   DO lh = nlhn + 1,sphhar%nlh(atoms%ntypsy(na))
+                IF (nlhn.LT.sphhar%nlh(sym%ntypsy(na))) THEN
+                   DO lh = nlhn + 1,sphhar%nlh(sym%ntypsy(na))
                       DO i = 1,atoms%jri(n)
                          fr(i,lh,n,jsp) = 0.
                       ENDDO
@@ -176,9 +176,8 @@
           IF (sym%invs2) DEALLOCATE ( fzxyr )
           RETURN
 
-200       WRITE (6,*) 'error reading dop nr.',nu
-          IF (nu /= 98)  CALL juDFT_error("error reading d/p-file!",calledby&
-          &     ="loddop")
+200       WRITE (oUnit,*) 'error reading dop nr.',nu
+          IF (nu /= 98)  CALL juDFT_error("error reading d/p-file!",calledby="loddop")
 
         END SUBROUTINE loddop
       END MODULE m_loddop

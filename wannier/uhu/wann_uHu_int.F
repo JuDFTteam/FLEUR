@@ -21,7 +21,7 @@ c*****************************************c
       subroutine wann_uHu_int(
      >               chi,nvd,k1d,k2d,k3d,
      >               n3d,nv_b,nv_b2,nbnd,neigd,
-     >               nslibd_b,nslibd_b2,nbasfcn,
+     >               nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2,
      >               addnoco,addnoco2,
      >               k1_b ,k2_b ,k3_b, gb,
      >               k1_b2,k2_b2,k3_b2,gb2,
@@ -40,7 +40,7 @@ c     ..arguments..
       integer, intent(in) :: gb(3),gb2(3)
       integer, intent(in) :: k1d,k2d,k3d
       integer, intent(in) :: nvd,n3d,nv_b,nv_b2,nbnd,neigd
-      integer, intent(in) :: nslibd_b,nslibd_b2,nbasfcn
+      integer, intent(in) :: nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2
       integer, intent(in) :: addnoco,addnoco2,sign
       integer, intent(in) :: k1_b(nvd) ,k2_b(nvd) ,k3_b(nvd)
       integer, intent(in) :: k1_b2(nvd),k2_b2(nvd),k3_b2(nvd)
@@ -133,21 +133,21 @@ c     ..local variables..
       ! complex conjugate of (z(k+b1,g))^* vstep(g,g') z(k+b2,g')
       IF(zMat_b%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv_b,nslibd_b2,nv_b2,real(1.0),
-     >               vstep_r,nv_b2,zMat_b2%data_r(1+addnoco2,1),nbasfcn,
-     >               real(0.0),mat_r,nv_b)
+     >  vstep_r,nv_b2,zMat_b2%data_r(1+addnoco2,1),nbasfcn_b2,
+     >  real(0.0),mat_r,nv_b)
          call CPP_BLAS_sgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              real(1.0),zMat_b%data_r(1+addnoco,1),nbasfcn,
-     >              mat_r,nv_b,real(0.0),uHu_tmp,nslibd_b)
+     >  real(1.0),zMat_b%data_r(1+addnoco,1),nbasfcn_b,
+     >  mat_r,nv_b,real(0.0),uHu_tmp,nslibd_b)
          uHu(1:nslibd_b,1:nslibd_b2) = uHu(1:nslibd_b,1:nslibd_b2)
      >                            + uHu_tmp(1:nslibd_b,1:nslibd_b2)*chi
       ELSE
          call CPP_BLAS_cgemm('T','N',nv_b,nslibd_b2,nv_b2,cmplx(1.0),
-     >               vstep_c,nv_b2,zMat_b2%data_c(1+addnoco2,1),nbasfcn,
-     >               cmplx(0.0),mat_c,nv_b)
+     >  vstep_c,nv_b2,zMat_b2%data_c(1+addnoco2,1),nbasfcn_b2,
+     >  cmplx(0.0),mat_c,nv_b)
          mat_c = conjg(mat_c)
          call CPP_BLAS_cgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              chi,zMat_b%data_c(1+addnoco,1),nbasfcn,
-     >              mat_c,nv_b,cmplx(1.0),uHu,nbnd)
+     >  chi,zMat_b%data_c(1+addnoco,1),nbasfcn_b,
+     >  mat_c,nv_b,cmplx(1.0),uHu,nbnd)
       END IF
 
       deallocate( rk_b, rk_b2 )
