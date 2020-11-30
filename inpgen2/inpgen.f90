@@ -251,6 +251,8 @@ PROGRAM inpgen
       END DO
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
+         kptsSelection(1) = kpts(1)%kptsName ! This may actually be wrong, but it is a backup solution.
+         input%bz_integration = kptsBZintegration(1)
          DO iKpts = numKpts, 1, -1
             IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
                kptsSelection(1) = kpts(iKpts)%kptsName
