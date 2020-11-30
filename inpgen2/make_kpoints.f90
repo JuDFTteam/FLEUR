@@ -227,10 +227,10 @@ CONTAINS
           segmentLengths(i-1) = d(i) / (nk(i-1) + 1)
        END DO
        IF (SUM(nk(:))+kpts%numSpecialPoints.GT.kpts%nkpt) THEN
-          iArray = MAXLOC(segmentLengths(:))
+          iArray = MINLOC(segmentLengths(:))
           nk(iArray(1)) = nk(iArray(1)) - 1
        ELSE
-          iArray = MINLOC(segmentLengths(:))
+          iArray = MAXLOC(segmentLengths(:))
           nk(iArray(1)) = nk(iArray(1)) + 1
        END IF
     END DO
