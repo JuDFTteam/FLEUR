@@ -211,6 +211,7 @@ test-intel:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
+    - export juDFT_MPI=time
     - cd /builds/fleur/fleur/build.intel;ctest
   allow_failure: true
   artifacts:
