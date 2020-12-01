@@ -162,7 +162,7 @@ contains
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
-      write (*,*) "post_n_parts", post_n_parts
+      write (*,*) "post_n_parts", n_parts
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
