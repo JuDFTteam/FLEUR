@@ -147,20 +147,22 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-   ! arrays should be less than 5 gb
-      ! if(fi%sym%invs) then
-      !    target_psize = 5e1/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      ! else
-      !    target_psize = 5e1/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
-      ! endif
+      ! arrays should be less than 5 gb
+      if(fi%sym%invs) then
+         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      else
+         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+      endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
 
       !remove splitting into multiple 
-      n_parts = 1 ! ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      write (*,*) "target_psize, n_parts, q_pack%submpi%size", target_psize, n_parts, q_pack%submpi%size
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
+      write (*,*) "post_n_parts", post_n_parts
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
