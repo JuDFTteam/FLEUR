@@ -7,7 +7,7 @@ stages:
 
 image:
   name: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  entrypoint: ["/usr/bin/bash"]
+  entrypoint: ["/usr/bin/bash -c"]
 
 
 build-gfortran-hdf5:
