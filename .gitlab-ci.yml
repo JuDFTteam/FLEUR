@@ -5,6 +5,12 @@ stages:
    - deploy
 
 
+image:
+  name: iffregistry.fz-juelich.de/fleur/fleur:pgi
+  alias: pgi
+  entrypoint: ["/usr/bin/bash"]
+
+
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
@@ -139,9 +145,7 @@ build-pgi:
 
 
 test-pgi:
-  image: 
-    name:iffregistry.fz-juelich.de/fleur/fleur:pgi
-    entrypoint: ["/usr/bin/bash"]
+  image: pgi
   stage: test
   dependencies:
     - build-pgi
