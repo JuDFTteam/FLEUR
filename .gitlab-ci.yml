@@ -139,7 +139,9 @@ build-pgi:
 
 
 test-pgi:
-  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
+  image: 
+    name:iffregistry.fz-juelich.de/fleur/fleur:pgi
+    entrypoint: ["/usr/bin/bash"]
   stage: test
   dependencies:
     - build-pgi
