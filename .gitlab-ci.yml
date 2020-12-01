@@ -7,7 +7,6 @@ stages:
 
 image:
   name: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  alias: pgi
   entrypoint: ["/usr/bin/bash"]
 
 
@@ -145,7 +144,7 @@ build-pgi:
 
 
 test-pgi:
-  image: pgi
+  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: test
   dependencies:
     - build-pgi
