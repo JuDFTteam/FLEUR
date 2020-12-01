@@ -47,7 +47,7 @@ MODULE m_resWeight
       REAL a,b,cut,min,z,denom(4)
       REAL eShift
       REAL eDeg(4)
-      INTEGER lowerCut,upperCut0,ie
+      INTEGER lowerCut,upperCut,ie
       INTEGER ndeg,i,j,k,l,m
       INTEGER ideg(6,2)
 
