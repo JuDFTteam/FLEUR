@@ -59,7 +59,6 @@ MODULE m_types_kpts
       procedure :: initTetra
       PROCEDURE :: tetrahedron_regular
       procedure :: calcNkpt3 => nkpt3_kpts
-
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
