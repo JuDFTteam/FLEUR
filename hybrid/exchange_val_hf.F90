@@ -72,6 +72,7 @@ CONTAINS
       USE m_kp_perturbation
       use m_spmm
       use m_work_package
+      use m_judft 
 #ifdef CPP_MPI
       use mpi
 #endif
@@ -400,8 +401,10 @@ CONTAINS
       call timestop("gamma point treatment")
 
       IF (mat_ex%l_real) THEN
-         IF (any(abs(aimag(exch_vv)) > 1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv', &
+         IF (any(abs(aimag(exch_vv)) > 1E-08)) then 
+            CALL judft_warn('unusally large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
                                                                calledby='exchange_val_hf.F90')
+         endif
       END IF
 
       ! write exch_vv in mat_ex
