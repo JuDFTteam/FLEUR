@@ -155,9 +155,11 @@ contains
       endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
-
-      !remove splitting into multiple 
+ 
       n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      ! I can't have more parts than hybdat%nobd
+      n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
+
       write (*,*) "target_psize, n_parts, q_pack%submpi%size", target_psize, n_parts, q_pack%submpi%size
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
