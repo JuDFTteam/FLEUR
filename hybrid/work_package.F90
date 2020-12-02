@@ -160,11 +160,10 @@ contains
       ! I can't have more parts than hybdat%nobd
       n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
 
-      write (*,*) "target_psize, n_parts, q_pack%submpi%size", target_psize, n_parts, q_pack%submpi%size
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
-      write (*,*) "post_n_parts", n_parts
+      
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
