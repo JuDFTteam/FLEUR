@@ -40,8 +40,8 @@ MODULE m_greensfTorgue
       INTEGER :: i_gf,l,lp,iContour,iGrid,ispin
       INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu
       COMPLEX :: phaseFactor, weight
-      REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),torgue_cmplx(3),g_Spin(2,2)
+      REAL    :: realIntegral
+      COMPLEX :: sigma(2,2,3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
       COMPLEX, ALLOCATABLE :: bxc(:,:)
@@ -94,7 +94,7 @@ MODULE m_greensfTorgue
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
 
-      torgue_cmplx = cmplx_0
+      torgue = 0.0
       iContour = -1
       DO i_gf = 1, SIZE(greensFunction)
 
@@ -102,14 +102,18 @@ MODULE m_greensfTorgue
          lp = greensFunction(i_gf)%elem%lp
          iContour = greensFunction(i_gf)%elem%iContour
 
-!         !$OMP parallel default(none) &
-!         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
-!         !$OMP shared(l,lp,i_gf,atomType,torgue_cmplx) &
-!         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
-!         !$OMP private(realIntegral,imagIntegral,integrand,g_ii,g_Spin)
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP parallel default(none) &
+         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
+         !$OMP shared(l,lp,i_gf,atomType,torgue) &
+         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
+         !$OMP private(realIntegral,integrand,g_ii,g_Spin)
+#endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
          ALLOCATE(g_ii(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
-!         !$OMP do collapse(2) reduction(+:torgue_cmplx)
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP do collapse(2)
+#endif
          DO lh = 0, atoms%lmaxd
             DO m = -l, l
                IF(MOD(lh+l+lp,2) .NE. 0) CYCLE
@@ -149,19 +153,27 @@ MODULE m_greensfTorgue
 
                   DO alpha = 1, 3 !(x,y,z)
                      CALL intgr3(REAL(integrand(:,alpha)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+#ifndef CPP_NOTYPEPROCINOMP
                      !$OMP critical
-                     torgue_cmplx(alpha) = torgue_cmplx(alpha) + realIntegral
+                     torgue(alpha) = torgue(alpha) + realIntegral
                      !$OMP end critical
+#else
+                     torgue(alpha) = torgue(alpha) + realIntegral
+#endif
                   ENDDO
                ENDDO
             ENDDO
          ENDDO
-!         !$OMP end do
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP end do
          DEALLOCATE(integrand,g_ii)
-!         !$OMP end parallel
+         !$OMP end parallel
+#else
+         DEALLOCATE(integrand,g_ii)
+#endif
+
 
       ENDDO
-      torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function Torgue: Integration")
 
       WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
