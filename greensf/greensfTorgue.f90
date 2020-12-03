@@ -63,7 +63,7 @@ MODULE m_greensfTorgue
       DEALLOCATE(vlm)
 
       !L=0 of potential has an additional rescaling of r/sqrt(4pi)
-      bxc(:,1) = bxc(:,1) * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
+      bxc(:atoms%jri(atomType),1) = bxc(:atoms%jri(atomType),1) * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
 
       ! sigma are the Pauli matrices
       sigma=cmplx_0
