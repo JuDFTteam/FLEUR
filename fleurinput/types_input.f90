@@ -23,8 +23,9 @@ MODULE m_types_input
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
-  INTEGER :: f_level = 0
-  !     f_level == 0: Original force calculation
+  INTEGER :: f_level = -1
+  !     f_level ==-1: Original force calculation
+  !     f_level == 0: Original force calculation with FORCES and POSCAR printout
   !     f_level == 1: Forces from coretails calculated over whole unit cell
   !     f_level == 2: Kinetic energy surface term evaluated with IR functions
   !     f_level == 3: Surface term for density and potential discontinuity at the MT boundaries

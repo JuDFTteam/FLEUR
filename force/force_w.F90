@@ -17,6 +17,7 @@ CONTAINS
     USE m_constants
     USE m_xmlOutput
     USE m_relaxation
+    USE m_rotate_forces
 
     IMPLICIT NONE
 
@@ -96,7 +97,6 @@ CONTAINS
        END DO
        IF (input%l_f) CALL closeXMLElement('totalForcesOnRepresentativeAtoms')
 
-
        !Check convergence of force by comparing force with old_force
        maxAbsForceDist=MAXVAL(ABS(forcetot - results%force_old))
        results%force_old(:,:)=forcetot !Store for next iteration
@@ -112,6 +112,10 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
+    IF (l_forceConverged.AND.input%l_f.AND.(input%f_level.GE.0)) CALL rotate_forces(atoms%ntype,atoms%ntype,atoms%nat,sym%nop,&
+                                             results%tote,cell%omtil,atoms%neq,sym%mrot,&
+                                             cell%amat,cell%bmat,atoms%taual,sym%tau,&
+                                             forcetot)
     IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 
   END SUBROUTINE force_w

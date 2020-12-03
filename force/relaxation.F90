@@ -154,6 +154,7 @@ CONTAINS
        CALL xsf_WRITE_atoms(55,tempAtoms,input%film,.FALSE.,cell%amat)
        CLOSE (55)
     ENDIF
+
 #ifdef CPP_MPI
     CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
