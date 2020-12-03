@@ -74,9 +74,7 @@ MODULE m_greensfTorgue
       sigma(1,1,3)=CMPLX(1.0,0.0)
       sigma(2,2,3)=CMPLX(-1.0,0.0)
 
-      CALL timestop("Green's Function Torgue: init")
-      CALL timestart("Green's Function Torgue: Integration")
-      torgue_cmplx = cmplx_0
+      !Some final checks that the greensfunctions have the right type
       iContour = -1
       DO i_gf = 1, SIZE(greensFunction)
 
@@ -85,14 +83,24 @@ MODULE m_greensfTorgue
             CALL juDFT_error("Provided greensFunction for wrong atomType", calledby="greensFunctionTorgue")
          ENDIF
 
-         l  = greensFunction(i_gf)%elem%l
-         lp = greensFunction(i_gf)%elem%lp
-
          IF(iContour == -1) THEN
             iContour = greensFunction(i_gf)%elem%iContour
          ELSE IF(greensFunction(i_gf)%elem%iContour/=iContour) THEN
             CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
          ENDIF
+
+      ENDDO
+
+      CALL timestop("Green's Function Torgue: init")
+      CALL timestart("Green's Function Torgue: Integration")
+
+      torgue_cmplx = cmplx_0
+      iContour = -1
+      DO i_gf = 1, SIZE(greensFunction)
+
+         l  = greensFunction(i_gf)%elem%l
+         lp = greensFunction(i_gf)%elem%lp
+         iContour = greensFunction(i_gf)%elem%iContour
 
 !         !$OMP parallel default(none) &
 !         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
