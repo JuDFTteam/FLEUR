@@ -33,8 +33,8 @@ CONTAINS
       hartreetoev = 27.211386245988
       autoangstrom = 0.529177210903
 
-      OPEN (79,name='FORCES')
-      OPEN (80,name='POSCAR')
+      OPEN (79,file='FORCES')
+      OPEN (80,file='POSCAR')
 
       WRITE (79,'(i1)') 1
       WRITE (79,'(i1,1x,a)') 1,'#insert displacement here (also, edit number of displacement/total displacements'
