@@ -109,7 +109,7 @@ MODULE m_greensfTorgue
                IF(lh.LT.abs(l-lp)) CYCLE
                DO mu = -lh, lh
                   lhmu = lh * (lh+1) + mu + 1
-                  mp = m - mu
+                  mp = m + mu
                   IF(ABS(mp).GT.lp) CYCLE
                   phaseFactor = gaunt1(lp,lh,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
