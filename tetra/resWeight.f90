@@ -142,6 +142,12 @@ MODULE m_resWeight
          lowerCut=SIZE(eMesh)
          upperCut=SIZE(eMesh)
       ENDIF
+
+      IF(MAXVAL(MINVAL(eMesh)-e)<highEnergyCut) THEN
+         lowerCut=1
+         upperCut=1
+      ENDIF
+
       !asymptotic relation Eqs. 9-11
       !the formulas below are unstable for big z arguments
       a = (eDeg(ind) + SUM(eDeg(:)))/5.0
