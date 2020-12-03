@@ -45,7 +45,7 @@ MODULE m_greensfTorgue
       CHARACTER(LEN=20) :: attributes(5)
 
       COMPLEX, ALLOCATABLE :: bxc(:,:)
-      COMPLEX, ALLOCATABLE :: integrand(:)
+      COMPLEX, ALLOCATABLE :: integrand(:,:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:,:,:)
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
 
@@ -99,7 +99,7 @@ MODULE m_greensfTorgue
 !         !$OMP shared(l,lp,i_gf,atomType,torgue_cmplx) &
 !         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
 !         !$OMP private(realIntegral,imagIntegral,integrand,g_ii,g_Spin)
-         ALLOCATE(integrand(atoms%jmtd),source=cmplx_0)
+         ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
          ALLOCATE(g_ii(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
 !         !$OMP do collapse(2) reduction(+:torgue_cmplx)
          DO lh = 0, atoms%lmaxd
@@ -113,26 +113,37 @@ MODULE m_greensfTorgue
                   IF(ABS(mp).GT.lp) CYCLE
                   phaseFactor = gaunt1(lp,lh,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
+                  integrand = cmplx_0
                   DO ipm = 1, 2
                      CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                      DO iz = 1, SIZE(g_ii,4)
                         weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
-                        DO alpha = 1, 3 !(x,y,z)
-                           DO jr = 1, atoms%jri(atomType)
-                              IF(ipm == 1) THEN
+
+                        IF(ipm == 1) THEN
+                           DO alpha = 1, 3 !(x,y,z)
+                              DO jr = 1, atoms%jri(atomType)
                                  g_Spin = matmul(sigma(:,:,alpha),g_ii(:,:,jr,iz))
-                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * bxc(jr,lhmu)
-                              ELSE
-                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
-                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * conjg(bxc(jr,lhmu))
-                              ENDIF
+                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
+                                                                            * bxc(jr,lhmu) * weight
+                              ENDDO
                            ENDDO
-                           CALL intgr3(REAL(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                           CALL intgr3(AIMAG(integrand),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                           torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                * MERGE(weight,conjg(weight),ipm.EQ.1)
-                        ENDDO
+                        ELSE
+                           DO alpha = 1, 3 !(x,y,z)
+                              DO jr = 1, atoms%jri(atomType)
+                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
+                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
+                                                                            * conjg(bxc(jr,lhmu) * weight)
+                              ENDDO
+                           ENDDO
+                        ENDIF
                      ENDDO
+                  ENDDO
+
+                  DO alpha = 1, 3 !(x,y,z)
+                     CALL intgr3(REAL(integrand(:,alpha)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+                     !$OMP critical
+                     torgue_cmplx(alpha) = torgue_cmplx(alpha) + realIntegral
+                     !$OMP end critical
                   ENDDO
                ENDDO
             ENDDO
