@@ -875,6 +875,7 @@
       <xsd:attribute name="nx" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="ny" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="nz" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="nkq_pairs" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="KPointListSelectionType">
