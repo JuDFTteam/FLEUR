@@ -44,7 +44,7 @@ MODULE m_types_kpts
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
       type(t_eibz), allocatable      :: EIBZ(:)
-      !integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
+      logical                        :: l_set_eibz = .False.
    CONTAINS
       PROCEDURE :: calcCommonFractions
       PROCEDURE :: add_special_line
@@ -383,7 +383,7 @@ CONTAINS
 2052  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0, &
                                                                                           '" nkq_pairs="', i0, '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
-         if(kpts%l_gamma) then 
+         if(kpts%l_gamma .and. kpts%l_set_eibz) then 
             nkq_pairs = sum([(kpts%eibz(i)%nkpt, i=1, size(kpts%eibz))])
             WRITE (kptsUnit, 2052) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3),&
                                                                         nkq_pairs, TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
@@ -910,6 +910,7 @@ CONTAINS
       IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
       if(l_eibz) then
+         kpts%l_set_eibz = .True.
          allocate(kpts%EIBZ(kpts%nkpt))
          !$OMP PARALLEL do default(none) private(n) shared(kpts, sym)
          do n = 1,kpts%nkpt
