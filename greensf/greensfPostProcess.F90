@@ -42,7 +42,6 @@ MODULE m_greensfPostProcess
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
-      REAL :: torgue(3)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
       TYPE(t_usdus)            :: usdus
@@ -121,6 +120,27 @@ MODULE m_greensfPostProcess
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
+      !----------------------------------------------
+      ! Torgue Calculations
+      !----------------------------------------------
+      IF(ANY(gfinp%numTorgueElems>0)) THEN
+         CALL timestart("Green's Function: Torgue")
+         CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+                            f,g,flo,vTot)
+         !IF(noco%l_soc) THEN
+         !   CALL openXMLElementNoAttributes('spinorbitTorgue')
+         !   WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
+         !   WRITE(oUnit,'(/,A)') '---------------------------------'
+         !   DO atomType = 1, atoms%nType
+         !      IF(gfinp%numTorgueElems(atomType)==0) CYCLE
+         !      CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
+         !                           sphhar,atoms,sym,noco,nococonv,input,enpara,mpi,f,g,flo,atomType,torgue,vTot)
+         !   ENDDO
+         !   CALL closeXMLElement('spinorbitTorgue')
+         !ENDIF
+         CALL timestop("Green's Function: Torgue")
+      ENDIF
+
       IF(mpi%irank==0) THEN
          CALL timestart("Green's Function: Postprocess")
          !-------------------------------------------------------------
@@ -158,34 +178,6 @@ MODULE m_greensfPostProcess
             ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")
-
-         !----------------------------------------------
-         ! Torgue Calculations
-         !----------------------------------------------
-         IF(ANY(gfinp%numTorgueElems>0)) THEN
-            CALL timestart("Green's Function: Torgue")
-            CALL openXMLElementNoAttributes('noncollinearTorgue')
-            WRITE(oUnit,'(/,A)') 'Torgue Calculation (noco):'
-            WRITE(oUnit,'(/,A)') '---------------------------'
-            DO atomType = 1, atoms%nType
-               IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-               CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-                                  sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vTot)
-            ENDDO
-            CALL closeXMLElement('noncollinearTorgue')
-            !IF(noco%l_soc) THEN
-            !   CALL openXMLElementNoAttributes('spinorbitTorgue')
-            !   WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
-            !   WRITE(oUnit,'(/,A)') '---------------------------------'
-            !   DO atomType = 1, atoms%nType
-            !      IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-            !      CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-            !                           sphhar,atoms,sym,noco,nococonv,input,enpara,mpi,f,g,flo,atomType,torgue,vTot)
-            !   ENDDO
-            !   CALL closeXMLElement('spinorbitTorgue')
-            !ENDIF
-            CALL timestop("Green's Function: Torgue")
-         ENDIF
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")

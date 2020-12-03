@@ -436,7 +436,7 @@ CONTAINS
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf =  this%find(l,itype,iContour,.FALSE.,lp=lp)
+                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
