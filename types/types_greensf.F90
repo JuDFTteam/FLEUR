@@ -759,10 +759,10 @@ MODULE m_types_greensf
             ENDIF
             IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
                gmat(spin1,spin2,:,:) = cmplx_0
-               CYCLE
+            ELSE
+               CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
+               gmat(spin1,spin2,:,:) = temp(:,:)
             ENDIF
-            CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
-            gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
       END SUBROUTINE getRadialSpin_gf
@@ -800,10 +800,10 @@ MODULE m_types_greensf
             ENDIF
             IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
                gmat(spin1,spin2,:,:) = cmplx_0
-               CYCLE
+            ELSE
+               CALL this%getRadialRadial(atoms,iz,m,mp,l_conjg,spin,f,g,flo,temp)
+               gmat(spin1,spin2,:,:) = temp(:,:)
             ENDIF
-            CALL this%getRadialRadial(atoms,iz,m,mp,l_conjg,spin,f,g,flo,temp)
-            gmat(spin1,spin2,:,:) = temp(:,:)
          ENDDO
 
       END SUBROUTINE getRadialRadialSpin_gf
