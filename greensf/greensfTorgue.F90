@@ -9,7 +9,7 @@ MODULE m_greensfTorgue
    USE m_lattHarmsSphHarmsConv
 #ifdef CPP_MPI
    USE mpi
-#else
+#endif
 
    IMPLICIT NONE
 
@@ -42,7 +42,7 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(IN)     :: flo(:,:,:,:,:)
       TYPE(t_potden),         INTENT(IN)     :: vTot
 
-      INTEGER :: i_gf,l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra
+      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra
       INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n
       COMPLEX :: phaseFactor, weight
       REAL    :: realIntegral
@@ -59,7 +59,7 @@ MODULE m_greensfTorgue
       INTEGER, ALLOCATABLE :: gf_indices(:)
 
       ALLOCATE(gf_indices(SUM(gfinp%numTorgueElems(:))), source=-1)
-
+      ALLOCATE(bxc(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype), source=cmplx_0)
       CALL timestart("Green's Function Torgue: init")
 
       DO atomType = 1, atoms%ntype
@@ -89,7 +89,6 @@ MODULE m_greensfTorgue
             CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, atomType, vTot%mt(:,0:,atomType,ispin), vlm(:,:,ispin))
          ENDDO
          !Get the Bxc part of the potential
-         ALLOCATE(bxc(SIZE(vlm,1),SIZE(vlm,2)))
          bxc(:,:,atomType) = (vlm(:,:,1) - vlm(:,:,2))/2.0
          DEALLOCATE(vlm)
 
@@ -147,7 +146,7 @@ MODULE m_greensfTorgue
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
          !$OMP shared(sphhar,atoms,currentGreensFunction,f,g,flo,sigma,bxc) &
-         !$OMP shared(l,lp,i_gf,atomType,torgue) &
+         !$OMP shared(l,lp,atomType,torgue) &
          !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,g_Spin)
 #endif
