@@ -32,13 +32,19 @@ MODULE m_types_hybdat
       COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
       type(t_mat)            :: mtir 
-      integer                :: comm ! communicator for this coulomb matrix
-      logical                :: l_participate ! am i somehow involved with this coulomb mtx
+#ifdef CPP_MPI
+      integer                :: comm = MPI_COMM_NULL ! communicator for this coulomb matrix
+#else
+      integer                :: comm = -1 
+#endif
+      integer                :: req(4)
+      logical                :: l_participate = .False. ! am i somehow involved with this coulomb mtx
    contains 
-      procedure :: init     => t_coul_init
-      procedure :: alloc    => t_coul_alloc
-      procedure :: free     => t_coul_free
-      procedure :: mpi_bc  => t_coul_mpi_bc
+      procedure :: init       => t_coul_init
+      procedure :: alloc      => t_coul_alloc
+      procedure :: free       => t_coul_free
+      procedure :: mpi_ibcast => t_coul_mpi_ibc
+      procedure :: mpi_wait   => t_coul_mpi_wait
    end type t_coul
 
    TYPE t_hybdat
@@ -335,13 +341,11 @@ contains
       END DO
    end subroutine set_states_hybdat
 
-   subroutine t_coul_mpi_bc(coul, fi, communicator, root)
+   subroutine t_coul_mpi_ibc(coul, fi, communicator, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
+
       implicit none 
       class(t_coul)                  :: coul
       type(t_fleurinput), intent(in) :: fi
@@ -350,32 +354,35 @@ contains
       integer :: ierr
 
       if (fi%sym%invs) THEN
-         call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_r failed")
-
-         call MPI_Bcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt2_r failed")
-
-         call MPI_Bcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
+         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(1), ierr)
+         call MPI_IBcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(2), ierr)
+         call MPI_IBcast(coul%mt3_r, size(coul%mt3_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(3), ierr)
       else 
-         call MPI_Bcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_c failed")
-
-         call MPI_Bcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt2_r failed")
-
-         call MPI_Bcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
+         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c), MPI_DOUBLE_COMPLEX,  root, communicator, coul%req(1), ierr)
+         call MPI_IBcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX , root, communicator, coul%req(2), ierr)
+         call MPI_IBcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX , root, communicator, coul%req(3), ierr)
       endif
 
-      call coul%mtir%bcast(root, communicator)
+      call coul%mtir%ibcast(root, communicator, coul%req(4))
 #endif
-   end subroutine t_coul_mpi_bc
+   end subroutine t_coul_mpi_ibc
+
+   subroutine t_coul_mpi_wait(coul)
+      implicit none 
+      class(t_coul)                  :: coul 
+
+#ifdef CPP_MPI
+      integer :: ierr
+      call MPI_Waitall(size(coul%req), coul%req, MPI_STATUSES_IGNORE, ierr)
+#endif
+
+   end subroutine t_coul_mpi_wait
+
 
    subroutine t_coul_free(coul)
       implicit none 
       class(t_coul), intent(inout) :: coul 
+      integer :: ierr
 
       if(allocated(coul%mt1_r)) deallocate(coul%mt1_r)
       if(allocated(coul%mt1_c)) deallocate(coul%mt1_c)
@@ -384,6 +391,10 @@ contains
       if(allocated(coul%mt2_c)) deallocate(coul%mt2_c)
       if(allocated(coul%mt3_c)) deallocate(coul%mt3_c)
       call coul%mtir%free()
+
+#ifdef CPP_MPI 
+      if(coul%comm /= MPI_COMM_NULL) call MPI_comm_free(coul%comm, ierr)
+#endif
    end subroutine t_coul_free
 
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)

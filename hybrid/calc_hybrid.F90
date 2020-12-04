@@ -12,7 +12,7 @@ CONTAINS
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
-
+      use m_set_coul_participation
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -24,6 +24,7 @@ CONTAINS
       USE m_eig66_io
       use m_eig66_mpi
       use m_distribute_mpi 
+      use m_create_coul_comms
 #ifdef CPP_MPI 
       use mpi 
 #endif
@@ -108,13 +109,9 @@ CONTAINS
          CALL timestop("generation of mixed basis")
 
 
-         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
-         do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
-         enddo
 
-         ! use jsp=1 for coulomb work-planning
-         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
+
+
 
          ! setup parallelization 
          n_wps = min(glob_mpi%size, fi%kpts%nkpt)
@@ -130,10 +127,30 @@ CONTAINS
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
+         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+#ifdef CPP_MPI
+         if(hybdat%coul(1)%comm == MPI_COMM_NULL) call create_coul_comms(hybdat, fi, fmpi)
+#endif
+
+         call set_coul_participation(hybdat, fi, work_pack)
          do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_bc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
+            if(hybdat%coul(i)%l_participate) then 
+               call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
+            endif 
+         enddo 
+
+         ! use jsp=1 for coulomb work-planning
+         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
+         
+         do i =1,fi%kpts%nkpt
+            if(hybdat%coul(i)%l_participate) then 
+               call hybdat%coul(i)%mpi_ibcast(fi, hybdat%coul(i)%comm, 0)
+               call hybdat%coul(i)%mpi_wait()
+            endif
          enddo
 
+
+         
          CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 

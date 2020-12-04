@@ -42,4 +42,6 @@ set(fleur_F90 ${fleur_F90}
    hybrid/legendre_poly.f90 
    hybrid/unify_zmat.f90
    hybrid/progress_thread/thread_lib.f90 
+   hybrid/set_coul_participation.f90
+   hybrid/create_coul_comms.F90
 )

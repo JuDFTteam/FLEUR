@@ -45,6 +45,7 @@ MODULE m_types_mat
       procedure        :: conjugate => t_mat_conjg
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
+      procedure        :: ibcast => t_mat_ibcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
       procedure        :: leastsq => t_mat_leastsq
    END type t_mat
@@ -133,7 +134,25 @@ CONTAINS
 #endif
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
-      integer, intent(in)           :: root, comm 
+      integer, intent(in)           :: root, comm  
+
+      integer :: req, ierr
+
+#ifdef CPP_MPI    
+      call mat%ibcast(root, comm, req)
+      call MPI_Wait(req, MPI_STATUS_IGNORE, ierr)
+#endif
+   end subroutine t_mat_bcast
+
+
+   subroutine t_mat_ibcast(mat, root, comm, req)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none 
+      CLASS(t_mat), INTENT(INOUT)   :: mat
+      integer, intent(in)           :: root, comm
+      integer, intent(inout)        :: req
       
       integer :: ierr, full_shape(2), me
 
@@ -154,12 +173,12 @@ CONTAINS
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
       if(mat%l_real) then
-         call MPI_Bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
+         call MPI_IBcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, req, ierr)
       else 
-         call MPI_Bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
+         call MPI_IBcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, req, ierr)
       endif
 #endif
-   end subroutine t_mat_bcast
+   end subroutine t_mat_ibcast
 
    subroutine t_mat_reset(mat, val)
       implicit none  
