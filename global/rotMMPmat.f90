@@ -155,6 +155,7 @@ MODULE m_rotMMPmat
       COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,4)
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
+      IF(.NOT.ALLOCATED(mmpmatOutsplit)) ALLOCATE(mmpmatOutsplit,mold=mmpmatsplit)
       mmpmatOut = mmpmat
 
       !Split up the matrix

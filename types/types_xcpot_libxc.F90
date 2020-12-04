@@ -121,10 +121,10 @@ CONTAINS
                                                                   XC_POLARIZED, err=errors(4))
       END IF
 
-      IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
-      IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
-      IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
-      IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
+      !IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
+      !IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
+      !IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
+      !IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
 
       !check if any potental is a MetaGGA
       IF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN

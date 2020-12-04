@@ -121,8 +121,8 @@ CONTAINS
     ALLOCATE(smat_final,mold=smat(1,1))
     ALLOCATE(hmat_final,mold=smat(1,1))
     CALL timestart("Matrix redistribution")
-    CALL eigen_redist_matrix(fmpi,lapw,fi%atoms,smat,smat_final,.FALSE.)
-    CALL eigen_redist_matrix(fmpi,lapw,fi%atoms,hmat,hmat_final,.TRUE.,smat_final)
+    CALL eigen_redist_matrix(fmpi,lapw,fi%atoms,smat,smat_final)
+    CALL eigen_redist_matrix(fmpi,lapw,fi%atoms,hmat,hmat_final,smat_final)
     CALL timestop("Matrix redistribution")
 
   END SUBROUTINE eigen_hssetup

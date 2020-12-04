@@ -29,7 +29,7 @@ eigen/tlmplm.F90
 #eigen/tlmplm_store.F90
 eigen/tlo.f90
 eigen/vacfun.F90
-eigen/eigen_redist_matrix.F90
+eigen/eigen_redist_matrix.f90
 )
 #if (FLEUR_USE_GPU)
 #   set(fleur_F90 ${fleur_F90}

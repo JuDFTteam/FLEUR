@@ -147,6 +147,7 @@ CONTAINS
         select case (i)
             case (MPI_THREAD_SINGLE)
                 l_mpi_multithreaded = .False.
+                call judft_error("Fleur does not support: 'MPI_THREAD_SINGLE'. The minimum is 'MPI_THREAD_FUNNELED'")
             case (MPI_THREAD_FUNNELED )
                 l_mpi_multithreaded = .False.
             case (MPI_THREAD_SERIALIZED)

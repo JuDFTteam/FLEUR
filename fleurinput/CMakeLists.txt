@@ -15,9 +15,9 @@ types_sliceplot.f90        types_sym.f90        types_atoms.F90
 types_econfig.F90          types_field.F90      types_xcpot.F90
 types_enparaXML.f90        types_forcetheo_data.f90
 types_mpinp.f90            types_gfinp.F90      types_hub1inp.f90
-types_xml.f90              types_juPhon.F90
+types_xml.f90              types_juPhon.F90     types_brZone.f90
 calculator.f constants.f90 mpi_bc_tool.F90 ../include/inputSchema.h ../include/outputSchema.h ../io/xml/dropInputSchema.c ../io/xml/dropOutputSchema.c ../io/xml/inputSchema_old.h  ../io/xml/xmlInterfaceWrapper.c
-../math/d_wigner.F90 ../math/inv3.f90 ../math/grule.f90 ../global/sort.f90 ../kpoints/tetcon.f ../kpoints/triang.f
+../math/d_wigner.F90 ../math/inv3.f90 ../math/grule.f90 ../global/sort.f90 ../kpoints/tetcon.f ../kpoints/triang.f ../kpoints/bravais.f ../kpoints/brzone2.f90
 )
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/fleurinput")

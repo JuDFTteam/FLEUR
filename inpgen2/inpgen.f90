@@ -46,6 +46,7 @@ PROGRAM inpgen
   USE m_constants
   USE m_types_xml
   USE m_types_juPhon
+  use m_make_sym
 
       IMPLICIT NONE
 
@@ -248,9 +249,17 @@ PROGRAM inpgen
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
                            kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+         if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
+            call timestart("Hybrid setup BZ")
+            CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
+            call kpts(ikpts)%init(sym, input%film,.true.)
+            call timestop("Hybrid setup BZ")
+         endif
       END DO
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
+         kptsSelection(1) = kpts(1)%kptsName ! This may actually be wrong, but it is a backup solution.
+         input%bz_integration = kptsBZintegration(1)
          DO iKpts = numKpts, 1, -1
             IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
                kptsSelection(1) = kpts(iKpts)%kptsName
@@ -296,6 +305,7 @@ PROGRAM inpgen
 
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
          DO iKpts = 1, numKpts
+            call kpts(iKpts)%find_gamma()
             CALL kpts(iKpts)%print_XML(kptsUnit)
          END DO
          WRITE (kptsUnit, '(a)') "         </kPointLists>"

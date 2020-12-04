@@ -41,13 +41,29 @@ MODULE m_resWeight
       REAL :: weights(SIZE(eMesh))
 
       REAL, PARAMETER :: tol = 1e-7!tolerance for degeneracy
-      REAL, PARAMETER :: fac = 10.0
+      REAL, PARAMETER :: fac = 5.0
+      REAL, PARAMETER :: highEnergyCut = -0.1
 
       REAL a,b,cut,min,z,denom(4)
+      REAL eShift
       REAL eDeg(4)
-      INTEGER lowerCut,upperCut,lowerCut0,upperCut0,ie
+      INTEGER lowerCut,upperCut,ie
       INTEGER ndeg,i,j,k,l,m
       INTEGER ideg(6,2)
+
+      REAL, ALLOCATABLE :: eMesh_shifted(:)
+      REAL :: eig_shifted(4)
+
+      eShift = 0.0
+      if (MAXVAL(eMesh)*MINVAL(eMesh) < 0.0) then
+         !0 is inside the interval
+         !The asymptotic relations for energies far from the
+         !eigenvalues at the corners has a pole for energies at 0
+         !To prevent these we shift everything (eignevalues and energy grid so that zero)
+         !is far away. This does not change the results for all other cases
+         !Since there only energy differences contribute
+         eShift = 2.0*MAX(ABS(MINVAL(eMesh)),ABS(MAXVAL(eMesh)))
+      endif
 
       weights = 0.0
       cut = 0.0
@@ -62,6 +78,8 @@ MODULE m_resWeight
       DO
          IF(MINVAL(ABS(eMesh(upperCut)-e)).LT.fac*cut.OR.upperCut.EQ.1) THEN
             EXIT
+         ELSE IF(MAXVAL(eMesh(upperCut)-e) < 0.0) THEN
+            EXIT
          ELSE
             upperCut = upperCut - 1
          ENDIF
@@ -70,69 +88,37 @@ MODULE m_resWeight
       DO
          IF(MINVAL(ABS(eMesh(lowerCut)-e)).LT.fac*cut.OR.lowerCut.EQ.upperCut) THEN
             EXIT
+         ELSE IF(MINVAL(eMesh(lowerCut)-e) > 0.0) THEN
+            EXIT
          ELSE
             lowerCut = lowerCut + 1
          ENDIF
       ENDDO
-      !Second limits around 0
-      upperCut0 = SIZE(eMesh)
-      DO
-         IF(ABS(eMesh(upperCut0)).LT.2e-2.OR.upperCut0.EQ.1) THEN
-            EXIT
-         ELSE
-            upperCut0 = upperCut0 - 1
-         ENDIF
-      ENDDO
-      lowerCut0 = 1
-      DO
-         IF(ABS(eMesh(lowerCut0)).LT.2e-2.OR.lowerCut0.EQ.upperCut0) THEN
-            EXIT
-         ELSE
-            lowerCut0 = lowerCut0 + 1
-         ENDIF
-      ENDDO
-      IF(MAXVAL(MAXVAL(eMesh)-e)<-0.2) THEN
-         lowerCut=SIZE(eMesh)
-         upperCut=SIZE(eMesh)
-      ENDIF
-      !asymptotic relation Eqs. 9-11
-      !the formulas below are unstable for big z arguments
-      a = (e(ind) + SUM(e(:)))/5.0
-      b = 0.0
-      DO j = 1, 4
-         IF(j.EQ.ind) CYCLE
-         b = b + 3*(e(j)-e(ind))**2
-         DO k = 1, 4
-            IF(k.EQ.j) CYCLE
-            b = b + (e(k)-e(j))**2
-         ENDDO
-      ENDDO
-      b = b/300.0
+      eig_shifted = e(:) - eShift
 
-      weights(  :lowerCut) = 0.25/(eMesh(  :lowerCut)-a-b/eMesh(  :lowerCut))
-      weights(upperCut+1:) = 0.25/(eMesh(upperCut+1:)-a-b/eMesh(upperCut+1:))
-      weights(lowerCut0:upperCut0) = 0.25/(eMesh(lowerCut0:upperCut0)-a)
-      IF(lowerCut==upperCut) RETURN
+      ALLOCATE(eMesh_shifted,mold=eMesh)
+      eMesh_shifted = eMesh(:) - eShift
+
       ndeg = 0
       ideg = 0
       !Search for degenerate eigenvalues
-      eDeg = e
+      eDeg = eig_shifted
       DO i = 1, 3
          DO j = i+1,4
-            IF(ABS(e(i)-e(j)).LT.tol) THEN
+            IF(ABS(eig_shifted(i)-eig_shifted(j)).LT.tol) THEN
                ndeg = ndeg + 1
                ideg(ndeg,1) = i
                ideg(ndeg,2) = j
                !Set the two values equal
-               eDeg(i) = (e(i)+e(j))/2.0
-               eDeg(j) = eDeg(j)
+               eDeg(i) = (eig_shifted(i)+eig_shifted(j))/2.0
+               eDeg(j) = eDeg(i)
                DO k = 1, ndeg-1
                   IF(ideg(k,1).EQ.i.OR.ideg(k,1).EQ.j) THEN
-                     eDeg(ideg(k,1)) = (e(i)+e(j)+e(ideg(k,1)))/3.0
+                     eDeg(ideg(k,1)) = (eig_shifted(i)+eig_shifted(j)+eig_shifted(ideg(k,1)))/3.0
                      eDeg(j) = eDeg(ideg(k,1))
                      eDeg(i) = eDeg(ideg(k,1))
                   ELSE IF(ideg(k,2).EQ.i.OR.ideg(k,2).EQ.j) THEN
-                     eDeg(ideg(k,2)) = (e(i)+e(j)+e(ideg(k,2)))/3.0
+                     eDeg(ideg(k,2)) = (eig_shifted(i)+eig_shifted(j)+eig_shifted(ideg(k,2)))/3.0
                      eDeg(j) = eDeg(ideg(k,2))
                      eDeg(i) = eDeg(ideg(k,2))
                   ENDIF
@@ -151,6 +137,30 @@ MODULE m_resWeight
             ENDIF
          ENDDO
       ENDDO
+
+      IF(MAXVAL(MAXVAL(eMesh)-e)<highEnergyCut) THEN
+         lowerCut=SIZE(eMesh)
+         upperCut=SIZE(eMesh)
+      ENDIF
+      !asymptotic relation Eqs. 9-11
+      !the formulas below are unstable for big z arguments
+      a = (eDeg(ind) + SUM(eDeg(:)))/5.0
+      b = 0.0
+      DO j = 1, 4
+         IF(j.EQ.ind) CYCLE
+         b = b + 3*(eDeg(j)-eDeg(ind))**2
+         DO k = 1, 4
+            IF(k.EQ.j) CYCLE
+            b = b + (eDeg(k)-eDeg(j))**2
+         ENDDO
+      ENDDO
+      b = b/300.0
+
+      weights(  :lowerCut) = 0.25/(eMesh_shifted(  :lowerCut)-a-b/eMesh_shifted(  :lowerCut))
+      weights(upperCut:) = 0.25/(eMesh_shifted(upperCut:)-a-b/eMesh_shifted(upperCut:))
+
+      IF(lowerCut==upperCut) RETURN
+
       IF(ndeg.EQ.0) THEN
          denom = 1.0
          DO i = 1, 4
@@ -161,8 +171,8 @@ MODULE m_resWeight
             IF(i.EQ.ind) CYCLE
             denom(i) = denom(i)*(eDeg(ind)-eDeg(i))
          ENDDO
-         DO ie = lowerCut+1, upperCut
-            z = eMesh(ie)
+         DO ie = lowerCut, upperCut
+            z = eMesh_shifted(ie)
             !all eigenvalues are non degenerate (EQ.7 from the paper)
             !First term
             weights(ie) = (z-eDeg(ind))**2/denom(ind)
@@ -193,8 +203,8 @@ MODULE m_resWeight
                IF(i.EQ.l.OR.i.EQ.m.OR.i.EQ.j) CYCLE
                k = i
             ENDDO
-            DO ie = lowerCut+1, upperCut
-               z = eMesh(ie)
+            DO ie = lowerCut, upperCut
+               z = eMesh_shifted(ie)
                weights(ie) = (z-eDeg(k))**3/((eDeg(k)-eDeg(j))*(eDeg(k)-eDeg(m))**3)*LOG(ABS(z-eDeg(k))) &
                             +(z-eDeg(j))**3/((eDeg(j)-eDeg(k))*(eDeg(j)-eDeg(m))**3)*LOG(ABS(z-eDeg(j))) &
                             +(z-eDeg(m))/((eDeg(m)-eDeg(j))*(eDeg(m)-eDeg(k))) * (0.5 + (z-eDeg(j))/(eDeg(m)-eDeg(j))&
@@ -210,8 +220,8 @@ MODULE m_resWeight
                k = i
             ENDDO
             !EQ. A1
-            DO ie = lowerCut+1, upperCut
-               z = eMesh(ie)
+            DO ie = lowerCut, upperCut
+               z = eMesh_shifted(ie)
                weights(ie) = (z-eDeg(ind))**2/((eDeg(ind)-eDeg(m))**2*(eDeg(k)-eDeg(ind))) *&
                         (1 + (2*(z-eDeg(m))/(eDeg(ind)-eDeg(m))+(z-eDeg(k))/(eDeg(ind)-eDeg(k)))*LOG(ABS(z-eDeg(ind)))) &
                        +(z-eDeg(m))**2/((eDeg(m)-eDeg(ind))**2*(eDeg(k)-eDeg(m))) *&
@@ -222,14 +232,14 @@ MODULE m_resWeight
       ELSE IF(ndeg.EQ.2) THEN
          !This is the case E1=E2<E3=E4 => A4
          IF(ind.LE.2) THEN
-            DO ie = lowerCut+1, upperCut
-               z = eMesh(ie)
+            DO ie = lowerCut, upperCut
+               z = eMesh_shifted(ie)
                weights(ie) = 3.0*(z-eDeg(3))**2*(z-eDeg(2))/(eDeg(3)-eDeg(2))**4*LOG(ABS((z-eDeg(2)))/ABS((z-eDeg(3)))) &
                             - 3.0/2.0*(z-eDeg(2))*(2*(z-eDeg(3))-eDeg(3)+eDeg(2))/(eDeg(3)-eDeg(2))**3-1.0/(eDeg(3)-eDeg(2))
             ENDDO
          ELSE
-            DO ie = lowerCut+1, upperCut
-               z = eMesh(ie)
+            DO ie = lowerCut, upperCut
+               z = eMesh_shifted(ie)
                weights(ie) = 3.0*(z-eDeg(2))**2*(z-eDeg(3))/(eDeg(3)-eDeg(2))**4*LOG(ABS((z-eDeg(3)))/ABS((z-eDeg(2)))) &
                             + 3.0/2.0*(z-eDeg(3))*(2*(z-eDeg(2))+eDeg(3)-eDeg(2))/(eDeg(3)-eDeg(2))**3+1.0/(eDeg(3)-eDeg(2))
             ENDDO
@@ -239,14 +249,14 @@ MODULE m_resWeight
          IF(ALL(ideg(:,:).NE.4)) THEN
             !A3
             IF(ind.NE.4) THEN
-               DO ie = lowerCut+1, upperCut
-                  z = eMesh(ie)
+               DO ie = lowerCut, upperCut
+                  z = eMesh_shifted(ie)
                   weights(ie) = (z-eDeg(4))**3/(eDeg(4)-eDeg(3))**4*LOG(ABS((z-eDeg(4))/(z-eDeg(3)))) &
                             + (6*(z-eDeg(4))**2-3*(eDeg(4)-eDeg(3))*(z-eDeg(4))+2*(eDeg(4)-eDeg(3))**2)/(6*(eDeg(4)-eDeg(3))**3)
                ENDDO
             ELSE
-               DO ie = lowerCut+1, upperCut
-                  z = eMesh(ie)
+               DO ie = lowerCut, upperCut
+                  z = eMesh_shifted(ie)
                   weights(ie) = 3.0*(z-eDeg(4))**2*(z-eDeg(3))/(eDeg(4)-eDeg(3))**4*LOG(ABS((z-eDeg(3))/(z-eDeg(4)))) &
                             - 3.0/2.0*(z-eDeg(3))*(2*(z-eDeg(4))-eDeg(4)+eDeg(3))/(eDeg(4)-eDeg(3))**3-1.0/(eDeg(4)-eDeg(3))
                ENDDO
@@ -254,14 +264,14 @@ MODULE m_resWeight
          ELSE IF(ALL(ideg(:,:).NE.1)) THEN
             !A5
             IF(ind.EQ.1) THEN
-               DO ie = lowerCut+1, upperCut
-                  z = eMesh(ie)
+               DO ie = lowerCut, upperCut
+                  z = eMesh_shifted(ie)
                   weights(ie) = 3.0*(z-eDeg(1))**2*(z-eDeg(2))/(eDeg(2)-eDeg(1))**4*LOG(ABS((z-eDeg(2))/(z-eDeg(1)))) &
                             + 3.0/2.0*(z-eDeg(2))*(2*(z-eDeg(1))-eDeg(1)+eDeg(2))/(eDeg(2)-eDeg(1))**3+1.0/(eDeg(2)-eDeg(1))
                ENDDO
             ELSE
-               DO ie = lowerCut+1, upperCut
-                  z = eMesh(ie)
+               DO ie = lowerCut, upperCut
+                  z = eMesh_shifted(ie)
                   weights(ie) = (z-eDeg(1))**3/(eDeg(2)-eDeg(1))**4*LOG(ABS((z-eDeg(1))/(z-eDeg(2)))) &
                             - (6*(z-eDeg(1))**2+3*(z-eDeg(1))*(eDeg(2)-eDeg(1))+2*(eDeg(2)-eDeg(1))**2)/(6*(eDeg(2)-eDeg(1))**3)
                ENDDO
@@ -269,7 +279,7 @@ MODULE m_resWeight
          ENDIF
       ELSE IF(ndeg.EQ.6) THEN
          !Eq. A6
-         weights(lowerCut+1:upperCut) = 0.25/(eMesh(lowerCut+1:upperCut)-eDeg(1))
+         weights(lowerCut:upperCut) = 0.25/(eMesh_shifted(lowerCut:upperCut)-eDeg(1))
       ENDIF
    END FUNCTION resWeightBulk
 
