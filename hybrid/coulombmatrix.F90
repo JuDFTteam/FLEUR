@@ -1111,8 +1111,19 @@ CONTAINS
             end if
 
          endif
-
          call coulomb(ikpt)%free()
+         m = hybdat%coul(ikpt)%mtir%matsize1
+         n = hybdat%coul(ikpt)%mtir%matsize2
+         write (*,*) "m, n", m, n
+         if(fi%sym%invs) then
+            !call DLACPY( UPLO, M, N, A,                     LDA,                    B,                          LDB )
+            call dlacpy("A",    M, N, hybdat%mtir%r(1,1,im), size(hybdat%mtir%r, 1), hybdat%coul(ikpt)%mtir%data_r, m)
+            ! hybdat%coul(ikpt)%mtir%data_r = hybdat%mtir%r(:m,:n, im)
+         else
+            !call ZLACPY( UPLO, M, N, A,                     LDA,                    B,                          LDB )
+            call zlacpy("A",    M, N, hybdat%mtir%c(1,1,im), size(hybdat%mtir%c, 1), hybdat%coul(ikpt)%mtir%data_c, m)
+            ! hybdat%coul(ikpt)%mtir%data_c = hybdat%mtir%c(:m,:n, im)
+         endif 
       END DO ! ikpt
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
