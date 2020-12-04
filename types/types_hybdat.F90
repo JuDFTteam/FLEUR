@@ -31,12 +31,14 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: mt2_r(:, :, :, :),   mt3_r(:, :, :)
       COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
+      type(t_mat)            :: mtir 
+      integer                :: comm ! communicator for this coulomb matrix
+      logical                :: l_participate ! am i somehow involved with this coulomb mtx
    contains 
       procedure :: init     => t_coul_init
       procedure :: alloc    => t_coul_alloc
       procedure :: free     => t_coul_free
       procedure :: mpi_bc  => t_coul_mpi_bc
-      procedure :: size_MB  => t_coul_size_MB
    end type t_coul
 
    TYPE t_hybdat
@@ -81,9 +83,43 @@ MODULE m_types_hybdat
       procedure :: free       => free_hybdat
       procedure :: allocate   => allocate_hybdat
       procedure :: set_states => set_states_hybdat
+      procedure :: set_nobd   => set_nobd_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine set_nobd_hybdat(hybdat, fi, results)
+      use m_types_fleurinput
+      use m_types_misc
+      implicit none 
+      class(t_hybdat), intent(inout) :: hybdat 
+      type(t_fleurinput), intent(in) :: fi
+      type(t_results), intent(in)    :: results
+
+      integer :: jsp, nk, i
+
+      if(.not. allocated(hybdat%nobd)) then 
+         allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
+      endif
+      hybdat%nobd = 0   
+
+      do jsp = 1,fi%input%jspins 
+         DO nk = 1, fi%kpts%nkpt
+            DO i = 1, results%neig(nk, jsp)
+               IF (results%w_iks(i, nk, jsp) > 0.0) then
+                  hybdat%nobd(nk,jsp) = hybdat%nobd(nk,jsp) + 1
+               endif
+            END DO
+         enddo 
+      enddo
+
+      do jsp = 1,fi%input%jspins 
+         DO nk = 1, fi%kpts%nkptf
+            i = fi%kpts%bkp(nk)
+            hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
+         END DO
+      enddo   
+   end subroutine set_nobd_hybdat
+
    subroutine t_mtir_block_read(mtir, fi, n_g, ik, out_mtx)
       use m_types_fleurinput
       use m_types_mat 
@@ -299,24 +335,6 @@ contains
       END DO
    end subroutine set_states_hybdat
 
-   function t_coul_size_MB(coul) result(size_MB)
-      implicit none 
-      class(t_coul), intent(in) :: coul
-      real  :: size_MB 
-
-      size_MB = 0
-      
-      ! real parts
-      if(allocated(coul%mt1_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt1_r) 
-      if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
-      if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
-
-      ! complex parts
-      if(allocated(coul%mt1_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt1_c) 
-      if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
-      if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
-   end function
-
    subroutine t_coul_mpi_bc(coul, fi, communicator, root)
       use m_types_fleurinput
       use m_types_hybmpi
@@ -350,6 +368,8 @@ contains
          call MPI_Bcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
          if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
       endif
+
+      call coul%mtir%bcast(root, communicator)
 #endif
    end subroutine t_coul_mpi_bc
 
@@ -363,6 +383,7 @@ contains
       if(allocated(coul%mt3_r)) deallocate(coul%mt3_r)
       if(allocated(coul%mt2_c)) deallocate(coul%mt2_c)
       if(allocated(coul%mt3_c)) deallocate(coul%mt3_c)
+      call coul%mtir%free()
    end subroutine t_coul_free
 
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
@@ -415,6 +436,7 @@ contains
              allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
             if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
          endif 
+         if(.not. coul%mtir%allocated()) call coul%mtir%alloc(.True., isize, isize)
       else      
          if(.not. allocated(coul%mt1_c)) then 
             allocate(coul%mt1_c(maxval(num_radbasfn) - 1,&
@@ -433,6 +455,7 @@ contains
             allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
             if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
          endif 
+         if(.not. coul%mtir%allocated()) call coul%mtir%alloc(.False., isize, isize)
       endif
    end subroutine t_coul_alloc
 
