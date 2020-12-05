@@ -243,7 +243,7 @@ gfortran-coverage:
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
-      - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest
+      - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest -I 1,45
       - lcov --capture  -d CMakeFiles -o after.info
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
