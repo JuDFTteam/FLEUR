@@ -45,7 +45,6 @@ MODULE m_types_mat
       procedure        :: conjugate => t_mat_conjg
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
-      procedure        :: ibcast => t_mat_ibcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
       procedure        :: leastsq => t_mat_leastsq
    END type t_mat
@@ -134,25 +133,7 @@ CONTAINS
 #endif
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
-      integer, intent(in)           :: root, comm  
-
-      integer :: req, ierr
-
-#ifdef CPP_MPI    
-      call mat%ibcast(root, comm, req)
-      call MPI_Wait(req, MPI_STATUS_IGNORE, ierr)
-#endif
-   end subroutine t_mat_bcast
-
-
-   subroutine t_mat_ibcast(mat, root, comm, req)
-#ifdef CPP_MPI
-      use mpi
-#endif
-      implicit none 
-      CLASS(t_mat), INTENT(INOUT)   :: mat
       integer, intent(in)           :: root, comm
-      integer, intent(inout)        :: req
       
       integer :: ierr, full_shape(2), me
 
@@ -173,12 +154,12 @@ CONTAINS
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
       if(mat%l_real) then
-         call MPI_IBcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, req, ierr)
+         call MPI_bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
       else 
-         call MPI_IBcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, req, ierr)
+         call MPI_bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
       endif
 #endif
-   end subroutine t_mat_ibcast
+   end subroutine t_mat_bcast
 
    subroutine t_mat_reset(mat, val)
       implicit none  
@@ -410,20 +391,24 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_add_transpose
 
-   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
       CLASS(t_mat) :: mat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_real
-      INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
-      INTEGER, INTENT(IN), OPTIONAL:: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_2d                 !not needed here either
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_real
+      INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2
+      INTEGER, INTENT(IN), OPTIONAL        :: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_2d                 !not needed here either
+      character(len=*),intent(in),optional :: mat_name
 
-      CALL mat%alloc(l_real, matsize1, matsize2)
+      CALL mat%alloc(l_real, matsize1, matsize2, mat_name=mat_name)
    END SUBROUTINE t_mat_init
-   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2)
+   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2, mat_name)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT) :: mat
       CLASS(t_mat), INTENT(IN)    :: templ
       INTEGER, INTENT(IN), OPTIONAL:: global_size1, global_size2
+      character(len=*),intent(in),optional :: mat_name
+
+      integer :: ierr
 
       IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
          IF ((global_size1 .NE. templ%matsize1) .OR. (global_size2 .NE. templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
@@ -432,22 +417,30 @@ CONTAINS
       mat%matsize1 = templ%matsize1
       mat%matsize2 = templ%matsize2
       IF (mat%l_real) THEN
-         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), source=0.0, stat=ierr)
          ALLOCATE (mat%data_c(1, 1))
-         mat%data_r = 0.0
       ELSE
-         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), source=(0.0,0.0), stat=ierr)
          ALLOCATE (mat%data_r(1, 1))
-         mat%data_c = 0.0
       END IF
+      if(ierr /= 0) then
+         if(present(mat_name)) then 
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "]. Name: " // trim(mat_name))
+         else 
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "].")
+         endif 
+      endif
    END SUBROUTINE t_mat_init_template
 
-   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init, mat_name)
       use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
+      character(len=*), intent(in), optional :: mat_name
       character(len=300)           :: errmsg
 
       INTEGER:: err
@@ -466,8 +459,17 @@ CONTAINS
       IF (mat%l_real) THEN
          ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
          ALLOCATE (mat%data_c(0, 0))
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
-                                        hint="Errormessage: " // trim(errmsg))
+         IF (err /= 0) then 
+            write (*,*) "Failed to allocate mem of shape: [" &
+                       // int2str(mat%matsize1) // ", " //  int2str(mat%matsize2) // "]"
+            if(present(mat_name)) then 
+               CALL judft_error("Allocation of memmory failed for mat datatype. Name:" // trim(mat_name), &
+                                       hint="Errormessage: " // trim(errmsg))
+            else
+               CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                       hint="Errormessage: " // trim(errmsg))
+            endif
+         endif
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
