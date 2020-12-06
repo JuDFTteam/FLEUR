@@ -435,15 +435,16 @@ CONTAINS
   !!  - TRUE: the matrix is a Scalapack BLOCK-CYCLIC distribution
   !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
   !! as used in the parallel matrix setup of FLEUR
-   SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+   SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
 #ifdef CPP_MPI
       use mpi
 #endif
       IMPLICIT NONE
-      CLASS(t_mpimat)             :: mat
-      INTEGER, INTENT(IN), OPTIONAL :: matsize1, matsize2, mpi_subcom
-      LOGICAL, INTENT(IN), OPTIONAL :: l_real, l_2d
-      INTEGER, INTENT(IN), OPTIONAL :: nb_y, nb_x
+      CLASS(t_mpimat)                      :: mat
+      INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2, mpi_subcom
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_real, l_2d
+      INTEGER, INTENT(IN), OPTIONAL        :: nb_y, nb_x
+      character(len=*),intent(in),optional :: mat_name
 
 #ifdef CPP_SCALAPACK
       INTEGER::nbx, nby, irank, ierr 
@@ -472,11 +473,12 @@ CONTAINS
 #endif
    END SUBROUTINE mpimat_init
 
-   SUBROUTINE mpimat_init_template(mat, templ, global_size1, global_size2)
+   SUBROUTINE mpimat_init_template(mat, templ, global_size1, global_size2, mat_name)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)  :: mat
       CLASS(t_mat), INTENT(IN)        :: templ
       INTEGER, INTENT(IN), OPTIONAL    :: global_size1, global_size2
+      character(len=*),intent(in),optional :: mat_name
 
       INTEGER::numroc
       EXTERNAL::numroc
