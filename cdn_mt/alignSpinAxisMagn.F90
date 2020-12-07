@@ -105,7 +105,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      !rotation angle
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
      print *,"delta-angles:",dphi,dtheta
-     dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
+     !dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
      dtheta = dtheta *(noco%mix_RelaxWeightOffD-1.0)
 
      !if (any(abs(dphi)>2.0).or.any(abs(dtheta)>2.0)) THEN
@@ -122,7 +122,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
 
      !CALL cureTooSmallAngles(atoms,dphi,dtheta)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,dtheta,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dphi,zeros,outden)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dphi,zeros,outden)
      !Rotate back in global frame
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%betaPrev,outden)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alphPrev,zeros,outden)

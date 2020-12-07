@@ -44,7 +44,7 @@ MODULE m_types_kpts
       REAL, ALLOCATABLE              :: voltet(:)
       REAL, ALLOCATABLE              :: sc_list(:, :) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
       type(t_eibz), allocatable      :: EIBZ(:)
-      !integer, ALLOCATABLE           :: nkpt_EIBZ(:) ! membern in little group
+      logical                        :: l_set_eibz = .False.
    CONTAINS
       PROCEDURE :: calcCommonFractions
       PROCEDURE :: add_special_line
@@ -59,6 +59,7 @@ MODULE m_types_kpts
       procedure :: initTetra
       PROCEDURE :: tetrahedron_regular
       procedure :: calcNkpt3 => nkpt3_kpts
+      procedure :: find_gamma => find_gamma_kpts
    ENDTYPE t_kpts
 
    PUBLIC :: t_kpts
@@ -356,7 +357,7 @@ CONTAINS
       INTEGER, INTENT(in)         :: kptsUnit
       CHARACTER(len=*), INTENT(in), OPTIONAL::filename
 
-      INTEGER :: n, iSpecialPoint
+      INTEGER :: n, iSpecialPoint, i, nkq_pairs
       REAL :: commonFractions(3)
       LOGICAL :: l_exist
       CHARACTER(LEN=17) :: posString(3)
@@ -379,8 +380,16 @@ CONTAINS
 
 205   FORMAT('            <kPointList name="', a, '" count="', i0, '" type="', a, '">')
 2051  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0,  '" type="', a, '">')
+2052  FORMAT('            <kPointList name="', a, '" count="', i0, '" nx="', i0, '" ny="', i0, '" nz="', i0, &
+                                                                                          '" nkq_pairs="', i0, '" type="', a, '">')
       IF(kpts%kptsKind.EQ.KPTS_KIND_MESH) THEN
-         WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
+         if(kpts%l_gamma .and. kpts%l_set_eibz) then 
+            nkq_pairs = sum([(kpts%eibz(i)%nkpt, i=1, size(kpts%eibz))])
+            WRITE (kptsUnit, 2052) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3),&
+                                                                        nkq_pairs, TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
+         else
+            WRITE (kptsUnit, 2051) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, kpts%nkpt3(1), kpts%nkpt3(2), kpts%nkpt3(3), TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
+         endif
          CALL calcCommonFractions(kpts,commonFractions)
       ELSE
          WRITE (kptsUnit, 205) TRIM(ADJUSTL(kpts%kptsName)), kpts%nkpt, TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind)))
@@ -897,13 +906,11 @@ CONTAINS
 
       INTEGER :: n,itet,ntet
       call timestart("init_kpts")
-      kpts%l_gamma = .FALSE.
-      DO n = 1, kpts%nkpt
-         kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
-      ENDDO
+      call kpts%find_gamma()
       IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
 
       if(l_eibz) then
+         kpts%l_set_eibz = .True.
          allocate(kpts%EIBZ(kpts%nkpt))
          !$OMP PARALLEL do default(none) private(n) shared(kpts, sym)
          do n = 1,kpts%nkpt
@@ -914,6 +921,18 @@ CONTAINS
 
       call timestop("init_kpts")
    END SUBROUTINE init_kpts
+
+   subroutine find_gamma_kpts(kpts)
+      implicit none 
+      class(t_kpts), INTENT(inout):: kpts
+      integer :: n 
+
+      kpts%l_gamma = .FALSE.
+
+      DO n = 1, kpts%nkpt
+         kpts%l_gamma = kpts%l_gamma .OR. ALL(ABS(kpts%bk(:, n)) < 1E-9)
+      ENDDO
+   end subroutine find_gamma_kpts
 
    SUBROUTINE gen_bz(kpts, sym)
       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1041,12 +1060,11 @@ CONTAINS
       INTEGER               ::  isym, ic, iop, ikpt, ikpt1
       INTEGER               ::  nsymop, nrkpt
 !     - local arrays -
-      INTEGER               ::  rrot(3, 3, sym%nsym), i
+      INTEGER               ::  i
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf), &
                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)
-      REAL                  ::  rotkpt(3)
-
+      REAL                  ::  rotkpt(3), rrot(3, 3, sym%nsym)
       allocate (psym(sym%nsym))
 
       ! calculate rotations in reciprocal space
@@ -1078,7 +1096,7 @@ CONTAINS
 
       DO ikpt = 2, kpts%nkptf
          DO iop = 1, nsymop
-
+            
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ

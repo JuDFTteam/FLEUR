@@ -26,7 +26,12 @@
 ! p.kurz aug. 1996
 !***********************************************************************
 
-      USE m_types
+      USE m_types_sym 
+      use m_types_atoms 
+      use m_types_cell 
+      use m_types_input 
+      use m_types_noco 
+      use m_types_gfinp
       USE m_constants
       USE m_socsym
 

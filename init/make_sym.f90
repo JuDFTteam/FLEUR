@@ -64,7 +64,7 @@ CONTAINS
       !Atom specific symmetries
 
       allocate (locops(sym%nop, atoms%nat), nrot(atoms%nat))
-      allocate (sym%ntypsy(atoms%nat))
+      if(.not. allocated(sym%ntypsy)) allocate (sym%ntypsy(atoms%nat))
       call ptsym(atoms%ntype, atoms%nat, atoms%neq, atoms%taual, sym%nop, sym%mrot, sym%tau, atoms%lmax, &
                  nsymt, sym%ntypsy, nrot, locops)
 

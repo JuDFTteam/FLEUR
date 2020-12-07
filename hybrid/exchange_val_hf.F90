@@ -171,7 +171,7 @@ CONTAINS
             !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
-            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik))
+            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik), mat_name="cprod_vv")
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
@@ -204,7 +204,7 @@ CONTAINS
             ! from IBZ to current k-point
 
             IF (fi%kpts%bkp(iq) /= iq) THEN
-               call carr3_vv%init(cprod_vv)
+               call carr3_vv%init(cprod_vv, mat_name="carr_3")
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, psize, phase_vv, cprod_vv, carr3_vv)
                call cprod_vv%copy(carr3_vv, 1, 1)
                call carr3_vv%free()

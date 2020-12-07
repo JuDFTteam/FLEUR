@@ -17,4 +17,5 @@ force/force_w.F90
 force/fix_by_gaussian.F90
 force/stern.f90
 force/relaxation.F90
+force/rotate_forces.f90
 )
