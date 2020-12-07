@@ -83,7 +83,7 @@ CONTAINS
             usdus,usdus%uuilon(1,1,jspin),usdus%duilon(1,1,jspin),usdus%ulouilopn(1,1,1,jspin),flo)
     END IF
 
-8000 FORMAT (1x,/,/,' wavefunction parameters for atom type',i3,':',&
+8000 FORMAT (1x,/,/,' wavefunction parameters for atom type',i5,':',&
          /,t32,'radial function',t79,'energy derivative',/,t3,&
          'l',t8,'energy',t26,'value',t39,'derivative',t53,&
          'nodes',t68,'value',t81,'derivative',t95,'nodes',t107,&

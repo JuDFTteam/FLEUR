@@ -316,7 +316,7 @@ CONTAINS
 8050 FORMAT (/,10x,'bandgap                     :',f11.6,' htr')
 8060 FORMAT (10x,'entropy         :',f11.6,' *kb htr/K =',&
          &       f10.5,' htr/K')
-8070 FORMAT (10x,'sum of the valence weights  :',f11.6)
+8070 FORMAT (10x,'sum of the valence weights  :',f12.6)
 8080 FORMAT (10x,'number of occ. states       :',i10)
 
   END SUBROUTINE ferhis
