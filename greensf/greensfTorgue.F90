@@ -7,7 +7,6 @@ MODULE m_greensfTorgue
    USE m_gaunt
    USE m_xmlOutput
    USE m_lattHarmsSphHarmsConv
-   USE m_mpi_bc_tool
 #ifdef CPP_MPI
    USE mpi
 #endif
@@ -130,11 +129,6 @@ MODULE m_greensfTorgue
       index_start = 1
       index_end = SIZE(gf_indices)
 #endif
-
-      !Broadcast radial functions
-      CALL mpi_bc(0,fmpi%mpi_comm,f)
-      CALL mpi_bc(0,fmpi%mpi_comm,g)
-      CALL mpi_bc(0,fmpi%mpi_comm,flo)
 
 
       CALL timestop("Green's Function Torgue: init")
