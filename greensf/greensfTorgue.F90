@@ -7,12 +7,17 @@ MODULE m_greensfTorgue
    USE m_gaunt
    USE m_xmlOutput
    USE m_lattHarmsSphHarmsConv
+#ifdef CPP_MPI
+   USE mpi
+#endif
 
    IMPLICIT NONE
 
+#include"cpp_double.h"
+
    CONTAINS
 
-   SUBROUTINE greensfTorgue(greensFunction,sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vTot)
+   SUBROUTINE greensfTorgue(greensFunction,gfinp,fmpi,sphhar,atoms,sym,noco,nococonv,input,f,g,flo,vTot)
 
       !--------------------------------------------------------------------------
       ! This Subroutine implements the formula:
@@ -20,50 +25,79 @@ MODULE m_greensfTorgue
       !  J      = - -  Im Tr      int dx  int   dE    B (x) sigma    G  (x,x,E)
       !   i         pi      sigma           -infinity  xc             ii
       !
-      ! For the evaluation of the torgue at site i (argument atomType)
+      ! For the evaluation of the torgue at site i
       !--------------------------------------------------------------------------
 
-      TYPE(t_greensf),        INTENT(IN)     :: greensFunction(:)
-      TYPE(t_sphhar),         INTENT(IN)     :: sphhar
-      TYPE(t_atoms),          INTENT(IN)     :: atoms
-      TYPE(t_sym),            INTENT(IN)     :: sym
-      TYPE(t_noco),           INTENT(IN)     :: noco
-      TYPE(t_nococonv),       INTENT(IN)     :: nococonv
-      TYPE(t_input),          INTENT(IN)     :: input
-      REAL,                   INTENT(IN)     :: f(:,:,0:,:,:)
-      REAL,                   INTENT(IN)     :: g(:,:,0:,:,:)
-      REAL,                   INTENT(IN)     :: flo(:,:,:,:,:)
-      INTEGER,                INTENT(IN)     :: atomType
-      REAL,                   INTENT(INOUT)  :: torgue(:)
-      TYPE(t_potden),         INTENT(IN)     :: vTot
+      TYPE(t_greensf),        INTENT(IN)  :: greensFunction(:)
+      TYPE(t_gfinp),          INTENT(IN)  :: gfinp
+      TYPE(t_mpi),            INTENT(IN)  :: fmpi
+      TYPE(t_sphhar),         INTENT(IN)  :: sphhar
+      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      TYPE(t_noco),           INTENT(IN)  :: noco
+      TYPE(t_nococonv),       INTENT(IN)  :: nococonv
+      TYPE(t_input),          INTENT(IN)  :: input
+      REAL,                   INTENT(IN)  :: f(:,:,0:,:,:)
+      REAL,                   INTENT(IN)  :: g(:,:,0:,:,:)
+      REAL,                   INTENT(IN)  :: flo(:,:,:,:,:)
+      TYPE(t_potden),         INTENT(IN)  :: vTot
 
-      INTEGER :: i_gf,l,lp,iContour,iGrid,ispin
-      INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu
+      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr
+      INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n,i_gf
       COMPLEX :: phaseFactor, weight
-      REAL    :: realIntegral, imagIntegral
-      COMPLEX :: sigma(2,2,3),torgue_cmplx(3),g_Spin(2,2)
+      REAL    :: realIntegral
+      COMPLEX :: sigma(2,2,3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
-      COMPLEX, ALLOCATABLE :: bxc(:,:)
-      COMPLEX, ALLOCATABLE :: integrand(:)
+      REAL,    ALLOCATABLE :: torgue(:,:),rtmp(:)
+      COMPLEX, ALLOCATABLE :: bxc(:,:,:)
+      COMPLEX, ALLOCATABLE :: integrand(:,:)
       COMPLEX, ALLOCATABLE :: g_ii(:,:,:,:)
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
+      INTEGER, ALLOCATABLE :: gf_indices(:)
 
+      ALLOCATE(gf_indices(SUM(gfinp%numTorgueElems(:))), source=-1)
+      ALLOCATE(bxc(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype), source=cmplx_0)
       CALL timestart("Green's Function Torgue: init")
-      !Get Bxc from the total potential (local frame)
-      !TODO: FFN components
-      ALLOCATE(vlm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,input%jspins),source=cmplx_0)
-      vlm = cmplx_0
-      DO ispin = 1, input%jspins
-         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, atomType, vTot%mt(:,0:,atomType,ispin), vlm(:,:,ispin))
-      ENDDO
-      !Get the Bxc part of the potential
-      ALLOCATE(bxc(SIZE(vlm,1),SIZE(vlm,2)))
-      bxc = (vlm(:,:,1) - vlm(:,:,2))/2.0
-      DEALLOCATE(vlm)
 
-      !L=0 of potential has an additional rescaling of r/sqrt(4pi)
-      bxc(:,1) = bxc(:,1) * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
+      DO atomType = 1, atoms%ntype
+         IF(gfinp%numTorgueElems(atomType)==0) CYCLE
+
+         iContour = -1
+         DO iTorgue = 1, gfinp%numTorgueElems(atomType)
+            gf_indices(SUM(gfinp%numTorgueElems(:atomType-1))+iTorgue) = gfinp%torgueElem(atomType,iTorgue)
+
+            !Check that its actually right
+            IF(greensFunction(gfinp%torgueElem(atomType,iTorgue))%elem%atomType.NE.atomType.OR.&
+               greensFunction(gfinp%torgueElem(atomType,iTorgue))%elem%atomTypep.NE.atomType) THEN
+               CALL juDFT_error("Provided greensFunction for wrong atomType", calledby="greensFunctionTorgue")
+            ENDIF
+
+            IF(iContour == -1) THEN
+               iContour = greensFunction(gfinp%torgueElem(atomType,iTorgue))%elem%iContour
+            ELSE IF(greensFunction(gfinp%torgueElem(atomType,iTorgue))%elem%iContour/=iContour) THEN
+               CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
+            ENDIF
+         ENDDO
+         !Get Bxc from the total potential (local frame)
+         !TODO: FFN components
+         ALLOCATE(vlm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,input%jspins),source=cmplx_0)
+         vlm = cmplx_0
+         DO ispin = 1, input%jspins
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, atomType, vTot%mt(:,0:,atomType,ispin), vlm(:,:,ispin))
+         ENDDO
+         !Get the Bxc part of the potential
+         bxc(:,:,atomType) = (vlm(:,:,1) - vlm(:,:,2))/2.0
+         DEALLOCATE(vlm)
+
+         !L=0 of potential has an additional rescaling of r/sqrt(4pi)
+         bxc(:atoms%jri(atomType),1,atomType) = bxc(:atoms%jri(atomType),1,atomType) &
+                                               * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
+      ENDDO
+
+      IF(ANY(gf_indices<1) .OR. ANY(gf_indices>SIZE(greensFunction))) THEN
+         CALL juDFT_error("Invalid index in greensFunction mapping array", calledby="greensFunctionTorgue")
+      ENDIF
 
       ! sigma are the Pauli matrices
       sigma=cmplx_0
@@ -74,34 +108,51 @@ MODULE m_greensfTorgue
       sigma(1,1,3)=CMPLX(1.0,0.0)
       sigma(2,2,3)=CMPLX(-1.0,0.0)
 
+#ifdef CPP_MPI
+      IF(fmpi%isize > 1) THEN
+         !Just distribute the individual gf elements over the ranks
+         index_task = FLOOR(REAL(SIZE(gf_indices))/(fmpi%isize))
+         extra = SIZE(gf_indices) - index_task*fmpi%isize
+         index_start = fmpi%irank*index_task + 1 + extra
+         index_end = (fmpi%irank+1)*index_task   + extra
+         IF(fmpi%irank < extra) THEN
+            index_start = index_start - (extra - fmpi%irank)
+            index_end = index_end - (extra - fmpi%irank - 1)
+         ENDIF
+      ELSE
+         index_start = 1
+         index_end = SIZE(gf_indices)
+      ENDIF
+#else
+      index_start = 1
+      index_end = SIZE(gf_indices)
+#endif
+
+
       CALL timestop("Green's Function Torgue: init")
       CALL timestart("Green's Function Torgue: Integration")
-      torgue_cmplx = cmplx_0
-      iContour = -1
-      DO i_gf = 1, SIZE(greensFunction)
 
-         IF(greensFunction(i_gf)%elem%atomType.NE.atomType.OR.&
-            greensFunction(i_gf)%elem%atomTypep.NE.atomType) THEN
-            CALL juDFT_error("Provided greensFunction for wrong atomType", calledby="greensFunctionTorgue")
-         ENDIF
+      ALLOCATE(torgue(3,atoms%ntype), source=0.0)
+      DO index = index_start, index_end
+         IF(index.LT.1 .OR. index.GT.SIZE(gf_indices)) CYCLE
+         i_gf = gf_indices(index)
 
          l  = greensFunction(i_gf)%elem%l
          lp = greensFunction(i_gf)%elem%lp
+         atomType = greensFunction(i_gf)%elem%atomType
 
-         IF(iContour == -1) THEN
-            iContour = greensFunction(i_gf)%elem%iContour
-         ELSE IF(greensFunction(i_gf)%elem%iContour/=iContour) THEN
-            CALL juDFT_error("Provided different energy contours", calledby="greensFunctionTorgue")
-         ENDIF
-
-!         !$OMP parallel default(none) &
-!         !$OMP shared(sphhar,atoms,greensFunction,f,g,flo,sigma,bxc) &
-!         !$OMP shared(l,lp,i_gf,atomType,torgue_cmplx) &
-!         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
-!         !$OMP private(realIntegral,imagIntegral,integrand,g_ii,g_Spin)
-         ALLOCATE(integrand(atoms%jmtd),source=cmplx_0)
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP parallel default(none) &
+         !$OMP shared(sphhar,atoms,greensFunction,i_gf,f,g,flo,sigma,bxc) &
+         !$OMP shared(l,lp,atomType,torgue) &
+         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ipm,iz,alpha,jr) &
+         !$OMP private(realIntegral,integrand,g_ii,g_Spin)
+#endif
+         ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
          ALLOCATE(g_ii(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
-!         !$OMP do collapse(2) reduction(+:torgue_cmplx)
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP do collapse(2)
+#endif
          DO lh = 0, atoms%lmaxd
             DO m = -l, l
                IF(MOD(lh+l+lp,2) .NE. 0) CYCLE
@@ -109,53 +160,88 @@ MODULE m_greensfTorgue
                IF(lh.LT.abs(l-lp)) CYCLE
                DO mu = -lh, lh
                   lhmu = lh * (lh+1) + mu + 1
-                  mp = m - mu
+                  mp = m + mu
                   IF(ABS(mp).GT.lp) CYCLE
                   phaseFactor = gaunt1(lp,lh,l,mp,mu,m,atoms%lmaxd)
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
+                  integrand = cmplx_0
                   DO ipm = 1, 2
                      CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                      DO iz = 1, SIZE(g_ii,4)
                         weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
-                        DO alpha = 1, 3 !(x,y,z)
-                           DO jr = 1, atoms%jri(atomType)
-                              IF(ipm == 1) THEN
+
+                        IF(ipm == 1) THEN
+                           DO alpha = 1, 3 !(x,y,z)
+                              DO jr = 1, atoms%jri(atomType)
                                  g_Spin = matmul(sigma(:,:,alpha),g_ii(:,:,jr,iz))
-                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * bxc(jr,lhmu)
-                              ELSE
-                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
-                                 integrand(jr) = (g_Spin(1,1) + g_Spin(2,2)) * conjg(bxc(jr,lhmu))
-                              ENDIF
+                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
+                                                                            * bxc(jr,lhmu,atomType) * weight
+                              ENDDO
                            ENDDO
-                           CALL intgr3(REAL(integrand(:)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-                           CALL intgr3(AIMAG(integrand),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),imagIntegral)
-                           torgue_cmplx(alpha) = torgue_cmplx(alpha) - 1/(2*ImagUnit*pi_const) * (-1)**(ipm-1) * (realIntegral+ImagUnit*imagIntegral) &
-                                                * MERGE(weight,conjg(weight),ipm.EQ.1)
-                        ENDDO
+                        ELSE
+                           DO alpha = 1, 3 !(x,y,z)
+                              DO jr = 1, atoms%jri(atomType)
+                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
+                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
+                                                                            * conjg(bxc(jr,lhmu,atomType) * weight)
+                              ENDDO
+                           ENDDO
+                        ENDIF
                      ENDDO
+                  ENDDO
+
+                  DO alpha = 1, 3 !(x,y,z)
+                     CALL intgr3(REAL(integrand(:,alpha)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
+#ifndef CPP_NOTYPEPROCINOMP
+                     !$OMP critical
+                     torgue(alpha,atomType) = torgue(alpha,atomType) + realIntegral
+                     !$OMP end critical
+#else
+                     torgue(alpha,atomType) = torgue(alpha,atomType) + realIntegral
+#endif
                   ENDDO
                ENDDO
             ENDDO
          ENDDO
-!         !$OMP end do
+#ifndef CPP_NOTYPEPROCINOMP
+         !$OMP end do
          DEALLOCATE(integrand,g_ii)
-!         !$OMP end parallel
+         !$OMP end parallel
+#else
+         DEALLOCATE(integrand,g_ii)
+#endif
 
       ENDDO
-      torgue = REAL(torgue_cmplx)
       CALL timestop("Green's Function Torgue: Integration")
 
-      WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue * hartree_to_ev_const * 1000, ' meV'
+#ifdef CPP_MPI
+      !Collect the torgue to rank 0
+      n = SIZE(torgue)
+      ALLOCATE(rtmp(n))
+      CALL MPI_REDUCE(torgue,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,rtmp,1,torgue,1)
+      DEALLOCATE(rtmp)
+#endif
 
-      attributes = ''
-      WRITE(attributes(1),'(i0)') atomType
-      WRITE(attributes(2),'(f14.8)') torgue(1) * hartree_to_ev_const * 1000
-      WRITE(attributes(3),'(f14.8)') torgue(2) * hartree_to_ev_const * 1000
-      WRITE(attributes(4),'(f14.8)') torgue(3) * hartree_to_ev_const * 1000
-      WRITE(attributes(5),'(a3)') 'meV'
-      CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
-                               attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+      IF(fmpi%irank.EQ.0) THEN
+         CALL openXMLElementNoAttributes('noncollinearTorgue')
+         WRITE(oUnit,'(/,A)') 'Torgue Calculation (noco):'
+         WRITE(oUnit,'(/,A)') '---------------------------'
+         DO atomType = 1, atoms%ntype
+            IF(gfinp%numTorgueElems(atomType)==0) CYCLE
+            WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue(:,atomType) * hartree_to_ev_const * 1000, ' meV'
 
+            attributes = ''
+            WRITE(attributes(1),'(i0)') atomType
+            WRITE(attributes(2),'(f14.8)') torgue(1,atomType) * hartree_to_ev_const * 1000
+            WRITE(attributes(3),'(f14.8)') torgue(2,atomType) * hartree_to_ev_const * 1000
+            WRITE(attributes(4),'(f14.8)') torgue(3,atomType) * hartree_to_ev_const * 1000
+            WRITE(attributes(5),'(a3)') 'meV'
+            CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
+                                     attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
+         ENDDO
+         CALL closeXMLElement('noncollinearTorgue')
+      ENDIF
 
    END SUBROUTINE greensfTorgue
 
