@@ -147,7 +147,7 @@ MODULE m_greensfTorgue
          !$OMP parallel default(none) &
          !$OMP shared(sphhar,atoms,currentGreensFunction,f,g,flo,sigma,bxc) &
          !$OMP shared(l,lp,atomType,torgue) &
-         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,ipm,iz,alpha,jr) &
+         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,g_Spin)
 #endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
