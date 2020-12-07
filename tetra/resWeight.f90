@@ -42,7 +42,7 @@ MODULE m_resWeight
 
       REAL, PARAMETER :: tol = 1e-7!tolerance for degeneracy
       REAL, PARAMETER :: fac = 5.0
-      REAL, PARAMETER :: highEnergyCut = -0.1
+      REAL, PARAMETER :: highEnergyCut = 0.1
 
       REAL a,b,cut,min,z,denom(4)
       REAL eShift
@@ -138,12 +138,12 @@ MODULE m_resWeight
          ENDDO
       ENDDO
 
-      IF(MAXVAL(MAXVAL(eMesh)-e)<highEnergyCut) THEN
+      IF(MAXVAL(MAXVAL(eMesh)-e)<-highEnergyCut) THEN
          lowerCut=SIZE(eMesh)
          upperCut=SIZE(eMesh)
       ENDIF
 
-      IF(MAXVAL(MINVAL(eMesh)-e)<highEnergyCut) THEN
+      IF(MINVAL(MINVAL(eMesh)-e)>highEnergyCut) THEN
          lowerCut=1
          upperCut=1
       ENDIF
