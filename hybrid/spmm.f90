@@ -21,6 +21,12 @@ contains
       type(t_mat) :: mat_hlp, mtir
 
       call timestart("spmm_invs")
+      if(.not. hybdat%coul(ikpt)%l_participate) call judft_error("I should be very much part of this")
+      call MPI_COMM_rank(MPI_COMM_WORLD, irank, ierr)
+      call save_npy("recv_mt1_ik="// int2str(ikpt) // "_from=" // int2str(irank) // ".npy", hybdat%coul(ikpt)%mt1_r)
+      call save_npy("recv_mt2_ik="// int2str(ikpt) // "_from=" // int2str(irank) // ".npy", hybdat%coul(ikpt)%mt2_r)
+      call save_npy("recv_mt3_ik="// int2str(ikpt) // "_from=" // int2str(irank) // ".npy", hybdat%coul(ikpt)%mt3_r)
+
       call mat_hlp%init(mat_in)
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2

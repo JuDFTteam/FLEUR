@@ -31,6 +31,7 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: mt2_r(:, :, :, :),   mt3_r(:, :, :)
       COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
+<<<<<<< Updated upstream
       type(t_mat)            :: mtir 
 #ifdef CPP_MPI
       integer                :: comm = MPI_COMM_NULL ! communicator for this coulomb matrix
@@ -45,6 +46,29 @@ MODULE m_types_hybdat
       procedure :: free       => t_coul_free
       procedure :: mpi_ibcast => t_coul_mpi_ibc
       procedure :: mpi_wait   => t_coul_mpi_wait
+=======
+<<<<<<< Updated upstream
+   contains 
+      procedure :: init     => t_coul_init
+      procedure :: alloc    => t_coul_alloc
+      procedure :: free     => t_coul_free
+      procedure :: mpi_bc  => t_coul_mpi_bc
+      procedure :: size_MB  => t_coul_size_MB
+=======
+      type(t_mat)            :: mtir 
+#ifdef CPP_MPI
+      integer                :: comm = MPI_COMM_NULL ! communicator for this coulomb matrix
+#else
+      integer                :: comm = -1 
+#endif
+      logical                :: l_participate = .false. ! am i somehow involved with this coulomb mtx
+   contains 
+      procedure :: init       => t_coul_init
+      procedure :: alloc      => t_coul_alloc
+      procedure :: free       => t_coul_free
+      procedure :: mpi_bcast  => t_coul_mpi_bc
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
    end type t_coul
 
    TYPE t_hybdat
@@ -341,7 +365,32 @@ contains
       END DO
    end subroutine set_states_hybdat
 
+<<<<<<< Updated upstream
    subroutine t_coul_mpi_ibc(coul, fi, communicator, root)
+=======
+<<<<<<< Updated upstream
+   function t_coul_size_MB(coul) result(size_MB)
+      implicit none 
+      class(t_coul), intent(in) :: coul
+      real  :: size_MB 
+
+      size_MB = 0
+      
+      ! real parts
+      if(allocated(coul%mt1_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt1_r) 
+      if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
+
+      ! complex parts
+      if(allocated(coul%mt1_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt1_c) 
+      if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
+      if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
+   end function
+
+=======
+>>>>>>> Stashed changes
+   subroutine t_coul_mpi_bc(coul, fi, communicator, root)
+>>>>>>> Stashed changes
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
@@ -354,9 +403,21 @@ contains
       integer :: ierr
 
       if (fi%sym%invs) THEN
+<<<<<<< Updated upstream
          call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(1), ierr)
          call MPI_IBcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(2), ierr)
          call MPI_IBcast(coul%mt3_r, size(coul%mt3_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(3), ierr)
+=======
+         call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+<<<<<<< Updated upstream
+         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_r failed")
+
+         call MPI_Bcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
+         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt2_r failed")
+
+         call MPI_Bcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
+         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
+>>>>>>> Stashed changes
       else 
          call MPI_IBcast(coul%mt1_c, size(coul%mt1_c), MPI_DOUBLE_COMPLEX,  root, communicator, coul%req(1), ierr)
          call MPI_IBcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX , root, communicator, coul%req(2), ierr)
@@ -367,6 +428,7 @@ contains
 #endif
    end subroutine t_coul_mpi_ibc
 
+<<<<<<< Updated upstream
    subroutine t_coul_mpi_wait(coul)
       implicit none 
       class(t_coul)                  :: coul 
@@ -374,6 +436,22 @@ contains
 #ifdef CPP_MPI
       integer :: ierr
       call MPI_Waitall(size(coul%req), coul%req, MPI_STATUSES_IGNORE, ierr)
+=======
+         call MPI_Bcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
+         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
+      endif
+=======
+         call MPI_Bcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+         call MPI_Bcast(coul%mt3_r, size(coul%mt3_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+      else 
+         call MPI_Bcast(coul%mt1_c, size(coul%mt1_c), MPI_DOUBLE_COMPLEX,  root, communicator, ierr)
+         call MPI_Bcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX , root, communicator, ierr)
+         call MPI_Bcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX , root, communicator, ierr)
+      endif
+
+      call coul%mtir%bcast(root, communicator)
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 #endif
 
    end subroutine t_coul_mpi_wait
