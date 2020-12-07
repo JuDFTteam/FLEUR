@@ -28,28 +28,26 @@ MODULE m_greensfTorgue
       ! For the evaluation of the torgue at site i
       !--------------------------------------------------------------------------
 
-      TYPE(t_greensf),        INTENT(IN)     :: greensFunction(:)
-      TYPE(t_gfinp),          INTENT(IN)     :: gfinp
-      TYPE(t_mpi),            INTENT(IN)     :: fmpi
-      TYPE(t_sphhar),         INTENT(IN)     :: sphhar
-      TYPE(t_atoms),          INTENT(IN)     :: atoms
-      TYPE(t_sym),            INTENT(IN)     :: sym
-      TYPE(t_noco),           INTENT(IN)     :: noco
-      TYPE(t_nococonv),       INTENT(IN)     :: nococonv
-      TYPE(t_input),          INTENT(IN)     :: input
-      REAL,                   INTENT(IN)     :: f(:,:,0:,:,:)
-      REAL,                   INTENT(IN)     :: g(:,:,0:,:,:)
-      REAL,                   INTENT(IN)     :: flo(:,:,:,:,:)
-      TYPE(t_potden),         INTENT(IN)     :: vTot
+      TYPE(t_greensf),        INTENT(IN)  :: greensFunction(:)
+      TYPE(t_gfinp),          INTENT(IN)  :: gfinp
+      TYPE(t_mpi),            INTENT(IN)  :: fmpi
+      TYPE(t_sphhar),         INTENT(IN)  :: sphhar
+      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      TYPE(t_noco),           INTENT(IN)  :: noco
+      TYPE(t_nococonv),       INTENT(IN)  :: nococonv
+      TYPE(t_input),          INTENT(IN)  :: input
+      REAL,                   INTENT(IN)  :: f(:,:,0:,:,:)
+      REAL,                   INTENT(IN)  :: g(:,:,0:,:,:)
+      REAL,                   INTENT(IN)  :: flo(:,:,:,:,:)
+      TYPE(t_potden),         INTENT(IN)  :: vTot
 
       INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr
-      INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n
+      INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n,i_gf
       COMPLEX :: phaseFactor, weight
       REAL    :: realIntegral
       COMPLEX :: sigma(2,2,3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
-
-      TYPE(t_greensf) :: currentGreensFunction
 
       REAL,    ALLOCATABLE :: torgue(:,:),rtmp(:)
       COMPLEX, ALLOCATABLE :: bxc(:,:,:)
@@ -137,22 +135,21 @@ MODULE m_greensfTorgue
       ALLOCATE(torgue(3,atoms%ntype), source=0.0)
       DO index = index_start, index_end
          IF(index.LT.1 .OR. index.GT.SIZE(gf_indices)) CYCLE
+         i_gf = gf_indices(index)
 
-         currentGreensFunction = greensFunction(gf_indices(index))
-
-         l  = currentGreensFunction%elem%l
-         lp = currentGreensFunction%elem%lp
-         atomType = currentGreensFunction%elem%atomType
+         l  = greensFunction(i_gf)%elem%l
+         lp = greensFunction(i_gf)%elem%lp
+         atomType = greensFunction(i_gf)%elem%atomType
 
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
-         !$OMP shared(sphhar,atoms,currentGreensFunction,f,g,flo,sigma,bxc) &
+         !$OMP shared(sphhar,atoms,greensFunction,i_gf,f,g,flo,sigma,bxc) &
          !$OMP shared(l,lp,atomType,torgue) &
          !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,g_Spin)
 #endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
-         ALLOCATE(g_ii(2,2,atoms%jmtd,currentGreensFunction%contour%nz),source=cmplx_0)
+         ALLOCATE(g_ii(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP do collapse(2)
 #endif
@@ -169,9 +166,9 @@ MODULE m_greensfTorgue
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
                   integrand = cmplx_0
                   DO ipm = 1, 2
-                     CALL currentGreensFunction%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
+                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                      DO iz = 1, SIZE(g_ii,4)
-                        weight = currentGreensFunction%contour%de(iz) * phaseFactor
+                        weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
 
                         IF(ipm == 1) THEN
                            DO alpha = 1, 3 !(x,y,z)
