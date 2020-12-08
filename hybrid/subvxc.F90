@@ -137,10 +137,10 @@ CONTAINS
       ! Calculate bascof
       call timestart("Calculate bascof")
       ALLOCATE (ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
-#ifndef CPP_OLDINTEL
-      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
-#endif
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp/bhlp')
+      
+      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, 1, lapw%nv(jsp), ahlp, bhlp, bascof_lo)
+      
       allocate(bascof(atoms%nat))
       do ic = 1, atoms%nat 
          call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))

@@ -16,7 +16,7 @@ MODULE m_abclocdn1
   !           of atom 'na' to it.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE abclocdn1(atoms,sym, con1,phase,ylm,ntyp,na,k,s,nv,&
+  SUBROUTINE abclocdn1(atoms,sym, con1,phase,ylm,ntyp,na,k,s,&
        nbasf0,alo1,blo1,clo1,kvec, nkvec,enough,bascof_lo )
     !
     USE m_types
@@ -26,7 +26,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: k,na,ntyp,nv
+    INTEGER, INTENT (IN) :: k,na,ntyp
     REAL,    INTENT (IN) :: con1 ,s
     COMPLEX, INTENT (IN) :: phase
     !     ..
@@ -118,13 +118,5 @@ CONTAINS
           enough(na) = .FALSE.
        ENDIF  ! s > eps  & l >= 1
     END DO
-    IF ((k.EQ.nv) .AND. (.NOT.enough(na))) THEN
-       WRITE (oUnit,FMT=*) 'abclocdn did not find enough linearly independent'
-       WRITE (oUnit,FMT=*) 'ccof coefficient-vectors. the linear independence'
-       WRITE (oUnit,FMT=*) 'quality, linindq, is set to: ',linindq,'.'
-       WRITE (oUnit,FMT=*) 'this value might be to large.'
-       STOP 'abclocdn: did not find enough lin. ind. ccof-vectors'
-    END IF
-
   END SUBROUTINE abclocdn1
 END MODULE m_abclocdn1

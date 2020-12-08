@@ -1,7 +1,7 @@
 MODULE m_abcof3
 CONTAINS
    SUBROUTINE abcof3(input, atoms, sym, jspin, cell, bkpt, lapw, &
-                     usdus, oneD, a, b, bascof_lo)
+                     usdus, oneD, band_l, band_u, a, b, bascof_lo)
       !     ************************************************************
       !     subroutine constructs the a,b coefficients of the linearized
       !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -26,6 +26,7 @@ CONTAINS
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT(IN) :: jspin
+      integer, intent(in) :: band_l, band_u !lower und upper bound for band
 
       !     .. Array Arguments ..
       REAL, INTENT(IN) :: bkpt(3)
@@ -36,7 +37,7 @@ CONTAINS
       COMPLEX phase, c_0, c_1, c_2
       REAL const, df, r1, s, tmk, wronk
       INTEGER i, j, k, l, ll1, lm, n, nap, natom, nn, iatom, jatom, lmp, mp
-      INTEGER inv_f, ilo, nvmax, lo, n_ldau, inap, iintsp
+      INTEGER inv_f, ilo, lo, n_ldau, inap, iintsp
       INTEGER nk_lo_sv, nk_lo, m
       !     ..
       !     .. Local Arrays ..
@@ -74,9 +75,8 @@ CONTAINS
       CALL setabc1locdn1(jspin, atoms, lapw, sym, usdus, enough, nkvec, kvec, &
                          nbasf0, alo1, blo1, clo1)
 
-      nvmax = lapw%nv(jspin)
       !---> loop over lapws
-      DO k = 1, nvmax
+      DO k = band_l, band_u
          !calculate k+G
          fk(1) = bkpt(1) + lapw%k1(k, jspin)
          fk(2) = bkpt(2) + lapw%k2(k, jspin)
@@ -159,7 +159,7 @@ CONTAINS
                      enddo
                   enddo
                   IF (.NOT. enough(natom)) THEN
-                     CALL abclocdn1(atoms, sym, const, phase, ylm, n, natom, k, s, nvmax, &
+                     CALL abclocdn1(atoms, sym, const, phase, ylm, n, natom, k, s, &
                                     nbasf0, alo1, blo1, clo1, kvec(1, 1, natom), nkvec, enough, bascof_lo)
 
                   ENDIF
@@ -189,10 +189,10 @@ CONTAINS
                      lm = ll1 + m
                      lmp = ll1 - m
                      inv_f = (-1.0)**(m + l)
-                     DO k = 1, nvmax
+                     DO k = band_l, band_u
                         a(k, lm, jatom) = inv_f*conjg(a(k, lmp, iatom))
                      ENDDO
-                     DO k = 1, nvmax
+                     DO k = band_l, band_u
                         b(k, lm, jatom) = inv_f*conjg(b(k, lmp, iatom))
                      ENDDO
                   ENDDO
