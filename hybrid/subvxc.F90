@@ -167,9 +167,10 @@ CONTAINS
             END DO
          END DO
       END DO
-      call timestop("Calculate bascof")
 
       deallocate(ahlp, bhlp)
+      call timestop("Calculate bascof")
+
 
       ! Loop over atom types
       call vrmat%alloc(.false., hybdat%maxlmindx, hybdat%maxlmindx)
