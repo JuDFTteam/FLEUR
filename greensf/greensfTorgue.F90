@@ -294,7 +294,7 @@ MODULE m_greensfTorgue
 
       ALLOCATE(gf_indices(SUM(gfinp%numTorgueElems(:))), source=-1)
       ALLOCATE(vso(atoms%jmtd,2,2,-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype), source=cmplx_0)
-      CALL timestart("Green's Function Torgue: init")
+      CALL timestart("Green's Function SOTorgue: init")
 
       DO atomType = 1, atoms%ntype
          IF(gfinp%numTorgueElems(atomType)==0) CYCLE
@@ -385,7 +385,7 @@ MODULE m_greensfTorgue
       index_end = SIZE(gf_indices)
 #endif
 
-      CALL timestop("Green's Function Torgue: init")
+      CALL timestop("Green's Function SOTorgue: init")
       CALL timestart("Green's Function SOTorgue: Integration")
 
       ALLOCATE(torgue(3,atoms%ntype), source=0.0)
