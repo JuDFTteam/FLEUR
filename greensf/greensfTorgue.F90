@@ -276,7 +276,7 @@ MODULE m_greensfTorgue
       TYPE(t_potden),         INTENT(IN)  :: vTot
 
       INTEGER :: jspin,na,nsym,nh,i_gf,l,lp,spin,iContour,i,n,iTorgue
-      INTEGER :: index_start,index_end, index_task, extra, index
+      INTEGER :: index_start,index_end, index_task, extra, index,ierr
       INTEGER :: lh,mh,mhp,m,mp,iz,ipm,jr,alpha,jspin1,jspin2,atomType
       COMPLEX :: phaseFactor,weight
       REAL    :: realIntegral, imagIntegral, e
@@ -410,11 +410,11 @@ MODULE m_greensfTorgue
          !$OMP do collapse(3)
 #endif
          DO lh = 0, SIZE(vso,6)-1
-            DO mh = -lh,lh
-               DO mhp = -lh, lh
-                  IF(MAXVAL(ABS(vso(:,:,:,mh,mhp,lh,atomType))).LT.1e-12) CYCLE
-                  DO m = -l, l
-                     DO mp = -lp, lp
+            DO m = -l, l
+               DO mp = -lp, lp
+                  DO mh = -lh,lh
+                     DO mhp = -lh, lh
+                        IF(MAXVAL(ABS(vso(:,:,:,mh,mhp,lh,atomType))).LT.1e-12) CYCLE
                         phaseFactor = fourProduct(lp,lh,l,lh,mp,mh,m,mhp,atoms%lmaxd)
                         IF(ABS(phaseFactor).LT.1e-12) CYCLE
                         integrand = cmplx_0
