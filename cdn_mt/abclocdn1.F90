@@ -100,12 +100,9 @@ CONTAINS
                 IF ( kvec(nkvec(lo,na),lo) == k ) THEN
                    DO m = -l,l
                       lm = ll1 + m
-                      bascof_lo(1,m,nkvec(lo,na),lo,na) =&
-                           &                                           clotmp(m)*alo1(lo,ntyp)
-                      bascof_lo(2,m,nkvec(lo,na),lo,na) =&
-                           &                                           clotmp(m)*blo1(lo,ntyp)
-                      bascof_lo(3,m,nkvec(lo,na),lo,na) =&
-                           &                                           clotmp(m)*clo1(lo,ntyp)
+                      bascof_lo(1,m,nkvec(lo,na),lo,na) = clotmp(m)*alo1(lo,ntyp)
+                      bascof_lo(2,m,nkvec(lo,na),lo,na) = clotmp(m)*blo1(lo,ntyp)
+                      bascof_lo(3,m,nkvec(lo,na),lo,na) = clotmp(m)*clo1(lo,ntyp)
                    ENDDO  ! m
                 ELSE       
                    nkvec(lo,na) = nkvec(lo,na) - 1
