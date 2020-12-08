@@ -125,17 +125,10 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Torgue")
          CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                             f,g,flo,vTot)
-         !IF(noco%l_soc) THEN
-         !   CALL openXMLElementNoAttributes('spinorbitTorgue')
-         !   WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
-         !   WRITE(oUnit,'(/,A)') '---------------------------------'
-         !   DO atomType = 1, atoms%nType
-         !      IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-         !      CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-         !                           sphhar,atoms,sym,noco,nococonv,input,enpara,mpi,f,g,flo,atomType,torgue,vTot)
-         !   ENDDO
-         !   CALL closeXMLElement('spinorbitTorgue')
-         !ENDIF
+         IF(noco%l_soc) THEN
+            CALL greensfSOTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+                                 enpara,f,g,flo,vTot)
+         ENDIF
          CALL timestop("Green's Function: Torgue")
       ENDIF
 

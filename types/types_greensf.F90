@@ -324,8 +324,8 @@ MODULE m_types_greensf
             spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
             !Find the right quadrant in gmat
             IF(l_full) THEN
-               ind1_start = (spin1-1)*(2*l+1)
-               ind2_start = (spin2-1)*(2*lp+1)
+               ind1_start = (spin2-1)*(2*l+1)
+               ind2_start = (spin1-1)*(2*lp+1)
             ELSE
                ind1_start = 0
                ind2_start = 0
@@ -878,8 +878,8 @@ MODULE m_types_greensf
                   spin1 = 1
                   spin2 = 2
                ENDIF
-               ind1_start = (spin1-1)*(2*l+1)
-               ind2_start = (spin2-1)*(2*lp+1)
+               ind1_start = (spin2-1)*(2*l+1)
+               ind2_start = (spin1-1)*(2*lp+1)
             ELSE
                ind1_start = 0
                ind2_start = 0
