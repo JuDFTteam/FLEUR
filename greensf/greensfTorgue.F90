@@ -133,6 +133,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function Torgue: Integration")
 
       ALLOCATE(torgue(3,atoms%ntype), source=0.0)
+      !$ phaseFactor = gaunt1(0,0,0,0,0,0,atoms%lmaxd)
       DO index = index_start, index_end
          IF(index.LT.1 .OR. index.GT.SIZE(gf_indices)) CYCLE
          i_gf = gf_indices(index)
@@ -389,6 +390,7 @@ MODULE m_greensfTorgue
       CALL timestart("Green's Function SOTorgue: Integration")
 
       ALLOCATE(torgue(3,atoms%ntype), source=0.0)
+      !$ phaseFactor = fourProduct(0,0,0,0,0,0,0,0,atoms%lmaxd)
       DO index = index_start, index_end
          IF(index.LT.1 .OR. index.GT.SIZE(gf_indices)) CYCLE
          i_gf = gf_indices(index)
