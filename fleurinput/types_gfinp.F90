@@ -1044,6 +1044,8 @@ CONTAINS
                shellDiff(:,ishellAtom,ishell+1) = shellAux1(:,ishellAtom)
             ENDDO
 
+         ELSE
+            shellop(:,ishell) = shellopAux(:)
          ENDIF
 
       ENDDO
@@ -1064,6 +1066,7 @@ CONTAINS
             ENDDO
          ENDIF
 
+         repr = 0
          DO ishellAtom = 1, numshellAtoms(ishell)
             !Transform representative element to lattice coordinates
             diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
