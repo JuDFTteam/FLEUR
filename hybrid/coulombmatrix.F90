@@ -1069,9 +1069,13 @@ CONTAINS
                                     IF (fi%sym%invs) THEN
                                        hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, indx4))
                                        hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                                       hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, indx4))
+                                       hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) 
                                     ELSE
                                        hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, indx4)
                                        hybdat%mtir%c(indx2, indx1, im) = CONJG(hybdat%mtir%c(indx1, indx2, im))
+                                       hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, indx4)
+                                       hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
                                     ENDIF
                                  END DO
                               END DO
@@ -1083,9 +1087,13 @@ CONTAINS
                            IF (fi%sym%invs) THEN
                               hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
                               hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                              hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
+                              hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
                            ELSE
                               hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
                               hybdat%mtir%c(indx2, indx1, im) = conjg(hybdat%mtir%c(indx1, indx2, im)) 
+                              hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
+                              hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
                            ENDIF
 
                         END DO
@@ -1104,24 +1112,18 @@ CONTAINS
             if (fi%sym%invs) THEN
                hybdat%mtir%r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im) &
                   = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
+               hybdat%coul(ikpt)%mtir%data_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
+                  = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
                ic2 = indx1 + mpdata%n_g(ikpt)
             else
                hybdat%mtir%c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im)&
+                  = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
+               hybdat%coul(ikpt)%mtir%data_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                   = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
                ic2 = indx1 + mpdata%n_g(ikpt)
             end if
 
             call coulomb(ikpt)%free()
-
-            m = hybdat%coul(ikpt)%mtir%matsize1
-            n = hybdat%coul(ikpt)%mtir%matsize2
-            if(fi%sym%invs) then
-               !call DLACPY( UPLO, M, N, A,                     LDA,                    B,                          LDB )
-               call dlacpy("A",    M, N, hybdat%mtir%r(1,1,im), size(hybdat%mtir%r, 1), hybdat%coul(ikpt)%mtir%data_r, m)
-            else
-               !call ZLACPY( UPLO, M, N, A,                     LDA,                    B,                          LDB )
-               call zlacpy("A",    M, N, hybdat%mtir%c(1,1,im), size(hybdat%mtir%c, 1), hybdat%coul(ikpt)%mtir%data_c, m)
-            endif 
          END DO ! ikpt
       endif
       call timestop("loop bla")

@@ -18,7 +18,7 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      type(t_mat) :: mat_hlp, mtir
+      type(t_mat) :: mat_hlp, mtir, tmp
 
       call timestart("spmm_invs")
       call mat_hlp%init(mat_in)
@@ -130,6 +130,10 @@ contains
 
       call timestart("ibasm+1 -> dgemm")
       call hybdat%mtir%read(fi, mpdata%n_g, ikpt, mtir)
+
+      call tmp%init(hybdat%coul(ikpt)%mtir)
+      tmp%data_r = hybdat%coul(ikpt)%mtir%data_r - mtir%data_r(:hybdat%coul(ikpt)%mtir%matsize1,:hybdat%coul(ikpt)%mtir%matsize2)
+      if(tmp%norm2() > 1e-12) call judft_error("mist")
 
       ! only work on assigned submtx
       ! call dgemm(transa, transb, m,   n, k,  alpha,  a,          lda,                
