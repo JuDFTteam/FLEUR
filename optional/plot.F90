@@ -569,7 +569,7 @@ CONTAINS
       REAL,               ALLOCATABLE :: tempVecs(:,:,:,:)
       REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
                                          zero(3), help(3), qssc(3), point(3)
-      INTEGER                         :: grid(3),k
+      INTEGER                         :: grid(3),k,strt,fin
       REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
@@ -720,31 +720,35 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
          END IF
 
-         IF (twodim.AND.fmpi%irank .EQ. 0) THEN
-            IF (numOutFiles.EQ.1) THEN
-               WRITE(nfile,'(3a15)') 'x','y','f'
-            ELSE IF (numOutFiles.EQ.2) THEN
-               WRITE(nfile,'(4a15)') 'x','y','f','g'
-            ELSE IF (numOutFiles.EQ.4) THEN
-               WRITE(nfile,'(6a15)') 'x','y','f','A1','A2','A3'
+         IF ((.NOT.xsf).AND.fmpi%irank .EQ. 0) THEN
+            IF (twodim) THEN
+               IF (numOutFiles.EQ.1) THEN
+                  WRITE(nfile,'(3a15)') 'x','y','f'
+               ELSE IF (numOutFiles.EQ.2) THEN
+                  WRITE(nfile,'(4a15)') 'x','y','f','g'
+               ELSE IF (numOutFiles.EQ.4) THEN
+                  WRITE(nfile,'(6a15)') 'x','y','f','A1','A2','A3'
+               ELSE
+                  WRITE(nfile,'(9a15)') 'x','y','f','A1','A2','A3','|A|','theta','phi'
+               END IF
             ELSE
-               WRITE(nfile,'(9a15)') 'x','y','f','A1','A2','A3','|A|','theta','phi'
-            END IF
-         ELSE
-            IF(fmpi%irank == 0) THEN
-              IF (numOutFiles.EQ.1) THEN
-                WRITE(nfile,'(4a15)') 'x','y','z','f'
-              ELSE IF (numOutFiles.EQ.2) THEN
-                WRITE(nfile,'(5a15)') 'x','y','z','f','g'
-              ELSE IF (numOutFiles.EQ.4) THEN
-                WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
-              ELSE
-                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
-              END IF
+               IF (numOutFiles.EQ.1) THEN
+                  WRITE(nfile,'(4a15)') 'x','y','z','f'
+               ELSE IF (numOutFiles.EQ.2) THEN
+                  WRITE(nfile,'(5a15)') 'x','y','z','f','g'
+               ELSE IF (numOutFiles.EQ.4) THEN
+                  WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
+               ELSE
+                  WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
+               END IF
             END IF
          END IF
+
          !loop over all points
-         DO iz = fmpi%irank*(grid(3)-1)/fmpi%isize, ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
+         strt=  fmpi%irank*(grid(3)-1)/fmpi%isize + 1
+         fin =   ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
+         IF ( fmpi%irank == 0) strt = 0
+         DO iz = strt,fin
             DO iy = 0, grid(2)-1
         !$OMP parallel shared(iz,iy,points,tempResults,tempVecs,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,fmpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
          !$OMP do
@@ -901,7 +905,7 @@ CONTAINS
      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
             IF(fmpi%irank.EQ.k) THEN
-               DO iz = fmpi%irank*(grid(3)-1)/ fmpi%isize, ((fmpi%irank+1)*(grid(3)-1))/ fmpi%isize
+               DO iz = strt, fin
                   DO iy = 0, grid(2)-1
                      DO ix = 0, grid(1)-1
                         IF (xsf) THEN
