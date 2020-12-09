@@ -778,7 +778,7 @@ CONTAINS
         CYCLE
       endif
       if (err.ne.0) exit
-      write(fileNum,*) "  ",trim(line)
+      write(fileNum,"(a,a)") "  ",trim(line)
     end do
     write(fileNum,*) "  <!-- END of dump of the inp.xml file -->"
     close(99,status='delete')
