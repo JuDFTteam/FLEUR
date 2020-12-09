@@ -98,6 +98,7 @@ MODULE m_greensf_io
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_gfinp),    INTENT(IN) :: gfinp
       TYPE(t_atoms),    INTENT(IN) :: atoms
+      TYPE(t_cell),     INTENT(IN) :: cell
       TYPE(t_greensf),  INTENT(IN) :: greensf(:)
       INTEGER,          INTENT(IN) :: archiveType
       COMPLEX,          INTENT(IN) :: mmpmat(-lmaxU_Const:,-lmaxU_Const:,:,:)
