@@ -171,10 +171,6 @@ CONTAINS
          END DO
       enddo
 
-      do ic = 1, atoms%nat 
-         call bascof(ic)%save_npy("bascof_iatm=" // int2str(ic) // ".npy")
-      enddo
-
       deallocate(ahlp, bhlp)
       call timestop("Calculate bascof")
 
