@@ -128,17 +128,15 @@ CONTAINS
          enddo
 
          if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+
+         call set_coul_participation(hybdat, fi, fmpi, work_pack)
 #ifdef CPP_MPI
          if(hybdat%coul(1)%comm == MPI_COMM_NULL) call create_coul_comms(hybdat, fi, fmpi)
 #endif
 
-         call set_coul_participation(hybdat, fi, work_pack)
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
                call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
-
-            else
-               write (*,*) "I tought everybody was in"
             endif 
          enddo 
 

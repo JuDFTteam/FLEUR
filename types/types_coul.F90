@@ -1,7 +1,9 @@
 module m_types_coul
    use m_types_mat
    use m_mtir_size
+#ifdef CPP_MPI
    use mpi
+#endif
    implicit none
    type t_coul
       REAL, ALLOCATABLE      :: mt1_r(:, :, :, :)
@@ -14,7 +16,7 @@ module m_types_coul
 #else
       integer                :: comm = -1
 #endif
-      logical                :: l_participate = .True. ! am i somehow involved with this coulomb mtx
+      logical                :: l_participate = .False. ! am i somehow involved with this coulomb mtx
    contains
       procedure :: init => t_coul_init
       procedure :: alloc => t_coul_alloc
