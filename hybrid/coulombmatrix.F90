@@ -919,14 +919,6 @@ CONTAINS
                   END DO
                END DO
             END DO
-         END DO
-         call timestop("m-dep. part of coulomb mtx")
-
-            if(fi%sym%invs) then
-               call save_npy("mt1_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt1_r)
-            else 
-               call save_npy("mt1_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt1_c)
-            endif
             call timestop("m-indep. part of coulomb mtx")
 
             !
@@ -954,7 +946,7 @@ CONTAINS
                      END DO
                   END DO
                END DO
-            END DO            
+            END DO
             call timestop("m-dep. part of coulomb mtx")
 
             !
@@ -1035,17 +1027,7 @@ CONTAINS
                      endif
                   END DO
                END DO
-            END DO
-         END IF
-         call timestop("gamma point treatment")
             END IF
-            if(fi%sym%invs) then
-               call save_npy("mt2_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt2_r)
-               call save_npy("mt3_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt3_r)
-            else 
-               call save_npy("mt2_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt2_c)
-               call save_npy("mt3_ik=" // int2str(ikpt) // ".npy", hybdat%coul(ikpt)%mt3_c)
-            endif
             call timestop("gamma point treatment")
 
             !
@@ -1131,9 +1113,6 @@ CONTAINS
 
             call coulomb(ikpt)%free()
 
-
-         call coulomb(ikpt)%free()
-      END DO ! ikpt
             m = hybdat%coul(ikpt)%mtir%matsize1
             n = hybdat%coul(ikpt)%mtir%matsize2
             if(fi%sym%invs) then
@@ -1143,12 +1122,6 @@ CONTAINS
                !call ZLACPY( UPLO, M, N, A,                     LDA,                    B,                          LDB )
                call zlacpy("A",    M, N, hybdat%mtir%c(1,1,im), size(hybdat%mtir%c, 1), hybdat%coul(ikpt)%mtir%data_c, m)
             endif 
-            
-            if(fi%sym%invs) then
-               call save_npy("mtir_ik=" // int2str(ikpt) // ".npy", hybdat%mtir%r)
-            else 
-               call save_npy("mtir_ik=" // int2str(ikpt) // ".npy", hybdat%mtir%c)
-            endif
          END DO ! ikpt
       endif
       call timestop("loop bla")

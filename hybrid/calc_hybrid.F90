@@ -122,7 +122,6 @@ CONTAINS
             enddo
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
-
          do jsp = 1,fi%input%jspins
             call hybdat%set_nobd(fi, results)
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
@@ -145,7 +144,8 @@ CONTAINS
          
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
-               call hybdat%coul(i)%mpi_bcast(fi, hybdat%coul(i)%comm, 0)
+               call hybdat%coul(i)%mpi_ibcast(fi, hybdat%coul(i)%comm, 0)
+               call hybdat%coul(i)%mpi_wait()
             endif
          enddo
 
@@ -153,6 +153,7 @@ CONTAINS
          
          CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
+
          call judft_comm_split(glob_mpi%comm, wp_mpi%rank, 0, root_comm)
 
          CALL timestart("Calculation of non-local HF potential")
