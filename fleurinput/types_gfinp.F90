@@ -605,11 +605,12 @@ CONTAINS
       ENDIF
 
 #ifdef CPP_DEBUG
-      WRITE(*,*) "Green's Function Elements: "
-      WRITE(*,'(8(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","atomDiff"
+      WRITE(oUnit,*) "Green's Function Elements: "
+      WRITE(oUnit,'(10(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff"
       DO i_gf = 1, this%n
-         WRITE(*,'(5I10,1l5,I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
                                           this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
+                                          this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op
                                           this%elem(i_gf)%atomDiff(:)
       ENDDO
 #endif
@@ -1062,7 +1063,7 @@ CONTAINS
 
             WRITE(oUnit,'(/,A)') ' Contains the following atom pairs:'
             DO ishellAtom = 1, numshellAtoms(ishell)
-               WRITE(oUnit,'(3f14.8,i0)') shellDiff(:,ishellAtom,ishell), shellop(ishellAtom,ishell)
+               WRITE(oUnit,'(3f14.8,i10)') shellDiff(:,ishellAtom,ishell), shellop(ishellAtom,ishell)
             ENDDO
          ENDIF
 
@@ -1077,8 +1078,10 @@ CONTAINS
             IF(repr == 0) repr = i_gf
 
             this%elem(i_gf)%refCutoff = refCutoff
-            this%elem(i_gf)%representative_elem = repr
-            this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
+            IF(ishellAtom > 1) THEN
+               this%elem(i_gf)%representative_elem = repr
+               this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
+            ENDIF
 
             IF(shellAtom(ishell).NE.refAtom) THEN
                !Other atomtype
@@ -1088,7 +1091,7 @@ CONTAINS
 
 
             IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,6f14.8,i0)') 'GF Element: ', refAtom, shellAtom(ishell),&
+               WRITE(oUnit,'(A,I6,I6,6f14.8,i10)') 'GF Element: ', refAtom, shellAtom(ishell),&
                                                shellDiff(:,ishellAtom,ishell), diff(:), &
                                                shellop(ishellAtom,ishell)
             ENDIF
