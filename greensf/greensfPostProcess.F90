@@ -17,12 +17,13 @@ MODULE m_greensfPostProcess
 
    CONTAINS
 
-   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,mpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_cell),              INTENT(IN)     :: cell
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_sym),               INTENT(IN)     :: sym
@@ -173,7 +174,7 @@ MODULE m_greensfPostProcess
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
                                scalarGF=scalarGF)

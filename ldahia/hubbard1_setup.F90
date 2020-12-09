@@ -27,9 +27,10 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_input),    INTENT(IN)     :: input
@@ -308,7 +309,7 @@ MODULE m_hubbard1_setup
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
 
@@ -316,7 +317,7 @@ MODULE m_hubbard1_setup
          !Write out correlated Green's Function
          !-------------------------------------
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
