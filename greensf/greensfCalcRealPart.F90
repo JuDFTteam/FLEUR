@@ -259,7 +259,7 @@ MODULE m_greensfCalcRealPart
       DO i_gf = i_gf_start, i_gf_end
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
          IF(g(i_gf)%elem%representative_elem <= 0) CYCLE
-         g(i_gf) = g(g(i_gf)%elem%representative_elem)
+         CALL g(i_gf)%set_gfdata(g(g(i_gf)%elem%representative_elem))
          CALL g(i_gf)%rotate(sym,atoms)
       ENDDO
 

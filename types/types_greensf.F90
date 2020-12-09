@@ -65,6 +65,7 @@ MODULE m_types_greensf
          PROCEDURE       :: getRadialRadialSpin => getRadialRadialSpin_gf
          PROCEDURE       :: integrateOverMT     => integrateOverMT_greensf
          PROCEDURE       :: set                 => set_gf
+         PROCEDURE       :: set_gfdata          => set_gfdata
          PROCEDURE       :: rotate              => rotate_gf
          PROCEDURE       :: reset               => reset_gf
          PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
@@ -898,6 +899,28 @@ MODULE m_types_greensf
          ENDDO
 
       END SUBROUTINE set_gf
+
+      SUBROUTINE set_gfdata(this,repr_gf)
+
+         !Sets all arrays equal to the data from another greensfunction
+
+         CLASS(t_greensf),    INTENT(INOUT)  :: this
+         TYPE(t_greensf),     INTENT(IN)     :: repr_gf
+
+         !TODO check array sizes before
+
+         IF(ALLOCATED(repr_gf%gmmpMat)) this%gmmpMat = repr_gf%gmmpMat
+         IF(ALLOCATED(repr_gf%uu)) this%uu = repr_gf%uu
+         IF(ALLOCATED(repr_gf%ud)) this%ud = repr_gf%ud
+         IF(ALLOCATED(repr_gf%du)) this%du = repr_gf%du
+         IF(ALLOCATED(repr_gf%dd)) this%dd = repr_gf%dd
+         IF(ALLOCATED(repr_gf%uulo)) this%uulo = repr_gf%uulo
+         IF(ALLOCATED(repr_gf%ulou)) this%ulou = repr_gf%ulou
+         IF(ALLOCATED(repr_gf%ulod)) this%ulod = repr_gf%ulod
+         IF(ALLOCATED(repr_gf%dulo)) this%dulo = repr_gf%dulo
+         IF(ALLOCATED(repr_gf%uloulop)) this%uloulop = repr_gf%uloulop
+
+      END SUBROUTINE set_gfdata
 
       SUBROUTINE rotate_gf(this,sym,atoms)
 
