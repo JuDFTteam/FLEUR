@@ -610,7 +610,7 @@ CONTAINS
       DO i_gf = 1, this%n
          WRITE(oUnit,'(5I10,1l5,3I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
                                           this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
-                                          this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op &
+                                          this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
                                           this%elem(i_gf)%atomDiff(:)
       ENDDO
 #endif
