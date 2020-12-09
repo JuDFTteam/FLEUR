@@ -153,7 +153,7 @@
    </xsd:complexType>
 
    <xsd:group name="GeneralIterationType">
-      <xsd:sequence maxOccurs="unbounded">
+      <xsd:sequence>
          <!--These tags can occur in a iteration/Forcetheorem iteration/!-->
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="OutEnergyParameterType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="eigenvalues" type="EigenvaluesType"/>
@@ -181,7 +181,7 @@
    <xsd:complexType name="IterationType">
       <xsd:sequence>
          <xsd:choice>
-            <xsd:group ref="GeneralIterationType"/>
+            <xsd:group maxOcuurs="unbounded" ref="GeneralIterationType"/>
             <xsd:element maxOccurs="unbounded" minOccurs="0" name="Forcetheorem_Loop" type="Forcetheorem_LoopType"/>
          </xsd:choice>
          <xsd:choice>
@@ -197,7 +197,7 @@
 
    <xsd:complexType name="Forcetheorem_LoopType">
       <xsd:sequence>
-         <xsd:group ref="GeneralIterationType"/>
+         <xsd:group maxOcuurs="unbounded" ref="GeneralIterationType"/>
       </xsd:sequence>
       <xsd:attribute name="No" type="xsd:integer" use="required"/>
       <xsd:attribute name="calculationType" type="ForceTheoremEnum" use="required"/>
