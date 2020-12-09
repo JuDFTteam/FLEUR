@@ -187,6 +187,7 @@ MODULE m_greensfCalcRealPart
          l_sphavg = g(i_gf)%elem%l_sphavg
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
          nLO = g(i_gf)%elem%countLOs(atoms)
+         IF(g(i_gf)%elem%representative_elem > 0) CYCLE
 
          i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg)
          i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
@@ -257,7 +258,8 @@ MODULE m_greensfCalcRealPart
       !perform rotations for intersite elements
       DO i_gf = i_gf_start, i_gf_end
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
-
+         IF(g(i_gf)%elem%representative_elem <= 0) CYCLE
+         g(i_gf) = g(g(i_gf)%elem%representative_elem)
          CALL g(i_gf)%rotate(sym,atoms)
       ENDDO
 

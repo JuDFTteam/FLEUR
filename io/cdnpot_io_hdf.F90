@@ -1804,7 +1804,7 @@ MODULE m_cdnpot_io_hdf
                ELSE
                   dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,input%jspins/)
                   CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
-                  CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
+                  CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat(:,:,:,:input%jspins))
                   CALL h5dclose_f(mmpMatSetID, hdfError)
                ENDIF
             ENDIF
@@ -1916,7 +1916,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "mmpMat", H5T_NATIVE_DOUBLE, mmpMatSpaceID, mmpMatSetID, hdfError)
                   CALL h5sclose_f(mmpMatSpaceID,hdfError)
-                  CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
+                  CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat(:,:,:,:input%jspins))
                   CALL h5dclose_f(mmpMatSetID, hdfError)
                END IF
             ENDIF
@@ -2052,7 +2052,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "mmpMat", H5T_NATIVE_DOUBLE, mmpMatSpaceID, mmpMatSetID, hdfError)
                CALL h5sclose_f(mmpMatSpaceID,hdfError)
-               CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
+               CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat(:,:,:,:input%jspins))
                CALL h5dclose_f(mmpMatSetID, hdfError)
             END IF
          ENDIF

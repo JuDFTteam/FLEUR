@@ -65,7 +65,7 @@ CONTAINS
       COMPLEX               ::  rc, rr
 
       ! Local Arrays
-      INTEGER               ::  gg(3), x, x_loc, y
+      INTEGER               ::  gg(3), x, x_loc, y, iband
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
       REAL                  ::  integ(0:sphhar%nlhd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd)
@@ -136,20 +136,23 @@ CONTAINS
 
       ! Calculate bascof
       call timestart("Calculate bascof")
-      ALLOCATE (ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
-#ifndef CPP_OLDINTEL
-      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
-#endif
+      ALLOCATE(ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp')
+      allocate(bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of bhlp')  
+      
       allocate(bascof(atoms%nat))
       do ic = 1, atoms%nat 
          call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))
       enddo
+      
+      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, &
+                  1,lapw%nv(jsp), ahlp, bhlp, bascof_lo)
 
-      ic = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
+   
+      do iband = 1,lapw%nv(jsp)
+         do ic = 1,atoms%nat
+            itype = atoms%itype(ic)
             indx = 0
             DO l = 0, atoms%lmax(itype)
                ll = l*(l + 1)
@@ -158,18 +161,23 @@ CONTAINS
                   DO i = 1, 2
                      indx = indx + 1
                      IF (i == 1) THEN
-                        bascof(ic)%data_c(:, indx) = ahlp(:, lm, ic)
+                        bascof(ic)%data_c(iband, indx) = ahlp(iband, lm, ic)
                      ELSE IF (i == 2) THEN
-                        bascof(ic)%data_c(:, indx) = bhlp(:, lm, ic)
+                        bascof(ic)%data_c(iband, indx) = bhlp(iband, lm, ic)
                      END IF
                   END DO
                END DO
             END DO
          END DO
-      END DO
-      call timestop("Calculate bascof")
+      enddo
+
+      do ic = 1, atoms%nat 
+         call bascof(ic)%save_npy("bascof_iatm=" // int2str(ic) // ".npy")
+      enddo
 
       deallocate(ahlp, bhlp)
+      call timestop("Calculate bascof")
+
 
       ! Loop over atom types
       call vrmat%alloc(.false., hybdat%maxlmindx, hybdat%maxlmindx)

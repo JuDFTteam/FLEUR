@@ -26,7 +26,6 @@ c     ..
       g=0.0
       shift = 0.0
       IF(PRESENT(energyShift)) shift = energyShift
-      WRITE(1234,*) 'shift: ', shift
       emin=minval(e)
 c
 c----> put weights in the right bins
