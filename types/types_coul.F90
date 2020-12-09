@@ -52,6 +52,7 @@ contains
 #ifdef CPP_MPI
       integer :: ierr
 
+      call timestart("Bcast coulomb_mtx")
       if (fi%sym%invs) THEN
          call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
          call MPI_Bcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
@@ -63,6 +64,7 @@ contains
       endif
 
       call coul%mtir%bcast(root, communicator)
+      call timestop("Bcast coulomb_mtx")
 #endif
    end subroutine t_coul_mpi_bc
 
