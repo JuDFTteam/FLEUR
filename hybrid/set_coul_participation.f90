@@ -10,9 +10,9 @@ contains
 
       integer :: i, jsp, ik, jq, iq, iq_p
 
-      do i = 1,fi%kpts%nkpt
-         hybdat%coul(i)%l_participate = .false.
-      enddo
+      ! do i = 1,fi%kpts%nkpt
+      !    hybdat%coul(i)%l_participate = .false.
+      ! enddo
 
       do jsp = 1,size(work_pack)
          do ik = 1,work_pack(jsp)%k_packs(1)%size

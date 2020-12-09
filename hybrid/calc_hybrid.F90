@@ -136,6 +136,9 @@ CONTAINS
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
                call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
+
+            else
+               write (*,*) "I tought everybody was in"
             endif 
          enddo 
 
@@ -144,8 +147,7 @@ CONTAINS
          
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
-               call hybdat%coul(i)%mpi_ibcast(fi, hybdat%coul(i)%comm, 0)
-               call hybdat%coul(i)%mpi_wait()
+               call hybdat%coul(i)%mpi_bcast(fi, hybdat%coul(i)%comm, 0)
             endif
          enddo
 

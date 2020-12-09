@@ -403,8 +403,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
 
    DO ikpt = 1, fi%kpts%nkpt
-      CALL hybdat%coul(ikpt)%mpi_ibcast(fi, fmpi%mpi_comm, 0)
-      call hybdat%coul(ikpt)%mpi_wait()
+      CALL hybdat%coul(ikpt)%mpi_bcast(fi, fmpi%mpi_comm, 0)
    END DO
 
    CALL hf_init(mpdata,fi,hybdat)

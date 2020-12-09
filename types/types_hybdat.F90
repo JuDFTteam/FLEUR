@@ -37,14 +37,12 @@ MODULE m_types_hybdat
 #else
       integer                :: comm = -1 
 #endif
-      integer                :: req(4)
-      logical                :: l_participate = .False. ! am i somehow involved with this coulomb mtx
+      logical                :: l_participate = .True. ! am i somehow involved with this coulomb mtx
    contains 
       procedure :: init       => t_coul_init
       procedure :: alloc      => t_coul_alloc
       procedure :: free       => t_coul_free
-      procedure :: mpi_ibcast => t_coul_mpi_ibc
-      procedure :: mpi_wait   => t_coul_mpi_wait
+      procedure :: mpi_bcast => t_coul_mpi_bc
    end type t_coul
 
    TYPE t_hybdat
@@ -341,7 +339,7 @@ contains
       END DO
    end subroutine set_states_hybdat
 
-   subroutine t_coul_mpi_ibc(coul, fi, communicator, root)
+   subroutine t_coul_mpi_bc(coul, fi, communicator, root)
       use m_types_fleurinput
       use m_types_hybmpi
       use m_judft
@@ -354,29 +352,19 @@ contains
       integer :: ierr
 
       if (fi%sym%invs) THEN
-         call MPI_IBcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(1), ierr)
-         call MPI_IBcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(2), ierr)
-         call MPI_IBcast(coul%mt3_r, size(coul%mt3_r), MPI_DOUBLE_PRECISION, root, communicator, coul%req(3), ierr)
+         call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+         call MPI_Bcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+         call MPI_Bcast(coul%mt3_r, size(coul%mt3_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
       else 
-         call MPI_IBcast(coul%mt1_c, size(coul%mt1_c), MPI_DOUBLE_COMPLEX,  root, communicator, coul%req(1), ierr)
-         call MPI_IBcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX , root, communicator, coul%req(2), ierr)
-         call MPI_IBcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX , root, communicator, coul%req(3), ierr)
+         call MPI_Bcast(coul%mt1_c, size(coul%mt1_c), MPI_DOUBLE_COMPLEX,  root, communicator, ierr)
+         call MPI_Bcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX , root, communicator, ierr)
+         call MPI_Bcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX , root, communicator, ierr)
       endif
 
-      call coul%mtir%ibcast(root, communicator, coul%req(4))
+      call coul%mtir%bcast(root, communicator)
 #endif
-   end subroutine t_coul_mpi_ibc
+   end subroutine t_coul_mpi_bc
 
-   subroutine t_coul_mpi_wait(coul)
-      implicit none 
-      class(t_coul)                  :: coul 
-
-#ifdef CPP_MPI
-      integer :: ierr
-      call MPI_Waitall(size(coul%req), coul%req, MPI_STATUSES_IGNORE, ierr)
-#endif
-
-   end subroutine t_coul_mpi_wait
 
 
    subroutine t_coul_free(coul)
