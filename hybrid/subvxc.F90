@@ -146,9 +146,10 @@ CONTAINS
          call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))
       enddo
       
+      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, &
+                  1,lapw%nv(jsp), ahlp, bhlp, bascof_lo)
 
-      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, 1, lapw%nv(jsp), ahlp, bhlp, bascof_lo)
-      
+   
       do iband = 1,lapw%nv(jsp)
          do ic = 1,atoms%nat
             itype = atoms%itype(ic)
