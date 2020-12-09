@@ -993,7 +993,7 @@ MODULE m_types_greensf
                ENDDO
             ENDDO
          ENDDO
-         CALL timestart("Green's Function: Rotate")
+         CALL timestop("Green's Function: Rotate")
       END SUBROUTINE rotate_gf
 
       SUBROUTINE reset_gf(this)
