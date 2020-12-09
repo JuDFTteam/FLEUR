@@ -906,9 +906,6 @@ CONTAINS
                      IF (ineq == 1) THEN
                         DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                            if (fi%sym%invs) THEN
-                              if(.not. allocated(hybdat%coul(ikpt)%mt1_r)) then
-                                 write (*,*) "mt1_r alloc:", allocated(hybdat%coul(ikpt)%mt1_r), shape(hybdat%coul(ikpt)%mt1_r)
-                              endif
                               hybdat%coul(ikpt)%mt1_r(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
                                  = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
                            else
