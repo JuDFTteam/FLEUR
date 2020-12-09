@@ -181,7 +181,7 @@
    <xsd:complexType name="IterationType">
       <xsd:sequence>
          <xsd:choice>
-            <xsd:group maxOcuurs="unbounded" ref="GeneralIterationType"/>
+            <xsd:group maxOccurs="unbounded" ref="GeneralIterationType"/>
             <xsd:element maxOccurs="unbounded" minOccurs="0" name="Forcetheorem_Loop" type="Forcetheorem_LoopType"/>
          </xsd:choice>
          <xsd:choice>
@@ -197,7 +197,7 @@
 
    <xsd:complexType name="Forcetheorem_LoopType">
       <xsd:sequence>
-         <xsd:group maxOcuurs="unbounded" ref="GeneralIterationType"/>
+         <xsd:group maxOccurs="unbounded" ref="GeneralIterationType"/>
       </xsd:sequence>
       <xsd:attribute name="No" type="xsd:integer" use="required"/>
       <xsd:attribute name="calculationType" type="ForceTheoremEnum" use="required"/>
