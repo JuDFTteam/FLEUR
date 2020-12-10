@@ -50,6 +50,7 @@ CONTAINS
 
 
       call timestart("HF_setup")
+      call hybdat%set_nobd(fi, results)
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
@@ -85,7 +86,7 @@ CONTAINS
             WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
-         hybdat%nobd(:,jsp) = 0         
+
          DO nk = 1, fi%kpts%nkpt
             DO i = 1, hybdat%ne_eig(nk)
                DO j = i + 1, hybdat%ne_eig(nk)
@@ -118,10 +119,6 @@ CONTAINS
                END IF
             END DO
 
-            DO i = 1, hybdat%ne_eig(nk)
-               IF (results%w_iks(i, nk, jsp) > 0.0) hybdat%nobd(nk,jsp) = hybdat%nobd(nk,jsp) + 1
-            END DO
-
             IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
                WRITE (*, *) 'k-point: ', nk
                WRITE (*, *) 'number of bands:          ', hybdat%nbands(nk)
@@ -132,11 +129,10 @@ CONTAINS
          END DO
          call timestop("degenerate treatment")
 
-         ! spread hybdat%nobd from IBZ to whole BZ
+         ! spread nbands from IBZ to whole BZ
          DO nk = 1, fi%kpts%nkptf
             i = fi%kpts%bkp(nk)
             hybdat%nbands(nk) = hybdat%nbands(i)
-            hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
@@ -231,10 +227,11 @@ CONTAINS
 
       ELSE IF (fi%hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
 
+
+
          !DO nk = n_start,fi%kpts%nkpt,n_stride
          DO nk = 1, fi%kpts%nkpt, 1
             hybdat%ne_eig(nk) = results%neig(nk, jsp)
-            hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
          hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, fi%atoms%lmax(itype))]), itype=1, fi%atoms%ntype)])

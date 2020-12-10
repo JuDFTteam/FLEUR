@@ -1,7 +1,8 @@
 module m_distribute_mpi 
-   use m_types
 contains 
    subroutine distribute_mpi(weights, glob_mpi, group_mpi, group_rank)
+      use m_types_hybmpi
+      use m_types_mpi
       implicit none 
       integer, intent(in)           :: weights(:)
       type(t_hybmpi), intent(in)    :: glob_mpi
