@@ -92,13 +92,13 @@ contains
                      ! make sure read_eig is only run if I have it in mem
                      if (fmpi%irank == root) call read_eig(hybdat%eig_id, ik, jsp, zmat=tmp, list=[ieig])
 
-                     write (*,*) "fmpi%irank", fmpi%irank, ik, jsp, hybdat%zmat(ik, jsp)%comm
+#ifdef CPP_MPI
                      if (fi%sym%invs) then
                         call MPI_Bcast(tmp%data_r, nbasfcn, MPI_DOUBLE_PRECISION, root, hybdat%zmat(ik, jsp)%comm, ierr)
                      else
                         call MPI_Bcast(tmp%data_c, nbasfcn, MPI_DOUBLE_COMPLEX, root, hybdat%zmat(ik, jsp)%comm, ierr)
                      endif
-
+#endif
                      ! deal with k-copies
                      if(hybdat%zmat(ik, jsp)%l_recv) then 
                         if(fi%sym%invs)then
