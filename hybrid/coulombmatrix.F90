@@ -885,155 +885,154 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
       enddo
 
-      call hybdat%mtir%alloc(fi, fmpi,  mpdata%n_g, size(fmpi%k_list))
+      if(fmpi%n_rank == 0) then 
+         DO im = 1, size(fmpi%k_list)
+            ikpt = fmpi%k_list(im)
+            ! unpack coulomb into coulomb(ikpt)
 
-      DO im = 1, size(fmpi%k_list)
-         ikpt = fmpi%k_list(im)
-         ! unpack coulomb into coulomb(ikpt)
+            ! only one processor per k-point calculates MT convolution
+            !
+            ! store m-independent part of Coulomb matrix in MT spheres
+            ! in coulomb_mt1(:mpdata%num_radbasfn(l,itype)-1,:mpdata%num_radbasfn(l,itype)-1,l,itype)
+            !
+            call timestart("m-indep. part of coulomb mtx")
+            indx1 = 0
+            DO itype = 1, fi%atoms%ntype
+               DO ineq = 1, fi%atoms%neq(itype)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
 
-         ! only one processor per k-point calculates MT convolution
-         !
-         ! store m-independent part of Coulomb matrix in MT spheres
-         ! in coulomb_mt1(:mpdata%num_radbasfn(l,itype)-1,:mpdata%num_radbasfn(l,itype)-1,l,itype)
-         !
-         call timestart("m-indep. part of coulomb mtx")
-         indx1 = 0
-         DO itype = 1, fi%atoms%ntype
-            DO ineq = 1, fi%atoms%neq(itype)
-               DO l = 0, fi%hybinp%lcutm1(itype)
+                     IF (ineq == 1) THEN
+                        DO n = 1, mpdata%num_radbasfn(l, itype) - 1
+                           if (fi%sym%invs) THEN
+                              hybdat%coul(ikpt)%mt1_r(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                                 = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                           else
+                              hybdat%coul(ikpt)%mt1_c(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
+                                 = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                           endif
+                        END DO
+                     END IF
 
-                  IF (ineq == 1) THEN
-                     DO n = 1, mpdata%num_radbasfn(l, itype) - 1
+                     indx1 = indx1 + (2*l + 1)*mpdata%num_radbasfn(l, itype)
+                  END DO
+               END DO
+            END DO
+            call timestop("m-indep. part of coulomb mtx")
+
+            !
+            ! store m-dependent and atom-dependent part of Coulomb matrix in MT spheres
+            ! in coulomb_mt2(:mpdata%num_radbasfn(l,itype)-1,-l:l,l,iatom)
+            !
+            call timestart("m-dep. part of coulomb mtx")
+            indx1 = 0
+            iatom = 0
+            DO itype = 1, fi%atoms%ntype
+               DO ineq = 1, fi%atoms%neq(itype)
+                  iatom = iatom + 1
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     DO M = -l, l
                         if (fi%sym%invs) THEN
-                           hybdat%coul(ikpt)%mt1_r(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
-                              = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                           hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                              = real(coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype)))
                         else
-                           hybdat%coul(ikpt)%mt1_c(n, 1:mpdata%num_radbasfn(l, itype) - 1, l, itype) &
-                              = real(coulomb(ikpt)%data_c(indx1 + n, indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1))
+                           hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                              = coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype))
+                        endif
+
+                        indx1 = indx1 + mpdata%num_radbasfn(l, itype)
+
+                     END DO
+                  END DO
+               END DO
+            END DO
+            call timestop("m-dep. part of coulomb mtx")
+
+            !
+            ! due to the subtraction of the divergent part at the Gamma point
+            ! additional contributions occur
+            !
+            call timestart("gamma point treatment")
+            IF (ikpt == 1) THEN
+               !
+               ! store the contribution of the G=0 plane wave with the MT l=0 functions in
+               ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(fi%hybinp%lcutm1)+1,iatom)
+               !
+               ic = 0
+               iatom = 0
+               DO itype = 1, fi%atoms%ntype
+                  DO ineq = 1, fi%atoms%neq(itype)
+                     iatom = iatom + 1
+                     DO n = 1, mpdata%num_radbasfn(0, itype) - 1
+                        if (fi%sym%invs) THEN
+                           hybdat%coul(ikpt)%mt2_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) =  real(coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1))
+                        else
+                           hybdat%coul(ikpt)%mt2_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1)
                         endif
                      END DO
-                  END IF
-
-                  indx1 = indx1 + (2*l + 1)*mpdata%num_radbasfn(l, itype)
-               END DO
-            END DO
-         END DO
-         call timestop("m-indep. part of coulomb mtx")
-
-         !
-         ! store m-dependent and atom-dependent part of Coulomb matrix in MT spheres
-         ! in coulomb_mt2(:mpdata%num_radbasfn(l,itype)-1,-l:l,l,iatom)
-         !
-         call timestart("m-dep. part of coulomb mtx")
-         indx1 = 0
-         iatom = 0
-         DO itype = 1, fi%atoms%ntype
-            DO ineq = 1, fi%atoms%neq(itype)
-               iatom = iatom + 1
-               DO l = 0, fi%hybinp%lcutm1(itype)
-                  DO M = -l, l
-                     if (fi%sym%invs) THEN
-                        hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
-                           = real(coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype)))
-                     else
-                        hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
-                           = coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype))
-                     endif
-
-                     indx1 = indx1 + mpdata%num_radbasfn(l, itype)
-
+                     ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
                   END DO
                END DO
-            END DO
-         END DO
-         call timestop("m-dep. part of coulomb mtx")
 
-         !
-         ! due to the subtraction of the divergent part at the Gamma point
-         ! additional contributions occur
-         !
-         call timestart("gamma point treatment")
-         IF (ikpt == 1) THEN
-            !
-            ! store the contribution of the G=0 plane wave with the MT l=0 functions in
-            ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(fi%hybinp%lcutm1)+1,iatom)
-            !
-            ic = 0
-            iatom = 0
-            DO itype = 1, fi%atoms%ntype
-               DO ineq = 1, fi%atoms%neq(itype)
-                  iatom = iatom + 1
-                  DO n = 1, mpdata%num_radbasfn(0, itype) - 1
-                     if (fi%sym%invs) THEN
-                        hybdat%coul(ikpt)%mt2_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) =  real(coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1))
-                     else
-                        hybdat%coul(ikpt)%mt2_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1)
-                     endif
-                  END DO
-                  ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
-               END DO
-            END DO
+               !
+               ! store the contributions between the MT s-like functions at atom1 and
+               ! and the constant function at a different atom2
+               !
+               iatom = 0
+               ic = 0
+               DO itype = 1, fi%atoms%ntype
+                  ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
+                  DO ineq = 1, fi%atoms%neq(itype)
+                     iatom = iatom + 1
+                     ic1 = ic + mpdata%num_radbasfn(0, itype)
 
-            !
-            ! store the contributions between the MT s-like functions at atom1 and
-            ! and the constant function at a different atom2
-            !
-            iatom = 0
-            ic = 0
-            DO itype = 1, fi%atoms%ntype
-               ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
-               DO ineq = 1, fi%atoms%neq(itype)
-                  iatom = iatom + 1
-                  ic1 = ic + mpdata%num_radbasfn(0, itype)
+                     iatom1 = 0
+                     ic2 = 0
+                     DO itype1 = 1, fi%atoms%ntype
+                        ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, fi%hybinp%lcutm1(itype1))])
+                        DO ineq1 = 1, fi%atoms%neq(itype1)
+                           iatom1 = iatom1 + 1
+                           ic3 = ic2 + 1
+                           ic4 = ic3 + mpdata%num_radbasfn(0, itype1) - 2
 
-                  iatom1 = 0
-                  ic2 = 0
-                  DO itype1 = 1, fi%atoms%ntype
-                     ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, fi%hybinp%lcutm1(itype1))])
-                     DO ineq1 = 1, fi%atoms%neq(itype1)
-                        iatom1 = iatom1 + 1
-                        ic3 = ic2 + 1
-                        ic4 = ic3 + mpdata%num_radbasfn(0, itype1) - 2
-
-                        IF (fi%sym%invs) THEN
-                           hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) = real(coulomb(ikpt)%data_c(ic1, ic3:ic4))
-                        ELSE
-                           hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) &
-                              = CONJG(coulomb(ikpt)%data_c(ic1, ic3:ic4))
-                        ENDIF
-                        ic2 = ic2 + ishift1
+                           IF (fi%sym%invs) THEN
+                              hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) = real(coulomb(ikpt)%data_c(ic1, ic3:ic4))
+                           ELSE
+                              hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) &
+                                 = CONJG(coulomb(ikpt)%data_c(ic1, ic3:ic4))
+                           ENDIF
+                           ic2 = ic2 + ishift1
+                        END DO
                      END DO
+
+                     ic = ic + ishift
                   END DO
-
-                  ic = ic + ishift
                END DO
-            END DO
 
-            !test
-            iatom = 0
-            DO itype = 1, fi%atoms%ntype
-               DO ineq = 1, fi%atoms%neq(itype)
-                  iatom = iatom + 1
-                  if (fi%sym%invs) THEN
-                     IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
-                                    - hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
-                        call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
+               !test
+               iatom = 0
+               DO itype = 1, fi%atoms%ntype
+                  DO ineq = 1, fi%atoms%neq(itype)
+                     iatom = iatom + 1
+                     if (fi%sym%invs) THEN
+                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
+                                       - hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
+                           call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
 
-                  else
-                     IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0,iatom) &
-                                    - hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom,iatom))) > 1E-08) &
-                        call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
-                  endif
+                     else
+                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0,iatom) &
+                                       - hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom,iatom))) > 1E-08) &
+                           call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
+                     endif
+                  END DO
                END DO
-            END DO
-         END IF
-         call timestop("gamma point treatment")
+            END IF
+            call timestop("gamma point treatment")
 
-         !
-         ! add the residual MT contributions, i.e. those functions with an moment,
-         ! to the matrix coulomb_mtir, which is fully occupied
-         !
-         if(fmpi%n_rank == 0) then
+            !
+            ! add the residual MT contributions, i.e. those functions with an moment,
+            ! to the matrix coulomb_mtir, which is fully occupied
+            !
+            
             call timestart("residual MT contributions")
             ic = 0
             DO itype = 1, fi%atoms%ntype
@@ -1066,11 +1065,11 @@ CONTAINS
                                     indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
                                     IF (indx4 < indx3) CYCLE
                                     IF (fi%sym%invs) THEN
-                                       hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, indx4))
-                                       hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                                       hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, indx4))
+                                       hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) 
                                     ELSE
-                                       hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, indx4)
-                                       hybdat%mtir%c(indx2, indx1, im) = CONJG(hybdat%mtir%c(indx1, indx2, im))
+                                       hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, indx4)
+                                       hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
                                     ENDIF
                                  END DO
                               END DO
@@ -1080,11 +1079,11 @@ CONTAINS
                         DO igpt = 1, mpdata%n_g(ikpt)
                            indx2 = indx2 + 1
                            IF (fi%sym%invs) THEN
-                              hybdat%mtir%r(indx1, indx2, im) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
-                              hybdat%mtir%r(indx2, indx1, im) = hybdat%mtir%r(indx1, indx2, im)
+                              hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
+                              hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
                            ELSE
-                              hybdat%mtir%c(indx1, indx2, im) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
-                              hybdat%mtir%c(indx2, indx1, im) = conjg(hybdat%mtir%c(indx1, indx2, im)) 
+                              hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
+                              hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
                            ENDIF
 
                         END DO
@@ -1101,19 +1100,18 @@ CONTAINS
             ! add ir part to the matrix coulomb_mtir
             !
             if (fi%sym%invs) THEN
-               hybdat%mtir%r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im) &
+               hybdat%coul(ikpt)%mtir%data_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                   = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
                ic2 = indx1 + mpdata%n_g(ikpt)
             else
-               hybdat%mtir%c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), im)&
+               hybdat%coul(ikpt)%mtir%data_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
                   = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
                ic2 = indx1 + mpdata%n_g(ikpt)
             end if
 
-         endif
-
-         call coulomb(ikpt)%free()
-      END DO ! ikpt
+            call coulomb(ikpt)%free()
+         END DO ! ikpt
+      endif
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
 
