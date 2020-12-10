@@ -46,7 +46,7 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
+      INTEGER           :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
 
 
       call timestart("HF_setup")
@@ -102,29 +102,29 @@ CONTAINS
 
             ! set the size of the exchange matrix in the space of the wavefunctions
 
-            hybdat%nbands(nk) = fi%hybinp%bands1
-            IF (hybdat%nbands(nk) > hybdat%ne_eig(nk)) THEN
+            hybdat%nbands(nk,jsp) = fi%hybinp%bands1
+            IF (hybdat%nbands(nk,jsp) > hybdat%ne_eig(nk)) THEN
                IF (fmpi%irank == 0) THEN
                   WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
                   WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
                   WRITE (*, *) ' set hybdat%nbands equal to hybdat%ne_eig'
                END IF
-               hybdat%nbands(nk) = hybdat%ne_eig(nk)
+               hybdat%nbands(nk,jsp) = hybdat%ne_eig(nk)
             END IF
 
-            DO i = hybdat%nbands(nk) - 1, 1, -1
-               IF ((degenerat(i, nk) >= 1) .AND. (degenerat(i, nk) + i - 1 /= hybdat%nbands(nk))) THEN
-                  hybdat%nbands(nk) = i + degenerat(i, nk) - 1
+            DO i = hybdat%nbands(nk,jsp) - 1, 1, -1
+               IF ((degenerat(i, nk) >= 1) .AND. (degenerat(i, nk) + i - 1 /= hybdat%nbands(nk,jsp))) THEN
+                  hybdat%nbands(nk,jsp) = i + degenerat(i, nk) - 1
                   EXIT
                END IF
             END DO
 
-            IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
+            IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk,jsp)) THEN
                WRITE (*, *) 'k-point: ', nk
-               WRITE (*, *) 'number of bands:          ', hybdat%nbands(nk)
+               WRITE (*, *) 'number of bands:          ', hybdat%nbands(nk,jsp)
                WRITE (*, *) 'number of occupied bands: ', hybdat%nobd(nk,jsp)
                CALL judft_warn("More occupied bands than total no of bands!?")
-               hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
+               hybdat%nbands(nk,jsp) = hybdat%nobd(nk,jsp)
             END IF
          END DO
          call timestop("degenerate treatment")
@@ -132,7 +132,7 @@ CONTAINS
          ! spread nbands from IBZ to whole BZ
          DO nk = 1, fi%kpts%nkptf
             i = fi%kpts%bkp(nk)
-            hybdat%nbands(nk) = hybdat%nbands(i)
+            hybdat%nbands(nk,jsp) = hybdat%nbands(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points

@@ -75,7 +75,7 @@ CONTAINS
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
       
-      call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk), hybdat%nbands(nk))
+      call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
 
       allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)
       if(ierr /= 0) call judft_error("alloc fprod failed")
@@ -86,7 +86,7 @@ CONTAINS
       rdum = 0
 
       call timestart("atom_loop")
-      call dot_result%alloc(.False., hybdat%nbands(nk), hybdat%nbands(nk))
+      call dot_result%alloc(.False., hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
       do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
@@ -125,7 +125,7 @@ CONTAINS
 
                   call timestart("Eval rad. integr")
                   call integral%alloc(.False., n,n)
-                  call carr%alloc(.False., n, hybdat%nbands(nk))
+                  call carr%alloc(.False., n, hybdat%nbands(nk,jsp))
                   call tmp%init(carr)
                   allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
 
@@ -156,7 +156,7 @@ CONTAINS
                         !$OMP private(n1, i, ll, lm, l2)&
                         !$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
                         !$OMP shared(m1, M, l, l1, nk)
-                        DO n1 = 1, hybdat%nbands(nk)
+                        DO n1 = 1, hybdat%nbands(nk,jsp)
                            DO i = 1, n
                               ll = larr(i)
                               IF (ABS(m2) > ll) CYCLE
@@ -181,7 +181,7 @@ CONTAINS
                            !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                            !$OMP private(n1, n2, nn2)&
                            !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk)
-                           DO n1 = 1, hybdat%nbands(nk)
+                           DO n1 = 1, hybdat%nbands(nk,jsp)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
                                  if(nn2 <= n1) then
@@ -194,7 +194,7 @@ CONTAINS
                            !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                            !$OMP private(n1, n2, nn2)&
                            !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk)
-                           DO n1 = 1, hybdat%nbands(nk)
+                           DO n1 = 1, hybdat%nbands(nk,jsp)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
                                  if(nn2 <= n1) then
@@ -219,7 +219,7 @@ CONTAINS
       call timestop("atom_loop")
       call dot_result%free()
 
-      buf_sz = hybdat%nbands(nk)**2
+      buf_sz = hybdat%nbands(nk,jsp)**2
 
 #ifdef CPP_MPI
       call timestart("exchange reduce")

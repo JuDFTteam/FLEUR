@@ -125,10 +125,10 @@ CONTAINS
 
       ! local arrays
       COMPLEX              :: exchcorrect(fi%kpts%nkptf)
-      COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk), 3)
-      COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk), hybdat%nbands(k_pack%nk))
+      COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp), 3)
+      COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX              :: hessian(3, 3)
-      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk))
+      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
@@ -150,8 +150,8 @@ CONTAINS
       ! the contribution of the Gamma-point is treated separately (see below)
 
       call timestart("alloc phase_vv & dot_res")
-      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik)), stat=ok, source=cmplx_0)
-      call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik), hybdat%nbands(ik))
+      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
+      call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp))
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
@@ -171,7 +171,7 @@ CONTAINS
             !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
-            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik), mat_name="cprod_vv")
+            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
@@ -194,7 +194,7 @@ CONTAINS
             !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
             !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
             !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-            !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
+            !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
             !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
             !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
             ! END IF
@@ -205,7 +205,7 @@ CONTAINS
 
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv, mat_name="carr_3")
-               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik), iq, psize, phase_vv, cprod_vv, carr3_vv)
+               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik,jsp), iq, psize, phase_vv, cprod_vv, carr3_vv)
                call cprod_vv%copy(carr3_vv, 1, 1)
                call carr3_vv%free()
             ELSE
@@ -225,7 +225,7 @@ CONTAINS
             call timestop("sparse matrix products")
 
             nq_idx = k_pack%q_packs(jq)%rank
-            DO iband = 1, hybdat%nbands(ik)
+            DO iband = 1, hybdat%nbands(ik,jsp)
                call timestart("apply prefactors carr1_v")
                if (mat_ex%l_real) then
                   DO iob = 1, psize
@@ -246,17 +246,17 @@ CONTAINS
             enddo
 
             call timestart("exch_vv dot prod")
-            m = hybdat%nbands(ik)
-            n = hybdat%nbands(ik)
+            m = hybdat%nbands(ik,jsp)
+            n = hybdat%nbands(ik,jsp)
             k = hybdat%nbasm(iq)
             lda = hybdat%nbasm(iq)*psize
             ldb = hybdat%nbasm(iq)*psize
-            ldc = hybdat%nbands(ik)
+            ldc = hybdat%nbands(ik,jsp)
             IF (mat_ex%l_real) THEN
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
                   call dgemm("T", "N", m, n, k, 1.0, carr1_v%data_r(1, iob), lda, cprod_vv%data_r(1, iob), ldb, 0.0, dot_result%data_r, ldc)
-                  DO iband = 1, hybdat%nbands(ik)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
                         exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_r(iband, nn2)
@@ -268,7 +268,7 @@ CONTAINS
                DO iob = 1, psize
                   call zgemm("C", "N", m, n, k, cmplx_1, carr1_v%data_c(1, iob), lda, cprod_vv%data_c(1, iob), ldb, cmplx_0, dot_result%data_c, ldc)
 
-                  DO iband = 1, hybdat%nbands(ik)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
                         exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_c(iband, nn2)
@@ -303,11 +303,11 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik), 1, hybdat%nbands(ik), .false., fi%input, fi%atoms, mpdata, fi%hybinp, &
+            CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik,jsp), 1, hybdat%nbands(ik,jsp), .false., fi%input, fi%atoms, mpdata, fi%hybinp, &
                                 fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, lapw, fi%oneD, jsp, eig_irr)
 
             ! make dcprod hermitian
-            DO n1 = 1, hybdat%nbands(ik)
+            DO n1 = 1, hybdat%nbands(ik,jsp)
                DO n2 = 1, n1
                   dcprod(n1, n2, :) = (dcprod(n1, n2, :) - conjg(dcprod(n2, n1, :)))/2
                   dcprod(n2, n1, :) = -conjg(dcprod(n1, n2, :))
@@ -331,7 +331,7 @@ CONTAINS
             END IF
          END DO
 
-         DO n1 = 1, hybdat%nbands(ik)
+         DO n1 = 1, hybdat%nbands(ik,jsp)
             DO n2 = 1, nsest(n1)!n1
                nn2 = indx_sest(n2, n1)
                exchcorrect = 0
@@ -349,7 +349,7 @@ CONTAINS
                   IF (occup(n1) .and. occup(nn2)) THEN
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybdat%nbands(ik)
+                        DO iband = 1, hybdat%nbands(ik,jsp)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -359,7 +359,7 @@ CONTAINS
                         ! ibs correction
                         IF (ibs_corr) THEN
                            hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/fi%cell%omtil
-                           DO iband = 1, hybdat%nbands(ik)
+                           DO iband = 1, hybdat%nbands(ik,jsp)
                               hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/fi%cell%omtil
                            END DO
                         END IF
@@ -367,7 +367,7 @@ CONTAINS
                   ELSE
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybdat%nbands(ik)
+                        DO iband = 1, hybdat%nbands(ik,jsp)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -411,7 +411,7 @@ CONTAINS
       call timestart("alloc mat_ex")
       if (.not. mat_ex%allocated()) then
          if (k_pack%submpi%root()) then
-            CALL mat_ex%alloc(matsize1=hybdat%nbands(ik))
+            CALL mat_ex%alloc(matsize1=hybdat%nbands(ik,jsp))
          else
             CALL mat_ex%alloc(matsize1=1)
          endif
@@ -421,13 +421,13 @@ CONTAINS
       call timestart("reduce exch_vv>mat_ex")
       IF (mat_ex%l_real) THEN
 #ifdef CPP_MPI
-         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%submpi%comm, ierr)
+         call MPI_Reduce(real(exch_vv), mat_ex%data_r, hybdat%nbands(ik,jsp)**2, MPI_DOUBLE_PRECISION, MPI_SUM, 0, k_pack%submpi%comm, ierr)
 #else
          mat_ex%data_r = exch_vv
 #endif
       ELSE
 #ifdef CPP_MPI
-         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%submpi%comm, ierr)
+         call MPI_Reduce(exch_vv, mat_ex%data_c, hybdat%nbands(ik,jsp)**2, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, k_pack%submpi%comm, ierr)
 #else
          mat_ex%data_c = exch_vv
 #endif

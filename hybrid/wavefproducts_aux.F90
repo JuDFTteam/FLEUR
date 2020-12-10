@@ -91,7 +91,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
       INTEGER, INTENT(IN)      ::  ikqpt
       !     - arrays -
-      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
       complex, allocatable  :: prod(:), psi_k(:, :)
 
@@ -156,7 +156,7 @@ CONTAINS
 
       call fft%init(length_zfft, .true.)
       !$OMP DO
-      do iband = 1, hybdat%nbands(ik)
+      do iband = 1, hybdat%nbands(ik,jsp)
          call wavef2rs(lapw, z_k, length_zfft, iband, iband, jsp, psi_k)
          psi_k(:, 1) = conjg(psi_k(:, 1))*stars%ufft*inv_vol
 

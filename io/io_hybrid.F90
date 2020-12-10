@@ -49,7 +49,7 @@ contains
       if(present(list)) then 
          p_list = list 
       else
-         p_list = [(i, i=1,hybdat%nbands(ik))]
+         p_list = [(i, i=1,hybdat%nbands(ik,jsp))]
       endif
 
       if(ik <= kpts%nkpt) then

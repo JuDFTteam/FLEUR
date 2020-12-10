@@ -25,6 +25,7 @@ CONTAINS
       use m_eig66_mpi
       use m_distribute_mpi 
       use m_create_coul_comms
+      use m_eigvec_setup
 #ifdef CPP_MPI 
       use mpi 
 #endif
@@ -108,11 +109,6 @@ CONTAINS
                         enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-
-
-
-
-
          ! setup parallelization 
          n_wps = min(glob_mpi%size, fi%kpts%nkpt)
          allocate(weights(n_wps), source=0)
@@ -127,12 +123,20 @@ CONTAINS
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
-         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+         ! if(.not. allocated(hybdat%zmat))then 
+         !     allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
+         !    DO jsp = 1, fi%input%jspins
+         !       DO nk = 1,fi%kpts%nkptf
+         !          CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+         !          call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, hybdat%nbands(nk, jsp), nk)
+         !       enddo 
+         !    enddo
+         ! endif
+         ! call bcast_eigvecs(hybdat, fi, nococonv, fmpi)
 
+         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
          call set_coul_participation(hybdat, fi, fmpi, work_pack)
-#ifdef CPP_MPI
-         if(hybdat%coul(1)%comm == MPI_COMM_NULL) call create_coul_comms(hybdat, fi, fmpi)
-#endif
+         call create_coul_comms(hybdat, fi, fmpi)
 
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
@@ -149,8 +153,6 @@ CONTAINS
             endif
          enddo
 
-
-         
          CALL hf_init(mpdata, fi, hybdat)
          CALL timestop("Preparation for hybrid functionals")
 
@@ -219,7 +221,7 @@ CONTAINS
             endif
          endif
 
-         allocate(hybdat%nbands(fi%kpts%nkptf), source=0)
+         allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins), source=0)
 
          if(allocated(hybdat%nbasm)) deallocate(hybdat%nbasm)
          allocate(hybdat%nbasm(fi%kpts%nkptf), source=0)
