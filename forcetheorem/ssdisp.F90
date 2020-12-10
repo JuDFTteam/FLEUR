@@ -116,7 +116,7 @@ CONTAINS
        CALL closeXMLElement('Forcetheorem_Loop')
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum)
-       WRITE(attributes(2),'(i5)') 'Htr'
+       WRITE(attributes(2),'(a)') 'Htr'
        CALL openXMLElement('Forcetheorem_SSDISP',(/'qvectors','units   '/),attributes(:2))
        DO q=1,SIZE(this%evsum)
           WRITE(attributes(1),'(i5)') q

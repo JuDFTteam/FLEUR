@@ -122,7 +122,7 @@ CONTAINS
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum,2)
        WRITE(attributes(2),'(i5)') SIZE(this%evsum,1)
-       WRITE(attributes(3),'(i5)') 'Htr'
+       WRITE(attributes(3),'(a)') 'Htr'
        CALL openXMLElement('Forcetheorem_DMI',(/'qPoints','Angles ','units  '/),attributes(:3))
        DO q=1,SIZE(this%evsum,2)
           WRITE(attributes(2),'(i5)') q

@@ -170,7 +170,7 @@ CONTAINS
     call closeXMLElement('Forcetheorem_Loop')
     attributes = ''
     WRITE(attributes(1),'(i5)') this%no_loops
-    WRITE(attributes(2),'(i5)') 'Htr'
+    WRITE(attributes(2),'(a)') 'Htr'
     CALL openXMLElement('Forcetheorem_JIJ',(/'Configs','units  '/),attributes(:2))
     DO n=1,this%no_loops
        WRITE(attributes(1),'(i5)') n
