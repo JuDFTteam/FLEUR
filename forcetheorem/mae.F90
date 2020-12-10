@@ -140,7 +140,10 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
-       CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
+       attributes = ''
+       WRITE(attributes(1),'(i5)') SIZE(this%evsum)
+       WRITE(attributes(2),'(i5)') 'Htr'
+       CALL openXMLElement('Forcetheorem_MAE',(/'Angles','units '/),attributes(:2))
        DO n=1,SIZE(this%evsum)
           WRITE(attributes(1),'(f12.7)') this%theta(n)
           WRITE(attributes(2),'(f12.7)') this%phi(n)

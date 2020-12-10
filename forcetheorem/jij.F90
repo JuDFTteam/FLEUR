@@ -168,7 +168,10 @@ CONTAINS
 
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop')
-    CALL openXMLElementPoly('Forcetheorem_JIJ',(/'Configs'/),(/this%no_loops/))
+    attributes = ''
+    WRITE(attributes(1),'(i5)') this%no_loops
+    WRITE(attributes(2),'(i5)') 'Htr'
+    CALL openXMLElement('Forcetheorem_JIJ',(/'Configs','units  '/),attributes(:2))
     DO n=1,this%no_loops
        WRITE(attributes(1),'(i5)') n
        WRITE(attributes(2),'(3(f5.3,1x))') this%qvec(:,this%q_index(n))

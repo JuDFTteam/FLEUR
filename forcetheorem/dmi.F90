@@ -119,12 +119,16 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
-       CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,1)/))
+       attributes = ''
+       WRITE(attributes(1),'(i5)') SIZE(this%evsum,2)
+       WRITE(attributes(2),'(i5)') SIZE(this%evsum,1)
+       WRITE(attributes(3),'(i5)') 'Htr'
+       CALL openXMLElement('Forcetheorem_DMI',(/'qPoints','Angles ','units  '/),attributes(:3))
        DO q=1,SIZE(this%evsum,2)
           WRITE(attributes(2),'(i5)') q
           WRITE(attributes(3),'(f12.7)') this%evsum(0,q)
           CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(2:3),&
-               RESHAPE((/1,6,5,12/),(/2,2/)))
+                                   RESHAPE((/1,6,5,12/),(/2,2/)))
           DO n=1,SIZE(this%evsum,1)-1
              WRITE(attributes(3),'(f12.7)') this%theta(n)
              WRITE(attributes(4),'(f12.7)') this%phi(n)

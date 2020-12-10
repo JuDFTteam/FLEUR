@@ -114,7 +114,10 @@ CONTAINS
     !Now output the results
     IF (this%l_io) THEN
        CALL closeXMLElement('Forcetheorem_Loop')
-       CALL openXMLElementPoly('Forcetheorem_SSDISP',(/'qvectors'/),(/SIZE(this%evsum)/))
+       attributes = ''
+       WRITE(attributes(1),'(i5)') SIZE(this%evsum)
+       WRITE(attributes(2),'(i5)') 'Htr'
+       CALL openXMLElement('Forcetheorem_SSDISP',(/'qvectors','units   '/),attributes(:2))
        DO q=1,SIZE(this%evsum)
           WRITE(attributes(1),'(i5)') q
           WRITE(attributes(2),'(f12.7)') this%evsum(q)
