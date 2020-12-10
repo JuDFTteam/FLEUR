@@ -1,43 +1,11 @@
 MODULE m_types_hybdat
    use m_types_usdus
    use m_types_mat
+   use m_types_coul
 #ifdef CPP_MPI
    use mpi 
 #endif
    IMPLICIT NONE
-
-   type t_mtir_block
-      integer, allocatable :: pe(:)   ! list where each coulomb is stored
-#ifdef CPP_MPI
-      integer(MPI_ADDRESS_KIND), allocatable :: start_slot(:), end_slot(:) ! local slot where it's stored
-#else 
-      integer, allocatable :: start_slot(:), end_slot(:) ! local slot where it's stored
-#endif
-      logical              :: l_real  ! real or complex storage
-      logical              :: allocated = .False.
-
-      real, pointer    :: r(:,:,:) ! (:,:,i_slot)
-      complex, pointer :: c(:,:,:) ! (:,:,i_slot)
-
-      !mpi stuff 
-      integer :: handle, slots_per_mtx, col_in_slot
-   contains 
-      procedure :: alloc => t_mtir_block_alloc
-      procedure :: read  => t_mtir_block_read
-   end type t_mtir_block
-
-   type t_coul
-      REAL, ALLOCATABLE      :: mt1_r(:, :, :, :)
-      REAL, ALLOCATABLE      :: mt2_r(:, :, :, :),   mt3_r(:, :, :)
-      COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
-      COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :),   mt3_c(:, :, :)
-   contains 
-      procedure :: init     => t_coul_init
-      procedure :: alloc    => t_coul_alloc
-      procedure :: free     => t_coul_free
-      procedure :: mpi_bc  => t_coul_mpi_bc
-      procedure :: size_MB  => t_coul_size_MB
-   end type t_coul
 
    TYPE t_hybdat
       LOGICAL                :: l_subvxc = .false.
@@ -72,7 +40,6 @@ MODULE m_types_hybdat
 
       ! coulomb matrix stuff
       type(t_coul), allocatable     :: coul(:)
-      type(t_mtir_block)              :: mtir
 
       type(t_usdus)             :: usdus
       type(t_mat), allocatable  :: v_x(:,:) ! nkpt, jsp
@@ -81,191 +48,42 @@ MODULE m_types_hybdat
       procedure :: free       => free_hybdat
       procedure :: allocate   => allocate_hybdat
       procedure :: set_states => set_states_hybdat
+      procedure :: set_nobd   => set_nobd_hybdat
    END TYPE t_hybdat
 
 contains
-   subroutine t_mtir_block_read(mtir, fi, n_g, ik, out_mtx)
+   subroutine set_nobd_hybdat(hybdat, fi, results)
       use m_types_fleurinput
-      use m_types_mat 
-      use m_types_mpi
-      use m_judft
-      implicit none
-      class(t_mtir_block), intent(in)   :: mtir
-      type(t_fleurinput), intent(in)    :: fi
-      integer, intent(in)               :: ik, n_g(:)
-      type(t_mat), intent(inout)        :: out_mtx 
+      use m_types_misc
+      implicit none 
+      class(t_hybdat), intent(inout) :: hybdat 
+      type(t_fleurinput), intent(in) :: fi
+      type(t_results), intent(in)    :: results
 
-      integer :: isize, irank, ierr, max_size, i, loc_k_idx, start_col
-#ifdef CPP_MPI
-      integer(MPI_ADDRESS_KIND) :: islot
-#else 
-      integer :: islot 
-#endif
+      integer :: jsp, nk, i
 
-      call timestart("t_mtir_block_read")
-      isize = mtir_size(fi, n_g, ik)
-      max_size = 0
-      do i = 1,fi%kpts%nkpt
-         max_size = max(max_size, mtir_size(fi, n_g, i))
+      if(.not. allocated(hybdat%nobd)) then 
+         allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
+      endif
+      hybdat%nobd = 0   
+
+      do jsp = 1,fi%input%jspins 
+         DO nk = 1, fi%kpts%nkpt
+            DO i = 1, results%neig(nk, jsp)
+               IF (results%w_iks(i, nk, jsp) > 0.0) then
+                  hybdat%nobd(nk,jsp) = hybdat%nobd(nk,jsp) + 1
+               endif
+            END DO
+         enddo 
       enddo
 
-#ifdef CPP_MPI 
-      call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
-#else 
-      irank = 0
-#endif
-      call out_mtx%init(mtir%l_real, max_size, max_size)
-      ! check if I have it locally
-      if(mtir%pe(ik) == irank) then 
-         loc_k_idx = (mtir%start_slot(ik)/mtir%slots_per_mtx) + 1
-         if(mtir%l_real) then 
-            call dlacpy("A", isize, isize, mtir%r(1,1,loc_k_idx), size(mtir%r, 1), out_mtx%data_r, max_size)
-         else
-            call zlacpy("A", isize, isize, mtir%c(1,1,loc_k_idx), size(mtir%c, 1), out_mtx%data_c, max_size)
-         endif
-      else
-#ifdef CPP_MPI 
-         CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, mtir%pe(ik), 0, mtir%handle, ierr)
-
-         start_col = 1
-         do islot = mtir%start_slot(ik), mtir%end_slot(ik)
-            if(mtir%l_real) then 
-               CALL MPI_GET(out_mtx%data_r(1,start_col), max_size*mtir%col_in_slot, MPI_DOUBLE_PRECISION, mtir%pe(ik), islot,&
-                            max_size*mtir%col_in_slot, MPI_DOUBLE_PRECISION, mtir%handle, ierr)
-            else
-               CALL MPI_GET(out_mtx%data_c(1,start_col), max_size*mtir%col_in_slot, MPI_DOUBLE_COMPLEX, mtir%pe(ik), islot,&
-                            max_size*mtir%col_in_slot, MPI_DOUBLE_COMPLEX, mtir%handle, ierr)
-            endif 
-            start_col = start_col + mtir%col_in_slot
-         enddo
-
-         CALL MPI_WIN_UNLOCK(mtir%pe(ik), mtir%handle, ierr)
-#else 
-         call judft_error("without MPI everything should be local (but it isn't i guess)")
-#endif
-      endif
-
-      call timestop("t_mtir_block_read")
-   end subroutine t_mtir_block_read
-
-   subroutine t_mtir_block_alloc(mtir, fi, fmpi, n_g, my_n_k)
-      use m_types_mpi
-      use m_types_fleurinput
-      use m_judft
-      implicit none 
-      class(t_mtir_block), intent(inout)  :: mtir
-      type(t_fleurinput), intent(in)    :: fi
-      TYPE(t_mpi), INTENT(IN)           :: fmpi
-      integer, intent(in)               :: n_g(:), my_n_k
-
-      integer :: ikpt, max_coul_size, ierr, slot_size, irank,&
-                 type_size, cnt_slot, i
-      integer, allocatable :: tmp_slot(:)
-#ifdef CPP_MPI 
-      integer(kind=MPI_ADDRESS_KIND) :: win_size
-#endif
-
-      if(.not. mtir%allocated) then
-         mtir%allocated = .True.
-         call timestart("t_mtir_block_alloc")
-
-         mtir%l_real = fi%sym%invs 
-
-         max_coul_size = 0
-         do ikpt = 1,fi%kpts%nkpt
-            max_coul_size = max(max_coul_size, mtir_size(fi, n_g, ikpt))
-         enddo
-
-         ! get # of slots per mtx and #colums per slot 
-         call calc_matrix_slots(mtir%l_real, max_coul_size, mtir%slots_per_mtx, mtir%col_in_slot)
-         
-#ifdef CPP_MPI 
-         call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
-         if(irank == 0) write (*,*) "Coulomb_mtx cut into " // int2str(mtir%slots_per_mtx) // " slots with " &
-                                    // int2str(mtir%col_in_slot) // " columns"
-
-         if(mtir%l_real) then
-            CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION, type_size, ierr)
-         else
-            CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX, type_size, ierr)
-         endif
-         slot_size = type_size * max_coul_size * mtir%col_in_slot
-         ! don't overflow int32
-         win_size  = slot_size 
-         win_size  = win_size * mtir%slots_per_mtx 
-         win_size  = win_size * my_n_k
-#else 
-         irank = 0
-#endif
-
-         if(mtir%l_real) then        
-            allocate(mtir%r(max_coul_size, max_coul_size, my_n_k), stat=ierr)
-            if(ierr /= 0) call juDFT_error("can't allocate mtir%r of size: " // &
-                                             int2str(max_coul_size) // "^2 x " // int2str(my_n_k))
-
-#ifdef CPP_MPI 
-            if(fmpi%isize > 1) then
-               call judft_win_create(mtir%r, win_size, slot_size, &
-                                    MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
-            endif
-#endif
-
-         else
-            allocate(mtir%c(max_coul_size, max_coul_size, my_n_k), stat=ierr)
-            if(ierr /= 0) call juDFT_error("can't allocate mtir%c of size: " // &
-                                             int2str(max_coul_size) // "^2 x " // int2str(my_n_k)) 
-
-#ifdef CPP_MPI 
-            if(fmpi%isize > 1) then
-               call judft_win_create(mtir%c, win_size, slot_size, &
-                                    MPI_INFO_NULL, fmpi%mpi_comm, mtir%handle)
-            endif
-#endif
-         endif
-
-         if(.not. allocated(mtir%pe)) then
-            allocate(mtir%pe(fi%kpts%nkpt), stat=ierr)
-            if(ierr /= 0) call judft_error("can't alloc mtir%pe")
-         endif 
-
-         if(.not. allocated(mtir%start_slot)) then
-            allocate(mtir%start_slot(fi%kpts%nkpt), stat=ierr)
-            if(ierr /= 0) call judft_error("can't alloc mtir%start_slot")
-         endif      
-         if(.not. allocated(mtir%end_slot)) then
-            allocate(mtir%end_slot(fi%kpts%nkpt), stat=ierr)
-            if(ierr /= 0) call judft_error("can't alloc mtir%end_slot")
-         endif
-
-         call timestop("t_mtir_block_alloc")
-
-         call timestart("t_mtir_block_init")
-
-#ifdef CPP_MPI
-         mtir%pe   = -1 
-         allocate(tmp_slot(fi%kpts%nkpt), source=-1)
-
-         cnt_slot = 0
-         do i = 1,fi%kpts%nkpt 
-            if(any(i == fmpi%k_list) .and. fmpi%n_rank == 0) then 
-               mtir%pe(i)  = fmpi%irank
-               tmp_slot(i) = cnt_slot 
-               cnt_slot = cnt_slot + mtir%slots_per_mtx
-            endif 
-         enddo
-
-         call MPI_Allreduce(MPI_IN_PLACE, mtir%pe,   fi%kpts%nkpt, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
-         call MPI_Allreduce(MPI_IN_PLACE, tmp_slot, fi%kpts%nkpt, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
-         mtir%start_slot = tmp_slot 
-         mtir%end_slot   = mtir%start_slot + (mtir%slots_per_mtx - 1)
-#else 
-         mtir%pe = 0 
-         mtir%start_slot = [(i, i=1,fi%kpts%nkpt)]
-         mtir%end_slot   = mtir%start_slot
-#endif
-         call timestop("t_mtir_block_init")
-      endif
-   end subroutine t_mtir_block_alloc
+      do jsp = 1,fi%input%jspins 
+         DO nk = 1, fi%kpts%nkptf
+            i = fi%kpts%bkp(nk)
+            hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
+         END DO
+      enddo   
+   end subroutine set_nobd_hybdat
 
    subroutine set_states_hybdat(hybdat, fi, results, jsp)
       use m_judft
@@ -298,157 +116,6 @@ contains
          hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
       END DO
    end subroutine set_states_hybdat
-
-   function t_coul_size_MB(coul) result(size_MB)
-      implicit none 
-      class(t_coul), intent(in) :: coul
-      real  :: size_MB 
-
-      size_MB = 0
-      
-      ! real parts
-      if(allocated(coul%mt1_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt1_r) 
-      if(allocated(coul%mt2_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt2_r) 
-      if(allocated(coul%mt3_r))   size_MB = size_MB + 8 * 1e-6 * size(coul%mt3_r) 
-
-      ! complex parts
-      if(allocated(coul%mt1_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt1_c) 
-      if(allocated(coul%mt2_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt2_r) 
-      if(allocated(coul%mt3_c))   size_MB = size_MB + 16 * 1e-6 * size(coul%mt3_r) 
-   end function
-
-   subroutine t_coul_mpi_bc(coul, fi, communicator, root)
-      use m_types_fleurinput
-      use m_types_hybmpi
-      use m_judft
-#ifdef CPP_MPI
-      use mpi
-#endif
-      implicit none 
-      class(t_coul)                  :: coul
-      type(t_fleurinput), intent(in) :: fi
-      integer, intent(in)            :: root, communicator
-#ifdef CPP_MPI
-      integer :: ierr
-
-      if (fi%sym%invs) THEN
-         call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_r failed")
-
-         call MPI_Bcast(coul%mt2_r,   size(coul%mt2_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt2_r failed")
-
-         call MPI_Bcast(coul%mt3_r,   size(coul%mt3_r),   MPI_DOUBLE_PRECISION, root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
-      else 
-         call MPI_Bcast(coul%mt1_c, size(coul%mt1_c),     MPI_DOUBLE_COMPLEX,  root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt1_c failed")
-
-         call MPI_Bcast(coul%mt2_c,   size(coul%mt2_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt2_r failed")
-
-         call MPI_Bcast(coul%mt3_c,   size(coul%mt3_c),   MPI_DOUBLE_COMPLEX , root, communicator, ierr)
-         if(ierr /= 0) call judft_error("MPI_Bcast of coul%mt3_r failed")
-      endif
-#endif
-   end subroutine t_coul_mpi_bc
-
-   subroutine t_coul_free(coul)
-      implicit none 
-      class(t_coul), intent(inout) :: coul 
-
-      if(allocated(coul%mt1_r)) deallocate(coul%mt1_r)
-      if(allocated(coul%mt1_c)) deallocate(coul%mt1_c)
-      if(allocated(coul%mt2_r)) deallocate(coul%mt2_r)
-      if(allocated(coul%mt3_r)) deallocate(coul%mt3_r)
-      if(allocated(coul%mt2_c)) deallocate(coul%mt2_c)
-      if(allocated(coul%mt3_c)) deallocate(coul%mt3_c)
-   end subroutine t_coul_free
-
-   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
-      use m_types_fleurinput
-      use m_judft
-      implicit NONE 
-      class(t_coul), intent(inout) :: coul
-      type(t_fleurinput), intent(in)    :: fi
-      integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
-      logical, intent(in), optional :: l_print
-      integer :: info, isize, l, itype
-
-      isize = mtir_size(fi, n_g, ikpt)
-
-      if(present(l_print)) then 
-         if(l_print) then 
-            write (*,*) "Coulomb dimensions:"
-            write (*,*) "real:", fi%sym%invs
-            write (*,*) "mt1 -> [" // int2str(maxval(num_radbasfn) - 1) //&
-                              ", "  // int2str(maxval(num_radbasfn) - 1) //&
-                              ", "  // int2str(maxval(fi%hybinp%lcutm1)+1)// &
-                              ", "  // int2str(fi%atoms%ntype) //  "]"
-            write (*,*) "mt2 -> [" // int2str(maxval(num_radbasfn) - 1) // &
-                              ", " // int2str(2*maxval(fi%hybinp%lcutm1)+1) // &
-                              ", " // int2str(maxval(fi%hybinp%lcutm1)+2) // &
-                              ", " // int2str(fi%atoms%nat) // "]"
-            write (*,*) "mt3 -> [" // int2str(maxval(num_radbasfn) - 1) // &
-                              ", " // int2str(fi%atoms%nat) // &
-                              ", " // int2str(fi%atoms%nat) // "]"
-            write (*,*) "mtir-> [" // int2str(isize) // &
-                              ", " // int2str(isize) // "]"
-         endif
-      endif
- 
-      if (fi%sym%invs) THEN      
-         if(.not. allocated(coul%mt1_r)) then 
-            allocate(coul%mt1_r(maxval(num_radbasfn) - 1,&
-                              maxval(num_radbasfn) - 1,&
-                              0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt1_r")
-         endif
-         if(.not. allocated(coul%mt2_r)) then
-            allocate(coul%mt2_r(maxval(num_radbasfn) - 1,&
-                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1),&
-                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt2_r")
-         endif
-
-         if(.not. allocated(coul%mt3_r)) then
-             allocate(coul%mt3_r(maxval(num_radbasfn) - 1,fi%atoms%nat, fi%atoms%nat), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt3_r")
-         endif 
-      else      
-         if(.not. allocated(coul%mt1_c)) then 
-            allocate(coul%mt1_c(maxval(num_radbasfn) - 1,&
-                              maxval(num_radbasfn) - 1,&
-                              0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt1_c")
-         endif
-         if(.not. allocated(coul%mt2_c)) then
-            allocate(coul%mt2_c(maxval(num_radbasfn) - 1,&
-                                 -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
-                                 0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt2_c")
-         endif 
-
-         if(.not. allocated(coul%mt3_c)) then
-            allocate(coul%mt3_c(maxval(num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), stat=info)
-            if(info /= 0) call judft_error("Can't allocate coul%mt3_c")
-         endif 
-      endif
-   end subroutine t_coul_alloc
-
-   subroutine t_coul_init(coul)
-      implicit none 
-      class(t_coul), intent(inout) :: coul
-      
-      if(allocated(coul%mt1_r)) coul%mt1_r = 0
-      if(allocated(coul%mt1_c)) coul%mt1_c = 0
-
-      if(allocated(coul%mt2_r))   coul%mt2_r = 0
-      if(allocated(coul%mt3_r))   coul%mt3_r = 0
-      
-      if(allocated(coul%mt2_c))   coul%mt2_c = 0
-      if(allocated(coul%mt3_c))   coul%mt3_c = 0
-   end subroutine t_coul_init
 
    subroutine allocate_hybdat(hybdat, fi, num_radfun_per_l)
       use m_types_fleurinput
@@ -590,24 +257,6 @@ contains
       gptnorm = norm2(matmul(gpt(:), bmat(:, :)))
 
    END FUNCTION gptnorm
-
-   function mtir_size(fi, n_g, ikpt) result(isize)
-      use m_types_fleurinput
-      implicit none 
-      type(t_fleurinput), intent(in) :: fi
-      integer, intent(in)            :: n_g(:), ikpt
-
-      integer :: isize, itype, l
-
-      isize = 0
-      do itype = 1, fi%atoms%ntype
-         do l = 0, fi%hybinp%lcutm1(itype)
-            isize = isize + (2*l + 1)* fi%atoms%neq(itype)
-         enddo 
-      enddo
-
-      isize = isize + n_g(ikpt)
-   end function mtir_size
 
    subroutine calc_matrix_slots(l_real, mtx_dim, slots_per_mtx, col_in_slot)
       implicit none 
