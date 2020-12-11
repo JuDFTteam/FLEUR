@@ -59,6 +59,7 @@ contains
       use m_eig66_data
       USE m_eig66_io
       use m_eig66_mpi, only: priv_find_data
+      use m_judft
       implicit none
       type(t_hybdat), intent(inout)     :: hybdat
       type(t_fleurinput), intent(in)    :: fi
@@ -72,6 +73,8 @@ contains
 
       logical  :: l_zref
       integer  :: jsp, ik, nbasfcn, ieig, ierr, root
+
+      call timestart("bcast zmat")
 
       l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
       select case (eig66_data_mode(hybdat%eig_id) )
@@ -119,5 +122,6 @@ contains
          CALL juDFT_error("The hybrid-code only supports eigvec comm via MEM or MPI")
       END select
 
+      call timestop("bcast zmat")
    end subroutine bcast_eigvecs
 end module m_eigvec_setup
