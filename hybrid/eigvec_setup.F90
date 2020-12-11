@@ -89,7 +89,6 @@ contains
                   !allocate tmp array
                   nbasfcn = lapw%hyb_num_bas_fun(fi)
                   call tmp%alloc(fi%sym%invs, nbasfcn, 1)
-                  write (*,*) "nbands=", hybdat%nbands(ik,jsp)
                   do ieig = 1, hybdat%nbands(ik,jsp)
                      root = d%pe_ev(ik, jsp, ieig)
                      ! make sure read_eig is only run if I have it in mem
