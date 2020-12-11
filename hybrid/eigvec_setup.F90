@@ -79,6 +79,7 @@ contains
       l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
       select case (eig66_data_mode(hybdat%eig_id) )
       case( mpi_mode)
+#ifdef CPP_MPI
          do jsp = 1, fi%input%jspins
             do ik = 1, fi%kpts%nkpt
                if(hybdat%zmat(ik, jsp)%l_participate) then
@@ -93,13 +94,11 @@ contains
                      ! make sure read_eig is only run if I have it in mem
                      if (me == root) call read_eig(hybdat%eig_id, ik, jsp, zmat=tmp, list=[ieig])
 
-#ifdef CPP_MPI
                      if (fi%sym%invs) then
                         call MPI_Bcast(tmp%data_r, nbasfcn, MPI_DOUBLE_PRECISION, root, hybdat%zmat(ik, jsp)%comm, ierr)
                      else
                         call MPI_Bcast(tmp%data_c, nbasfcn, MPI_DOUBLE_COMPLEX, root, hybdat%zmat(ik, jsp)%comm, ierr)
                      endif
-#endif
                      ! deal with k-copies
                      if(hybdat%zmat(ik, jsp)%l_recv) then 
                         if(fi%sym%invs)then
@@ -110,10 +109,10 @@ contains
                      endif
                   enddo
                   call tmp%free()
-
                endif
             enddo
          enddo
+#endif
       case(mem_mode)
          call juDFT_error("need to implement this!")
       CASE DEFAULT
