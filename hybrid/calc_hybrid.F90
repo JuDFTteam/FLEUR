@@ -118,8 +118,8 @@ CONTAINS
             enddo
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
+         call hybdat%set_nobd(fi, results)
          do jsp = 1,fi%input%jspins
-            call hybdat%set_nobd(fi, results)
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
