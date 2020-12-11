@@ -113,9 +113,9 @@ contains
          WRITE (oUnit, *)
          WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
       END IF
-      degenerat = 1
 
       do jsp = 1,fi%input%jspins
+         degenerat = 1
          DO nk = 1, fi%kpts%nkpt
             DO i = 1, results%neig(nk, jsp)
                DO j = i + 1, results%neig(nk, jsp)
@@ -164,8 +164,6 @@ contains
          END DO
       enddo
       call timestop("degenerate treatment")
-
-
    end subroutine set_nbands_hybdat
 
    subroutine allocate_hybdat(hybdat, fi, num_radfun_per_l)

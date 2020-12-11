@@ -119,6 +119,7 @@ CONTAINS
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
          call hybdat%set_nobd(fi, results)
+         call hybdat%set_nbands(fi, fmpi, results)
          do jsp = 1,fi%input%jspins
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
          enddo
@@ -163,7 +164,7 @@ CONTAINS
          DO jsp = 1, fi%input%jspins
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-            
+             
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
