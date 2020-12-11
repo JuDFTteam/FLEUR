@@ -376,12 +376,10 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    WRITE(*,*) 'RDMFT: HF initializations start'
 
-   IF(ALLOCATED(hybdat%ne_eig)) DEALLOCATE(hybdat%ne_eig)
    IF(ALLOCATED(hybdat%nbands)) DEALLOCATE(hybdat%nbands)
    IF(ALLOCATED(hybdat%nobd)) DEALLOCATE(hybdat%nobd)
    IF(ALLOCATED(hybdat%nbasm)) DEALLOCATE(hybdat%nbasm)
    IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
-   ALLOCATE(hybdat%ne_eig(fi%kpts%nkpt),hybdat%nbands(fi%kpts%nkpt,jsp),hybdat%nobd(fi%kpts%nkptf,fi%input%jspins))
    ALLOCATE(hybdat%nbasm(fi%kpts%nkptf))
    ALLOCATE(hybdat%div_vv(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
 
@@ -556,7 +554,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
+            call symm_hf(fi,ikpt,hybdat,results,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest, jsp)
 
             exMat%l_real=fi%sym%invs

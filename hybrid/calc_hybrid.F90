@@ -210,9 +210,6 @@ CONTAINS
          type(t_fleurinput), intent(in)    :: fi
          TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-         if(allocated(hybdat%ne_eig)) deallocate(hybdat%ne_eig)
-         allocate(hybdat%ne_eig(fi%kpts%nkpt), source=0)
-
          if(allocated(hybdat%nbands)) then
             deallocate(hybdat%nbands, stat=err, errmsg=msg)
             if(err /= 0) THEN

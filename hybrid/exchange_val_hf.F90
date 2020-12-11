@@ -323,7 +323,7 @@ CONTAINS
 
          !This should be done with w_iks I guess!TODO
          occup = .false.
-         DO i = 1, hybdat%ne_eig(ik)
+         DO i = 1, results%neig(ik, jsp)
             IF (results%ef >= eig_irr(i, ik)) THEN
                occup(i) = .true.
             ELSE IF ((eig_irr(i, ik) - results%ef) <= 1E-06) THEN

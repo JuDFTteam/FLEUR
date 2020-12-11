@@ -69,7 +69,6 @@ CONTAINS
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
-            hybdat%ne_eig(nk) = results%neig(nk, jsp)
          END DO
          call timestop("eig stuff")
 
@@ -88,28 +87,28 @@ CONTAINS
          degenerat = 1
 
          DO nk = 1, fi%kpts%nkpt
-            DO i = 1, hybdat%ne_eig(nk)
-               DO j = i + 1, hybdat%ne_eig(nk)
+            DO i = 1, results%neig(nk, jsp)
+               DO j = i + 1, results%neig(nk, jsp)
                   IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
                      degenerat(i, nk) = degenerat(i, nk) + 1
                   END IF
                END DO
             END DO
 
-            DO i = 1, hybdat%ne_eig(nk)
+            DO i = 1, results%neig(nk, jsp)
                IF ((degenerat(i, nk) /= 1) .OR. (degenerat(i, nk) /= 0)) degenerat(i + 1:i + degenerat(i, nk) - 1, nk) = 0
             END DO
 
             ! set the size of the exchange matrix in the space of the wavefunctions
 
             hybdat%nbands(nk,jsp) = fi%hybinp%bands1
-            IF (hybdat%nbands(nk,jsp) > hybdat%ne_eig(nk)) THEN
+            IF (hybdat%nbands(nk,jsp) > results%neig(nk, jsp)) THEN
                IF (fmpi%irank == 0) THEN
-                  WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
+                  WRITE (*, *) ' maximum for hybdat%nbands is', results%neig(nk, jsp)
                   WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
                   WRITE (*, *) ' set hybdat%nbands equal to hybdat%ne_eig'
                END IF
-               hybdat%nbands(nk,jsp) = hybdat%ne_eig(nk)
+               hybdat%nbands(nk,jsp) = results%neig(nk, jsp)
             END IF
 
             DO i = hybdat%nbands(nk,jsp) - 1, 1, -1
@@ -226,14 +225,6 @@ CONTAINS
          CALL timestop("gen_bz and gen_wavf")
 
       ELSE IF (fi%hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
-
-
-
-         !DO nk = n_start,fi%kpts%nkpt,n_stride
-         DO nk = 1, fi%kpts%nkpt, 1
-            hybdat%ne_eig(nk) = results%neig(nk, jsp)
-         END DO
-
          hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, fi%atoms%lmax(itype))]), itype=1, fi%atoms%ntype)])
          hybdat%nbands = MIN(fi%hybinp%bands1, fi%input%neig)
 
