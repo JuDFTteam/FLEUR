@@ -389,7 +389,7 @@ CONTAINS
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
                                  !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik, jsp)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
@@ -415,7 +415,7 @@ CONTAINS
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
                                  !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik, jsp)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
