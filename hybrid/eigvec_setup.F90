@@ -159,12 +159,7 @@ contains
                   eigvec%root_pe(ieig) = me_loc 
                endif 
             enddo
-
-            if(me_glob == 0) call save_npy("pe_ev.npy", d%pe_ev)
-            call save_npy("prered_root_pe_irank=" // int2str(me_glob) // "_ik=" // int2str(ik) // ".npy", eigvec%root_pe)
-
             call MPI_Allreduce(MPI_IN_PLACE, eigvec%root_pe, nbands, MPI_INTEGER, MPI_MAX, eigvec%comm, ierr)
-            call save_npy("postred_root_pe_irank=" // int2str(me_glob) // "_ik=" // int2str(ik) // ".npy", eigvec%root_pe)
 
             if(any(eigvec%root_pe < 0)) call judft_error("A vector can't be on a negative PE. Distrb failed.")
          endif
