@@ -35,6 +35,7 @@ types/types_xcpot_data.F90
 types/types_xcpot_inbuild.F90
 types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_libxc.F90
+types/types_fftGrid.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}
