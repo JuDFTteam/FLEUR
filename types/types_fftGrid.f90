@@ -8,9 +8,9 @@ MODULE m_types_fftGrid
 
 TYPE t_fftGrid
 
-   INTEGER :: extend(3)
-   INTEGER :: dimensions(3)
-   INTEGER :: gridLength
+   INTEGER :: extend(3) = [-1,-1,-1]
+   INTEGER :: dimensions(3) = [-1,-1,-1]
+   INTEGER :: gridLength = -1
    COMPLEX, ALLOCATABLE :: grid(:)
 
    CONTAINS
@@ -107,7 +107,7 @@ SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
 
    IF(ALLOCATED(this%grid)) DEALLOCATE(this%grid)
 
-   ALLOCATE(this%grid(0:this%gridLength - 1))
+   ALLOCATE(this%grid(0:this%gridLength - 1), source=cmplx_0)
 
 END SUBROUTINE t_fftGrid_init
 
