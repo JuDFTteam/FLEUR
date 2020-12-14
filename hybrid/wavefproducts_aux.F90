@@ -127,12 +127,6 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
 
-#if defined(CPP_MPI)
-      ! call timestart("Post read_z Barrier: is_fft")
-      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)
-      ! call timestop("Post read_z Barrier: is_fft")
-#endif
-
       call psi_kqpt%alloc(.false., fftd, psize)
 
       call timestart("1st wavef2rs")
