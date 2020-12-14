@@ -365,8 +365,8 @@ CONTAINS
                      ELSE
                         tempState(iv) = s*zMat%data_c(iv, nu)
                      END IF
-                     CALL stateDeriv%putComplexStateOnGrid(lapw, jSpin, tempState)
                   END DO
+                  CALL stateDeriv%putComplexStateOnGrid(lapw, jSpin, tempState)
                   CALL fft_interface(3, stateDeriv%dimensions(:), stateDeriv%grid, forw)
                   DO ir = 0, ekinGrid%gridLength - 1
                      ekinGrid%grid(ir) = ekinGrid%grid(ir) + wtf(nu) * 0.5 * ABS(stateDeriv%grid(ir))**2
