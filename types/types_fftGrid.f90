@@ -107,7 +107,7 @@ SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
 
    IF(ALLOCATED(this%grid)) DEALLOCATE(this%grid)
 
-   ALLOCATE(this%grid(0:this%gridLength - 1), source=cmplx_0)
+   ALLOCATE(this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
 
 END SUBROUTINE t_fftGrid_init
 
