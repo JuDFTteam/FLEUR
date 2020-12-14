@@ -13,6 +13,7 @@ MODULE m_types
   use m_types_eigvec
   USE m_types_enpara
   use m_types_fft
+  USE m_types_fftGrid
   USE m_types_field
   USE m_types_force
   USE m_types_forcetheo

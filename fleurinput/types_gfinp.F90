@@ -1083,7 +1083,7 @@ CONTAINS
                this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
             ENDIF
 
-            IF(shellAtom(ishell).NE.refAtom) THEN
+            IF(shellAtom(ishell).NE.refAtom.AND..NOT.ANY(atomTypepList(:nOtherAtoms).EQ.shellAtom(ishell))) THEN
                !Other atomtype
                nOtherAtoms = nOtherAtoms + 1
                atomTypepList(nOtherAtoms) = shellAtom(ishell)
