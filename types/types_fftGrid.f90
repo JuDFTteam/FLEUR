@@ -57,8 +57,9 @@ CONTAINS
          inv_du(i) = i ! dummy array for spgrot
       END DO
 
-      ALLOCATE (ig(-tempDim(1):tempDim(1), -tempDim(2):tempDim(2), -tempDim(3):tempDim(3)))
-      ig(:, :, :) = 0
+      ALLOCATE (ig(-tempDim(1):tempDim(1), &
+                   -tempDim(2):tempDim(2), &
+                   -tempDim(3):tempDim(3)), source=0)
 
       mxx(:) = 0
       gCutoffSquared = gCutoff*gCutoff
