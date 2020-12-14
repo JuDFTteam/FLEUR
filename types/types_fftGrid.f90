@@ -268,6 +268,8 @@ COMPLEX FUNCTION getElement(this,x,y,z)
 
    INTEGER :: xGrid, yGrid, zGrid, layerDim
 
+   layerDim = this%dimensions(1) * this%dimensions(2)
+
    xGrid = MODULO(x,this%dimensions(1))
    yGrid = MODULO(y,this%dimensions(2))
    zGrid = MODULO(z,this%dimensions(3))
