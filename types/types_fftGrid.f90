@@ -45,9 +45,9 @@ CONTAINS
       INTEGER, ALLOCATABLE :: ig(:, :, :)
 
       INTEGER :: k1, k2, k3, i
-      INTEGER :: mxx(3), kVec(3), kRot(3, sym%nop), inv_du(sym%nop)
+      INTEGER :: mxx(3), kVec(3), kRot(3, sym%nop), inv_du(sym%nop), tempDim(3)
       REAL    :: gCutoffSquared, gSquared
-      REAL    :: arltv(3), tempDim(3), g(3)
+      REAL    :: arltv(3), g(3)
 
       CALL boxdim(cell%bmat, arltv(1), arltv(2), arltv(3))
 
