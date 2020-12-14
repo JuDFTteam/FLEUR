@@ -25,7 +25,7 @@ contains
 
       if (eigvec%l_recv) then
          nbasfcn = lapw%hyb_num_bas_fun(fi)
-         call eigvec%mat%alloc(fi%sym%invs, nbasfcn, (eigvec%max_band - eigvec%min_band + 1))
+         call eigvec%mat%alloc(fi%sym%invs, nbasfcn, nbands)
       endif
    end subroutine eigvec_setup
 
@@ -47,11 +47,7 @@ contains
       do i = 1, work_packs(jsp)%k_packs(1)%size
          if (eigvec%nk == work_packs(jsp)%k_packs(i)%nk) then
             eigvec%l_participate = .True.
-            eigvec%l_recv = .True.
-
-            eigvec%min_band = min(eigvec%min_band, 1)
-            eigvec%max_band = max(eigvec%max_band, nbands)
-            
+            eigvec%l_recv = .True.            
          endif
       enddo
    end subroutine eigvec_set_part_and_band

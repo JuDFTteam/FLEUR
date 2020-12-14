@@ -13,8 +13,6 @@ module m_types_eigvec
 
       integer, allocatable :: root_pe(:)
 
-      integer     :: min_band = huge(1)
-      integer     :: max_band = -1 
       integer     :: nk = -1, jsp = -1
 #ifdef CPP_MPI
       integer                :: comm = MPI_COMM_NULL ! communicator for this t_eigvec
