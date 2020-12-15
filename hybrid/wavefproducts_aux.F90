@@ -82,10 +82,10 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       iob_list = -7
       iband_list = -7
-      ! !$OMP PARALLEL default(none) &
-      ! !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      ! !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list)&
-      ! !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi)
+      !$OMP PARALLEL default(none) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
@@ -93,7 +93,7 @@ CONTAINS
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(stepf%dimensions, .true.)
-      ! !$OMP DO
+      !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
          psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
@@ -128,10 +128,12 @@ CONTAINS
             endif
          enddo
       enddo
-      ! !$OMP END DO
+      !$OMP END DO
       deallocate (prod, psi_k)
       call fft%free()
-      ! !$OMP END PARALLEL
+      !$OMP END PARALLEL
+
+      call stepf%free()
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()
@@ -158,7 +160,7 @@ CONTAINS
 
       psi = 0.0
       n_threads = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(none) &
+      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(private) &
       !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
 
       call grid%init(fi%cell, fi%sym, gcutoff)
