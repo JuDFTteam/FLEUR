@@ -57,6 +57,7 @@ contains
       USE m_eig66_io
       use m_eig66_mpi, only: priv_find_data
       use m_judft
+      use m_io_hybinp
       implicit none
       type(t_hybdat), intent(inout)     :: hybdat
       type(t_fleurinput), intent(in)    :: fi
@@ -110,7 +111,11 @@ contains
          enddo
 #endif
       case(mem_mode)
-         call juDFT_error("need to implement this!")
+         do jsp = 1, fi%input%jspins
+            do ik = 1, fi%kpts%nkpt
+               call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ik, jsp, hybdat%zmat(ik,jsp)%mat)
+            enddo 
+         enddo
       CASE DEFAULT
          CALL juDFT_error("The hybrid-code only supports eigvec comm via MEM or MPI")
       END select
@@ -160,7 +165,7 @@ contains
             if(any(eigvec%root_pe < 0)) call judft_error("A vector can't be on a negative PE. Distrb failed.")
          endif
       case(mem_mode)
-         call juDFT_error("need to implement this!")
+         
       CASE DEFAULT
          CALL juDFT_error("The hybrid-code only supports eigvec comm via MEM or MPI")
       END select
