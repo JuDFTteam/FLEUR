@@ -154,27 +154,26 @@ CONTAINS
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu, n_threads, me
+      integer :: iv, nu, n_threads
 
       psi = 0.0
       n_threads = 1
-      me = 1
-      ! !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
-      ! !$OMP shared(bandoi, bandof, zMat, psi,  ivmap, lapw, jspin)
+      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(none) &
+      !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
 
       call grid%init(fi%cell, fi%sym, gcutoff)
       call fft%init(grid%dimensions, .false.)
 
-      ! !$OMP DO
+      !$OMP DO
       do nu = bandoi, bandof
          call grid%putStateOnGrid(lapw, jspin, zMat, nu)
          psi(:,nu) = grid%grid
          call fft%exec(psi(:, nu))
       enddo
-      ! !$OMP ENDDO
+      !$OMP ENDDO
       call grid%free()
       call fft%free()
-      ! !$OMP END PARALLEL
+      !$OMP END PARALLEL
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
