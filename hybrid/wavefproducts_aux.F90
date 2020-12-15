@@ -1,71 +1,6 @@
 module m_wavefproducts_aux
-
+   use m_types_fftGrid
 CONTAINS
-   subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
-      use m_types
-      use m_juDFT
-      implicit none
-      type(t_lapw), intent(in)    :: lapw
-      TYPE(t_mpdata), intent(in)         :: mpdata
-      integer, intent(in)    :: g_bounds(:), g_t(:), iq, jsp
-      integer, allocatable, intent(inout) :: pointer(:, :, :), gpt0(:, :)
-      integer, intent(inout) :: ngpt0
-
-      integer :: ic, ig1, igptm, iigptm, ok, g(3)
-
-      allocate (pointer(-g_bounds(1):g_bounds(1), &
-                        -g_bounds(2):g_bounds(2), &
-                        -g_bounds(3):g_bounds(3)), stat=ok)
-      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation pointer')
-      allocate (gpt0(3, size(pointer)), stat=ok)
-      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation gpt0')
-
-      call timestart("prep list of Gvec")
-      pointer = 0
-      ic = 0
-      DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, mpdata%n_g(iq)
-            iigptm = mpdata%gptm_ptr(igptm, iq)
-            g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
-            IF (pointer(g(1), g(2), g(3)) == 0) THEN
-               ic = ic + 1
-               gpt0(:, ic) = g
-               pointer(g(1), g(2), g(3)) = ic
-            END IF
-         END DO
-      END DO
-      ngpt0 = ic
-      call timestop("prep list of Gvec")
-   end subroutine prep_list_of_gvec
-
-   function calc_number_of_basis_functions(lapw, atoms, noco) result(nbasfcn)
-      use m_types
-      implicit NONE
-      type(t_lapw), intent(in)  :: lapw
-      type(t_atoms), intent(in) :: atoms
-      type(t_noco), intent(in)  :: noco
-      integer                   :: nbasfcn
-
-      if (noco%l_noco) then
-         nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot
-      else
-         nbasfcn = lapw%nv(1) + atoms%nlotot
-      endif
-   end function calc_number_of_basis_functions
-
-   function outer_prod(x, y) result(outer)
-      implicit NONE
-      complex, intent(in) :: x(:), y(:)
-      complex :: outer(size(x), size(y))
-      integer  :: i, j
-
-      do j = 1, size(y)
-         do i = 1, size(x)
-            outer(i, j) = x(i)*y(j)
-         enddo
-      enddo
-   end function outer_prod
-
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
       !$ use omp_lib
@@ -138,10 +73,10 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       iob_list = -7
       iband_list = -7
-      !$OMP PARALLEL default(private) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp, bandoi)
+      ! !$OMP PARALLEL default(private) &
+      ! !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
+      ! !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
+      ! !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp, bandoi)
 
       allocate (prod(0:fftd - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
@@ -149,7 +84,7 @@ CONTAINS
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(length_zfft, .true.)
-      !$OMP DO
+      ! !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
          call wavef2rs(lapw, z_k, length_zfft, iband, iband, jsp, psi_k)
          psi_k(:, 1) = conjg(psi_k(:, 1))*stars%ufft*inv_vol
@@ -184,10 +119,10 @@ CONTAINS
             endif
          enddo
       enddo
-      !$OMP END DO
+      ! !$OMP END DO
       deallocate (prod, psi_k)
       call fft%free()
-      !$OMP END PARALLEL
+      ! !$OMP END PARALLEL
 
       call timestop("Big OMP loop")
       call psi_kqpt%free()
@@ -216,12 +151,12 @@ CONTAINS
       psi = 0.0
       n_threads = 1
       me = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
-      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      ! !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
+      ! !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
 
       call fft%init(length_zfft, .false.)
 
-      !$OMP DO
+      ! !$OMP DO
       do nu = bandoi, bandof
          !------> map WF into FFTbox
          DO iv = 1, lapw%nv(jspin)
@@ -233,9 +168,73 @@ CONTAINS
          ENDDO
          call fft%exec(psi(:, nu))
       enddo
-      !$OMP ENDDO
+      ! !$OMP ENDDO
       call fft%free()
-      !$OMP END PARALLEL
+      ! !$OMP END PARALLEL
    end subroutine wavef2rs
 
+   subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
+      use m_types
+      use m_juDFT
+      implicit none
+      type(t_lapw), intent(in)    :: lapw
+      TYPE(t_mpdata), intent(in)         :: mpdata
+      integer, intent(in)    :: g_bounds(:), g_t(:), iq, jsp
+      integer, allocatable, intent(inout) :: pointer(:, :, :), gpt0(:, :)
+      integer, intent(inout) :: ngpt0
+
+      integer :: ic, ig1, igptm, iigptm, ok, g(3)
+
+      allocate (pointer(-g_bounds(1):g_bounds(1), &
+                        -g_bounds(2):g_bounds(2), &
+                        -g_bounds(3):g_bounds(3)), stat=ok)
+      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation pointer')
+      allocate (gpt0(3, size(pointer)), stat=ok)
+      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation gpt0')
+
+      call timestart("prep list of Gvec")
+      pointer = 0
+      ic = 0
+      DO ig1 = 1, lapw%nv(jsp)
+         DO igptm = 1, mpdata%n_g(iq)
+            iigptm = mpdata%gptm_ptr(igptm, iq)
+            g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
+            IF (pointer(g(1), g(2), g(3)) == 0) THEN
+               ic = ic + 1
+               gpt0(:, ic) = g
+               pointer(g(1), g(2), g(3)) = ic
+            END IF
+         END DO
+      END DO
+      ngpt0 = ic
+      call timestop("prep list of Gvec")
+   end subroutine prep_list_of_gvec
+
+   function calc_number_of_basis_functions(lapw, atoms, noco) result(nbasfcn)
+      use m_types
+      implicit NONE
+      type(t_lapw), intent(in)  :: lapw
+      type(t_atoms), intent(in) :: atoms
+      type(t_noco), intent(in)  :: noco
+      integer                   :: nbasfcn
+
+      if (noco%l_noco) then
+         nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot
+      else
+         nbasfcn = lapw%nv(1) + atoms%nlotot
+      endif
+   end function calc_number_of_basis_functions
+
+   function outer_prod(x, y) result(outer)
+      implicit NONE
+      complex, intent(in) :: x(:), y(:)
+      complex :: outer(size(x), size(y))
+      integer  :: i, j
+
+      do j = 1, size(y)
+         do i = 1, size(x)
+            outer(i, j) = x(i)*y(j)
+         enddo
+      enddo
+   end function outer_prod
 end module m_wavefproducts_aux
