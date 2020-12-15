@@ -23,11 +23,31 @@ MODULE m_types_fftGrid
       PROCEDURE :: putRealStateOnGrid
       PROCEDURE :: putComplexStateOnGrid
       PROCEDURE :: getElement
+      procedure :: g2fft => map_g_to_fft_grid
    END TYPE t_fftGrid
 
    PUBLIC :: t_fftGrid
 
 CONTAINS
+function map_g_to_fft_grid(grid, g_in) result(g_idx)
+   implicit none 
+   CLASS(t_fftGrid), INTENT(INOUT) :: grid
+   integer, intent(in)             :: g_in(3)
+   integer                         :: g_idx
+
+   integer ::  shifted_g(3)
+
+   ! the fft-grid starts at g=0, not -g_max
+   ! therefore all negative g's need to be shifted
+   
+   shifted_g = merge(g_in + grid%dimensions, g_in, g_in < 0)
+
+   ! map it to 1d
+   g_idx = shifted_g(1) &
+         + shifted_g(2) * grid%dimensions(1) &
+         + shifted_g(3) * grid%dimensions(1) * grid%dimensions(2)
+ end function map_g_to_fft_grid
+
    SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
       USE m_constants
       USE m_boxdim
