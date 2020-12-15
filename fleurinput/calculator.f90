@@ -34,7 +34,7 @@ CONTAINS
       IMPLICIT NONE
 
 !<-- Locals
-      INTEGER ::             :: n
+      INTEGER                :: n
 !>
 
       WRITE (*, *) "Defined variables:"
@@ -59,7 +59,7 @@ CONTAINS
       CHARACTER(len=*), INTENT(in) :: m
 !>
 !<-- Locals
-      INTEGER ::             :: ierr, n
+      INTEGER                :: ierr, n
 !>
 
       WRITE (*, *) m
@@ -164,7 +164,7 @@ CONTAINS
 !>
 
 !<-- Locals
-      INTEGER ::             :: n
+      INTEGER                :: n
       CHARACTER(len=10) :: s
 !>
       IF (.NOT. initialized) CALL priv_init()
@@ -202,11 +202,11 @@ CONTAINS
 
 !<-- Arguments
       CHARACTER(len=*), INTENT(inout) :: string
-      REAL ::                             :: number
+      REAL                                :: number
 !>
 
 !<-- Locals
-      INTEGER ::             :: pos
+      INTEGER                :: pos
       LOGICAL             :: dot
 !>
 
@@ -259,7 +259,7 @@ CONTAINS
 !>
 
 !<-- Locals
-      INTEGER ::  :: n, l
+      INTEGER     :: n, l
       CHARACTER(len=5), DIMENSION(13), PARAMETER :: functions = (/ &
                                                     'cos( ', 'sin( ', 'tan( ', 'exp( ', 'log( ', 'abs( ', 'sqrt(' &
                                                     , 'acos(', 'asin(', 'atan(', 'cosh(', 'sinh(', 'tanh('/)
@@ -363,7 +363,7 @@ CONTAINS
 !>
 
 !<-- Locals
-      INTEGER ::             :: n, pos, cnt
+      INTEGER                :: n, pos, cnt
 !>
 
       pos = 0
@@ -406,12 +406,12 @@ CONTAINS
       CHARACTER(len=*), INTENT(inout) :: string
       CHARACTER(len=10), INTENT(in) :: command
       REAL, INTENT(in)                :: value
-      REAL ::                            :: number
+      REAL                               :: number
 !>
 
 !<-- Locals
       CHARACTER(len=10) :: nextcommand
-      REAL ::                :: nextnumber
+      REAL                   :: nextnumber
 !>
 
       SELECT CASE (command)
@@ -531,7 +531,7 @@ CONTAINS
 
 !<--Arguments
       CHARACTER(len=*), INTENT(in) :: command
-      INTEGER ::                       :: order
+      INTEGER                          :: order
 !>
 
       order = 0
@@ -582,12 +582,12 @@ CONTAINS
 !<--Arguments
       CHARACTER(len=*), INTENT(inout) :: string
       CHARACTER(len=*), INTENT(in)     :: blockcommand
-      REAL ::                             :: number
+      REAL                                :: number
 !>
 
 !<-- Locals
       CHARACTER(len=10) :: command, nextcommand
-      REAL ::                :: nextnumber
+      REAL                   :: nextnumber
 !>
       IF (.NOT. initialized) CALL priv_init()
 
@@ -618,7 +618,7 @@ CONTAINS
 
 !<--Arguments
       CHARACTER(len=*), INTENT(in) :: s
-      REAL ::                            :: number
+      REAL                               :: number
 !>
 
 !<-- Locals
@@ -653,8 +653,8 @@ CONTAINS
 !>
 
 !<-- Locals
-      INTEGER ::                :: n, i, m
-      REAL ::                   :: xx, xm
+      INTEGER                   :: n, i, m
+      REAL                      :: xx, xm
       CHARACTER(len=10)     :: fn ! function string
       CHARACTER              :: p2 ! closing parenthesis
       CHARACTER              :: sg ! sign
@@ -711,7 +711,7 @@ CONTAINS
       REAL, ALLOCATABLE, INTENT(INOUT) ::array(:)
       CHARACTER(len=*), INTENT(inout) ::s
 
-      REAL ::    :: tmp(10)
+      REAL       :: tmp(10)
       INTEGER :: n
       n = 0
       DO WHILE (LEN_TRIM(ADJUSTL(s)) > 1)
@@ -736,11 +736,11 @@ CONTAINS
 !<--Arguments
       CHARACTER(len=*), INTENT(inout) :: s
       INTEGER, OPTIONAL                 :: n
-      REAL ::                             :: number
+      REAL                                :: number
 !>
 
 !<-- Locals
-      INTEGER ::             :: pos
+      INTEGER                :: pos
 !>
       IF (.NOT. initialized) CALL priv_init()
 
@@ -766,11 +766,11 @@ CONTAINS
       IMPLICIT NONE
 
       CHARACTER(len=*), INTENT(IN)    :: s
-      REAL ::                             :: number
+      REAL                                :: number
 
 !<-- Locals
       CHARACTER(len=LEN(s)) :: tempS
-      INTEGER ::               :: pos
+      INTEGER                  :: pos
 !>
 
       tempS = ADJUSTL(s)
@@ -789,10 +789,10 @@ CONTAINS
       IMPLICIT NONE
 
       CHARACTER(len=*), INTENT(in) :: s
-      INTEGER ::                          :: number
+      INTEGER                             :: number
 
 !<-- Locals
-      INTEGER ::               :: pos
+      INTEGER                  :: pos
       CHARACTER(len=LEN(s)) :: tempS
 !>
 
@@ -815,7 +815,7 @@ CONTAINS
       LOGICAL                          :: bool
 
 !<-- Locals
-      INTEGER ::               :: pos
+      INTEGER                  :: pos
       CHARACTER(len=LEN(s)) :: tempS
 !>
 
