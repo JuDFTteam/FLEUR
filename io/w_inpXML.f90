@@ -204,8 +204,8 @@ CONTAINS
       WRITE (fileNum, 150) noco%l_soc, noco%theta_inp, noco%phi_inp, noco%l_spav
 
       IF (l_explicit .OR. hybinp%l_hybrid) THEN
-155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '"/>')
-         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1
+155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '" fftcut="', f0.8, '"/>')
+         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1, hybinp%fftcut
       END IF
 
       IF (oneD%odd%d1) THEN
