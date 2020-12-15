@@ -17,8 +17,8 @@ MODULE m_calculator
              makenumberstring, show, evaluateFirstOnly, &
              evaluateFirstIntOnly, evaluateFirstBoolOnly
 
-   CHARACTER(len=10), SAVE, ALLOCATABLE :: var_names(:)
-   REAL, ALLOCATABLE, SAVE                :: var_values(:)
+   CHARACTER(len=10), SAVE, ALLOCATABLE  :: var_names(:)
+   REAL, ALLOCATABLE, SAVE               :: var_values(:)
    INTEGER, SAVE                         :: n_vars
    INTEGER, PARAMETER                    :: num_predef = 6
    LOGICAL, SAVE                         :: initialized = .false.
@@ -104,7 +104,7 @@ CONTAINS
 
 !<-- Locals
       CHARACTER(len=10), ALLOCATABLE :: tmp_names(:)
-      REAL ::, ALLOCATABLE             :: tmp_values(:)
+      REAL, ALLOCATABLE              :: tmp_values(:)
       INTEGER, PARAMETER :: min_buffer = 5
       INTEGER :: i
 !>
@@ -160,7 +160,7 @@ CONTAINS
 
 !<--Arguments
       CHARACTER(len=*), INTENT(IN) :: var
-      REAL ::, INTENT(IN)            :: value
+      REAL, INTENT(IN)             :: value
 !>
 
 !<-- Locals
@@ -648,7 +648,7 @@ CONTAINS
       IMPLICIT NONE
 
 !<--Arguments
-      REAL ::, INTENT(IN)     :: x
+      REAL, INTENT(IN)       :: x
       CHARACTER(len=20)      :: str
 !>
 
