@@ -58,6 +58,7 @@ CONTAINS
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
       call fft%init(stepf%dimensions, .false.)
+      write (*,*) "stepf%dim", stepf%dimensions
       call fft%exec(stepf%grid)
       call fft%free()
 
