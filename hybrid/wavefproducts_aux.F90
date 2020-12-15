@@ -30,27 +30,36 @@ CONTAINS
 
       complex, allocatable  :: prod(:), psi_k(:, :)
 
-      type(t_mat)               :: z_kqpt
-      type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
-      integer :: ok, nbasfcn, fftd, psize, iband, ierr, i
+      type(t_mat)     :: z_kqpt
+      type(t_lapw)    :: lapw_ikqpt
+      type(t_mat)     :: psi_kqpt
+      type(t_fft)     :: fft
+      type(t_fftgrid) :: stepf
+
+      integer :: g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
+      integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
-      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
-      type(t_mat)  :: psi_kqpt
-      type(t_fft)  :: fft
+      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start, gcutoff
+
       logical :: real_warned
+
       real_warned = .False.
 
       call timestart("wavef_IS_FFT")
+      gcutoff = 1.4*fi%input%gmax ! 2*fi%input%rkmax + fi%mpinp%g_cutoff ! * 0.66667
       inv_vol = 1/sqrt(fi%cell%omtil)
-      length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
-      fftd = product(length_zfft)
       psize = bandof - bandoi + 1
       !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
       if (2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then
          write (*, *) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
          !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
+
+      call stepf%init(fi%cell, fi%sym, gcutoff)
+      call stepf%putFieldOnGrid(stars, stars%ustep)
+      call fft%init(stepf%dimensions, .false.)
+      call fft%exec(stepf%grid)
+      call fft%free()
 
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
 
@@ -62,10 +71,10 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
 
-      call psi_kqpt%alloc(.false., fftd, psize)
+      call psi_kqpt%alloc(.false., stepf%gridLength, psize)
 
       call timestart("1st wavef2rs")
-      call wavef2rs(lapw_ikqpt, z_kqpt, length_zfft, 1, psize, jsp, psi_kqpt%data_c)
+      call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt%data_c)
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
@@ -73,21 +82,21 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       iob_list = -7
       iband_list = -7
-      ! !$OMP PARALLEL default(private) &
+      ! !$OMP PARALLEL default(none) &
       ! !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      ! !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
-      ! !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp, bandoi)
+      ! !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list)&
+      ! !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi)
 
-      allocate (prod(0:fftd - 1), stat=ok)
+      allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
-      allocate (psi_k(0:fftd - 1, 1), stat=ok)
+      allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
-      call fft%init(length_zfft, .true.)
+      call fft%init(stepf%dimensions, .true.)
       ! !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
-         call wavef2rs(lapw, z_k, length_zfft, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1))*stars%ufft*inv_vol
+         call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+         psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
 
          do iob = 1, psize
             iob_list(iob + (iband - 1)*psize) = iob + bandoi - 1
@@ -104,17 +113,17 @@ CONTAINS
             endif
 
             ! we still have to devide by the number of mesh points
-            prod = prod/product(length_zfft)
+            prod = prod/stepf%gridLength
 
             if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                  cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g2fft(length_zfft, g)))
+                  cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g)))
                enddo
             else
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                  cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g2fft(length_zfft, g))
+                  cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
             endif
          enddo
@@ -129,46 +138,41 @@ CONTAINS
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
 
-   subroutine wavef2rs(lapw, zmat, length_zfft, bandoi, bandof, jspin, psi)
+   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
 !$    use omp_lib
       use m_types
       use m_fft_interface
       implicit none
+      type(t_fleurinput), intent(in) :: fi
       type(t_lapw), intent(in)       :: lapw
       type(t_mat), intent(in)        :: zmat
-      integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
+      integer, intent(in)            :: jspin, bandoi, bandof
+      real, intent(in)               :: gcutoff
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 
       type(t_fft) :: fft
+      type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu, n_threads, me
-
-      DO iv = 1, lapw%nv(jspin)
-         ivmap(iv) = g2fft(length_zfft, lapw%gvec(:, iv, jspin))
-      ENDDO
 
       psi = 0.0
       n_threads = 1
       me = 1
       ! !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
-      ! !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
+      ! !$OMP shared(bandoi, bandof, zMat, psi,  ivmap, lapw, jspin)
 
-      call fft%init(length_zfft, .false.)
+      call grid%init(fi%cell, fi%sym, gcutoff)
+      call fft%init(grid%dimensions, .false.)
 
       ! !$OMP DO
       do nu = bandoi, bandof
-         !------> map WF into FFTbox
-         DO iv = 1, lapw%nv(jspin)
-            if (zMat%l_real) then
-               psi(ivmap(iv), nu) = zMat%data_r(iv, nu)
-            else
-               psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
-            endif
-         ENDDO
+         call grid%putStateOnGrid(lapw, jspin, zMat, nu)
+         psi(:,nu) = grid%grid
          call fft%exec(psi(:, nu))
       enddo
       ! !$OMP ENDDO
+      call grid%free()
       call fft%free()
       ! !$OMP END PARALLEL
    end subroutine wavef2rs
