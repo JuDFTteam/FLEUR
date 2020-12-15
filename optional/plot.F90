@@ -560,7 +560,7 @@ CONTAINS
       REAL    :: tec, qint, phi0, angss
       INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
       INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
-      LOGICAL :: twodim, cartesian, xsf, unwind, polar
+      LOGICAL :: twodim, cartesian, xsf, polar,unwind
 
       TYPE(t_potden),     ALLOCATABLE :: den(:)
       REAL,               ALLOCATABLE :: xdnout(:)
@@ -577,10 +577,11 @@ CONTAINS
 
       REAL,               PARAMETER   :: eps = 1.0e-15
 
-      NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
+      !NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
       integer:: ierr
 
+      unwind = .FALSE.
       nfile = 120
 
       IF (PRESENT(denA2)) THEN
@@ -744,14 +745,22 @@ CONTAINS
             END IF
          END IF
 
+#ifdef CPP_MPI
+     CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
+#endif
+         CALL timestart("loop over points")
+         print*, "loop over points", fmpi%irank
          !loop over all points
          strt=  fmpi%irank*(grid(3)-1)/fmpi%isize + 1
          fin =   ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
          IF ( fmpi%irank == 0) strt = 0
          DO iz = strt,fin
+            !$OMP PARALLEL DO DEFAULT(none) &
+            !$OMP& SHARED(iz,grid,zero,vec1,vec2,vec3,twodim,input,cell,oneD,numInDen,potnorm) &
+            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,sliceplot,noco,points) &
+            !$OMP& SHARED(unwind,polar,tempResults,tempVecs,nplo,qssc,xsf,NumOutFiles) &
+            !$OMP& PRIVATE(ix,point,nt,na,pt,iv,iflag,xdnout,angss,help,phi0)
             DO iy = 0, grid(2)-1
-        !$OMP parallel shared(iz,iy,points,tempResults,tempVecs,numOutFiles,xsf,phi0,polar,qssc,noco,den,sym,sphhar,unwind,vacuum,stars,potnorm, numInDen,oneD,atoms,cell,input,vec1,vec2,vec3,twodim,zero,grid,fmpi,sliceplot,nplo) private(ix,i,j,point,na,nt,pt,iv,iflag,help,xdnout,angss,k) default(none)
-         !$OMP do
                DO ix = 0, grid(1)-1
 
                   point = zero + vec1*REAL(ix)/(grid(1)-1) +&
@@ -882,11 +891,13 @@ CONTAINS
                      points(ix,iy,iz,:)=point(:)/1.8897269
                   END IF
                END DO !x-loop
-     !$OMP end do
-     !$OMP end parallel
             END DO !y-loop
+            !END PARALLEL DO
          END DO !z-loop
+         CALL timestop("loop over points")
 
+         CALL timestart("output")
+         print*, "output"
          !Print out results of the different MPI processes in correct order.
          IF(fmpi%irank.EQ.0) THEN
             IF (xsf)  THEN
@@ -905,35 +916,49 @@ CONTAINS
      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
             IF(fmpi%irank.EQ.k) THEN
-               DO iz = strt, fin
-                  DO iy = 0, grid(2)-1
-                     DO ix = 0, grid(1)-1
-                        IF (xsf) THEN
-                           DO i = 1, numOutFiles
-                              OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+
+               IF (xsf) THEN
+                  DO i = 1, numOutFiles
+                     OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted',position="append", action="write")
+                     DO iz = strt, fin
+                        DO iy = 0, grid(2)-1
+                           DO ix = 0, grid(1)-1
                               WRITE(nfile+i,*) tempResults(ix,iy,iz,i)
-                              CLOSE(nfile+i)
                            END DO
+                        END DO
+                     END DO
+                     CLOSE(nfile+i)
+                  END DO
 
-                           IF (sliceplot%plot(nplo)%vecField) THEN
-                              OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
+                  IF (sliceplot%plot(nplo)%vecField) THEN
+                     OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted',position="append", action="write")
+                     DO iz = strt, fin
+                        DO iy = 0, grid(2)-1
+                           DO ix = 0, grid(1)-1
                               WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
-                              CLOSE(nfile+10)
-                           END IF
-
-                        ELSE
-                           OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
+                           END DO
+                        END DO
+                     END DO
+                     CLOSE(nfile+10)
+                  END IF
+               ELSE
+                  OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted',position="append", action="write")
+                  DO iz = strt, fin
+                     DO iy = 0, grid(2)-1
+                        DO ix = 0, grid(1)-1
                            WRITE(nfile,'(10e15.7)') points(ix,iy,iz,:) ,tempResults(ix,iy,iz,:)
-                           CLOSE(nfile)
-                        END IF
+                        END DO
                      END DO
                   END DO
-               END DO
+                  CLOSE(nfile)
+               END IF
+
             END IF
 #ifdef CPP_MPI
    CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
          END DO
+         CALL timestop("output")
 
 
          IF (xsf.AND.(fmpi%irank.EQ.0)) THEN
