@@ -5,6 +5,7 @@ types/types_cdnval.f90
 types/types_coul.F90
 types/types_denCoeffsOffdiag.f90
 types/types_dos.f90
+types/types_eigvec.F90
 types/types_enpara.F90
 types/types.F90
 types/types_fft.F90

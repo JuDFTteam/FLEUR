@@ -65,14 +65,14 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       type(t_k_package), intent(in)     :: k_pack
-      TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
-      TYPE(t_mpi), INTENT(IN)    :: fmpi
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_lapw), INTENT(IN)    :: lapw
-      type(t_stars), intent(in)   :: stars
-      TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      TYPE(t_results), INTENT(INOUT) :: results
+      TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      TYPE(t_lapw), INTENT(IN)          :: lapw
+      type(t_stars), intent(in)         :: stars
+      TYPE(t_mpdata), intent(inout)     :: mpdata
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+      TYPE(t_results), INTENT(INOUT)    :: results
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
@@ -84,14 +84,13 @@ CONTAINS
       INTEGER                 ::  l, itype
       INTEGER                 ::  iband, nk
       INTEGER                 ::  ikpt, ikpt0
-      INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
       INTEGER                 ::  ncstd
       INTEGER                 ::  ok
       REAL                    ::  a_ex
 
       ! local arrays
-      INTEGER                 ::  nsest(hybdat%nbands(k_pack%nk )), indx_sest(hybdat%nbands(k_pack%nk ), hybdat%nbands(k_pack%nk ))
+      INTEGER                 ::  nsest(hybdat%nbands(k_pack%nk ,jsp)), indx_sest(hybdat%nbands(k_pack%nk ,jsp), hybdat%nbands(k_pack%nk ,jsp))
       INTEGER                 ::  rrot(3, 3, fi%sym%nsym), ierr
       INTEGER                 ::  psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
 
@@ -99,9 +98,9 @@ CONTAINS
       INTEGER, ALLOCATABLE    :: n_q(:)
       complex, allocatable    :: cmt_nk(:,:,:) 
 
-      complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ))
+      complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ,jsp))
       REAL                     :: wl_iks(fi%input%neig, fi%kpts%nkptf)
-      TYPE(t_mat)              :: ex, z_k
+      TYPE(t_mat)              :: ex
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -116,25 +115,16 @@ CONTAINS
       IF(ok /= 0) call judft_error('mhsfock: failure allocation parent')
       parent = 0
 
-      nbasfcn = lapw%hyb_num_bas_fun(fi)
-      call z_k%init(fi%sym%invs, nbasfcn, hybdat%nbands(nk))
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z_k, &
-                   c_phase=c_phase_k)  
-#ifdef CPP_MPI
-      ! call timestart("Post read_z Barrier: hsfock")
-      ! call MPI_Barrier(MPI_COMM_WORLD, ok)
-      ! call timestop("Post read_z Barrier: hsfock")
-#endif  
-      allocate(cmt_nk(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
+      allocate(cmt_nk(hybdat%nbands(nk,jsp), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
       if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                   fi%sym, fi%oneD, z_k, jsp, nk, c_phase_k, cmt_nk)
+                   fi%sym, fi%oneD, hybdat%zmat(nk,jsp)%mat, jsp, nk, c_phase_k, cmt_nk)
 
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, cmt_nk,&
-                   rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
+      CALL symm_hf(fi, nk, hybdat, results, k_pack%submpi, eig_irr, mpdata, cmt_nk,&
+                   rrot, nsymop, psym, n_q, parent, nsest, indx_sest, jsp)
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf
@@ -147,7 +137,7 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       ex%l_real = fi%sym%invs
-      CALL exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
 
       if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
@@ -168,7 +158,7 @@ CONTAINS
 
       CALL timestop("core exchange calculation")
       if(k_pack%submpi%root()) then
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z_k, ex, hybdat%v_x(nk, jsp))
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
 

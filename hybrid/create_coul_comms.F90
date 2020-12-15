@@ -16,18 +16,20 @@ contains
 
 #ifdef CPP_MPI
       do ik = 1,fi%kpts%nkpt 
-         i_am_root = (fmpi%n_rank == 0) .and. any(ik == fmpi%k_list)
+         if(hybdat%coul(ik)%comm == MPI_COMM_NULL) then
+            i_am_root = (fmpi%n_rank == 0) .and. any(ik == fmpi%k_list)
 
-         if(hybdat%coul(ik)%l_participate) then
-            color = 1
-         else
-            color = 2
+            if(hybdat%coul(ik)%l_participate) then
+               color = 1
+            else
+               color = 2
+            endif
+
+            ! put the root rank on 0, others don't care
+            key = merge(0, fmpi%irank+1, i_am_root)
+
+            call judft_comm_split(MPI_COMM_WORLD, color, key, hybdat%coul(ik)%comm)
          endif
-
-         ! put the root rank on 0, others don't care
-         key = merge(0, fmpi%irank+1, i_am_root)
-
-         call judft_comm_split(MPI_COMM_WORLD, color, key, hybdat%coul(ik)%comm)
       enddo
 #endif
    end subroutine

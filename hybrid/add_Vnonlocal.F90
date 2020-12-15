@@ -100,7 +100,7 @@ CONTAINS
       endif
       call timestop("apply v_x")
 
-      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk))
+      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk, jsp))
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z)
 
 #ifdef CPP_MPI
@@ -122,7 +122,7 @@ CONTAINS
       endif
 
       ! WRITE (oUnit, '(A)') "          K-points,   iband,    exch - div (eV), div (eV),  exch (eV)"
-      DO iband = 1, hybdat%nbands(nk)
+      DO iband = 1, hybdat%nbands(nk, jsp)
          IF (z%l_real) THEN
             exch(iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
          ELSE

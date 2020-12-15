@@ -41,7 +41,7 @@ CONTAINS
       g_t = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       ikqpt = fi%kpts%get_nk(kqpt)
-      allocate (c_phase_kqpt(hybdat%nbands(ikqpt)))
+      allocate (c_phase_kqpt(hybdat%nbands(ikqpt,jsp)))
       call cprod_tmp%init(cprod)
 
       IF (.not. fi%kpts%is_kpt(kqpt)) then
@@ -83,7 +83,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  ikqpt
 
 !     - arrays -
-      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2, iob, iband, ok
@@ -104,7 +104,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::  z0(:, :), ctmp(:, :, :), carr(:,:)
 
       call timestart("wavefproducts_noinv5 IR")
-      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      allocate(carr(bandoi:bandof, hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
       !
       ! compute G's fulfilling |bk(:,ikqpt) + G| <= rkmax
@@ -155,7 +155,7 @@ CONTAINS
       call timestop("step function")
 
       call timestart("hybrid g")
-      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik), mpdata%n_g(iq)), source=(0.0, 0.0))
+      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik,jsp), mpdata%n_g(iq)), source=(0.0, 0.0))
       if (z_k%l_real) then
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
@@ -168,7 +168,7 @@ CONTAINS
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-               DO n1 = 1, hybdat%nbands(ik)
+               DO n1 = 1, hybdat%nbands(ik,jsp)
                   DO n2 = bandoi,bandof
                      ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + z_k%data_r(ig1, n1)*z0(n2, ig2)
                   END DO
@@ -189,7 +189,7 @@ CONTAINS
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-               DO n1 = 1, hybdat%nbands(ik)
+               DO n1 = 1, hybdat%nbands(ik,jsp)
                   DO n2 = bandoi,bandof
                      ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + conjg(z_k%data_c(ig1, n1))*z0(n2, ig2)
                   END DO
@@ -204,7 +204,7 @@ CONTAINS
          ic = hybdat%nbasp + igptm
          do iob = 1,psize 
             b_idx = iob - 1 + bandoi
-            do iband = 1, hybdat%nbands(ik)
+            do iband = 1, hybdat%nbands(ik,jsp)
                cprod%data_c(ic, iob + (iband-1)*psize) = ctmp(b_idx, iband, igptm)
             enddo 
          enddo
@@ -239,7 +239,7 @@ CONTAINS
       INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
-      complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
       complex, intent(in)    :: cmt_nk(:,:,:)
 
@@ -288,7 +288,7 @@ CONTAINS
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
             !$OMP shared(iatm, psize, atom_phase, ik)
-            do k = 1, hybdat%nbands(ik)
+            do k = 1, hybdat%nbands(ik,jsp)
                do j = bandoi, bandof 
                   DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                      call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)

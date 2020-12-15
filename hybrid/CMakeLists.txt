@@ -8,6 +8,7 @@ hybrid/checkolap.F90
 hybrid/coulombmatrix.F90
 hybrid/create_coul_comms.F90
 hybrid/distribute_mpi.F90
+hybrid/eigvec_setup.F90 
 hybrid/exchange_core.F90
 hybrid/exchange_val_hf.F90
 hybrid/exponential_integral.f90

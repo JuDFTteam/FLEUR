@@ -376,12 +376,10 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    WRITE(*,*) 'RDMFT: HF initializations start'
 
-   IF(ALLOCATED(hybdat%ne_eig)) DEALLOCATE(hybdat%ne_eig)
    IF(ALLOCATED(hybdat%nbands)) DEALLOCATE(hybdat%nbands)
    IF(ALLOCATED(hybdat%nobd)) DEALLOCATE(hybdat%nobd)
    IF(ALLOCATED(hybdat%nbasm)) DEALLOCATE(hybdat%nbasm)
    IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
-   ALLOCATE(hybdat%ne_eig(fi%kpts%nkpt),hybdat%nbands(fi%kpts%nkpt),hybdat%nobd(fi%kpts%nkptf,fi%input%jspins))
    ALLOCATE(hybdat%nbasm(fi%kpts%nkptf))
    ALLOCATE(hybdat%div_vv(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
 
@@ -547,17 +545,17 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
             if(ikpt /= fi%kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
             call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, ikpt, jsp, zMat, c_phase=c_phase)
-            allocate(cmt_nk(hybdat%nbands(ikpt), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
+            allocate(cmt_nk(hybdat%nbands(ikpt,jsp), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
             if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
             call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                         fi%sym, fi%oneD, zMat, jsp, ikpt, c_phase, cmt_nk)
 
-            ALLOCATE (indx_sest(hybdat%nbands(ikpt), hybdat%nbands(ikpt)))
+            ALLOCATE (indx_sest(hybdat%nbands(ikpt,jsp), hybdat%nbands(ikpt,jsp)))
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
-                         rrot,nsymop,psym,n_q,parent,nsest,indx_sest)
+            call symm_hf(fi,ikpt,hybdat,results,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
+                         rrot,nsymop,psym,n_q,parent,nsest,indx_sest, jsp)
 
             exMat%l_real=fi%sym%invs
             CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,fmpi,zMat, mpdata,jspin,hybdat,lapw,&
@@ -575,14 +573,14 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
             CALL read_eig(hybdat%eig_id,ikpt,jspin, smat=olap)
 
-            zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
+            zMat%matsize2 = hybdat%nbands(ikpt,jsp) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)
 
-            CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
+            CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt,jsp),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
 
-            DO iBand = 1, hybdat%nbands(ikpt)
+            DO iBand = 1, hybdat%nbands(ikpt,jsp)
                DO jBand = 1, iBand-1
                   IF (exMat%l_real) THEN
                      exMat%data_r(iBand,jBand)=exMat%data_r(jBand,iBand)

@@ -28,7 +28,6 @@ MODULE m_types_fftGrid
    PUBLIC :: t_fftGrid
 
 CONTAINS
-
    SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
       USE m_constants
       USE m_boxdim
@@ -49,63 +48,16 @@ CONTAINS
       REAL    :: gCutoffSquared, gSquared
       REAL    :: arltv(3), g(3)
 
-      CALL boxdim(cell%bmat, arltv(1), arltv(2), arltv(3))
+      this%extend     = calc_extend(cell, sym, gCutoff)
+      this%dimensions = 2*this%extend + 1
 
-      tempDim(:) = INT(gCutoff/arltv(:)) + 1
-
-      DO i = 1, sym%nop
-         inv_du(i) = i ! dummy array for spgrot
-      END DO
-
-      ALLOCATE (ig(-tempDim(1):tempDim(1), &
-                   -tempDim(2):tempDim(2), &
-                   -tempDim(3):tempDim(3)), source=0)
-
-      mxx(:) = 0
-      gCutoffSquared = gCutoff*gCutoff
-      DO k1 = tempDim(1), -tempDim(1), -1
-         kVec(1) = k1
-         DO k2 = tempDim(2), -tempDim(2), -1
-            kVec(2) = k2
-            DO k3 = tempDim(3), -tempDim(3), -1
-               IF (ig(k1, k2, k3) .NE. 0) CYCLE
-
-               kVec(3) = k3
-
-               DO i = 1, 3
-                  g(i) = DOT_PRODUCT(cell%bmat(:, i), kVec(:))  ! loop to be replaced by MATMUL call later.
-               END DO
-
-               gSquared = g(1)**2 + g(2)**2 + g(3)**2
-
-               IF (gSquared .LE. gCutoffSquared) THEN
-                  CALL spgrot(sym%nop, .true., sym%mrot, sym%tau, inv_du, kVec, kRot)
-                  DO i = 1, sym%nop
-                     IF (mxx(1) .lt. kRot(1, i)) mxx(1) = kRot(1, i)
-                     IF (mxx(2) .lt. kRot(2, i)) mxx(2) = kRot(2, i)
-                     IF (mxx(3) .lt. kRot(3, i)) mxx(3) = kRot(3, i)
-                     ig(kRot(1, i), kRot(2, i), kRot(3, i)) = 1
-                  END DO
-               END IF
-            END DO
-         END DO
-      END DO
-
-      this%extend(1) = mxx(1)
-      this%extend(2) = mxx(2)
-      this%extend(3) = mxx(3)
-
-      this%dimensions(:) = 2*this%extend(:) + 1
-
-      this%dimensions(1) = next_optimal_fft_size(this%dimensions(1))
-      this%dimensions(2) = next_optimal_fft_size(this%dimensions(2))
-      this%dimensions(3) = next_optimal_fft_size(this%dimensions(3))
-      this%gridLength = this%dimensions(1)*this%dimensions(2)*this%dimensions(3)
-
+      do i = 1,3
+         this%dimensions(i) = next_optimal_fft_size(this%dimensions(i))
+      enddo
+      this%gridLength = product(this%dimensions)
+   
       IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)
-
       ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
-
    END SUBROUTINE t_fftGrid_init
 
    SUBROUTINE putFieldOnGrid(this, stars, field, gCutoff)
@@ -278,5 +230,86 @@ CONTAINS
 
       if(allocated(fftGrid%grid)) deallocate(fftGrid%grid)
    end subroutine t_fftGrid_free
+
+   function calc_extend(cell, sym, gCutoff) result(mxx)
+      USE m_constants
+      USE m_boxdim
+      USE m_spgrot
+      USE m_ifft
+      USE m_types_cell
+      USE m_types_sym
+      IMPLICIT NONE
+      
+      TYPE(t_cell), INTENT(IN)  :: cell
+      TYPE(t_sym), INTENT(IN)   :: sym
+      REAL, INTENT(IN)          :: gCutoff
+
+      INTEGER, ALLOCATABLE :: ig(:, :, :)
+
+      INTEGER :: k1, k2, k3, i, j
+      INTEGER :: mxx(3), kVec(3), kRot(3, sym%nop), inv_du(sym%nop), tempDim(3)
+      REAL    :: gCutoffSquared, gSquared
+      REAL    :: arltv(3), g(3)
+
+      CALL boxdim(cell%bmat, arltv(1), arltv(2), arltv(3))
+
+      tempDim(:) = INT(gCutoff/arltv(:)) + 1
+
+      DO i = 1, sym%nop
+         inv_du(i) = i ! dummy array for spgrot
+      END DO
+
+      ALLOCATE (ig(-tempDim(1):tempDim(1), &
+                   -tempDim(2):tempDim(2), &
+                   -tempDim(3):tempDim(3)), source=0)
+
+      mxx(:) = 0
+      gCutoffSquared = gCutoff*gCutoff
+      DO k1 = tempDim(1), -tempDim(1), -1
+         kVec(1) = k1
+         DO k2 = tempDim(2), -tempDim(2), -1
+            kVec(2) = k2
+            DO k3 = tempDim(3), -tempDim(3), -1
+               IF (ig(k1, k2, k3) .NE. 0) CYCLE
+
+               kVec(3) = k3
+
+               DO i = 1, 3
+                  g(i) = DOT_PRODUCT(cell%bmat(:, i), kVec(:))  ! loop to be replaced by MATMUL call later.
+               END DO
+
+               gSquared = g(1)**2 + g(2)**2 + g(3)**2
+
+               IF (gSquared .LE. gCutoffSquared) THEN
+                  CALL spgrot(sym%nop, .true., sym%mrot, sym%tau, inv_du, kVec, kRot)
+                  DO i = 1, sym%nop
+                     do j = 1,3 
+                        mxx(j) = max(mxx(j), kRot(j,i))
+                     enddo
+                     ig(kRot(1, i), kRot(2, i), kRot(3, i)) = 1
+                  END DO
+               END IF
+            END DO
+         END DO
+      END DO
+   END function calc_extend
+
+   function calc_fft_dim(cell, sym, gCutoff) result(dims)
+      USE m_ifft
+      USE m_types_cell
+      USE m_types_sym
+      implicit none
+      TYPE(t_cell), INTENT(IN)  :: cell
+      TYPE(t_sym), INTENT(IN)   :: sym
+      REAL, INTENT(IN)          :: gCutoff 
+      integer :: dims(3)
+      integer :: i
+
+      dims = 2* calc_extend(cell, sym, gCutoff) + 1
+
+      do i = 1,3
+         dims(i) = next_optimal_fft_size(dims(i))
+      enddo
+   end function calc_fft_dim
 
 END MODULE m_types_fftGrid
