@@ -114,6 +114,7 @@ CONTAINS
 
     !locals
     INTEGER:: n
+    CHARACTER(LEN=12):: attributes(2)
 
     IF (.NOT.lastiter) THEN
        jij_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
@@ -146,8 +147,10 @@ CONTAINS
     ENDDO
 
     IF (.NOT.this%l_io) RETURN
-    IF (this%loopindex.NE.1) CALL closeXMLElement('Forcetheorem_Loop_JIJ')
-    CALL openXMLElementPoly('Forcetheorem_Loop_JIJ',(/'Loop index:'/),(/this%loopindex/))
+    IF (this%loopindex.NE.1) CALL closeXMLElement('Forcetheorem_Loop')
+    WRITE(attributes(1),'(a)') 'JIJ'
+    WRITE(attributes(2),'(i5)') this%loopindex
+    CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
   END FUNCTION jij_next_job
 
   SUBROUTINE jij_postprocess(this)
@@ -164,8 +167,11 @@ CONTAINS
     IF (.NOT.this%l_io) RETURN
 
     !Now output the results
-    call closeXMLElement('Forcetheorem_Loop_JIJ')
-    CALL openXMLElementPoly('Forcetheorem_JIJ',(/'Configs'/),(/this%no_loops/))
+    call closeXMLElement('Forcetheorem_Loop')
+    attributes = ''
+    WRITE(attributes(1),'(i5)') this%no_loops
+    WRITE(attributes(2),'(a)') 'Htr'
+    CALL openXMLElement('Forcetheorem_JIJ',(/'Configs','units  '/),attributes(:2))
     DO n=1,this%no_loops
        WRITE(attributes(1),'(i5)') n
        WRITE(attributes(2),'(3(f5.3,1x))') this%qvec(:,this%q_index(n))

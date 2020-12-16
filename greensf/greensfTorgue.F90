@@ -238,7 +238,7 @@ MODULE m_greensfTorgue
             WRITE(attributes(3),'(f14.8)') torgue(2,atomType) * hartree_to_ev_const * 1000
             WRITE(attributes(4),'(f14.8)') torgue(3,atomType) * hartree_to_ev_const * 1000
             WRITE(attributes(5),'(a3)') 'meV'
-            CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
+            CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','units   '],&
                                      attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
          ENDDO
          CALL closeXMLElement('noncollinearTorgue')
@@ -496,7 +496,7 @@ MODULE m_greensfTorgue
             WRITE(attributes(3),'(f14.8)') torgue(2,atomType) * hartree_to_ev_const * 1000
             WRITE(attributes(4),'(f14.8)') torgue(3,atomType) * hartree_to_ev_const * 1000
             WRITE(attributes(5),'(a3)') 'meV'
-            CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','unit    '],&
+            CALL writeXMLElementForm('torgue',['atomType','sigma_x ','sigma_y ','sigma_z ','units   '],&
                                      attributes,reshape([8,7,7,7,4,6,14,14,14,3],[5,2]))
          ENDDO
          CALL closeXMLElement('spinorbitTorgue')

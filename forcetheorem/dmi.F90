@@ -81,6 +81,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN) :: noco
     TYPE(t_nococonv),INTENT(INOUT) :: nococonv
     INTEGER                 :: itype
+    CHARACTER(LEN=12):: attributes(2)
     IF (.NOT.lastiter) THEN
        dmi_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
        RETURN
@@ -99,8 +100,10 @@ CONTAINS
     END DO
     IF (.NOT.this%l_io) RETURN
 
-    IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_DMI')
-    CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec'/),(/this%q_done/))
+    IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop')
+    WRITE(attributes(1),'(a)') 'DMI'
+    WRITE(attributes(2),'(i5)') this%q_done
+    CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
   END FUNCTION dmi_next_job
 
   SUBROUTINE dmi_postprocess(this)
@@ -110,29 +113,33 @@ CONTAINS
 
     !Locals
     INTEGER:: n,q,i
-    CHARACTER(LEN=12):: attributes(4)
+    CHARACTER(LEN=12):: attributes(5)
     CHARACTER(LEN=16) :: atom_name
     IF (this%q_done==0) RETURN
     IF (this%l_io) THEN
        !Now output the results
-       CALL closeXMLElement('Forcetheorem_Loop_DMI')
-       CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,1)/))
+       CALL closeXMLElement('Forcetheorem_Loop')
+       attributes = ''
+       WRITE(attributes(1),'(i5)') SIZE(this%evsum,2)
+       WRITE(attributes(2),'(i5)') SIZE(this%evsum,1)
+       WRITE(attributes(3),'(a)') 'Htr'
+       CALL openXMLElement('Forcetheorem_DMI',(/'qPoints','Angles ','units  '/),attributes(:3))
        DO q=1,SIZE(this%evsum,2)
-          WRITE(attributes(1),'(i5)') q
-          WRITE(attributes(2),'(f12.7)') this%evsum(0,q)
-          CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(1:2),&
-               RESHAPE((/1,6,5,12/),(/2,2/)))
+          WRITE(attributes(2),'(i5)') q
+          WRITE(attributes(3),'(f12.7)') this%evsum(0,q)
+          CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(2:3),&
+                                   RESHAPE((/1,6,5,12/),(/2,2/)))
           DO n=1,SIZE(this%evsum,1)-1
-             WRITE(attributes(2),'(f12.7)') this%theta(n)
-             WRITE(attributes(3),'(f12.7)') this%phi(n)
-             WRITE(attributes(4),'(f12.7)') this%evsum(n,q)
-             CALL writeXMLElementForm('Entry',(/'q     ','theta ','phi   ','ev-sum'/),attributes,RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
-             write(attributes(4),'(f12.7)') this%h_so(0,n,q)
-             CALL writeXMLElementForm('All atoms',(/'q     ','theta ','phi   ','<H_so>'/),attributes,RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
+             WRITE(attributes(3),'(f12.7)') this%theta(n)
+             WRITE(attributes(4),'(f12.7)') this%phi(n)
+             WRITE(attributes(5),'(f12.7)') this%evsum(n,q)
+             CALL writeXMLElementForm('Entry',(/'q     ','theta ','phi   ','ev-sum'/),attributes(2:),RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
+             write(attributes(5),'(f12.7)') this%h_so(0,n,q)
+             CALL writeXMLElementForm('allAtoms',(/'q     ','theta ','phi   ','H_so  '/),attributes(2:),RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
              DO i=1,size(this%h_so,1)-1
-               write(attributes(4),'(f12.7)') this%h_so(i,n,q)
-               write(atom_name,'(a,i0)') "Atom type:",i
-               CALL writeXMLElementForm(atom_name,(/'q     ','theta ','phi   ','<H_so>'/),attributes,RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
+               write(attributes(5),'(f12.7)') this%h_so(i,n,q)
+               write(attributes(1),'(i0)') i
+               CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','theta   ','phi     ','H_so    '/),attributes,RESHAPE((/8,1,5,3,6,5,5,12,12,12/),(/5,2/)))
              ENDDO
           END DO
        ENDDO

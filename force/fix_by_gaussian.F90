@@ -69,7 +69,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,fmpi%isize==1,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
+      CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
    END SUBROUTINE fix_by_gaussian
 
    FUNCTION gaussian_r(r,alpha)   

@@ -66,6 +66,11 @@ CONTAINS
         INTEGER(c_int) ::dropInputSchema
         CHARACTER(kind=c_char) ::version
       END FUNCTION dropInputSchema
+      FUNCTION dropOutputSchema(version) BIND(C, name="dropOutputSchema")
+        USE iso_c_binding
+        INTEGER(c_int) ::dropInputSchema
+        CHARACTER(kind=c_char) ::version
+      END FUNCTION dropOutputSchema
     END INTERFACE
         !Now validate with schema
     errorStatus = 0
@@ -73,6 +78,13 @@ CONTAINS
 
     IF(errorStatus.NE.0) THEN
        CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd for version '//version)
+    END IF
+
+    errorStatus = 0
+    errorStatus=dropOutputSchema(version//C_NULL_CHAR)
+
+    IF(errorStatus.NE.0) THEN
+       WRITE(*,*) 'Cannot print out FleurOutputSchema.xsd for version '//version
     END IF
 
     schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
