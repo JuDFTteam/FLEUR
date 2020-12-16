@@ -46,7 +46,7 @@ CONTAINS
       real_warned = .False.
 
       call timestart("wavef_IS_FFT")
-      gcutoff = 2*fi%input%rkmax + fi%mpinp%g_cutoff * fi%hybinp%fftcut
+      gcutoff = (2*fi%input%rkmax + fi%mpinp%g_cutoff) * fi%hybinp%fftcut
       inv_vol = 1/sqrt(fi%cell%omtil)
       psize = bandof - bandoi + 1
       !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
