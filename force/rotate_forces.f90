@@ -25,13 +25,9 @@ CONTAINS
       REAL, INTENT (IN) :: force(3,ntypd)
 
       INTEGER :: iatom,iatom0,itype,ieq,ratom,isym,sym,i
-      REAL :: hartreetoev,autoangstrom
 
       REAL :: pos(3,natd),rtaual(3),forcerot(3,3),forceval(3,natd)
       CHARACTER(len=20) :: string
-
-      hartreetoev = 27.211386245988
-      autoangstrom = 0.529177210903
 
       OPEN (79,file='FORCES')
       OPEN (80,file='POSCAR')
@@ -39,10 +35,10 @@ CONTAINS
       WRITE (79,'(i1)') 1
       WRITE (79,'(i1,1x,a)') 1,'#insert displacement here (also, edit number of displacement/total displacements'
       WRITE (80,'(a)') "#insert lattice name"
-      WRITE (80,'(f20.10)') -omtil*autoangstrom**3
-      WRITE (80,FMT=800) amat(1,1:3)*autoangstrom
-      WRITE (80,FMT=800) amat(2,1:3)*autoangstrom
-      WRITE (80,FMT=800) amat(3,1:3)*autoangstrom
+      WRITE (80,'(f20.10)') -omtil*bohr_to_angstrom_const**3
+      WRITE (80,FMT=800) amat(1,1:3)*bohr_to_angstrom_const
+      WRITE (80,FMT=800) amat(2,1:3)*bohr_to_angstrom_const
+      WRITE (80,FMT=800) amat(3,1:3)*bohr_to_angstrom_const
       WRITE (string,'(i3)') ntype
       WRITE (80,'('//string//'(i2,1x))') (neq(itype),itype=1,ntype)
       WRITE (80,'(a)') 'Direct'
@@ -73,7 +69,7 @@ CONTAINS
             forcerot = matmul(amat,matmul(mrot(:,:,sym),bmat/tpi_const))
             forceval(:,iatom) = matmul(forcerot,force(:,itype))
 
-            WRITE (79,FMT=790) forceval(1:3,iatom)*hartreetoev/autoangstrom
+            WRITE (79,FMT=790) forceval(1:3,iatom)*hartree_to_ev_const/bohr_to_angstrom_const
             WRITE (80,FMT=800) taual(1:3,iatom)
 
          END DO
