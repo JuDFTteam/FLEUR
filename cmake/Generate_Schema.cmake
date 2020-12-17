@@ -19,4 +19,9 @@ else()
         COMMAND cp ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h.backup ${CMAKE_BINARY_DIR}/include/inputSchema.h
         COMMENT "No xxd found using backup")
   message("No xxd command found! Using backup of inputSchema.h")
+  ADD_CUSTOM_COMMAND(
+        OUTPUT ${CMAKE_BINARY_DIR}/include/outputSchema.h
+        COMMAND cp ${CMAKE_SOURCE_DIR}/io/xml/outputSchema.h.backup ${CMAKE_BINARY_DIR}/include/outputSchema.h
+        COMMENT "No xxd found using backup")
+  message("No xxd command found! Using backup of outputSchema.h")
 endif()     
