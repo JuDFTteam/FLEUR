@@ -8,7 +8,7 @@ MODULE m_rotMMPmat
    PUBLIC :: rotMMPmat
 
    INTERFACE rotMMPmat
-      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle
+      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_angle_completeMatrix
    END INTERFACE
 
    CONTAINS
@@ -39,13 +39,17 @@ MODULE m_rotMMPmat
          ENDDO
       ENDIF
 
-      IF(SIZE(mmpmat,3)==3 .AND. PRESENT(su)) THEN
+      IF(SIZE(mmpmat,3)>=3 .AND. PRESENT(su)) THEN
          DO m = -lmaxU_const, lmaxU_const
             DO mp = -lmaxU_const, lmaxU_const
                d(1,1) = mmpmatOut(m,mp,1)
                d(2,2) = mmpmatOut(m,mp,2)
                d(2,1) = mmpmatOut(m,mp,3)
-               d(1,2) = conjg(mmpmatOut(mp,m,3))
+               IF(SIZE(mmpmat,3)==3) THEN
+                  d(1,2) = conjg(mmpmatOut(mp,m,3))
+               ELSE
+                  d(1,2) = mmpmatOut(m,mp,4)
+               ENDIF
 
                d = matmul(su,d)
                d = matmul(d,conjg(transpose(su)))
@@ -53,6 +57,9 @@ MODULE m_rotMMPmat
                mmpmatOut(m,mp,1) = d(1,1)
                mmpmatOut(m,mp,2) = d(2,2)
                mmpmatOut(m,mp,3) = d(2,1)
+               IF(SIZE(mmpmat,3)==4) THEN
+                  mmpmatOut(mp,m,4) = d(1,2)
+               ENDIF
             ENDDO
          ENDDO
       ENDIF
@@ -134,9 +141,38 @@ MODULE m_rotMMPmat
       su(1,2) = eia*si_bh
       su(2,2) = eia*co_bh
 
-      mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su)
+      mmpmatOut = rotMMPmat_dwgn(mmpmat,d)
 
    END FUNCTION rotMMPmat_angle
+
+   PURE FUNCTION rotMMPmat_angle_completeMatrix(mmpmat,alpha,beta,gamma,l) Result(mmpmatOut)
+
+      COMPLEX,    INTENT(IN)  :: mmpmat(:,:)
+      REAL,       INTENT(IN)  :: alpha,beta,gamma !Euler angles
+      INTEGER,    INTENT(IN)  :: l
+
+      COMPLEX, ALLOCATABLE :: mmpmatOut(:,:), mmpmatOutsplit(:,:,:)
+      COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,4)
+
+      IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
+      IF(.NOT.ALLOCATED(mmpmatOutsplit)) ALLOCATE(mmpmatOutsplit,mold=mmpmatsplit)
+      mmpmatOut = mmpmat
+
+      !Split up the matrix
+      mmpmatsplit(-l:l,-l:l,1) = mmpmat(:2*l+1,:2*l+1)
+      mmpmatsplit(-l:l,-l:l,2) = mmpmat(2*l+2:,2*l+2:)
+      mmpmatsplit(-l:l,-l:l,3) = mmpmat(2*l+2:,:2*l+1)
+      mmpmatsplit(-l:l,-l:l,4) = mmpmat(:2*l+1,2*l+2:)
+
+      mmpmatOutsplit = rotMMPmat_angle(mmpmatsplit,alpha,beta,gamma,l)
+
+      mmpmatOut(:2*l+1,:2*l+1) = mmpmatOutsplit(-l:l,-l:l,1)
+      mmpmatOut(2*l+2:,2*l+2:) = mmpmatOutsplit(-l:l,-l:l,2)
+      mmpmatOut(2*l+2:,:2*l+1) = mmpmatOutsplit(-l:l,-l:l,3)
+      mmpmatOut(:2*l+1,2*l+2:) = mmpmatOutsplit(-l:l,-l:l,4)
+
+   END FUNCTION rotMMPmat_angle_completeMatrix
+
 
    ELEMENTAL REAL FUNCTION  fac(n)
 

@@ -49,10 +49,9 @@ MODULE m_vmt_xc
          TYPE(t_kinED),INTENT(IN)       :: kinED
          !     ..
          !     .. Local Scalars ..
-         TYPE(t_gradients)     :: grad, tmp_grad
+         TYPE(t_gradients)     :: grad
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
-         TYPE(t_sphhar)        :: tmp_sphhar
          REAL, ALLOCATABLE     :: ch(:,:),v_x(:,:),v_xc(:,:),e_xc(:,:)
          INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
@@ -145,6 +144,7 @@ MODULE m_vmt_xc
 
             !Add postprocessing for libxc
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num=n)
+            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_x,grad, atom_num=n)
 
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
@@ -191,6 +191,7 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
          !
          RETURN

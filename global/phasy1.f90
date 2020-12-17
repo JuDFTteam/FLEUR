@@ -95,6 +95,7 @@ CONTAINS
 !     .. Local Arrays ..
       COMPLEX ciall(0:atoms%lmaxd)
       COMPLEX phas(sym%nop)
+      REAL phasr(sym%nop)
       REAL rg(3,sym%nop)
       INTEGER kr(3,sym%nop)
       COMPLEX, ALLOCATABLE :: ylm(:,:)
@@ -104,7 +105,8 @@ CONTAINS
          ciall(l) = ciall(0)*ImagUnit**l
       ENDDO
 
-      CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3,kr,phas)
+      CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
+      phasr=REAL(phas)
 
       ALLOCATE ( ylm( (atoms%lmaxd+1)**2, sym%nop ) )
       ylm = cmplx(0.,0.)
@@ -118,7 +120,7 @@ CONTAINS
       DO j = 1, sym%nop
         x = tpi_const* dot_product(real(kr(:,j)),atoms%taual(:,na))
         DO dir = 1,3
-          sf = cmplx(cos(x),sin(x))*phas(j)*ImagUnit*rg(dir,j)
+          sf = cmplx(cos(x),sin(x))*phasr(j)*ImagUnit*rg(dir,j)
           DO l = 0,atoms%lmax(n)
             ll1 = l*(l+1) + 1
             csf = ciall(l)*sf

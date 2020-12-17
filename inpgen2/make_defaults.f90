@@ -56,19 +56,7 @@ CONTAINS
     ENDDO
     IF (input%jspins==0) input%jspins=1
 
-    IF (ANY(atoms%nlo(:) .NE. 0)) THEN
-       input%ellow = -1.8
-    ELSE
-       input%ellow = -0.8
-    ENDIF
-    IF (input%film) THEN
-       input%elup = 0.5
-    ELSE
-       input%elup = 1.0
-    ENDIF
     IF (hybinp%l_hybrid) THEN
-       input%ellow = input%ellow - 2.0
-       input%elup = input%elup + 10.0
        input%minDistance = 1.0e-5
        input%ctail = .FALSE.
     END IF

@@ -145,7 +145,7 @@ CONTAINS
     allocate(this%alpha(size(this%dos_atom)));this%alpha=0.0
     allocate(this%beta(size(this%dos_atom)));this%beta=0.0
     allocate(this%gamma(size(this%dos_atom)));this%gamma=0.0
-    allocate(neq(xml%get_ntype()))
+    allocate(neq(xml%get_ntype()), source=0)
 
     this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
     na = 0
@@ -170,9 +170,9 @@ CONTAINS
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@alpha')==1) &
           this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@beta')==1) &
-          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
+          this%beta(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@gamma')==1) &
-          this%alpha(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
+          this%gamma(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
         ENDDO
     ENDDO
     endif
@@ -210,8 +210,8 @@ CONTAINS
     END IF
 
     !Create a list of all atoms and all types for which the DOS is calculated
-    ALLOCATE(dos_atomlist(xml%get_nat()))
-    allocate(dos_typelist(xml%get_ntype()))
+    ALLOCATE(dos_atomlist(xml%get_nat()),source=0)
+    allocate(dos_typelist(xml%get_ntype()),source=0)
 
     na=0
     n_dos_atom=0

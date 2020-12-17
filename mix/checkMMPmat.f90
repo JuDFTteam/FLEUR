@@ -15,32 +15,28 @@ MODULE m_checkMMPmat
       INTEGER,             INTENT(IN)  :: indStart, indEnd
       TYPE(t_atoms),       INTENT(IN)  :: atoms
       TYPE(t_input),       INTENT(IN)  :: input
-      COMPLEX,             INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:,:)
-
-      !which elements are considered to cause an error
-      REAL, PARAMETER :: lowBound = -0.01
-      REAL, PARAMETER :: highBound = 1.05 !Attention keep in mind jspins=1
+      COMPLEX,             INTENT(INOUT) :: mmpmat(-lmaxU_const:,-lmaxU_const:,:,:)
 
       LOGICAL l_err
       INTEGER i_u,l,ispin,m
-      REAL spindeg
+      REAL maxOcc
 
-      spindeg = 3-input%jspins
-      l_err = .FALSE.
+      maxOcc = 2.0/input%jspins
       DO i_u = indStart, indEnd
          l = atoms%lda_u(i_u)%l
          !Check the diagonal elements
          DO ispin = 1, input%jspins
             DO m = -l,l
-               IF(REAL(mmpmat(m,m,i_u,ispin)).LT.lowBound.OR. &
-                  REAL(mmpmat(m,m,i_u,ispin)).GT.highBound*spindeg) THEN
-                  l_err = .TRUE.
+               IF(REAL(mmpmat(m,m,i_u,ispin)).LT.0.0) THEN
+                  mmpmat(m,m,i_u,ispin) = 0.0
+               ELSE IF(REAL(mmpmat(m,m,i_u,ispin)).GT.maxOcc) THEN
+                  mmpmat(m,m,i_u,ispin) = maxOcc
                ENDIF
             ENDDO
          ENDDO
       ENDDO
 
-      IF(l_err) THEN
+      IF(.FALSE.) THEN
          WRITE(*,*) "-----------------------------------------------------------------"
          WRITE(*,*) "Using the Quasi-Newton methods for mixing and LDA+U"
          WRITE(*,*) "from the beginning of the SCF calculaion can be unstable."

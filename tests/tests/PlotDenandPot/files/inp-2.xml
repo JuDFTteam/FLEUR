@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.32">
+<fleurInput fleurInputVersion="0.33">
    <comment>
       bcc Fe
    </comment>
@@ -15,7 +15,6 @@
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
-      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
    </calculationSetup>
    <cell>
       <bzIntegration valenceElectrons="32.00000000" mode="hist" fermiSmearingEnergy=".00100000">

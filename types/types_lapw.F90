@@ -189,6 +189,7 @@ CONTAINS
       USE m_types_nococonv
       IMPLICIT NONE
 
+
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -214,6 +215,7 @@ CONTAINS
       REAL, ALLOCATABLE    :: rk(:), rkq(:), rkqq(:)
       INTEGER, ALLOCATABLE :: gvec(:, :), index3(:)
 
+      call timestart("t_lapw_init")
       !     ..
       !---> in a spin-spiral calculation different basis sets are used for
       !---> the two spin directions, because the cutoff radius is defined
@@ -377,6 +379,8 @@ CONTAINS
       IF (noco%l_noco) lapw%nv_tot = lapw%nv_tot + lapw%nv(2)
       IF (noco%l_noco) lapw%nmat = lapw%nv_tot + 2*atoms%nlotot
 
+
+      call timestop("t_lapw_init")
    CONTAINS
 
       SUBROUTINE priv_lo_basis_setup(lapw, atoms, sym, noco, nococonv, cell)

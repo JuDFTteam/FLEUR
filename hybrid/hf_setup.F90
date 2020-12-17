@@ -46,8 +46,12 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
+      INTEGER           :: degenerat(merge(fi%input%neig*2,fi%input%neig,fi%noco%l_soc) + 1, fi%kpts%nkpt)
 
+
+      call timestart("HF_setup")
+      call hybdat%set_nobd(fi, results)
+      call hybdat%set_nbands(fi, fmpi, results)
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
@@ -66,76 +70,9 @@ CONTAINS
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
-            hybdat%ne_eig(nk) = results%neig(nk, jsp)
          END DO
          call timestop("eig stuff")
 
-         !determine degenerate states at each k-point
-         !
-         ! degenerat(i) =1  band i  is not degenerat ,
-         ! degenerat(i) =j  band i  has j-1 degenart states ( i, i+1, ..., i+j)
-         ! degenerat(i) =0  band i  is  degenerat, but is not the lowest band
-         !                  of the group of degenerate states
-
-         call timestart("degenerate treatment")
-         IF (fmpi%irank == 0) THEN
-            WRITE (oUnit, *)
-            WRITE (oUnit, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
-         END IF
-         degenerat = 1
-         hybdat%nobd(:,jsp) = 0         
-         DO nk = 1, fi%kpts%nkpt
-            DO i = 1, hybdat%ne_eig(nk)
-               DO j = i + 1, hybdat%ne_eig(nk)
-                  IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
-                     degenerat(i, nk) = degenerat(i, nk) + 1
-                  END IF
-               END DO
-            END DO
-
-            DO i = 1, hybdat%ne_eig(nk)
-               IF ((degenerat(i, nk) /= 1) .OR. (degenerat(i, nk) /= 0)) degenerat(i + 1:i + degenerat(i, nk) - 1, nk) = 0
-            END DO
-
-            ! set the size of the exchange matrix in the space of the wavefunctions
-
-            hybdat%nbands(nk) = fi%hybinp%bands1
-            IF (hybdat%nbands(nk) > hybdat%ne_eig(nk)) THEN
-               IF (fmpi%irank == 0) THEN
-                  WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
-                  WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
-                  WRITE (*, *) ' set hybdat%nbands equal to hybdat%ne_eig'
-               END IF
-               hybdat%nbands(nk) = hybdat%ne_eig(nk)
-            END IF
-
-            DO i = hybdat%nbands(nk) - 1, 1, -1
-               IF ((degenerat(i, nk) >= 1) .AND. (degenerat(i, nk) + i - 1 /= hybdat%nbands(nk))) THEN
-                  hybdat%nbands(nk) = i + degenerat(i, nk) - 1
-                  EXIT
-               END IF
-            END DO
-
-            DO i = 1, hybdat%ne_eig(nk)
-               IF (results%w_iks(i, nk, jsp) > 0.0) hybdat%nobd(nk,jsp) = hybdat%nobd(nk,jsp) + 1
-            END DO
-
-            IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
-               WRITE (*, *) 'k-point: ', nk
-               WRITE (*, *) 'number of bands:          ', hybdat%nbands(nk)
-               WRITE (*, *) 'number of occupied bands: ', hybdat%nobd(nk,jsp)
-               CALL judft_warn("More occupied bands than total no of bands!?")
-               hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
-            END IF
-         END DO
-         call timestop("degenerate treatment")
-
-         ! spread hybdat%nobd from IBZ to whole BZ
-         DO nk = 1, fi%kpts%nkptf
-            i = fi%kpts%bkp(nk)
-            hybdat%nbands(nk) = hybdat%nbands(i)
-            hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
-         END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(fi%kpts, fi%sym, fi%atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), fi%cell,  &
@@ -144,13 +81,6 @@ CONTAINS
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(fi%atoms, jsp, fi%input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, fmpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
-
-         ! check olap between core-basis/core-valence/basis-basis
-         ! This routine actually does nothing.
-         ! CALL checkolap(fi%atoms, hybdat, mpdata, fi%hybinp, fi%kpts%nkpt, fi%kpts,  fmpi, &
-         !                fi%input, fi%sym, fi%noco, nococonv,fi%oneD,fi%cell, lapw, jsp)
-
-         ! set up pointer pntgpt
 
          ! setup dimension of pntgpt
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE(hybdat%pntgptd) ! for spinpolarized systems
@@ -228,18 +158,12 @@ CONTAINS
          CALL timestop("gen_bz and gen_wavf")
 
       ELSE IF (fi%hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
-
-         !DO nk = n_start,fi%kpts%nkpt,n_stride
-         DO nk = 1, fi%kpts%nkpt, 1
-            hybdat%ne_eig(nk) = results%neig(nk, jsp)
-            hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
-         END DO
-
          hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, fi%atoms%lmax(itype))]), itype=1, fi%atoms%ntype)])
          hybdat%nbands = MIN(fi%hybinp%bands1, fi%input%neig)
 
       ENDIF ! hybdat%l_calhf
 
+      call timestop("HF_setup")
    END SUBROUTINE hf_setup
 
 END MODULE m_hf_setup

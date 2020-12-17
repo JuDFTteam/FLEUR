@@ -41,7 +41,7 @@ CONTAINS
       g_t = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       ikqpt = fi%kpts%get_nk(kqpt)
-      allocate (c_phase_kqpt(hybdat%nbands(ikqpt)))
+      allocate (c_phase_kqpt(hybdat%nbands(ikqpt,jsp)))
       call cprod_tmp%init(cprod)
 
       IF (.not. fi%kpts%is_kpt(kqpt)) then
@@ -83,7 +83,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  ikqpt
 
 !     - arrays -
-      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2, iob, iband, ok
@@ -104,7 +104,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::  z0(:, :), ctmp(:, :, :), carr(:,:)
 
       call timestart("wavefproducts_noinv5 IR")
-      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
+      allocate(carr(bandoi:bandof, hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
       !
       ! compute G's fulfilling |bk(:,ikqpt) + G| <= rkmax
@@ -155,7 +155,7 @@ CONTAINS
       call timestop("step function")
 
       call timestart("hybrid g")
-      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik), mpdata%n_g(iq)), source=(0.0, 0.0))
+      allocate (ctmp(bandoi:bandof, hybdat%nbands(ik,jsp), mpdata%n_g(iq)), source=(0.0, 0.0))
       if (z_k%l_real) then
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
@@ -168,7 +168,7 @@ CONTAINS
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-               DO n1 = 1, hybdat%nbands(ik)
+               DO n1 = 1, hybdat%nbands(ik,jsp)
                   DO n2 = bandoi,bandof
                      ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + z_k%data_r(ig1, n1)*z0(n2, ig2)
                   END DO
@@ -189,7 +189,7 @@ CONTAINS
                ig2 = pointer(g(1), g(2), g(3))
                IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
 
-               DO n1 = 1, hybdat%nbands(ik)
+               DO n1 = 1, hybdat%nbands(ik,jsp)
                   DO n2 = bandoi,bandof
                      ctmp(n2, n1, igptm) = ctmp(n2, n1, igptm) + conjg(z_k%data_c(ig1, n1))*z0(n2, ig2)
                   END DO
@@ -204,7 +204,7 @@ CONTAINS
          ic = hybdat%nbasp + igptm
          do iob = 1,psize 
             b_idx = iob - 1 + bandoi
-            do iband = 1, hybdat%nbands(ik)
+            do iband = 1, hybdat%nbands(ik,jsp)
                cprod%data_c(ic, iob + (iband-1)*psize) = ctmp(b_idx, iband, igptm)
             enddo 
          enddo
@@ -239,28 +239,25 @@ CONTAINS
       INTEGER, INTENT(IN)     ::  ikqpt
 
       !     - arrays -
-      complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt))
+      complex, intent(in)     :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
       complex, intent(in)    :: cmt_nk(:,:,:)
 
       !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
+      INTEGER                 ::  iatm, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k, ok
-      INTEGER                 ::  itype, ieq, ic1, m, psize
+      INTEGER                 ::  itype, ieq, m, psize
 
-      COMPLEX                 ::  atom_phase
+      COMPLEX                 ::  atom_phase, cscal
 
       LOGICAL                 ::  offdiag
 
       !      - local arrays -
       INTEGER                 ::  lmstart(0:fi%atoms%lmaxd, fi%atoms%ntype)
 
-      COMPLEX, allocatable    ::  carr(:,:)
       COMPLEX, allocatable    ::  cmt_ikqpt(:,:,:)
 
       call timestart("wavefproducts_noinv5 MT")
-      allocate(carr(bandoi:bandof, hybdat%nbands(ik)), stat=ok, source=cmplx_0)
-      if(ok /= 0) call juDFT_error("Can't alloc carr in wavefproducts_noinv_IS")
 
       allocate(cmt_ikqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("alloc cmt_ikqpt")
@@ -280,80 +277,75 @@ CONTAINS
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
-      !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
-      !$OMP lm, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, itype, ieq, &
-      !$OMP ic, lm_0)
       lm_0 = 0
-      ic = 0
-      DO itype = 1, fi%atoms%ntype
-         DO ieq = 1, fi%atoms%neq(itype)
-            ic = ic + 1
-            ic1 = 0
+      do iatm = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatm)
+         atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatm)))
 
-            atom_phase = exp(-ImagUnit*tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, ic)))
+         ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
+            !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
+            !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
+            !$OMP shared(iatm, psize, atom_phase, ik)
+            do k = 1, hybdat%nbands(ik,jsp)
+               do j = bandoi, bandof 
+                  DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
+                     call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
-            DO l = 0, fi%hybinp%lcutm1(itype)
+                     IF (mod(l1 + l2 + l, 2) == 0) THEN
+                        offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
+                        !(leading to the same basis-function product)
 
-               DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-                  call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
+                        lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
+                        lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
-                  IF (mod(l1 + l2 + l, 2) == 0) THEN
-                     offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
-                     !(leading to the same basis-function product)
+                        lm = lm_0
+                        DO m = -l, l
+                           cscal = 0.0
 
-                     lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
-                     lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
-
-                     lm = lm_0
-                     !$OMP DO
-                     DO m = -l, l
-                        carr = 0.0
-
-                        lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
-                        DO m1 = -l1, l1
-                           m2 = m1 + m ! Gaunt condition -m1+m2-m=0
-                           IF (abs(m2) <= l2) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                              IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                                 carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                        *outer_prod(cmt_ikqpt(bandoi:bandof, lm2, ic), &
-                                                    conjg(cmt_nk(1:hybdat%nbands(ik), lm1, ic)))
+                           lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
+                           DO m1 = -l1, l1
+                              m2 = m1 + m ! Gaunt condition -m1+m2-m=0
+                              
+                              IF (abs(m2) <= l2) THEN
+                                 lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
+                                    cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                                            * cmt_ikqpt(j, lm2, iatm) &
+                                                               * conjg(cmt_nk(k, lm1, iatm))
+                                 END IF
                               END IF
-                           END IF
 
-                           m2 = m1 - m ! switch role of b1 and b2
-                           IF (abs(m2) <= l2 .and. offdiag) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                              IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                                 carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                        *outer_prod(cmt_ikqpt(bandoi:bandof, lm1, ic), &
-                                                    conjg(cmt_nk(1:hybdat%nbands(ik), lm2, ic)))
+                              m2 = m1 - m ! switch role of b1 and b2
+                              IF (abs(m2) <= l2 .and. offdiag) THEN
+                                 lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
+                                    cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                                            * cmt_ikqpt(j, lm1, iatm) & 
+                                                               * conjg(cmt_nk(k, lm2, iatm))
+                                 END IF
                               END IF
-                           END IF
 
-                           lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                              lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
-                        END DO  !m1
+                           END DO  !m1
 
-                        lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
-                        do k = 1, hybdat%nbands(ik)
-                           do j = 1, psize
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 cprod%data_c(i + lm, j + (k-1)*psize) &
-                                      = cprod%data_c(i + lm, j + (k-1)*psize) &
-                                          + hybdat%prodm(i, n, l, itype)*carr(j+bandoi-1, k)*atom_phase
-                              ENDDO
-                           end do
-                        end do
-                     END DO
-                     !$OMP END  DO
-                  ENDIF
-               END DO
-               lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
-            END DO
+                           lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
+                           DO i = 1, mpdata%num_radbasfn(l, itype)
+                              cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                 = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                       + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
+                           ENDDO
+                        END DO
+                     ENDIF
+                  END DO !n
+               enddo  !j
+            enddo !k
+            !$OMP END PARALLEL DO
+            lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
-      !$OMP END PARALLEL
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT

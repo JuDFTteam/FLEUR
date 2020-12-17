@@ -83,7 +83,7 @@
       REAL     ::scpos  ,zc,dtild
       INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
-      REAL s3,ah,a,hs2,rest,rdum,rdum1
+      REAL s3,ah,a,hs2,rest,rdum,rdum1,ellow,elup
       LOGICAL l_hyb,l_sym,ldum,gauss,tria
       INTEGER :: ierr, intDummy
 ! ..
@@ -517,8 +517,8 @@
       READ (UNIT=5,FMT=*,END=99,ERR=99)
          !WRITE (oUnit,'(a8,i2)') 'Window #',nw
 !
-      READ (UNIT=5,FMT=6040,END=99,ERR=99) input%ellow,input%elup,input%zelec
-      WRITE (oUnit,9150) input%ellow,input%elup,input%zelec
+      READ (UNIT=5,FMT=6040,END=99,ERR=99) ellow,elup,input%zelec
+      WRITE (oUnit,9150) ellow,elup,input%zelec
 6040  FORMAT (4f10.5)
       zc = zc + input%zelec
 !
@@ -912,7 +912,7 @@
 
       WRITE (5,'(a)') 'ellow, elup, valence electrons:'
 
-      WRITE (5,9150) input%ellow,input%elup,input%zelec
+      WRITE (5,9150) ellow,elup,input%zelec
 9150  FORMAT (4f10.5)
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%bz_integration==BZINT_METHOD_GAUSS,input%tkb,input%bz_integration==BZINT_METHOD_TRIA
@@ -934,7 +934,7 @@
      &      banddos%locx(1),banddos%locy(1),banddos%locx(2),banddos%locy(2)
  9210 FORMAT ('vacdos=',l1,',layers=',i2,',integ=',l1,',star=',l1,&
      & ',nstars=',i2,4(4x,f5.2),',nstm=',i1,',tworkf=',f10.6)
-!-stm 
+!-stm
       IF (banddos%vacdos) THEN
         IF (input%integ) THEN
           WRITE (5,9220) ((banddos%izlay(i,k),k=1,2),i=1,banddos%layers)

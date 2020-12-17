@@ -30,6 +30,7 @@ message("${Green}  Wannier90-4   Library found   : ${CReset}    ${FLEUR_USE_WANN
 message("${Green}  Wannier90-5   Library found   : ${CReset}    ${FLEUR_USE_WANN5}")
 message("${Green}  EDSolver Library found        : ${CReset}    ${FLEUR_USE_EDSOLVER}")
 message("${Green}  MAGMA Library found           : ${CReset}    ${FLEUR_USE_MAGMA}")
+message("${Green}  progress thread compiled      : ${CReset}    ${FLEUR_USE_PROG_THREAD}")
 message("${Green}  MPI Library found             : ${CReset}    ${FLEUR_USE_MPI}")
 if (FLEUR_USE_MPI)
   message("${Green}    SCALAPACK Library found     : ${CReset}    ${FLEUR_USE_SCALAPACK}")

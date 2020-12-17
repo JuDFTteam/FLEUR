@@ -17,7 +17,7 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat
+      integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
       type(t_mat) :: mat_hlp
 
       call timestart("spmm_invs")
@@ -25,9 +25,11 @@ contains
       call mat_hlp%copy(mat_in, 1, 1)
       n_vec = mat_in%matsize2
 
+      call timestart("reorder_forw")
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp%data_r(:, i_vec))
       enddo
+      call timestop("reorder_forw")
 
       ibasm = calc_ibasm(fi, mpdata)
 
@@ -125,9 +127,14 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
+
       call timestart("ibasm+1 -> dgemm")
-      ! call dgemm(transa, transb, m,   n,     k,  alpha,  a,          lda,   b,                         ldb,             beta,  c,                           ldc)
-      call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir_r, indx1, mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
+
+      ! only work on assigned submtx
+      ! call dgemm(transa, transb, m,   n, k,  alpha,  a,          lda,                
+      call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir%data_r, size(hybdat%coul(ikpt)%mtir%data_r,1), &
+      !          b,                           ldb,              beta, c,                           ldc)
+                 mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out%data_r(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -207,9 +214,11 @@ contains
 
       END IF
 
+      call timestart("reorder_back")
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out%data_r(:, i_vec))
       enddo
+      call timestop("reorder_back")
       call timestop("spmm_invs")
    end subroutine spmm_invs
 
@@ -231,8 +240,8 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
-      integer :: iat2, it2, l2, iat
-      type(t_mat) :: mat_hlp
+      integer :: iat2, it2, l2, iat, ierr, irank, i
+      type(t_mat) :: mat_hlp, mtir
 
       call timestart("spmm_noinvs")
       call mat_hlp%init(mat_in)
@@ -345,15 +354,29 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
-      call timestart("ibasm+1->nbasm: zgemm")
+      
       if(conjg_mtir) then
-         call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, conjg(hybdat%coul(ikpt)%mtir_c), indx1, &
-                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
-      else
-         call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir_c, indx1, &
-                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
+         ! conjg and back so we don't make a copy 
+         call timestart("conjg mtir_c")
+         call zlacgv(size(hybdat%coul(ikpt)%mtir%data_c), hybdat%coul(ikpt)%mtir%data_c, 1)
+         call timestop("conjg mtir_c")
       endif
+
+      call timestart("ibasm+1->nbasm: zgemm")
+      !ZGEMM(TRANSA,TRANSB, M,    N,     K,     ALPHA,    A,          LDA,
+      call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir%data_c, size(hybdat%coul(ikpt)%mtir%data_c,1), &
+      !             B,                            LDB,              BETA,    C,                            LDC )
+                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out%data_c(ibasm + 1, 1), mat_out%matsize1)
       call timestop("ibasm+1->nbasm: zgemm")
+
+
+      if(conjg_mtir) then
+         ! conjg and back so we don't make a copy 
+         call timestart("back conjg mtir_c")
+         call zlacgv(size(hybdat%coul(ikpt)%mtir%data_c), hybdat%coul(ikpt)%mtir%data_c, 1)
+         call timestop("back conjg mtir_c")
+      endif
+
 
       call timestart("dot prod")
       iatom = 0

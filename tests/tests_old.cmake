@@ -6,7 +6,8 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
      Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO  CoMCDXML CuOrb SmAtomjDOS
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
-   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria)
+   GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
+   CrystalFieldOutput VO2_forces VO2_force_levels )
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -51,8 +52,10 @@ endif()
 
 #Tests for LibXC
 if (FLEUR_USE_LIBXC)
-   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
+   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC)
 endif()
+
+#To be repaired: Diamond_SCAN
 
 #Tests for EDsolver
 if (FLEUR_USE_EDSOLVER)
@@ -63,7 +66,7 @@ endif()
 #The inpgen tests
 #if (INPGEN)
 foreach(test ${InpgenTests})
-   add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2")
+   add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen")
 endforeach(test)
 #endif()
 
@@ -91,6 +94,15 @@ if (FLEUR_USE_MPI)
 endif()
 
 #Hybrid tests
-foreach(test ${HybridTests})
-   add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
-endforeach()
+
+if (FLEUR_USE_MPI)
+   foreach(test ${HybridTests})
+      add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
+   endforeach()
+endif()
+
+#Add OutputSchema Test if xmllint is available
+find_program(XMLLINT_PROG xmllint)
+if (XMLLINT_PROG)
+   add_test("ValidateOutFiles" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/ValidateOutFiles/test.py --command ${XMLLINT_PROG} --testdir ${CMAKE_BINARY_DIR}/Testing/ValidateOutFiles)
+endif()

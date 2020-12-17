@@ -48,9 +48,10 @@ CONTAINS
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
 
       ! Local arrays
-      COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
+      COMPLEX, ALLOCATABLE :: sf2(:),sf3(:),ylm(:)
       REAL rcc(3),x(3)
       
+      ALLOCATE( sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2))
       ivac=iv
      
       IF (iflag.NE.1) THEN

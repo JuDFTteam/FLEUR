@@ -44,7 +44,7 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath,l_first)
+   SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: i_hia
@@ -55,7 +55,6 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
-      LOGICAL,          INTENT(IN)  :: l_first
 
       INTEGER :: info, io_error,i,j,k,ind1,ind2,i_exc,i_arg
       REAL exc
@@ -162,7 +161,7 @@ MODULE m_hubbard1_io
       !------------------------------------
       ! Crystal field contribution
       !------------------------------------
-      IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12.AND..NOT.l_first) THEN
+      IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
          CALL writeValue(input_iounit, "cf")
 
          CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))

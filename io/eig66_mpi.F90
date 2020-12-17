@@ -125,6 +125,7 @@ CONTAINS
          IF (PRESENT(real_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, real_data_ptr, (/length/type_size/))
+            call judft_error("hmm fuck")
 #else
             ALLOCATE (real_data_ptr(length))
 #endif

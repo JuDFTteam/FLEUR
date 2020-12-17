@@ -271,7 +271,8 @@ CONTAINS
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
       if(.not.perform_MetaGGA) return
 #ifdef CPP_LIBXC
-
+      core_den=den
+      CALL core_den%resetPotDen
       call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
                           CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,rdum,ldum,core_den,'cdnc')

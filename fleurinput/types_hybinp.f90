@@ -15,6 +15,7 @@ MODULE m_types_hybinp
       INTEGER                ::  ewaldlambda = 3
       INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
+      real                   ::  fftcut = 2.0/3.0 ! c. friedrich says 2/3 of excat case is good enough
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -54,7 +55,9 @@ CONTAINS
       CALL mpi_bc(this%map, rank, mpi_comm)
       CALL mpi_bc(this%tvec, rank, mpi_comm)
       CALL mpi_bc(this%d_wgn2, rank, mpi_comm)
+      call mpi_bc(this%fftcut, rank, mpi_comm)
    END SUBROUTINE mpi_bc_hybinp
+
    SUBROUTINE read_xml_hybinp(this, xml)
       USE m_types_xml
       CLASS(t_hybinp), INTENT(INout):: this
@@ -73,6 +76,7 @@ CONTAINS
          this%ewaldlambda = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          this%lexp = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
          this%bands1 = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
+         this%fftcut = evaluateFirstOnly (xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@fftcut'))
       ENDIF
 
       DO itype = 1, ntype
@@ -92,7 +96,7 @@ CONTAINS
       END DO
 
       xc_name = ''
-      IF (xml%versionNumber > 31) THEN
+      IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/xcFunctional') > 0) THEN
          xc_name = trim(xml%GetAttributeValue('/fleurInput/calculationSetup/xcFunctional/@name'))
       ELSE
          xc_name = trim(xml%GetAttributeValue('/fleurInput/xcFunctional/@name'))

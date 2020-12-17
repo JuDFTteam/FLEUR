@@ -559,7 +559,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT) ::  mat(dim1, dim2)
+      COMPLEX, INTENT(INOUT) ::  mat(:,:)
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
@@ -601,21 +601,21 @@ CONTAINS
                      j = i + ishift
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           carr(:dim2) = mat(i, :)
-                           mat(i, :) = (carr(:dim2) + ifac*mat(j, :))*rfac
-                           mat(j, :) = (carr(:dim2) - ifac*mat(j, :))*(-cfac)
+                           carr(:dim2) = mat(i, :dim2)
+                           mat(i, :dim2) = (carr(:dim2) + ifac*mat(j, :dim2))*rfac
+                           mat(j, :dim2) = (carr(:dim2) - ifac*mat(j, :dim2))*(-cfac)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           carr(:dim1) = mat(:, i)
-                           mat(:, i) = (carr(:dim1) + ifac*mat(:, j))*rfac
-                           mat(:, j) = (carr(:dim1) - ifac*mat(:, j))*cfac
+                           carr(:dim1) = mat(:dim1, i)
+                           mat(:dim1, i) = (carr(:dim1) + ifac*mat(:dim1, j))*rfac
+                           mat(:dim1, j) = (carr(:dim1) - ifac*mat(:dim1, j))*cfac
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           mat(i, :) = -ImagUnit*mat(i, :)
+                           mat(i, :dim2) = -ImagUnit*mat(i, :dim2)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           mat(:, i) = ImagUnit*mat(:, i)
+                           mat(:dim1, i) = ImagUnit*mat(:dim1, i)
                         END IF
                      END IF
                   END DO
@@ -626,9 +626,15 @@ CONTAINS
 
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
-         cfac = commonphase(mat, dim1*dim2)
-         mat = mat/cfac
-         IF (any(abs(aimag(mat)) > 1e-8)) call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
+         cfac = commonphase_mtx(mat, dim1, dim2)
+         do i = 1,dim1 
+            do j = 1,dim2 
+               mat(i,j) = mat(i,j) / cfac 
+               if(abs(aimag(mat(i,j))) > 1e-8 ) then
+                  call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
+               endif 
+            enddo
+         enddo
       END IF
 
    END SUBROUTINE symmetrize
@@ -783,7 +789,7 @@ CONTAINS
       DO i = 1, nbands
          DO j = 1, psize
             cnt = cnt + 1
-            CALL symmetrize(vecout1(:,cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
+            CALL symmetrize(vecout1(:,cnt:cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             phase(j, i) = commonphase(vecout1(:,cnt), hybdat%nbasm(ikpt))
@@ -1014,6 +1020,34 @@ CONTAINS
       END IF
    END function commonphase
 
+   function commonphase_mtx(mtx, dim1, dim2) result(cfac)
+      implicit none 
+
+      COMPLEX, INTENT(IN)      :: mtx(:,:)
+      integer, intent(in)      :: dim1, dim2
+      COMPLEX                  :: cfac
+      REAL                     :: rdum, rmax
+      INTEGER                  :: i,j
+
+      do j = 1,dim2 
+         do i = 1,dim1
+            rdum = abs(mtx(i,j))
+            IF (rdum > 1e-6) THEN
+               cfac = mtx(i,j)/rdum
+               EXIT
+            ELSE IF (rdum > rmax) THEN
+               cfac = mtx(i,j)/rdum
+               rmax = rdum
+            END IF
+         enddo 
+      enddo
+
+      IF (abs(cfac) < 1e-10 .and. all(abs(mtx(:dim1,:dim2)) > 1e-10)) THEN
+         WRITE (999, *) mtx(:dim1,:dim2)
+         call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
+      END IF
+   END function commonphase_mtx
+
    SUBROUTINE bramat_trafo(vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
                            rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, &
                            dwgn, nbasp, nbasm, vecout, igptm_out)
@@ -1048,7 +1082,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm, &
                                         -maxlcutm:maxlcutm, &
                                         0:maxlcutm)
-      COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm))
+      COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm),1)
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
@@ -1106,14 +1140,14 @@ CONTAINS
 
       if (.not. touch) call judft_error("g-point could not be found.")
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
-      vecout(:nbasm(ikpt0)) = vecin(:nbasm(ikpt0))
+      vecout(:nbasm(ikpt0),1) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
 
 !     Right-multiplication
       ! PW
-      IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0)))
-      ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0))
+      IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0),1))
+      ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0),1)
       END IF
 
 !     Define pointer to first mixed-basis functions (with m = -l)
@@ -1150,7 +1184,7 @@ CONTAINS
                   j1 = pnt(n, l, hybinp%map(ic, sym%invtab(isym)))
                   j2 = j1 + nn*2*l
 
-                  vecout(i1:i2:nn) = cdum*matmul(dwgn(-l:l, -l:l, l), vecin1(j1:j2:nn))
+                  vecout(i1:i2:nn,1) = cdum*matmul(dwgn(-l:l, -l:l, l), vecin1(j1:j2:nn))
 
                END DO
             END DO
@@ -1165,7 +1199,7 @@ CONTAINS
          carr(igptm) = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
       END DO
       DO i1 = 1, mpdata%n_g(ikpt1)
-         vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
+         vecout(nbasp + i1,1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.

@@ -74,8 +74,8 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, cmt, &
-                      rrot, nsymop, psym, n_q, parent, nsest, indx_sest)
+   SUBROUTINE symm_hf(fi, nk, hybdat, results, submpi, eig_irr, mpdata, cmt, &
+                      rrot, nsymop, psym, n_q, parent, nsest, indx_sest, jsp)
 
       USE m_olap
       USE m_trafo
@@ -86,20 +86,21 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(IN) :: hybdat
+      type(t_results),intent(in) :: results
       type(t_hybmpi), intent(in) :: submpi
       TYPE(t_mpdata), intent(in) :: mpdata
 
 !     - scalars -
-      INTEGER, INTENT(IN)              :: nk
+      INTEGER, INTENT(IN)              :: nk, jsp
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
-      COMPLEX , intent(in)             :: cmt(hybdat%nbands(nk), hybdat%maxlmindx, fi%atoms%nat)
+      COMPLEX , intent(in)             :: cmt(hybdat%nbands(nk,jsp), hybdat%maxlmindx, fi%atoms%nat)
       INTEGER, INTENT(IN)              :: rrot(:, :, :)
       INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(INOUT)           :: parent(fi%kpts%nkptf)
-      INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk))
-      INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
+      INTEGER, INTENT(INOUT)           :: nsest(hybdat%nbands(nk,jsp))
+      INTEGER, INTENT(INOUT)           :: indx_sest(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
       INTEGER, ALLOCATABLE, INTENT(INOUT) :: n_q(:)
 
       REAL, INTENT(IN)                 :: eig_irr(:, :)
@@ -124,7 +125,7 @@ CONTAINS
 !     - local arrays -
       INTEGER                         :: neqvkpt(fi%kpts%nkptf)
       INTEGER                         :: list(fi%kpts%nkptf)
-      INTEGER                         :: degenerat(hybdat%ne_eig(nk))
+      INTEGER                         :: degenerat(results%neig(nk, jsp))
 
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
@@ -212,15 +213,15 @@ CONTAINS
 
       WRITE(oUnit, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
-      DO i = 1, hybdat%nbands(nk)
-         DO j = i + 1, hybdat%nbands(nk)
+      DO i = 1, hybdat%nbands(nk,jsp)
+         DO j = i + 1, hybdat%nbands(nk,jsp)
             IF(abs(eig_irr(i, nk) - eig_irr(j, nk)) <= tolerance) THEN
                degenerat(i) = degenerat(i) + 1
             END IF
          END DO
       END DO
 
-      DO i = 1, hybdat%ne_eig(nk)
+      DO i = 1, results%neig(nk, jsp)
          IF(degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
             degenerat(i + 1:i + degenerat(i) - 1) = 0
          END IF
@@ -233,8 +234,8 @@ CONTAINS
       nddb = count(degenerat >= 1)
 #ifdef CPP_EXPLICIT_HYB
       WRITE(oUnit, *) ' Degenerate states:'
-      DO iband = 1, hybdat%nbands(nk)/5 + 1
-         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
+      DO iband = 1, hybdat%nbands(nk,jsp)/5 + 1
+         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk,jsp)))
       END DO
 #endif
 
@@ -259,7 +260,7 @@ CONTAINS
       END DO
       call timestop("calc olapmt")
 
-      allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
+      allocate(wavefolap(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
       wavefolap = 0
 
@@ -274,7 +275,7 @@ CONTAINS
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
                nn = mpdata%num_radfun_per_l(l, itype)
-               DO iband1 = 1, hybdat%nbands(nk)
+               DO iband1 = 1, hybdat%nbands(nk,jsp)
                   !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
                   !          X,                  INCX,  BETA,    Y, INCY )
                   call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
@@ -282,7 +283,7 @@ CONTAINS
                   
                   !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
                   !          X,      INCX,  BETA,    Y, INCY )  
-                  call zgemv("C", nn, hybdat%nbands(nk), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
+                  call zgemv("C", nn, hybdat%nbands(nk,jsp), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
                              carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
                END DO
                lm = lm + nn
@@ -302,12 +303,12 @@ CONTAINS
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
       symequivalent = .false.
       ic1 = 0
-      DO iband1 = 1, hybdat%nbands(nk)
+      DO iband1 = 1, hybdat%nbands(nk,jsp)
          ndb1 = degenerat(iband1)
          IF(ndb1 == 0) CYCLE
          ic1 = ic1 + 1
          ic2 = 0
-         DO iband2 = 1, hybdat%nbands(nk)
+         DO iband2 = 1, hybdat%nbands(nk,jsp)
             ndb2 = degenerat(iband2)
             IF(ndb2 == 0) CYCLE
             ic2 = ic2 + 1
@@ -327,7 +328,7 @@ CONTAINS
       ic1 = 0
       indx_sest = 0
       nsest = 0
-      DO iband1 = 1, hybdat%nbands(nk)
+      DO iband1 = 1, hybdat%nbands(nk,jsp)
          ndb1 = degenerat(iband1)
          IF(ndb1 >= 1) ic1 = ic1 + 1
          i = 0
@@ -336,7 +337,7 @@ CONTAINS
          END DO
          ndb1 = degenerat(iband1 - i)
          ic2 = 0
-         DO iband2 = 1, hybdat%nbands(nk)
+         DO iband2 = 1, hybdat%nbands(nk,jsp)
             ndb2 = degenerat(iband2)
             IF(ndb2 >= 1) ic2 = ic2 + 1
             i = 0

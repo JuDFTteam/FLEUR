@@ -48,7 +48,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    USE m_greensfPostProcess
-   USE m_writeCFOutput
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
@@ -175,7 +174,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN
       hub1data%mag_mom = 0.0
-      hub1data%cdn_spherical = 0.0
+      hub1data%cdn_atomic = 0.0
    ENDIF
 
 
@@ -217,13 +216,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL closeXMLElement('valenceDensity')
    END IF ! fmpi%irank = 0
 
-   ! Klueppelberg (force level 3)
-   IF (input%l_f.AND.(input%f_level.GE.3)) THEN
-      DO jspin = 1,input%jspins ! jsp_start, jsp_end
-         CALL force_sf_mt(atoms,sphhar,jspin,jspin,fmpi,vtot%mt(:,0:,:,jspin),exc%mt(:,0:,:,1),vxc%mt(:,0:,:,:),outDen%mt(:,0:,:,:),sym,cell )
-      END DO
-   END IF
-
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN
          IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
@@ -242,7 +234,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,fmpi,&
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,fmpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
       ELSE
          IF(fmpi%irank.EQ.0) THEN
@@ -251,13 +243,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                                                   "minCalcDistance: ", gfinp%minCalcDistance
          ENDIF
       ENDIF
-   ENDIF
-
-   !Are there requests for crystal field outputs
-   IF(PRESENT(hub1data).AND. &
-      (ANY(atoms%l_outputCFcdn(:)).OR.ANY(atoms%l_outputCFpot(:)))) THEN
-      IF(fmpi%irank==0) CALL writeCFOutput(atoms,input,sym,sphhar,noco,vTot,hub1data)
-      CALL juDFT_end("Crystal Field Output written",fmpi%irank)
    ENDIF
 
    CALL timestart("cdngen: cdncore")
@@ -311,6 +296,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
+
+   ! Klueppelberg (force level 3)
+   IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN
+      DO jspin = 1,input%jspins ! jsp_start, jsp_end
+         CALL force_sf_mt(atoms,sphhar,jspin,jspin,fmpi,vtot%mt(:,0:,:,jspin),exc%mt(:,0:,:,1),vxc%mt(:,0:,:,:),outDen%mt(:,0:,:,:),sym,cell)
+      END DO
+   END IF
 
 END SUBROUTINE cdngen
 

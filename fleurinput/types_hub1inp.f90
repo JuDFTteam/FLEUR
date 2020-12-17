@@ -27,6 +27,7 @@ MODULE m_types_hub1inp
 
       REAL, ALLOCATABLE :: init_occ(:) !initial occupation
       REAL, ALLOCATABLE :: ccf(:) !crystal field factor
+      REAL, ALLOCATABLE :: cfCoeffs(:,:,:)
       REAL, ALLOCATABLE :: xi_par(:) !Fixed SOC parameters
 
       INTEGER, ALLOCATABLE :: n_exc(:)
@@ -72,6 +73,7 @@ CONTAINS
       CALL mpi_bc(this%n_occpm,rank,mpi_comm)
       CALL mpi_bc(this%init_occ,rank,mpi_comm)
       CALL mpi_bc(this%ccf,rank,mpi_comm)
+      CALL mpi_bc(this%cfCoeffs,rank,mpi_comm)
       CALL mpi_bc(this%xi_par,rank,mpi_comm)
       CALL mpi_bc(this%n_exc,rank,mpi_comm)
       CALL mpi_bc(this%exc_l,rank,mpi_comm)
@@ -90,7 +92,7 @@ CONTAINS
       TYPE(t_xml),INTENT(INOUT) ::xml
 
       INTEGER::numberNodes,ntype,n_maxaddArgs
-      INTEGER::i_hia,itype,i_exc,i_addArg,i,j,hub1_l
+      INTEGER::i_hia,itype,i_exc,i_addArg,i,j,hub1_l,i_cf,l,m
       CHARACTER(len=100)  :: xPathA,xPathB,xPathS,key,tmp_str
       REAL::val
 
@@ -99,7 +101,8 @@ CONTAINS
 
       ALLOCATE(this%init_occ(4*ntype),source=0.0)
       ALLOCATE(this%ccf(4*ntype),source=-1.0)
-      ALLOCATE(this%xi_par(4*ntype),source=0.0)
+      ALLOCATE(this%cfCoeffs(4*ntype,0:6,-6:6),source=0.0)
+      ALLOCATE(this%xi_par(4*ntype),source=0.001)
       ALLOCATE(this%n_exc(4*ntype),source=0)
       ALLOCATE(this%exc_l(4*ntype,lmaxU_const),source=-1)
       ALLOCATE(this%exc(4*ntype,lmaxU_const),source=0.0)
@@ -115,7 +118,7 @@ CONTAINS
       xPathA = '/fleurInput/calculationSetup/ldaHIA'
       numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF(numberNodes==1) THEN
-         this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@itmax'))
+         this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@itmaxHubbard1'))
          this%minoccDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minoccDistance'))
          this%minmatDistance = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minmatDistance'))
          this%beta = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))
@@ -169,6 +172,23 @@ CONTAINS
                      CALL juDFT_error("Two exchange splittings defined for equal l"&
                                      ,calledby="read_xml_hub1inp")
                ENDDO
+            ENDDO
+
+            DO i_cf = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/cFCoeff')
+               WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/cFCoeff[',i_cf,']'
+
+               l = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l'))
+               m = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@m'))
+               !Check if the given l is valid (l<3 and not the same as the hubbard orbital)
+               IF(l.LT.0 .OR. l.GT.6 .OR. ABS(m).GT.l) &
+                  CALL juDFT_error("Crystal Field Coefficient: Not a valid l,m combination (|m|<l and l<=6)"&
+                                  ,calledby="read_xml_hub1inp")
+
+               IF(ABS(this%cfCoeffs(i_hia,l,m)).GT.1e-12) &
+                  CALL juDFT_error("Crystal Field Coefficient: Two Coefficients for the same lm"&
+                                  ,calledby="read_xml_hub1inp")
+               this%cfCoeffs(i_hia,l,m) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@value'))
+               this%cfCoeffs(i_hia,l,-m) = this%cfCoeffs(i_hia,l,m)
             ENDDO
 
             DO i_addArg = 1, xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/addArg')

@@ -1,5 +1,6 @@
 module m_work_package
    use m_types
+   use m_distribute_mpi
    implicit none
 
    type t_band_package  
@@ -16,6 +17,10 @@ module m_work_package
       procedure :: init => t_q_package_init
       procedure :: free => t_q_package_free
    end type t_q_package 
+
+   type t_qwps
+      type(t_q_package), allocatable :: q_packs 
+   end type t_qwps
 
    type t_k_package
       integer :: nk, rank, size
@@ -81,12 +86,14 @@ contains
       type(t_hybmpi), intent(in)           :: wp_mpi
       integer, intent(in)                  :: rank, size, jsp
 
+      call timestart("t_work_package_init")
       work_pack%rank    = rank
       work_pack%size    = size
       work_pack%submpi  = wp_mpi
 
       call split_into_work_packages(work_pack, fi, hybdat, jsp)
 
+      call timestop("t_work_package_init")
    end subroutine t_work_package_init
 
    subroutine t_k_package_init(k_pack, fi, hybdat, k_wide_mpi, jsp, nk)
@@ -95,15 +102,31 @@ contains
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_hybmpi), intent(in)        :: k_wide_mpi
-      integer, intent(in) :: nk, jsp
-      integer             :: iq, jq
+      type(t_hybmpi)                    :: q_wide_mpi
+
+      integer, intent(in)  :: nk, jsp
+      integer              :: iq, jq, loc_num_qs, i, cnt, n_groups, idx, q_rank, w_cnt
+      integer, allocatable :: loc_qs(:)
+
+      n_groups = min(k_wide_mpi%size, fi%kpts%EIBZ(nk)%nkpt)
+      allocate(loc_qs(n_groups), source=0)
+      do w_cnt = 1, n_groups 
+         do i = w_cnt, fi%kpts%EIBZ(nk)%nkpt, n_groups 
+            loc_qs(w_cnt) = loc_qs(w_cnt) + 1 
+         enddo
+      enddo
+
+      call distribute_mpi(loc_qs, k_wide_mpi, q_wide_mpi, q_rank)
 
       k_pack%submpi = k_wide_mpi
-      k_pack%nk = nk
-      allocate(k_pack%q_packs(fi%kpts%EIBZ(nk)%nkpt)) 
-      do iq = 1,fi%kpts%EIBZ(nk)%nkpt
+      k_pack%nk = nk 
+      
+      allocate(k_pack%q_packs(loc_qs(q_rank+1)))
+      cnt = 0
+      do iq = q_rank+1,fi%kpts%EIBZ(nk)%nkpt, n_groups
+         cnt = cnt + 1
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
-         call k_pack%q_packs(iq)%init(fi, hybdat, k_pack%submpi, jsp, nk, iq, jq)
+         call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
       enddo
    end subroutine t_k_package_init
 
@@ -124,7 +147,7 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-   ! arrays should be less than 5 gb
+      ! arrays should be less than 5 gb
       if(fi%sym%invs) then
          target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       else
@@ -132,11 +155,15 @@ contains
       endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
-
+ 
       n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      ! I can't have more parts than hybdat%nobd
+      n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
+
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
+      
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
@@ -263,7 +290,10 @@ contains
       end_idx = 0
       do i = 1,n_parts
          psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-
+         if(psize(i) == 0) then
+            write (*,*) "n_total, n_parts", n_total, n_parts
+            call judft_warn("some band_packs have 0 bands")
+         endif
          start_idx(i) = end_idx + 1
          end_idx = start_idx(i) + psize(i) - 1
       enddo

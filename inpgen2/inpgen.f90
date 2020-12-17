@@ -45,6 +45,8 @@ PROGRAM inpgen
   USE m_types_mpinp
   USE m_constants
   USE m_types_xml
+  USE m_types_juPhon
+  use m_make_sym
 
       IMPLICIT NONE
 
@@ -71,6 +73,7 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
+      TYPE(t_juPhon)  :: juPhon
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -84,7 +87,7 @@ PROGRAM inpgen
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
       INTEGER, ALLOCATABLE :: kptsBZintegration(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
-      LOGICAL            :: l_exist, l_addPath, l_check
+      LOGICAL            :: l_exist, l_addPath, l_check, l_oldinpXML
 
       TYPE(t_xml)::xml
 
@@ -167,14 +170,14 @@ PROGRAM inpgen
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
+         l_oldinpXML=.true.
          call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_fullinput)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
          CALL xcpot%init(atoms%ntype)
          CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-         l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
          l_kptsInitialized(:) = .FALSE.
@@ -246,9 +249,17 @@ PROGRAM inpgen
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
                            kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+         if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
+            call timestart("Hybrid setup BZ")
+            CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
+            call kpts(ikpts)%init(sym, input%film,.true.)
+            call timestop("Hybrid setup BZ")
+         endif
       END DO
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
+         kptsSelection(1) = kpts(1)%kptsName ! This may actually be wrong, but it is a backup solution.
+         input%bz_integration = kptsBZintegration(1)
          DO iKpts = numKpts, 1, -1
             IF((kpts(iKpts)%kptsKind.EQ.KPTS_KIND_UNSPECIFIED).OR.(kpts(iKpts)%kptsKind.EQ.KPTS_KIND_MESH)) THEN
                kptsSelection(1) = kpts(iKpts)%kptsName
@@ -260,14 +271,16 @@ PROGRAM inpgen
       !
       !Now the IO-section
       !
-      IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite")) THEN
-         call determine_includes(l_include)
+      call determine_includes(l_include)
+      IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite").or.l_oldinpXML) THEN
          !the inp.xml file
          !CALL dump_FleurInputSchema()
          filename="inp.xml"
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
+         INQUIRE(file=filename,exist=l_exist)
+         IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
-              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
               cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
@@ -292,6 +305,7 @@ PROGRAM inpgen
 
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
          DO iKpts = 1, numKpts
+            call kpts(iKpts)%find_gamma()
             CALL kpts(iKpts)%print_XML(kptsUnit)
          END DO
          WRITE (kptsUnit, '(a)') "         </kPointLists>"
@@ -331,8 +345,8 @@ PROGRAM inpgen
                   kptsComment = TRIM(ADJUSTL(kptsComment))//' - '//TRIM(ADJUSTL(kpts(iKpts)%specialPointNames(iPoint)))
                END DO
                WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'PATH', kpts(iKpts)%nkpt, TRIM(ADJUSTL(kptsComment))
-            CASE (KPTS_KIND_TETRA)
-               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TETRA', kpts(ikpts)%nkpt, ''
+            CASE (KPTS_KIND_TRIA_BULK)
+               WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA-BULK', kpts(ikpts)%nkpt, ''
             CASE (KPTS_KIND_TRIA)
                WRITE(*,100) TRIM(ADJUSTL(kpts(iKpts)%kptsName)), 'TRIA', kpts(ikpts)%nkpt, ''
             CASE (KPTS_KIND_SPEX_MESH)

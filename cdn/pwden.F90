@@ -81,8 +81,11 @@ CONTAINS
       USE m_rfft
       USE m_cfft
       use m_wavefproducts_aux
+      USE m_types_fftGrid
       USE m_fft_interface
+
       IMPLICIT NONE
+
       TYPE(t_lapw), INTENT(IN)       :: lapw
       TYPE(t_mpi), INTENT(IN)        :: fmpi
       TYPE(t_oneD), INTENT(IN)       :: oneD
@@ -110,6 +113,9 @@ CONTAINS
 
       !-----> LOCAL VARIABLES
 
+      TYPE(t_fftGrid) :: state, StateDeriv, ekinGrid, chargeDen
+      COMPLEX tempState(lapw%nv(jspin))
+
       !----->  FFT  INFORMATION
       INTEGER :: ifftq2d, ifftq3d
 
@@ -124,11 +130,8 @@ CONTAINS
       !
       INTEGER iv1d(SIZE(lapw%gvec, 2), input%jspins), fft_size(3)
       REAL wtf(ne), wsave(stars%kq3_fft + 15)
-      REAL, ALLOCATABLE :: psir(:), psii(:), rhon(:)
       REAL, ALLOCATABLE :: psi1r(:), psi1i(:), psi2r(:), psi2i(:)
       REAL, ALLOCATABLE :: rhomat(:, :)
-      REAL, ALLOCATABLE :: kpsir(:), kpsii(:)
-      REAL, ALLOCATABLE :: ekin(:)
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
       !
       LOGICAL l_real
@@ -191,22 +194,14 @@ CONTAINS
                    psi2i(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
                    rhomat(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1, 4))
       ELSE
-         IF (zmat%l_real) THEN
-            ALLOCATE (psir(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft + 1) - 1), &
-                      psii(1), &
-                      rhon(-stars%kq1_fft*stars%kq2_fft:stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft + 1) - 1))
-            IF (input%l_f) ALLOCATE (kpsii(1), &
-                                     kpsir(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft + 1) - 1), &
-                                     ekin(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft + 1) - 1))
-         ELSE
-            ALLOCATE (psir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                      psii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                      zfft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                      rhon(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1))
-            IF (input%l_f) ALLOCATE (kpsir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                                     kpsii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                                     ekin(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1))
-         ENDIF
+         CALL state%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+         CALL chargeDen%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+         chargeDen%grid(:) = CMPLX(0.0,0.0)
+         IF (input%l_f) THEN
+            CALL stateDeriv%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+            CALL ekinGrid%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+            ekinGrid%grid(:) = CMPLX(0.0,0.0)
+         END IF
       ENDIF
       !
       !=======>  CALCULATE CHARGE DENSITY USING FFT
@@ -270,9 +265,6 @@ CONTAINS
          IF (ikpt .LE. fmpi%isize) THEN
             dos%qis = 0.0
          ENDIF
-      ELSE
-         rhon = 0.0
-         IF (input%l_f) ekin = 0.0
       ENDIF
       !
       !------> calculate:  wtf(nu,k) =  w(k)*f(nu,k)/vol
@@ -328,19 +320,7 @@ CONTAINS
             ENDIF
 
          ELSE
-            psir = 0.0
-            psii = 0.0
-            !------> map WF into FFTbox
-            IF (zmat%l_real) THEN
-               DO iv = 1, lapw%nv(jspin)
-                  psir(iv1d(iv, jspin)) = zMat%data_r(iv, nu)
-               ENDDO
-            ELSE
-               DO iv = 1, lapw%nv(jspin)
-                  psir(iv1d(iv, jspin)) = REAL(zMat%data_c(iv, nu))
-                  psii(iv1d(iv, jspin)) = AIMAG(zMat%data_c(iv, nu))
-               ENDDO
-            ENDIF
+            CALL state%putStateOnGrid(lapw, jSpin, zMat, nu)
          ENDIF
          !
          !------> do (real) inverse FFT; notice that the array psir is filled from
@@ -357,99 +337,43 @@ CONTAINS
             CALL cfft(psi2r, psi2i, ifftq3, stars%kq2_fft, ifftq2, isn)
             CALL cfft(psi2r, psi2i, ifftq3, stars%kq3_fft, ifftq3, isn)
          ELSE
-            isn = 1
-            IF (zmat%l_real) THEN
-               CALL rfft(isn, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft + 1, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, &
-                         nw1, nw2, nw3, wsave, psir(ifftq3d), psir(-ifftq2))
 
-               ! GM forces part
-               IF (input%l_f) THEN
-                  DO in = -1, stars%kq3_fft, 2
-                     DO im = 0, ifftq2 - 1
-                        ir = ifftq2*in + im
-                        ekin(ir) = ekin(ir) - wtf(nu)*eig(nu)*(psir(ir)**2 + psir(ir + ifftq2)**2)
-                     ENDDO
-                  ENDDO
+            
+            forw = .FALSE.
+            ! The following FFT is a general complex to complex FFT
+            ! For zmat%l_real this should be turned into areal to real FFT at some point
+            ! Note: For the moment also no zero-indices for SpFFT provided
+            CALL fft_interface(3, state%dimensions(:), state%grid, forw)
+            DO ir = 0, chargeDen%gridLength - 1
+               chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
+            END DO
 
-                  DO j = 1, 3
-                     kpsir(ifftq3d:) = 0.0
-                     kpsir(-ifftq2d:ifftq3d) = 0.0
-                     DO iv = 1, lapw%nv(jspin)
-                        xk = lapw%gvec(:, iv, jspin) + lapw%bkpt
-                        s = 0.0
-                        DO i = 1, 3
-                           s = s + xk(i)*cell%bmat(i, j)
-                        ENDDO
-                        kpsir(iv1d(iv, jspin)) = s*zMat%data_r(iv, nu)
-                     ENDDO
-                     CALL rfft(isn, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft + 1, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, &
-                               nw1, nw2, nw3, wsave, kpsir(ifftq3d), kpsir(-ifftq2))
-                     DO in = -1, stars%kq3_fft, 2
-                        DO im = 0, ifftq2 - 1
-                           ir = ifftq2*in + im
-                           ekin(ir) = ekin(ir) + wtf(nu)*0.5*(kpsir(ir)**2 + kpsir(ir + ifftq2)**2)
-                        ENDDO
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ELSE
-               !--------------------------------
-               ! FFT transform
-               zfft = cmplx(psir, psii)
-               if (isn == -1) then
-                  forw = .true.
-               else
-                  forw = .false.
-               end if
-               length_zfft(1) = stars%kq1_fft
-               length_zfft(2) = stars%kq2_fft
-               length_zfft(3) = stars%kq3_fft
-               call fft_interface(3, length_zfft, zfft, forw, iv1d(1:lapw%nv(jspin), jspin))
-               psir = real(zfft)
-               psii = aimag(zfft)
-               !--------------------------------
-               ! GM forces part
-               IF (input%l_f) THEN
-                  DO ir = 0, ifftq3d-1
-                     ekin(ir) = ekin(ir) - wtf(nu)*eig(nu)*(psir(ir)**2 + psii(ir)**2)
-                  ENDDO
+            IF (input%l_f) THEN
+               DO ir = 0, ekinGrid%gridLength - 1
+                  ekinGrid%grid(ir) = ekinGrid%grid(ir) - wtf(nu) * eig(nu) * ABS(state%grid(ir))**2
+               END DO
 
-                  DO j = 1, 3
-                     kpsir = 0.0
-                     kpsii = 0.0
-                     DO iv = 1, lapw%nv(jspin)
-                        xk = lapw%gvec(:, iv, jspin) + lapw%bkpt
-                        s = 0.0
-                        DO i = 1, 3
-                           s = s + xk(i)*cell%bmat(i, j)
-                        ENDDO
-                        kpsir(iv1d(iv, jspin)) = s*REAL(zMat%data_c(iv, nu))
-                        kpsii(iv1d(iv, jspin)) = s*AIMAG(zMat%data_c(iv, nu))
+               DO j = 1, 3
+                  DO iv = 1, lapw%nv(jspin)
+                     xk = lapw%gvec(:, iv, jspin) + lapw%bkpt
+                     s = 0.0
+                     DO i = 1, 3
+                        s = s + xk(i)*cell%bmat(i, j)
                      ENDDO
-
-                     !--------------------------------
-                     ! FFT transform
-                     zfft = cmplx(kpsir, kpsii)
-                     if (isn == -1) then
-                        forw = .true.
-                     else
-                        forw = .false.
-                     end if
-                     length_zfft(1) = stars%kq1_fft
-                     length_zfft(2) = stars%kq2_fft
-                     length_zfft(3) = stars%kq3_fft
-                     call fft_interface(3, length_zfft, zfft, forw, iv1d(1:lapw%nv(jspin), jspin))
-                     kpsir = real(zfft)
-                     kpsii = aimag(zfft)
-                     !--------------------------------
-
-                     DO ir = 0, ifftq3d-1
-                        ekin(ir) = ekin(ir) + wtf(nu)*0.5*(kpsir(ir)**2 + kpsii(ir)**2)
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDIF
-         ENDIF
+                     IF (zmat%l_real) THEN
+                        tempState(iv) = s*zMat%data_r(iv, nu)
+                     ELSE
+                        tempState(iv) = s*zMat%data_c(iv, nu)
+                     END IF
+                  END DO
+                  CALL stateDeriv%putComplexStateOnGrid(lapw, jSpin, tempState)
+                  CALL fft_interface(3, stateDeriv%dimensions(:), stateDeriv%grid, forw)
+                  DO ir = 0, ekinGrid%gridLength - 1
+                     ekinGrid%grid(ir) = ekinGrid%grid(ir) + wtf(nu) * 0.5 * ABS(stateDeriv%grid(ir))**2
+                  END DO
+               END DO
+            END IF
+         END IF
          !----> calculate rho(r) = sum w(k)*f(nu)*conjg(psi_nu,k(r))*psi_nu,k(r)
          !                         k,nu
          !      again, we fill rhon() from -ifftq2 to ifftq3-1 for the rfft
@@ -503,19 +427,6 @@ CONTAINS
                   dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
                ENDDO
             ENDIF
-         ELSE
-            IF (zmat%l_real) THEN
-               DO in = -1, stars%kq3_fft, 2
-                  DO im = 0, ifftq2 - 1
-                     ir = ifftq2*in + im
-                     rhon(ir) = rhon(ir) + wtf(nu)*(psir(ir)**2 + psir(ir + ifftq2)**2)
-                  ENDDO
-               ENDDO
-            ELSE
-               DO ir = 0, ifftq3d-1
-                  rhon(ir) = rhon(ir) + wtf(nu)*(psir(ir)**2 + psii(ir)**2)
-               ENDDO
-            ENDIF
          ENDIF
          !              DO ir = -ifftq2 , ifftq3-1
          !     +                      + wtf(nu)*(psi(ir+ifftq3d) * psi(ir+ifftq3d)
@@ -545,58 +456,14 @@ CONTAINS
             CALL cfft(rhomat(0, idens), psi1r, ifftq3, stars%kq2_fft, ifftq2, isn)
             CALL cfft(rhomat(0, idens), psi1r, ifftq3, stars%kq3_fft, ifftq3, isn)
          ELSE
-            !--->  psir is used here as work array, charge is real ,but fft complex
-            IF (zmat%l_real) THEN
-               psir(ifftq3d:) = 0.0
-               IF (input%l_f) kpsir(ifftq3d:) = 0.0
-            ELSE
-               psir = 0.0
-               psii = 0.0
-               IF (input%l_f) kpsir = 0.0
-               IF (input%l_f) kpsii = 0.0
-            ENDIF
-
-            isn = -1
-            IF (zmat%l_real) THEN
-               CALL rfft(isn, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft + 1, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, &
-                         stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, wsave, psir(ifftq3d), rhon(-ifftq2))
-               IF (input%l_f) CALL rfft(isn, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft + 1, stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, &
-                                        stars%kq1_fft, stars%kq2_fft, stars%kq3_fft, wsave, kpsir(ifftq3d), ekin(-ifftq2))
-            ELSE
-               !--------------------------------
-               ! FFT transform
-               zfft = cmplx(rhon, psir)
-               if (isn == -1) then
-                  forw = .true.
-               else
-                  forw = .false.
-               end if
-               length_zfft(1) = stars%kq1_fft
-               length_zfft(2) = stars%kq2_fft
-               length_zfft(3) = stars%kq3_fft
-               call fft_interface(3, length_zfft, zfft, forw)
-               rhon = real(zfft)
-               psir = aimag(zfft)
-               !--------------------------------
-               !+apw
-               IF (input%l_f) THEN
-                  !--------------------------------
-                  ! FFT transform
-                  zfft = cmplx(ekin, psii)
-                  if (isn == -1) then
-                     forw = .true.
-                  else
-                     forw = .false.
-                  end if
-                  length_zfft(1) = stars%kq1_fft
-                  length_zfft(2) = stars%kq2_fft
-                  length_zfft(3) = stars%kq3_fft
-                  call fft_interface(3, length_zfft, zfft, forw)
-                  ekin = real(zfft)
-                  psii = aimag(zfft)
-                  !--------------------------------
-               ENDIF
-            ENDIF
+            ! The following FFT is a general complex to complex FFT
+            ! For zmat%l_real this should be turned into areal to real FFT at some point
+            ! Note: For the moment also no zero-indices for SpFFT provided
+            forw = .TRUE.
+            CALL fft_interface(3, chargeDen%dimensions(:), chargeDen%grid, forw)
+            IF (input%l_f) THEN
+               CALL fft_interface(3, ekinGrid%dimensions(:), ekinGrid%grid, forw)
+            END IF
          ENDIF
          !  ---> collect stars from the fft-grid
          !
@@ -608,44 +475,24 @@ CONTAINS
                                          CMPLX(rhomat(stars%igq_fft(ik), idens), psi1r(stars%igq_fft(ik)))
             ENDDO
          ELSE
-            IF (zmat%l_real) THEN
-               DO ik = 0, stars%kmxq_fft - 1
-                  cwk(stars%igfft(ik, 1)) = cwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                            CMPLX(rhon(stars%igq_fft(ik)), zero)
-               ENDDO
-            ELSE
-               DO ik = 0, stars%kmxq_fft - 1
-                  cwk(stars%igfft(ik, 1)) = cwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                            CMPLX(rhon(stars%igq_fft(ik)), psir(stars%igq_fft(ik)))
-               ENDDO
-            ENDIF
-            !+apw
+            CALL chargeDen%takeFieldFromGrid(stars, cwk, 2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.0005)
             IF (input%l_f) THEN
-               IF (zmat%l_real) THEN
-                  DO ik = 0, stars%kmxq_fft - 1
-                     ecwk(stars%igfft(ik, 1)) = ecwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                                CMPLX(ekin(stars%igq_fft(ik)), zero)
-                  ENDDO
-               ELSE
-                  DO ik = 0, stars%kmxq_fft - 1
-                     ecwk(stars%igfft(ik, 1)) = ecwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                                CMPLX(ekin(stars%igq_fft(ik)), psii(stars%igq_fft(ik)))
-                  ENDDO
-               ENDIF
-            ENDIF
-            !-apw
+               CALL ekinGrid%takeFieldFromGrid(stars, ecwk, 2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.0005)
+            END IF
          ENDIF
          !
          scale = 1.0/ifftq3
+         IF(noco%l_noco) THEN
          DO istr = 1, stars%ng3_fft
             cwk(istr) = scale*cwk(istr)/REAL(stars%nstr(istr))
          ENDDO
+         END IF
          IF (input%l_useapw) THEN
 
             IF (input%l_f) THEN
-               DO istr = 1, stars%ng3_fft
-                  ecwk(istr) = scale*ecwk(istr)/REAL(stars%nstr(istr))
-               ENDDO
+!               DO istr = 1, stars%ng3_fft
+!                  ecwk(istr) = scale*ecwk(istr)/REAL(stars%nstr(istr))
+!               ENDDO
                CALL force_b8(atoms, ecwk, stars, sym, cell, jspin, results%force, f_b8)
             ENDIF
          ENDIF
@@ -705,9 +552,6 @@ CONTAINS
 
       IF (noco%l_noco) THEN
          DEALLOCATE (psi1r, psi1i, psi2r, psi2i, rhomat)
-      ELSE
-         DEALLOCATE (psir, psii, rhon)
-         IF (input%l_f) DEALLOCATE (kpsir, kpsii, ekin)
       ENDIF
 
       CALL timestop("pwden")

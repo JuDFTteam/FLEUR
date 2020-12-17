@@ -40,6 +40,8 @@ CONTAINS
     TYPE(t_jDOS), OPTIONAL, INTENT(IN) :: jDOS
     TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
+
+    INTEGER, PARAMETER :: lcf=3
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
 
@@ -132,8 +134,9 @@ CONTAINS
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
                 IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
-                  !1/SQRT(4pi) is added in crystalfieldCoeffs after normalization
-                  hub1data%cdn_spherical(j,l,itype) = hub1data%cdn_spherical(j,l,itype) + s/atoms%neq(itype)
+                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%uu(l,itype,ispin)&
+                                                        *( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) ) &
+                                                        *1.0/(atoms%neq(itype)*sfp_const)
                 ENDIF
              ENDDO
           ENDDO
@@ -189,6 +192,8 @@ CONTAINS
              DO l = 0,atoms%lmax(itype)
                 DO lp = 0,l
                    llp = (l* (l+1))/2 + lp
+                   IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
+                      .AND.(l.EQ.lcf.OR.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
                    DO j = 1,atoms%jri(itype)
                       s = denCoeffs%uunmt(llp,lh,itype,ispin)*( &
                            f(j,1,l,ispin)*f(j,1,lp,ispin)+ f(j,2,l,ispin)*f(j,2,lp,ispin) )&

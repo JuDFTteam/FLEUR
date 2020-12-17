@@ -133,7 +133,6 @@ CONTAINS
     CLASS(t_force),       INTENT(INOUT) :: thisForce
     TYPE(t_input),        INTENT(IN)    :: input
     TYPE(t_atoms),        INTENT(IN)    :: atoms
-
     TYPE(t_sym),          INTENT(IN)    :: sym
     TYPE(t_cell),         INTENT(IN)    :: cell
     TYPE(t_oneD),         INTENT(IN)    :: oneD

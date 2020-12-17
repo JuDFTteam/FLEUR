@@ -13,23 +13,23 @@
 !
       CONTAINS
       SUBROUTINE kvecon(
-     >                  mkpt,mface,
-     >                  nkpt,ncorn,nsym,nface,rcmt,fdist,fnorm,cpoint,
+     >                  nkpt,mface,
+     >                  ncorn,nsym,nface,rcmt,fdist,fnorm,cpoint,
      <                  kvc )
 
       IMPLICIT NONE
 
 ! ... Arguments ...
-      INTEGER, INTENT (IN) :: mkpt,mface
-      INTEGER, INTENT (IN) :: nkpt,ncorn,nsym,nface
+      INTEGER, INTENT (IN) :: nkpt,mface
+      INTEGER, INTENT (IN) :: ncorn,nsym,nface
       REAL,    INTENT (IN) :: fdist(mface),fnorm(3,mface)
       REAL,    INTENT (IN) :: rcmt(3,3),cpoint(3,mface)
-      REAL,    INTENT (OUT) :: kvc(3,mkpt)
+      REAL,    INTENT (OUT) :: kvc(3,nkpt)
 
 ! ... Locals ...
       INTEGER nk,i,lmin,l,j,n1,n2,n3,i1,i2,i3,ncd
       REAL d,dm,dist,dmax,xmin,cn,alpha,thrd
-      REAL knew(3),kc(3),cnorm(3),xnorm(3),cand(3,48*mkpt)
+      REAL knew(3),kc(3),cnorm(3),xnorm(3),cand(3,48*nkpt)
 !
 ! ... Intrinsic Functions ...
       INTRINSIC abs,sqrt
@@ -37,10 +37,6 @@
       IF ( nkpt.LT.ncorn ) THEN
         WRITE (oUnit,'(1x,''nkpt='',i4,'' ,ncorn='',i4)') nkpt,ncorn
          CALL juDFT_error("nkpt<ncorn ",calledby="kvecon")
-      ENDIF
-      IF ( nkpt.GT.mkpt ) THEN
-        WRITE (oUnit,'(1x,''nkpt='',i4,'' , mkpt='',i4)') nkpt, mkpt
-         CALL juDFT_error("nkpt>mkpt ",calledby="kvecon")
       ENDIF
       thrd=1.00/3.00
 !
@@ -95,7 +91,7 @@ C
               IF ( alpha.GT.( fdist(l)+1.0e-6*d ) ) GOTO 200
             ENDDO
             ncd = ncd + 1
-            IF (ncd>48*mkpt)  CALL juDFT_error("ncd>ncmax",calledby
+            IF (ncd>48*nkpt)  CALL juDFT_error("ncd>ncmax",calledby
      +           ="kvecon")
             DO i = 1, 3
               cand(i,ncd)=knew(i)
@@ -152,7 +148,7 @@ C the corner points.
 C
       dmax=0.0e0
       write(oUnit,'('' kpoint ('',i3,'')  ncd = '',i8,
-     +               '' max. allowed is '',i8)') lmin,ncd,48*mkpt
+     +               '' max. allowed is '',i8)') lmin,ncd,48*nkpt
       do 3000 n1=1,ncd
       do 3100 i=1,3
       knew(i)=cand(i,n1)

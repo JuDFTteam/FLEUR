@@ -150,6 +150,8 @@ c        Read the file "WF1.hsomtx".
 c**************************************************** 
       allocate( hsomtx(2,2,num_bands2,num_bands2,nkpts) )
       open(304,file='WF1.hsomtx',form='formatted')
+      read(304,*) !title
+      read(304,*) !specification of array dimensions
       do nkp=1,num_kpts
        do i=1,num_bands2
         do j=1,num_bands2

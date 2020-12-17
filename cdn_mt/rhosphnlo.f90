@@ -43,6 +43,7 @@ CONTAINS
     REAL,    INTENT (INOUT) :: rho(:,0:)
     TYPE(t_moments), INTENT(INOUT) :: moments
 
+    INTEGER, PARAMETER :: lcf=3
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2
@@ -128,6 +129,8 @@ CONTAINS
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
              l = atoms%llo(lo,itype)
+             IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
+                .AND.(l.EQ.lcf.OR.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
              llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
                 temp = c_1 * (&

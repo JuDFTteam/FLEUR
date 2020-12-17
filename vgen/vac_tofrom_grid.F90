@@ -7,7 +7,7 @@ MODULE m_vac_tofrom_grid
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
-  subroutine vac_to_grid(dograds,ifftd2,input,vacuum,noco,cell,den,stars,rho,grad)
+  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,stars,rho,grad)
 
 
     !-----------------------------------------------------------------------
@@ -31,12 +31,13 @@ CONTAINS
 
     IMPLICIT NONE
     logical,intent(in)           :: dograds
-    TYPE(t_input),INTENT(IN)     :: input
+    INTEGER,INTENT(IN)           :: jspins
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_noco),INTENT(IN)      :: noco
+    LOGICAL,INTENT(IN)           :: l_noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_potden),INTENT(IN)    :: den
+    COMPLEX,INTENT(IN)    :: vacxy(:,:,:,:)
+    REAL,INTENT(IN)    :: vacz(:,:,:)
     TYPE(t_gradients),INTENT(INOUT)::grad
     real,intent(OUT)             :: rho(:,:)
     !     .. Scalar Arguments ..
@@ -71,25 +72,28 @@ CONTAINS
     zro      = 0.0
     nt       = ifftd2
     idx=1
+
+    rho = 0.0
+
     ALLOCATE ( bf2(ifftd2) )
 
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
-    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,input%jspins) )
-    ALLOCATE ( rhtdz(vacuum%nmzd,input%jspins),rhtdzz(vacuum%nmzd,input%jspins) )
-    ALLOCATE ( rhdx(0:ifftd2-1,input%jspins),rhdy(0:ifftd2-1,input%jspins) )
-    ALLOCATE ( rhdz(0:ifftd2-1,input%jspins),rhdxx(0:ifftd2-1,input%jspins) )
-    ALLOCATE ( rhdyy(0:ifftd2-1,input%jspins),rhdzz(0:ifftd2-1,input%jspins) )
-    ALLOCATE ( rhdyz(0:ifftd2-1,input%jspins),rhdzx(0:ifftd2-1,input%jspins) )
-    ALLOCATE ( rhdxy(0:ifftd2-1,input%jspins))
+    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,jspins) )
+    ALLOCATE ( rhtdz(vacuum%nmzd,jspins),rhtdzz(vacuum%nmzd,jspins) )
+    ALLOCATE ( rhdx(0:ifftd2-1,jspins),rhdy(0:ifftd2-1,jspins) )
+    ALLOCATE ( rhdz(0:ifftd2-1,jspins),rhdxx(0:ifftd2-1,jspins) )
+    ALLOCATE ( rhdyy(0:ifftd2-1,jspins),rhdzz(0:ifftd2-1,jspins) )
+    ALLOCATE ( rhdyz(0:ifftd2-1,jspins),rhdzx(0:ifftd2-1,jspins) )
+    ALLOCATE ( rhdxy(0:ifftd2-1,jspins))
 
 
     ALLOCATE ( cqpw(stars%ng2-1))
     ALLOCATE ( fgxy(stars%ng2-1) )
 
 
-    IF (noco%l_noco) THEN
+    IF (l_noco) THEN
       ALLOCATE ( magmom(0:ifftd2-1,vacuum%nmzxy) )
       ALLOCATE ( dzmagmom(0:ifftd2-1,vacuum%nmzxy) )
       ALLOCATE ( ddzmagmom(0:ifftd2-1,vacuum%nmzxy) )
@@ -97,7 +101,7 @@ CONTAINS
       ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
       ALLOCATE ( ddxmagmom(0:ifftd2-1,2),ddymagmom(0:ifftd2-1,2) )
     ENDIF
-    IF ( noco%l_noco .OR. dograds ) THEN
+    IF ( l_noco .OR. dograds ) THEN
       ALLOCATE ( rhtxyr(vacuum%nmzxy)  )
       ALLOCATE ( rxydzr(vacuum%nmzxy),rxydzzr(vacuum%nmzxy) )
     ENDIF
@@ -121,13 +125,13 @@ CONTAINS
 
           idx1=idx
           DO ip=1,vacuum%nmzxy
-            DO js=1,input%jspins
-              CALL fft2d(stars, rho(idx1:,js),bf2, den%vacz(ip,ivac,js),0.,&
-              den%vacxy(ip,1,ivac,js), vacuum%nmzxy,+1)
+            DO js=1,jspins
+              CALL fft2d(stars, rho(idx1:,js),bf2, vacz(ip,ivac,js),0.,&
+              vacxy(ip,:,ivac,js), 1,+1)
             END DO
-            IF (noco%l_noco) THEN
-              CALL fft2d(stars, mx,my, den%vacz(ip,ivac,3),den%vacz(ip,ivac,4), &
-              den%vacxy(ip,1,ivac,3), vacuum%nmzxy,+1)
+            IF (l_noco) THEN
+              CALL fft2d(stars, mx,my, vacz(ip,ivac,3),vacz(ip,ivac,4), &
+              vacxy(ip,:,ivac,3), 1,+1)
 
               DO i=0,9*stars%mx1*stars%mx2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 + ((rho(i+idx1,1)-rho(i+idx1,2))/2.)**2
@@ -144,24 +148,24 @@ CONTAINS
        !      DO ivac = 1,nvac
 
        IF (dograds) THEN
-          DO js=1,input%jspins
+          DO js=1,jspins
              !
-             ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
+             ! calculate first (rhtdz) & second (rhtdzz) derivative of vacz(1:nmz)
              !
-             CALL grdchlh(vacuum%delz,den%vacz(1:vacuum%nmz,ivac,js),&
+             CALL grdchlh(vacuum%delz,vacz(1:vacuum%nmz,ivac,js),&
                   rhtdz(1:,js),rhtdzz(1:,js))
 
              DO iq = 1, stars%ng2-1
                 !
-                ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
+                ! calculate first (rxydz) & second (rxydzz) derivative of vacxy:
                 !
                 DO ip=1,vacuum%nmzxy
-                   rhtxyr(ip)=den%vacxy(ip,iq,ivac,js)
+                   rhtxyr(ip)=vacxy(ip,iq,ivac,js)
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
 
                 DO ip=1,vacuum%nmzxy
-                   rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
+                   rhtxyi(ip)=aimag(vacxy(ip,iq,ivac,js))
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
 
@@ -173,9 +177,9 @@ CONTAINS
              ENDDO ! loop over 2D stars (iq)
 
 
-          ENDDO ! input%jspins
+          ENDDO ! jspins
 
-          IF (noco%l_noco) THEN
+          IF (l_noco) THEN
              !  calculate  dzmagmom = d magmom / d z  and ddzmagmom= d dmagmom / d z
 
              DO i=0,9*stars%mx1*stars%mx2-1
@@ -188,7 +192,7 @@ CONTAINS
                    ddzmagmom(i,ip)= rxydzzr(ip)
                 ENDDO
              END DO
-          END IF ! noco%l_noco
+          END IF ! l_noco
 
        ENDIF   ! xcpot%igrd.GT.0
 
@@ -204,15 +208,15 @@ CONTAINS
              ! calculate derivatives with respect to x,y in g-space
              ! and transform them to real-space.
 
-             DO js = 1,input%jspins
+             DO js = 1,jspins
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=ImagUnit*vacxy(ip,iq,ivac,js)
                 ENDDO
 
-                rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
-                ! (den%vacz is set to zero and gx is included in
-                !    dn/atoms =  FFT(0,i*gx*den%vacxy)
+                rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*vacxy
+                ! (vacz is set to zero and gx is included in
+                !    dn/atoms =  FFT(0,i*gx*vacxy)
 
 
 
@@ -220,7 +224,7 @@ CONTAINS
                 !TODO    &                 pgft2x)
 
                 rhti = 0.0
-                CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
+                CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*vacxy)&
                       stars, rhdy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
 
                 rhti = 0.0
@@ -228,15 +232,15 @@ CONTAINS
                         stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,1,js), vacuum%nmzxyd,+1)
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-den%vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=-vacxy(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
-                CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*den%vacxy)&
+                CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
                        stars, rhdxx(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx*stars%ft2_gfx)
 
                 rhti = 0.0
-                CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*den%vacxy)&
+                CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
                       stars, rhdyy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy*stars%ft2_gfy)
 
                 rhti = 0.0
@@ -257,17 +261,17 @@ CONTAINS
                        stars, rhdzx(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-den%vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=-vacxy(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
-                CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*den%vacxy)&
+                CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
                       stars, rhdxy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy*stars%ft2_gfx)
 
-             END DO ! js=1,input%jspins
+             END DO ! js=1,jspins
 
 
-             IF (noco%l_noco) THEN
+             IF (l_noco) THEN
                 ! ! In non-collinear calculations the derivatives of |m| are calculated
                 ! ! in real-space. The derivatives of the charge density, that are
                 ! ! already calculated in g-space, will be used.
@@ -314,7 +318,7 @@ CONTAINS
                    rhdzz(i,2)= chdens - ddzmagmom(i,ip)
                 END DO
 
-             END IF ! noco%l_noco
+             END IF ! l_noco
 !          if(oneD%odi%d1)then
 !          rd = cell%z1 + vacuum%delz*(ip-1)
 !!$             CALL od_mkgxyz3(&
@@ -333,7 +337,7 @@ CONTAINS
           ! set minimal value of af2 to 1.0e-13
           !
 
-          rho=max(rho,1e-13)
+!          rho=max(rho,1e-13)
 
           idx=idx+ifftd2
        END DO ! ip=1,vacuum%nmzxy
@@ -352,23 +356,23 @@ CONTAINS
 
 
        DO ip=nmz0,vacuum%nmz
-          IF (.not. noco%l_noco) THEN
-             DO js=1,input%jspins
-                rho(idx+ip-nmz0,js)= den%vacz(ip,ivac,js)
+          IF (.not. l_noco) THEN
+             DO js=1,jspins
+                rho(idx+ip-nmz0,js)= vacz(ip,ivac,js)
              END DO
           ELSE
-             mx(0) = den%vacz(ip,ivac,3)
-             my(0) = den%vacz(ip,ivac,4)
-             chdens= (den%vacz(ip,ivac,1)+den%vacz(ip,ivac,2))/2.
-             magmom(0,1)= mx(0)**2 + my(0)**2 + ((den%vacz(ip,ivac,1)-den%vacz(ip,ivac,2))/2.)**2
+             mx(0) = vacz(ip,ivac,3)
+             my(0) = vacz(ip,ivac,4)
+             chdens= (vacz(ip,ivac,1)+vacz(ip,ivac,2))/2.
+             magmom(0,1)= mx(0)**2 + my(0)**2 + ((vacz(ip,ivac,1)-vacz(ip,ivac,2))/2.)**2
              magmom(0,1)= SQRT(magmom(0,1))
              rho(idx+ip-nmz0,1)= chdens + magmom(0,1)
              rho(idx+ip-nmz0,2)= chdens - magmom(0,1)
           END IF
        END DO
        IF (dograds)  THEN
-         IF (noco%l_noco) THEN
-           DO js=1,input%jspins
+         IF (l_noco) THEN
+           DO js=1,jspins
              CALL grdchlh(vacuum%delz,rho(idx:idx+nmzdiff-1,js),rhtdz(nmz0:,js),rhtdzz(nmz0:,js))
            END DO
 
@@ -382,17 +386,17 @@ CONTAINS
 !          if(oneD%odi%d1)then
 !             CALL od_mkgz(&
 !                              cell%z1,vacuum%nmzxy,vacuum%delz,&
-!                              nmzdiff,input%jspins,&
-!                              rhtz(vacuum%nmzxy+1,1),rhtz(vacuum%nmzxy+1,input%jspins),&
-!                              rhtdz(vacuum%nmzxy+1,1), rhtdz(vacuum%nmzxy+1,input%jspins),&
-!                              rhtdzz(vacuum%nmzxy+1,1),rhtdzz(vacuum%nmzxy+1,input%jspins),&
+!                              nmzdiff,jspins,&
+!                              rhtz(vacuum%nmzxy+1,1),rhtz(vacuum%nmzxy+1,jspins),&
+!                              rhtdz(vacuum%nmzxy+1,1), rhtdz(vacuum%nmzxy+1,jspins),&
+!                              rhtdzz(vacuum%nmzxy+1,1),rhtdzz(vacuum%nmzxy+1,jspins),&
 !                              agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,&
 !                              gzgr)
 !             CALL judft_error("OneD not implemented")
 !          ELSE
-             CALL mkgz(nmzdiff,input%jspins, rho(nmz0:,1),rho(nmz0:,input%jspins),&
-             rhtdz(nmz0:,1),rhtdz(nmz0:,input%jspins),rhtdzz(nmz0:,1),&
-                  rhtdzz(nmz0:,input%jspins),idx,grad)
+             CALL mkgz(nmzdiff,jspins, rho(nmz0:,1),rho(nmz0:,jspins),&
+             rhtdz(nmz0:,1),rhtdz(nmz0:,jspins),rhtdzz(nmz0:,1),&
+                  rhtdzz(nmz0:,jspins),idx,grad)
 
 !          endif
        ENDIF

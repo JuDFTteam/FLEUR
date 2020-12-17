@@ -126,20 +126,31 @@ subroutine write_dos(eigdos,hdf_id)
     class(t_eigdos),INTENT(INOUT):: eigdos
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
-    integer:: n
+#else
+    integer,       intent(in) ::hdf_id
+#endif
+    integer:: jspin,i,ind,id, n
+    character(len=100)::filename
+    real,allocatable:: dos_grid(:)
+    LOGICAL l_printTextDOS
+
+    l_printTextDOS = .TRUE.
+
+#ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
       print *, "writedos:",n,eigdos%get_num_weights()
       call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),eigdos%dos(:,:,n))
     enddo
-#else
-    integer,intent(in):: hdf_id !not used
-    integer:: jspin,i,ind,id
-    character(len=100)::filename
-    real,allocatable:: dos_grid(:)
+    IF(eigdos%get_num_weights().GT.40) THEN
+       WRITE(*,*) 'Number of weights in ', TRIM(ADJUSTL(eigdos%name_of_dos)),' DOS too large for simple text output.'
+       WRITE(*,*) 'Output only in banddos.hdf file.'
+       l_printTextDOS = .FALSE.
+    END IF
+#endif
 
+    IF (.NOT.l_printTextDOS) RETURN
     if (.not.allocated(eigdos%dos)) return
     if (size(eigdos%dos)==0) return
-
     DO jspin=1,eigdos%get_spins()
       write(filename,"(a,a,i0)") trim(eigdos%name_of_dos),".",jspin
       open(999,file=filename)
@@ -152,7 +163,6 @@ subroutine write_dos(eigdos,hdf_id)
       close(999)
       write(*,*) "done:",filename
     ENDDO
-#endif
   END subroutine
 
   subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi,banddos)

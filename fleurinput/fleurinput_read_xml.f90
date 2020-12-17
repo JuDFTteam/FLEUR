@@ -61,7 +61,7 @@ CONTAINS
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
-    IF (present(kptsSelection)) THEN
+    IF (present(kptsSelection).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        kptsSelection(:) = ''
        kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')))
        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/altKPointList')
@@ -77,7 +77,7 @@ CONTAINS
           END IF
        END DO
     END IF
-    IF (PRESENT(kptsArray)) THEN
+    IF (PRESENT(kptsArray).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        numNodes = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
        IF(.NOT.ALLOCATED(kptsArray)) THEN
           ALLOCATE(kptsArray(numNodes))

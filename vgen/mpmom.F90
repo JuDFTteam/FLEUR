@@ -89,7 +89,7 @@ contains
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
     use m_intgr,     only: intgr3
-    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
+    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK, POTDEN_TYPE_CRYSTALFIELD
     use m_types
     use m_DoubleFactorial
     use m_SphBessel

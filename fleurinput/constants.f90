@@ -27,29 +27,33 @@ MODULE m_constants
   REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
   REAL,             PARAMETER :: sfp_const=SQRT(4.*3.1415926535897932)
   COMPLEX,          PARAMETER :: ImagUnit=(0.0,1.0)
-  REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
+  REAL,             PARAMETER :: hartree_to_ev_const=27.211386245988 ! value from  https://physics.nist.gov/cgi-bin/cuu/Value?hrev
+                                                                     ! 27.211386245988(53)
+  REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
+                                                                       ! 0.529177210903(80) 
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 30'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     Development Version     (based on MaX4.0)'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 32'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 5.0          (www.max-centre.eu)'
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
-  INTEGER, PARAMETER :: POTDEN_TYPE_OTHER     = 0    ! POTDEN_TYPE <= 0 ==> undefined
-  INTEGER, PARAMETER :: POTDEN_TYPE_POTTOT    = 1    ! 0 < POTDEN_TYPE <= 1000 ==> potential
-  INTEGER, PARAMETER :: POTDEN_TYPE_POTCOUL   = 2
-  INTEGER, PARAMETER :: POTDEN_TYPE_POTX      = 3
-  INTEGER, PARAMETER :: POTDEN_TYPE_POTYUK    = 4
-  INTEGER, PARAMETER :: POTDEN_TYPE_EnergyDen = 5
-  INTEGER, PARAMETER :: POTDEN_TYPE_DEN       = 1001 ! 1000 < POTDEN_TYPE ==> density
+  INTEGER, PARAMETER :: POTDEN_TYPE_OTHER        = 0    ! POTDEN_TYPE <= 0 ==> undefined
+  INTEGER, PARAMETER :: POTDEN_TYPE_POTTOT       = 1    ! 0 < POTDEN_TYPE <= 1000 ==> potential
+  INTEGER, PARAMETER :: POTDEN_TYPE_POTCOUL      = 2
+  INTEGER, PARAMETER :: POTDEN_TYPE_POTX         = 3
+  INTEGER, PARAMETER :: POTDEN_TYPE_POTYUK       = 4
+  INTEGER, PARAMETER :: POTDEN_TYPE_EnergyDen    = 5
+  INTEGER, PARAMETER :: POTDEN_TYPE_CRYSTALFIELD = 6
+  INTEGER, PARAMETER :: POTDEN_TYPE_DEN          = 1001 ! 1000 < POTDEN_TYPE ==> density
 
   INTEGER, PARAMETER :: KPTS_KIND_UNSPECIFIED = 0
   INTEGER, PARAMETER :: KPTS_KIND_MESH        = 1
   INTEGER, PARAMETER :: KPTS_KIND_PATH        = 2
-  INTEGER, PARAMETER :: KPTS_KIND_TETRA       = 3
+  INTEGER, PARAMETER :: KPTS_KIND_TRIA_BULK   = 3
   INTEGER, PARAMETER :: KPTS_KIND_TRIA        = 4
   INTEGER, PARAMETER :: KPTS_KIND_SPEX_MESH   = 5
 
   CHARACTER(LEN=11),DIMENSION(0:5),PARAMETER :: kptsKindString_consts = &
-     (/'unspecified','mesh       ','path       ','tetra      ','tria       ','SPEX mesh  ' /)
+     (/'unspecified','mesh       ','path       ','tria-bulk  ','tria       ','SPEX mesh  ' /)
 
   INTEGER, PARAMETER :: BZINT_METHOD_HIST  = 0
   INTEGER, PARAMETER :: BZINT_METHOD_GAUSS = 1

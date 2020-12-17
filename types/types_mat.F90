@@ -46,9 +46,67 @@ MODULE m_types_mat
       procedure        :: reset => t_mat_reset
       procedure        :: bcast => t_mat_bcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
+      procedure        :: leastsq => t_mat_leastsq
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_leastsq(A, b)
+      use m_constants
+      implicit none 
+      class(t_mat), intent(inout) :: A
+      type(t_mat), intent(inout)  :: b 
+
+      type(t_mat) :: tmp
+      integer              :: m, n, nrhs, lda, ldb, info, lwork
+
+      real    :: rwork_req(1)
+      complex :: cwork_req(1)
+
+      real, allocatable    :: rwork(:)
+      complex, allocatable :: cwork(:)
+
+      if(A%matsize2 /= b%matsize2) call judft_error("least-squares dimension problem")
+      if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
+
+      m = A%matsize1
+      n = A%matsize2 
+      nrhs = b%matsize2
+      if(A%l_real) then 
+         lda = size(A%data_r,1)
+         ldb = size(b%data_r,1)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork_req, -1, info)
+         lwork = int(rwork_req(1))
+         allocate(rwork(lwork), source=0.0)
+
+         call dgels("N", m, n, nrhs, A%data_r, lda, b%data_r, ldb, rwork, lwork, info)
+      else
+         lda = size(A%data_c,1)
+         ldb = size(b%data_c,1)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork_req, -1, info)
+         lwork = int(cwork_req(1))
+         allocate(cwork(lwork), source=cmplx_0)
+
+         call zgels("N", m, n, nrhs, A%data_c, lda, b%data_c, ldb, cwork, lwork, info)
+      endif
+
+      if(info /= 0) call judft_error("least squares failed.")
+
+      call tmp%init(A%l_real, n, nrhs)
+
+      if(tmp%l_real) then
+         tmp%data_r = b%data_r(:n,:)
+      else
+         tmp%data_c = b%data_c(:n,:)
+      endif
+
+      call b%free()
+      call b%init(tmp)
+      call b%copy(tmp, 1,1)
+      call tmp%free()
+   end subroutine t_mat_leastsq
+
    subroutine t_mat_pos_eigvec_sum(mat)
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
@@ -75,7 +133,7 @@ CONTAINS
 #endif
       implicit none 
       CLASS(t_mat), INTENT(INOUT)   :: mat
-      integer, intent(in)           :: root, comm 
+      integer, intent(in)           :: root, comm
       
       integer :: ierr, full_shape(2), me
 
@@ -96,9 +154,9 @@ CONTAINS
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
       if(mat%l_real) then
-         call MPI_Bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
+         call MPI_bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
       else 
-         call MPI_Bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
+         call MPI_bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
       endif
 #endif
    end subroutine t_mat_bcast
@@ -333,20 +391,24 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_add_transpose
 
-   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
       CLASS(t_mat) :: mat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_real
-      INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
-      INTEGER, INTENT(IN), OPTIONAL:: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_2d                 !not needed here either
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_real
+      INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2
+      INTEGER, INTENT(IN), OPTIONAL        :: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_2d                 !not needed here either
+      character(len=*),intent(in),optional :: mat_name
 
-      CALL mat%alloc(l_real, matsize1, matsize2)
+      CALL mat%alloc(l_real, matsize1, matsize2, mat_name=mat_name)
    END SUBROUTINE t_mat_init
-   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2)
+   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2, mat_name)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT) :: mat
       CLASS(t_mat), INTENT(IN)    :: templ
       INTEGER, INTENT(IN), OPTIONAL:: global_size1, global_size2
+      character(len=*),intent(in),optional :: mat_name
+
+      integer :: ierr
 
       IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
          IF ((global_size1 .NE. templ%matsize1) .OR. (global_size2 .NE. templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
@@ -355,22 +417,30 @@ CONTAINS
       mat%matsize1 = templ%matsize1
       mat%matsize2 = templ%matsize2
       IF (mat%l_real) THEN
-         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), source=0.0, stat=ierr)
          ALLOCATE (mat%data_c(1, 1))
-         mat%data_r = 0.0
       ELSE
-         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), source=(0.0,0.0), stat=ierr)
          ALLOCATE (mat%data_r(1, 1))
-         mat%data_c = 0.0
       END IF
+      if(ierr /= 0) then
+         if(present(mat_name)) then 
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "]. Name: " // trim(mat_name))
+         else 
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "].")
+         endif 
+      endif
    END SUBROUTINE t_mat_init_template
 
-   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init, mat_name)
       use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
+      character(len=*), intent(in), optional :: mat_name
       character(len=300)           :: errmsg
 
       INTEGER:: err
@@ -389,8 +459,17 @@ CONTAINS
       IF (mat%l_real) THEN
          ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
          ALLOCATE (mat%data_c(0, 0))
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
-                                        hint="Errormessage: " // trim(errmsg))
+         IF (err /= 0) then 
+            write (*,*) "Failed to allocate mem of shape: [" &
+                       // int2str(mat%matsize1) // ", " //  int2str(mat%matsize2) // "]"
+            if(present(mat_name)) then 
+               CALL judft_error("Allocation of memmory failed for mat datatype. Name:" // trim(mat_name), &
+                                       hint="Errormessage: " // trim(errmsg))
+            else
+               CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                       hint="Errormessage: " // trim(errmsg))
+            endif
+         endif
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
@@ -444,7 +523,19 @@ CONTAINS
       endif
 
       lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
+      if(transA_i == "N") then 
+         if(lda < max(1,m)) call judft_error("problem with lda")
+      else
+         if(lda < max(1,k)) call judft_error("problem with lda")
+      endif
+
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
+      if(transB_i == "N") then 
+         if(ldb < max(1,k)) call judft_error("problem with ldb")
+      else
+         if(ldb < max(1,n)) call judft_error("problem with ldb")
+      endif
+
       IF (present(res)) THEN
          ! prepare res matrix
          if(res%allocated()) then
@@ -473,6 +564,8 @@ CONTAINS
          if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          IF (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
@@ -484,7 +577,8 @@ CONTAINS
 
          call tmp%alloc(mat1%l_real, n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
-
+         if(ldc < max(1,m)) call judft_error("problem with ldc")
+         
          if (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
@@ -649,6 +743,8 @@ CONTAINS
 
       INTEGER:: i1, i2
 
+      call timestart("t_mat_copy")
+
       select type (mat1)
       type is(t_mat)
           
@@ -665,6 +761,8 @@ CONTAINS
       ELSE
          call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
       END IF
+
+      call timestop("t_mat_copy")
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)

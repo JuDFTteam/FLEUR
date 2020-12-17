@@ -37,6 +37,7 @@ wannier/wann_maxbnd.F
 wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
+wannier/wann_mmk0_updown_sph_at.f
 wannier/wann_mmk0_vac.F
 #wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
@@ -51,6 +52,7 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
+wannier/wann_pauliat_rs.f
 wannier/wann_gabeffgagaunt.f
 wannier/wann_perpmag.f
 wannier/wann_perpmag_rs.F

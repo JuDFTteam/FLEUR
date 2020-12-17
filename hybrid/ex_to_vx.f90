@@ -25,7 +25,7 @@ contains
       nbasfcn = lapw%hyb_num_bas_fun(fi)
 
       !calculate trafo from wavefunctions to APW basis
-      IF (fi%input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
+      IF (fi%input%neig < hybdat%nbands(nk,jsp)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
       
       call ex%u2l()
 

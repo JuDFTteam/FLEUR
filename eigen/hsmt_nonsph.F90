@@ -71,7 +71,11 @@ CONTAINS
           DEALLOCATE(hmat%data_c)
           ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
        ENDIF
-       hmat%data_c=0.0
+       !$OMP PARALLEL DO DEFAULT(shared)
+       DO l = 1, size(hmat%data_c,2)
+          hmat%data_c(:,l)=0.0
+       ENDDO
+       !$OMP END PARALLEL DO
     ENDIF
     size_data_c=size(hmat%data_c,1)
 #else
@@ -96,10 +100,8 @@ CONTAINS
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
           cchi=MERGE(chi,chi*2,(sym%invsat(na)==0))
-          call timestart("hsmt_ab")
           CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,jintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
-          call timestop("hsmt_ab")
-          !!$acc update device(abcoeffs)
+          !!$acc update device(ab)
           !$acc host_data use_device(abCoeffs,ab1,h_loc)
           CALL CPP_zgemm("T","N",lapw%nv(jintsp),ab_size,ab_size,cmplx(1.0,0.0),abCoeffs,SIZE(abCoeffs,1),&
                      h_loc,size(td%h_loc_nonsph,1),cmplx(0.,0.),ab1,size_ab)
@@ -115,9 +117,17 @@ CONTAINS
           !$acc end kernels
           IF (iintsp==jintsp) THEN
              IF (isp==jsp) THEN
+#ifdef _OPENACC
                !$acc kernels default(none) present(ab1)
                ab1(:,:)=conjg(ab1(:,:))
                !$acc end kernels
+#else
+               !$omp parallel do default(shared)
+               DO ll = 1, SIZE(ab1,2)
+                  ab1(:,ll)=conjg(ab1(:,ll))
+               ENDDO
+               !$omp end parallel do
+#endif
                IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
                  CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,1.0,CPP_data_c,size_data_c)
@@ -167,8 +177,8 @@ CONTAINS
              ENDIF
           ENDIF
 
-         END IF
-       end do
+       END IF
+    END DO
 #ifdef _OPENACC
        if (hmat%l_real) THEN
           !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
@@ -181,7 +191,11 @@ CONTAINS
        endif
 #else
     IF (hmat%l_real) THEN
-       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
+       !$OMP PARALLEL DO DEFAULT(shared)
+       DO l = 1, size(hmat%data_c,2)
+          hmat%data_r(:,l) = hmat%data_r(:,l) + REAL(hmat%data_c(:,l))
+       ENDDO
+       !$OMP END PARALLEL DO
     ENDIF
 #endif
        !$acc exit data delete(ab2,ab1,abCoeffs,data_c,ab_select,h_loc)

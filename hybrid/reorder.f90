@@ -20,7 +20,6 @@ CONTAINS
       INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
       REAL, allocatable     ::  vechlp_r(:)
 
-      call timestart("reorder")
       allocate(vechlp_r(nbasm), source=0.0, stat=info)
       if(info /= 0) call judft_error("can't allocate vechlp_r")
       vechlp_r = vec_r
@@ -54,8 +53,6 @@ CONTAINS
             END DO
          END DO
       END DO
-
-      call timestop("reorder")
    end subroutine reorder_forw_real
 
    subroutine reorder_back_real(nbasm, atoms, lcutm, nindxm, vec_r)
@@ -117,7 +114,6 @@ CONTAINS
       INTEGER               :: itype, ieq, indx1, indx2, l, n, m, info
       complex, allocatable  ::  vechlp_c(:)
 
-      call timestart("reorder")
       allocate(vechlp_c(nbasm), source=cmplx_0, stat=info)
       if(info /= 0) call judft_error("can't allocate vechlp_c")
       vechlp_c = vec_c
@@ -151,8 +147,6 @@ CONTAINS
             END DO
          END DO
       END DO
-
-      call timestop("reorder")
    end subroutine reorder_forw_cmplx
 
    subroutine reorder_back_cmplx(nbasm, atoms, lcutm, nindxm, vec_c)

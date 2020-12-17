@@ -16,12 +16,14 @@ MODULE m_types_xml
   USE m_calculator
   IMPLICIT NONE
   PRIVATE
+
   LOGICAL :: INITIALIZED=.false.
   TYPE t_xml
      INTEGER:: id
      character(len=200):: basepath=""
      integer           :: versionNumber=0
-   CONTAINS
+     INTEGER           :: currentversionNumber=33 !parameters are not allowed here
+ CONTAINS
      PROCEDURE        :: init
      PROCEDURE        :: GetNumberOfNodes
      PROCEDURE,NOPASS :: SetAttributeValue
@@ -64,6 +66,11 @@ CONTAINS
         INTEGER(c_int) ::dropInputSchema
         CHARACTER(kind=c_char) ::version
       END FUNCTION dropInputSchema
+      FUNCTION dropOutputSchema(version) BIND(C, name="dropOutputSchema")
+        USE iso_c_binding
+        INTEGER(c_int) ::dropInputSchema
+        CHARACTER(kind=c_char) ::version
+      END FUNCTION dropOutputSchema
     END INTERFACE
         !Now validate with schema
     errorStatus = 0
@@ -71,6 +78,13 @@ CONTAINS
 
     IF(errorStatus.NE.0) THEN
        CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd for version '//version)
+    END IF
+
+    errorStatus = 0
+    errorStatus=dropOutputSchema(version//C_NULL_CHAR)
+
+    IF(errorStatus.NE.0) THEN
+       WRITE(*,*) 'Cannot print out FleurOutputSchema.xsd for version '//version
     END IF
 
     schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
@@ -113,8 +127,7 @@ CONTAINS
     versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
     read(versionString,*) tempReal
     xml%versionNumber=nint(tempReal*100)
-    IF(versionString.NE.'0.32') THEN
-      if (versionString=='0.30') call judft_error("Version number of inp.xml no longer supported. If you use the current development version try to simply replace 0.30 with 0.32 in inp.xml")
+    IF(xml%versionNumber.NE.xml%currentversionNumber) THEN
       if (.not.l_allow_old) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
       old_version=.true.
     END IF
@@ -777,7 +790,7 @@ CONTAINS
         CYCLE
       endif
       if (err.ne.0) exit
-      write(fileNum,*) "  ",trim(line)
+      write(fileNum,"(a,a)") "  ",trim(line)
     end do
     write(fileNum,*) "  <!-- END of dump of the inp.xml file -->"
     close(99,status='delete')
