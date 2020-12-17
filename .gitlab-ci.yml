@@ -85,7 +85,7 @@ test-gfortran-serial:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
     - cd build.serial
-    - ctest -j 2
+    - ctest
   artifacts:
     when: on_failure
     paths:
