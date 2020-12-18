@@ -1,6 +1,8 @@
 docs/mkdocs/site
 init/compileinfo.h
 Testing/*
+work/*
+failed_test_results/*
 *~
 \#*
 build
