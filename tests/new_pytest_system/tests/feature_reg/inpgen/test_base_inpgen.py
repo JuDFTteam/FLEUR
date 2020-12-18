@@ -53,5 +53,8 @@ def test_inpgen_Si_inputfile_content(execute_inpgen, clean_workdir):
     should_files = ['inp.xml', 'struct.xsf', 'default.econfig', 'out', 'usage.json', 'sym.xml', 'kpts.xml']
     res_file_names = list(res_files.keys())
     
+    # if it would complain about a list the inp.xml would not be there
     for file1 in should_files:
         assert file1 in res_file_names
+
+    # Now we test if the namelists are really set in the inp.xml

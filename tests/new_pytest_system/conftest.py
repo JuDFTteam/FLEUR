@@ -63,11 +63,17 @@ def pytest_configure(config):
     """
     Here you can add things by a pytest config, could be also part of a seperate file
     So far we add some markers here to be able to execute a certain group of tests
+    We make them all lowercaps as convention
     """
     config.addinivalue_line("markers", "bulk: test with bulk")
     config.addinivalue_line("markers", "film: test with film")
     config.addinivalue_line("markers", "inpgen: test running inpgen")
+    config.addinivalue_line("markers", "fleur: test running fleur")
     config.addinivalue_line("markers", "serial: test running fleur serial")
+    config.addinivalue_line("markers", "band: testing bandstructure")
+    config.addinivalue_line("markers", "dos: testing DOS")
+    config.addinivalue_line("markers", "hybrid: testing hybrid functionals")
+    config.addinivalue_line("markers", "eigpara: test testing eig para")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
@@ -82,6 +88,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "collinear: test with collinear")
     config.addinivalue_line("markers", "non-collinear: test with non-collinear")
     config.addinivalue_line("markers", "spinspiral: test with spinspiral")
+    config.addinivalue_line("markers", "libxc: test for fleur using libxc")
 
 ####################################
 ########### fixtures
@@ -100,7 +107,7 @@ def fleur_test_session():
     - look for executables to use within that session for all tests
     """
     # put session preparation code here
-
+    # maybe clean failed_dir
     yield # now all the tests run
 
     # put session tear down code here
@@ -271,9 +278,13 @@ def grep_exists():
         :return: Bool, if exists
         """
         exists = False
+        #regex_pattern = "(" + expression + ")"
+        #pattern = re.compile(regex_pattern) # This might be unsave, 
+        # but we do it to allow for same expressions as grep does
         with open(filepath, "r") as file1:
             for line in file1:
-                if re.search(expression, line):
+                if re.search(expression, line):#pattern.search(line):
+                    #print(line)
                     exists = True
                     break
         return exists
@@ -294,7 +305,7 @@ def grep_number():
                     try:
                         number = float(res)
                     except ValueError as exc: # There is still something after the number
-                        number = float(re.findall("\d+\.\d+", res)[0])
+                        number = float(re.findall("[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
         if first_only:
             return numbers[0]
