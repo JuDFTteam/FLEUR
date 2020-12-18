@@ -109,7 +109,7 @@ CONTAINS
                 bx(kp) = CMPLX(0.0,0.0)
                 cx(kp) = CMPLX(0.0,0.0)
              END DO
-             CALL timestart("hlomat11")
+             !CALL timestart("hlomat11")
              !CPP_OMP PARALLEL DO DEFAULT(none) &
              !CPP_OMP& SHARED(ax,bx,cx,ntyp,isp,jsp,m,lm,lo,mlo) &
              !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,iintsp) &
@@ -130,7 +130,7 @@ CONTAINS
                 END DO
              END DO
              !CPP_OMP END PARALLEL DO
-             CALL timestop("hlomat11")
+             !CALL timestop("hlomat11")
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                 locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix

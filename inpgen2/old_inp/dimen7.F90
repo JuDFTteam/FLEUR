@@ -168,7 +168,7 @@
         input%neig = input%neig + nstate*atoms%neq(n)
 !
       ENDDO
-      CALL ylmnorm_init(atoms%lmaxd)
+      !CALL ylmnorm_init(atoms%lmaxd)
 !      IF (mod(lmaxd,2).NE.0) lmaxd = lmaxd + 1
       IF (2*input%neig.LT.MAX(5.0,input%zelec)) THEN
         WRITE(oUnit,*) input%neig,' states estimated in dimen7 ...'
