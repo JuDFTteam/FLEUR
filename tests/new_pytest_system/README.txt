@@ -71,7 +71,7 @@ pytest-regression
 
 1. Create a new folder under inputfiles where you put all the input files needed for your test
 2. Optional add a new test_<some_name>.py file somewhere under the tests directory where your test functions goes, or add you test function to an already existing file
-
+Usually one executes all tests within a file, so if you want to execute your single test, it needs its own file.
 
 example test function:
 
