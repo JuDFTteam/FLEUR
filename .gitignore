@@ -1,8 +1,9 @@
 docs/mkdocs/site
 init/compileinfo.h
 Testing/*
-work/*
-failed_test_results/*
+tests/new_pytest_system/work/*
+tests/new_pytest_system/failed_test_results/*
+tests/new_pytest_system/parser_testdir/*
 __pycache__
 *~
 \#*

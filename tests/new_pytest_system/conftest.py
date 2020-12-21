@@ -2,16 +2,26 @@
 """
 In this file go all implemented of fixtures for fleur tests which are useful by more then one test
 
-Some code from taken and adapted from redis libtest.py
-We stay close to the old test workflow, which is serial, everything is executed in the work dir
+Some code was taken and adapted from redis libtest.py
+We stay close to the old test workflow, which is serial, everything is executed in the work dir.
+Also so far we did not rename or restructure the tests, in a new directory tree
 Maybe one could also execute tests in parallel, since fleur tests take quite some time
 """
 import os
 import re
+import sys
 import pytest
 import logging
 import shutil
+sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
+# Now we can import everything that is in helpers, but be careful about name clashing
+from helpers.utils import RUN_PARSER_TESTS
+
 pytest_plugins = []
+
+
+
+#TODO other optional aiida tests
 
 ######### Helpers ############
 # C: By using os.path instead of pathlib, this will prob fail on Windows
@@ -27,14 +37,14 @@ pytest_plugins = []
 # TODO set environment i.e open mp
 # TODO make tests work on CI
 # TODO smoke tests, i.e early end test session if no executable, and so on...
-# TODO instead of making all functions fixtures, most of them could be put into a libtest.py and imported
-# Through I am not sure how to do this without installing anything. Prob works as long as it is a sub path
+# TODO instead of making all functions fixtures, most of them could be put into the helpers dir, like it was with libtest.py and imported
 # TODO generate docs for devs on webside of test system. Should be done from README.txt. Ideal if possible generate also docs for all tests
 # and fixtures from docstring
 
 
 def test_dir():
-    """Get path to the parent test directory other paths are relative to this"""
+    """Get path to the parent test directory defined by the positon of this conftest.py file
+    other paths are relative to this"""
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
     return test_dir_path
 
@@ -45,17 +55,22 @@ def build_dir():
     return build_path
 
 def work_dir():
-    """Return directory path where execute tests in."""
+    """Return directory path where execute tests in"""
     path = "./work/"
     work_dir_path = os.path.abspath(os.path.join(test_dir(), path))
     return work_dir_path
 
 def failed_dir():
-    """Return directory path where execute tests in."""
+    """Return directory path where execute tests in"""
     path = "./failed_test_results/"
     failed_dir_path = os.path.abspath(os.path.join(test_dir(), path))
     return failed_dir_path
 
+def parser_testdir():
+    """Return directory path where execute tests in"""
+    path = "./parser_testdir/"
+    parser_testdir_path = os.path.abspath(os.path.join(test_dir(), path))
+    return parser_testdir_path
 
 ##### Add some markers to pytest to group tests
 
@@ -89,6 +104,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "non-collinear: test with non-collinear")
     config.addinivalue_line("markers", "spinspiral: test with spinspiral")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
+    config.addinivalue_line("markers", "wannier: test for fleur using wannier")
+    config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
+    
 
 ####################################
 ########### fixtures
@@ -108,15 +126,19 @@ def fleur_test_session():
     """
     # put session preparation code here
     # maybe clean failed_dir
+    # maybe clean parser_testdir
+
     yield # now all the tests run
 
     # put session tear down code here
+    
 
 @pytest.fixture
 def set_environment():
     """
     Fixture to set given environment variables
     """
+    # Implement me
     pass
 
 ##### fixtures active EACH test case ####
@@ -169,7 +191,7 @@ def execute_inpgen(set_environment, inpgen_binary):
     """
     Fixture which returns an execute_inpgen function
     """
-    def _execute_inpgen(cmdline_param=None, test_file_folder=None, exclude=[]):
+    def _execute_inpgen(cmdline_param=None, test_file_folder=None, exclude=[], only_copy=[]):
         """
         Function which copies the input files
         executes inpgen with the given cmdline_param
@@ -188,13 +210,27 @@ def execute_inpgen(set_environment, inpgen_binary):
         if cmdline_param is None:
             cmdline_param = []
 
+        # Prepare exclude and only copy list, since we allow for name changes.
+
+        new_only_copy_list = {}
+        for entry in only_copy:
+            if isinstance(entry, list):
+                new_only_copy_list[entry[0]] = entry[1]
+            else:
+                new_only_copy_list[entry] = entry
+
+
+
         if test_file_folder is not None:
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
             source = os.listdir(abspath)
             for files in source:
                 if files not in exclude:
-                    shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
-        
+                    if new_only_copy_list != {}:
+                        if files in list(new_only_copy_list.keys()):
+                            shutil.copy(os.path.abspath(os.path.join(abspath, new_only_copy_list[files])), workdir)
+                    else:
+                        shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
         #print(inpgen_binary)
         arg_list = [inpgen_binary] + cmdline_param
         #print(arg_list)
@@ -220,7 +256,7 @@ def execute_fleur(set_environment, fleur_binary):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(cmdline_param=None, test_file_folder=None, exclude=[]):
+    def _execute_fleur(cmdline_param=None, test_file_folder=None, exclude=[], only_copy=[]):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -237,13 +273,25 @@ def execute_fleur(set_environment, fleur_binary):
         if cmdline_param is None:
             cmdline_param = []
 
+        # Prepare only copy list, since we allow for name changes.
+        new_only_copy_list = {}
+        for entry in only_copy:
+            if isinstance(entry, list):
+                new_only_copy_list[entry[0]] = entry[1]
+            else:
+                new_only_copy_list[entry] = entry
+
         if test_file_folder is not None:
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
             source = os.listdir(abspath)
             for files in source:
                 if files not in exclude:
-                    shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
-        
+                    if new_only_copy_list != {}:
+                        if files in list(new_only_copy_list.keys()):
+                            shutil.copy(os.path.abspath(os.path.join(abspath, new_only_copy_list[files])), workdir)
+                    else:
+                        shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
+
         fleur, parallel = fleur_binary
         mpiruncmd = []
         arg_list = mpiruncmd + [fleur] + cmdline_param
@@ -284,6 +332,7 @@ def grep_exists():
         with open(filepath, "r") as file1:
             for line in file1:
                 if re.search(expression, line):#pattern.search(line):
+                    # re.search allows also for patters, complains about some
                     #print(line)
                     exists = True
                     break
@@ -305,9 +354,11 @@ def grep_number():
                     try:
                         number = float(res)
                     except ValueError as exc: # There is still something after the number
-                        number = float(re.findall("[+-]?\d+\.\d+", res)[0])
+                        number = float(re.findall(r"[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
         if first_only:
+            if len(numbers) == 0:
+                return numbers
             return numbers[0]
         else:
             return numbers
@@ -384,7 +435,27 @@ def clean_workdir():
     return _clean_workdir
 
 
+@pytest.fixture(scope='function')
+def stage_for_parser_test(request):
+    """
+    Fixture to copy the results files of a test to the parser test folder.
+    """
+    
+    parsertestdir = parser_testdir()
+    workdir = work_dir()
 
+    yield # test is running
+    
+    # clean up code goes here:
+   
+    method_name = request.node.name
+    if RUN_PARSER_TESTS and not request.node.rep_call.failed:
+        # if failed move test result to parsertestdir, will replace dir if existent
+        destination = os.path.abspath(os.path.join(parsertestdir, method_name))
+        if os.path.isdir(destination):
+            shutil.rmtree(destination)
+        #os.mkdir(destination)
+        shutil.copytree(workdir, destination)
 
 
 @pytest.fixture(scope='session')

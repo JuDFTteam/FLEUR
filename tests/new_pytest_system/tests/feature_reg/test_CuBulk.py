@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.bulk
 @pytest.mark.xml
 @pytest.mark.fast
-def test_CuBulkXML(execute_fleur, grep_exists, grep_number):
+def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test):
     """
     Simple test of Fleur with XML input with one step:
     1.Generate a starting density and run 1 iteration and compare fermi-energy & total energy
@@ -36,7 +36,7 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number):
 @pytest.mark.xml
 @pytest.mark.band
 @pytest.mark.fast
-def test_CuBandXML(execute_fleur, grep_exists):
+def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
     """
     Simple test of Fleur band structure calculation with XML input with one step:
     1.Generate a starting density, run 1 iteration, and generate band structure. Ensure that the files are created.
@@ -104,7 +104,7 @@ def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
 @pytest.mark.xml
 @pytest.mark.dos
 @pytest.mark.fast
-def test_CuDOSXML(execute_fleur, grep_exists, grep_number):
+def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test):
     """Simple test of Fleur DOS calculation with XML input with one step:
     1.Generate a starting density, run 1 iteration, and generate DOS. Ensure that the files are created.
 
