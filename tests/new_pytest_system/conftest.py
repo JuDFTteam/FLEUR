@@ -197,10 +197,12 @@ def execute_inpgen(set_environment, inpgen_binary):
         executes inpgen with the given cmdline_param
         and returns a path to the folder with the results
         
-        :param cmdline_param:
+        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
         :param test_file_folder: string relative path to a folder containing all files, to copy for the test
-        :param exclude: list of strings file names to exclude form copy
-        
+        :param exclude: list of strings file names to exclude from copy
+        :param only_copy: list of string file names, or length 2 to change file name. example ['inp', ['kpts2', 'kpts']]
+        in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
+
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
@@ -210,7 +212,7 @@ def execute_inpgen(set_environment, inpgen_binary):
         if cmdline_param is None:
             cmdline_param = []
 
-        # Prepare exclude and only copy list, since we allow for name changes.
+        # Prepare only copy list, since we allow for name changes.
 
         new_only_copy_list = {}
         for entry in only_copy:
@@ -262,8 +264,13 @@ def execute_fleur(set_environment, fleur_binary):
         executes fleur with the given cmdline_param
         and returns a path to the folder with the results
         
-        :param cmdline_param:
-        :return:
+        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
+        :param test_file_folder: string relative path to a folder containing all files, to copy for the test
+        :param exclude: list of strings file names to exclude from copy
+        :param only_copy: list of string file names, or length 2 to change file name. example ['inp.xml', ['kpts2', 'kpts']]
+        in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
+
+        :return: a dictionary of the form 'filename :filepath'
         """
         
         import subprocess
