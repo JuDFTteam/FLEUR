@@ -517,3 +517,81 @@ def inpxml_etree():
 
 
 
+@pytest.fixture()
+def collect_all_judft_messages_f():
+    return collect_all_judft_messages
+
+def collect_all_judft_messages():
+    """Helper function, to create a list of all judft messages within the fleur source code, 
+    by grepping for them.
+    """
+    import os
+    import re
+    testdir = test_dir()
+    rel_fleur_source = '../../'
+    fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))
+    # source code is top dir, to much other stuff in there....
+    src_folders = [#'cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen', 
+    #'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force', 
+    'forcetheorem', 'global', 'greensf', 'hybrid', 'include', 'init', 'inpgen2', 
+    'io'#, 
+    #'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep', 
+    #'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
+     ]
+
+    grep_results = []
+    grep_string = '(judft_error|error_output)'
+    # fortran is not case sensitive, sometimes output is written line before..
+    # maybe use real grep instead of this python implementation...
+    for folder in src_folders:
+        folder_path = os.path.join(fleur_source_dir, folder)
+        for root, dirs, files in os.walk(folder_path):
+            for filename in files:
+                if not (filename.endswith('f90') or filename.endswith('F90')):
+                    continue
+                file_path = os.path.join(root, filename)
+                try:
+                    with open(file_path, encoding="utf-8") as file1:
+                        for line in file1:
+                            try:
+                                if re.search(
+                                    grep_string, line, re.IGNORECASE):
+                                    grep_results.append(line)
+                            except (TypeError):
+                                pass
+                except (IOError, OSError, UnicodeDecodeError):
+                    pass
+    # Construct list
+    all_messages = []
+    for judft_string in grep_results:
+        ju_str = judft_string.split('"')
+        if len(ju_str) == 1:
+            ju_str = judft_string.split("'")
+            if len(ju_str) == 1:
+                # ignore this one
+                continue
+        # there are several error types
+        #for string in judft_string:
+        string = ''
+        for s in judft_string:
+            string = string + s
+        if re.search('calledby', string):
+            ju_str1 = string.split('calledby')[0]
+            ju_str = ju_str1.split('"')
+            if len(ju_str) == 1:
+                ju_str = ju_str1.split("'")
+                if len(ju_str) == 1:
+                    # ignore this one
+                    continue
+            try:
+                message = ju_str[-2]
+            except IndexError: # In the source code both strings sings are used
+                # We are missing some, but currently we do not care
+                print(ju_str)
+                message = None
+                continue
+
+        else:
+            message = ju_str[-2]
+        all_messages.append(message)
+    return list(set(all_messages))
