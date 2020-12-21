@@ -530,18 +530,18 @@ def collect_all_judft_messages():
     testdir = test_dir()
     rel_fleur_source = '../../'
     fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))
-    # source code is top dir, to much other stuff in there....
-    src_folders = [#'cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen', 
-    #'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force', 
+    # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
+    # and to avoid problems with binaries and so on.
+    src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen', 
+    'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force', 
     'forcetheorem', 'global', 'greensf', 'hybrid', 'include', 'init', 'inpgen2', 
-    'io'#, 
-    #'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep', 
-    #'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
+    'io', 'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep', 
+    'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
      ]
 
     grep_results = []
     grep_string = '(judft_error|error_output)'
-    # fortran is not case sensitive, sometimes output is written line before..
+    # fortran is not case sensitive, sometimes output is programmed line before.
     # maybe use real grep instead of this python implementation...
     for folder in src_folders:
         folder_path = os.path.join(fleur_source_dir, folder)
@@ -563,6 +563,7 @@ def collect_all_judft_messages():
                     pass
     # Construct list
     all_messages = []
+    # there are all combinations of strings all over the place in the fleur src
     for judft_string in grep_results:
         ju_str = judft_string.split('"')
         if len(ju_str) == 1:
@@ -570,11 +571,10 @@ def collect_all_judft_messages():
             if len(ju_str) == 1:
                 # ignore this one
                 continue
-        # there are several error types
-        #for string in judft_string:
         string = ''
         for s in judft_string:
             string = string + s
+        # if calledby is used the split is always different, therefore we split calledby.
         if re.search('calledby', string):
             ju_str1 = string.split('calledby')[0]
             ju_str = ju_str1.split('"')
