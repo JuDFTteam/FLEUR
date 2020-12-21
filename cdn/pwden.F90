@@ -140,17 +140,12 @@ CONTAINS
       q0_11 = 0.0
       q0_22 = 0.0
       IF (noco%l_noco) THEN
-         q0_11 = 0.0
-         q0_22 = 0.0
          IF (.NOT. zmat%l_real) THEN
             DO nu = 1, ne
                norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
                q0_11 = q0_11 + we(nu)*norm*norm
                norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
                q0_22 = q0_22 + we(nu)*norm*norm
-!              alternative formulation for the 4 lines above:
-!               q0_11 = q0_11 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(1), zMat%data_c(1:, nu), 1, zMat%data_c(1:, nu), 1))
-!               q0_22 = q0_22 + we(nu)*REAL(CPP_BLAS_cdotc(lapw%nv(2), zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1, zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu), 1))
             ENDDO
          ENDIF
          q0_11 = q0_11/cell%omtil
@@ -160,13 +155,11 @@ CONTAINS
             DO nu = 1, ne
                norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
                q0 = q0 + we(nu)*norm*norm
-!               q0 = q0 + we(nu)*CPP_BLAS_sdot(lapw%nv(jspin), zMat%data_r(:, nu), 1, zMat%data_r(:, nu), 1)
             ENDDO
          ELSE
             DO nu = 1, ne
                norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
                q0 = q0 + we(nu)*norm*norm
-!               q0 = REAL(CPP_BLAS_cdotc(lapw%nv(jspin), zMat%data_c(:, nu), 1, zMat%data_c(:, nu), 1))
             ENDDO
          ENDIF
          q0 = q0/cell%omtil
@@ -202,7 +195,6 @@ CONTAINS
                rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * ABS(stateB%grid(ir))**2
                rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
                rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * (AIMAG(state%grid(ir))*REAL(stateB%grid(ir)) - REAL(state%grid(ir))*AIMAG(stateB%grid(ir)))
-               WRITE(2345,'(i7,8f15.8)') ir, rhomatGrid(1)%grid(ir), rhomatGrid(2)%grid(ir), rhomatGrid(3)%grid(ir), rhomatGrid(4)%grid(ir)
             END DO
 
             ! In a non-collinear calculation the interstitial charge
