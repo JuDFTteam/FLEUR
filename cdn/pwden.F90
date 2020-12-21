@@ -6,7 +6,7 @@
 
 MODULE m_pwden
 CONTAINS
-   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, fmpi, noco, cell, atoms, sym, &
+   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, fmpi, noco, nococonv, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
@@ -15,47 +15,12 @@ CONTAINS
       !     This subroutine is called for each k-point and each spin.
       !
       !
-      !     Two methods are implemented to calculate the charge density
-      !     1) which uses the FFT. The effort in calculating the charge
-      !        density is proportional to M * N * log(N) , M being number of
-      !        states and N being number of plane waves. This is the method
-      !        which we use for production runs
-      !     2) the traditional method for calculating the charge density
-      !        using the double summation. In this case the effort scales as
-      !        M * N * N. The method is only used for test purposes or for
-      !        special cases.
-      !
-      !
       !     INPUT:    eigen vectors
       !               reciprocal lattice information
       !               Brillouine zone sampling
       !               FFT information
       !
       !     OUTPUT:   den%pw(s)
-      !               1) using FFT
-      !
-      !                2) traditional method
-      !
-      !                             -1             ef
-      !               den%pw(g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
-      !                                  sp   k    nu   g'
-      !                                     *
-      !                                    c(g'-g,nu,k) * c(g',nu,k) } } } }
-      !                or :
-      !                             -1             ef
-      !               den%pw(g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
-      !                                  sp   k    nu   g'
-      !                                     *
-      !                                    c(g',nu,k) * c(g'+g,nu,k) } } } }
-      !
-      !                den%pw(g) are actuall
-      !
-      !                the weights w(k) are normalized: sum{w(k)} = 1
-      !                                                  k                -6
-      !                         a) 1                           for kT < 10
-      !                f(nu) = {                           -1             -6
-      !                         b){ 1+exp(e(k,nu) -ef)/kt) }   for kt >=10
-      !
       !
       !                                      Stefan Bl"ugel, JRCAT, Feb. 1997
       !                                      Gustav Bihlmayer, UniWien
@@ -67,9 +32,11 @@ CONTAINS
       !     of the off-diagonal element are store in den%pw(:,3).
       !
       !     Philipp Kurz 99/07
+      !
+      !     Subtroutine was refactored in 2020. GM.
+      !
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      !
-      !
+
 !DEC$ NOOPTIMIZE
 #include"cpp_double.h"
       USE m_types
@@ -78,9 +45,6 @@ CONTAINS
       USE m_forceb8
       USE m_pwint
       USE m_juDFT
-      USE m_rfft
-      USE m_cfft
-      use m_wavefproducts_aux
       USE m_types_fftGrid
       USE m_fft_interface
 
@@ -92,6 +56,7 @@ CONTAINS
       TYPE(t_banddos), INTENT(IN)    :: banddos
       TYPE(t_input), INTENT(IN)      :: input
       TYPE(t_noco), INTENT(IN)       :: noco
+      TYPE(t_nococonv),INTENT(IN)    :: nococonv
       TYPE(t_sym), INTENT(IN)        :: sym
       TYPE(t_stars), INTENT(IN)      :: stars
       TYPE(t_cell), INTENT(IN)       :: cell
@@ -100,134 +65,83 @@ CONTAINS
       TYPE(t_mat), INTENT(IN)        :: zMat
       TYPE(t_potden), INTENT(INOUT)  :: den
       TYPE(t_results), INTENT(INOUT) :: results
-      TYPE(t_dos), INTENT(INOUT)    :: dos
+      TYPE(t_dos), INTENT(INOUT)     :: dos
 
-      REAL, INTENT(IN)   :: we(:) !(nobd)
-      REAL, INTENT(IN)   :: eig(:)!(input%neig)
-      INTEGER, INTENT(IN) :: ev_list(ne)
-      !----->  BASIS FUNCTION INFORMATION
-      INTEGER, INTENT(IN):: ne
-      !----->  CHARGE DENSITY INFORMATION
-      INTEGER, INTENT(IN)    :: ikpt, jspin
+      REAL, INTENT(IN)       :: we(:)  !(nobd)
+      REAL, INTENT(IN)       :: eig(:) !(input%neig)
+      INTEGER, INTENT(IN)    :: ev_list(ne)
+      INTEGER, INTENT(IN)    :: ne
+      INTEGER, INTENT(IN)    :: ikpt
+      INTEGER, INTENT(IN)    :: jspin
       COMPLEX, INTENT(INOUT) ::  f_b8(3, atoms%ntype)
 
-      !-----> LOCAL VARIABLES
-
-      TYPE(t_fftGrid) :: state, StateDeriv, ekinGrid, chargeDen
-      COMPLEX tempState(lapw%nv(jspin))
-
-      !----->  FFT  INFORMATION
-      INTEGER :: ifftq2d, ifftq3d
-
-      INTEGER isn, nu, iv, ir, ik, il, im, in, istr, nw1, nw2, nw3, i, j
-      INTEGER ifftq1, ifftq2, ifftq3
-      INTEGER idens, ndens, ispin, jkpt, jsp_start, jsp_end
-      REAL q0, q0_11, q0_22, scale, xk(3)
-      REAL s
-      COMPLEX x, norm
-      INTEGER, PARAMETER::  ist(-1:1) = (/1, 0, 0/)
-      REAL, PARAMETER:: zero = 0.00, tol_3 = 1.0e-3
-      !
-      INTEGER iv1d(SIZE(lapw%gvec, 2), input%jspins), fft_size(3)
-      REAL wtf(ne), wsave(stars%kq3_fft + 15)
-      REAL, ALLOCATABLE :: psi1r(:), psi1i(:), psi2r(:), psi2i(:)
-      REAL, ALLOCATABLE :: rhomat(:, :)
-      COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
-      !
-      LOGICAL l_real
-      REAL CPP_BLAS_sdot, dznrm2, dnrm2
-      EXTERNAL CPP_BLAS_sdot
-      COMPLEX CPP_BLAS_cdotc
-      EXTERNAL CPP_BLAS_cdotc
-
+      ! local variables
+      TYPE(t_fftGrid) :: state, stateB, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
+      INTEGER nu, iv, ir, istr, i, j
+      INTEGER idens, ndens, ispin
+      REAL q0, q0_11, q0_22, norm, xk(3)
+      REAL s, stateRadius
+      COMPLEX x
+      REAL, PARAMETER:: tol_3 = 1.0e-3
       LOGICAL forw
-      INTEGER length_zfft(3)
-      COMPLEX, ALLOCATABLE :: zfft(:)
+
+      ! local arrays
+      REAL wtf(ne)
+      COMPLEX tempState(lapw%nv(jspin))
+      COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
+
+      ! subroutines
+      REAL dznrm2, dnrm2
 
       !------->          ABBREVIATIONS
       !
-      !     rhon  : charge density in real space
       !     ne    : number of occupied states
       !     nv    : number of g-components in eigenstate
       !     cv=z  : wavefunction in g-space (reciprocal space)
-      !     psir   : wavefunction in r-space (real-space)
       !     cwk   : complex work array: charge density in g-space (as stars)
       !     den%pw : charge density stored as stars
-      !     trdchg: logical key, determines the mode of charge density
-      !             calculation: false (default) : fft
-      !                          true            : double sum over stars
       !     we    : weights for the BZ-integration for a particular k-point
       !     omtil : volume (slab) unit cell, between -.5*D_tilde and +.5*D_tilde
-      !     k1   : reciprocal lattice vectors G=G(k1,k2,k3) for wavefunction
-      !     k2   :                             =k1*a_1 + k2*a_2 + k3*a_3
-      !     k3   : where a_i= Bravais lattice vectors in reciprocal space
-      !             kwi, depend on k-point.
-      !     kq1d  : dimension of the charge density FFT box in the pos. domain
-      !     kq2d  : defined in dimens.f program (subroutine apws).1,2,3 indicate
-      !     kq3d  ; a_1, a_2, a_3 directions.
-      !     kq(i) : i=1,2,3 actual length of the fft-box for which FFT is done.
       !     nstr  : number of members (arms) of reciprocal lattice (g) vector
       !             of each star.
       !     ng3_fft: number of stars in the  charge density  FFT-box
       !     ng3   : number of 3 dim. stars in the charge density sphere defined
       !             by gmax
-      !     kmxq_fft: number of g-vectors forming the ng3_fft stars in the
-      !               charge density sphere
-      !     kimax : number of g-vectors forming the ng3 stars in the gmax-sphere
-      !     iv1d  : maps vector (k1,k2,k3) of wave function into one
-      !             dimensional vector of cdn-fft box in positive domain.
-      !     ifftq3d: elements (g-vectors) in the charge density  FFT-box
-      !     igfft : pointer from the g-sphere (stored as stars) to fft-grid
-      !             and     from fft-grid to g-sphere (stored as stars)
-      !     pgfft : contains the phases of the g-vectors of sph.
-      !     isn   : isn = +1, FFT transform for g-space to r-space
-      !             isn = -1, vice versa
 
       CALL timestart("pwden")
 
       ALLOCATE (cwk(stars%ng3), ecwk(stars%ng3))
 
+      stateRadius = MAXVAL(ABS(lapw%rk(:,:)))
+      stateRadius = stateRadius + SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt)))
+      IF (noco%l_noco) stateRadius = stateRadius + SQRT(DOT_PRODUCT(nococonv%qss(:),nococonv%qss(:)))
+
       IF (noco%l_noco) THEN
-         ALLOCATE (psi1r(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                   psi1i(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                   psi2r(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                   psi2i(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1), &
-                   rhomat(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft - 1, 4))
+         CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
+         CALL stateB%init(cell,sym,(2.0*stateRadius)+0.001)
+         DO i = 1, 4
+            CALL rhomatGrid(i)%init(cell,sym,(2.0*stateRadius)+0.001)
+            rhomatGrid(i)%grid(:) = CMPLX(0.0,0.0)
+         END DO
       ELSE
-         CALL state%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
-         CALL chargeDen%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+         CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
+         CALL chargeDen%init(cell,sym,(2.0*stateRadius)+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
          IF (input%l_f) THEN
-            CALL stateDeriv%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
-            CALL ekinGrid%init(cell,sym,2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.001)
+            CALL stateDeriv%init(cell,sym,(2.0*stateRadius)+0.001)
+            CALL ekinGrid%init(cell,sym,(2.0*stateRadius)+0.001)
             ekinGrid%grid(:) = CMPLX(0.0,0.0)
          END IF
       ENDIF
-      !
-      !=======>  CALCULATE CHARGE DENSITY USING FFT
-      !
-      !
-      !------> setup FFT
-      !
-      ifftq1 = stars%kq1_fft
-      ifftq2 = stars%kq1_fft*stars%kq2_fft
-      ifftq3 = stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
-      ifftq3d = stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
-      ifftq2d = stars%kq1_fft*stars%kq2_fft
-      !
-      nw1 = NINT(stars%kq1_fft/4.+0.3)
-      nw2 = NINT(stars%kq2_fft/4.+0.3)
-      nw3 = NINT(stars%kq3_fft/4.+0.3)
-      !
-      !------> g=0 star: calculate the charge for this k-point and spin
-      !                  analytically to test the quality of FFT
-      !
-      q0 = zero
-      q0_11 = zero
-      q0_22 = zero
+
+      ! g=0 star: calculate the charge for this k-point and spin
+      !           analytically to test the quality of FFT
+      q0 = 0.0
+      q0_11 = 0.0
+      q0_22 = 0.0
       IF (noco%l_noco) THEN
-         q0_11 = zero
-         q0_22 = zero
+         q0_11 = 0.0
+         q0_22 = 0.0
          IF (.NOT. zmat%l_real) THEN
             DO nu = 1, ne
                norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
@@ -257,87 +171,78 @@ CONTAINS
          ENDIF
          q0 = q0/cell%omtil
       ENDIF
-      !
-      !--------> initialize charge density with zero
-      !
-      IF (noco%l_noco) THEN
-         rhomat = 0.0
-         IF (ikpt .LE. fmpi%isize) THEN
-            dos%qis = 0.0
-         ENDIF
-      ENDIF
-      !
-      !------> calculate:  wtf(nu,k) =  w(k)*f(nu,k)/vol
-      !
+
+      IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
+         dos%qis = 0.0
+      END IF
+
       wtf(:ne) = we(:ne)/cell%omtil
-      !
-      !------> prepare mapping from wave function box to cdn FFT box
-      !
-      IF (noco%l_ss) THEN
-         jsp_start = 1
-         jsp_end = 2
-      ELSE
-         jsp_start = jspin
-         jsp_end = jspin
-      ENDIF
 
-      fft_size = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
-      DO ispin = jsp_start, jsp_end
-         DO iv = 1, lapw%nv(ispin)
-            iv1d(iv, ispin) = g2fft(fft_size, lapw%gvec(:, iv, ispin))
-         ENDDO
-      ENDDO
-
-      !
-      !------------> LOOP OVER OCCUPIED STATES
-      !
+      ! LOOP OVER OCCUPIED STATES
       DO nu = 1, ne
-         !
-         !---> FFT transform c_nu,k(g) --> psi_nu,k(r), for each k-point
-         !                                              and each nu-state
+
+         ! Do inverse FFT of state and add related charge density to overall charge density on real-space mesh.
          IF (noco%l_noco) THEN
-            psi1r = 0.0
-            psi1i = 0.0
-            psi2r = 0.0
-            psi2i = 0.0
-            !------> map WF into FFTbox
+            forw = .FALSE.
             IF (noco%l_ss) THEN
-               DO iv = 1, lapw%nv(1)
-                  psi1r(iv1d(iv, 1)) = REAL(zMat%data_c(iv, nu))
-                  psi1i(iv1d(iv, 1)) = AIMAG(zMat%data_c(iv, nu))
-               ENDDO
-               DO iv = 1, lapw%nv(2)
-                  psi2r(iv1d(iv, 2)) = REAL(zMat%data_c(lapw%nv(1) + atoms%nlotot + iv, nu))
-                  psi2i(iv1d(iv, 2)) = AIMAG(zMat%data_c(lapw%nv(1) + atoms%nlotot + iv, nu))
-               ENDDO
+               CALL state%putComplexStateOnGrid(lapw, 1, zMat%data_c(1:lapw%nv(1),nu))
+               CALL stateB%putComplexStateOnGrid(lapw, 2, zMat%data_c(lapw%nv(1) + atoms%nlotot+1:lapw%nv(1) + atoms%nlotot+lapw%nv(2),nu))
             ELSE
-               DO iv = 1, lapw%nv(jspin)
-                  psi1r(iv1d(iv, jspin)) = REAL(zMat%data_c(iv, nu))
-                  psi1i(iv1d(iv, jspin)) = AIMAG(zMat%data_c(iv, nu))
-                  psi2r(iv1d(iv, jspin)) = REAL(zMat%data_c(lapw%nv(1) + atoms%nlotot + iv, nu))
-                  psi2i(iv1d(iv, jspin)) = AIMAG(zMat%data_c(lapw%nv(1) + atoms%nlotot + iv, nu))
+               CALL state%putComplexStateOnGrid(lapw, jspin, zMat%data_c(1:lapw%nv(jspin),nu))
+               CALL stateB%putComplexStateOnGrid(lapw, jspin, zMat%data_c(lapw%nv(1) + atoms%nlotot+1:lapw%nv(1) + atoms%nlotot+lapw%nv(jspin),nu))
+            ENDIF
+
+            CALL fft_interface(3, state%dimensions(:), state%grid, forw)
+            CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw)
+
+            ! In the non-collinear case rho becomes a hermitian 2x2
+            ! matrix (rhomatGrid).
+            DO ir = 0, rhomatGrid(1)%gridLength - 1
+               rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
+               rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * ABS(stateB%grid(ir))**2
+               rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
+               rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * (AIMAG(state%grid(ir))*REAL(stateB%grid(ir)) - REAL(state%grid(ir))*AIMAG(stateB%grid(ir)))
+               WRITE(2345,'(i7,8f15.8)') ir, rhomatGrid(1)%grid(ir), rhomatGrid(2)%grid(ir), rhomatGrid(3)%grid(ir), rhomatGrid(4)%grid(ir)
+            END DO
+
+            ! In a non-collinear calculation the interstitial charge
+            ! cannot be calculated by a simple substraction if the
+            ! muffin-tin (and vacuum) charge is know, because the
+            ! total charge does not need to be one in each spin-
+            ! channel. Thus it has to be calculated explicitly, if
+            ! it is needed.
+            IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)) THEN
+               DO ir = 0, state%gridLength - 1
+                  state%grid(ir) = ABS(state%grid(ir))**2
+                  stateB%grid(ir) = ABS(stateB%grid(ir))**2
+               END DO
+
+               forw = .TRUE.
+               CALL fft_interface(3, state%dimensions(:), state%grid, forw)
+               CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw)
+
+               CALL state%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+               DO istr = 1, stars%ng3
+                  cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
+               END DO
+               DO istr = 1, stars%ng3_fft
+                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
+                  dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+               ENDDO
+
+               CALL stateB%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+               DO istr = 1, stars%ng3
+                  cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
+               END DO
+               DO istr = 1, stars%ng3_fft
+                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
+                  dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
             ENDIF
 
          ELSE
+
             CALL state%putStateOnGrid(lapw, jSpin, zMat, nu)
-         ENDIF
-         !
-         !------> do (real) inverse FFT; notice that the array psir is filled from
-         !        0 to ifftq3-1, but starts at -ifftq2 to give work space for rfft
-         !
-         IF (noco%l_noco) THEN
-            isn = 1
-
-            CALL cfft(psi1r, psi1i, ifftq3, stars%kq1_fft, ifftq1, isn)
-            CALL cfft(psi1r, psi1i, ifftq3, stars%kq2_fft, ifftq2, isn)
-            CALL cfft(psi1r, psi1i, ifftq3, stars%kq3_fft, ifftq3, isn)
-
-            CALL cfft(psi2r, psi2i, ifftq3, stars%kq1_fft, ifftq1, isn)
-            CALL cfft(psi2r, psi2i, ifftq3, stars%kq2_fft, ifftq2, isn)
-            CALL cfft(psi2r, psi2i, ifftq3, stars%kq3_fft, ifftq3, isn)
-         ELSE
-
             
             forw = .FALSE.
             ! The following FFT is a general complex to complex FFT
@@ -374,131 +279,50 @@ CONTAINS
                END DO
             END IF
          END IF
-         !----> calculate rho(r) = sum w(k)*f(nu)*conjg(psi_nu,k(r))*psi_nu,k(r)
-         !                         k,nu
-         !      again, we fill rhon() from -ifftq2 to ifftq3-1 for the rfft
-         !
-         IF (noco%l_noco) THEN
-            !--->             in the non-collinear case rho becomes a hermitian 2x2
-            !--->             matrix (rhomat).
-            DO ir = 0, ifftq3d-1
-               rhomat(ir, 1) = rhomat(ir, 1) + wtf(nu)*(psi1r(ir)**2 + psi1i(ir)**2)
-               rhomat(ir, 2) = rhomat(ir, 2) + wtf(nu)*(psi2r(ir)**2 + psi2i(ir)**2)
-               rhomat(ir, 3) = rhomat(ir, 3) + wtf(nu)*(psi2r(ir)*psi1r(ir) + psi2i(ir)*psi1i(ir))
-               rhomat(ir, 4) = rhomat(ir, 4) + wtf(nu)*(psi2r(ir)*psi1i(ir) - psi2i(ir)*psi1r(ir))
-            ENDDO
-            !--->             in a non-collinear calculation the interstitial charge
-            !--->             cannot be calculated by a simple substraction if the
-            !--->             muffin-tin (and vacuum) charge is know, because the
-            !--->             total charge does not need to be one in each spin-
-            !--->             channel. Thus it has to be calculated explicitly, if
-            !--->             it is needed.
-            IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)) THEN
-               DO ir = 0, ifftq3d-1
-                  psi1r(ir) = (psi1r(ir)**2 + psi1i(ir)**2)
-                  psi2r(ir) = (psi2r(ir)**2 + psi2i(ir)**2)
-               ENDDO
-               isn = -1
-               psi1i = 0.0
-               CALL cfft(psi1r, psi1i, ifftq3, stars%kq1_fft, ifftq1, isn)
-               CALL cfft(psi1r, psi1i, ifftq3, stars%kq2_fft, ifftq2, isn)
-               CALL cfft(psi1r, psi1i, ifftq3, stars%kq3_fft, ifftq3, isn)
-               psi2i = 0.0
-               CALL cfft(psi2r, psi2i, ifftq3, stars%kq1_fft, ifftq1, isn)
-               CALL cfft(psi2r, psi2i, ifftq3, stars%kq2_fft, ifftq2, isn)
-               CALL cfft(psi2r, psi2i, ifftq3, stars%kq3_fft, ifftq3, isn)
-               cwk = 0.0
-               DO ik = 0, stars%kmxq_fft - 1
-                  cwk(stars%igfft(ik, 1)) = cwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                            CMPLX(psi1r(stars%igq_fft(ik)), psi1i(stars%igq_fft(ik)))
-               ENDDO
-               DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
-                  dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
-               ENDDO
+      END DO
+      ! END OUTER LOOP OVER STATES NU
 
-               cwk = 0.0
-               DO ik = 0, stars%kmxq_fft - 1
-                  cwk(stars%igfft(ik, 1)) = cwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                            CMPLX(psi2r(stars%igq_fft(ik)), psi2i(stars%igq_fft(ik)))
-               ENDDO
-               DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
-                  dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
-               ENDDO
-            ENDIF
-         ENDIF
-         !              DO ir = -ifftq2 , ifftq3-1
-         !     +                      + wtf(nu)*(psi(ir+ifftq3d) * psi(ir+ifftq3d)
-         !     +                               + psi(ir  ) * psi(ir  )
-         !     +                                 )
-         !              ENDDO
+      ! Perform FFT transform of charge density to reciprocal space.
 
-      ENDDO
-      !
-      !<<<<<<<<<<<<<< END OUTER LOOP OVER STATES NU  >>>>>>>>>>>>>>>>>>
-      !
-      !
-      !----> perform back  FFT transform: rho(r) --> chgn(star)
-      !        ( do direct FFT)                    = cwk(star)
-
-      !--->  In a collinear calculation pwden is calles once per spin.
-      !--->  However in a non-collinear calculation pwden is only called once
-      !--->  and all four components of the density matrix (n_11 n_22 n_12
-      !--->  n_21) have to be calculated at once.
+      ! In a collinear calculation pwden is called once per spin.
+      ! However in a non-collinear calculation pwden is only called once
+      ! and all four components of the density matrix (n_11 n_22 n_12
+      ! n_21) have to be calculated at once.
       ndens = 1
       IF (noco%l_noco) ndens = 4
       DO idens = 1, ndens
+         forw = .TRUE.
          IF (noco%l_noco) THEN
-            psi1r = 0.0
-            isn = -1
-            CALL cfft(rhomat(0, idens), psi1r, ifftq3, stars%kq1_fft, ifftq1, isn)
-            CALL cfft(rhomat(0, idens), psi1r, ifftq3, stars%kq2_fft, ifftq2, isn)
-            CALL cfft(rhomat(0, idens), psi1r, ifftq3, stars%kq3_fft, ifftq3, isn)
+            CALL fft_interface(3, rhomatGrid(idens)%dimensions(:), rhomatGrid(idens)%grid, forw)
          ELSE
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into areal to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
-            forw = .TRUE.
             CALL fft_interface(3, chargeDen%dimensions(:), chargeDen%grid, forw)
             IF (input%l_f) THEN
                CALL fft_interface(3, ekinGrid%dimensions(:), ekinGrid%grid, forw)
             END IF
          ENDIF
-         !  ---> collect stars from the fft-grid
-         !
+
+         ! collect stars from the fft-grid
          cwk = 0.0
          ecwk = 0.0
          IF (noco%l_noco) THEN
-            DO ik = 0, stars%kmxq_fft - 1
-               cwk(stars%igfft(ik, 1)) = cwk(stars%igfft(ik, 1)) + CONJG(stars%pgfft(ik))* &
-                                         CMPLX(rhomat(stars%igq_fft(ik), idens), psi1r(stars%igq_fft(ik)))
-            ENDDO
+            CALL rhomatGrid(idens)%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
          ELSE
-            CALL chargeDen%takeFieldFromGrid(stars, cwk, 2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.0005)
+            CALL chargeDen%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
             IF (input%l_f) THEN
-               CALL ekinGrid%takeFieldFromGrid(stars, ecwk, 2.0*(input%rkmax+SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt))))+0.0005)
+               CALL ekinGrid%takeFieldFromGrid(stars, ecwk, (2.0*stateRadius)+0.0005)
             END IF
          ENDIF
-         !
-         scale = 1.0/ifftq3
-         IF(noco%l_noco) THEN
-         DO istr = 1, stars%ng3_fft
-            cwk(istr) = scale*cwk(istr)/REAL(stars%nstr(istr))
-         ENDDO
-         END IF
-         IF (input%l_useapw) THEN
 
+         IF (input%l_useapw) THEN
             IF (input%l_f) THEN
-!               DO istr = 1, stars%ng3_fft
-!                  ecwk(istr) = scale*ecwk(istr)/REAL(stars%nstr(istr))
-!               ENDDO
                CALL force_b8(atoms, ecwk, stars, sym, cell, jspin, results%force, f_b8)
             ENDIF
          ENDIF
-         !
-         !---> check charge neutralilty
-         !
+
+         ! check charge neutralilty
          IF ((idens .EQ. 1) .OR. (idens .EQ. 2)) THEN
             IF (noco%l_noco) THEN
                IF (idens .EQ. 1) THEN
@@ -524,35 +348,29 @@ CONTAINS
                ENDIF
             ENDIF
          ENDIF
-         !
-         !---> add charge density to existing one
-         !
+
+         ! add charge density to existing one
          IF (idens .LE. 2) THEN
-            !--->       add to spin-up or -down density (collinear & non-collinear)
+            ! add to spin-up or -down density (collinear & non-collinear)
             ispin = jspin
             IF (noco%l_noco) ispin = idens
             DO istr = 1, stars%ng3_fft
                den%pw(istr, ispin) = den%pw(istr, ispin) + cwk(istr)
             ENDDO
          ELSE IF (idens .EQ. 3) THEN
-            !--->       add to off-diag. part of density matrix (only non-collinear)
+            ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
                den%pw(istr, 3) = den%pw(istr, 3) + cwk(istr)
             ENDDO
          ELSE
-            !--->       add to off-diag. part of density matrix (only non-collinear)
+            ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
                den%pw(istr, 3) = den%pw(istr, 3) + CMPLX(0.0, 1.0)*cwk(istr)
             ENDDO
          ENDIF
-
       ENDDO
 
       DEALLOCATE (cwk, ecwk)
-
-      IF (noco%l_noco) THEN
-         DEALLOCATE (psi1r, psi1i, psi2r, psi2i, rhomat)
-      ENDIF
 
       CALL timestop("pwden")
 
