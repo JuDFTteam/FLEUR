@@ -138,14 +138,13 @@ def fleur_test_session():
     yield # now all the tests run
 
     # put session tear down code here
-    
 
 @pytest.fixture
-def set_environment():
+def set_environment_session():
     """
     Fixture to set given environment variables
     """
-    # Implement me
+    # So far this is done on the outside, and for the whole test set
     pass
 
 ##### fixtures active EACH test case ####
@@ -194,7 +193,7 @@ def base_test_case(request, clean_workdir):
 ##### other fixtures ####
 
 @pytest.fixture
-def execute_inpgen(set_environment, inpgen_binary):
+def execute_inpgen(inpgen_binary):
     """
     Fixture which returns an execute_inpgen function
     """
@@ -219,6 +218,7 @@ def execute_inpgen(set_environment, inpgen_binary):
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
+
 
         # Prepare only copy list, since we allow for name changes.
 
@@ -245,6 +245,7 @@ def execute_inpgen(set_environment, inpgen_binary):
         #print(inpgen_binary)
         arg_list = [inpgen_binary] + cmdline_param
         #print(arg_list)
+
         os.chdir(workdir)
         with open(f"{workdir}/stdout", "w") as f_stdout:
             with open(f"{workdir}/stderr", "w") as f_stderr:
@@ -263,11 +264,11 @@ def execute_inpgen(set_environment, inpgen_binary):
 
 
 @pytest.fixture
-def execute_fleur(set_environment, fleur_binary):
+def execute_fleur(fleur_binary):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[]):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -289,6 +290,12 @@ def execute_fleur(set_environment, fleur_binary):
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
+
+        osenv = dict(os.environ)
+        run_env = osenv # This creates a complete env for the fleur, but we keep all session env
+        # Not sure if this is good 
+        run_env['OMP_NUM_THREADS'] = osenv.get('OMP_NUM_THREADS', '1')
+        run_env.update(env) # apply custom user changes
 
         # Prepare only copy list, since we allow for name changes.
         new_only_copy_list = {}
@@ -315,13 +322,17 @@ def execute_fleur(set_environment, fleur_binary):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
 
         fleur, parallel = fleur_binary
-        mpiruncmd = []
+        mpiruncmd = run_env.get('juDFT_MPI', None)
+        if mpiruncmd is not None:
+            mpiruncmd = [mpiruncmd]
+        else:
+            mpiruncmd = []
         arg_list = mpiruncmd + [fleur] + cmdline_param
         #print(arg_list)
         os.chdir(workdir)
         with open(f"{workdir}/stdout", "w") as f_stdout:
             with open(f"{workdir}/stderr", "w") as f_stderr:
-                subprocess.run(arg_list, stdout=f_stdout, stderr=f_stderr, check=True)
+                subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True)
 
         result_files = {}
         source = os.listdir(workdir) # Notice this is simple and not recursive,
@@ -399,39 +410,46 @@ def grep_number():
             return numbers
         
     return _grep_number
-    
-def check_value_outfile(filepath, before_str, after_str, expected, delta):
+
+@pytest.fixture
+def check_value_outfile():
+    """Fixture which returns a check_value_outfile function
     """
-    Check a value in the out file, copied from libtest.py
-    """
-    exp_idx = 0
-    found = False
-    passed = False
-    with open(filepath, "r") as f:
-        for line in f.readlines():
-            if(before_str in line):
-                value_string = line.split(before_str)[-1]
-                value_string = value_string.split(after_str)
-                # remove empty strings
-                value_string = [i for i in value_string if i is not ""][0]
-                value = float(value_string)
-             
-                if(expected[exp_idx] is not None):
-                    if(abs(value - expected[exp_idx]) < delta):
-                        #log_info(f"PASSED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
-                        passed = True
-                    else:
-                        #log_info(f"FAILED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
-                        errors += 1
-                exp_idx += 1
-                found = True
-    if(len(expected) != exp_idx):
-        #log_error("Number of expected values disagree with found values.")
-        #log_error(f"before_str: '{before_str}''")
+    def _check_value_outfile(filepath, before_str, after_str, expected, delta):
+        """
+        Check a value in the out file, copied from libtest.py
+        """
+        exp_idx = 0
+        found = False
         passed = False
-    if(errors != 0):
-        passed = False
-    return found, passed
+        errors = 0
+        with open(filepath, "r") as f:
+            for line in f.readlines():
+                if(before_str in line):
+                    value_string = line.split(before_str)[-1]
+                    value_string = value_string.split(after_str)
+                    # remove empty strings
+                    value_string = [i for i in value_string if i is not ""][0]
+                    value = float(value_string)
+                    if (expected[exp_idx] is not None):
+                        if(abs(value - expected[exp_idx]) < delta):
+                            #log_info(f"PASSED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
+                            passed = True
+                        else:
+                            #log_info(f"FAILED [{exp_idx}]: {before_str} found: {value} expected: {expected[exp_idx]}")
+                            errors += 1
+                    exp_idx = exp_idx + 1
+                    found = True
+                    if exp_idx > len(expected):
+                        break # failed, so we stop
+        if(len(expected) != exp_idx):
+            #log_error("Number of expected values disagree with found values.")
+            #log_error(f"before_str: '{before_str}''")
+            passed = False
+        if(errors != 0):
+            passed = False
+        return found, passed
+    return _check_value_outfile
 
 def parse_inp_xml():
     pass

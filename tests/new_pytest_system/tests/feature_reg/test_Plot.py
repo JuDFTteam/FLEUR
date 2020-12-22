@@ -2,13 +2,13 @@
 import pytest
 
 @pytest.mark.skip('test not implemented')
-def test_PlotDenandPot():
+def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     """
     """
     assert False
 
 @pytest.mark.skip('test not implemented')
-def test_PlotOnlyMT():
+def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     """
     """
     assert False

@@ -1,7 +1,7 @@
 import pytest
 
 @pytest.mark.bulk
-@pytest.mark.magnetsim
+@pytest.mark.magnetism
 @pytest.mark.spinspiral
 def test_fe_bulk_SS_conv(execute_fleur, grep_number, grep_exists):
     """Fe monolayer fcc (110): spin spiral energy
@@ -27,7 +27,7 @@ def test_fe_bulk_SS_conv(execute_fleur, grep_number, grep_exists):
 
 
 @pytest.mark.bulk
-@pytest.mark.magnetsim
+@pytest.mark.magnetism
 @pytest.mark.spinspiral
 def test_Fe_film_SS_conv(execute_fleur, grep_number, grep_exists):
     """Fe monolayer fcc (110): spin spiral energy
@@ -51,7 +51,7 @@ def test_Fe_film_SS_conv(execute_fleur, grep_number, grep_exists):
     assert abs(mm - 3.79655) <= 0.00001
 
 @pytest.mark.bulk
-@pytest.mark.magnetsim
+@pytest.mark.magnetism
 @pytest.mark.spinspiral
 def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists):
     """Fe monolayer fcc (110): spin spiral energy
@@ -90,7 +90,7 @@ def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
     ev_q1 = grep_number(res_files['out.xml'], 'Entry q= "1', "ev-sum=.")
-    ev_q2 = grep_number(res_files['out.xml'], 'Entry q= "1', "ev-sum=.")
+    ev_q2 = grep_number(res_files['out.xml'], 'Entry q= "2', "ev-sum=.")
 
     assert abs(ev_q1 - -2.2243925) <= 0.000001
     assert abs(ev_q2 - -2.2178465) <= 0.000001
