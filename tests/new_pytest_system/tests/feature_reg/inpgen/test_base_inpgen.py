@@ -17,7 +17,7 @@ def test_inpgen_Si_simple_interface_files(execute_inpgen, clean_workdir):
 
     # Test if inpgen runs and required files are there
     cmd_params = ['-f', 'inp_simple']
-    res_files = execute_inpgen(cmd_params, test_file_folder)
+    res_files = execute_inpgen(test_file_folder, cmd_params)
     should_files = ['inp.xml', 'struct.xsf', 'default.econfig', 'out', 'usage.json', 'sym.xml', 'kpts.xml']
     res_file_names = list(res_files.keys())
     
@@ -28,7 +28,7 @@ def test_inpgen_Si_simple_interface_files(execute_inpgen, clean_workdir):
 
     # Test if inpgen can run with --explicit and different includes are right in inp.xml
     cmd_params = ['-explicit', '-inc', 'all', '-f', 'inp_simple']
-    res_files = execute_inpgen(cmd_params, test_file_folder)
+    res_files = execute_inpgen(test_file_folder, cmd_params)
     should_files = ['inp.xml', 'struct.xsf', 'default.econfig', 'out', 'usage.json']
     not_there = ['sym.xml', 'kpts.xml']
     res_file_names = list(res_files.keys())
@@ -49,7 +49,7 @@ def test_inpgen_Si_inputfile_content(execute_inpgen, clean_workdir):
 
     # Test if inpgen runs and required files are there
     cmd_params = ['-f', 'inp_simple']
-    res_files = execute_inpgen(cmd_params, test_file_folder)
+    res_files = execute_inpgen(test_file_folder, cmd_params)
     should_files = ['inp.xml', 'struct.xsf', 'default.econfig', 'out', 'usage.json', 'sym.xml', 'kpts.xml']
     res_file_names = list(res_files.keys())
     

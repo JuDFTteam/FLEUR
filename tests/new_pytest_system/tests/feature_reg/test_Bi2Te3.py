@@ -13,10 +13,9 @@ def test_Bi2Te3(execute_fleur, grep_exists, grep_number):
     Uses: SOC,LOs
     """
     test_file_folder = './inputfiles/Bi2Te3/'
-    cmd_params = []
 
     # Stage 1
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=['inp', 'kpts'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp', 'kpts'])
     should_files = ['out']
     res_file_names = list(res_files.keys())
     if 'cdn.hdf' in res_file_names:
@@ -60,10 +59,9 @@ def test_Bi2Te3XML(execute_fleur, grep_exists, grep_number):
     Uses: SOC,LOs
     """
     test_file_folder = './inputfiles/Bi2Te3XML/'
-    cmd_params = []
 
     # Stage 1
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:

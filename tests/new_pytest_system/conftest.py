@@ -33,17 +33,22 @@ pytest_plugins = []
 
 # TODO test log, and better reporting
 # TODO time out tests,
+# TODO Do we want to be able to run a whole test session with a certain parallelisation?
+# Which one would provide via the pytest command or export before the command?
+# i.e export FLEUR_TEST_MPI=2; export FLEUR_TEST_OMP=2; pytest
 # TODO MPI
-# TODO set environment i.e open mp
+# TODO set environment i.e openmp
+
 # TODO make tests work on CI
 # TODO smoke tests, i.e early end test session if no executable, and so on...
 # TODO instead of making all functions fixtures, most of them could be put into the helpers dir, like it was with libtest.py and imported
 # TODO generate docs for devs on webside of test system. Should be done from README.txt. Ideal if possible generate also docs for all tests
 # and fixtures from docstring
-
+# TODO: Check what kind of fleur executable it is,  for example check configure out,
+# to only run subtest set which belongs to executable.
 
 def test_dir():
-    """Get path to the parent test directory defined by the positon of this conftest.py file
+    """Get path to the parent test directory defined by the position of this conftest.py file
     other paths are relative to this"""
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
     return test_dir_path
@@ -106,6 +111,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
+    config.addinivalue_line("markers", "greensfunction: test with greensfunction")
+    config.addinivalue_line("markers", "magnetism: test with magnetism")
     
 
 ####################################
@@ -191,17 +198,18 @@ def execute_inpgen(set_environment, inpgen_binary):
     """
     Fixture which returns an execute_inpgen function
     """
-    def _execute_inpgen(cmdline_param=None, test_file_folder=None, exclude=[], only_copy=[]):
+    def _execute_inpgen(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[]):
         """
         Function which copies the input files
         executes inpgen with the given cmdline_param
         and returns a path to the folder with the results
         
-        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
         :param test_file_folder: string relative path to a folder containing all files, to copy for the test
+        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
         :param exclude: list of strings file names to exclude from copy
         :param only_copy: list of string file names, or length 2 to change file name. example ['inp', ['kpts2', 'kpts']]
         in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
+        :param rm_files: list of strings files in the workdir to be removed, will be executed before copy
 
         :return: a dictionary of the form 'filename :filepath'
         """
@@ -230,6 +238,7 @@ def execute_inpgen(set_environment, inpgen_binary):
                 if files not in exclude:
                     if new_only_copy_list != {}:
                         if files in list(new_only_copy_list.keys()):
+                            #os.remove(os.path.abspath(os.path.join(workdir, new_only_copy_list[files])))
                             shutil.copy(os.path.abspath(os.path.join(abspath, new_only_copy_list[files])), workdir)
                     else:
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
@@ -258,18 +267,19 @@ def execute_fleur(set_environment, fleur_binary):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(cmdline_param=None, test_file_folder=None, exclude=[], only_copy=[]):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[]):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
         and returns a path to the folder with the results
-        
-        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
+
         :param test_file_folder: string relative path to a folder containing all files, to copy for the test
+        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
         :param exclude: list of strings file names to exclude from copy
         :param only_copy: list of string file names, or length 2 to change file name. example ['inp.xml', ['kpts2', 'kpts']]
         in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
-
+        :param rm_files: list of strings files in the workdir to be removed, will be executed before copy
+        
         :return: a dictionary of the form 'filename :filepath'
         """
         
@@ -287,8 +297,13 @@ def execute_fleur(set_environment, fleur_binary):
                 new_only_copy_list[entry[0]] = entry[1]
             else:
                 new_only_copy_list[entry] = entry
+        
+        for entry in rm_files:
+            path = os.path.abspath(os.path.join(workdir, entry))
+            if os.isfile(path):
+                shutil.remove(path)
 
-        if test_file_folder is not None:
+        if test_file_folder is not None: # Does it even make sense to not give a folder?
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
             source = os.listdir(abspath)
             for files in source:
@@ -327,8 +342,8 @@ def grep_exists():
     def _grep_exists(filepath, expression):
         """for an expression in a file
         Args:
-            filepath ([string, path]): path to the file to search for
-            expression (string): 'string' to look for
+            filepath ([str, path]): path to the file to search for
+            expression (str): 'string' to look for
     
         :return: Bool, if exists
         """
@@ -351,22 +366,35 @@ def grep_exists():
 def grep_number():
     """returns the grep number function
     """
-    def _grep_number(filepath, expression, split, index=1, first_only=True):
+    def _grep_number(filepath, expression, split, line_index=1, res_index=-1):
+        """Implements grep for a float number in a file
         
+        :param filepath (str): path to the dile
+        :param expression (str): a python expression to look for in lines (everything that is can be used by re.search())
+        :param split (str): if the expression is in line
+        :param line_index (int, optional): After the split where to look for the number, Default 1, therefore the first number ofter the split string 
+        :param res_index (int, optional): If expression matches several lines, which one to use. Defaults to -1, last number only
+        if res_index=None a list of all numbers is returned
+
+        :return: float, list of floats
+        """
         numbers = []
         with open(filepath, "r") as file1:
             for line in file1:
                 if re.search(expression, line):
-                    res = line.split(expression)[index]
+                    res = line.split(expression)[line_index]
                     try:
                         number = float(res)
                     except ValueError as exc: # There is still something after the number
                         number = float(re.findall(r"[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
-        if first_only:
-            if len(numbers) == 0:
-                return numbers
+        if len(numbers) == 0:
+            raise ValueError(f'Number for "{expression}" was not found in {filepath}')
+        elif len(numbers) == 1:
             return numbers[0]
+
+        if res_index is not None:
+            return numbers[res_index]
         else:
             return numbers
         
@@ -374,7 +402,7 @@ def grep_number():
     
 def check_value_outfile(filepath, before_str, after_str, expected, delta):
     """
-    Check a value in the out file, coped form libtest.py
+    Check a value in the out file, copied from libtest.py
     """
     exp_idx = 0
     found = False
@@ -433,7 +461,7 @@ def clean_workdir():
         """
         workdir = work_dir()
         if 'all' in filelist:
-            shutil.rmtree(workdir) # this remove the work dir too.
+            shutil.rmtree(workdir) # this removes the work dir too.
             os.mkdir(workdir)
         else:
             for files in filelist:
@@ -445,7 +473,8 @@ def clean_workdir():
 @pytest.fixture(scope='function')
 def stage_for_parser_test(request):
     """
-    Fixture to copy the results files of a test to the parser test folder.
+    Fixture to copy the result files of a test to the parser test folder.
+    To later autogenerate tests for the fleur parsers
     """
     
     parsertestdir = parser_testdir()
@@ -457,7 +486,7 @@ def stage_for_parser_test(request):
    
     method_name = request.node.name
     if RUN_PARSER_TESTS and not request.node.rep_call.failed:
-        # if failed move test result to parsertestdir, will replace dir if existent
+        # if not failed move test result to parsertestdir, will replace dir if existent
         destination = os.path.abspath(os.path.join(parsertestdir, method_name))
         if os.path.isdir(destination):
             shutil.rmtree(destination)
@@ -532,8 +561,6 @@ def collect_all_judft_messages():
     """Helper function, to create a list of all judft messages within the fleur source code, 
     by grepping for them.
     """
-    import os
-    import re
     testdir = test_dir()
     rel_fleur_source = '../../'
     fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))

@@ -12,8 +12,7 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
     """
     test_file_folder = './inputfiles/CuBulkXML/'
 
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     should_files = ['out.xml', 'out', 'usage.json']
     res_file_names = list(res_files.keys())
     
@@ -42,8 +41,7 @@ def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
     1.Generate a starting density, run 1 iteration, and generate band structure. Ensure that the files are created.
     """
     test_file_folder = './inputfiles/CuBandXML/'
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out.xml', 'bands.1']
     if 'cdn.hdf' in res_file_names:
@@ -82,8 +80,7 @@ def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
     If fleur is not complied and linked to libXC this test will fail
     """
     test_file_folder = './inputfiles/CuBulkLibXC/'
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
@@ -110,8 +107,7 @@ def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test
 
     """
     test_file_folder = './inputfiles/CuDOSXML/'
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     if 'cdn.hdf' in res_file_names:
@@ -143,8 +139,7 @@ def test_CuOrb(execute_fleur, grep_exists, grep_number):
     # TODO these are the same checks as in the CuDOSXML test, is this correct?
     # we do not check orbital decom...
     test_file_folder = './inputfiles/CuOrb/'
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     if 'cdn.hdf' in res_file_names:
@@ -157,6 +152,7 @@ def test_CuOrb(execute_fleur, grep_exists, grep_number):
         assert file1 in res_file_names
 
     fermi = grep_number(res_files['out'], "fermi energy =", "=")
+    print(fermi)
     assert abs(fermi - 0.4239) <= 0.001
     
     if not with_hdf:

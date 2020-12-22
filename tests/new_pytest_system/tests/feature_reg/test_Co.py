@@ -12,7 +12,7 @@ def test_CoHybridPBE0(execute_fleur, grep_exists, grep_number):
     """
     test_file_folder = './inputfiles/CoHybridPBE0/'
     cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder)
+    res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
@@ -36,9 +36,9 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
     2.Calculate and verify MCD spectra
     """
     test_file_folder = './inputfiles/CoMCDXML/'
-    cmd_params = []
+
     # Stage 1
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=['inp.xml', 'sym.out'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
     with_hdf = False
@@ -50,8 +50,8 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
         assert file1 in res_file_names
 
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    dist = grep_number(res_files['out'], "distance of charge densitie", "2: ")
-    dist_spin = grep_number(res_files['out'], "distance of spin densitie", "2: ")
+    dist = grep_number(res_files['out'], "distance of charge densities for it=    2", ": ")
+    dist_spin = grep_number(res_files['out'], "distance of spin densities for it=    2", ": ")
     
     assert abs(tenergy - -2786.95650275) <= 0.001
     assert abs(dist - 8.376682) <= 0.001
@@ -59,7 +59,7 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
 
 
     # Stage 2
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=[['inp2.xml', 'inp.xml']])
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml']])
     res_file_names = list(res_files.keys())
     should_files = []
     if with_hdf:
@@ -84,8 +84,8 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     1.Generate a starting density and run 1 iteration with band unfolding and compare several quantities
     """
     test_file_folder = './inputfiles/CoUnfold/'
-    cmd_params = []
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=['inp.xml', 'sym.xml'])
+
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'])
     res_file_names = list(res_files.keys())
     should_files = ['out', 'bands_sc.1', 'bands_sc.2']
     for file1 in should_files:
