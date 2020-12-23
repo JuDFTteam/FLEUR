@@ -88,6 +88,7 @@ CONTAINS
       ! local arrays
       INTEGER, ALLOCATABLE :: stateIndices(:)
       INTEGER, ALLOCATABLE :: stateBIndices(:)
+      INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne)
       COMPLEX tempState(lapw%nv(jspin))
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
@@ -125,6 +126,7 @@ CONTAINS
             CALL rhomatGrid(i)%init(cell,sym,(2.0*stateRadius)+0.001)
             rhomatGrid(i)%grid(:) = CMPLX(0.0,0.0)
          END DO
+         CALL rhomatGrid(1)%fillFieldSphereIndexArray(stars, (2.0*stateRadius)+0.0008, fieldSphereIndices)
          IF (noco%l_ss) THEN
             ALLOCATE(stateIndices(lapw%nv(1)))
             ALLOCATE(stateBIndices(lapw%nv(2)))
@@ -140,6 +142,7 @@ CONTAINS
          CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
          CALL chargeDen%init(cell,sym,(2.0*stateRadius)+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
+         CALL chargeDen%fillFieldSphereIndexArray(stars, (2.0*stateRadius)+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
             CALL stateDeriv%init(cell,sym,(2.0*stateRadius)+0.001)
             CALL ekinGrid%init(cell,sym,(2.0*stateRadius)+0.001)
@@ -225,8 +228,8 @@ CONTAINS
                END DO
 
                forw = .TRUE.
-               CALL fft_interface(3, state%dimensions(:), state%grid, forw)
-               CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw)
+               CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
+               CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw, fieldSphereIndices)
 
                CALL state%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
                DO istr = 1, stars%ng3
@@ -279,7 +282,7 @@ CONTAINS
                      END IF
                   END DO
                   CALL stateDeriv%putComplexStateOnGrid(lapw, jSpin, tempState)
-                  CALL fft_interface(3, stateDeriv%dimensions(:), stateDeriv%grid, forw)
+                  CALL fft_interface(3, stateDeriv%dimensions(:), stateDeriv%grid, forw, stateIndices)
                   DO ir = 0, ekinGrid%gridLength - 1
                      ekinGrid%grid(ir) = ekinGrid%grid(ir) + wtf(nu) * 0.5 * ABS(stateDeriv%grid(ir))**2
                   END DO
@@ -300,14 +303,14 @@ CONTAINS
       DO idens = 1, ndens
          forw = .TRUE.
          IF (noco%l_noco) THEN
-            CALL fft_interface(3, rhomatGrid(idens)%dimensions(:), rhomatGrid(idens)%grid, forw)
+            CALL fft_interface(3, rhomatGrid(idens)%dimensions(:), rhomatGrid(idens)%grid, forw, fieldSphereIndices)
          ELSE
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into areal to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
-            CALL fft_interface(3, chargeDen%dimensions(:), chargeDen%grid, forw)
+            CALL fft_interface(3, chargeDen%dimensions(:), chargeDen%grid, forw, fieldSphereIndices)
             IF (input%l_f) THEN
-               CALL fft_interface(3, ekinGrid%dimensions(:), ekinGrid%grid, forw)
+               CALL fft_interface(3, ekinGrid%dimensions(:), ekinGrid%grid, forw, fieldSphereIndices)
             END IF
          ENDIF
 
