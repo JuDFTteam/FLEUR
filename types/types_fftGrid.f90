@@ -22,6 +22,7 @@ MODULE m_types_fftGrid
       PROCEDURE :: putStateOnGrid
       PROCEDURE :: putRealStateOnGrid
       PROCEDURE :: putComplexStateOnGrid
+      PROCEDURE :: fillStateIndexArray
       PROCEDURE :: getElement
       procedure :: g2fft => map_g_to_fft_grid
    END TYPE t_fftGrid
@@ -213,6 +214,27 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
       END DO
    END SUBROUTINE putComplexStateOnGrid
+
+   SUBROUTINE fillStateIndexArray(this, lapw, ispin, indexArray)
+      USE m_types_lapw
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)        :: lapw
+      INTEGER, INTENT(IN)             :: iSpin
+      INTEGER, INTENT(INOUT)          :: indexArray(lapw%nv(ispin))
+
+      INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
+
+      layerDim = this%dimensions(1)*this%dimensions(2)
+
+      DO iLAPW = 1, lapw%nv(iSpin)
+         xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+         yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+         zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+         indexArray(iLAPW) = xGrid + this%dimensions(1)*yGrid + layerDim*zGrid
+      END DO
+
+   END SUBROUTINE fillStateIndexArray
 
    COMPLEX FUNCTION getElement(this, x, y, z)
       IMPLICIT NONE

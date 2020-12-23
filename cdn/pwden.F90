@@ -86,6 +86,8 @@ CONTAINS
       LOGICAL forw
 
       ! local arrays
+      INTEGER, ALLOCATABLE :: stateIndices(:)
+      INTEGER, ALLOCATABLE :: stateBIndices(:)
       REAL wtf(ne)
       COMPLEX tempState(lapw%nv(jspin))
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
@@ -123,6 +125,17 @@ CONTAINS
             CALL rhomatGrid(i)%init(cell,sym,(2.0*stateRadius)+0.001)
             rhomatGrid(i)%grid(:) = CMPLX(0.0,0.0)
          END DO
+         IF (noco%l_ss) THEN
+            ALLOCATE(stateIndices(lapw%nv(1)))
+            ALLOCATE(stateBIndices(lapw%nv(2)))
+            CALL state%fillStateIndexArray(lapw,1,stateIndices)
+            CALL stateB%fillStateIndexArray(lapw,2,stateBIndices)
+         ELSE
+            ALLOCATE(stateIndices(lapw%nv(jspin)))
+            ALLOCATE(stateBIndices(lapw%nv(jspin)))
+            CALL state%fillStateIndexArray(lapw,jspin,stateIndices)
+            CALL stateB%fillStateIndexArray(lapw,jspin,stateBIndices)
+         ENDIF
       ELSE
          CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
          CALL chargeDen%init(cell,sym,(2.0*stateRadius)+0.001)
@@ -132,6 +145,8 @@ CONTAINS
             CALL ekinGrid%init(cell,sym,(2.0*stateRadius)+0.001)
             ekinGrid%grid(:) = CMPLX(0.0,0.0)
          END IF
+         ALLOCATE(stateIndices(lapw%nv(jspin)))
+         CALL state%fillStateIndexArray(lapw,jspin,stateIndices)
       ENDIF
 
       ! g=0 star: calculate the charge for this k-point and spin
@@ -185,8 +200,8 @@ CONTAINS
                CALL stateB%putComplexStateOnGrid(lapw, jspin, zMat%data_c(lapw%nv(1) + atoms%nlotot+1:lapw%nv(1) + atoms%nlotot+lapw%nv(jspin),nu))
             ENDIF
 
-            CALL fft_interface(3, state%dimensions(:), state%grid, forw)
-            CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw)
+            CALL fft_interface(3, state%dimensions(:), state%grid, forw, stateIndices)
+            CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw, stateBIndices)
 
             ! In the non-collinear case rho becomes a hermitian 2x2
             ! matrix (rhomatGrid).
@@ -240,7 +255,7 @@ CONTAINS
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into areal to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
-            CALL fft_interface(3, state%dimensions(:), state%grid, forw)
+            CALL fft_interface(3, state%dimensions(:), state%grid, forw, stateIndices)
             DO ir = 0, chargeDen%gridLength - 1
                chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
             END DO
