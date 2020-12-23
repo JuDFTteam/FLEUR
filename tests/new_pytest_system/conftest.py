@@ -23,13 +23,8 @@ pytest_plugins = []
 
 #TODO other optional aiida tests
 
-######### Helpers ############
-# C: By using os.path instead of pathlib, this will prob fail on Windows
 
-# TODO allow User to specify some of these over the cmd line when executing pytest
-# because build dir can have different names
-# see https://stackoverflow.com/questions/36141024/how-to-pass-environment-variables-to-pytest#39162893
-# or https://adamj.eu/tech/2020/10/13/how-to-mock-environment-variables-with-pytest/
+
 
 # TODO test log, and better reporting
 # TODO time out tests,
@@ -46,6 +41,19 @@ pytest_plugins = []
 # and fixtures from docstring
 # TODO: Check what kind of fleur executable it is,  for example check configure out,
 # to only run subtest set which belongs to executable.
+# TODO: install pytest-xdist to run pytest -n=2 to execute tests in parallel
+# pytest --durations=0
+
+######### Helpers ############
+# C: By using os.path instead of pathlib, this will prob fail on Windows
+# TODO allow User to specify some of these over the cmd line when executing pytest
+# because build dir can have different names
+# see https://stackoverflow.com/questions/36141024/how-to-pass-environment-variables-to-pytest#39162893
+# or https://adamj.eu/tech/2020/10/13/how-to-mock-environment-variables-with-pytest/
+
+# The current fleur test workflow is as follows, create Testing dir in build dir
+# there is the workdir in which the test runs, after the test is finished, they copy the work dir
+# they create logs there. 
 
 def test_dir():
     """Get path to the parent test directory defined by the position of this conftest.py file
@@ -100,7 +108,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
     config.addinivalue_line("markers", "masci_tools: tests which use function from masci-tools repo")
     config.addinivalue_line("markers", "soc: tests with soc")
-    config.addinivalue_line("markers", "lda: tests with ldau")
+    config.addinivalue_line("markers", "ldau: tests with ldau")
     config.addinivalue_line("markers", "lo: tests with lo")
     config.addinivalue_line("markers", "forces: tests with forces")
     config.addinivalue_line("markers", "xml: test with xml")
@@ -305,10 +313,18 @@ def execute_fleur(fleur_binary):
             else:
                 new_only_copy_list[entry] = entry
         
+        files_work_dir = os.listdir(workdir)
         for entry in rm_files:
             path = os.path.abspath(os.path.join(workdir, entry))
-            if os.isfile(path):
-                shutil.remove(path)
+            if os.path.isfile(path):
+                os.remove(path)
+            else: # Either the file does not exits, or an expression was given
+                for filename in files_work_dir:
+                    if re.search(entry, filename):
+                        print(filename)
+                        path = os.path.abspath(os.path.join(workdir, filename))
+                        if os.path.isfile(path):
+                             os.remove(path)        
 
         if test_file_folder is not None: # Does it even make sense to not give a folder?
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))

@@ -1,14 +1,14 @@
 import pytest
 
 @pytest.mark.hybrid
-def test_GaAsHybridPBEO(execute_fleur, grep_number, grep_exists):
+def test_GaAsHybridPBE0(execute_fleur, check_value_outfile, fleur_binary):
     """Fleur GaAs Hybrid PBE0
 
     Simple test of Fleur with XML input with one step:
     1.Generate a starting density and run 2 HF iterations and compare total energies and other quantities
 
     """
-    test_file_folder = './inputfiles/GaAsHybridPBEO/'
+    test_file_folder = './inputfiles/GaAsHybridPBE0/'
     cmd_params = ['-trace']
 
     # special for this hybrid test:
@@ -22,7 +22,7 @@ def test_GaAsHybridPBEO(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
     
     assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-4205.2193168, -4204.9174214647], 0.000001)
     # only check the last bandgap
@@ -30,15 +30,15 @@ def test_GaAsHybridPBEO(execute_fleur, grep_number, grep_exists):
     exp_bandgap[37] = 0.09105
     check_value_outfile(res_files['out'], "bandgap                     :", "htr", exp_bandgap, 0.0001)
 
-@pytest.mark.eigpar
+@pytest.mark.eigpara
 @pytest.mark.hybrid
-def test_GaAsHybridPBEO_eigpar(execute_fleur, grep_number, grep_exists):
+def test_GaAsHybridPBE0_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     """Fleur GaAs Hybrid PBE0
 
     Simple test of Fleur with XML input with one step:
     1.Generate a starting density and run 2 HF iterations and compare total energies and other quantities
     """
-    test_file_folder = './inputfiles/GaAsHybridPBEO_eigpar/'
+    test_file_folder = './inputfiles/GaAsHybridPBE0_eigpar/'
     cmd_params = ['-trace']
 
     # special for this hybrid test:
@@ -52,7 +52,7 @@ def test_GaAsHybridPBEO_eigpar(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
     
     assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-4205.2193168, -4204.9174214647], 0.000001)
     # only check the last bandgap
@@ -63,7 +63,7 @@ def test_GaAsHybridPBEO_eigpar(execute_fleur, grep_number, grep_exists):
 
 @pytest.mark.ldau
 @pytest.mark.forces
-def test_GaAsMulitUForceXML(execute_fleur, grep_number, grep_exists):
+def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     """GaAs: displaced atoms with U parameters and forces
 
     Simple test of Fleur with three steps:
@@ -71,11 +71,47 @@ def test_GaAsMulitUForceXML(execute_fleur, grep_number, grep_exists):
     2.Remove Broyden files, last line of n_mmp_mat and run 12 iterations
     3.Calculate forces
     """
-    
+    test_file_folder = './inputfiles/GaAsMultiUForceXML/'
     
     # Stage 1
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if not 'cdn.hdf' in res_file_names:
+        should_files.append('cdn1')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    tenergy = grep_number(res_files['out'], "total energy=", "=")
+    dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
+
+    assert abs(tenergy - -4205.143) <= 0.001
+    assert abs(dist - 7.609001) <= 0.0001
+
     # Stage 2
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp-2.xml', 'inp.xml'], 'n_mmp_mat'], rm_files=['mixing_history'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    assert grep_exists(res_files['out'], "it= 12  is completed")
+    efermi = grep_number(res_files['out'], "first approx. to ef", ":")
+    tenergy = grep_number(res_files['out'], "total energy=", "=")
+    
+    assert abs(efermi - 0.125) <= 0.001
+    assert abs(tenergy - -4204.7140) <= 0.0001
+
     # Stage 3
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp-3.xml', 'inp.xml']], rm_files=['mixing_history'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out', 'relax.xml']
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    assert grep_exists(res_files['relax.xml'], "4204.714")
+    assert grep_exists(res_files['relax.xml'], "1.3806000000   -0.0179")
+
 
 @pytest.mark.soc
 @pytest.mark.wannier
@@ -91,45 +127,37 @@ def test_GaAsWannSOC(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/GaAsWannSOC/'
     
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp', 'sym.out', 'enpara', 'kpts'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml', 'kpts.xml'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
-        assert (file1 in res_file_names), file1
+        assert (file1 in res_file_names), f'{file1} missing'
     
     # Stage 2
-    res_files = execute_fleur(test_file_folder, only_copy=[['wann_inp2', 'wann_inp'], 'projgen_inp', ['kpts-2', 'kpts']])
+    res_files = execute_fleur(test_file_folder, only_copy=[['wann_inp-1.xml', 'inp.xml'], 'projgen_inp'])
     res_file_names = list(res_files.keys())
     should_files = ['proj']
     for file1 in should_files:
-        assert (file1 in res_file_names), file1
-    assert grep_exists(res_files['proj'],"           8           8")
-    assert grep_exists(res_files['proj'],"  1 -3  1  0")
-    assert grep_exists(res_files['proj'],"  2 -3  4  0")
+        assert (file1 in res_file_names), f'{file1} missing'
+    assert grep_exists(res_files['proj'],"          16          36   t ")
+    assert grep_exists(res_files['proj'],"  1 -3  1  0  1")
+    assert grep_exists(res_files['proj'],"  2 -3  4  0 -1")
     assert grep_exists(res_files['proj'],"     0.000000  0.000000  0.000000  0.000000 1.00")
 
     # Stage 3
-    res_files = execute_fleur(test_file_folder, only_copy=[['wann_inp2', 'wann_inp']])
+    res_files = execute_fleur(test_file_folder, only_copy=[['wann_inp-2.xml', 'inp.xml']])
     res_file_names = list(res_files.keys())
-    should_files = ['WF1.amn', 'WF1.mmn', 'WF1.eig', 'WF1.win', 'WF1.wout']
+    should_files = ['WF1.amn', 'WF1.mmn', 'WF1.mmn0','WF1.eig', 'WF1.win', 'WF1.wout']
     for file1 in should_files:
-        assert (file1 in res_file_names), file1
+        assert (file1 in res_file_names), f'{file1} missing'
     
-    assert grep_exists(res_files['WF1.eig'], "           1           1   -9.96004957")
-    assert grep_exists(res_files['WF1.eig'], "           8           1   24.36259922")
-    assert grep_exists(res_files['WF1.eig'], "           8           8   27.60170066")
-    assert grep_exists(res_files['WF1.eig'], "           5           6   16.51363508")
-    #Note:WF1.amn and WF1.mmn seem to differ strongly from the reference result.
-    #But this does not seem to be relevant as invoking wannier90.x WF1 yields high precision results.
-    assert grep_exists(res_files['WF1.amn'], "    8    8    8")
-    assert grep_exists(res_files['WF1.amn'], "    1    1    1      -0.21709150")
-    assert grep_exists(res_files['WF1.amn'], "    8    2    1       0.000000000000    0.29174760")
-    assert grep_exists(res_files['WF1.amn'], "    2    6    2       0.000000000000   -0.01714566")
-    assert grep_exists(res_files['WF1.amn'], "    3    5    2      -0.18082932")
-    assert grep_exists(res_files['WF1.amn'], "    8    8    8       0.000000000000   -0.11210751")
-    assert grep_exists(res_files['WF1.amn'], "    6    7    8      -0.33695808")
-    assert grep_exists(res_files['WF1.mmn'], "    8    8    8")
-    assert grep_exists(res_files['WF1.mmn'], "    1    2      0   0   0")
-    assert grep_exists(res_files['WF1.mmn'], "   -0.757938912603")
-    assert grep_exists(res_files['WF1.mmn'], "    0.257799685127")
-    assert grep_exists(res_files['WF1.mmn'], "    8    7      0   0   1")
+    assert grep_exists(res_files['WF1.eig'], "           1           1   -7.869")
+    assert grep_exists(res_files['WF1.eig'], "           8           1    4.840")
+    assert grep_exists(res_files['WF1.eig'], "           8           8    3.769")
+    assert grep_exists(res_files['WF1.eig'], "           5           6    2.167")
+    assert grep_exists(res_files['WF1.mmn0'], "    8    8      8       1.000000000000")
+    assert grep_exists(res_files['WF1.mmn0'], "    1    1      1       1.000000000000")
+    assert grep_exists(res_files['WF1.wout'], "WF centre and spread    1  ( -2.041")
+    assert grep_exists(res_files['WF1.wout'], "WF centre and spread    2  ( -2.041")
+    assert grep_exists(res_files['WF1.wout'], "dis")
+    assert grep_exists(res_files['WF1.wout'], "WF centre and spread    4  ( -0.642")
