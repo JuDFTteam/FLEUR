@@ -64,15 +64,14 @@ MODULE m_rotMMPmat
          ENDDO
       ENDIF
 
-      mmpmatOut = conjg(mmpmatOut)
-
    END FUNCTION rotMMPmat_dwgn
 
-   PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l,spin_rotation) Result(mmpmatOut)
 
-      COMPLEX,    INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
-      REAL,       INTENT(IN)  :: alpha,beta,gamma !Euler angles
-      INTEGER,    INTENT(IN)  :: l
+      COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
+      REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
+      INTEGER,           INTENT(IN)  :: l
+      LOGICAL, OPTIONAL, INTENT(IN)  :: spin_rotation
 
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
@@ -82,11 +81,16 @@ MODULE m_rotMMPmat
       REAL    :: co_bh,si_bh,zaehler,nenner,cp,sp
       COMPLEX :: phase_g,phase_a,bas,eia
       COMPLEX :: d(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      LOGICAL :: spin_rotation_arg
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
 
       IF(ABS(alpha)<1e-10.AND.ABS(beta)<1e-10.AND.ABS(gamma)<1e-10) RETURN
+
+      spin_rotation_arg = .FALSE.
+      IF(PRESENT(spin_rotation)) spin_rotation_arg = spin_rotation
+
 
       co_bh = cos(beta*0.5)
       si_bh = sin(beta*0.5)
@@ -141,15 +145,20 @@ MODULE m_rotMMPmat
       su(1,2) = eia*si_bh
       su(2,2) = eia*co_bh
 
-      mmpmatOut = rotMMPmat_dwgn(mmpmat,d)
+      IF(spin_rotation_arg) THEN
+         mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su=su)
+      ELSE
+         mmpmatOut = rotMMPmat_dwgn(mmpmat,d)
+      ENDIF
 
    END FUNCTION rotMMPmat_angle
 
-   PURE FUNCTION rotMMPmat_angle_completeMatrix(mmpmat,alpha,beta,gamma,l) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_angle_completeMatrix(mmpmat,alpha,beta,gamma,l,spin_rotation) Result(mmpmatOut)
 
-      COMPLEX,    INTENT(IN)  :: mmpmat(:,:)
-      REAL,       INTENT(IN)  :: alpha,beta,gamma !Euler angles
-      INTEGER,    INTENT(IN)  :: l
+      COMPLEX,           INTENT(IN)  :: mmpmat(:,:)
+      REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
+      INTEGER,           INTENT(IN)  :: l
+      LOGICAL, OPTIONAL, INTENT(IN)  :: spin_rotation
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:), mmpmatOutsplit(:,:,:)
       COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,4)
@@ -164,7 +173,7 @@ MODULE m_rotMMPmat
       mmpmatsplit(-l:l,-l:l,3) = mmpmat(2*l+2:,:2*l+1)
       mmpmatsplit(-l:l,-l:l,4) = mmpmat(:2*l+1,2*l+2:)
 
-      mmpmatOutsplit = rotMMPmat_angle(mmpmatsplit,alpha,beta,gamma,l)
+      mmpmatOutsplit = rotMMPmat_angle(mmpmatsplit,alpha,beta,gamma,l,spin_rotation=spin_rotation)
 
       mmpmatOut(:2*l+1,:2*l+1) = mmpmatOutsplit(-l:l,-l:l,1)
       mmpmatOut(2*l+2:,2*l+2:) = mmpmatOutsplit(-l:l,-l:l,2)
