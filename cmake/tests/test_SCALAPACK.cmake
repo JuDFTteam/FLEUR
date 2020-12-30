@@ -4,9 +4,9 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
 #Try typical mkl string
-foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack_openmpi" "-lscalapack")
+foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack-openmpi" "-lscalapack")
 if (NOT FLEUR_USE_SCALAPACK)
-     message("Test for SCALAPCK with:${test_string}")
+     message("Test for SCALAPACK with:${test_string}")
      set(TEST_LIBRARIES "${test_string};${FLEUR_LIBRARIES}")
      try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
            LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output

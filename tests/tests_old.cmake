@@ -7,7 +7,7 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
    FePt_film_SSFT FePt_film_SSFT_LO  CoMCDXML CuOrb SmAtomjDOS
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
    GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
-   CrystalFieldOutput VO2_forces VO2_force_levels )
+   CrystalFieldOutput VO2_forces VO2_force_levels Bi2Te3XML NiO_ldauXML)
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
