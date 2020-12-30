@@ -318,7 +318,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,fmpi,noco,cell,atoms,sym,ikpt,&
+         CALL pwden(stars,kpts,banddos,oneD,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
          IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)

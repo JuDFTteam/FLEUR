@@ -105,8 +105,8 @@ MODULE m_types_selfen
             swapMat(ns+i,i) = 1.0
          ENDDO
 
-         DO iz = 1, SIZE(this%data,3)
-            DO ipm = 1, 2
+         DO ipm = 1, 2
+            DO iz = 1, SIZE(this%data,3)
                !---------------------------------------------
                ! Convert the selfenergy to hartree
                !---------------------------------------------
@@ -122,9 +122,9 @@ MODULE m_types_selfen
                !---------------------------------------------
                IF(noco%l_soc) THEN
                   IF(noco%l_noco) THEN
-                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%beta(atomType),nococonv%alph(atomType),l)
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
                   ELSE
-                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%theta,nococonv%phi,l)
+                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),nococonv%phi,nococonv%theta,0.0,l)
                   ENDIF
                ENDIF
                !---------------------------------------------------------------------

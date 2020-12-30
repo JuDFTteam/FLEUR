@@ -13,7 +13,6 @@ MODULE m_umix
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_nmat_rot
    USE m_xmlOutput
 
    IMPLICIT NONE
