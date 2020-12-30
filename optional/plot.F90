@@ -751,9 +751,11 @@ CONTAINS
          CALL timestart("loop over points")
          print*, "loop over points", fmpi%irank
          !loop over all points
-         strt=  fmpi%irank*(grid(3)-1)/fmpi%isize + 1
-         fin =   ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
-         IF ( fmpi%irank == 0) strt = 0
+         #strt=  fmpi%irank*(grid(3)-1)/fmpi%isize + 1
+         #fin =   ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
+         #IF ( fmpi%irank == 0) strt = 0
+         strt=  fmpi%irank   *grid(3)/fmpi%isize ! Proposed fix to issue #540.
+         fin = (fmpi%irank+1)*grid(3)/fmpi%isize - 1 ! Continued
          DO iz = strt,fin
             !$OMP PARALLEL DO DEFAULT(none) &
             !$OMP& SHARED(iz,grid,zero,vec1,vec2,vec3,twodim,input,cell,oneD,numInDen,potnorm) &
