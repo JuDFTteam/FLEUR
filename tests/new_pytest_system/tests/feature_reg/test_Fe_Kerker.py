@@ -1,7 +1,7 @@
 
 import pytest
 
-def test_Fe_Kerker():
+def test_Fe_Kerker(execute_fleur, grep_exists, grep_number):
     """Fleur Fe Kerker XML
 
     Test of the Kerker preconditioner with one step:

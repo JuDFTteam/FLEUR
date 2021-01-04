@@ -84,7 +84,7 @@ def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
     
     assert grep_exists(res_files['out'], "it=  1  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
@@ -117,7 +117,7 @@ def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test
         with_hdf = False
         should_files.append('Local.1')
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
 
     fermi = grep_number(res_files['out'], "fermi energy =", "=")
     assert abs(fermi - 0.4239) <= 0.001
@@ -149,10 +149,9 @@ def test_CuOrb(execute_fleur, grep_exists, grep_number):
         with_hdf = False
         should_files.append('Local.1')
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
 
     fermi = grep_number(res_files['out'], "fermi energy =", "=")
-    print(fermi)
     assert abs(fermi - 0.4239) <= 0.001
     
     if not with_hdf:

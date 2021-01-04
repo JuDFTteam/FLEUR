@@ -13,7 +13,7 @@ def test_Fe_Tetra_noSYM(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert (file1 in res_file_names), f'{file1} missing'
     
     assert grep_exists(res_files['out'], "it=  15  is completed")
     fermi = grep_number(res_files['out'], "fermi energy =", "=")

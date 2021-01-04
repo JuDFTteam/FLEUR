@@ -24,9 +24,8 @@ pytest_plugins = []
 #TODO other optional aiida tests
 
 
-
-
-# TODO test log, and better reporting
+# TODO test log, and better reporting https://docs.pytest.org/en/stable/logging.html
+# python test_out.py | tee myoutput.log, # maybe with capsys, capsysbinary, capfd
 # TODO time out tests,
 # TODO Do we want to be able to run a whole test session with a certain parallelisation?
 # Which one would provide via the pytest command or export before the command?
@@ -43,6 +42,11 @@ pytest_plugins = []
 # to only run subtest set which belongs to executable.
 # TODO: install pytest-xdist to run pytest -n=2 to execute tests in parallel
 # pytest --durations=0
+# TODO: All hdf tests do not test for values in hdf files, this is bad
+# TODO: Check in configure output or somewhere which type of executable was compiled and
+# run only tests which make sense for this executable, for example if no libxc is linked
+# running libxc tests makes no sense.
+# TODO: if tests fails should we print the fleur stderr output to pytest log?
 
 ######### Helpers ############
 # C: By using os.path instead of pathlib, this will prob fail on Windows
@@ -114,14 +118,19 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "xml: test with xml")
     config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "collinear: test with collinear")
-    config.addinivalue_line("markers", "non-collinear: test with non-collinear")
+    config.addinivalue_line("markers", "non_collinear: test with non-collinear")
     config.addinivalue_line("markers", "spinspiral: test with spinspiral")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
     config.addinivalue_line("markers", "greensfunction: test with greensfunction")
     config.addinivalue_line("markers", "magnetism: test with magnetism")
-    
+    config.addinivalue_line("markers", "plot: tests testing a plot feature")
+    config.addinivalue_line("markers", "eels: test with eels")
+    config.addinivalue_line("markers", "hdf: tests needing hdf")
+    config.addinivalue_line("markers", "gw: test for gw interface")
+    config.addinivalue_line("markers", "interface: tests testing some interface")
+    config.addinivalue_line("markers", "relaxation: tests involving relaxation")
 
 ####################################
 ########### fixtures
@@ -140,8 +149,19 @@ def fleur_test_session():
     - look for executables to use within that session for all tests
     """
     # put session preparation code here
-    # maybe clean failed_dir
-    # maybe clean parser_testdir
+
+    # We clean before and not after test session, because that way
+    # people can investigate the files
+
+    # clean parser_testdir
+    parser_testdir_path = parser_testdir()
+    shutil.rmtree(parser_testdir_path)
+    os.mkdir(parser_testdir_path)
+
+    # clean failed_dir
+    failed_dir_path = failed_dir()
+    shutil.rmtree(failed_dir_path)
+    os.mkdir(failed_dir_path)
 
     yield # now all the tests run
 
@@ -153,7 +173,7 @@ def set_environment_session():
     Fixture to set given environment variables
     """
     # So far this is done on the outside, and for the whole test set
-    pass
+    yield
 
 ##### fixtures active EACH test case ####
 
@@ -260,8 +280,15 @@ def execute_inpgen(inpgen_binary):
                 subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=True)
 
         result_files = {}
-        source = os.listdir(workdir) # Notice this is simple and not recursive,
-        # TODO if we have output directories use os.walk or so instead
+        source = []
+        for (dirpath, dirname, filenames) in os.walk(workdir):
+            # We ignore hidden files and dirs, i.e .__pycache__ and so on
+            filenames = [f for f in filenames if not f[0] == '.']
+            dirname[:] = [d for d in dirname if not d[0] == '.']
+            for file1 in filenames:
+                source.append(os.path.join(dirpath, file1))
+        
+        # We want to be able to address file with '/subpath/filename'
         for files in source:
             result_files[files] = os.path.abspath(os.path.join(workdir, files))      
         os.chdir(testdir)
