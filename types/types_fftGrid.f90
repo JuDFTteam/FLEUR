@@ -22,6 +22,8 @@ MODULE m_types_fftGrid
       PROCEDURE :: putStateOnGrid
       PROCEDURE :: putRealStateOnGrid
       PROCEDURE :: putComplexStateOnGrid
+      PROCEDURE :: fillStateIndexArray
+      PROCEDURE :: fillFieldSphereIndexArray
       PROCEDURE :: getElement
       procedure :: g2fft => map_g_to_fft_grid
    END TYPE t_fftGrid
@@ -213,6 +215,64 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
       END DO
    END SUBROUTINE putComplexStateOnGrid
+
+   SUBROUTINE fillStateIndexArray(this, lapw, ispin, indexArray)
+      USE m_types_lapw
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)        :: lapw
+      INTEGER, INTENT(IN)             :: iSpin
+      INTEGER, INTENT(INOUT)          :: indexArray(lapw%nv(ispin))
+
+      INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
+
+      layerDim = this%dimensions(1)*this%dimensions(2)
+
+      DO iLAPW = 1, lapw%nv(iSpin)
+         xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+         yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+         zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+         indexArray(iLAPW) = xGrid + this%dimensions(1)*yGrid + layerDim*zGrid
+      END DO
+
+   END SUBROUTINE fillStateIndexArray
+
+   SUBROUTINE fillFieldSphereIndexArray(this, stars, gCutoff, indexArray)
+      USE m_types_stars
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(IN)        :: this
+      TYPE(t_stars), INTENT(IN)           :: stars
+      REAL, INTENT(IN)                    :: gCutoff
+      INTEGER, ALLOCATABLE, INTENT(INOUT) :: indexArray(:)
+
+      INTEGER :: x, y, z, iStar
+      INTEGER :: xGrid, yGrid, zGrid, layerDim, tempArrayIndex
+      INTEGER :: tempArray((2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1))
+
+      layerDim = this%dimensions(1)*this%dimensions(2)
+
+      tempArrayIndex = 0
+      DO z = -stars%mx3, stars%mx3
+         zGrid = MODULO(z, this%dimensions(3))
+         DO y = -stars%mx2, stars%mx2
+            yGrid = MODULO(y, this%dimensions(2))
+            DO x = -stars%mx1, stars%mx1
+               iStar = stars%ig(x, y, z)
+               IF (iStar .EQ. 0) CYCLE
+               IF (stars%sk3(iStar) .GT. gCutoff) CYCLE
+               xGrid = MODULO(x, this%dimensions(1))
+               tempArrayIndex = tempArrayIndex + 1
+               tempArray(tempArrayIndex) = xGrid + this%dimensions(1)*yGrid + layerDim*zGrid
+            END DO
+         END DO
+      END DO
+
+      IF(ALLOCATED(indexArray)) DEALLOCATE (indexArray)
+      ALLOCATE(indexArray(tempArrayIndex))
+
+      indexArray(1:tempArrayIndex) = tempArray(1:tempArrayIndex)
+
+   END SUBROUTINE fillFieldSphereIndexArray
 
    COMPLEX FUNCTION getElement(this, x, y, z)
       IMPLICIT NONE
