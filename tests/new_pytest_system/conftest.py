@@ -68,9 +68,10 @@ def test_dir():
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
     return test_dir_path
 
-def build_dir():
+@pytest.fixture(scope='session')
+def build_dir(pytestconfig):
     """Return directory path where to look for executables"""
-    path = "../../build/"
+    path = pytestconfig.getoption("build_dir")
     build_path = os.path.abspath(os.path.join(test_dir(), path))
     return build_path
 
@@ -80,6 +81,7 @@ def work_dir():
     work_dir_path = os.path.abspath(os.path.join(test_dir(), path))
     return work_dir_path
 
+#@pytest.fixture(scope='session')
 def failed_dir():
     """Return directory path where execute tests in"""
     path = "./failed_test_results/"
@@ -92,11 +94,19 @@ def parser_testdir():
     parser_testdir_path = os.path.abspath(os.path.join(test_dir(), path))
     return parser_testdir_path
 
+##### change pytest executable:
+def pytest_addoption(parser):
+    """We add an option to pytest to parse the build dir
+    """
+    parser.addoption("--build_dir", action="store", default="../../build/")
+    #parser.addoption("--testing_dir", action="store", default="")
+
+
 ##### Add some markers to pytest to group tests
 
 def pytest_configure(config):
     """
-    Here you can add things by a pytest config, could be also part of a seperate file
+    Here you can add things by a pytest config, could be also part of a separate file
     So far we add some markers here to be able to execute a certain group of tests
     We make them all lowercaps as convention
     """
@@ -577,11 +587,11 @@ def stage_for_parser_test(request):
 
 
 @pytest.fixture(scope='session')
-def inpgen_binary():
+def inpgen_binary(build_dir):
     """
     Fixture returning the path to a inpgen executable
     """
-    fleur_dir = build_dir()
+    fleur_dir = build_dir
     if(fleur_dir[-1] == "/"):
         fleur_dir = fleur_dir[:-1]
     
@@ -596,11 +606,11 @@ def inpgen_binary():
     return binary
 
 @pytest.fixture(scope='session')
-def fleur_binary():
+def fleur_binary(build_dir):
     """
     Fixture returning the path to a fleur executable
     """
-    fleur_dir = build_dir()
+    fleur_dir = build_dir
     parallel = False
     if(fleur_dir[-1] == "/"):
         fleur_dir = fleur_dir[:-1]
