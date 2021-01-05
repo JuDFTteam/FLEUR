@@ -33,18 +33,23 @@ build-gfortran-hdf5:
   stage: test
   dependencies:
     - build-gfortran-hdf5
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     - cd $CI_PROJECT_DIR
-    - cd build
-    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
-    - ctest $CTEST_FLAGS -j 1
+    - cd tests/new_pytest_system
+    - pytest
+#    - cd build
+#    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
+#    - ctest $CTEST_FLAGS -j 1
   artifacts:
     when: on_failure
-    paths:
-      - build/Testing
+#    paths:
+#      - build/Testing
 #  only:
 #    - schedules
 #    - triggers
@@ -81,11 +86,16 @@ test-gfortran-serial:
   stage: test
   dependencies:
     - build-gfortran-serial
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
-    - cd build.serial
-    - ctest -j 2
+    - cd tests/new_pytest_system
+    - pytest -m serial --build_dir="../../build.serial"
+#    - cd build.serial
+#    - ctest -j 2
   artifacts:
     when: on_failure
     paths:
@@ -154,15 +164,21 @@ test-pgi:
   stage: test
   dependencies:
     - build-pgi
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
-    - cd /builds/fleur/fleur/build.pgi;ctest
+    - cd /builds/fleur/fleur/
+    - cd /builds/fleur/fleur/tests/new_pytest_system
+    - pytest --build_dir="../../build.pgi"
+#build.pgi;ctest
   allow_failure: true
   artifacts:
     when: on_failure
-    paths:
-      - build.pgi/Testing
+#    paths:
+#      - build.pgi/Testing
   only:
      - schedules
      - web
@@ -219,17 +235,22 @@ test-intel:
   stage: test
   dependencies:
      - build-intel
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
-    - cd /builds/fleur/fleur/build.intel;ctest
+    - cd /builds/fleur/fleur/tests/new_pytest_system
+    - pytest --build_dir="../../build.intel"
+#/build.intel;ctest
   allow_failure: true
   artifacts:
     when: on_failure
     paths:
-      - build.intel/Testing
+#      - build.intel/Testing
 #      - build.intel.debug/Testing/test.oldlogs
   only:
      - schedules
@@ -240,10 +261,14 @@ gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
   needs: []
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
-      - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest -I 1,45
+      - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root "; cd ../tests/new_pytest_system; pytest --build_dir="../../build.coverage"
+#ctest -I 1,45
       - lcov --capture  -d CMakeFiles -o after.info
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out

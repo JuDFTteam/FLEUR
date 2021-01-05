@@ -4,7 +4,7 @@ if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
 endif()
 
-if(${CMAKE_VERSION} VERSION_LESS "3.10.0") 
+if(${CMAKE_VERSION} VERSION_LESS "3.10.0")
     message("Your cmake Version is rather old. Please consider to update cmake")
     message("More modern cmake versions might be needed to make sure your compiler settings are detected correctly")
 endif()
@@ -24,7 +24,7 @@ include("cmake/Files_and_Targets.txt")
 include("cmake/filespecific.cmake")
 
 include("cmake/ReportConfig.txt")
-
+include("cmake/pytest_setup.cmake")
 
 #install(TARGETS fleur inpgen DESTINATION bin)
 install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur
