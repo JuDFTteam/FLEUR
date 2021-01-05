@@ -18,7 +18,7 @@ build-gfortran-hdf5:
        - build
      expire_in: 1h
   script:
-    - pip3 install pytest
+    - pip install pytest
     - cd $CI_PROJECT_DIR
     - ./configure.sh GITLAB
 #    - FC=/usr/lib64/openmpi/bin/mpif90 ./configure.sh
@@ -66,7 +66,7 @@ build-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
   script:
-    - pip3 install pytest
+    - pip install pytest
     - cd $CI_PROJECT_DIR
     - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
     - cd build.serial
@@ -145,7 +145,7 @@ build-pgi:
        - build.pgi
      expire_in: 1h
   script:
-    - pip3 install pytest
+    - pip install pytest
     - export FC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvfortran
     - export CC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvc
     - cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
@@ -211,7 +211,7 @@ build-intel:
        - build.intel
      expire_in: 1h
   script:
-    - pip3 install pytest
+    - pip install pytest
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - cd /builds/fleur/fleur
@@ -254,7 +254,7 @@ gfortran-coverage:
   stage: html
   needs: []
   script:
-      - pip3 install pytest
+      - pip install pytest
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root "; cd ../tests/new_pytest_system; pytest --build_dir="../../build.coverage"
