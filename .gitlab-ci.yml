@@ -17,9 +17,6 @@ build-gfortran-hdf5:
      paths:
        - build
      expire_in: 1h
-  before_script:
-    - apt-get -yq install python3-pip
-    - pip3 install pytest
   script:
     - cd $CI_PROJECT_DIR
     - ./configure.sh GITLAB
@@ -36,6 +33,9 @@ build-gfortran-hdf5:
   stage: test
   dependencies:
     - build-gfortran-hdf5
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
@@ -67,9 +67,6 @@ test-gfortran-hdf5-3of3:
 build-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
-  before_script:
-    - apt-get -yq install python3-pip
-    - pip3 install pytest
   script:
     - cd $CI_PROJECT_DIR
     - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
@@ -89,6 +86,9 @@ test-gfortran-serial:
   stage: test
   dependencies:
     - build-gfortran-serial
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
@@ -149,7 +149,6 @@ build-pgi:
        - build.pgi
      expire_in: 1h
   script:
-    - pip install pytest
     - export FC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvfortran
     - export CC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvc
     - cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
@@ -165,6 +164,9 @@ test-pgi:
   stage: test
   dependencies:
     - build-pgi
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
@@ -215,7 +217,6 @@ build-intel:
        - build.intel
      expire_in: 1h
   script:
-    - pip install pytest
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - cd /builds/fleur/fleur
@@ -234,6 +235,9 @@ test-intel:
   stage: test
   dependencies:
      - build-intel
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
