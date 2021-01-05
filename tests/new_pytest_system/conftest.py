@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-In this file go all implemented of fixtures for fleur tests which are useful by more then one test
+In this file contains all implemented fixtures for fleur tests which are useful by more then one test
 
 Some code was taken and adapted from redis libtest.py
 We stay close to the old test workflow, which is serial, everything is executed in the work dir.
@@ -21,7 +21,8 @@ from helpers.utils import RUN_PARSER_TESTS
 pytest_plugins = []
 
 
-
+# pytest logfile: --log-file=path
+# --log-file-level
 #TODO other optional aiida tests
 
 
@@ -70,39 +71,64 @@ def test_dir():
 
 @pytest.fixture(scope='session')
 def build_dir(pytestconfig):
-    """Return directory path where to look for executables"""
+    """Return directory path where to look for executables, some other paths are relative to this"""
     path = pytestconfig.getoption("build_dir")
     build_path = os.path.abspath(os.path.join(test_dir(), path))
     return build_path
 
-def work_dir():
+@pytest.fixture(scope='session')
+def cleanup(pytestconfig):
+    """Flag if only failed test results are stored or all tests"""
+    return pytestconfig.getoption("cleanup")
+
+@pytest.fixture(scope='session')
+def work_dir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./work/"
-    work_dir_path = os.path.abspath(os.path.join(test_dir(), path))
+    path = "./Testing/work/"
+    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
     return work_dir_path
 
-#@pytest.fixture(scope='session')
-def failed_dir():
+@pytest.fixture(scope='session')
+def failed_dir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./failed_test_results/"
-    failed_dir_path = os.path.abspath(os.path.join(test_dir(), path))
+    path = "./Testing/failed_test_results/"
+    failed_dir_path = os.path.abspath(os.path.join(build_dir, path))
     return failed_dir_path
 
-def parser_testdir():
+@pytest.fixture(scope='session')
+def parser_testdir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./parser_testdir/"
-    parser_testdir_path = os.path.abspath(os.path.join(test_dir(), path))
+    path = "./Testing/parser_testdir/"
+    parser_testdir_path = os.path.abspath(os.path.join(build_dir, path))
     return parser_testdir_path
 
-##### change pytest executable:
+##### change pytest configuration and execution:
+
 def pytest_addoption(parser):
     """We add an option to pytest to parse the build dir
     """
     parser.addoption("--build_dir", action="store", default="../../build/")
+    parser.addoption("--cleanup", action="store", default=True)
     #parser.addoption("--testing_dir", action="store", default="")
 
+'''
+# Does not work with the fixtures
+def pytest_report_header(config, fleur_binary, inpgen_binary, work_dir):#libs):
+    """Add further information to header"""
+    # ggf add version info
+    path_fleur, para = fleur_binary
+    path_inp = inpgen_binary
+    workdir = work_dir
+    add_header_string = "Fleur exe: {} \n".format(path_fleur)
+    add_header_string += "Inpgen exe: {} \n".format(path_inp)
+    add_header_string += "Linked libraries: \n"
+    add_header_string += "Running tests in {} \n".format(workdir)
+    return add_header_string
+'''
 
 ##### Add some markers to pytest to group tests
+# control skipping test on command line options, for test collection
+# https://docs.pytest.org/en/stable/example/simple.html?highlight=pytest_configure
 
 def pytest_configure(config):
     """
@@ -123,16 +149,17 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
-    config.addinivalue_line("markers", "masci_tools: tests which use function from masci-tools repo")
+    config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "soc: tests with soc")
-    config.addinivalue_line("markers", "ldau: tests with ldau")
-    config.addinivalue_line("markers", "lo: tests with lo")
+    config.addinivalue_line("markers", "ldau: tests with LDA+U")
+    config.addinivalue_line("markers", "lo: tests with LOs")
     config.addinivalue_line("markers", "forces: tests with forces")
+    config.addinivalue_line("markers", "relaxation: tests involving relaxation")
     config.addinivalue_line("markers", "xml: test with xml")
     config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "collinear: test with collinear")
     config.addinivalue_line("markers", "non_collinear: test with non-collinear")
-    config.addinivalue_line("markers", "spinspiral: test with spinspiral")
+    config.addinivalue_line("markers", "spinspiral: test with spinspiral calculations")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
@@ -143,7 +170,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "gw: test for gw interface")
     config.addinivalue_line("markers", "interface: tests testing some interface")
-    config.addinivalue_line("markers", "relaxation: tests involving relaxation")
 
 ####################################
 ########### fixtures
@@ -154,10 +180,11 @@ def pytest_configure(config):
 
 ##### fixtures for whole test session ####
 
-@pytest.fixture(scope='session')
-def fleur_test_session():
+@pytest.fixture(scope='session', autouse=True)
+def fleur_test_session(parser_testdir, failed_dir, work_dir):
     """
     Setup a fleur test session
+    - cleanup directories
     - initiate a global logger
     - look for executables to use within that session for all tests
     """
@@ -166,15 +193,23 @@ def fleur_test_session():
     # We clean before and not after test session, because that way
     # people can investigate the files
 
+    # create work dir if not existent
+    work_dir_path = work_dir
+    if not os.path.isdir(work_dir_path):
+        os.makedirs(work_dir_path)  # Will create also Testing dir if not existent
+
     # clean parser_testdir
-    parser_testdir_path = parser_testdir()
-    shutil.rmtree(parser_testdir_path)
+    parser_testdir_path = parser_testdir
+    if os.path.isdir(parser_testdir_path):
+        shutil.rmtree(parser_testdir_path)
     os.mkdir(parser_testdir_path)
 
     # clean failed_dir
-    failed_dir_path = failed_dir()
-    shutil.rmtree(failed_dir_path)
+    failed_dir_path = failed_dir
+    if os.path.isdir(failed_dir_path):
+        shutil.rmtree(failed_dir_path)
     os.mkdir(failed_dir_path)
+
 
     yield # now all the tests run
 
@@ -186,6 +221,7 @@ def set_environment_session():
     Fixture to set given environment variables
     """
     # So far this is done on the outside, and for the whole test set
+    # or on an individual test basis
     yield
 
 ##### fixtures active EACH test case ####
@@ -205,21 +241,21 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.fixture(scope='function', autouse=True)
-def base_test_case(request, clean_workdir):
+def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
     """
     Base fixture for every test case to execute cleanup code after a test
     Write testlog.
     """
 
-    workdir = work_dir()
-    faildir = failed_dir()
+    workdir = work_dir
+    faildir = failed_dir
 
     yield # test is running
 
     # clean up code goes here:
 
     method_name = request.node.name
-    if request.node.rep_call.failed:
+    if request.node.rep_call.failed or not cleanup:
         #log('Test {} failed :('.format(method_name))
         # if failed move test result to failed dir, will replace dir if existent
         destination = os.path.abspath(os.path.join(faildir, method_name))
@@ -234,7 +270,7 @@ def base_test_case(request, clean_workdir):
 ##### other fixtures ####
 
 @pytest.fixture
-def execute_inpgen(inpgen_binary):
+def execute_inpgen(inpgen_binary, work_dir):
     """
     Fixture which returns an execute_inpgen function
     """
@@ -255,7 +291,7 @@ def execute_inpgen(inpgen_binary):
         """
         import subprocess
 
-        workdir = work_dir()
+        workdir = str(work_dir)
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
@@ -312,7 +348,7 @@ def execute_inpgen(inpgen_binary):
 
 
 @pytest.fixture
-def execute_fleur(fleur_binary):
+def execute_fleur(fleur_binary, work_dir):
     """
     Fixture which returns an execute_fleur function
     """
@@ -333,7 +369,7 @@ def execute_fleur(fleur_binary):
         """
         import subprocess
 
-        workdir = work_dir()
+        workdir = work_dir
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
@@ -407,7 +443,10 @@ def execute_fleur(fleur_binary):
 
 
 
-# Comment: Instead of implementing grep in python consider just executing grep via subprocess
+# Comment: Instead of implementing grep in python one could also just execute grep via subprocess
+# This might be rather unsave someone not nice could put 'grep x y; rm -rf /' in a test...
+# The same goes for fleur and inpgen execute
+# Pro: The rexpressions stay close that what people are used to.
 @pytest.fixture
 def grep_exists():
     """returns the grep_exits function
@@ -457,7 +496,7 @@ None then the given expression will be used.
 
         :return: float, list of floats
         """
-        #t0 = time.perf_counter()
+        t0 = time.perf_counter()
         numbers = []
         with open(filepath, "r") as file1:
             for line in file1:
@@ -471,8 +510,8 @@ None then the given expression will be used.
                     except ValueError as exc: # There is still something after the number
                         number = float(re.findall(r"[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
-        #t1 = time.perf_counter()
-        #print(f'Executing grep number took {t1 - t0:0.4f} seconds')
+        t1 = time.perf_counter()
+        print(f'Executing grep number took {t1 - t0:0.4f} seconds')
 
         if len(numbers) == 0:
             raise ValueError(f'Number for "{expression}" was not found in {filepath}')
@@ -541,7 +580,7 @@ def parse_file():
     pass
 
 @pytest.fixture
-def clean_workdir():
+def clean_workdir(work_dir):
     """
     Fixture which returns a function to delete files in the test work dir
     the default is to delete all
@@ -551,7 +590,7 @@ def clean_workdir():
         Delete files in the test work dir the default is to delete all
         :param filelist (list, optional): filesnames to delete. Defaults to ['all'].
         """
-        workdir = work_dir()
+        workdir = work_dir
         if 'all' in filelist:
             shutil.rmtree(workdir) # this removes the work dir too.
             os.mkdir(workdir)
@@ -563,14 +602,14 @@ def clean_workdir():
 
 
 @pytest.fixture(scope='function')
-def stage_for_parser_test(request):
+def stage_for_parser_test(request, work_dir, parser_testdir):
     """
     Fixture to copy the result files of a test to the parser test folder.
     To later autogenerate tests for the fleur parsers
     """
     
-    parsertestdir = parser_testdir()
-    workdir = work_dir()
+    parsertestdir = parser_testdir
+    workdir = work_dir
 
     yield # test is running
     
