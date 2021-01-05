@@ -18,7 +18,10 @@ build-gfortran-hdf5:
        - build
      expire_in: 1h
   script:
-    - pip install pytest
+    - which python
+    - python3 --version
+    - sudo apt install python3-pip
+    - pip3 install pytest
     - cd $CI_PROJECT_DIR
     - ./configure.sh GITLAB
 #    - FC=/usr/lib64/openmpi/bin/mpif90 ./configure.sh
