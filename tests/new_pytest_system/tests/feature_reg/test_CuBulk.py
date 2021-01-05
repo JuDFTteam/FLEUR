@@ -3,6 +3,7 @@ import pytest
 
 @pytest.mark.fleur
 @pytest.mark.bulk
+@pytest.mark.serial
 @pytest.mark.xml
 @pytest.mark.fast
 def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test):
@@ -15,16 +16,16 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
     res_files = execute_fleur(test_file_folder)
     should_files = ['out.xml', 'out', 'usage.json']
     res_file_names = list(res_files.keys())
-    
+
     # Test if all files are there
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "it=  1  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
-    
+
     assert abs(fermi - 0.4233) <= 0.001
     assert abs(tenergy - -3305.016) <= 0.001
     assert abs(dist - 45.8259) <= 0.001
@@ -35,6 +36,7 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
 @pytest.mark.xml
 @pytest.mark.band
 @pytest.mark.fast
+@pytest.mark.serial
 def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
     """
     Simple test of Fleur band structure calculation with XML input with one step:
@@ -76,7 +78,7 @@ def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
 def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
     """Simple test of Fleur with XML input with one step:
     1.Generate a starting density and run 1 iteration and compare fermi-energy & total energy
-    
+
     If fleur is not complied and linked to libXC this test will fail
     """
     test_file_folder = './inputfiles/CuBulkLibXC/'
@@ -85,7 +87,7 @@ def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert grep_exists(res_files['out'], "it=  1  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
@@ -95,7 +97,7 @@ def test_CuBulkLibXC(execute_fleur, grep_exists, grep_number):
     assert abs(tenergy - -3305.007) <= 0.001
     assert abs(dist - 48.986892) <= 0.001
 
-
+@pytest.mark.serial
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.xml
@@ -121,7 +123,7 @@ def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test
 
     fermi = grep_number(res_files['out'], "fermi energy =", "=")
     assert abs(fermi - 0.4239) <= 0.001
-    
+
     if not with_hdf:
         assert grep_exists(res_files['Local.1'], "0.207025")
         assert grep_exists(res_files['Local.1'], "0.326256")
@@ -132,6 +134,7 @@ def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test
 @pytest.mark.xml
 @pytest.mark.dos
 @pytest.mark.fast
+@pytest.mark.serial
 def test_CuOrb(execute_fleur, grep_exists, grep_number):
     """Simple test of Fleur DOS calculation with XML input with one step:
     1.Generate a starting density, run 1 iteration, and generate DOS. Ensure that the files are created.
@@ -153,7 +156,7 @@ def test_CuOrb(execute_fleur, grep_exists, grep_number):
 
     fermi = grep_number(res_files['out'], "fermi energy =", "=")
     assert abs(fermi - 0.4239) <= 0.001
-    
+
     if not with_hdf:
         assert grep_exists(res_files['Local.1'], "0.207025")
         assert grep_exists(res_files['Local.1'], "0.326256")

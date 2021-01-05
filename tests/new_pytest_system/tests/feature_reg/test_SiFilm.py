@@ -1,6 +1,7 @@
 
 import pytest
 
+@pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.plot
 @pytest.mark.xml
@@ -14,12 +15,12 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/SiFilmPlotXML/'
 
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'kpts.xml', 'sym.out'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out']) #kpts.xml 
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2
@@ -41,7 +42,7 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn.xsf'], "7.9874788") # line 521
     assert grep_exists(res_files['denIn.xsf'], "10.2889353") # line 523
 
-
+@pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.plot
 @pytest.mark.xml
@@ -61,7 +62,7 @@ def test_SiFilmSlicePlotXML(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2
@@ -70,7 +71,7 @@ def test_SiFilmSlicePlotXML(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     # now test output cdn_slice
     assert ('cdn_slice' in res_file_names) or ('cdn_slice.hdf' in res_file_names)
 

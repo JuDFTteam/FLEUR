@@ -25,6 +25,7 @@ def test_CoHybridPBE0(execute_fleur, grep_exists, grep_number):
     assert abs(mm - 1.64918) <= 0.001
 
 
+@pytest.mark.serial
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.xml

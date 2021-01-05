@@ -10,7 +10,7 @@ def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     2.Calculate magnetization and check it's value. 
     """
     test_file_folder = './inputfiles/Fe_bcc_FlipcdnXLDA/'
-    
+ 
     # Stage 1
     files = ['inp.xml', 'kpts.xml', 'sym.xml']
     res_files = execute_fleur(test_file_folder, only_copy=files)
@@ -44,7 +44,7 @@ def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "flip")
 
     # Stage 2
@@ -55,6 +55,7 @@ def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
 @pytest.mark.bulk
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
+@pytest.mark.serial
 def test_Fe_bcc_GreensFunction(execute_fleur, grep_number, grep_exists):
     """Fleur Fe bcc Green's function
     Simple test of the green's function calculation in FLEUR with one step:
@@ -69,7 +70,7 @@ def test_Fe_bcc_GreensFunction(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "it=  1  is completed")
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
@@ -93,7 +94,7 @@ def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "SF")
     magmom = grep_number(res_files['out'], "Magmom before SF", "mz =")
     bfield_before = grep_number(res_files['out'], "Bfield before SF", "Bz =")

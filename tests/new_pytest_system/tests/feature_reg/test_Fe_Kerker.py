@@ -1,6 +1,7 @@
 
 import pytest
 
+@pytest.mark.serial
 def test_Fe_Kerker(execute_fleur, grep_exists, grep_number):
     """Fleur Fe Kerker XML
 
@@ -13,8 +14,8 @@ def test_Fe_Kerker(execute_fleur, grep_exists, grep_number):
     should_files = ['out']
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "it=  3  is completed")
-    dist = grep_number(res_files['out'], "distance of charge densities for it   3", ":")
+    dist = grep_number(res_files['out'], "distance of charge densities for it=    3", ":")
 
     assert abs(dist - 11.747482) <= 0.001

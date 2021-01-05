@@ -1,5 +1,6 @@
 import pytest
 
+@pytest.mark.serial
 @pytest.mark.magnetism
 @pytest.mark.dos
 def test_SmAtomjDOS(execute_fleur, grep_number, grep_exists):
@@ -13,12 +14,12 @@ def test_SmAtomjDOS(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/SmAtomjDOS/'
 
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml'])
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp1.xml', 'inp.xml']])
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert grep_exists(res_files['out'], "it= 15  is completed")
     efermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
@@ -43,7 +44,7 @@ def test_SmAtomjDOS(execute_fleur, grep_number, grep_exists):
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    assert ('banddos.hdf' in res_file_names) or ('jDOS.1' in res_file_names)     
+    assert ('banddos.hdf' in res_file_names) or ('jDOS.1' in res_file_names)
 
     assert grep_exists(res_files['out'], "0.2073")
     assert grep_exists(res_files['out'], "5.835")

@@ -17,7 +17,7 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=")
     assert grep_exists(res_files['out'], "it=  3  is completed")
@@ -32,7 +32,7 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
     assert abs(dist - 12.700) <= 0.09
     assert abs(mm - 1.96) <= 0.03
 
-
+@pytest.mark.serial
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.xml
@@ -51,7 +51,7 @@ def test_Fe_bct_LOXML(execute_fleur, grep_number, grep_exists):
         should_files.append('cdn1')
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=")
     assert grep_exists(res_files['out'], "it=  4  is completed")
@@ -66,7 +66,7 @@ def test_Fe_bct_LOXML(execute_fleur, grep_number, grep_exists):
     assert abs(dist - 1.593616) <= 0.3
     assert abs(mm - 1.90) <= 0.01
 
-
+@pytest.mark.serial
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.soc
@@ -83,7 +83,7 @@ def test_Fe_bct_SOCXML(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=", res_index=-1)
     assert grep_exists(res_files['out'], "it= 20  is completed")
@@ -98,6 +98,7 @@ def test_Fe_bct_SOCXML(execute_fleur, grep_number, grep_exists):
     assert abs(dist - 0.00003) <= 0.1
     assert abs(mm - 0.05411) <= 0.01
 
+@pytest.mark.serial
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.xml
@@ -115,7 +116,7 @@ def test_Fe_bctXML(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=")
     assert grep_exists(res_files['out'], "it= 20  is completed")

@@ -1,6 +1,7 @@
 
 import pytest
 
+@pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
@@ -33,20 +34,21 @@ def test_FePt_film_SSFT(execute_fleur, grep_number, grep_exists):
 
     # Stage 2
     files = [['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY']
-    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files='mixing_history')
+    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files=['mixing_history'])
     should_files = ['out.xml']
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
-    ev_q1 = grep_number(res_files['out.xml'], 'Entry q= "1', "ev-sum=.")
-    ev_q2 = grep_number(res_files['out.xml'], 'Entry q= "2', "ev-sum=.")
+    ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
+    ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
 
     assert abs(ev_q1 - -5.1963114) <= 0.000001
     assert abs(ev_q2 - -5.1706357) <= 0.000001
 
 
+@pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
@@ -80,15 +82,15 @@ def test_FePt_film_SSFT_LO(execute_fleur, grep_number, grep_exists):
 
     # Stage 2
     files = [['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY']
-    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files='mixing_history')
+    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files=['mixing_history'])
     should_files = ['out.xml']
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
-    ev_q1 = grep_number(res_files['out.xml'], 'Entry q= "1', "ev-sum=.")
-    ev_q2 = grep_number(res_files['out.xml'], 'Entry q= "2', "ev-sum=.")
+    ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
+    ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
 
     assert abs(ev_q1 - -37.3674565) <= 0.000001
     assert abs(ev_q2 - -37.3421164) <= 0.000001

@@ -1,6 +1,7 @@
 
 import pytest
 
+@pytest.mark.serial
 @pytest.mark.bulk
 @pytest.mark.xml
 @pytest.mark.magnetism
@@ -21,10 +22,10 @@ def test_Fe_fccXML(execute_fleur, grep_number, grep_exists):
         should_files.append('cdn1')
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=")
-    assert grep_exists(res_files['out'], "it=  20  is completed")
+    assert grep_exists(res_files['out'], "it= 20  is completed")
 
     fermi = grep_number(res_files['out'], "to ef", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
@@ -40,18 +41,18 @@ def test_Fe_fccXML(execute_fleur, grep_number, grep_exists):
 @pytest.mark.magnetism
 @pytest.mark.soc
 @pytest.mark.lo
+@pytest.mark.hdf
 def test_FeFFNLOsSOC(execute_fleur, grep_number, grep_exists):
     """Iron LO's and SOC test in FFN
 
     Simple test of Fleur with one step:
     1.Generate a starting density and run 1 iteration and check magnetization of Fe. 
     """
-    test_file_folder = './inputfiles/Fe_fccXML/'
+    test_file_folder = './inputfiles/FeFFNLOsSOC/'
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
-    
 
     assert grep_exists(res_files['out'], "mx=  0.00000 my=  0.00000 mz=  2.293")

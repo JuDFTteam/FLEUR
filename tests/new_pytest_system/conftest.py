@@ -10,6 +10,7 @@ Maybe one could also execute tests in parallel, since fleur tests take quite som
 import os
 import re
 import sys
+import time
 import pytest
 import logging
 import shutil
@@ -41,7 +42,9 @@ pytest_plugins = []
 # TODO: Check what kind of fleur executable it is,  for example check configure out,
 # to only run subtest set which belongs to executable.
 # TODO: install pytest-xdist to run pytest -n=2 to execute tests in parallel
-# pytest --durations=0
+# pytest --durations=0 for showing slowest tests
+# we could also create a timeing fixture around each test for example see
+# https://stackoverflow.com/questions/51490166/how-to-time-tests-with-pytest
 # TODO: All hdf tests do not test for values in hdf files, this is bad
 # TODO: Check in configure output or somewhere which type of executable was compiled and
 # run only tests which make sense for this executable, for example if no libxc is linked
@@ -197,14 +200,14 @@ def base_test_case(request, clean_workdir):
     Base fixture for every test case to execute cleanup code after a test
     Write testlog.
     """
-    
+
     workdir = work_dir()
     faildir = failed_dir()
 
     yield # test is running
-    
+
     # clean up code goes here:
-   
+
     method_name = request.node.name
     if request.node.rep_call.failed:
         #log('Test {} failed :('.format(method_name))
@@ -230,7 +233,7 @@ def execute_inpgen(inpgen_binary):
         Function which copies the input files
         executes inpgen with the given cmdline_param
         and returns a path to the folder with the results
-        
+
         :param test_file_folder: string relative path to a folder containing all files, to copy for the test
         :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
         :param exclude: list of strings file names to exclude from copy
@@ -241,7 +244,7 @@ def execute_inpgen(inpgen_binary):
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
-        
+
         workdir = work_dir()
         testdir = test_dir()
         if cmdline_param is None:
@@ -287,14 +290,14 @@ def execute_inpgen(inpgen_binary):
             dirname[:] = [d for d in dirname if not d[0] == '.']
             for file1 in filenames:
                 source.append(os.path.join(dirpath, file1))
-        
+
         # We want to be able to address file with '/subpath/filename'
         for files in source:
-            result_files[files] = os.path.abspath(os.path.join(workdir, files))      
+            result_files[files] = os.path.abspath(os.path.join(workdir, files))
         os.chdir(testdir)
 
         return result_files
-        
+
     return _execute_inpgen
 
 
@@ -315,12 +318,11 @@ def execute_fleur(fleur_binary):
         :param only_copy: list of string file names, or length 2 to change file name. example ['inp.xml', ['kpts2', 'kpts']]
         in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
         :param rm_files: list of strings files in the workdir to be removed, will be executed before copy
-        
+
         :return: a dictionary of the form 'filename :filepath'
         """
-        
         import subprocess
-        
+
         workdir = work_dir()
         testdir = test_dir()
         if cmdline_param is None:
@@ -328,18 +330,19 @@ def execute_fleur(fleur_binary):
 
         osenv = dict(os.environ)
         run_env = osenv # This creates a complete env for the fleur, but we keep all session env
-        # Not sure if this is good 
+        # Not sure if this is good
         run_env['OMP_NUM_THREADS'] = osenv.get('OMP_NUM_THREADS', '1')
         run_env.update(env) # apply custom user changes
 
         # Prepare only copy list, since we allow for name changes.
+        # but each file name is allowed only once
         new_only_copy_list = {}
         for entry in only_copy:
             if isinstance(entry, list):
                 new_only_copy_list[entry[0]] = entry[1]
             else:
                 new_only_copy_list[entry] = entry
-        
+
         files_work_dir = os.listdir(workdir)
         for entry in rm_files:
             path = os.path.abspath(os.path.join(workdir, entry))
@@ -348,10 +351,9 @@ def execute_fleur(fleur_binary):
             else: # Either the file does not exits, or an expression was given
                 for filename in files_work_dir:
                     if re.search(entry, filename):
-                        print(filename)
                         path = os.path.abspath(os.path.join(workdir, filename))
                         if os.path.isfile(path):
-                             os.remove(path)        
+                             os.remove(path)
 
         if test_file_folder is not None: # Does it even make sense to not give a folder?
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
@@ -360,7 +362,9 @@ def execute_fleur(fleur_binary):
                 if files not in exclude:
                     if new_only_copy_list != {}:
                         if files in list(new_only_copy_list.keys()):
-                            shutil.copy(os.path.abspath(os.path.join(abspath, new_only_copy_list[files])), workdir)
+                            srcpath = os.path.abspath(os.path.join(abspath, files))
+                            destpath = os.path.abspath(os.path.join(workdir, new_only_copy_list[files]))
+                            shutil.copy(srcpath, destpath)
                     else:
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
 
@@ -373,22 +377,27 @@ def execute_fleur(fleur_binary):
         arg_list = mpiruncmd + [fleur] + cmdline_param
         #print(arg_list)
         os.chdir(workdir)
-        with open(f"{workdir}/stdout", "w") as f_stdout:
-            with open(f"{workdir}/stderr", "w") as f_stderr:
-                subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True)
+        #t0 = time.perf_counter()
+        with open(f"{workdir}/stdout", "bw") as f_stdout:
+            with open(f"{workdir}/stderr", "bw") as f_stderr:
+                 subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True)
+        #t1 = time.perf_counter()
+        #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
 
         result_files = {}
         source = os.listdir(workdir) # Notice this is simple and not recursive,
         # TODO if we have output directories use os.walk or so instead
         for files in source:
-            result_files[files] = os.path.abspath(os.path.join(workdir, files))      
+            result_files[files] = os.path.abspath(os.path.join(workdir, files))
         os.chdir(testdir)
 
         return result_files
-        
 
     return _execute_fleur
 
+
+
+# Comment: Instead of implementing grep in python consider just executing grep via subprocess
 @pytest.fixture
 def grep_exists():
     """returns the grep_exits function
@@ -398,12 +407,13 @@ def grep_exists():
         Args:
             filepath ([str, path]): path to the file to search for
             expression (str): 'string' to look for
-    
+
         :return: Bool, if exists
         """
+        #t0 = time.perf_counter()
         exists = False
         #regex_pattern = "(" + expression + ")"
-        #pattern = re.compile(regex_pattern) # This might be unsave, 
+        #pattern = re.compile(regex_pattern) # This might be unsave,
         # but we do it to allow for same expressions as grep does
         with open(filepath, "r") as file1:
             for line in file1:
@@ -412,7 +422,11 @@ def grep_exists():
                     #print(line)
                     exists = True
                     break
+        #t1 = time.perf_counter()
+        #print(f'Executing grep exits took {t1 - t0:0.4f} seconds')
+
         return exists
+
     return _grep_exists
 
 
@@ -420,28 +434,36 @@ def grep_exists():
 def grep_number():
     """returns the grep number function
     """
-    def _grep_number(filepath, expression, split, line_index=1, res_index=-1):
+    def _grep_number(filepath, expression, split=None, line_index=1, res_index=-1):
         """Implements grep for a float number in a file
-        
+
         :param filepath (str): path to the dile
         :param expression (str): a python expression to look for in lines (everything that is can be used by re.search())
-        :param split (str): if the expression is in line
+        :param split (str, optional): if the expression is in line, split for this expression. if
+None then the given expression will be used.
         :param line_index (int, optional): After the split where to look for the number, Default 1, therefore the first number ofter the split string 
         :param res_index (int, optional): If expression matches several lines, which one to use. Defaults to -1, last number only
         if res_index=None a list of all numbers is returned
 
         :return: float, list of floats
         """
+        #t0 = time.perf_counter()
         numbers = []
         with open(filepath, "r") as file1:
             for line in file1:
                 if re.search(expression, line):
-                    res = line.split(expression)[line_index]
+                    if split is not None:
+                        res = line.split(split)[line_index]
+                    else:
+                        res = line.split(expression)[line_index]
                     try:
                         number = float(res)
                     except ValueError as exc: # There is still something after the number
                         number = float(re.findall(r"[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
+        #t1 = time.perf_counter()
+        #print(f'Executing grep number took {t1 - t0:0.4f} seconds')
+
         if len(numbers) == 0:
             raise ValueError(f'Number for "{expression}" was not found in {filepath}')
         elif len(numbers) == 1:
@@ -451,7 +473,6 @@ def grep_number():
             return numbers[res_index]
         else:
             return numbers
-        
     return _grep_number
 
 @pytest.fixture

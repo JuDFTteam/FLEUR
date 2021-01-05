@@ -60,7 +60,7 @@ def test_GaAsHybridPBE0_eigpar(execute_fleur, check_value_outfile, fleur_binary)
     exp_bandgap[37] = 0.09105
     check_value_outfile(res_files['out'], "bandgap                     :", "htr", exp_bandgap, 0.0001)
 
-
+@pytest.mark.serial
 @pytest.mark.ldau
 @pytest.mark.forces
 def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
@@ -72,7 +72,7 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     3.Calculate forces
     """
     test_file_folder = './inputfiles/GaAsMultiUForceXML/'
-    
+
     # Stage 1
     res_files = execute_fleur(test_file_folder, only_copy=['inp.xml'])
     res_file_names = list(res_files.keys())
@@ -98,7 +98,7 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "it= 12  is completed")
     efermi = grep_number(res_files['out'], "first approx. to ef", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    
+
     assert abs(efermi - 0.125) <= 0.001
     assert abs(tenergy - -4204.7140) <= 0.0001
 
