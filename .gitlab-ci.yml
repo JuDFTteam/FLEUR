@@ -67,8 +67,10 @@ test-gfortran-hdf5-3of3:
 build-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
-    - pip install pytest
     - cd $CI_PROJECT_DIR
     - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
     - cd build.serial
@@ -255,8 +257,10 @@ gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
   needs: []
+  before_script:
+    - apt-get -yq install python3-pip
+    - pip3 install pytest
   script:
-      - pip install pytest
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root "; cd ../tests/new_pytest_system; pytest --build_dir="../../build.coverage"
