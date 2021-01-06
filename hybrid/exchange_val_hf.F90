@@ -56,7 +56,6 @@ MODULE m_exchange_valence_hf
    USE m_util
 
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
-   INTEGER, PARAMETER:: maxmem = 600
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
@@ -76,6 +75,16 @@ CONTAINS
 #ifdef CPP_MPI
       use mpi
 #endif
+#ifdef _OPENACC
+      USE cublas
+#define CPP_zgemm cublaszgemm
+#define CPP_dgemm cublasdgemm
+#define CPP_zherk cublaszherk
+#else
+#define CPP_zgemm zgemm
+#define CPP_dgemm dgemm
+#define CPP_zherk zherk
+#endif
       IMPLICIT NONE
 
       type(t_k_package), intent(in)     :: k_pack
@@ -90,10 +99,6 @@ CONTAINS
       type(t_stars), intent(in)         :: stars
       TYPE(t_mat), INTENT(INOUT)        :: mat_ex
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-
-      ! blas
-      real, external      :: ddot
-      complex, external   :: zdotc
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
@@ -132,9 +137,28 @@ CONTAINS
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
+#ifdef _OPENACC
+      real, allocatable    :: carr1_v_r(:,:), cprod_vv_r(:,:), dot_result_r(:,:)
+      complex, allocatable :: carr1_v_c(:,:), cprod_vv_c(:,:), dot_result_c(:,:)
+
+#define CPP_carr_r carr1_v_r
+#define CPP_carr_c carr1_v_c
+#define CPP_cprod_r cprod_vv_r 
+#define CPP_cprod_c cprod_vv_c 
+#define CPP_dotres_r dot_result_r
+#define CPP_dotres_c dot_result_c 
+
+#else 
+
+#define CPP_carr_r carr1_v%data_r
+#define CPP_carr_c carr1_v%data_c
+#define CPP_cprod_r cprod_vv%data_r
+#define CPP_cprod_c cprod_vv%data_c
+#define CPP_dotres_r dot_result%data_r
+#define CPP_dotres_c dot_result%data_c
+
+#endif
       type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
-
-
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
@@ -152,11 +176,13 @@ CONTAINS
       call timestart("alloc phase_vv & dot_res")
       allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
       call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp))
+      call alloc_dev_cpy(dot_result, CPP_dotres_r, CPP_dotres_c)
+
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       exch_vv = 0
       call timestop("alloc phase_vv & dot_res")
-
+      
       call timestart("q_loop")
       DO jq = 1, size(k_pack%q_packs)
          iq = k_pack%q_packs(jq)%ptr
@@ -172,6 +198,7 @@ CONTAINS
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
+            call alloc_dev_cpy(cprod_vv, CPP_cprod_r, CPP_cprod_c)
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
@@ -211,9 +238,7 @@ CONTAINS
             ELSE
                phase_vv(:, :) = cmplx_1
             END IF
-
-            call carr1_v%init(cprod_vv)
-            ! calculate exchange matrix at iq
+            call carr1_v%init(cprod_vv)            ! calculate exchange matrix at iq
             call timestart("exchange matrix")
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
@@ -222,6 +247,7 @@ CONTAINS
                conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
                call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
             END IF
+            call alloc_dev_cpy(carr1_v, CPP_carr_r, CPP_carr_c)
             call timestop("sparse matrix products")
 
             nq_idx = k_pack%q_packs(jq)%rank
@@ -253,9 +279,24 @@ CONTAINS
             ldb = hybdat%nbasm(iq)*psize
             ldc = hybdat%nbands(ik,jsp)
             IF (mat_ex%l_real) THEN
+#ifdef _OPENACC
+               CPP_carr_r   = carr1_v%data_r 
+               CPP_cprod_r  = cprod_vv%data_r
+#endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
-                  call dgemm("T", "N", m, n, k, 1.0, carr1_v%data_r(1, iob), lda, cprod_vv%data_r(1, iob), ldb, 0.0, dot_result%data_r, ldc)
+                  !$acc enter data create(CPP_dotres_r) copyin(CPP_carr_r,CPP_cprod_r)
+                  !$acc host_data use_device(carr1_v_r, cprod_vv_r, dot_result_r)
+                  call dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
+                  !$acc end host_data
+                  !$acc exit data delete(CPP_carr_r,CPP_cprod_r) copyout(CPP_dotres_r) 
+#ifdef _OPENACC 
+                  dot_result%data_r = CPP_dotres_r   
+#endif
+                  ! call carr1_v%save_npy("carr1.npy")
+                  ! call cprod_vv%save_npy("cprod.npy")
+                  ! call dot_result%save_npy("dot_prod.npy")
+                  ! call judft_error("end it")
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
@@ -264,10 +305,24 @@ CONTAINS
                   END DO
                END DO
             ELSE
+#ifdef _OPENACC
+               CPP_carr_r   = carr1_v%data_r 
+               CPP_cprod_r  = cprod_vv%data_r
+#endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                DO iob = 1, psize
-                  call zgemm("C", "N", m, n, k, cmplx_1, carr1_v%data_c(1, iob), lda, cprod_vv%data_c(1, iob), ldb, cmplx_0, dot_result%data_c, ldc)
-
+                  !$acc enter data create(CPP_dotres_c) copyin(CPP_carr_c,CPP_cprod_c)
+                  !$acc host_data use_device(carr1_v_c, cprod_vv_c, dot_result_c)
+                  call CPP_zgemm("C", "N", m, n, k, cmplx_1, CPP_carr_c(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, CPP_dotres_c, ldc)
+                  !$acc end host_data
+                  !$acc exit data delete(CPP_carr_c,CPP_cprod_c) copyout(CPP_dotres_c) 
+#ifdef _OPENACC 
+                  dot_result%data_r = CPP_dotres_r   
+#endif
+                  call carr1_v%save_npy("carr1.npy")
+                  call cprod_vv%save_npy("cprod.npy")
+                  call dot_result%save_npy("dot_prod.npy")
+                  call judft_error("end it")
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
@@ -543,4 +598,27 @@ CONTAINS
          enddo
       enddo
    end subroutine recombine_parts
+
+   subroutine alloc_dev_cpy(mat, arr_r, arr_c)
+      implicit none 
+      type(t_mat), intent(in)             :: mat
+
+      real, allocatable, intent(inout)    :: arr_r(:,:)
+      complex, allocatable, intent(inout) :: arr_c(:,:) 
+      integer :: ierr
+
+#ifdef _OPENACC
+      if(allocated(arr_r)) deallocate(arr_r)
+      if(allocated(arr_c)) deallocate(arr_c)
+
+      if(mat%l_real) then 
+         allocate(arr_r(mat%matsize1, mat%matsize2), stat=ierr, source=0.0)
+      else
+         allocate(arr_c(mat%matsize1, mat%matsize2), stat=ierr, source=cmplx_0)
+      endif 
+
+      if(ierr /= 0) call judft_error("can't alloc. prob. no mem.")
+#endif
+   end subroutine alloc_dev_cpy
+
 END MODULE m_exchange_valence_hf
