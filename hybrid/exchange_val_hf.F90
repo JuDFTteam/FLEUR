@@ -293,10 +293,7 @@ CONTAINS
 #ifdef _OPENACC 
                   dot_result%data_r = CPP_dotres_r   
 #endif
-                  ! call carr1_v%save_npy("carr1.npy")
-                  ! call cprod_vv%save_npy("cprod.npy")
-                  ! call dot_result%save_npy("dot_prod.npy")
-                  ! call judft_error("end it")
+
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
@@ -317,7 +314,7 @@ CONTAINS
                   !$acc end host_data
                   !$acc exit data delete(CPP_carr_c,CPP_cprod_c) copyout(CPP_dotres_c) 
 #ifdef _OPENACC 
-                  dot_result%data_r = CPP_dotres_r   
+                  dot_result%data_c = CPP_dotres_c   
 #endif
                   call carr1_v%save_npy("carr1.npy")
                   call cprod_vv%save_npy("cprod.npy")
