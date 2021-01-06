@@ -29,7 +29,7 @@ hybrid/progress_thread/thread_lib.f90
 hybrid/reorder.f90
 hybrid/set_coul_participation.f90
 hybrid/sphbessel_integral.f90
-hybrid/spmm.f90
+hybrid/spmm.F90
 hybrid/spmvec.F90
 hybrid/structureconstant.F90
 hybrid/subvxc.F90
