@@ -42,14 +42,15 @@ build-gfortran-hdf5:
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     - cd $CI_PROJECT_DIR
     - cd tests/new_pytest_system
-    - pytest
 #    - cd build
 #    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
 #    - ctest $CTEST_FLAGS -j 1
+    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/ --testoffset=\1 --runevery=\2/p')"
+    - pytest $CTEST_FLAGS
   artifacts:
     when: on_failure
-#    paths:
-#      - build/Testing
+    paths:
+      - build/Testing
 #  only:
 #    - schedules
 #    - triggers
@@ -177,8 +178,8 @@ test-pgi:
   allow_failure: true
   artifacts:
     when: on_failure
-#    paths:
-#      - build.pgi/Testing
+    paths:
+      - build.pgi/Testing
   only:
      - schedules
      - web
@@ -250,7 +251,7 @@ test-intel:
   artifacts:
     when: on_failure
     paths:
-#      - build.intel/Testing
+      - build.intel/Testing
 #      - build.intel.debug/Testing/test.oldlogs
   only:
      - schedules

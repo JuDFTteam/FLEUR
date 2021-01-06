@@ -111,6 +111,9 @@ def pytest_addoption(parser):
     """
     parser.addoption("--build_dir", action="store", default="../../build/")
     parser.addoption("--cleanup", action="store", default=True)
+    parser.addoption("--runevery", action="store", default=None)
+    parser.addoption("--testoffset", action="store", default=None)
+
     #parser.addoption("--testing_dir", action="store", default="")
 
 '''
@@ -141,6 +144,14 @@ def pytest_collection_modifyitems(session, config, items):
     inpgen = True
     hdf = True
 
+    run_every = config.getoption("runevery")
+    if run_every is None:
+        run_every = 1
+
+    testoffset = config.getoption("testoffset")
+    if testoffset is None:
+        testoffset = 0
+
     marker_to_skip = []
     if not hdf:
         marker_to_skip.append('hdf')
@@ -152,6 +163,7 @@ def pytest_collection_modifyitems(session, config, items):
     skip_libxc = pytest.mark.skip(reason='Fleur not compiled with libxc.')
     skip_hdf = pytest.mark.skip(reason='Fleur not compiled with hdf5.')
     skip_inpgen = pytest.mark.skip(reason='Inpgen binary was not compiled.')
+    skip_unselected = pytest.mark.skip(reason='This test was unselected by commandline arguments given.')
    
     
     skip_markers = {'libxc' : skip_libxc,
@@ -159,7 +171,10 @@ def pytest_collection_modifyitems(session, config, items):
                    'inpgen' : skip_inpgen
                    }
 
-    for item in items:
+    for i, item in enumerate(items):
+        mod = (i+testoffset)%run_every
+        if mod !=0:
+            item.add_marker(skip_unselected)
         for marker in marker_to_skip:
             if marker in item.keywords:
                 item.add_marker(skip_markers[marker])
@@ -211,6 +226,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "gw: test for gw interface")
     config.addinivalue_line("markers", "interface: tests testing some interface")
+    config.addinivalue_line("markers", "noci: this test will not run on CI ")
 
 ####################################
 ########### fixtures
@@ -488,7 +504,7 @@ def execute_fleur(fleur_binary, work_dir):
         arg_string = ''
         for entry in arg_list:
             arg_string += entry + ' '
-        print(arg_string)
+        #print(arg_string)
         os.chdir(workdir)
         #t0 = time.perf_counter()
         with open(f"{workdir}/stdout", "bw") as f_stdout:
@@ -565,7 +581,7 @@ None then the given expression will be used.
 
         :return: float, list of floats
         """
-        t0 = time.perf_counter()
+        #t0 = time.perf_counter()
         numbers = []
         with open(filepath, "r") as file1:
             for line in file1:
@@ -579,8 +595,8 @@ None then the given expression will be used.
                     except ValueError as exc: # There is still something after the number
                         number = float(re.findall(r"[+-]?\d+\.\d+", res)[0])
                     numbers.append(number)
-        t1 = time.perf_counter()
-        print(f'Executing grep number took {t1 - t0:0.4f} seconds')
+        #t1 = time.perf_counter()
+        #print(f'Executing grep number took {t1 - t0:0.4f} seconds')
 
         if len(numbers) == 0:
             raise ValueError(f'Number for "{expression}" was not found in {filepath}')
