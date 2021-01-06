@@ -35,13 +35,11 @@ contains
 
       call timestart("0 > ibasm: small matricies")
       ! compute vecout for the indices from 0:ibasm
-#ifndef _OPENACC
       !$OMP PARALLEL DO default(none) schedule(dynamic)&
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
       !$OMP private(lm, l, m, n_size, i_vec)&
       !$OMP lastprivate(indx2)&
       !$OMP shared(ibasm, mat_hlp, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
-#endif
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
 
@@ -78,9 +76,7 @@ contains
             indx1 = indx2
          END DO
       END DO
-#ifndef _OPENACC
       !$OMP END PARALLEL DO
-#endif
       call timestop("0 > ibasm: small matricies")
 
       IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
