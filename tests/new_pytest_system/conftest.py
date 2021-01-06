@@ -18,8 +18,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
 # Now we can import everything that is in helpers, but be careful about name clashing
 from helpers.utils import RUN_PARSER_TESTS
 
-pytest_plugins = []
+#pytest_plugins = []
 
+LOGGER = logging.getLogger(__name__)
 
 # pytest logfile: --log-file=path
 # --log-file-level
@@ -113,18 +114,57 @@ def pytest_addoption(parser):
 
 '''
 # Does not work with the fixtures
-def pytest_report_header(config, fleur_binary, inpgen_binary, work_dir):#libs):
+def pytest_report_header(config):#libs):
     """Add further information to header"""
     # ggf add version info
-    path_fleur, para = fleur_binary
-    path_inp = inpgen_binary
-    workdir = work_dir
+    path_fleur, para = get_fleur_binary()
+    path_inp = get_inpgen_binary()
+    workdir = work_dir()
     add_header_string = "Fleur exe: {} \n".format(path_fleur)
     add_header_string += "Inpgen exe: {} \n".format(path_inp)
     add_header_string += "Linked libraries: \n"
     add_header_string += "Running tests in {} \n".format(workdir)
     return add_header_string
 '''
+
+# To modify the collected tests AFTER collections
+def pytest_collection_modifyitems(session, config, items):
+    """After test collection modify collection.
+
+    Depending on how fleur was compiled we mark some tests 
+    with certain markers to be skiped.
+
+    """
+    # TODO get these from config, i.e what cmake has written out
+    libxc = True
+    inpgen = True
+    hdf = True
+
+    marker_to_skip = []
+    if not hdf:
+        marker_to_skip.append('hdf')
+    if not libxc:
+        marker_to_skip.append('libxc')
+    if not inpgen:
+        marker_to_skip.append('inpgen')
+
+    skip_libxc = pytest.mark.skip(reason='Fleur not compiled with libxc.')
+    skip_hdf = pytest.mark.skip(reason='Fleur not compiled with hdf5.')
+    skip_inpgen = pytest.mark.skip(reason='Inpgen binary was not compiled.')
+   
+    
+    skip_markers = {'libxc' : skip_libxc,
+                   'hdf': skip_hdf,
+                   'inpgen' : skip_inpgen
+                   }
+
+    for item in items:
+        for marker in marker_to_skip:
+            if marker in item.keywords:
+                item.add_marker(skip_markers[marker])
+    #Add to all tests marked with masci_tools
+    #pytest.importorskip("masci_tools")
+
 
 ##### Add some markers to pytest to group tests
 # control skipping test on command line options, for test collection
@@ -181,39 +221,60 @@ def pytest_configure(config):
 ##### fixtures for whole test session ####
 
 @pytest.fixture(scope='session', autouse=True)
-def fleur_test_session(parser_testdir, failed_dir, work_dir):
+def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary):
     """
     Setup a fleur test session
     - cleanup directories
-    - initiate a global logger
+    - print some info
     - look for executables to use within that session for all tests
     """
+    # This fixture gets executed just before the first test runs
+
     # put session preparation code here
+
+    parser_testdir_path = parser_testdir
+    failed_dir_path = failed_dir
+    work_dir_path = work_dir
+    libs = []
+
+    # First we print out some info, which will show at the end of session:
+    path_fleur, para = fleur_binary
+    path_inp = inpgen_binary
+    add_header_string = "\n#########################################\n"
+    add_header_string += "Fleur test session information:\n\n"
+    add_header_string += "Fleur exe: {} \n".format(path_fleur)
+    add_header_string += "Inpgen exe: {} \n".format(path_inp)
+    add_header_string += "Linked libraries: {} \n".format(str(libs))
+    add_header_string += "Running tests in: {} \n".format(work_dir_path)
+    add_header_string += "Failed tests will be copied to: {} \n\n".format(failed_dir_path)
+    add_header_string += "Cleaning now work, failed and parser_test directories...\n"
+    add_header_string += "#########################################\n"
+    #LOGGER.info(add_header_string)
+    print(add_header_string)
 
     # We clean before and not after test session, because that way
     # people can investigate the files
 
     # create work dir if not existent
-    work_dir_path = work_dir
     if not os.path.isdir(work_dir_path):
         os.makedirs(work_dir_path)  # Will create also Testing dir if not existent
 
     # clean parser_testdir
-    parser_testdir_path = parser_testdir
     if os.path.isdir(parser_testdir_path):
         shutil.rmtree(parser_testdir_path)
     os.mkdir(parser_testdir_path)
 
     # clean failed_dir
-    failed_dir_path = failed_dir
     if os.path.isdir(failed_dir_path):
         shutil.rmtree(failed_dir_path)
     os.mkdir(failed_dir_path)
 
+    time.sleep(0.5) # otherwise somehow the first test fails
 
     yield # now all the tests run
 
     # put session tear down code here
+    #print("Fleur test session ended.")
 
 @pytest.fixture
 def set_environment_session():
@@ -624,13 +685,10 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
         #os.mkdir(destination)
         shutil.copytree(workdir, destination)
 
-
-@pytest.fixture(scope='session')
-def inpgen_binary(build_dir):
+def get_inpgen_binary(fleur_dir):
     """
     Fixture returning the path to a inpgen executable
     """
-    fleur_dir = build_dir
     if(fleur_dir[-1] == "/"):
         fleur_dir = fleur_dir[:-1]
     
@@ -645,11 +703,17 @@ def inpgen_binary(build_dir):
     return binary
 
 @pytest.fixture(scope='session')
-def fleur_binary(build_dir):
+def inpgen_binary(build_dir):
+    """
+    Fixture returning the path to a inpgen executable
+    """
+    return get_inpgen_binary(build_dir)
+
+
+def get_fleur_binary(fleur_dir):
     """
     Fixture returning the path to a fleur executable
     """
-    fleur_dir = build_dir
     parallel = False
     if(fleur_dir[-1] == "/"):
         fleur_dir = fleur_dir[:-1]
@@ -670,6 +734,13 @@ def fleur_binary(build_dir):
     #   logging.warning("Can not find any executables")
 
     return binary, parallel
+
+@pytest.fixture(scope='session')
+def fleur_binary(build_dir):
+    """
+    Fixture returning the path to a fleur executable
+    """
+    return get_fleur_binary(build_dir)
 
 
 @pytest.fixture
