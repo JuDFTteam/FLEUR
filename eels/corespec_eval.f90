@@ -944,7 +944,6 @@ MODULE m_corespec_eval
     double precision, intent(out) :: r2leb(nleb,3),wleb(nleb)
 
     integer :: ileb,ctrln
-    double precision :: vec(0)
 
     if(nleb.eq. 0006) call LD0006(r2leb(1,1),r2leb(1,2),r2leb(1,3),wleb,ctrln)
     if(nleb.eq. 0014) call LD0014(r2leb(1,1),r2leb(1,2),r2leb(1,3),wleb,ctrln)

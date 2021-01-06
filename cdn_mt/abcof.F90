@@ -217,7 +217,7 @@ CONTAINS
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
              CALL zgemm("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
-             write(777,"(f20.5)") abTemp
+             
              !stop "DEBUG"
              !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
              !$acc kernels present(acof,bcof,abTemp) default(none)
