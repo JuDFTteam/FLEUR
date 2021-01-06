@@ -12,6 +12,7 @@ import re
 import sys
 import time
 import pytest
+import shlex
 import logging
 import shutil
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
@@ -476,18 +477,25 @@ def execute_fleur(fleur_binary, work_dir):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
 
         fleur, parallel = fleur_binary
+        #args have to be splited, otherwise it will be executed as one command
         mpiruncmd = run_env.get('juDFT_MPI', None)
         if mpiruncmd is not None:
-            mpiruncmd = [mpiruncmd]
+            mpiruncmd = mpiruncmd.split()
         else:
             mpiruncmd = []
+        
         arg_list = mpiruncmd + [fleur] + cmdline_param
-        #print(arg_list)
+        arg_string = ''
+        for entry in arg_list:
+            arg_string += entry + ' '
+        print(arg_string)
         os.chdir(workdir)
         #t0 = time.perf_counter()
         with open(f"{workdir}/stdout", "bw") as f_stdout:
             with open(f"{workdir}/stderr", "bw") as f_stderr:
-                 subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True)
+                # we parse the whole string and execute in shell,
+                # otherwise popen things 'mpirun -np 2 /path/fleur' is the path to the executable...
+                subprocess.run(arg_string, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True, shell=True)
         #t1 = time.perf_counter()
         #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
 
