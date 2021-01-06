@@ -139,6 +139,11 @@ def pytest_collection_modifyitems(session, config, items):
     with certain markers to be skiped.
 
     """
+    from _pytest.mark import deselect_by_keyword, deselect_by_mark
+    # I have not found any other way, but to import from a protective method...
+    deselect_by_keyword(items, config)
+    deselect_by_mark(items, config)
+
     # TODO get these from config, i.e what cmake has written out
     libxc = True
     inpgen = True
@@ -170,9 +175,9 @@ def pytest_collection_modifyitems(session, config, items):
                    'hdf': skip_hdf,
                    'inpgen' : skip_inpgen
                    }
-
+    # only left with selected items.
     for i, item in enumerate(items):
-        mod = (i+testoffset)%run_every
+        mod = (i+int(testoffset))%int(run_every)
         if mod !=0:
             item.add_marker(skip_unselected)
         for marker in marker_to_skip:
