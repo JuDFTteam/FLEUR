@@ -578,7 +578,7 @@ def validate_out_xml_file(execute_fleur):
             return True
             #raise ValueError(msg)
         # this fails as validation fails
-        execute_fleur(cmdline_param=['--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut'))
+        execute_fleur(cmdline_param=['--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut')
         return True
 
     return _validate_out_xml_file
