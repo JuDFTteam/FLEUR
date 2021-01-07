@@ -420,10 +420,11 @@ def execute_inpgen(inpgen_binary, work_dir):
         # Check per hand if successful:
         if p1.returncode != 0:
             # failure
-            print('Fleur execution failed.')
+            print('Inpgen execution failed.')
             with open(f"{workdir}/stderr", "w") as f_stderr:
                 print(f_stderr.read())
             p1.check_returncode() # This throws error
+
         result_files = {}
         source = []
         for (dirpath, dirname, filenames) in os.walk(workdir):
@@ -448,7 +449,7 @@ def execute_fleur(fleur_binary, work_dir):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout'):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -525,11 +526,19 @@ def execute_fleur(fleur_binary, work_dir):
         #print(arg_string)
         os.chdir(workdir)
         #t0 = time.perf_counter()
-        with open(f"{workdir}/stdout", "bw") as f_stdout:
-            with open(f"{workdir}/stderr", "bw") as f_stderr:
+        with open(f"{workdir}/{stdout}", "bw") as f_stdout:
+            with open(f"{workdir}/{stderr}", "bw") as f_stderr:
                 # we parse the whole string and execute in shell,
-                # otherwise popen things 'mpirun -np 2 /path/fleur' is the path to the executable...
-                subprocess.run(arg_string, env=run_env, stdout=f_stdout, stderr=f_stderr, check=True, shell=True)
+                # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
+                p1 = subprocess.run(arg_string, env=run_env, stdout=f_stdout, stderr=f_stderr, shell=True)#check=True
+        # Check per hand if successful:
+        if p1.returncode != 0:
+            # failure
+            print('Fleur execution failed.')
+            with open(f"{workdir}/stderr", "w") as f_stderr:
+                print(f_stderr.read())
+            p1.check_returncode() # This throws error
+        
         #t1 = time.perf_counter()
         #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
 
@@ -544,7 +553,35 @@ def execute_fleur(fleur_binary, work_dir):
 
     return _execute_fleur
 
+# Consider maybe running this after each fleur execution?
+@pytest.fixture(scope='function')#, autouse=True) # make this available in every test
+def validate_out_xml_file(execute_fleur):
+    """
+    return function validate_out_xml_file_f
+    """
+    def _validate_out_xml_file(file_path, schema_path=None):
+        """
+        Validates and outxml file via a fleur execution
+        Maybe we also want to validate the out.xml file outside of fleur with python and lxml instead?
+        So far we stay to the validatation test
+        """
+        if 'out.xml' not in file_path:
+            raise ValueError('No out.xml file given for validation.')
+        root = file_path.split('out.xml')[0]
+        if schema_path is None:
+            schema_path = os.path.join(root,'FleurOutputSchema.xsd')
+        print(f"Test validating outputfile: {file_path}")
+        if not os.path.isfile(schema_path):
+            msg = "No OutputSchema found"
+            # the original test just continued
+            print(msg)
+            return True
+            #raise ValueError(msg)
+        # this fails as validation fails
+        execute_fleur(cmdline_param=['--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut'))
+        return True
 
+    return _validate_out_xml_file
 
 # Comment: Instead of implementing grep in python one could also just execute grep via subprocess
 # This might be rather unsave someone not nice could put 'grep x y; rm -rf /' in a test...

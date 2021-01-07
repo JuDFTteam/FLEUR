@@ -53,7 +53,7 @@ def test_Fe_film_SS_conv(execute_fleur, grep_number, grep_exists):
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
-def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists):
+def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists, validate_out_xml_file):
     """Fe monolayer fcc (110): spin spiral energy
     
     Simple test of Fleur with two steps:
@@ -87,6 +87,8 @@ def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists):
     res_file_names = list(res_files.keys())
     for file1 in should_files:
         assert file1 in res_file_names
+
+    assert validate_out_xml_file(res_files['out.xml'])
 
     assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
     ev_q1 = grep_number(res_files['out.xml'], 'Entry q= "1', "ev-sum=.")

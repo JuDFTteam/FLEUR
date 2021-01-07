@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.serial
 @pytest.mark.xml
 @pytest.mark.fast
-def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test):
+def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test, validate_out_xml_file):
     """
     Simple test of Fleur with XML input with one step:
     1.Generate a starting density and run 1 iteration and compare fermi-energy & total energy
@@ -20,6 +20,8 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
     # Test if all files are there
     for file1 in should_files:
         assert file1 in res_file_names
+    
+    assert validate_out_xml_file(res_files['out.xml'])
 
     assert grep_exists(res_files['out'], "it=  1  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
@@ -37,7 +39,7 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
 @pytest.mark.band
 @pytest.mark.fast
 @pytest.mark.serial
-def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
+def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test, validate_out_xml_file):
     """
     Simple test of Fleur band structure calculation with XML input with one step:
     1.Generate a starting density, run 1 iteration, and generate band structure. Ensure that the files are created.
@@ -54,6 +56,8 @@ def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test):
     # Test if all files are there
     for file1 in should_files:
         assert file1 in res_file_names
+
+    assert validate_out_xml_file(res_files['out.xml'])
 
     # Note: For the test the correction of the Fermi energy with HDF5 is wrong because
     #       the band structure is calculated directly on top of the starting
