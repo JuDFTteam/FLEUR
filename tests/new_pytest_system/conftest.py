@@ -149,6 +149,8 @@ def read_cmake_config(configfilepath):
                 marker_string = marker_string.replace('"', '')
                 marker_string = marker_string.strip()
                 marker_list = marker_string.split()
+
+    marker_list.append('noci') # these tests are always ignored
     return marker_list
 
 # To modify the collected tests AFTER collections
@@ -171,8 +173,8 @@ def pytest_collection_modifyitems(session, config, items):
     confile = os.path.abspath(os.path.join(test_dir_path, path))
     confile = os.path.join(confile, filename)
     marker_list = read_cmake_config(confile)
+    marker_list = sorted(list(set(marker_list)))
     print("\nExcluding tests with the following markers in 'pytest_incl.py': ", marker_list)
-    marker_list = list(set(marker_list))
     run_every = config.getoption("runevery")
     if run_every is None:
         run_every = 1
@@ -240,41 +242,62 @@ def pytest_configure(config):
     So far we add some markers here to be able to execute a certain group of tests
     We make them all lowercaps as convention
     """
-    config.addinivalue_line("markers", "bulk: test with bulk")
-    config.addinivalue_line("markers", "film: test with film")
+    # run mode markers
     config.addinivalue_line("markers", "inpgen: test running inpgen")
     config.addinivalue_line("markers", "fleur: test running fleur")
     config.addinivalue_line("markers", "serial: test running fleur serial")
+    config.addinivalue_line("markers", "mpi: test running fleur in parallel")
+    config.addinivalue_line("markers", "mpionly: test which need a MPI capable fleur to run.")
+    config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
+    config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
+    config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
+    config.addinivalue_line("markers", "xml: test with xml")
+    config.addinivalue_line("markers", "noxml: test with no xml")
+    config.addinivalue_line("markers", "gpu: this test will a GPU capbale fleur version")
+
+    config.addinivalue_line("markers", "noci: this test will not be run on CI ")
+
+    # feature makers
+    config.addinivalue_line("markers", "bulk: test with bulk")
+    config.addinivalue_line("markers", "film: test with film")
     config.addinivalue_line("markers", "band: testing bandstructure")
     config.addinivalue_line("markers", "dos: testing DOS")
     config.addinivalue_line("markers", "hybrid: testing hybrid functionals")
     config.addinivalue_line("markers", "eigpara: test testing eig para")
-    config.addinivalue_line("markers", "mpi: test running fleur in parallel")
-    config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
-    config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
-    config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
-    config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "soc: tests with soc")
     config.addinivalue_line("markers", "ldau: tests with LDA+U")
     config.addinivalue_line("markers", "lo: tests with LOs")
     config.addinivalue_line("markers", "forces: tests with forces")
     config.addinivalue_line("markers", "relaxation: tests involving relaxation")
-    config.addinivalue_line("markers", "xml: test with xml")
-    config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "collinear: test with collinear")
     config.addinivalue_line("markers", "non_collinear: test with non-collinear")
     config.addinivalue_line("markers", "spinspiral: test with spinspiral calculations")
-    config.addinivalue_line("markers", "libxc: test for fleur using libxc")
-    config.addinivalue_line("markers", "wannier: test for fleur using wannier")
-    config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
     config.addinivalue_line("markers", "greensfunction: test with greensfunction")
     config.addinivalue_line("markers", "magnetism: test with magnetism")
     config.addinivalue_line("markers", "plot: tests testing a plot feature")
     config.addinivalue_line("markers", "eels: test with eels")
-    config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "gw: test for gw interface")
     config.addinivalue_line("markers", "interface: tests testing some interface")
-    config.addinivalue_line("markers", "noci: this test will not run on CI ")
+
+    # main libs
+    config.addinivalue_line("markers", "hdf: tests needing hdf")
+    config.addinivalue_line("markers", "libxc: test for fleur using libxc")
+    config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
+    config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
+    config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
+
+    # solvers, ffts and other libs
+    config.addinivalue_line("markers", "edsolver: test needing the edsolver")
+    config.addinivalue_line("markers", "cusolver: test needing the cusolver")
+    config.addinivalue_line("markers", "fftmkl: test needing the fftmkl")
+    config.addinivalue_line("markers", "fftw: test needing the fftw")
+    config.addinivalue_line("markers", "spfft: test needing the spfft")
+    config.addinivalue_line("markers", "magma: test needing the magma")
+    config.addinivalue_line("markers", "progthread: test needing the progthread")
+    config.addinivalue_line("markers", "elpa: test needing the elpa")
+    config.addinivalue_line("markers", "elpaonenode: test needing the elpaonenode")
+    config.addinivalue_line("markers", "chase: test needing the chase")
+    config.addinivalue_line("markers", "scalapack: test needing the scalapack")
 
 def pytest_runtest_logreport(report):
     """
