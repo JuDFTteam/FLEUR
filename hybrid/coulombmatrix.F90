@@ -67,7 +67,7 @@ CONTAINS
       INTEGER                    :: inviop
       INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2, iqnrmstart, iqnrmstep
       INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, idum, ikpt
-      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2
+      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2, iat2
       INTEGER                    :: ic, ic1, ic2, ic3, ic4
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
       INTEGER                    :: isym, isym1, isym2, igpt0
