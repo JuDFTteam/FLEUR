@@ -233,6 +233,13 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "interface: tests testing some interface")
     config.addinivalue_line("markers", "noci: this test will not run on CI ")
 
+def pytest_runtest_logreport(report):
+    """
+    Short path names in report
+    """
+    # remove the tests/ in all paths printed
+    report.nodeid = report.nodeid[5:]
+
 ####################################
 ########### fixtures
 # useful ones from pytest:
@@ -409,8 +416,14 @@ def execute_inpgen(inpgen_binary, work_dir):
         os.chdir(workdir)
         with open(f"{workdir}/stdout", "w") as f_stdout:
             with open(f"{workdir}/stderr", "w") as f_stderr:
-                subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=True)
-
+                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr)#, check=True)
+        # Check per hand if successful:
+        if p1.returncode != 0:
+            # failure
+            print('Fleur execution failed.')
+            with open(f"{workdir}/stderr", "w") as f_stderr:
+                print(f_stderr.read())
+            p1.check_returncode() # This throws error
         result_files = {}
         source = []
         for (dirpath, dirname, filenames) in os.walk(workdir):
