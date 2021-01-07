@@ -85,12 +85,14 @@ MODULE m_judft_xmlOutput
       ENDIF
       xmlOpened = .TRUE.
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="0.27">'
+      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="0.33">'
    END SUBROUTINE startXMLOutput
 
-   SUBROUTINE endXMLOutput()
+   SUBROUTINE endXMLOutput(errmsg)
 
       IMPLICIT NONE
+
+      CHARACTER(len=*), OPTIONAL , INTENT(IN) :: errmsg
 
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
@@ -103,6 +105,7 @@ MODULE m_judft_xmlOutput
          CALL closeXMLElement(elementList(currentElementIndex))
       END DO
       DEALLOCATE(elementList)
+      IF(PRESENT(errmsg)) CALL writeXMLElement('ERROR',(/"Message"/),(/errmsg/))
       CALL DATE_AND_TIME(date,time,zone)
       WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
       WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)

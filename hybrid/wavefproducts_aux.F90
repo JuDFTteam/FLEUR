@@ -83,7 +83,7 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       iob_list = -7
       iband_list = -7
-      !$OMP PARALLEL default(none) &
+      !$OMP PARALLEL default(private) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
       !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)

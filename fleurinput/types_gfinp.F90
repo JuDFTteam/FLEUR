@@ -604,6 +604,10 @@ CONTAINS
          IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
+      IF(this%l_resolvent .AND. input%bz_integration.NE.BZINT_METHOD_TETRA) THEN
+         CALL juDFT_error('For l_resolvent=T the tetra brillouin-zone integration method has to be used', calledby='init_gfinp')
+      ENDIF
+
 #ifdef CPP_DEBUG
       WRITE(oUnit,*) "Green's Function Elements: "
       WRITE(oUnit,'(10(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff"

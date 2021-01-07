@@ -8,6 +8,9 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
    GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
    CrystalFieldOutput VO2_forces VO2_force_levels )
+   
+#Currently running but broken
+# NiO_ldauXML
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
@@ -41,8 +44,9 @@ if (FLEUR_USE_HDF5)
 endif()
 
 #Check if all tests (including those running for a long time) should be executed
+#NiO_ldauXML used to be here as well
 if (all_tests)
-   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML ${FFNTests})
+   set(SerialParallelTests ${SerialParallelTests} Bi2Te3XML ${FFNTests})
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
@@ -99,4 +103,10 @@ if (FLEUR_USE_MPI)
    foreach(test ${HybridTests})
       add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
    endforeach()
+endif()
+
+#Add OutputSchema Test if xmllint is available
+find_program(XMLLINT_PROG xmllint)
+if (XMLLINT_PROG)
+   add_test("ValidateOutFiles" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/ValidateOutFiles/test.py --command ${XMLLINT_PROG} --testdir ${CMAKE_BINARY_DIR}/Testing/ValidateOutFiles)
 endif()

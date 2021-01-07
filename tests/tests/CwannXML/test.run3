@@ -13,10 +13,10 @@ $result+=jt::test_fileexists("$workdir/WF1.mmn0");
 $result+=jt::test_fileexists("$workdir/WF1.eig");
 $result+=jt::test_fileexists("$workdir/WF1.win");
 $result+=jt::test_fileexists("$workdir/WF1.wout");
-$result+=jt::test_grepexists("$workdir/WF1.eig","           1           1  -10.23681524");
-$result+=jt::test_grepexists("$workdir/WF1.eig","           7           1   16.70098726");
-$result+=jt::test_grepexists("$workdir/WF1.eig","           7           8   19.83323805");
-$result+=jt::test_grepexists("$workdir/WF1.eig","           5           6   16.23524831");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           1           1  -10.236815");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           7           1   16.700987");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           7           8   19.833238");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           5           6   16.235248");
 $result+=jt::test_grepexists("$workdir/WF1.mmn0","    8    8      8       1.000000000000");
 $result+=jt::test_grepexists("$workdir/WF1.mmn0","    1    1      1       1.000000000000");
 

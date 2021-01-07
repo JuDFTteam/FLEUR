@@ -9,20 +9,28 @@ class TestEnv:
    binary = ""
    testdir = ""
    workdir = ""
+   command = ""
    parallel = False
    nprocs = -1
    errors = 0
 
    def __init__(self):
       parser = argparse.ArgumentParser(description='get test-dir and bin-dir')
-      parser.add_argument("--bindir", type=str, nargs=1, required=True, help="location of fleur executable")
+      parser.add_argument("--bindir", type=str, nargs=1, default='', required=False, help="location of fleur executable")
+      parser.add_argument("--command", type=str, nargs=1, default='', required=False, help="command, which to execute instead of fleur")
       parser.add_argument("--testdir", type=str, nargs=1, required=True, help="where to execute tests")
       parser.add_argument("--nprocs", type=int, nargs='?', default=2, help="number of parallel mpi-processes")
       args = parser.parse_args()
 
       self.setup_logger(args)
       self.setup_env(args)
-      self.find_binary(args)
+      if args.bindir:
+         self.find_binary(args)
+      elif args.command:
+         self.command = args.command[0]
+      else:
+         logging.warning("No executable/command specified")
+         sys.exit(1)
       self.nprocs = args.nprocs
 
    def find_binary(self, args):      
@@ -76,6 +84,8 @@ class TestEnv:
       logging.error(text)
 
    def run(self,arg_list):
+      if not self.binary:
+         self.log_error('No fleur executable specified')
       OMP_NUM_THREADS = os.environ['OMP_NUM_THREADS'] if 'OMP_NUM_THREADS' in os.environ else ''
       self.log_info(f"Start running command:\nOMP_NUM_THREADS={OMP_NUM_THREADS}\n{arg_list}")
       with open(f"{self.workdir}/stdout", "w") as f_stdout:
