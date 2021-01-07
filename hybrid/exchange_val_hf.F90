@@ -180,7 +180,11 @@ CONTAINS
 
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
+      !$acc enter data create(exch_vv)
+      !$acc kernels present(exch_vv) default(none)
       exch_vv = 0
+      !$acc end kernels
+
       call timestop("alloc phase_vv & dot_res")
       
       call timestart("q_loop")
@@ -284,49 +288,44 @@ CONTAINS
                CPP_cprod_r  = cprod_vv%data_r
 #endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               !$acc enter data create(CPP_dotres_r) copyin(CPP_carr_r,CPP_cprod_r, hybdat, phase_vv, nsest, indx_sest)
                DO iob = 1, psize
-                  !$acc enter data create(CPP_dotres_r) copyin(CPP_carr_r,CPP_cprod_r)
-                  !$acc host_data use_device(carr1_v_r, cprod_vv_r, dot_result_r)
-                  call dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
+                  !$acc host_data use_device(carr1_v_r, cprod_vv_r, CPP_dotres_r)
+                  call CPP_dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
                   !$acc end host_data
-                  !$acc exit data delete(CPP_carr_r,CPP_cprod_r) copyout(CPP_dotres_r) 
-#ifdef _OPENACC 
-                  dot_result%data_r = CPP_dotres_r   
-#endif
 
+                  !$acc kernels present(exch_vv, CPP_dotres_r, phase_vv, hybdat, nsest, indx_sest) default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_r(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*CPP_dotres_r(iband, nn2)
                      enddo
                   END DO
+                  !$acc end kernels
                END DO
+               !$acc exit data delete(CPP_carr_r,CPP_cprod_r, CPP_dotres_r, hybdat, phase_vv, nsest, indx_sest)
             ELSE
 #ifdef _OPENACC
                CPP_carr_r   = carr1_v%data_r 
                CPP_cprod_r  = cprod_vv%data_r
 #endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               !$acc enter data create(CPP_dotres_c) copyin(CPP_carr_c,CPP_cprod_c, hybdat, phase_vv, nsest, indx_sest)
                DO iob = 1, psize
-                  !$acc enter data create(CPP_dotres_c) copyin(CPP_carr_c,CPP_cprod_c)
-                  !$acc host_data use_device(carr1_v_c, cprod_vv_c, dot_result_c)
+                  !$acc host_data use_device(CPP_carr_c, CPP_cprod_c, CPP_dotres_c)
                   call CPP_zgemm("C", "N", m, n, k, cmplx_1, CPP_carr_c(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, CPP_dotres_c, ldc)
                   !$acc end host_data
-                  !$acc exit data delete(CPP_carr_c,CPP_cprod_c) copyout(CPP_dotres_c) 
-#ifdef _OPENACC 
-                  dot_result%data_c = CPP_dotres_c   
-#endif
-                  call carr1_v%save_npy("carr1.npy")
-                  call cprod_vv%save_npy("cprod.npy")
-                  call dot_result%save_npy("dot_prod.npy")
-                  call judft_error("end it")
+
+                  !$acc kernels present(exch_vv, CPP_dotres_c, phase_vv, hybdat, nsest, indx_sest)  default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result%data_c(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*CPP_dotres_c(iband, nn2)
                      enddo
                   END DO
+                  !$acc end kernels
                enddo
+               !$acc exit data delete(CPP_carr_c,CPP_cprod_c, CPP_dotres_r, hybdat, phase_vv, nsest, indx_sest)
             END IF
             call timestop("exch_vv dot prod")
             call timestop("exchange matrix")
@@ -335,7 +334,7 @@ CONTAINS
             call carr1_v%free()
          enddo
       END DO  !jq
-
+      !$acc exit data copyout(exch_vv)
       call timestop("q_loop")
 
       call dot_result%free()
