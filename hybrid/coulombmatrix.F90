@@ -568,30 +568,28 @@ CONTAINS
                iatom = 0
                carr2 = 0
                call timestart("itype loops")
-               DO itype2 = 1, fi%atoms%ntype
-                  DO ineq2 = 1, fi%atoms%neq(itype2)
-                     iatom = iatom + 1
-                     cexp = CONJG(carr2b(iatom, igpt2))
-                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
-                     ! this is a nested loop over
-                     ! l=1..hyb%lexp{
-                     !    m=-l..l{}
-                     ! }
-                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
-                     DO lm1 = 1, (fi%hybinp%lexp+1)**2
-                        call calc_l_m_from_lm(lm1, l1, m1)
-                        do lm2 = 1, (fi%hybinp%lexp+1)**2
-                           call calc_l_m_from_lm(lm2, l2, m2)
-                           cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                           l = l1 + l2
-                           lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
-                           carr2(:, lm1) = carr2(:, lm1) + cdum*gmat(lm1, lm2)*structconst1(:, lm)
-                        END DO
+               do iatom = 1,fi%atoms%nat
+                  itype2 = fi%atoms%itype(iatom)
+                  cexp = CONJG(carr2b(iatom, igpt2))
+                  structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
+
+                  !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
+                  !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+                  DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                     call calc_l_m_from_lm(lm1, l1, m1)
+                     do lm2 = 1, (fi%hybinp%lexp+1)**2
+                        call calc_l_m_from_lm(lm2, l2, m2)
+                        cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
+                        l = l1 + l2
+                        lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
+                        do iat2=1,fi%atoms%nat 
+                           carr2(iat2, lm1) = carr2(iat2, lm1) + cdum*gmat(lm1, lm2)*structconst1(iat2, lm)
+                        enddo
                      enddo
-                     !$OMP end parallel do
-                  END DO
+                  enddo
+                  !$OMP end parallel do
                END DO
+
                call timestop("itype loops")
 
                call timestart("igpt1")
