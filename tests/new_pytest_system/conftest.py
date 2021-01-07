@@ -54,6 +54,8 @@ LOGGER = logging.getLogger(__name__)
 # running libxc tests makes no sense.
 # TODO: if tests fails should we print the fleur stderr output to pytest log?
 
+# Once can also run non python tests, so we could if we want to run the old tests as they are...
+# https://docs.pytest.org/en/stable/example/nonpython.html
 ######### Helpers ############
 # C: By using os.path instead of pathlib, this will prob fail on Windows
 # TODO allow User to specify some of these over the cmd line when executing pytest
@@ -64,6 +66,7 @@ LOGGER = logging.getLogger(__name__)
 # The current fleur test workflow is as follows, create Testing dir in build dir
 # there is the workdir in which the test runs, after the test is finished, they copy the work dir
 # they create logs there. 
+
 
 def test_dir():
     """Get path to the parent test directory defined by the position of this conftest.py file
@@ -130,6 +133,23 @@ def pytest_report_header(config):#libs):
     add_header_string += "Running tests in {} \n".format(workdir)
     return add_header_string
 '''
+def read_cmake_config(configfilepath):
+    """
+    reads build path
+    and which markers to ignore by cmake
+    """
+    marker_list = []
+
+    if os.path.exists(configfilepath):
+        with open(configfilepath, 'r') as conf:
+            content = conf.readlines()
+        for line in content:
+            if 'excl_flags=' in line:
+                marker_string = str(line.split('excl_flags=')[1])
+                marker_string = marker_string.replace('"', '')
+                marker_string = marker_string.strip()
+                marker_list = marker_string.split()
+    return marker_list
 
 # To modify the collected tests AFTER collections
 def pytest_collection_modifyitems(session, config, items):
@@ -143,12 +163,16 @@ def pytest_collection_modifyitems(session, config, items):
     # I have not found any other way, but to import from a protective method...
     deselect_by_keyword(items, config)
     deselect_by_mark(items, config)
+    
+    filename = 'pytest_incl.py'
+    path = config.getoption("build_dir")
+    test_dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    # TODO get these from config, i.e what cmake has written out
-    libxc = True
-    inpgen = True
-    hdf = True
-
+    confile = os.path.abspath(os.path.join(test_dir_path, path))
+    confile = os.path.join(confile, filename)
+    marker_list = read_cmake_config(confile)
+    print("\nExcluding tests with the following markers in 'pytest_incl.py': ", marker_list)
+    marker_list = list(set(marker_list))
     run_every = config.getoption("runevery")
     if run_every is None:
         run_every = 1
@@ -156,6 +180,12 @@ def pytest_collection_modifyitems(session, config, items):
     testoffset = config.getoption("testoffset")
     if testoffset is None:
         testoffset = 0
+    print(f'Running every {run_every}st test with offset {testoffset}, others will be skiped.')
+    '''
+    # TODO get these from config, i.e what cmake has written out
+    libxc = True
+    inpgen = True
+    hdf = True
 
     marker_to_skip = []
     if not hdf:
@@ -168,23 +198,36 @@ def pytest_collection_modifyitems(session, config, items):
     skip_libxc = pytest.mark.skip(reason='Fleur not compiled with libxc.')
     skip_hdf = pytest.mark.skip(reason='Fleur not compiled with hdf5.')
     skip_inpgen = pytest.mark.skip(reason='Inpgen binary was not compiled.')
-    skip_unselected = pytest.mark.skip(reason='This test was unselected by commandline arguments given.')
-   
     
+   
     skip_markers = {'libxc' : skip_libxc,
                    'hdf': skip_hdf,
                    'inpgen' : skip_inpgen
                    }
+    '''
+    skip_unselected = pytest.mark.skip(reason='This test was unselected by commandline arguments given.')
+    #Add to all tests marked with masci_tools
+    #pytest.importorskip("masci_tools")
+
     # only left with selected items.
+    deselection_items = []
     for i, item in enumerate(items):
+        # be careful with this because it also applies for test classes, 
+        # and tests which might depend on each other
         mod = (i+int(testoffset))%int(run_every)
         if mod !=0:
             item.add_marker(skip_unselected)
+        for marker in marker_list:
+            if marker in item.keywords:
+                deselection_items.append(item)
+        '''
         for marker in marker_to_skip:
             if marker in item.keywords:
                 item.add_marker(skip_markers[marker])
-    #Add to all tests marked with masci_tools
-    #pytest.importorskip("masci_tools")
+        '''
+    items[:] = [item for item in items if item not in deselection_items]
+    config.hook.pytest_deselected(items=deselection_items)
+
 
 
 ##### Add some markers to pytest to group tests
@@ -273,7 +316,7 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     add_header_string += "Fleur test session information:\n\n"
     add_header_string += "Fleur exe: {} \n".format(path_fleur)
     add_header_string += "Inpgen exe: {} \n".format(path_inp)
-    add_header_string += "Linked libraries: {} \n".format(str(libs))
+    add_header_string += "NOT linked libraries: {} \n".format(str(libs))
     add_header_string += "Running tests in: {} \n".format(work_dir_path)
     add_header_string += "Failed tests will be copied to: {} \n\n".format(failed_dir_path)
     add_header_string += "Cleaning now work, failed and parser_test directories...\n"
@@ -563,7 +606,8 @@ def validate_out_xml_file(execute_fleur):
         """
         Validates and outxml file via a fleur execution
         Maybe we also want to validate the out.xml file outside of fleur with python and lxml instead?
-        So far we stay to the validatation test
+        Which is probably faster.
+        So far we stay to the validatation test. Still one should test the fleur validatation feature at least once
         """
         if 'out.xml' not in file_path:
             raise ValueError('No out.xml file given for validation.')
