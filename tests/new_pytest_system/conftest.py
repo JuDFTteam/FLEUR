@@ -421,7 +421,7 @@ def execute_inpgen(inpgen_binary, work_dir):
         if p1.returncode != 0:
             # failure
             print('Inpgen execution failed.')
-            with open(f"{workdir}/stderr", "w") as f_stderr:
+            with open(f"{workdir}/stderr", "r") as f_stderr:
                 print(f_stderr.read())
             p1.check_returncode() # This throws error
 
@@ -535,7 +535,7 @@ def execute_fleur(fleur_binary, work_dir):
         if p1.returncode != 0:
             # failure
             print('Fleur execution failed.')
-            with open(f"{workdir}/stderr", "w") as f_stderr:
+            with open(f"{workdir}/{stderr}", "r") as f_stderr:
                 print(f_stderr.read())
             p1.check_returncode() # This throws error
         
