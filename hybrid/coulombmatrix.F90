@@ -557,38 +557,58 @@ CONTAINS
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
             allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
-                      structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2))
-            carr2 = 0; structconst1 = 0
-
+                      structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2), source=cmplx_0)
+               
+            !$acc enter data copyin(fi, fi%hybinp%lexp,fi%atoms%nat,fi%atoms%itype,sphbesmoment, carr2a, carr2b, gmat, structconst) create(structconst1)
             DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size !1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
-               iatom = 0
+
+               !$acc enter data create(carr2) copyin(iqnrm2, igpt2)
+               !$acc kernels present(carr2) default(none)
                carr2 = 0
+               !$acc end kernels
+
                call timestart("itype loops")
                do iatom = 1,fi%atoms%nat
                   itype2 = fi%atoms%itype(iatom)
                   cexp = CONJG(carr2b(iatom, igpt2))
+                  !$acc kernels present(structconst, structconst1)
                   structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
-
-                  !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
+                  !$acc end kernels
+                  
+#ifdef _OPENACC 
+                  !$acc parallel loop default(none) &
+                  !$acc present(carr2, fi, fi%hybinp%lexp,fi%atoms%nat,sphbesmoment, carr2a, gmat, structconst1) &
+                  !$acc present(iqnrm2, igpt2) &
+                  !$acc private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
+                  !$acc copyin(itype2, cexp)
+#else
+                  !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
                   !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+#endif
                   DO lm1 = 1, (fi%hybinp%lexp+1)**2
                      call calc_l_m_from_lm(lm1, l1, m1)
                      do lm2 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm2, l2, m2)
-                        cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
+                        cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)*gmat(lm1, lm2)
                         l = l1 + l2
                         lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
-                        do iat2=1,fi%atoms%nat 
-                           carr2(iat2, lm1) = carr2(iat2, lm1) + cdum*gmat(lm1, lm2)*structconst1(iat2, lm)
+                        !$acc loop seq
+                        do iat2 =1,fi%atoms%nat
+                           carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst1(iat2, lm)
                         enddo
                      enddo
                   enddo
+#ifdef _OPENACC 
+                  !$acc end parallel loop
+#else
                   !$OMP end parallel do
-               END DO
+#endif
+               end do ! iatom
+               !$acc exit data delete(iqnrm2, igpt2)
 
                call timestop("itype loops")
 
@@ -598,12 +618,20 @@ CONTAINS
                   iy = iy + 1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
+                  !$acc enter data create(csum)
                   csum = 0
+#ifdef _OPENACC 
+                  !$acc parallel loop default(none) reduction(+: csum) collapse(2)&
+                  !$acc private(ic, itype, lm, l, m, cdum) &
+                  !$acc present(fi, fi%hybinp%lexp,fi%atoms%nat,fi%atoms%itype,sphbesmoment, carr2, carr2a, carr2b) &
+                  !$acc copyin(igpt1, iqnrm1)
+#else
                   !$OMP PARALLEL DO default(none) &
                   !$OMP private(ic, itype, lm, l, m, cdum) &
                   !$OMP shared(fi, carr2b, sphbesmoment, iqnrm1, igpt1, carr2, carr2a) &
                   !$OMP reduction(+: csum) &
                   !$OMP collapse(2)
+#endif
                   do ic = 1, fi%atoms%nat
                      do lm = 1, (fi%hybinp%lexp+1)**2
                         itype = fi%atoms%itype(ic)
@@ -612,11 +640,17 @@ CONTAINS
                         csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
                      END DO
                   END DO
+#ifdef _OPENACC 
+                  !$acc end parallel loop
+                  !$acc exit data copyout(csum)
+#else 
                   !$OMP end parallel do
+#endif      
                   coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
                call timestop("igpt1")
             END DO !igpt0
+            !$acc exit data delete(fi, fi%hybinp%lexp,fi%atoms%nat,fi%atoms%itype,sphbesmoment, carr2, carr2a, carr2b, gmat, structconst, structconst1)
             deallocate (carr2, carr2a, carr2b, structconst1)
 
 #ifdef CPP_MPI
