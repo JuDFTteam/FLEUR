@@ -166,13 +166,13 @@ contains
     ENDIF
 
 
-    IF(atoms%n_u>0.AND.l_densitymatrix) THEN
+    IF(atoms%n_u>0) THEN
        !When the mixing of the density matrix is done together
        !with the charge density depending on the mixing scheme
        !it can become unstable
        !Check whether the mixed density matrix makes sense
        !And correct invalid elements
-       CALL checkMMPmat(1,atoms%n_u,atoms,input,inden%mmpMat)
+       CALL checkMMPmat(1,atoms%n_u,atoms,input,outden,inden)
     ENDIF
 
     IF(atoms%n_hia>0) THEN
