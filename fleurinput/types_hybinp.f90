@@ -76,7 +76,9 @@ CONTAINS
          this%ewaldlambda = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          this%lexp = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
          this%bands1 = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
-         this%fftcut = evaluateFirstOnly (xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@fftcut'))
+         IF(xml%versionNumber>=34) THEN
+            this%fftcut = evaluateFirstOnly (xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@fftcut'))
+         ENDIF
       ENDIF
 
       DO itype = 1, ntype
