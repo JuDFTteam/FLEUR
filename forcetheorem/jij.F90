@@ -9,6 +9,9 @@ MODULE m_types_jij
   USE m_types
   USE m_types_forcetheo
   USE m_judft
+#ifdef CPP_MPI
+  USE mpi
+#endif
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_jij
      INTEGER :: loopindex,no_loops
      INTEGER,ALLOCATABLE :: q_index(:),iatom(:),jatom(:)
@@ -82,7 +85,6 @@ CONTAINS
 
     INTEGER:: i,q,ierr
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     call judft_error("jij has to be parallelized")
 #endif
   END SUBROUTINE jij_dist
@@ -283,9 +285,6 @@ c     .. Intrinsic Functions ..
 c     .. External Subroutines ..
 
       EXTERNAL CPP_LAPACK_dgels
-#ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-#endif
 
 c-------------------------------------------------------------------
        OPEN(116,file='qptsinfo',status='unknown')

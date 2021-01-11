@@ -32,6 +32,7 @@ CONTAINS
 #else
 #ifdef CPP_ELPA
       USE elpa1
+      USE mpi
 #ifdef CPP_ELPA2
       USE elpa2
 #endif
@@ -45,7 +46,6 @@ CONTAINS
       INTEGER, INTENT(INOUT)         :: ne
 
 #ifdef CPP_ELPA
-      INCLUDE 'mpif.h'
       !...  Local variables
       !
       INTEGER           :: num, num2

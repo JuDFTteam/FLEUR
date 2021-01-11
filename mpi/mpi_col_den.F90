@@ -38,7 +38,6 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(INOUT) :: den
-    !INCLUDE 'mpif.h'
     ! ..
     ! ..  Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin

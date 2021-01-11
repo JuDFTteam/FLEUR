@@ -40,6 +40,9 @@ c******************************************************************
       use m_wann_real
       use m_xsf_io
       use m_wann_plot_vac
+#ifdef CPP_MPI
+      use mpi
+#endif
 !      USE m_wann_plot_wannier
       IMPLICIT NONE
 
@@ -106,7 +109,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer ierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)

@@ -54,11 +54,13 @@ MODULE m_types_potden
 CONTAINS
   subroutine collect(this,mpi_comm)
     use m_mpi_bc_tool
+#ifdef CPP_MPI
+    use mpi
+#endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
     integer :: mpi_comm
 #ifdef CPP_MPI
-    include 'mpif.h'
     INTEGER:: ierr,irank
     real,ALLOCATABLE::rtmp(:)
     complex,ALLOCATABLE::ctmp(:)
@@ -96,11 +98,13 @@ CONTAINS
 
   subroutine distribute(this,mpi_comm)
     use m_mpi_bc_tool
+#ifdef CPP_MPI
+    use mpi
+#endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
     integer :: mpi_comm
 #ifdef CPP_MPI
-    include 'mpif.h'
     call mpi_bc(this%iter,0,mpi_comm)
     call mpi_bc(this%potdentype,0,mpi_comm)
     call mpi_bc(this%pw,0,mpi_comm)

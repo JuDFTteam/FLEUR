@@ -104,6 +104,9 @@ CONTAINS
   END SUBROUTINE iomatrix_hdf_close
 
   SUBROUTINE iomatrix_hdf_open(l_real,matsize,no_rec,filename,fid,did)
+#ifdef CPP_HDFMPI
+    USE mpi
+#endif
     LOGICAL,INTENT(IN)          :: l_real
     INTEGER,INTENT(in)          :: matsize,no_rec
     CHARACTER(len=*),INTENT(in) :: filename
@@ -113,7 +116,6 @@ CONTAINS
     LOGICAL :: l_exist
     INTEGER(HID_T)  :: access_prp
 #if defined(CPP_HDFMPI) && defined(CPP_MPI)
-    include 'mpif.h'
     CALL h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, err)
     CALL h5pset_fapl_mpio_f(access_prp, MPI_COMM_WORLD, MPI_INFO_NULL,err)
 #else

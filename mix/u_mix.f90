@@ -13,7 +13,6 @@ MODULE m_umix
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_nmat_rot
    USE m_xmlOutput
 
    IMPLICIT NONE
@@ -91,7 +90,7 @@ MODULE m_umix
       IF (input%ldauLinMix) THEN
 
          ! mix here straight with given mixing factors
-         ALLOCATE (n_mmp,mold=n_mmp_in)
+         ALLOCATE (n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(n_mmp_in,dim=3),SIZE(n_mmp_in,dim=4)))
          n_mmp = cmplx_0
 
          alpha = input%ldauMixParam

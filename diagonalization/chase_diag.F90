@@ -317,6 +317,7 @@ CONTAINS
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
+    USE mpi
 
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
@@ -338,7 +339,6 @@ CONTAINS
     REAL,                          ALLOCATABLE  :: eigenvalues(:)
 
     REAL :: t1,t2,t3,t4
-    include 'mpif.h'
 
     CALL CPU_TIME(t1)
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,info)
@@ -459,12 +459,12 @@ CONTAINS
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
     USE m_types_mpimat
     USE m_types_mat
+    USE mpi
     IMPLICIT NONE
     TYPE(t_mpimat),INTENT(INOUT)::hmat,mat
     INTEGER,INTENT(IN)          :: nev,nex
     INTEGER::nbc,nbr
 
-    INCLUDE 'mpif.h'
     INTEGER     :: myrow,mycol
     INTEGER     :: npblacs,np,myid
     INTEGER     :: rowlen,collen,rowoff,coloff

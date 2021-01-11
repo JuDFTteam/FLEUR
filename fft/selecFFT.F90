@@ -49,7 +49,7 @@ MODULE m_selecFFT
       IF(l_sparse) fftRoutine = spFFT_const
 #endif
       IF (TRIM(juDFT_string_for_argument("-fft"))=="fftw") THEN
-#ifdef CPP_FFT_MKL
+#ifdef CPP_FFTW
          fftRoutine = fftw_const
 #else
          CALL juDFT_error("Selected fftw is not available!", calledby="selecFFT")

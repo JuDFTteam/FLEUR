@@ -10,12 +10,13 @@ MODULE m_checkMMPmat
 
    CONTAINS
 
-   SUBROUTINE checkMMPmat(indStart,indEnd,atoms,input,mmpmat)
+   SUBROUTINE checkMMPmat(indStart,indEnd,atoms,input,outden,inden)
 
-      INTEGER,             INTENT(IN)  :: indStart, indEnd
-      TYPE(t_atoms),       INTENT(IN)  :: atoms
-      TYPE(t_input),       INTENT(IN)  :: input
-      COMPLEX,             INTENT(INOUT) :: mmpmat(-lmaxU_const:,-lmaxU_const:,:,:)
+      INTEGER,             INTENT(IN)    :: indStart, indEnd
+      TYPE(t_atoms),       INTENT(IN)    :: atoms
+      TYPE(t_input),       INTENT(IN)    :: input
+      TYPE(t_potden),      INTENT(IN)    :: outden
+      TYPE(t_potden),      INTENT(INOUT) :: inden
 
       LOGICAL l_err
       INTEGER i_u,l,ispin,m
@@ -27,10 +28,12 @@ MODULE m_checkMMPmat
          !Check the diagonal elements
          DO ispin = 1, input%jspins
             DO m = -l,l
-               IF(REAL(mmpmat(m,m,i_u,ispin)).LT.0.0) THEN
-                  mmpmat(m,m,i_u,ispin) = 0.0
-               ELSE IF(REAL(mmpmat(m,m,i_u,ispin)).GT.maxOcc) THEN
-                  mmpmat(m,m,i_u,ispin) = maxOcc
+               IF(REAL(inden%mmpmat(m,m,i_u,ispin)).LT.0.0) THEN
+                  inden%mmpmat(m,m,i_u,ispin) = 0.0
+               ELSE IF(REAL(inden%mmpmat(m,m,i_u,ispin)).GT.maxOcc) THEN
+                  IF(REAL(outden%mmpmat(m,m,i_u,ispin)).LE.maxOcc) THEN
+                     inden%mmpmat(m,m,i_u,ispin) = maxOcc
+                  ENDIF
                ENDIF
             ENDDO
          ENDDO

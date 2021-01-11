@@ -970,7 +970,7 @@ CONTAINS
             !           (do numerical integration of tails)
 
             IF ( method2 .EQ. 1) THEN
-               DO ir = 1 , n_out_p
+               DO ir = -6 , n_out_p
                   j = jri+ir-1
                   rhohelp(mshc+1-j) =  rat(j) * rat(j) * rat(j) *  rh(j)
                END DO
@@ -1001,7 +1001,7 @@ CONTAINS
             !           (do numerical integration of tails)
 
             IF ( method2 .EQ. 1) THEN
-               DO ir = 1 , n_out_p 
+               DO ir = -6 , n_out_p
                   j  = jri+ir-1
                   rhohelp(mshc-jri+2-ir) =  rat(j)*rat(j) * rh(j) * SIN( g*rat(j) )
                END DO

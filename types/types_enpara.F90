@@ -101,6 +101,9 @@ CONTAINS
     USE m_types_potden
     USE m_types_hub1data
     USE m_find_enpara
+#ifdef CPP_MPI
+    USE mpi
+#endif
     CLASS(t_enpara),INTENT(inout):: enpara
     INTEGER,INTENT(IN)          :: mpi_comm
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -122,7 +125,6 @@ CONTAINS
     REAL ::  elo_up(atoms%nlod,atoms%ntype)
 
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER :: ierr
     CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 #else
@@ -476,6 +478,9 @@ CONTAINS
     USE m_types_input
     USE m_types_vacuum
     USE m_constants
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
     INTEGER,INTENT(IN)             :: mpi_comm
@@ -491,7 +496,6 @@ CONTAINS
     INTEGER same(atoms%nlod),irank
     LOGICAL l_enpara
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER :: ierr
     CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
 #else

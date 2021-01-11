@@ -42,6 +42,9 @@ c*******************************************c
       USE m_wann_uHu_radintsra5
       USE m_wann_uHu_tlo
       USE m_constants
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       IMPLICIT NONE
 C     ..
@@ -121,7 +124,6 @@ C     .. Local Arrays ..
       REAL :: bpt(3),bpt2(3),bkrot(3)
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      INCLUDE 'mpif.h'
       INTEGER ierr(3)
 #endif
 C     .. Intrinsic Functions ..
@@ -690,7 +692,7 @@ c        tt3 = t_gggint
       enddo !ikpt_b
 
 #if (defined(CPP_MPI) && !defined(CPP_T90))
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr(1))
 #endif
 
       deallocate( yl1, yl2 )
