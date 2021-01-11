@@ -27,6 +27,9 @@ c     Frank Freimuth
 c*************************************************************
 
       USE m_constants
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       implicit none
 
@@ -47,7 +50,6 @@ c*************************************************************
       integer :: ikpt,i,j,k
       integer :: cpu_index
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -66,7 +68,7 @@ c**********************************************************
            call MPI_RECV(
      &             nablamat(1:3,1:nbnd,1:nbnd,ikpt),nbnd*nbnd*3,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &             ikpt,mpi_comm,stt,ierr)
+     &             ikpt,mpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
         else
@@ -74,10 +76,10 @@ c**********************************************************
            call MPI_SEND(
      &             nablamat(1:3,1:nbnd,1:nbnd,ikpt),nbnd*nbnd*3,
      &             CPP_MPI_COMPLEX,0,
-     &             ikpt,mpi_comm,ierr)
+     &             ikpt,mpi_comm,ierr(1))
          endif !processors
         endif ! l_p0
-        call MPI_BARRIER(mpi_comm,ierr)
+        call MPI_BARRIER(mpi_comm,ierr(1))
        enddo !ikpt 
       endif !isize
 #endif

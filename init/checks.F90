@@ -13,7 +13,7 @@ MODULE m_checks
     SUBROUTINE check_command_line()
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
+      USE mpi
       INTEGER:: isize,ierr,irank
 #endif
       IF (TRIM(juDFT_string_for_argument("-eig"))=="hdf") THEN

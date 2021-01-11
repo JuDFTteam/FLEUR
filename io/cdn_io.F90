@@ -942,7 +942,6 @@ CONTAINS
     INTEGER(HID_T) :: fileID
 #endif
 #ifdef CPP_MPI
-    !INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
 
@@ -1032,7 +1031,6 @@ CONTAINS
     CHARACTER(len=50) :: archivename
 #endif
 #ifdef CPP_MPI
-    !INCLUDE 'mpif.h'
     INTEGER :: ierr
 #endif
 

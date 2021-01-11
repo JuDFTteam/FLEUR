@@ -153,11 +153,13 @@ CONTAINS
    END subroutine
 
    SUBROUTINE print_matrix(mat, fileno)
+#ifdef CPP_SCALAPACK
+      USE mpi
+#endif
       CLASS(t_mpimat), INTENT(INOUT) ::mat
       INTEGER:: fileno
 
 #ifdef CPP_SCALAPACK
-      INCLUDE 'mpif.h'
       INTEGER, EXTERNAL:: indxl2g
       CHARACTER(len=10)::filename
       INTEGER :: irank, isize, i, j, npr, npc, r, c, tmp, err, status(MPI_STATUS_SIZE)
@@ -197,6 +199,9 @@ CONTAINS
    end subroutine t_mpimat_l2u
 
    SUBROUTINE t_mpimat_u2l(mat)
+#ifdef CPP_SCALAPACK
+      USE mpi
+#endif
       implicit none
       CLASS(t_mpimat), INTENT(INOUT) ::mat
 
@@ -204,7 +209,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE:: tmp_c(:, :)
       REAL, ALLOCATABLE   :: tmp_r(:, :)
 #ifdef CPP_SCALAPACK
-      INCLUDE 'mpif.h'
       INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
 
       CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, myid, err)
@@ -514,6 +518,9 @@ CONTAINS
    END SUBROUTINE mpimat_init_template
 
    SUBROUTINE priv_create_blacsgrid(mpi_subcom, l_2d, m1, m2, nbc, nbr, blacsdata, local_size1, local_size2)
+#ifdef CPP_SCALAPACK
+      USE mpi
+#endif
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: mpi_subcom
       INTEGER, INTENT(IN) :: m1, m2
@@ -523,7 +530,6 @@ CONTAINS
       INTEGER, INTENT(OUT):: local_size1, local_size2
 
 #ifdef CPP_SCALAPACK
-      INCLUDE 'mpif.h'
       INTEGER     :: myrowssca, mycolssca
       INTEGER     :: iamblacs, npblacs, np, myid, mycol, myrow
       INTEGER     :: nprow2, npcol2

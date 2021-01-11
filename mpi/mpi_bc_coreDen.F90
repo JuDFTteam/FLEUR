@@ -14,7 +14,6 @@ CONTAINS
 
    USE m_types
    IMPLICIT NONE
-   !INCLUDE 'mpif.h'
 
    TYPE(t_mpi),INTENT(IN)       :: fmpi
    TYPE(t_atoms),INTENT(IN)     :: atoms

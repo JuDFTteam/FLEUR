@@ -62,6 +62,9 @@ CONTAINS
       !*****************************************************************
       !     opens hdf-file for eigenvectors+values
       !*****************************************************************
+#ifdef CPP_HDFMPI
+      USE mpi
+#endif
       IMPLICIT NONE
 
       INTEGER, INTENT(IN) :: id, mpi_comm
@@ -79,7 +82,6 @@ CONTAINS
       !Set creation and access properties
 
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h'
       IF (readonly) THEN
          access_prp = H5P_DEFAULT_f
          creation_prp = H5P_DEFAULT_f

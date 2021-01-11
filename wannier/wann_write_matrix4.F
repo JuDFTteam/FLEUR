@@ -24,6 +24,9 @@ c     Frank Freimuth
 c*************************************************************
 
       USE m_constants
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       implicit none
 
@@ -45,7 +48,6 @@ c*************************************************************
       integer :: ikpt,i,j,ii,jj
       integer :: cpu_index,dir
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -70,7 +72,7 @@ c**********************************************************
      &             1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &             ikpt,mpi_comm,stt,ierr)
+     &             ikpt,mpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
         else
@@ -80,10 +82,10 @@ c**********************************************************
      &             1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,0,
-     &             ikpt,mpi_comm,ierr)
+     &             ikpt,mpi_comm,ierr(1))
          endif !processors
         endif ! l_p0
-        call MPI_BARRIER(mpi_comm,ierr)
+        call MPI_BARRIER(mpi_comm,ierr(1))
        enddo !ikpt 
       endif !isize
 #endif

@@ -27,6 +27,9 @@ CONTAINS
     USE m_constants
     USE m_types_mpimat
     USE m_types_mat
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)::ev
@@ -35,9 +38,6 @@ CONTAINS
     
     
 #ifdef CPP_SCALAPACK
-#ifdef CPP_MPI    
-    INCLUDE 'mpif.h'
-#endif
     !...  Local variables
     !
     INTEGER i , ierr, err
