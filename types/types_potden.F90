@@ -52,67 +52,67 @@ MODULE m_types_potden
   END TYPE t_potden
 
 CONTAINS
-  subroutine collect(this,mpi_comm)
+  subroutine collect(this,fmpi_comm)
     use m_mpi_bc_tool
 #ifdef CPP_MPI
     use mpi
 #endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
-    integer :: mpi_comm
+    integer :: fmpi_comm
 #ifdef CPP_MPI
     INTEGER:: ierr,irank
     real,ALLOCATABLE::rtmp(:)
     complex,ALLOCATABLE::ctmp(:)
-    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+    CALL MPI_COMM_RANK(fmpi_comm,irank,ierr)
     !pw
     ALLOCATE(ctmp(size(this%pw)))
-    CALL MPI_REDUCE(this%pw,ctmp,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+    CALL MPI_REDUCE(this%pw,ctmp,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
     if (irank==0) this%pw=reshape(ctmp,shape(this%pw))
     deallocate(ctmp)
     !mt
     ALLOCATE(rtmp(size(this%mt)))
-    CALL MPI_REDUCE(this%mt,rtmp,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi_comm,ierr)
+    CALL MPI_REDUCE(this%mt,rtmp,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
     if (irank==0) this%mt=reshape(rtmp,shape(this%mt))
     deallocate(rtmp)
     !vac
     if (allocated(this%vacz)) THEN
        ALLOCATE(rtmp(size(this%vacz)))
-       CALL MPI_REDUCE(this%vacz,rtmp,size(this%vacz),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi_comm,ierr)
+       CALL MPI_REDUCE(this%vacz,rtmp,size(this%vacz),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
        if (irank==0) this%vacz=reshape(rtmp,shape(this%vacz))
        deallocate(rtmp)
        ALLOCATE(ctmp(size(this%vacxy)))
-       CALL MPI_REDUCE(this%vacxy,ctmp,size(this%vacxy),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+       CALL MPI_REDUCE(this%vacxy,ctmp,size(this%vacxy),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
        if (irank==0) this%vacxy=reshape(ctmp,shape(this%vacxy))
        deallocate(ctmp)
     endif
     !density matrix
     if (allocated(this%mmpMat)) then
        ALLOCATE(ctmp(size(this%mmpMat)))
-       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
        if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
        deallocate(ctmp)
     endif
 #endif
   end subroutine collect
 
-  subroutine distribute(this,mpi_comm)
+  subroutine distribute(this,fmpi_comm)
     use m_mpi_bc_tool
 #ifdef CPP_MPI
     use mpi
 #endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
-    integer :: mpi_comm
+    integer :: fmpi_comm
 #ifdef CPP_MPI
-    call mpi_bc(this%iter,0,mpi_comm)
-    call mpi_bc(this%potdentype,0,mpi_comm)
-    call mpi_bc(this%pw,0,mpi_comm)
-    IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,mpi_comm)
-    CALL mpi_bc(this%mt ,0,mpi_comm)
-    IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,mpi_comm)
-    IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,mpi_comm)
-    IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,mpi_comm)
+    call mpi_bc(this%iter,0,fmpi_comm)
+    call mpi_bc(this%potdentype,0,fmpi_comm)
+    call mpi_bc(this%pw,0,fmpi_comm)
+    IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,fmpi_comm)
+    CALL mpi_bc(this%mt ,0,fmpi_comm)
+    IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,fmpi_comm)
+    IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,fmpi_comm)
+    IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
 #endif
   end subroutine distribute
 
