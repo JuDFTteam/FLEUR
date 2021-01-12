@@ -7,7 +7,7 @@ contains
       USE m_constants
       use, intrinsic :: iso_c_binding
       implicit none
-#ifndef __PGI
+      
 #ifdef CPP_SCHED
       interface
          function findmycpu() bind(c)
@@ -48,6 +48,6 @@ contains
          endif
       enddo
 #endif
-#endif
+
    end subroutine omp_checker
 end module m_omp_checker
