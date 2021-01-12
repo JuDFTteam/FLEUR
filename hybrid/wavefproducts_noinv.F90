@@ -258,7 +258,6 @@ CONTAINS
       COMPLEX, allocatable    ::  cmt_ikqpt(:,:,:)
 
       call timestart("wavefproducts_noinv5 MT")
-
       allocate(cmt_ikqpt(bandoi:bandof, hybdat%maxlmindx, fi%atoms%nat), stat=ok, source=cmplx_0)
       if(ok /= 0) call juDFT_error("alloc cmt_ikqpt")
       
@@ -276,6 +275,11 @@ CONTAINS
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
+
+      ! $acc enter data copyin(cprod, cprod%data_c,  hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm) &
+      ! $acc copyin(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2)&
+      ! $acc copyin(cmt_ikqpt, cmt_nk, psize, ik)
+
       call timestart("loop over l, l1, l2, n, n1, n2")
       lm_0 = 0
       do iatm = 1,fi%atoms%nat 
@@ -284,14 +288,27 @@ CONTAINS
 
          ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
          DO l = 0, fi%hybinp%lcutm1(itype)
+! #ifdef _OPENACC
+!             !$acc parallel loop default(none) copyin(itype, l, iatm, atom_phase) collapse(2)&
+!             !$acc private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i) &
+!             !$acc present(cprod, cprod%data_c, hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm)&
+!             !$acc present(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2)&
+!             !$acc present(cmt_ikqpt, cmt_nk, psize, ik)
+! #else
             !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
             !$OMP shared(iatm, psize, atom_phase, ik)
+! #endif
             do k = 1, hybdat%nbands(ik,jsp)
                do j = bandoi, bandof 
                   DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-                     call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
+                     ! don't call object funcktions in acc
+                     l1 = mpdata%l1(n, l, itype) !
+                     l2 = mpdata%l2(n, l, itype) ! current basis-function mpdatauct
+                     n1 = mpdata%n1(n, l, itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+                     n2 = mpdata%n2(n, l, itype) !
+                     ! call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
                      IF (mod(l1 + l2 + l, 2) == 0) THEN
                         offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
@@ -342,10 +359,17 @@ CONTAINS
                   END DO !n
                enddo  !j
             enddo !k
+#ifdef _OPENACC
+#else
             !$OMP END PARALLEL DO
+#endif
             lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
+      ! $acc exit data copyout(cprod, cprod%data_c) &
+      ! $acc delete(hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm) &
+      ! $acc delete(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2) &
+      ! $acc delete(cmt_ikqpt, cmt_nk, psize, ik)
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT

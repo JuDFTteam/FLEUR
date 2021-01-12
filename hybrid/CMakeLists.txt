@@ -43,7 +43,7 @@ hybrid/util/util.f90
 hybrid/wavefproducts_aux.F90
 hybrid/wavefproducts.f90
 hybrid/wavefproducts_inv.f90
-hybrid/wavefproducts_noinv.f90
+hybrid/wavefproducts_noinv.F90
 hybrid/work_package.F90
 hybrid/wrapper.f90
 )
