@@ -82,7 +82,7 @@ CONTAINS
                WRITE (79,FMT=790) forceval(1:3,iatom)*hartree_to_ev_const/bohr_to_angstrom_const
                WRITE (80,FMT=800) taual(1:3,iatom)
             ELSE
-               WRITE (79,*) forceval(1:3,iatom), force
+               WRITE (79,*) forceval(1:3,iatom), 'force'
             END IF
 
          END DO
