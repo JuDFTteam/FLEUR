@@ -119,18 +119,6 @@ MODULE m_greensfPostProcess
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
-      !Rotate the green's function back into the global frame in real-space
-      IF(noco%l_noco) THEN
-         DO i_gf = 1, gfinp%n
-            atomType  = gfinp%elem(i_gf)%atomType
-            CALL greensFunction(i_gf)%rotate_euler_angles(atoms,nococonv%alph(atomType),nococonv%beta(atomType),0.0)
-         ENDDO
-      ELSE IF(noco%l_soc) THEN
-         DO i_gf = 1, gfinp%n
-            CALL greensFunction(i_gf)%rotate_euler_angles(atoms,nococonv%phi,nococonv%theta,0.0)
-         ENDDO
-      ENDIF
-
       !----------------------------------------------
       ! Torgue Calculations
       !----------------------------------------------
@@ -167,16 +155,16 @@ MODULE m_greensfPostProcess
             l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            l_write=.TRUE.,check=l_check)
             ELSE IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            scalarGF=scalarGF(i_gf),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
                            l_write=.TRUE.,check=l_check)
             ENDIF

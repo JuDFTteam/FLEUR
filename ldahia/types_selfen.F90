@@ -116,15 +116,6 @@ MODULE m_types_selfen
                !---------------------------------------------
                this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),swapMat)
                this%data(:,:,iz,ipm) = matmul(swapMat,this%data(:,:,iz,ipm))
-               !---------------------------------------------
-               ! Rotate the selfenergy in real space to the
-               ! correct orientation
-               !---------------------------------------------
-               IF(noco%l_noco) THEN
-                  this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
-               ELSE IF(noco%l_soc) THEN
-                  this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),nococonv%phi,nococonv%theta,0.0,l)
-               ENDIF
                !---------------------------------------------------------------------
                ! The DFT green's function also includes the previous DFT+U correction
                ! This is removed by substracting it from the selfenergy
