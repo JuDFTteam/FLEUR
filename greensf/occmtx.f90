@@ -194,9 +194,7 @@ MODULE m_occmtx
 9000        FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
-            DO i = 1, 2*ns
-               WRITE(oUnit,'(28f8.4)') ((gmat%data_c(i,j),i=1,2*(2*l+1)),j=1,2*(2*l+1))
-            ENDDO
+            WRITE(oUnit,'(28f8.4)') ((gmat%data_c(i,j),i=1,2*ns),j=1,2*ns)
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
          ENDIF
