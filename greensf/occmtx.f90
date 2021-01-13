@@ -36,7 +36,7 @@ MODULE m_occmtx
       LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
 
       INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp
-      INTEGER :: atomType,atomTypep,m,mp,i,ns,spin_start,spin_end
+      INTEGER :: atomType,atomTypep,m,mp,i,j,ns,spin_start,spin_end
       REAL    :: nup,ndwn,tr
       COMPLEX :: weight
       TYPE(t_mat) :: gmat
@@ -195,7 +195,7 @@ MODULE m_occmtx
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
             DO i = 1, 2*ns
-               WRITE(oUnit,'(28f8.4)') gmat%data_c(i,:)
+               WRITE(oUnit,'(28f8.4)') ((gmat%data_c(i,j),i=1,2*(2*l+1)),j=1,2*(2*l+1))
             ENDDO
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
